@@ -41,7 +41,7 @@ def with_category(category: str) -> Callable:
 ##########################
 
 
-def _parse_positionals(args: Tuple) -> Tuple['cmd2.Cmd', Union[Statement, str]]:
+def _parse_positionals(args: Tuple) -> Tuple[Union['cmd2.Cmd', 'cmd2.CommandSet'], Union[Statement, str]]:
     """
     Helper function for cmd2 decorators to inspect the positional arguments until the cmd2.Cmd argument is found
     Assumes that we will find cmd2.Cmd followed by the command statement object or string.
@@ -49,8 +49,10 @@ def _parse_positionals(args: Tuple) -> Tuple['cmd2.Cmd', Union[Statement, str]]:
     :return: The cmd2.Cmd reference and the command line statement
     """
     for pos, arg in enumerate(args):
-        from cmd2 import Cmd
-        if isinstance(arg, Cmd) and len(args) > pos:
+        from cmd2 import Cmd, CommandSet
+        if (isinstance(arg, Cmd) or isinstance(arg, CommandSet)) and len(args) > pos:
+            if isinstance(arg, CommandSet):
+                arg = arg._cmd
             next_arg = args[pos + 1]
             if isinstance(next_arg, (Statement, str)):
                 return arg, args[pos + 1]
@@ -92,7 +94,7 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
     >>>     def do_echo(self, arglist):
     >>>         self.poutput(' '.join(arglist)
     """
-    import functools
+    import functools, cmd2
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
@@ -293,8 +295,8 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             else:
                 setattr(ns, '__statement__', statement)
 
-                def get_handler(self: argparse.Namespace) -> Optional[Callable]:
-                    return getattr(self, constants.SUBCMD_HANDLER, None)
+                def get_handler(ns_self: argparse.Namespace) -> Optional[Callable]:
+                    return getattr(ns_self, constants.SUBCMD_HANDLER, None)
 
                 setattr(ns, 'get_handler', types.MethodType(get_handler, ns))
 

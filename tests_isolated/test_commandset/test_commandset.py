@@ -21,36 +21,36 @@ class CommandSetBase(cmd2.CommandSet):
 
 @cmd2.with_default_category('Fruits')
 class CommandSetA(CommandSetBase):
-    def do_apple(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
-        cmd.poutput('Apple!')
+    def do_apple(self, statement: cmd2.Statement):
+        self._cmd.poutput('Apple!')
 
-    def do_banana(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
+    def do_banana(self, statement: cmd2.Statement):
         """Banana Command"""
-        cmd.poutput('Banana!!')
+        self._cmd.poutput('Banana!!')
 
     cranberry_parser = cmd2.Cmd2ArgumentParser('cranberry')
     cranberry_parser.add_argument('arg1', choices=['lemonade', 'juice', 'sauce'])
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
-    def do_cranberry(self, cmd: cmd2.Cmd, ns: argparse.Namespace, unknown: List[str]):
-        cmd.poutput('Cranberry {}!!'.format(ns.arg1))
+    def do_cranberry(self, ns: argparse.Namespace, unknown: List[str]):
+        self._cmd.poutput('Cranberry {}!!'.format(ns.arg1))
         if unknown and len(unknown):
-            cmd.poutput('Unknown: ' + ', '.join(['{}']*len(unknown)).format(*unknown))
-        cmd.last_result = {'arg1': ns.arg1,
+            self._cmd.poutput('Unknown: ' + ', '.join(['{}']*len(unknown)).format(*unknown))
+        self._cmd.last_result = {'arg1': ns.arg1,
                            'unknown': unknown}
 
-    def help_cranberry(self, cmd: cmd2.Cmd):
-        cmd.stdout.write('This command does diddly squat...\n')
+    def help_cranberry(self):
+        self._cmd.stdout.write('This command does diddly squat...\n')
 
     @cmd2.with_argument_list
     @cmd2.with_category('Also Alone')
-    def do_durian(self, cmd: cmd2.Cmd, args: List[str]):
+    def do_durian(self, args: List[str]):
         """Durian Command"""
-        cmd.poutput('{} Arguments: '.format(len(args)))
-        cmd.poutput(', '.join(['{}']*len(args)).format(*args))
-        cmd.last_result = {'args': args}
+        self._cmd.poutput('{} Arguments: '.format(len(args)))
+        self._cmd.poutput(', '.join(['{}']*len(args)).format(*args))
+        self._cmd.last_result = {'args': args}
 
-    def complete_durian(self, cmd: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return utils.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
 
     elderberry_parser = cmd2.Cmd2ArgumentParser('elderberry')
@@ -58,9 +58,9 @@ class CommandSetA(CommandSetBase):
 
     @cmd2.with_category('Alone')
     @cmd2.with_argparser(elderberry_parser)
-    def do_elderberry(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
-        cmd.poutput('Elderberry {}!!'.format(ns.arg1))
-        cmd.last_result = {'arg1': ns.arg1}
+    def do_elderberry(self, ns: argparse.Namespace):
+        self._cmd.poutput('Elderberry {}!!'.format(ns.arg1))
+        self._cmd.last_result = {'arg1': ns.arg1}
 
 
 @cmd2.with_default_category('Command Set B')
@@ -69,15 +69,15 @@ class CommandSetB(CommandSetBase):
         super().__init__()
         self._arg1 = arg1
 
-    def do_aardvark(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
-        cmd.poutput('Aardvark!')
+    def do_aardvark(self, statement: cmd2.Statement):
+        self._cmd.poutput('Aardvark!')
 
-    def do_bat(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
+    def do_bat(self, statement: cmd2.Statement):
         """Banana Command"""
-        cmd.poutput('Bat!!')
+        self._cmd.poutput('Bat!!')
 
-    def do_crocodile(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
-        cmd.poutput('Crocodile!!')
+    def do_crocodile(self, statement: cmd2.Statement):
+        self._cmd.poutput('Crocodile!!')
 
 
 def test_autoload_commands(command_sets_app):
@@ -108,18 +108,18 @@ def test_custom_construct_commandsets():
     # Verifies that the same CommandSet can not be loaded twice
     command_set_2 = CommandSetB('bar')
     with pytest.raises(CommandSetRegistrationError):
-        assert app.install_command_set(command_set_2)
+        assert app.register_command_set(command_set_2)
 
     # Verify that autoload doesn't conflict with a manually loaded CommandSet that could be autoloaded.
     command_set_a = CommandSetA()
     app2 = WithCommandSets(command_sets=[command_set_a])
 
     with pytest.raises(CommandSetRegistrationError):
-        app2.install_command_set(command_set_b)
+        app2.register_command_set(command_set_b)
 
-    app.uninstall_command_set(command_set_b)
+    app.unregister_command_set(command_set_b)
 
-    app2.install_command_set(command_set_b)
+    app2.register_command_set(command_set_b)
 
     assert hasattr(app2, 'do_apple')
     assert hasattr(app2, 'do_aardvark')
@@ -141,7 +141,7 @@ def test_load_commands(command_sets_manual):
     assert command_sets_manual.find_commandset_for_command('elderberry') is None
     assert not command_sets_manual.find_commandsets(CommandSetA)
 
-    command_sets_manual.install_command_set(cmd_set)
+    command_sets_manual.register_command_set(cmd_set)
 
     assert command_sets_manual.find_commandsets(CommandSetA)[0] is cmd_set
     assert command_sets_manual.find_commandset_for_command('elderberry') is cmd_set
@@ -155,7 +155,7 @@ def test_load_commands(command_sets_manual):
     assert 'cranberry' in cmds_cats['Fruits']
 
     # uninstall the command set and verify it is now also no longer accessible
-    command_sets_manual.uninstall_command_set(cmd_set)
+    command_sets_manual.unregister_command_set(cmd_set)
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
 
@@ -163,10 +163,10 @@ def test_load_commands(command_sets_manual):
     assert 'Fruits' not in cmds_cats
 
     # uninstall a second time and verify no errors happen
-    command_sets_manual.uninstall_command_set(cmd_set)
+    command_sets_manual.unregister_command_set(cmd_set)
 
     # reinstall the command set and verify it is accessible
-    command_sets_manual.install_command_set(cmd_set)
+    command_sets_manual.register_command_set(cmd_set)
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
 
@@ -177,33 +177,10 @@ def test_load_commands(command_sets_manual):
     assert 'cranberry' in cmds_cats['Fruits']
 
 
-def test_partial_with_passthru():
-
-    def test_func(arg1, arg2):
-        """Documentation Comment"""
-        print('Do stuff {} - {}'.format(arg1, arg2))
-
-    my_partial = cmd2.command_definition._partial_passthru(test_func, 1)
-
-    setattr(test_func, 'Foo', 5)
-
-    assert hasattr(my_partial, 'Foo')
-
-    assert getattr(my_partial, 'Foo', None) == 5
-
-    a = dir(test_func)
-    b = dir(my_partial)
-    assert a == b
-
-    assert not hasattr(test_func, 'Bar')
-    setattr(my_partial, 'Bar', 6)
-    assert hasattr(test_func, 'Bar')
-
-    assert getattr(test_func, 'Bar', None) == 6
-
-
 def test_commandset_decorators(command_sets_app):
     result = command_sets_app.app_cmd('cranberry juice extra1 extra2')
+    assert result is not None
+    assert result.data is not None
     assert len(result.data['unknown']) == 2
     assert 'extra1' in result.data['unknown']
     assert 'extra2' in result.data['unknown']
@@ -240,7 +217,7 @@ def test_load_commandset_errors(command_sets_manual, capsys):
     # create a conflicting command before installing CommandSet to verify rollback behavior
     command_sets_manual._install_command_function('durian', cmd_set.do_durian)
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual.install_command_set(cmd_set)
+        command_sets_manual.register_command_set(cmd_set)
 
     # verify that the commands weren't installed
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
@@ -256,7 +233,7 @@ def test_load_commandset_errors(command_sets_manual, capsys):
     command_sets_manual.app_cmd('alias create banana run_pyscript')
 
     # now install a command set and verify the commands are now present
-    command_sets_manual.install_command_set(cmd_set)
+    command_sets_manual.register_command_set(cmd_set)
     out, err = capsys.readouterr()
 
     # verify aliases and macros are deleted with warning if they conflict with a command
@@ -289,7 +266,7 @@ class LoadableBase(cmd2.CommandSet):
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     @cmd2.with_argparser(cut_parser)
-    def do_cut(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+    def do_cut(self, ns: argparse.Namespace):
         """Cut something"""
         handler = ns.get_handler()
         if handler is not None:
@@ -297,15 +274,15 @@ class LoadableBase(cmd2.CommandSet):
             handler(ns)
         else:
             # No subcommand was provided, so call help
-            cmd.pwarning('This command does nothing without sub-parsers registered')
-            cmd.do_help('cut')
+            self._cmd.pwarning('This command does nothing without sub-parsers registered')
+            self._cmd.do_help('cut')
 
 
     stir_parser = cmd2.Cmd2ArgumentParser('stir')
     stir_subparsers = stir_parser.add_subparsers(title='item', help='what to stir')
 
     @cmd2.with_argparser(stir_parser)
-    def do_stir(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+    def do_stir(self, ns: argparse.Namespace):
         """Stir something"""
         handler = ns.get_handler()
         if handler is not None:
@@ -313,21 +290,21 @@ class LoadableBase(cmd2.CommandSet):
             handler(ns)
         else:
             # No subcommand was provided, so call help
-            cmd.pwarning('This command does nothing without sub-parsers registered')
-            cmd.do_help('stir')
+            self._cmd.pwarning('This command does nothing without sub-parsers registered')
+            self._cmd.do_help('stir')
 
     stir_pasta_parser = cmd2.Cmd2ArgumentParser('pasta', add_help=False)
     stir_pasta_parser.add_argument('--option', '-o')
     stir_pasta_parser.add_subparsers(title='style', help='Stir style')
 
     @cmd2.as_subcommand_to('stir', 'pasta', stir_pasta_parser)
-    def stir_pasta(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+    def stir_pasta(self, ns: argparse.Namespace):
         handler = ns.get_handler()
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
         else:
-            cmd.poutput('Stir pasta haphazardly')
+            self._cmd.poutput('Stir pasta haphazardly')
 
 
 class LoadableBadBase(cmd2.CommandSet):
@@ -335,7 +312,7 @@ class LoadableBadBase(cmd2.CommandSet):
         super(LoadableBadBase, self).__init__()
         self._dummy = dummy  # prevents autoload
 
-    def do_cut(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+    def do_cut(self, ns: argparse.Namespace):
         """Cut something"""
         handler = ns.get_handler()
         if handler is not None:
@@ -343,8 +320,8 @@ class LoadableBadBase(cmd2.CommandSet):
             handler(ns)
         else:
             # No subcommand was provided, so call help
-            cmd.poutput('This command does nothing without sub-parsers registered')
-            cmd.do_help('cut')
+            self._cmd.poutput('This command does nothing without sub-parsers registered')
+            self._cmd.do_help('cut')
 
 
 @cmd2.with_default_category('Fruits')
@@ -353,16 +330,16 @@ class LoadableFruits(cmd2.CommandSet):
         super(LoadableFruits, self).__init__()
         self._dummy = dummy  # prevents autoload
 
-    def do_apple(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('Apple')
+    def do_apple(self, _: cmd2.Statement):
+        self._cmd.poutput('Apple')
 
     banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
     @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
-    def cut_banana(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+    def cut_banana(self, ns: argparse.Namespace):
         """Cut banana"""
-        cmd.poutput('cutting banana: ' + ns.direction)
+        self._cmd.poutput('cutting banana: ' + ns.direction)
 
 
 class LoadablePastaStir(cmd2.CommandSet):
@@ -374,8 +351,8 @@ class LoadablePastaStir(cmd2.CommandSet):
     stir_pasta_vigor_parser.add_argument('frequency')
 
     @cmd2.as_subcommand_to('stir pasta', 'vigorously', stir_pasta_vigor_parser)
-    def stir_pasta_vigorously(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
-        cmd.poutput('stir the pasta vigorously')
+    def stir_pasta_vigorously(self, ns: argparse.Namespace):
+        self._cmd.poutput('stir the pasta vigorously')
 
 
 @cmd2.with_default_category('Vegetables')
@@ -384,18 +361,18 @@ class LoadableVegetables(cmd2.CommandSet):
         super(LoadableVegetables, self).__init__()
         self._dummy = dummy  # prevents autoload
 
-    def do_arugula(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('Arugula')
+    def do_arugula(self, _: cmd2.Statement):
+        self._cmd.poutput('Arugula')
 
-    def complete_style_arg(self, cmd: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return ['quartered', 'diced']
 
     bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False)
     bokchoy_parser.add_argument('style', completer_method=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
-    def cut_bokchoy(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('Bok Choy')
+    def cut_bokchoy(self, _: cmd2.Statement):
+        self._cmd.poutput('Bok Choy')
 
 
 def test_subcommands(command_sets_manual):
@@ -407,12 +384,12 @@ def test_subcommands(command_sets_manual):
 
     # installing subcommands without base command present raises exception
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual.install_command_set(fruit_cmds)
+        command_sets_manual.register_command_set(fruit_cmds)
 
     # if the base command is present but isn't an argparse command, expect exception
-    command_sets_manual.install_command_set(badbase_cmds)
+    command_sets_manual.register_command_set(badbase_cmds)
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual.install_command_set(fruit_cmds)
+        command_sets_manual.register_command_set(fruit_cmds)
 
     # verify that the commands weren't installed
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
@@ -420,8 +397,8 @@ def test_subcommands(command_sets_manual):
     assert 'Fruits' not in cmds_cats
 
     # Now install the good base commands
-    command_sets_manual.uninstall_command_set(badbase_cmds)
-    command_sets_manual.install_command_set(base_cmds)
+    command_sets_manual.unregister_command_set(badbase_cmds)
+    command_sets_manual.register_command_set(base_cmds)
 
     # verify that we catch an attempt to register subcommands when the commandset isn't installed
     with pytest.raises(CommandSetRegistrationError):
@@ -431,8 +408,8 @@ def test_subcommands(command_sets_manual):
     assert 'This command does nothing without sub-parsers registered' in cmd_result.stderr
 
     # verify that command set install without problems
-    command_sets_manual.install_command_set(fruit_cmds)
-    command_sets_manual.install_command_set(veg_cmds)
+    command_sets_manual.register_command_set(fruit_cmds)
+    command_sets_manual.register_command_set(veg_cmds)
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
     assert 'Fruits' in cmds_cats
 
@@ -460,21 +437,21 @@ def test_subcommands(command_sets_manual):
     assert ['diced', 'quartered'] == command_sets_manual.completion_matches
 
     # verify that command set uninstalls without problems
-    command_sets_manual.uninstall_command_set(fruit_cmds)
+    command_sets_manual.unregister_command_set(fruit_cmds)
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
     assert 'Fruits' not in cmds_cats
 
     # verify a double-unregister raises exception
     with pytest.raises(CommandSetRegistrationError):
         command_sets_manual._unregister_subcommands(fruit_cmds)
-    command_sets_manual.uninstall_command_set(veg_cmds)
+    command_sets_manual.unregister_command_set(veg_cmds)
 
     # Disable command and verify subcommands still load and unload
     command_sets_manual.disable_command('cut', 'disabled for test')
 
     # verify that command set install without problems
-    command_sets_manual.install_command_set(fruit_cmds)
-    command_sets_manual.install_command_set(veg_cmds)
+    command_sets_manual.register_command_set(fruit_cmds)
+    command_sets_manual.register_command_set(veg_cmds)
 
     command_sets_manual.enable_command('cut')
 
@@ -505,7 +482,7 @@ def test_subcommands(command_sets_manual):
     command_sets_manual.disable_command('cut', 'disabled for test')
 
     # verify that command set uninstalls without problems
-    command_sets_manual.uninstall_command_set(fruit_cmds)
+    command_sets_manual.unregister_command_set(fruit_cmds)
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
     assert 'Fruits' not in cmds_cats
 
@@ -514,10 +491,10 @@ def test_subcommands(command_sets_manual):
         command_sets_manual._unregister_subcommands(fruit_cmds)
 
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual.uninstall_command_set(base_cmds)
+        command_sets_manual.unregister_command_set(base_cmds)
 
-    command_sets_manual.uninstall_command_set(veg_cmds)
-    command_sets_manual.uninstall_command_set(base_cmds)
+    command_sets_manual.unregister_command_set(veg_cmds)
+    command_sets_manual.unregister_command_set(base_cmds)
 
 def test_nested_subcommands(command_sets_manual):
     base_cmds = LoadableBase(1)
@@ -526,14 +503,14 @@ def test_nested_subcommands(command_sets_manual):
     pasta_cmds = LoadablePastaStir(1)
 
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual.install_command_set(pasta_cmds)
+        command_sets_manual.register_command_set(pasta_cmds)
 
-    command_sets_manual.install_command_set(base_cmds)
+    command_sets_manual.register_command_set(base_cmds)
 
-    command_sets_manual.install_command_set(pasta_cmds)
+    command_sets_manual.register_command_set(pasta_cmds)
 
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual.uninstall_command_set(base_cmds)
+        command_sets_manual.unregister_command_set(base_cmds)
 
     class BadNestedSubcommands(cmd2.CommandSet):
         def __init__(self, dummy):
@@ -544,11 +521,11 @@ def test_nested_subcommands(command_sets_manual):
         stir_pasta_vigor_parser.add_argument('frequency')
 
         @cmd2.as_subcommand_to('stir sauce', 'vigorously', stir_pasta_vigor_parser)
-        def stir_pasta_vigorously(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
-            cmd.poutput('stir the pasta vigorously')
+        def stir_pasta_vigorously(self, ns: argparse.Namespace):
+            self._cmd.poutput('stir the pasta vigorously')
 
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual.install_command_set(BadNestedSubcommands(1))
+        command_sets_manual.register_command_set(BadNestedSubcommands(1))
 
 
 class AppWithSubCommands(cmd2.Cmd):
@@ -631,7 +608,7 @@ class WithCompleterCommandSet(cmd2.CommandSet):
         """dummy variable prevents this from being autoloaded in other tests"""
         super(WithCompleterCommandSet, self).__init__()
 
-    def complete_states(self, cmd: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         assert self is complete_states_expected_self
         return utils.basic_complete(text, line, begidx, endidx, self.states)
 
@@ -641,8 +618,8 @@ class SubclassCommandSetCase1(WithCompleterCommandSet):
     parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_case1(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
-        cmd.poutput('something {}'.format(ns.state))
+    def do_case1(self, ns: argparse.Namespace):
+        self._cmd.poutput('something {}'.format(ns.state))
 
 
 class SubclassCommandSetErrorCase2(WithCompleterCommandSet):
@@ -650,8 +627,8 @@ class SubclassCommandSetErrorCase2(WithCompleterCommandSet):
     parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_error2(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
-        cmd.poutput('something {}'.format(ns.state))
+    def do_error2(self, ns: argparse.Namespace):
+        self._cmd.poutput('something {}'.format(ns.state))
 
 
 class SubclassCommandSetCase2(cmd2.CommandSet):
@@ -663,8 +640,8 @@ class SubclassCommandSetCase2(cmd2.CommandSet):
     parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_case2(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
-        cmd.poutput('something {}'.format(ns.state))
+    def do_case2(self, ns: argparse.Namespace):
+        self._cmd.poutput('something {}'.format(ns.state))
 
 
 def test_cross_commandset_completer(command_sets_manual):
@@ -678,7 +655,7 @@ def test_cross_commandset_completer(command_sets_manual):
     # CommandSet instance as self when calling the completer
     case1_set = SubclassCommandSetCase1(1)
 
-    command_sets_manual.install_command_set(case1_set)
+    command_sets_manual.register_command_set(case1_set)
 
     text = ''
     line = 'case1 {}'.format(text)
@@ -691,7 +668,7 @@ def test_cross_commandset_completer(command_sets_manual):
     assert first_match == 'alabama'
     assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
 
-    command_sets_manual.uninstall_command_set(case1_set)
+    command_sets_manual.unregister_command_set(case1_set)
 
     ####################################################################################################################
     # This exercises Case 2
@@ -701,8 +678,8 @@ def test_cross_commandset_completer(command_sets_manual):
     # First verify that, without the correct command set
     base_set = WithCompleterCommandSet(1)
     case2_set = SubclassCommandSetCase2(2)
-    command_sets_manual.install_command_set(base_set)
-    command_sets_manual.install_command_set(case2_set)
+    command_sets_manual.register_command_set(base_set)
+    command_sets_manual.register_command_set(case2_set)
 
     text = ''
     line = 'case2 {}'.format(text)
@@ -715,8 +692,8 @@ def test_cross_commandset_completer(command_sets_manual):
     assert first_match == 'alabama'
     assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
 
-    command_sets_manual.uninstall_command_set(case2_set)
-    command_sets_manual.uninstall_command_set(base_set)
+    command_sets_manual.unregister_command_set(case2_set)
+    command_sets_manual.unregister_command_set(base_set)
 
     ####################################################################################################################
     # This exercises Case 3
@@ -724,8 +701,8 @@ def test_cross_commandset_completer(command_sets_manual):
     # and no exact type match can be found, but sub-class matches can be found and there is only a single
     # subclass match, then use the lone subclass match as the parent CommandSet.
 
-    command_sets_manual.install_command_set(case1_set)
-    command_sets_manual.install_command_set(case2_set)
+    command_sets_manual.register_command_set(case1_set)
+    command_sets_manual.register_command_set(case2_set)
 
     text = ''
     line = 'case2 {}'.format(text)
@@ -738,8 +715,8 @@ def test_cross_commandset_completer(command_sets_manual):
     assert first_match == 'alabama'
     assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
 
-    command_sets_manual.uninstall_command_set(case2_set)
-    command_sets_manual.uninstall_command_set(case1_set)
+    command_sets_manual.unregister_command_set(case2_set)
+    command_sets_manual.unregister_command_set(case1_set)
 
     ####################################################################################################################
     # Error Case 1
@@ -747,7 +724,7 @@ def test_cross_commandset_completer(command_sets_manual):
     # all installed CommandSet instances for one that is an exact type match, none are found
     # search for sub-class matches, also none are found.
 
-    command_sets_manual.install_command_set(case2_set)
+    command_sets_manual.register_command_set(case2_set)
 
     text = ''
     line = 'case2 {}'.format(text)
@@ -758,7 +735,7 @@ def test_cross_commandset_completer(command_sets_manual):
     assert first_match is None
     assert command_sets_manual.completion_matches == []
 
-    command_sets_manual.uninstall_command_set(case2_set)
+    command_sets_manual.unregister_command_set(case2_set)
 
     ####################################################################################################################
     # Error Case 2
@@ -767,9 +744,9 @@ def test_cross_commandset_completer(command_sets_manual):
     # search for sub-class matches, more than 1 is found
 
     error_case2_set = SubclassCommandSetErrorCase2(4)
-    command_sets_manual.install_command_set(case1_set)
-    command_sets_manual.install_command_set(case2_set)
-    command_sets_manual.install_command_set(error_case2_set)
+    command_sets_manual.register_command_set(case1_set)
+    command_sets_manual.register_command_set(case2_set)
+    command_sets_manual.register_command_set(error_case2_set)
 
     text = ''
     line = 'case2 {}'.format(text)
@@ -780,7 +757,7 @@ def test_cross_commandset_completer(command_sets_manual):
     assert first_match is None
     assert command_sets_manual.completion_matches == []
 
-    command_sets_manual.uninstall_command_set(case2_set)
+    command_sets_manual.unregister_command_set(case2_set)
 
 
 class CommandSetWithPathComplete(cmd2.CommandSet):
@@ -799,7 +776,7 @@ class CommandSetWithPathComplete(cmd2.CommandSet):
 def test_path_complete(command_sets_manual):
     test_set = CommandSetWithPathComplete(1)
 
-    command_sets_manual.install_command_set(test_set)
+    command_sets_manual.register_command_set(test_set)
 
     text = ''
     line = 'path {}'.format(text)

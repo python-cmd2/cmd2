@@ -13,11 +13,11 @@ class AutoLoadCommandSet(CommandSet):
     def __init__(self):
         super().__init__()
 
-    def do_hello(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('Hello')
+    def do_hello(self, _: cmd2.Statement):
+        self._cmd.poutput('Hello')
 
-    def do_world(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('World')
+    def do_world(self, _: cmd2.Statement):
+        self._cmd.poutput('World')
 
 
 class ExampleApp(cmd2.Cmd):

@@ -45,7 +45,7 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
 from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .command_definition import CommandSet, _partial_passthru
+from .command_definition import CommandSet
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser, as_subcommand_to
 from .exceptions import (
@@ -186,7 +186,7 @@ class Cmd(cmd.Cmd):
         :param auto_load_commands: If True, cmd2 will check for all subclasses of `CommandSet`
                                    that are currently loaded by Python and automatically
                                    instantiate and register all commands. If False, CommandSets
-                                   must be manually installed with `install_command_set`.
+                                   must be manually installed with `register_command_set`.
         """
         # If use_ipython is False, make sure the ipy command isn't available in this instance
         if not use_ipython:
@@ -264,7 +264,7 @@ class Cmd(cmd.Cmd):
         self._cmd_to_command_sets = {}  # type: Dict[str, CommandSet]
         if command_sets:
             for command_set in command_sets:
-                self.install_command_set(command_set)
+                self.register_command_set(command_set)
 
         if auto_load_commands:
             self._autoload_commands()
@@ -452,11 +452,11 @@ class Cmd(cmd.Cmd):
                             or len(init_sig.parameters) != 1
                             or 'self' not in init_sig.parameters):
                         cmdset = cmdset_type()
-                        self.install_command_set(cmdset)
+                        self.register_command_set(cmdset)
 
         load_commandset_by_type(all_commandset_defs)
 
-    def install_command_set(self, cmdset: CommandSet) -> None:
+    def register_command_set(self, cmdset: CommandSet) -> None:
         """
         Installs a CommandSet, loading all commands defined in the CommandSet
 
@@ -476,23 +476,20 @@ class Cmd(cmd.Cmd):
         try:
             for method_name, method in methods:
                 command = method_name[len(COMMAND_FUNC_PREFIX):]
-                command_wrapper = _partial_passthru(method, self)
 
-                self._install_command_function(command, command_wrapper, type(cmdset).__name__)
+                self._install_command_function(command, method, type(cmdset).__name__)
                 installed_attributes.append(method_name)
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
                 if cmd_completer is not None:
-                    completer_wrapper = _partial_passthru(cmd_completer, self)
-                    self._install_completer_function(command, completer_wrapper)
+                    self._install_completer_function(command, cmd_completer)
                     installed_attributes.append(completer_func_name)
 
                 help_func_name = HELP_FUNC_PREFIX + command
                 cmd_help = getattr(cmdset, help_func_name, None)
                 if cmd_help is not None:
-                    help_wrapper = _partial_passthru(cmd_help, self)
-                    self._install_help_function(command, help_wrapper)
+                    self._install_help_function(command, cmd_help)
                     installed_attributes.append(help_func_name)
 
                 self._cmd_to_command_sets[command] = cmdset
@@ -508,7 +505,7 @@ class Cmd(cmd.Cmd):
             if cmdset in self._cmd_to_command_sets.values():
                 self._cmd_to_command_sets = \
                     {key: val for key, val in self._cmd_to_command_sets.items() if val is not cmdset}
-            cmdset.on_unregister(self)
+            cmdset.on_unregister()
             raise
 
     def _install_command_function(self, command: str, command_wrapper: Callable, context=''):
@@ -549,7 +546,7 @@ class Cmd(cmd.Cmd):
             raise CommandSetRegistrationError('Attribute already exists: {}'.format(help_func_name))
         setattr(self, help_func_name, cmd_help)
 
-    def uninstall_command_set(self, cmdset: CommandSet):
+    def unregister_command_set(self, cmdset: CommandSet):
         """
         Uninstalls a CommandSet and unloads all associated commands
         :param cmdset: CommandSet to uninstall
@@ -581,7 +578,7 @@ class Cmd(cmd.Cmd):
                 if hasattr(self, HELP_FUNC_PREFIX + cmd_name):
                     delattr(self, HELP_FUNC_PREFIX + cmd_name)
 
-            cmdset.on_unregister(self)
+            cmdset.on_unregister()
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet):
@@ -656,11 +653,7 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError('Could not find argparser for command "{}" needed by subcommand: {}'
                                                   .format(command_name, str(method)))
 
-            if isinstance(cmdset, CommandSet):
-                command_handler = _partial_passthru(method, self)
-            else:
-                command_handler = method
-            subcmd_parser.set_defaults(cmd2_handler=command_handler)
+            subcmd_parser.set_defaults(cmd2_handler=method)
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
                 if not subcmd_names:

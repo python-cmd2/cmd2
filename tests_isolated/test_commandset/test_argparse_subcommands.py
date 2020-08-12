@@ -19,17 +19,17 @@ class SubcommandSet(cmd2.CommandSet):
         super(SubcommandSet, self).__init__()
 
     # subcommand functions for the base command
-    def base_foo(self, cmd: cmd2.Cmd, args):
+    def base_foo(self, args):
         """foo subcommand of base command"""
-        cmd.poutput(args.x * args.y)
+        self._cmd.poutput(args.x * args.y)
 
-    def base_bar(self, cmd: cmd2.Cmd, args):
+    def base_bar(self, args):
         """bar subcommand of base command"""
-        cmd.poutput('((%s))' % args.z)
+        self._cmd.poutput('((%s))' % args.z)
 
-    def base_helpless(self, cmd: cmd2.Cmd, args):
+    def base_helpless(self, args):
         """helpless subcommand of base command"""
-        cmd.poutput('((%s))' % args.z)
+        self._cmd.poutput('((%s))' % args.z)
 
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser()
@@ -56,11 +56,11 @@ class SubcommandSet(cmd2.CommandSet):
     parser_bar.set_defaults(func=base_bar)
 
     @cmd2.with_argparser(base_parser)
-    def do_base(self, cmd: cmd2.Cmd, args):
+    def do_base(self, args):
         """Base command help"""
         # Call whatever subcommand function was selected
         func = getattr(args, 'func')
-        func(self, cmd, args)
+        func(self, args)
 
 
 @pytest.fixture

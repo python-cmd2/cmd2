@@ -606,7 +606,8 @@ class ArgparseCompleter:
                         # No cases matched, raise an error
                         raise CompletionError('Could not find CommandSet instance matching defining type for completer')
                     args.append(cmd_set)
-                args.append(self._cmd2_app)
+                else:
+                    args.append(self._cmd2_app)
 
             # Check if arg_choices.to_call expects arg_tokens
             to_call_params = inspect.signature(arg_choices.to_call).parameters
