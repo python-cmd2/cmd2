@@ -42,8 +42,9 @@ A new decorator ``with_default_category`` is provided to categorize all commands
 same command category.  Individual commands in a CommandSet may be override the default category by specifying a
 specific category with ``cmd.with_category``.
 
-CommandSet methods will always expect ``self``, and ``cmd2.Cmd`` as the first two parameters. The parameters that
-follow will depend on the specific command decorator being used.
+CommandSet command methods will always expect the same parameters as when defined in a ``cmd2.Cmd`` sub-class,
+except that ``self`` will now refer to the ``CommandSet`` instead of the cmd2 instance. The cmd2 instance can
+be accessed through ``self._cmd`` that is populated when the ``CommandSet`` is registered.
 
 CommandSets will only be auto-loaded if the constructor takes no arguments.
 If you need to provide constructor arguments, see :ref:`features/modular_commands:Manual CommandSet Construction`
@@ -58,11 +59,11 @@ If you need to provide constructor arguments, see :ref:`features/modular_command
         def __init__(self):
             super().__init__()
 
-        def do_hello(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Hello')
+        def do_hello(self, _: cmd2.Statement):
+            self._cmd.poutput('Hello')
 
-        def do_world(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('World')
+        def do_world(self, _: cmd2.Statement):
+            self._cmd.poutput('World')
 
     class ExampleApp(cmd2.Cmd):
         """
@@ -94,11 +95,11 @@ CommandSets and pass in the constructor to Cmd2.
             self._arg1 = arg1
             self._arg2 = arg2
 
-        def do_show_arg1(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Arg1: ' + self._arg1)
+        def do_show_arg1(self, _: cmd2.Statement):
+            self._cmd.poutput('Arg1: ' + self._arg1)
 
-        def do_show_arg2(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Arg2: ' + self._arg2)
+        def do_show_arg2(self, _: cmd2.Statement):
+            self._cmd.poutput('Arg2: ' + self._arg2)
 
     class ExampleApp(cmd2.Cmd):
         """
@@ -139,11 +140,11 @@ You may need to disable command auto-loading if you need dynamically load comman
         def __init__(self):
             super().__init__()
 
-        def do_apple(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Apple')
+        def do_apple(self, _: cmd2.Statement):
+            self._cmd.poutput('Apple')
 
-        def do_banana(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Banana')
+        def do_banana(self, _: cmd2.Statement):
+            self._cmd.poutput('Banana')
 
 
     @with_default_category('Vegetables')
@@ -151,11 +152,11 @@ You may need to disable command auto-loading if you need dynamically load comman
         def __init__(self):
             super().__init__()
 
-        def do_arugula(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Arugula')
+        def do_arugula(self, _: cmd2.Statement):
+            self._cmd.poutput('Arugula')
 
-        def do_bokchoy(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Bok Choy')
+        def do_bokchoy(self, _: cmd2.Statement):
+            self._cmd.poutput('Bok Choy')
 
 
     class ExampleApp(cmd2.Cmd):
@@ -178,14 +179,14 @@ You may need to disable command auto-loading if you need dynamically load comman
         def do_load(self, ns: argparse.Namespace):
             if ns.cmds == 'fruits':
                 try:
-                    self.install_command_set(self._fruits)
+                    self.register_command_set(self._fruits)
                     self.poutput('Fruits loaded')
                 except ValueError:
                     self.poutput('Fruits already loaded')
 
             if ns.cmds == 'vegetables':
                 try:
-                    self.install_command_set(self._vegetables)
+                    self.register_command_set(self._vegetables)
                     self.poutput('Vegetables loaded')
                 except ValueError:
                     self.poutput('Vegetables already loaded')
@@ -193,11 +194,11 @@ You may need to disable command auto-loading if you need dynamically load comman
         @with_argparser(load_parser)
         def do_unload(self, ns: argparse.Namespace):
             if ns.cmds == 'fruits':
-                self.uninstall_command_set(self._fruits)
+                self.unregister_command_set(self._fruits)
                 self.poutput('Fruits unloaded')
 
             if ns.cmds == 'vegetables':
-                self.uninstall_command_set(self._vegetables)
+                self.unregister_command_set(self._vegetables)
                 self.poutput('Vegetables unloaded')
 
 
@@ -240,16 +241,16 @@ command and each CommandSet
         def __init__(self):
             super().__init__()
 
-        def do_apple(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Apple')
+        def do_apple(self, _: cmd2.Statement):
+            self._cmd.poutput('Apple')
 
         banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
         banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
         @cmd2.as_subcommand_to('cut', 'banana', banana_parser)
-        def cut_banana(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+        def cut_banana(self, ns: argparse.Namespace):
             """Cut banana"""
-            cmd.poutput('cutting banana: ' + ns.direction)
+            self._cmd.poutput('cutting banana: ' + ns.direction)
 
 
     @with_default_category('Vegetables')
@@ -257,15 +258,15 @@ command and each CommandSet
         def __init__(self):
             super().__init__()
 
-        def do_arugula(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Arugula')
+        def do_arugula(self, _: cmd2.Statement):
+            self._cmd.poutput('Arugula')
 
         bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False)
         bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
 
         @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
-        def cut_bokchoy(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-            cmd.poutput('Bok Choy')
+        def cut_bokchoy(self, _: cmd2.Statement):
+            self._cmd.poutput('Bok Choy')
 
 
     class ExampleApp(cmd2.Cmd):
@@ -288,14 +289,14 @@ command and each CommandSet
         def do_load(self, ns: argparse.Namespace):
             if ns.cmds == 'fruits':
                 try:
-                    self.install_command_set(self._fruits)
+                    self.register_command_set(self._fruits)
                     self.poutput('Fruits loaded')
                 except ValueError:
                     self.poutput('Fruits already loaded')
 
             if ns.cmds == 'vegetables':
                 try:
-                    self.install_command_set(self._vegetables)
+                    self.register_command_set(self._vegetables)
                     self.poutput('Vegetables loaded')
                 except ValueError:
                     self.poutput('Vegetables already loaded')
@@ -303,11 +304,11 @@ command and each CommandSet
         @with_argparser(load_parser)
         def do_unload(self, ns: argparse.Namespace):
             if ns.cmds == 'fruits':
-                self.uninstall_command_set(self._fruits)
+                self.unregister_command_set(self._fruits)
                 self.poutput('Fruits unloaded')
 
             if ns.cmds == 'vegetables':
-                self.uninstall_command_set(self._vegetables)
+                self.unregister_command_set(self._vegetables)
                 self.poutput('Vegetables unloaded')
 
         cut_parser = cmd2.Cmd2ArgumentParser('cut')

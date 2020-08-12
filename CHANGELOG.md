@@ -1,4 +1,9 @@
 ## 1.3.3 (TBD)
+* Breaking changes
+    * CommandSet command functions (do_, complete_, help_) will no longer have the cmd2 app
+      passed in as the first parameter after `self` since this is already a class member.
+    * Renamed `install_command_set()` and `uninstall_command_set()` to `register_command_set()` and 
+      `unregister_command_set()` for better name consistency.
 * Bug Fixes
     * Added explicit testing against python 3.5.2 for Ubuntu 16.04, and 3.5.3 for Debian 9
     * Added fallback definition of typing.Deque (taken from 3.5.4)

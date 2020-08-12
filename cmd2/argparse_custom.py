@@ -68,9 +68,9 @@ If bound to a cmd2.Cmd subclass, it will pass the app instance as the `self`
 argument. This is good in cases where the list of choices being generated
 relies on state data of the cmd2-based app.
 If bound to a cmd2.CommandSet subclass, it will pass the CommandSet instance
-as the `self` argument, and the app instance as the positional argument.
+as the `self` argument.
 
-    Example bound to cmd2.Cmd::
+    Example::
 
         def my_choices_method(self):
             ...
@@ -78,13 +78,6 @@ as the `self` argument, and the app instance as the positional argument.
 
         parser.add_argument("arg", choices_method=my_choices_method)
 
-    Example bound to cmd2.CommandSEt::
-
-        def my_choices_method(self, app: cmd2.Cmd):
-            ...
-            return my_generated_list
-
-        parser.add_argument("arg", choices_method=my_choices_method)
 
 ``completer_function`` - pass a tab completion function that does custom
 completion. Since custom tab completion operations commonly need to modify

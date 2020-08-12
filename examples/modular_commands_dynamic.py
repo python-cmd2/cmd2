@@ -19,11 +19,11 @@ class LoadableFruits(CommandSet):
     def __init__(self):
         super().__init__()
 
-    def do_apple(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('Apple')
+    def do_apple(self, _: cmd2.Statement):
+        self._cmd.poutput('Apple')
 
-    def do_banana(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('Banana')
+    def do_banana(self, _: cmd2.Statement):
+        self._cmd.poutput('Banana')
 
 
 @with_default_category('Vegetables')
@@ -31,11 +31,11 @@ class LoadableVegetables(CommandSet):
     def __init__(self):
         super().__init__()
 
-    def do_arugula(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('Arugula')
+    def do_arugula(self, _: cmd2.Statement):
+        self._cmd.poutput('Arugula')
 
-    def do_bokchoy(self, cmd: cmd2.Cmd, _: cmd2.Statement):
-        cmd.poutput('Bok Choy')
+    def do_bokchoy(self, _: cmd2.Statement):
+        self._cmd.poutput('Bok Choy')
 
 
 class ExampleApp(cmd2.Cmd):
@@ -58,14 +58,14 @@ class ExampleApp(cmd2.Cmd):
     def do_load(self, ns: argparse.Namespace):
         if ns.cmds == 'fruits':
             try:
-                self.install_command_set(self._fruits)
+                self.register_command_set(self._fruits)
                 self.poutput('Fruits loaded')
             except ValueError:
                 self.poutput('Fruits already loaded')
 
         if ns.cmds == 'vegetables':
             try:
-                self.install_command_set(self._vegetables)
+                self.register_command_set(self._vegetables)
                 self.poutput('Vegetables loaded')
             except ValueError:
                 self.poutput('Vegetables already loaded')
@@ -73,11 +73,11 @@ class ExampleApp(cmd2.Cmd):
     @with_argparser(load_parser)
     def do_unload(self, ns: argparse.Namespace):
         if ns.cmds == 'fruits':
-            self.uninstall_command_set(self._fruits)
+            self.unregister_command_set(self._fruits)
             self.poutput('Fruits unloaded')
 
         if ns.cmds == 'vegetables':
-            self.uninstall_command_set(self._vegetables)
+            self.unregister_command_set(self._vegetables)
             self.poutput('Vegetables unloaded')
 
 
