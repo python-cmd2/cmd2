@@ -59,7 +59,7 @@ from .exceptions import (
 from .history import History, HistoryItem
 from .parsing import Macro, MacroArg, Statement, StatementParser, shlex_split
 from .rl_utils import RlType, rl_get_point, rl_make_safe_prompt, rl_set_prompt, rl_type, rl_warning, vt100_support
-from .utils import CompletionError, Settable
+from .utils import CompletionError, get_defining_class, Settable
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
@@ -4656,3 +4656,51 @@ class Cmd(cmd.Cmd):
         """Register a hook to be called after a command is completed, whether it completes successfully or not."""
         self._validate_cmdfinalization_callable(func)
         self._cmdfinalization_hooks.append(func)
+
+    def _resolve_func_self(self,
+                           cmd_support_func: Callable,
+                           cmd_self: Union[CommandSet, 'Cmd']) -> object:
+        """
+        Attempt to resolve a candidate instance to pass as 'self' for an unbound class method that was
+        used when defining command's argparse object. Since we restrict registration to only a single CommandSet
+        instance of each type, using type is a reasonably safe way to resolve the correct object instance
+
+        :param cmd_support_func: command support function. This could be a completer or namespace provider
+        :param cmd_self: The `self` associated with the command or sub-command
+        :return:
+        """
+        # figure out what class the command support function was defined in
+        func_class = get_defining_class(cmd_support_func)
+
+        # Was there a defining class identified? If so, is it a sub-class of CommandSet?
+        if func_class is not None and issubclass(func_class, CommandSet):
+            # Since the support function is provided as an unbound function, we need to locate the instance
+            # of the CommandSet to pass in as `self` to emulate a bound method call.
+            # We're searching for candidates that match the support function's defining class type in this order:
+            #   1. Is the command's CommandSet a sub-class of the support function's class?
+            #   2. Do any of the registered CommandSets in the Cmd2 application exactly match the type?
+            #   3. Is there a registered CommandSet that is is the only matching subclass?
+
+            # check if the command's CommandSet is a sub-class of the support function's defining class
+            if isinstance(cmd_self, func_class):
+                # Case 1: Command's CommandSet is a sub-class of the support function's CommandSet
+                func_self = cmd_self
+            else:
+                # Search all registered CommandSets
+                func_self = None
+                candidate_sets = []  # type: List[CommandSet]
+                for installed_cmd_set in self._installed_command_sets:
+                    if type(installed_cmd_set) == func_class:
+                        # Case 2: CommandSet is an exact type match for the function's CommandSet
+                        func_self = installed_cmd_set
+                        break
+
+                    # Add candidate for Case 3:
+                    if isinstance(installed_cmd_set, func_class):
+                        candidate_sets.append(installed_cmd_set)
+                if func_self is None and len(candidate_sets) == 1:
+                    # Case 3: There exists exactly 1 CommandSet that is a sub-class match of the function's CommandSet
+                    func_self = candidate_sets[0]
+            return func_self
+        else:
+            return self

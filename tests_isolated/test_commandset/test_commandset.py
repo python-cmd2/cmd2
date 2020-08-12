@@ -261,9 +261,15 @@ class LoadableBase(cmd2.CommandSet):
     def __init__(self, dummy):
         super(LoadableBase, self).__init__()
         self._dummy = dummy  # prevents autoload
+        self._cut_called = False
 
     cut_parser = cmd2.Cmd2ArgumentParser('cut')
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
+
+    def namespace_provider(self) -> argparse.Namespace:
+        ns = argparse.Namespace()
+        ns.cut_called = self._cut_called
+        return ns
 
     @cmd2.with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace):
@@ -272,6 +278,7 @@ class LoadableBase(cmd2.CommandSet):
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
+            self._cut_called = True
         else:
             # No subcommand was provided, so call help
             self._cmd.pwarning('This command does nothing without sub-parsers registered')
@@ -281,9 +288,13 @@ class LoadableBase(cmd2.CommandSet):
     stir_parser = cmd2.Cmd2ArgumentParser('stir')
     stir_subparsers = stir_parser.add_subparsers(title='item', help='what to stir')
 
-    @cmd2.with_argparser(stir_parser)
+    @cmd2.with_argparser(stir_parser, ns_provider=namespace_provider)
     def do_stir(self, ns: argparse.Namespace):
         """Stir something"""
+        if not ns.cut_called:
+            self._cmd.poutput('Need to cut before stirring')
+            return
+
         handler = ns.get_handler()
         if handler is not None:
             # Call whatever subcommand function was selected
@@ -371,8 +382,8 @@ class LoadableVegetables(cmd2.CommandSet):
     bokchoy_parser.add_argument('style', completer_method=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
-    def cut_bokchoy(self, _: cmd2.Statement):
-        self._cmd.poutput('Bok Choy')
+    def cut_bokchoy(self, ns: argparse.Namespace):
+        self._cmd.poutput('Bok Choy: ' + ns.style)
 
 
 def test_subcommands(command_sets_manual):
@@ -498,8 +509,6 @@ def test_subcommands(command_sets_manual):
 
 def test_nested_subcommands(command_sets_manual):
     base_cmds = LoadableBase(1)
-    # fruit_cmds = LoadableFruits(1)
-    # veg_cmds = LoadableVegetables(1)
     pasta_cmds = LoadablePastaStir(1)
 
     with pytest.raises(CommandSetRegistrationError):
@@ -520,12 +529,27 @@ def test_nested_subcommands(command_sets_manual):
         stir_pasta_vigor_parser = cmd2.Cmd2ArgumentParser('vigor', add_help=False)
         stir_pasta_vigor_parser.add_argument('frequency')
 
+        # stir sauce doesn't exist anywhere, this should fail
         @cmd2.as_subcommand_to('stir sauce', 'vigorously', stir_pasta_vigor_parser)
         def stir_pasta_vigorously(self, ns: argparse.Namespace):
             self._cmd.poutput('stir the pasta vigorously')
 
     with pytest.raises(CommandSetRegistrationError):
         command_sets_manual.register_command_set(BadNestedSubcommands(1))
+
+    fruit_cmds = LoadableFruits(1)
+    command_sets_manual.register_command_set(fruit_cmds)
+
+    # validates custom namespace provider works correctly. Stir command will fail until
+    # the cut command is called
+    result = command_sets_manual.app_cmd('stir pasta vigorously everyminute')
+    assert 'Need to cut before stirring' in result.stdout
+
+    result = command_sets_manual.app_cmd('cut banana discs')
+    assert 'cutting banana: discs' in result.stdout
+
+    result = command_sets_manual.app_cmd('stir pasta vigorously everyminute')
+    assert 'stir the pasta vigorously' in result.stdout
 
 
 class AppWithSubCommands(cmd2.Cmd):

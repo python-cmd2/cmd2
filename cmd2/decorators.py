@@ -94,7 +94,7 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
     >>>     def do_echo(self, arglist):
     >>>         self.poutput(' '.join(arglist)
     """
-    import functools, cmd2
+    import functools
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
@@ -282,7 +282,11 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             if ns_provider is None:
                 namespace = None
             else:
-                namespace = ns_provider(cmd2_app)
+                # The namespace provider may or may not be defined in the same class as the command. Since provider
+                # functions are registered with the command argparser before anything is instantiated, we
+                # need to find an instance at runtime that matches the types during declaration
+                provider_self = cmd2_app._resolve_func_self(ns_provider, args[0])
+                namespace = ns_provider(provider_self if not None else cmd2_app)
 
             try:
                 if with_unknown_args:
