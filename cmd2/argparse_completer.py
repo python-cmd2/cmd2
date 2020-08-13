@@ -580,12 +580,12 @@ class ArgparseCompleter:
             # The completer may or may not be defined in the same class as the command. Since completer
             # functions are registered with the command argparser before anything is instantiated, we
             # need to find an instance at runtime that matches the types during declaration
-            cmd_set = self._cmd2_app._resolve_func_self(arg_choices.to_call, cmd_set)
-            if cmd_set is None:
+            self_arg = self._cmd2_app._resolve_func_self(arg_choices.to_call, cmd_set)
+            if self_arg is None:
                 # No cases matched, raise an error
                 raise CompletionError('Could not find CommandSet instance matching defining type for completer')
 
-            args.append(cmd_set)
+            args.append(self_arg)
 
             # Check if arg_choices.to_call expects arg_tokens
             to_call_params = inspect.signature(arg_choices.to_call).parameters

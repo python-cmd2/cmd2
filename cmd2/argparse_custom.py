@@ -52,18 +52,15 @@ argument's value. Only one can be used at a time.
 ``choices_provider`` - pass a function that returns choices. This is good in
 cases where the choice list is dynamically generated when the user hits tab.
 
-When ArgparseCompleter calls the provider, it will detect whether is is bound
-to a Cmd subclass or CommandSet. If bound to a cmd2.Cmd subclass, it will pass
-the app instance as the `self` argument. If bound to a cmd2.CommandSet
-subclass, it will pass the CommandSet instance as the `self` argument.
+    Example::
 
+        def my_choices_provider(self):
+            ...
+            return my_generated_list
+
+        parser.add_argument("arg", choices_provider=my_choices_provider)
 
 ``completer`` - pass a tab completion function that does custom completion.
-
-When ArgparseCompleter calls the completer, it will detect whether is is bound
-to a Cmd subclass or CommandSet. If bound to a cmd2.Cmd subclass, it will pass
-the app instance as the `self` argument. If bound to a cmd2.CommandSet
-subclass, it will pass the CommandSet instance as the `self` argument.
 
 cmd2 provides a few completer methods for convenience (e.g., path_complete,
 delimiter_complete)
@@ -82,6 +79,15 @@ delimiter_complete)
         dir_completer = functools.partial(path_complete,
                                           path_filter=lambda path: os.path.isdir(path))
         parser.add_argument('-o', '--options', completer=dir_completer)
+
+For `choices_provider` and `completer`, do not set them to a bound method. This
+is because ArgparseCompleter passes the `self` argument explicitly to these
+functions. When ArgparseCompleter calls one, it will detect whether it is bound
+to a `Cmd` subclass or `CommandSet`. If bound to a `cmd2.Cmd subclass`, it will
+pass the app instance as the `self` argument. If bound to a `cmd2.CommandSet`
+subclass, it will pass the `CommandSet` instance as the `self` argument.
+Therefore instead of passing something like `self.path_complete`, pass
+`cmd2.Cmd.path_complete`.
 
 Of the 3 tab completion parameters, choices is the only one where argparse
 validates user input against items in the choices list. This is because the
