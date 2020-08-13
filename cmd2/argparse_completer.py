@@ -24,8 +24,8 @@ from .argparse_custom import (
     generate_range_error,
 )
 from .command_definition import CommandSet
+from .exceptions import CompletionError
 from .table_creator import Column, SimpleTable
-from .utils import CompletionError, basic_complete
 
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
@@ -459,7 +459,7 @@ class ArgparseCompleter:
                 if action.help != argparse.SUPPRESS:
                     match_against.append(flag)
 
-        return basic_complete(text, line, begidx, endidx, match_against)
+        return self._cmd2_app.basic_complete(text, line, begidx, endidx, match_against)
 
     def _format_completions(self, arg_state: _ArgumentState, completions: List[Union[str, CompletionItem]]) -> List[str]:
         # Check if the results are CompletionItems and that there aren't too many to display
@@ -533,7 +533,7 @@ class ArgparseCompleter:
                     return completer.complete_subcommand_help(tokens[token_index:], text, line, begidx, endidx)
                 elif token_index == len(tokens) - 1:
                     # Since this is the last token, we will attempt to complete it
-                    return basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
+                    return self._cmd2_app.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
                 else:
                     break
         return []
@@ -577,16 +577,15 @@ class ArgparseCompleter:
         args = []
         kwargs = {}
         if isinstance(arg_choices, ChoicesCallable):
-            if arg_choices.is_method:
-                # The completer may or may not be defined in the same class as the command. Since completer
-                # functions are registered with the command argparser before anything is instantiated, we
-                # need to find an instance at runtime that matches the types during declaration
-                cmd_set = self._cmd2_app._resolve_func_self(arg_choices.to_call, cmd_set)
-                if cmd_set is None:
-                    # No cases matched, raise an error
-                    raise CompletionError('Could not find CommandSet instance matching defining type for completer')
+            # The completer may or may not be defined in the same class as the command. Since completer
+            # functions are registered with the command argparser before anything is instantiated, we
+            # need to find an instance at runtime that matches the types during declaration
+            self_arg = self._cmd2_app._resolve_func_self(arg_choices.to_call, cmd_set)
+            if self_arg is None:
+                # No cases matched, raise an error
+                raise CompletionError('Could not find CommandSet instance matching defining type for completer')
 
-                args.append(cmd_set)
+            args.append(self_arg)
 
             # Check if arg_choices.to_call expects arg_tokens
             to_call_params = inspect.signature(arg_choices.to_call).parameters
@@ -630,6 +629,6 @@ class ArgparseCompleter:
             arg_choices = [choice for choice in arg_choices if choice not in used_values]
 
             # Do tab completion on the choices
-            results = basic_complete(text, line, begidx, endidx, arg_choices)
+            results = self._cmd2_app.basic_complete(text, line, begidx, endidx, arg_choices)
 
         return self._format_completions(arg_state, results)
