@@ -260,3 +260,10 @@ def test_override_parser():
     # Verify DEFAULT_ARGUMENT_PARSER is now our CustomParser
     from examples.custom_parser import CustomParser
     assert DEFAULT_ARGUMENT_PARSER == CustomParser
+
+
+def test_apcustom_metavar_tuple():
+    # Test the case when a tuple metavar is used with nargs an integer > 1
+    parser = Cmd2ArgumentParser()
+    parser.add_argument('--aflag', nargs=2, metavar=('foo', 'bar'), help='This is a test')
+    assert '[--aflag foo bar]' in parser.format_help()
