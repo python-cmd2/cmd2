@@ -1,4 +1,4 @@
-## 1.3.3 (TBD)
+## 1.3.3 (August 13, 2020)
 * Breaking changes
     * CommandSet command functions (do_, complete_, help_) will no longer have the cmd2 app
       passed in as the first parameter after `self` since this is already a class member.
