@@ -26,7 +26,6 @@ from .argparse_custom import (
 from .command_definition import CommandSet
 from .exceptions import CompletionError
 from .table_creator import Column, SimpleTable
-from .utils import get_defining_class
 
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
@@ -406,7 +405,7 @@ class ArgparseCompleter:
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
+            completion_results = self._complete_for_arg(flag_arg_state, text, line,
                                                         begidx, endidx, consumed_arg_values,
                                                         cmd_set=cmd_set)
 
@@ -427,7 +426,7 @@ class ArgparseCompleter:
                 action = remaining_positionals.popleft()
                 pos_arg_state = _ArgumentState(action)
 
-            completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
+            completion_results = self._complete_for_arg(pos_arg_state, text, line,
                                                         begidx, endidx, consumed_arg_values,
                                                         cmd_set=cmd_set)
 
@@ -462,7 +461,7 @@ class ArgparseCompleter:
 
         return self._cmd2_app.basic_complete(text, line, begidx, endidx, match_against)
 
-    def _format_completions(self, action, completions: List[Union[str, CompletionItem]]) -> List[str]:
+    def _format_completions(self, arg_state: _ArgumentState, completions: List[Union[str, CompletionItem]]) -> List[str]:
         # Check if the results are CompletionItems and that there aren't too many to display
         if 1 < len(completions) <= self._cmd2_app.max_completion_items and \
                 isinstance(completions[0], CompletionItem):
@@ -473,9 +472,18 @@ class ArgparseCompleter:
                 self._cmd2_app.matches_sorted = True
 
             # If a metavar was defined, use that instead of the dest field
-            destination = action.metavar if action.metavar else action.dest
+            destination = arg_state.action.metavar if arg_state.action.metavar else arg_state.action.dest
 
-            desc_header = getattr(action, ATTR_DESCRIPTIVE_COMPLETION_HEADER, None)
+            # Handle case where metavar was a tuple
+            if isinstance(destination, tuple):
+                # Figure out what string in the tuple to use based on how many of the arguments have been completed.
+                # Use min() to avoid going passed the end of the tuple to support nargs being ZERO_OR_MORE and
+                # ONE_OR_MORE. In those cases, argparse limits metavar tuple to 2 elements but we may be completing
+                # the 3rd or more argument here.
+                tuple_index = min(len(destination) - 1, arg_state.count)
+                destination = destination[tuple_index]
+
+            desc_header = getattr(arg_state.action, ATTR_DESCRIPTIVE_COMPLETION_HEADER, None)
             if desc_header is None:
                 desc_header = DEFAULT_DESCRIPTIVE_HEADER
 
@@ -547,7 +555,7 @@ class ArgparseCompleter:
                     break
         return self._parser.format_help()
 
-    def _complete_for_arg(self, arg_action: argparse.Action,
+    def _complete_for_arg(self, arg_state: _ArgumentState,
                           text: str, line: str, begidx: int, endidx: int,
                           consumed_arg_values: Dict[str, List[str]], *,
                           cmd_set: Optional[CommandSet] = None) -> List[str]:
@@ -557,10 +565,10 @@ class ArgparseCompleter:
         :raises: CompletionError if the completer or choices function this calls raises one
         """
         # Check if the arg provides choices to the user
-        if arg_action.choices is not None:
-            arg_choices = arg_action.choices
+        if arg_state.action.choices is not None:
+            arg_choices = arg_state.action.choices
         else:
-            arg_choices = getattr(arg_action, ATTR_CHOICES_CALLABLE, None)
+            arg_choices = getattr(arg_state.action, ATTR_CHOICES_CALLABLE, None)
 
         if arg_choices is None:
             return []
@@ -569,44 +577,15 @@ class ArgparseCompleter:
         args = []
         kwargs = {}
         if isinstance(arg_choices, ChoicesCallable):
-            # figure out what class the completer was defined in
-            completer_class = get_defining_class(arg_choices.to_call)
+            # The completer may or may not be defined in the same class as the command. Since completer
+            # functions are registered with the command argparser before anything is instantiated, we
+            # need to find an instance at runtime that matches the types during declaration
+            cmd_set = self._cmd2_app._resolve_func_self(arg_choices.to_call, cmd_set)
+            if cmd_set is None:
+                # No cases matched, raise an error
+                raise CompletionError('Could not find CommandSet instance matching defining type for completer')
 
-            # Was there a defining class identified? If so, is it a sub-class of CommandSet?
-            if completer_class is not None and issubclass(completer_class, CommandSet):
-                # Since the completer function is provided as an unbound function, we need to locate the instance
-                # of the CommandSet to pass in as `self` to emulate a bound method call.
-                # We're searching for candidates that match the completer function's parent type in this order:
-                #   1. Does the CommandSet registered with the command's argparser match as a subclass?
-                #   2. Do any of the registered CommandSets in the Cmd2 application exactly match the type?
-                #   3. Is there a registered CommandSet that is is the only matching subclass?
-
-                # Now get the CommandSet associated with the current command/subcommand argparser
-                parser_cmd_set = getattr(self._parser, constants.PARSER_ATTR_COMMANDSET, cmd_set)
-                if isinstance(parser_cmd_set, completer_class):
-                    # Case 1: Parser's CommandSet is a sub-class of the completer function's CommandSet
-                    cmd_set = parser_cmd_set
-                else:
-                    # Search all registered CommandSets
-                    cmd_set = None
-                    candidate_sets = []  # type: List[CommandSet]
-                    for installed_cmd_set in self._cmd2_app._installed_command_sets:
-                        if type(installed_cmd_set) == completer_class:
-                            # Case 2: CommandSet is an exact type match for the completer's CommandSet
-                            cmd_set = installed_cmd_set
-                            break
-
-                        # Add candidate for Case 3:
-                        if isinstance(installed_cmd_set, completer_class):
-                            candidate_sets.append(installed_cmd_set)
-                    if cmd_set is None and len(candidate_sets) == 1:
-                        # Case 3: There exists exactly 1 CommandSet that is a subclass of the completer's CommandSet
-                        cmd_set = candidate_sets[0]
-                if cmd_set is None:
-                    # No cases matched, raise an error
-                    raise CompletionError('Could not find CommandSet instance matching defining type for completer')
-                args.append(cmd_set)
-            args.append(self._cmd2_app)
+            args.append(cmd_set)
 
             # Check if arg_choices.to_call expects arg_tokens
             to_call_params = inspect.signature(arg_choices.to_call).parameters
@@ -615,8 +594,8 @@ class ArgparseCompleter:
                 arg_tokens = {**self._parent_tokens, **consumed_arg_values}
 
                 # Include the token being completed
-                arg_tokens.setdefault(arg_action.dest, [])
-                arg_tokens[arg_action.dest].append(text)
+                arg_tokens.setdefault(arg_state.action.dest, [])
+                arg_tokens[arg_state.action.dest].append(text)
 
                 # Add the namespace to the keyword arguments for the function we are calling
                 kwargs[ARG_TOKENS] = arg_tokens
@@ -646,10 +625,10 @@ class ArgparseCompleter:
                     arg_choices[index] = str(choice)
 
             # Filter out arguments we already used
-            used_values = consumed_arg_values.get(arg_action.dest, [])
+            used_values = consumed_arg_values.get(arg_state.action.dest, [])
             arg_choices = [choice for choice in arg_choices if choice not in used_values]
 
             # Do tab completion on the choices
             results = self._cmd2_app.basic_complete(text, line, begidx, endidx, arg_choices)
 
-        return self._format_completions(arg_action, results)
+        return self._format_completions(arg_state, results)

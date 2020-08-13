@@ -14,7 +14,7 @@ def docs(session):
                 '-d', '{}/doctrees'.format(tmpdir), '.', '{}/html'.format(tmpdir))
 
 
-@nox.session(python=['3.5', '3.6', '3.7', '3.8', '3.9'])
+@nox.session(python=['3.5.2', '3.5.3', '3.5', '3.6', '3.7', '3.8', '3.9'])
 @nox.parametrize('plugin', [None,
                             'ext_test',
                             'template',
@@ -29,10 +29,9 @@ def tests(session, plugin):
         session.install('invoke', 'codecov', 'coverage')
         session.run('codecov')
     else:
-        session.install('invoke', '.')
+        session.install('invoke', './', 'plugins/{}[test]'.format(plugin))
 
         # cd into test directory to run other unit test
-        session.install('plugins/{}[test]'.format(plugin))
         session.run('invoke',
                     'plugin.{}.pytest'.format(plugin.replace('_', '-')),
                     '--junit',

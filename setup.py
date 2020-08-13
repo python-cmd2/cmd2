@@ -51,13 +51,19 @@ EXTRAS_REQUIRE = {
         "mock ; python_version<'3.6'",  # for python 3.5 we need the third party mock module
         'codecov',
         'coverage',
-        'pytest',
+        'pytest>=4.6',
         'pytest-cov',
         'pytest-mock',
     ],
     # development only dependencies:  install with 'pip install -e .[dev]'
     'dev': ["mock ; python_version<'3.6'",  # for python 3.5 we need the third party mock module
-            'pytest', 'codecov', 'pytest-cov', 'pytest-mock', 'nox', 'flake8',
+            "pytest>=4.6",
+            'codecov',
+            'pytest-cov',
+            'pytest-mock',
+            "nox==2019.11.9 ; python_version=='3.5.2'",
+            "nox ; python_version>'3.5.2'",
+            'flake8',
             'sphinx', 'sphinx-rtd-theme', 'sphinx-autobuild', 'doc8',
             'invoke', 'twine>=1.11',
             ]

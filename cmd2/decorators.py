@@ -41,7 +41,7 @@ def with_category(category: str) -> Callable:
 ##########################
 
 
-def _parse_positionals(args: Tuple) -> Tuple['cmd2.Cmd', Union[Statement, str]]:
+def _parse_positionals(args: Tuple) -> Tuple[Union['cmd2.Cmd', 'cmd2.CommandSet'], Union[Statement, str]]:
     """
     Helper function for cmd2 decorators to inspect the positional arguments until the cmd2.Cmd argument is found
     Assumes that we will find cmd2.Cmd followed by the command statement object or string.
@@ -49,8 +49,10 @@ def _parse_positionals(args: Tuple) -> Tuple['cmd2.Cmd', Union[Statement, str]]:
     :return: The cmd2.Cmd reference and the command line statement
     """
     for pos, arg in enumerate(args):
-        from cmd2 import Cmd
-        if isinstance(arg, Cmd) and len(args) > pos:
+        from cmd2 import Cmd, CommandSet
+        if (isinstance(arg, Cmd) or isinstance(arg, CommandSet)) and len(args) > pos:
+            if isinstance(arg, CommandSet):
+                arg = arg._cmd
             next_arg = args[pos + 1]
             if isinstance(next_arg, (Statement, str)):
                 return arg, args[pos + 1]
@@ -280,7 +282,11 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             if ns_provider is None:
                 namespace = None
             else:
-                namespace = ns_provider(cmd2_app)
+                # The namespace provider may or may not be defined in the same class as the command. Since provider
+                # functions are registered with the command argparser before anything is instantiated, we
+                # need to find an instance at runtime that matches the types during declaration
+                provider_self = cmd2_app._resolve_func_self(ns_provider, args[0])
+                namespace = ns_provider(provider_self if not None else cmd2_app)
 
             try:
                 if with_unknown_args:
@@ -293,8 +299,8 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             else:
                 setattr(ns, '__statement__', statement)
 
-                def get_handler(self: argparse.Namespace) -> Optional[Callable]:
-                    return getattr(self, constants.SUBCMD_HANDLER, None)
+                def get_handler(ns_self: argparse.Namespace) -> Optional[Callable]:
+                    return getattr(ns_self, constants.SUBCMD_HANDLER, None)
 
                 setattr(ns, 'get_handler', types.MethodType(get_handler, ns))
 

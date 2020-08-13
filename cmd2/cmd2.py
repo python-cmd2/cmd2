@@ -45,7 +45,7 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
 from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .command_definition import CommandSet, _partial_passthru
+from .command_definition import CommandSet
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser, as_subcommand_to
 from .exceptions import (
@@ -60,7 +60,7 @@ from .exceptions import (
 from .history import History, HistoryItem
 from .parsing import Macro, MacroArg, Statement, StatementParser, shlex_split
 from .rl_utils import RlType, rl_get_point, rl_make_safe_prompt, rl_set_prompt, rl_type, rl_warning, vt100_support
-from .utils import Settable
+from .utils import get_defining_class, Settable
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
@@ -180,6 +180,14 @@ class Cmd(cmd.Cmd):
         :param shortcuts: dictionary containing shortcuts for commands. If not supplied,
                           then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
                           any shortcuts, pass an empty dictionary.
+        :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
+                             This allows CommandSets with custom constructor parameters to be
+                             loaded.  This also allows the a set of CommandSets to be provided
+                             when `auto_load_commands` is set to False
+        :param auto_load_commands: If True, cmd2 will check for all subclasses of `CommandSet`
+                                   that are currently loaded by Python and automatically
+                                   instantiate and register all commands. If False, CommandSets
+                                   must be manually installed with `register_command_set`.
         """
         # If use_ipython is False, make sure the ipy command isn't available in this instance
         if not use_ipython:
@@ -257,7 +265,7 @@ class Cmd(cmd.Cmd):
         self._cmd_to_command_sets = {}  # type: Dict[str, CommandSet]
         if command_sets:
             for command_set in command_sets:
-                self.install_command_set(command_set)
+                self.register_command_set(command_set)
 
         if auto_load_commands:
             self._autoload_commands()
@@ -445,11 +453,11 @@ class Cmd(cmd.Cmd):
                             or len(init_sig.parameters) != 1
                             or 'self' not in init_sig.parameters):
                         cmdset = cmdset_type()
-                        self.install_command_set(cmdset)
+                        self.register_command_set(cmdset)
 
         load_commandset_by_type(all_commandset_defs)
 
-    def install_command_set(self, cmdset: CommandSet) -> None:
+    def register_command_set(self, cmdset: CommandSet) -> None:
         """
         Installs a CommandSet, loading all commands defined in the CommandSet
 
@@ -469,23 +477,20 @@ class Cmd(cmd.Cmd):
         try:
             for method_name, method in methods:
                 command = method_name[len(COMMAND_FUNC_PREFIX):]
-                command_wrapper = _partial_passthru(method, self)
 
-                self._install_command_function(command, command_wrapper, type(cmdset).__name__)
+                self._install_command_function(command, method, type(cmdset).__name__)
                 installed_attributes.append(method_name)
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
                 if cmd_completer is not None:
-                    completer_wrapper = _partial_passthru(cmd_completer, self)
-                    self._install_completer_function(command, completer_wrapper)
+                    self._install_completer_function(command, cmd_completer)
                     installed_attributes.append(completer_func_name)
 
                 help_func_name = HELP_FUNC_PREFIX + command
                 cmd_help = getattr(cmdset, help_func_name, None)
                 if cmd_help is not None:
-                    help_wrapper = _partial_passthru(cmd_help, self)
-                    self._install_help_function(command, help_wrapper)
+                    self._install_help_function(command, cmd_help)
                     installed_attributes.append(help_func_name)
 
                 self._cmd_to_command_sets[command] = cmdset
@@ -501,7 +506,7 @@ class Cmd(cmd.Cmd):
             if cmdset in self._cmd_to_command_sets.values():
                 self._cmd_to_command_sets = \
                     {key: val for key, val in self._cmd_to_command_sets.items() if val is not cmdset}
-            cmdset.on_unregister(self)
+            cmdset.on_unregister()
             raise
 
     def _install_command_function(self, command: str, command_wrapper: Callable, context=''):
@@ -542,7 +547,7 @@ class Cmd(cmd.Cmd):
             raise CommandSetRegistrationError('Attribute already exists: {}'.format(help_func_name))
         setattr(self, help_func_name, cmd_help)
 
-    def uninstall_command_set(self, cmdset: CommandSet):
+    def unregister_command_set(self, cmdset: CommandSet):
         """
         Uninstalls a CommandSet and unloads all associated commands
         :param cmdset: CommandSet to uninstall
@@ -574,7 +579,7 @@ class Cmd(cmd.Cmd):
                 if hasattr(self, HELP_FUNC_PREFIX + cmd_name):
                     delattr(self, HELP_FUNC_PREFIX + cmd_name)
 
-            cmdset.on_unregister(self)
+            cmdset.on_unregister()
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet):
@@ -649,11 +654,7 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError('Could not find argparser for command "{}" needed by subcommand: {}'
                                                   .format(command_name, str(method)))
 
-            if isinstance(cmdset, CommandSet):
-                command_handler = _partial_passthru(method, self)
-            else:
-                command_handler = method
-            subcmd_parser.set_defaults(cmd2_handler=command_handler)
+            subcmd_parser.set_defaults(cmd2_handler=method)
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
                 if not subcmd_names:
@@ -4669,3 +4670,51 @@ class Cmd(cmd.Cmd):
         """Register a hook to be called after a command is completed, whether it completes successfully or not."""
         self._validate_cmdfinalization_callable(func)
         self._cmdfinalization_hooks.append(func)
+
+    def _resolve_func_self(self,
+                           cmd_support_func: Callable,
+                           cmd_self: Union[CommandSet, 'Cmd']) -> object:
+        """
+        Attempt to resolve a candidate instance to pass as 'self' for an unbound class method that was
+        used when defining command's argparse object. Since we restrict registration to only a single CommandSet
+        instance of each type, using type is a reasonably safe way to resolve the correct object instance
+
+        :param cmd_support_func: command support function. This could be a completer or namespace provider
+        :param cmd_self: The `self` associated with the command or sub-command
+        :return:
+        """
+        # figure out what class the command support function was defined in
+        func_class = get_defining_class(cmd_support_func)
+
+        # Was there a defining class identified? If so, is it a sub-class of CommandSet?
+        if func_class is not None and issubclass(func_class, CommandSet):
+            # Since the support function is provided as an unbound function, we need to locate the instance
+            # of the CommandSet to pass in as `self` to emulate a bound method call.
+            # We're searching for candidates that match the support function's defining class type in this order:
+            #   1. Is the command's CommandSet a sub-class of the support function's class?
+            #   2. Do any of the registered CommandSets in the Cmd2 application exactly match the type?
+            #   3. Is there a registered CommandSet that is is the only matching subclass?
+
+            # check if the command's CommandSet is a sub-class of the support function's defining class
+            if isinstance(cmd_self, func_class):
+                # Case 1: Command's CommandSet is a sub-class of the support function's CommandSet
+                func_self = cmd_self
+            else:
+                # Search all registered CommandSets
+                func_self = None
+                candidate_sets = []  # type: List[CommandSet]
+                for installed_cmd_set in self._installed_command_sets:
+                    if type(installed_cmd_set) == func_class:
+                        # Case 2: CommandSet is an exact type match for the function's CommandSet
+                        func_self = installed_cmd_set
+                        break
+
+                    # Add candidate for Case 3:
+                    if isinstance(installed_cmd_set, func_class):
+                        candidate_sets.append(installed_cmd_set)
+                if func_self is None and len(candidate_sets) == 1:
+                    # Case 3: There exists exactly 1 CommandSet that is a sub-class match of the function's CommandSet
+                    func_self = candidate_sets[0]
+            return func_self
+        else:
+            return self

@@ -29,7 +29,7 @@ class BasicCompletionCommandSet(CommandSet):
         -s, --sport [completes sports]
         -p, --path [completes local file system paths]
         """
-        cmd.poutput("Args: {}".format(statement.args))
+        self._cmd.poutput("Args: {}".format(statement.args))
 
     def complete_flag_based(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completion function for do_flag_based"""
@@ -52,7 +52,7 @@ class BasicCompletionCommandSet(CommandSet):
 
     def do_index_based(self, cmd: Cmd, statement: Statement):
         """Tab completes first 3 arguments using index_based_complete"""
-        cmd.poutput("Args: {}".format(statement.args))
+        self._cmd.poutput("Args: {}".format(statement.args))
 
     def complete_index_based(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completion function for do_index_based"""
@@ -67,14 +67,14 @@ class BasicCompletionCommandSet(CommandSet):
 
     def do_delimiter_complete(self, cmd: Cmd, statement: Statement):
         """Tab completes files from a list using delimiter_complete"""
-        cmd.poutput("Args: {}".format(statement.args))
+        self._cmd.poutput("Args: {}".format(statement.args))
 
     def complete_delimiter_complete(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return cmd.delimiter_complete(text, line, begidx, endidx, match_against=self.file_strs, delimiter='/')
 
     def do_raise_error(self, cmd: Cmd, statement: Statement):
         """Demonstrates effect of raising CompletionError"""
-        cmd.poutput("Args: {}".format(statement.args))
+        self._cmd.poutput("Args: {}".format(statement.args))
 
     def complete_raise_error(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
@@ -88,4 +88,4 @@ class BasicCompletionCommandSet(CommandSet):
 
     @with_category('Not Basic Completion')
     def do_custom_category(self, cmd: Cmd, statement: Statement):
-        cmd.poutput('Demonstrates a command that bypasses the default category')
+        self._cmd.poutput('Demonstrates a command that bypasses the default category')

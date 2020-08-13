@@ -67,6 +67,10 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to testing choices and choices_provider parameters
     ############################################################################################################
+    STR_METAVAR = "HEADLESS"
+    TUPLE_METAVAR = ('arg1', 'others')
+    CUSTOM_DESC_HEADER = "Custom Header"
+
     static_int_choices_list = [-1, 1, -2, 2, 0, -12]
     static_choices_list = ['static', 'choices', 'stop', 'here']
     choices_from_provider = ['choices', 'provider', 'probably', 'improved']
@@ -90,8 +94,14 @@ class AutoCompleteTester(cmd2.Cmd):
                                 choices=static_choices_list)
     choices_parser.add_argument("-p", "--provider", help="a flag populated with a choices provider",
                                 choices_provider=choices_provider)
-    choices_parser.add_argument('-n', "--no_header", help='this arg has a no descriptive header',
-                                choices_provider=completion_item_method)
+    choices_parser.add_argument('-d', "--desc_header", help='this arg has a descriptive header',
+                                choices_provider=completion_item_method,
+                                descriptive_header=CUSTOM_DESC_HEADER)
+    choices_parser.add_argument('-n', "--no_header", help='this arg has no descriptive header',
+                                choices_provider=completion_item_method, metavar=STR_METAVAR)
+    choices_parser.add_argument('-t', "--tuple_metavar", help='this arg has tuple for a metavar',
+                                choices_provider=completion_item_method, metavar=TUPLE_METAVAR,
+                                nargs=argparse.ONE_OR_MORE)
     choices_parser.add_argument('-i', '--int', type=int, help='a flag with an int type',
                                 choices=static_int_choices_list)
 
@@ -661,15 +671,73 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys)
     assert is_error == all(x in out for x in ["Error: argument", "expected"])
 
 
-def test_completion_items_default_header(ac_app):
-    from cmd2.argparse_completer import DEFAULT_DESCRIPTIVE_HEADER
-
+def test_completion_items_arg_header(ac_app):
+    # Test when metavar is None
     text = ''
-    line = 'choices -n {}'.format(text)
+    line = 'choices --desc_header {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # This positional argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADER
+    complete_tester(text, line, begidx, endidx, ac_app)
+    assert "DESC_HEADER" in ac_app.completion_header
+
+    # Test when metavar is a string
+    text = ''
+    line = 'choices --no_header {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    complete_tester(text, line, begidx, endidx, ac_app)
+    assert ac_app.STR_METAVAR in ac_app.completion_header
+
+    # Test when metavar is a tuple
+    text = ''
+    line = 'choices --tuple_metavar {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # We are completing the first argument of this flag. The first element in the tuple should be the column header.
+    complete_tester(text, line, begidx, endidx, ac_app)
+    assert ac_app.TUPLE_METAVAR[0].upper() in ac_app.completion_header
+
+    text = ''
+    line = 'choices --tuple_metavar token_1 {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # We are completing the second argument of this flag. The second element in the tuple should be the column header.
+    complete_tester(text, line, begidx, endidx, ac_app)
+    assert ac_app.TUPLE_METAVAR[1].upper() in ac_app.completion_header
+
+    text = ''
+    line = 'choices --tuple_metavar token_1 token_2 {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # We are completing the third argument of this flag. It should still be the second tuple element
+    # in the column header since the tuple only has two strings in it.
+    complete_tester(text, line, begidx, endidx, ac_app)
+    assert ac_app.TUPLE_METAVAR[1].upper() in ac_app.completion_header
+
+
+def test_completion_items_descriptive_header(ac_app):
+    from cmd2.argparse_completer import DEFAULT_DESCRIPTIVE_HEADER
+
+    # This argument provided a descriptive header
+    text = ''
+    line = 'choices --desc_header {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    complete_tester(text, line, begidx, endidx, ac_app)
+    assert ac_app.CUSTOM_DESC_HEADER in ac_app.completion_header
+
+    # This argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADER
+    text = ''
+    line = 'choices --no_header {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
     complete_tester(text, line, begidx, endidx, ac_app)
     assert DEFAULT_DESCRIPTIVE_HEADER in ac_app.completion_header
 

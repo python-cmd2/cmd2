@@ -52,35 +52,18 @@ argument's value. Only one can be used at a time.
 ``choices_provider`` - pass a function that returns choices. This is good in
 cases where the choice list is dynamically generated when the user hits tab.
 
-When ArgparseCompleter calls the provider, it well detect whether is is bound
+When ArgparseCompleter calls the provider, it will detect whether is is bound
 to a Cmd subclass or CommandSet. If bound to a cmd2.Cmd subclass, it will pass
 the app instance as the `self` argument. If bound to a cmd2.CommandSet
-subclass, it will pass the CommandSet instance as the `self` argument, and the
-app instance as the positional argument.
+subclass, it will pass the CommandSet instance as the `self` argument.
 
-    Example bound to cmd2.Cmd::
-
-        def my_choices_provider(self):
-            ...
-            return my_generated_list
-
-        parser.add_argument("arg", choices_provider=my_choices_provider)
-
-    Example bound to cmd2.CommandSet::
-
-        def my_choices_provider(self, app: cmd2.Cmd):
-            ...
-            return my_generated_list
-
-        parser.add_argument("arg", choices_provider=my_choices_provider)
 
 ``completer`` - pass a tab completion function that does custom completion.
 
-When ArgparseCompleter calls the completer, it well detect whether is is bound
+When ArgparseCompleter calls the completer, it will detect whether is is bound
 to a Cmd subclass or CommandSet. If bound to a cmd2.Cmd subclass, it will pass
 the app instance as the `self` argument. If bound to a cmd2.CommandSet
-subclass, it will pass the CommandSet instance as the `self` argument, and the
-app instance as the positional argument.
+subclass, it will pass the CommandSet instance as the `self` argument.
 
 cmd2 provides a few completer methods for convenience (e.g., path_complete,
 delimiter_complete)
@@ -692,7 +675,8 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 return ', '.join(action.option_strings) + ' ' + args_string
             # End cmd2 customization
 
-    def _metavar_formatter(self, action, default_metavar) -> Callable:
+    def _determine_metavar(self, action, default_metavar) -> Union[str, Tuple]:
+        """Custom method to determine what to use as the metavar value of an action"""
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
@@ -702,38 +686,46 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             # End cmd2 customization
         else:
             result = default_metavar
+        return result
+
+    def _metavar_formatter(self, action, default_metavar) -> Callable:
+        metavar = self._determine_metavar(action, default_metavar)
 
         # noinspection PyMissingOrEmptyDocstring
         def format(tuple_size):
-            if isinstance(result, tuple):
-                return result
+            if isinstance(metavar, tuple):
+                return metavar
             else:
-                return (result, ) * tuple_size
+                return (metavar, ) * tuple_size
         return format
 
     # noinspection PyProtectedMember
     def _format_args(self, action, default_metavar) -> str:
-        get_metavar = self._metavar_formatter(action, default_metavar)
-        # Begin cmd2 customization (less verbose)
-        nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+        """Customized to handle ranged nargs and make other output less verbose"""
+        metavar = self._determine_metavar(action, default_metavar)
+        metavar_formatter = self._metavar_formatter(action, default_metavar)
 
+        # Handle nargs specified as a range
+        nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
         if nargs_range is not None:
             if nargs_range[1] == constants.INFINITY:
                 range_str = '{}+'.format(nargs_range[0])
             else:
                 range_str = '{}..{}'.format(nargs_range[0], nargs_range[1])
 
-            result = '{}{{{}}}'.format('%s' % get_metavar(1), range_str)
-        elif action.nargs == ZERO_OR_MORE:
-            result = '[%s [...]]' % get_metavar(1)
-        elif action.nargs == ONE_OR_MORE:
-            result = '%s [...]' % get_metavar(1)
-        elif isinstance(action.nargs, int) and action.nargs > 1:
-            result = '{}{{{}}}'.format('%s' % get_metavar(1), action.nargs)
-        # End cmd2 customization
-        else:
-            result = super()._format_args(action, default_metavar)
-        return result
+            return '{}{{{}}}'.format('%s' % metavar_formatter(1), range_str)
+
+        # Make this output less verbose. Do not customize the output when metavar is a
+        # tuple of strings. Allow argparse's formatter to handle that instead.
+        elif isinstance(metavar, str):
+            if action.nargs == ZERO_OR_MORE:
+                return '[%s [...]]' % metavar_formatter(1)
+            elif action.nargs == ONE_OR_MORE:
+                return '%s [...]' % metavar_formatter(1)
+            elif isinstance(action.nargs, int) and action.nargs > 1:
+                return '{}{{{}}}'.format('%s' % metavar_formatter(1), action.nargs)
+
+        return super()._format_args(action, default_metavar)
 
 
 # noinspection PyCompatibility

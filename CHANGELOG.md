@@ -1,3 +1,21 @@
+## 1.3.3 (August 13, 2020)
+* Breaking changes
+    * CommandSet command functions (do_, complete_, help_) will no longer have the cmd2 app
+      passed in as the first parameter after `self` since this is already a class member.
+    * Renamed `install_command_set()` and `uninstall_command_set()` to `register_command_set()` and 
+      `unregister_command_set()` for better name consistency.
+* Bug Fixes
+    * Fixed help formatting bug in `Cmd2ArgumentParser` when `metavar` is a tuple
+    * Fixed tab completion bug when using `CompletionItem` on an argument whose `metavar` is a tuple
+    * Added explicit testing against python 3.5.2 for Ubuntu 16.04, and 3.5.3 for Debian 9
+    * Added fallback definition of typing.Deque (taken from 3.5.4)
+    * Removed explicit type hints that fail due to a bug in 3.5.2 favoring comment-based hints instead
+    * When passing a ns_provider to an argparse command, will now attempt to resolve the correct
+      CommandSet instance for self. If not, it'll fall back and pass in the cmd2 app
+* Other 
+    * Added missing doc-string for new cmd2.Cmd __init__ parameters 
+      introduced by CommandSet enhancement
+
 ## 1.3.2 (August 10, 2020)
 * Bug Fixes
     * Fixed `prog` value of subcommands added with `as_subcommand_to()` decorator.
