@@ -25,7 +25,7 @@ from .argparse_custom import (
 )
 from .command_definition import CommandSet
 from .table_creator import Column, SimpleTable
-from .utils import CompletionError, basic_complete, get_defining_class
+from .utils import CompletionError, basic_complete
 
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
@@ -405,7 +405,7 @@ class ArgparseCompleter:
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
+            completion_results = self._complete_for_arg(flag_arg_state, text, line,
                                                         begidx, endidx, consumed_arg_values,
                                                         cmd_set=cmd_set)
 
@@ -426,7 +426,7 @@ class ArgparseCompleter:
                 action = remaining_positionals.popleft()
                 pos_arg_state = _ArgumentState(action)
 
-            completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
+            completion_results = self._complete_for_arg(pos_arg_state, text, line,
                                                         begidx, endidx, consumed_arg_values,
                                                         cmd_set=cmd_set)
 
@@ -461,7 +461,7 @@ class ArgparseCompleter:
 
         return basic_complete(text, line, begidx, endidx, match_against)
 
-    def _format_completions(self, action, completions: List[Union[str, CompletionItem]]) -> List[str]:
+    def _format_completions(self, arg_state: _ArgumentState, completions: List[Union[str, CompletionItem]]) -> List[str]:
         # Check if the results are CompletionItems and that there aren't too many to display
         if 1 < len(completions) <= self._cmd2_app.max_completion_items and \
                 isinstance(completions[0], CompletionItem):
@@ -472,9 +472,18 @@ class ArgparseCompleter:
                 self._cmd2_app.matches_sorted = True
 
             # If a metavar was defined, use that instead of the dest field
-            destination = action.metavar if action.metavar else action.dest
+            destination = arg_state.action.metavar if arg_state.action.metavar else arg_state.action.dest
 
-            desc_header = getattr(action, ATTR_DESCRIPTIVE_COMPLETION_HEADER, None)
+            # Handle case where metavar was a tuple
+            if isinstance(destination, tuple):
+                # Figure out what string in the tuple to use based on how many of the arguments have been completed.
+                # Use min() to avoid going passed the end of the tuple to support nargs being ZERO_OR_MORE and
+                # ONE_OR_MORE. In those cases, argparse limits metavar tuple to 2 elements but we may be completing
+                # the 3rd or more argument here.
+                tuple_index = min(len(destination) - 1, arg_state.count)
+                destination = destination[tuple_index]
+
+            desc_header = getattr(arg_state.action, ATTR_DESCRIPTIVE_COMPLETION_HEADER, None)
             if desc_header is None:
                 desc_header = DEFAULT_DESCRIPTIVE_HEADER
 
@@ -546,7 +555,7 @@ class ArgparseCompleter:
                     break
         return self._parser.format_help()
 
-    def _complete_for_arg(self, arg_action: argparse.Action,
+    def _complete_for_arg(self, arg_state: _ArgumentState,
                           text: str, line: str, begidx: int, endidx: int,
                           consumed_arg_values: Dict[str, List[str]], *,
                           cmd_set: Optional[CommandSet] = None) -> List[str]:
@@ -556,10 +565,10 @@ class ArgparseCompleter:
         :raises: CompletionError if the completer or choices function this calls raises one
         """
         # Check if the arg provides choices to the user
-        if arg_action.choices is not None:
-            arg_choices = arg_action.choices
+        if arg_state.action.choices is not None:
+            arg_choices = arg_state.action.choices
         else:
-            arg_choices = getattr(arg_action, ATTR_CHOICES_CALLABLE, None)
+            arg_choices = getattr(arg_state.action, ATTR_CHOICES_CALLABLE, None)
 
         if arg_choices is None:
             return []
@@ -586,8 +595,8 @@ class ArgparseCompleter:
                 arg_tokens = {**self._parent_tokens, **consumed_arg_values}
 
                 # Include the token being completed
-                arg_tokens.setdefault(arg_action.dest, [])
-                arg_tokens[arg_action.dest].append(text)
+                arg_tokens.setdefault(arg_state.action.dest, [])
+                arg_tokens[arg_state.action.dest].append(text)
 
                 # Add the namespace to the keyword arguments for the function we are calling
                 kwargs[ARG_TOKENS] = arg_tokens
@@ -617,10 +626,10 @@ class ArgparseCompleter:
                     arg_choices[index] = str(choice)
 
             # Filter out arguments we already used
-            used_values = consumed_arg_values.get(arg_action.dest, [])
+            used_values = consumed_arg_values.get(arg_state.action.dest, [])
             arg_choices = [choice for choice in arg_choices if choice not in used_values]
 
             # Do tab completion on the choices
             results = basic_complete(text, line, begidx, endidx, arg_choices)
 
-        return self._format_completions(arg_action, results)
+        return self._format_completions(arg_state, results)
