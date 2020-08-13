@@ -5,6 +5,7 @@
     * Renamed `install_command_set()` and `uninstall_command_set()` to `register_command_set()` and 
       `unregister_command_set()` for better name consistency.
 * Bug Fixes
+    * Fixed help formatting bug in `Cmd2ArgumentParser` when `nargs` > 1 and `metavar` is a tuple
     * Added explicit testing against python 3.5.2 for Ubuntu 16.04, and 3.5.3 for Debian 9
     * Added fallback definition of typing.Deque (taken from 3.5.4)
     * Removed explicit type hints that fail due to a bug in 3.5.2 favoring comment-based hints instead
