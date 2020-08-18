@@ -104,12 +104,6 @@ class Settable:
         :param choices: iterable of accepted values
         :param choices_provider: function that provides choices for this argument
         :param completer: tab completion function that provides choices for this argument
-
-        Note:
-        For choices_provider and completer, do not set them to a bound method. This is because
-        ArgparseCompleter passes the self argument explicitly to these functions.
-
-        Therefore instead of passing something like self.path_complete, pass cmd2.Cmd.path_complete.
         """
         if val_type == bool:
             val_type = str_to_bool

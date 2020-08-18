@@ -13,6 +13,19 @@ from cmd2 import Cmd2ArgumentParser, CompletionError, CompletionItem, with_argpa
 from cmd2.utils import StdSim
 from .conftest import complete_tester, run_cmd
 
+# Data and functions for testing standalone choice_provider and completer
+standalone_choices = ['standalone', 'provider']
+standalone_completions = ['standalone', 'completer']
+
+
+# noinspection PyUnusedLocal
+def standalone_choice_provider(cli: cmd2.Cmd) -> List[str]:
+    return standalone_choices
+
+
+def standalone_completer(cli: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    return cli.basic_complete(text, line, begidx, endidx, standalone_completions)
+
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal,PyProtectedMember
 class AutoCompleteTester(cmd2.Cmd):
@@ -261,6 +274,17 @@ class AutoCompleteTester(cmd2.Cmd):
 
     @with_argparser(mutex_parser)
     def do_mutex(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
+    # Begin code related to standalone functions
+    ############################################################################################################
+    standalone_parser = Cmd2ArgumentParser()
+    standalone_parser.add_argument('--provider', help='standalone provider', choices_provider=standalone_choice_provider)
+    standalone_parser.add_argument('--completer', help='standalone completer', completer=standalone_completer)
+
+    @with_argparser(standalone_parser)
+    def do_standalone(self, args: argparse.Namespace) -> None:
         pass
 
 
@@ -935,3 +959,18 @@ def test_complete_command_help_no_tokens(ac_app):
 
     completions = ac.complete_subcommand_help(tokens=[], text='', line='', begidx=0, endidx=0)
     assert not completions
+
+
+@pytest.mark.parametrize('flag, completions', [
+    ('--provider', standalone_choices),
+    ('--completer', standalone_completions)
+])
+def test_complete_standalone(ac_app, flag, completions):
+    text = ''
+    line = 'standalone {} {}'.format(flag, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)

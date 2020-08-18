@@ -80,7 +80,7 @@ delimiter_complete)
                                           path_filter=lambda path: os.path.isdir(path))
         parser.add_argument('-o', '--options', completer=dir_completer)
 
-For `choices_provider` and `completer`, do not set them to a bound method. This
+For ``choices_provider`` and ``completer``, do not set them to a bound method. This
 is because ArgparseCompleter passes the `self` argument explicitly to these
 functions. When ArgparseCompleter calls one, it will detect whether it is bound
 to a `Cmd` subclass or `CommandSet`. If bound to a `cmd2.Cmd subclass`, it will
@@ -89,7 +89,12 @@ subclass, it will pass the `CommandSet` instance as the `self` argument.
 Therefore instead of passing something like `self.path_complete`, pass
 `cmd2.Cmd.path_complete`.
 
-Of the 3 tab completion parameters, choices is the only one where argparse
+``choices_provider`` and ``completer`` functions can also be implemented as
+standalone functions (i.e. not a member of a class). In this case,
+ArgparseCompleter will pass its ``cmd2.Cmd`` app instance as the first
+positional argument.
+
+Of the 3 tab completion parameters, ``choices`` is the only one where argparse
 validates user input against items in the choices list. This is because the
 other 2 parameters are meant to tab complete data sets that are viewed as
 dynamic. Therefore it is up to the developer to validate if the user has typed
@@ -103,7 +108,7 @@ in __init__() of a custom action class.
     - set_completer(action, func)
 
 There are times when what's being tab completed is determined by a previous
-argument on the command line. In theses cases, Autocompleter can pass a
+argument on the command line. In theses cases, ArgparseCompleter can pass a
 dictionary that maps the command line tokens up through the one being completed
 to their argparse argument name. To receive this dictionary, your
 choices/completer function should have an argument called arg_tokens.
