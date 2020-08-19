@@ -28,13 +28,15 @@ from typing import (
     Optional,
     TextIO,
     Type,
+    TYPE_CHECKING, 
     Union,
 )
 
 from . import (
     constants,
 )
-
+if TYPE_CHECKING:  # pragma: no cover
+    import cmd2
 
 def is_quoted(arg: str) -> bool:
     """
@@ -93,7 +95,7 @@ def str_to_bool(val: str) -> bool:
 
 
 class Settable:
-    """Used to configure a cmd2 instance member to be settable via the set command in the CLI"""
+    """Used to configure an attribute to be settable via the set command in the CLI"""
 
     def __init__(
         self,
@@ -101,6 +103,8 @@ class Settable:
         val_type: Callable,
         description: str,
         *,
+        settable_object: Optional[object] = None,
+        settable_attrib_name: Optional[str] = None,
         onchange_cb: Callable[[str, Any, Any], Any] = None,
         choices: Iterable = None,
         choices_provider: Optional[Callable] = None,
@@ -114,6 +118,8 @@ class Settable:
                          even validate its value. Setting this to bool provides tab completion for true/false and
                          validation using str_to_bool(). The val_type function should raise an exception if it fails.
                          This exception will be caught and printed by Cmd.do_set().
+        :param settable_object: Object to configure with the set command
+        :param settable_attrib_name: Attribute name to be modified. Defaults to `name` if not specified.
         :param description: string describing this setting
         :param onchange_cb: optional function or method to call when the value of this settable is altered
                             by the set command. (e.g. onchange_cb=self.debug_changed)
@@ -137,10 +143,35 @@ class Settable:
         self.name = name
         self.val_type = val_type
         self.description = description
+        self.settable_obj = settable_object
+        self.settable_attrib_name = settable_attrib_name if settable_attrib_name is not None else name
         self.onchange_cb = onchange_cb
         self.choices = choices
         self.choices_provider = choices_provider
         self.completer = completer
+
+    def get_value(self) -> Any:
+        """
+        Get the value of the settable attribute
+        :return:
+        """
+        return getattr(self.settable_obj, self.settable_attrib_name)
+
+    def set_value(self, value: Any) -> Any:
+        """
+        Set the settable attribute on the specified destination object
+        :param value: New value to set
+        :return: New value that the attribute was set to
+        """
+        # Try to update the settable's value
+        orig_value = self.get_value()
+        setattr(self.settable_obj, self.settable_attrib_name, self.val_type(value))
+        new_value = getattr(self.settable_obj, self.settable_attrib_name)
+
+        # Check if we need to call an onchange callback
+        if orig_value != new_value and self.onchange_cb:
+            self.onchange_cb(self.name, orig_value, new_value)
+        return new_value
 
 
 def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]], default_values: collections_abc.Iterable = ()):
