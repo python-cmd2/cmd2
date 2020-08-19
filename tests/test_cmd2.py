@@ -176,7 +176,7 @@ Parameter 'qqq' not supported (type 'set' for list of parameters).
 
 
 def test_set_no_settables(base_app):
-    base_app.settables = {}
+    base_app._settables.clear()
     out, err = run_cmd(base_app, 'set quiet True')
     expected = normalize("There are no settable parameters")
     assert err == expected
@@ -229,11 +229,10 @@ def onchange_app():
 
 def test_set_onchange_hook(onchange_app):
     out, err = run_cmd(onchange_app, 'set quiet True')
-    expected = normalize(
-        """
+    expected = normalize("""
+You changed quiet
 quiet - was: False
 now: True
-You changed quiet
 """
     )
     assert out == expected

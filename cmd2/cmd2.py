@@ -308,8 +308,13 @@ class Cmd(cmd.Cmd):
         self.max_completion_items = 50
 
         # A dictionary mapping settable names to their Settable instance
-        self.settables: Dict[str, Settable] = dict()
+        self._settables: Dict[str, Settable] = dict()
+        self.always_prefix_settables: bool = False
         self.build_settables()
+
+        # CommandSet containers
+        self._installed_command_sets: List[CommandSet] = []
+        self._cmd_to_command_sets: Dict[str, CommandSet] = {}
 
         # Use as prompt for multiline commands on the 2nd+ line of input
         self.continuation_prompt = '> '
@@ -500,8 +505,6 @@ class Cmd(cmd.Cmd):
         # depends on them and it's possible a module's on_register() method may need to access some.
         ############################################################################################################
         # Load modular commands
-        self._installed_command_sets: List[CommandSet] = []
-        self._cmd_to_command_sets: Dict[str, CommandSet] = {}
         if command_sets:
             for command_set in command_sets:
                 self.register_command_set(command_set)
@@ -574,6 +577,15 @@ class Cmd(cmd.Cmd):
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
         if type(cmdset) in existing_commandset_types:
             raise CommandSetRegistrationError('CommandSet ' + type(cmdset).__name__ + ' is already installed')
+
+        if self.always_prefix_settables:
+            if len(cmdset.settable_prefix.strip()) == 0:
+                raise CommandSetRegistrationError('CommandSet settable prefix must not be empty')
+        else:
+            all_settables = self.settables
+            for key in cmdset.settables.keys():
+                if key in all_settables:
+                    raise KeyError(f'Duplicate settable {key} is already registered')
 
         cmdset.on_register(self)
         methods = inspect.getmembers(
@@ -888,13 +900,27 @@ class Cmd(cmd.Cmd):
                     action.remove_parser(subcommand_name)
                     break
 
+    @property
+    def settables(self) -> Mapping[str, Settable]:
+        all_settables = dict(self._settables)
+        for cmd_set in self._installed_command_sets:
+            cmdset_settables = cmd_set.settables
+            for settable_name, settable in cmdset_settables.items():
+                if self.always_prefix_settables:
+                    all_settables[f'{cmd_set.settable_prefix}.{settable_name}'] = settable
+                else:
+                    all_settables[settable_name] = settable
+        return all_settables
+
     def add_settable(self, settable: Settable) -> None:
         """
         Convenience method to add a settable parameter to ``self.settables``
 
         :param settable: Settable object being added
         """
-        self.settables[settable.name] = settable
+        if settable.settable_obj is None:
+            settable.settable_obj = self
+        self._settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
         """
@@ -904,7 +930,7 @@ class Cmd(cmd.Cmd):
         :raises: KeyError if the Settable matches this name
         """
         try:
-            del self.settables[name]
+            del self._settables[name]
         except KeyError:
             raise KeyError(name + " is not a settable parameter")
 
@@ -3712,29 +3738,23 @@ class Cmd(cmd.Cmd):
         if args.param:
             try:
                 settable = self.settables[args.param]
+                if settable.settable_obj is None:
+                    settable.settable_obj = self
             except KeyError:
                 self.perror("Parameter '{}' not supported (type 'set' for list of parameters).".format(args.param))
                 return
 
             if args.value:
-                args.value = utils.strip_quotes(args.value)
-
                 # Try to update the settable's value
                 try:
-                    orig_value = getattr(self, args.param)
-                    setattr(self, args.param, settable.val_type(args.value))
-                    new_value = getattr(self, args.param)
+                    orig_value = settable.get_value()
+                    new_value = settable.set_value(utils.strip_quotes(args.value))
                 # noinspection PyBroadException
                 except Exception as e:
                     err_msg = "Error setting {}: {}".format(args.param, e)
                     self.perror(err_msg)
-                    return
-
-                self.poutput('{} - was: {!r}\nnow: {!r}'.format(args.param, orig_value, new_value))
-
-                # Check if we need to call an onchange callback
-                if orig_value != new_value and settable.onchange_cb:
-                    settable.onchange_cb(args.param, orig_value, new_value)
+                else:
+                    self.poutput('{} - was: {!r}\nnow: {!r}'.format(args.param, orig_value, new_value))
                 return
 
             # Show one settable
@@ -3747,7 +3767,8 @@ class Cmd(cmd.Cmd):
         max_len = 0
         results = dict()
         for param in to_show:
-            results[param] = '{}: {!r}'.format(param, getattr(self, param))
+            settable = self.settables[param]
+            results[param] = '{}: {!r}'.format(param, settable.get_value())
             max_len = max(max_len, ansi.style_aware_wcswidth(results[param]))
 
         # Display the results
@@ -5131,7 +5152,7 @@ class Cmd(cmd.Cmd):
         :return:
         """
         # figure out what class the command support function was defined in
-        func_class = get_defining_class(cmd_support_func)
+        func_class = get_defining_class(cmd_support_func)  # type: Optional[Type]
 
         # Was there a defining class identified? If so, is it a sub-class of CommandSet?
         if func_class is not None and issubclass(func_class, CommandSet):
