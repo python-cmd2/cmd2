@@ -3,8 +3,8 @@
     * Argparse Completion / Settables
         * Replaced `choices_function` / `choices_method` with `choices_provider`.
         * Replaced `completer_function` / `completer_method` with `completer`.
-        * ArgparseCompleter now always passes `cmd2.Cmd` or `CommandSet` instance as the
-        `self argument` to choices_provider and completer functions.
+        * ArgparseCompleter now always passes `cmd2.Cmd` or `CommandSet` instance as the first positional
+        argument` to choices_provider and completer functions.
     * Moved `basic_complete` from utils into `cmd2.Cmd` class.
     * Moved `CompletionError` to exceptions.py
 
