@@ -3,6 +3,8 @@
 Supports the definition of commands in separate classes to be composed into cmd2.Cmd
 """
 from typing import (
+    Dict,
+    Mapping,
     Optional,
     Type,
 )
@@ -13,6 +15,9 @@ from .constants import (
 )
 from .exceptions import (
     CommandSetRegistrationError,
+)
+from .utils import (
+    Settable,
 )
 
 # Allows IDEs to resolve types without impacting imports at runtime, breaking circular dependency issues
@@ -90,6 +95,8 @@ class CommandSet(object):
 
     def __init__(self):
         self._cmd: Optional[cmd2.Cmd] = None
+        self._settables: Dict[str, Settable] = {}
+        self._settable_prefix = self.__class__.__name__
 
     def on_register(self, cmd) -> None:
         """
@@ -126,3 +133,36 @@ class CommandSet(object):
         Subclasses can override this to perform remaining cleanup steps.
         """
         self._cmd = None
+
+    @property
+    def settable_prefix(self) -> str:
+        return self._settable_prefix
+
+    @property
+    def settables(self) -> Mapping[str, Settable]:
+        return self._settables
+
+    def add_settable(self, settable: Settable) -> None:
+        """
+        Convenience method to add a settable parameter to the CommandSet
+
+        :param settable: Settable object being added
+        """
+        if self._cmd and not self._cmd.always_prefix_settables:
+            if settable.name in self._cmd.settables.keys() and settable.name not in self._settables.keys():
+                raise KeyError(f'Duplicate settable: {settable.name}')
+        if settable.settable_obj is None:
+            settable.settable_obj = self
+        self._settables[settable.name] = settable
+
+    def remove_settable(self, name: str) -> None:
+        """
+        Convenience method for removing a settable parameter from the CommandSet
+
+        :param name: name of the settable being removed
+        :raises: KeyError if the Settable matches this name
+        """
+        try:
+            del self._settables[name]
+        except KeyError:
+            raise KeyError(name + " is not a settable parameter")
