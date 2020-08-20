@@ -844,3 +844,30 @@ def test_path_complete(command_sets_manual):
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
 
     assert first_match is not None
+
+
+def test_bad_subcommand():
+    class BadSubcommandApp(cmd2.Cmd):
+        """Class for testing usage of `as_subcommand_to` decorator directly in a Cmd2 subclass."""
+
+        def __init__(self, *args, **kwargs):
+            super(BadSubcommandApp, self).__init__(*args, **kwargs)
+
+        cut_parser = cmd2.Cmd2ArgumentParser('cut')
+        cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
+
+        @cmd2.with_argparser(cut_parser)
+        def do_cut(self, ns: argparse.Namespace):
+            """Cut something"""
+            pass
+
+        banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+        banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
+
+        @cmd2.as_subcommand_to('cut', 'bad name', banana_parser, help='This should fail')
+        def cut_banana(self, ns: argparse.Namespace):
+            """Cut banana"""
+            self.poutput('cutting banana: ' + ns.direction)
+
+    with pytest.raises(CommandSetRegistrationError):
+        app = BadSubcommandApp()
