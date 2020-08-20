@@ -836,7 +836,15 @@ def test_statement_is_immutable():
         statement.raw = 'baz'
 
 
-def test_is_valid_command_invalid(parser):
+def test_is_valid_command_invalid(mocker, parser):
+    # Non-string command
+    valid, errmsg = parser.is_valid_command(5)
+    assert not valid and 'must be a string' in errmsg
+
+    mock = mocker.MagicMock()
+    valid, errmsg = parser.is_valid_command(mock)
+    assert not valid and 'must be a string' in errmsg
+
     # Empty command
     valid, errmsg = parser.is_valid_command('')
     assert not valid and 'cannot be an empty string' in errmsg
@@ -868,6 +876,11 @@ def test_is_valid_command_invalid(parser):
 def test_is_valid_command_valid(parser):
     # Empty command
     valid, errmsg = parser.is_valid_command('shell')
+    assert valid
+    assert not errmsg
+
+    # Subcommands can start with shortcut
+    valid, errmsg = parser.is_valid_command('!subcmd', is_subcommand=True)
     assert valid
     assert not errmsg
 

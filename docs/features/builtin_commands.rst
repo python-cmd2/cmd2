@@ -70,6 +70,8 @@ quit
 
 This command exits the ``cmd2`` application.
 
+.. _feature-builtin-commands-run-pyscript:
+
 run_pyscript
 ~~~~~~~~~~~~
 
