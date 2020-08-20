@@ -1,3 +1,8 @@
+## 1.3.4 (TBD)
+* Bug Fixes
+    * Fixed `AttributeError` when `CommandSet` that uses `as_subcommand_to` decorator is loaded during
+    `cmd2.Cmd.__init__()`.
+
 ## 1.3.3 (August 13, 2020)
 * Breaking changes
     * CommandSet command functions (do_, complete_, help_) will no longer have the cmd2 app

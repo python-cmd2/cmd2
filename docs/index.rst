@@ -76,6 +76,15 @@ Plugins
    plugins/index
 
 
+Testing
+=======
+
+.. toctree::
+   :maxdepth: 2
+
+   testing
+
+
 API Reference
 =============
 

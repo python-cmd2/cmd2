@@ -61,6 +61,8 @@ session.
   (Cmd) command # this is not a comment
 
 
+.. _scripting-python-scripts:
+
 Python Scripts
 --------------
 

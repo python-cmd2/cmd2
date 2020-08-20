@@ -32,6 +32,7 @@ This documentation is for ``cmd2`` version |version|.
    py_bridge
    table_creator
    utils
+   plugin_external_test
 
 **Modules**
 
@@ -56,3 +57,4 @@ This documentation is for ``cmd2`` version |version|.
   embedded python environment to the host app
 - :ref:`api/table_creator:cmd2.table_creator` - table creation module
 - :ref:`api/utils:cmd2.utils` - various utility classes and functions
+- :ref:`api/plugin_external_test:cmd2_ext_test` - External test plugin

@@ -92,6 +92,7 @@ class ArgparseApp(cmd2.Cmd):
     known_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     known_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+
     @cmd2.with_argparser(known_parser, with_unknown_args=True)
     def do_speak(self, args, extra, *, keyword_arg: Optional[str] = None):
         """Repeat what you tell me to."""
@@ -131,13 +132,16 @@ def test_invalid_syntax(argparse_app):
     out, err = run_cmd(argparse_app, 'speak "')
     assert err[0] == "Invalid syntax: No closing quotation"
 
+
 def test_argparse_basic_command(argparse_app):
     out, err = run_cmd(argparse_app, 'say hello')
     assert out == ['hello']
 
+
 def test_argparse_remove_quotes(argparse_app):
     out, err = run_cmd(argparse_app, 'say "hello there"')
     assert out == ['hello there']
+
 
 def test_argparser_kwargs(argparse_app, capsys):
     """Test with_argparser wrapper passes through kwargs to command function"""
@@ -145,37 +149,46 @@ def test_argparser_kwargs(argparse_app, capsys):
     out, err = capsys.readouterr()
     assert out == "foo\n"
 
+
 def test_argparse_preserve_quotes(argparse_app):
     out, err = run_cmd(argparse_app, 'tag mytag "hello"')
     assert out[0] == '<mytag>"hello"</mytag>'
+
 
 def test_argparse_custom_namespace(argparse_app):
     out, err = run_cmd(argparse_app, 'test_argparse_ns')
     assert out[0] == 'custom'
 
+
 def test_argparse_with_list(argparse_app):
     out, err = run_cmd(argparse_app, 'speak -s hello world!')
     assert out == ['HELLO WORLD!']
+
 
 def test_argparse_with_list_remove_quotes(argparse_app):
     out, err = run_cmd(argparse_app, 'speak -s hello "world!"')
     assert out == ['HELLO WORLD!']
 
+
 def test_argparse_with_list_preserve_quotes(argparse_app):
     out, err = run_cmd(argparse_app, 'test_argparse_with_list_quotes "hello" person')
     assert out[0] == '"hello" person'
+
 
 def test_argparse_with_list_custom_namespace(argparse_app):
     out, err = run_cmd(argparse_app, 'test_argparse_with_list_ns')
     assert out[0] == 'custom'
 
+
 def test_argparse_with_list_and_empty_doc(argparse_app):
     out, err = run_cmd(argparse_app, 'speak -s hello world!')
     assert out == ['HELLO WORLD!']
 
+
 def test_argparser_correct_args_with_quotes_and_midline_options(argparse_app):
     out, err = run_cmd(argparse_app, "speak 'This  is a' -s test of the emergency broadcast system!")
     assert out == ['THIS  IS A TEST OF THE EMERGENCY BROADCAST SYSTEM!']
+
 
 def test_argparser_and_unknown_args_kwargs(argparse_app, capsys):
     """Test with_argparser_and_unknown_args wrapper passes through kwargs to command function"""
@@ -183,9 +196,11 @@ def test_argparser_and_unknown_args_kwargs(argparse_app, capsys):
     out, err = capsys.readouterr()
     assert out == "foo\n"
 
+
 def test_argparse_quoted_arguments_multiple(argparse_app):
     out, err = run_cmd(argparse_app, 'say "hello  there" "rick & morty"')
     assert out == ['hello  there rick & morty']
+
 
 def test_argparse_help_docstring(argparse_app):
     out, err = run_cmd(argparse_app, 'help say')
@@ -193,26 +208,31 @@ def test_argparse_help_docstring(argparse_app):
     assert out[1] == ''
     assert out[2] == 'Repeat what you tell me to.'
 
+
 def test_argparse_help_description(argparse_app):
     out, err = run_cmd(argparse_app, 'help tag')
     assert out[0].startswith('usage: tag')
     assert out[1] == ''
     assert out[2] == 'create a html tag'
 
+
 def test_argparse_prog(argparse_app):
     out, err = run_cmd(argparse_app, 'help tag')
     progname = out[0].split(' ')[1]
     assert progname == 'tag'
 
+
 def test_arglist(argparse_app):
     out, err = run_cmd(argparse_app, 'arglist "we  should" get these')
     assert out[0] == 'True'
+
 
 def test_arglist_kwargs(argparse_app, capsys):
     """Test with_argument_list wrapper passes through kwargs to command function"""
     argparse_app.do_arglist('arg', keyword_arg="foo")
     out, err = capsys.readouterr()
     assert out == "foo\n"
+
 
 def test_preservelist(argparse_app):
     out, err = run_cmd(argparse_app, 'preservelist foo "bar baz"')
@@ -269,6 +289,7 @@ class SubcommandApp(cmd2.Cmd):
         func = getattr(args, 'func')
         func(self, args)
 
+
 @pytest.fixture
 def subcommand_app():
     app = SubcommandApp()
@@ -284,16 +305,19 @@ def test_subcommand_bar(subcommand_app):
     out, err = run_cmd(subcommand_app, 'base bar baz')
     assert out == ['((baz))']
 
+
 def test_subcommand_invalid(subcommand_app):
     out, err = run_cmd(subcommand_app, 'base baz')
     assert err[0].startswith('usage: base')
     assert err[1].startswith("base: error: argument SUBCOMMAND: invalid choice: 'baz'")
+
 
 def test_subcommand_base_help(subcommand_app):
     out, err = run_cmd(subcommand_app, 'help base')
     assert out[0].startswith('usage: base')
     assert out[1] == ''
     assert out[2] == 'Base command help'
+
 
 def test_subcommand_help(subcommand_app):
     # foo has no aliases
@@ -334,9 +358,11 @@ def test_subcommand_help(subcommand_app):
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
+
 def test_subcommand_invalid_help(subcommand_app):
     out, err = run_cmd(subcommand_app, 'help base baz')
     assert out[0].startswith('usage: base')
+
 
 def test_add_another_subcommand(subcommand_app):
     """
@@ -345,3 +371,40 @@ def test_add_another_subcommand(subcommand_app):
     """
     new_parser = subcommand_app.base_subparsers.add_parser('new_sub', help="stuff")
     assert new_parser.prog == "base new_sub"
+
+
+def test_unittest_mock():
+    from unittest import mock
+    from cmd2 import CommandSetRegistrationError
+
+    with mock.patch.object(ArgparseApp, 'namespace_provider'):
+        with pytest.raises(CommandSetRegistrationError):
+            app = ArgparseApp()
+
+    with mock.patch.object(ArgparseApp, 'namespace_provider', spec=True):
+        app = ArgparseApp()
+
+    with mock.patch.object(ArgparseApp, 'namespace_provider', spec_set=True):
+        app = ArgparseApp()
+
+    with mock.patch.object(ArgparseApp, 'namespace_provider', autospec=True):
+        app = ArgparseApp()
+
+
+def test_pytest_mock_invalid(mocker):
+    from cmd2 import CommandSetRegistrationError
+
+    mocker.patch.object(ArgparseApp, 'namespace_provider')
+    with pytest.raises(CommandSetRegistrationError):
+        app = ArgparseApp()
+
+
+@pytest.mark.parametrize('spec_param', [
+    {'spec': True},
+    {'spec_set': True},
+    {'autospec': True},
+])
+def test_pytest_mock_valid(mocker, spec_param):
+    mocker.patch.object(ArgparseApp, 'namespace_provider', **spec_param)
+    app = ArgparseApp()
+
