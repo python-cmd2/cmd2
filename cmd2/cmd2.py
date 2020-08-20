@@ -637,9 +637,13 @@ class Cmd(cmd.Cmd):
 
         # iterate through all matching methods
         for method_name, method in methods:
-            subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
+            subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)  # type: str
             full_command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)  # type: str
             subcmd_parser = getattr(method, constants.CMD_ATTR_ARGPARSER)
+
+            subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
+            if not subcommand_valid:
+                raise CommandSetRegistrationError('Subcommand {} is not valid: {}'.format(str(subcommand_name), errmsg))
 
             command_tokens = full_command_name.split()
             command_name = command_tokens[0]

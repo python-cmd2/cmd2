@@ -277,7 +277,7 @@ class StatementParser:
         expr = r'\A\s*(\S*?)({})'.format(second_group)
         self._command_pattern = re.compile(expr)
 
-    def is_valid_command(self, word: str) -> Tuple[bool, str]:
+    def is_valid_command(self, word: str, *, is_subcommand: bool = False) -> Tuple[bool, str]:
         """Determine whether a word is a valid name for a command.
 
         Commands can not include redirection characters, whitespace,
@@ -285,6 +285,7 @@ class StatementParser:
         shortcut.
 
         :param word: the word to check as a command
+        :param is_subcommand: Flag whether this command name is a subcommand name
         :return: a tuple of a boolean and an error string
 
         If word is not a valid command, return ``False`` and an error string
@@ -297,18 +298,22 @@ class StatementParser:
         """
         valid = False
 
+        if not isinstance(word, str):
+            return False, 'must be a string. Received {} instead'.format(str(type(word)))
+
         if not word:
             return False, 'cannot be an empty string'
 
         if word.startswith(constants.COMMENT_CHAR):
             return False, 'cannot start with the comment character'
 
-        for (shortcut, _) in self.shortcuts:
-            if word.startswith(shortcut):
-                # Build an error string with all shortcuts listed
-                errmsg = 'cannot start with a shortcut: '
-                errmsg += ', '.join(shortcut for (shortcut, _) in self.shortcuts)
-                return False, errmsg
+        if not is_subcommand:
+            for (shortcut, _) in self.shortcuts:
+                if word.startswith(shortcut):
+                    # Build an error string with all shortcuts listed
+                    errmsg = 'cannot start with a shortcut: '
+                    errmsg += ', '.join(shortcut for (shortcut, _) in self.shortcuts)
+                    return False, errmsg
 
         errmsg = 'cannot contain: whitespace, quotes, '
         errchars = []
