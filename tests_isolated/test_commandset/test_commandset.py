@@ -62,6 +62,26 @@ class CommandSetA(CommandSetBase):
         self._cmd.poutput('Elderberry {}!!'.format(ns.arg1))
         self._cmd.last_result = {'arg1': ns.arg1}
 
+    # Test that CommandSet with as_subcommand_to decorator successfully loads
+    # during `cmd2.Cmd.__init__()`.
+    main_parser = cmd2.Cmd2ArgumentParser(description="Main Command")
+    main_subparsers = main_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+    main_subparsers.required = True
+
+    @cmd2.with_category('Alone')
+    @cmd2.with_argparser(main_parser)
+    def do_main(self, args: argparse.Namespace) -> None:
+        # Call handler for whatever subcommand was selected
+        handler = args.get_handler()
+        handler(args)
+
+    # main -> sub
+    subcmd_parser = cmd2.Cmd2ArgumentParser(add_help=False, description="Sub Command")
+
+    @cmd2.as_subcommand_to('main', 'sub', subcmd_parser, help="sub command")
+    def subcmd_func(self, args: argparse.Namespace) -> None:
+        self._cmd.poutput("Subcommand Ran")
+
 
 @cmd2.with_default_category('Command Set B')
 class CommandSetB(CommandSetBase):
@@ -87,6 +107,11 @@ def test_autoload_commands(command_sets_app):
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
+    assert 'main' in cmds_cats['Alone']
+
+    # Test subcommand was autoloaded
+    result = command_sets_app.app_cmd('main sub')
+    assert 'Subcommand Ran' in result.stdout
 
     assert 'Also Alone' in cmds_cats
     assert 'durian' in cmds_cats['Also Alone']
@@ -150,6 +175,11 @@ def test_load_commands(command_sets_manual):
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
+    assert 'main' in cmds_cats['Alone']
+
+    # Test subcommand was loaded
+    result = command_sets_manual.app_cmd('main sub')
+    assert 'Subcommand Ran' in result.stdout
 
     assert 'Fruits' in cmds_cats
     assert 'cranberry' in cmds_cats['Fruits']
@@ -172,6 +202,11 @@ def test_load_commands(command_sets_manual):
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
+    assert 'main' in cmds_cats['Alone']
+
+    # Test subcommand was loaded
+    result = command_sets_manual.app_cmd('main sub')
+    assert 'Subcommand Ran' in result.stdout
 
     assert 'Fruits' in cmds_cats
     assert 'cranberry' in cmds_cats['Fruits']
