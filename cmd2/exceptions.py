@@ -31,6 +31,31 @@ class CommandSetRegistrationError(Exception):
     """
     pass
 
+
+class CompletionError(Exception):
+    """
+    Raised during tab completion operations to report any sort of error you want printed. This can also be used
+    just to display a message, even if it's not an error. For instance, ArgparseCompleter raises CompletionErrors
+    to display tab completion hints and sets apply_style to False so hints aren't colored like error text.
+
+    Example use cases
+
+    - Reading a database to retrieve a tab completion data set failed
+    - A previous command line argument that determines the data set being completed is invalid
+    - Tab completion hints
+    """
+    def __init__(self, *args, apply_style: bool = True, **kwargs):
+        """
+        Initializer for CompletionError
+        :param apply_style: If True, then ansi.style_error will be applied to the message text when printed.
+                            Set to False in cases where the message text already has the desired style.
+                            Defaults to True.
+        """
+        self.apply_style = apply_style
+
+        # noinspection PyArgumentList
+        super().__init__(*args, **kwargs)
+
 ############################################################################################################
 # The following exceptions are NOT part of the public API and are intended for internal use only.
 ############################################################################################################

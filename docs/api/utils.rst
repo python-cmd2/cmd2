@@ -36,15 +36,6 @@ IO Handling
     :members:
 
 
-Tab Completion
---------------
-
-.. autoclass:: cmd2.utils.CompletionError
-    :members:
-
-.. autofunction:: cmd2.utils.basic_complete
-
-
 Text Alignment
 --------------
 

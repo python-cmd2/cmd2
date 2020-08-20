@@ -1,3 +1,13 @@
+## 2.0.0 (TBD)
+* Breaking changes
+    * Argparse Completion / Settables
+        * Replaced `choices_function` / `choices_method` with `choices_provider`.
+        * Replaced `completer_function` / `completer_method` with `completer`.
+        * ArgparseCompleter now always passes `cmd2.Cmd` or `CommandSet` instance as the first positional
+        argument` to choices_provider and completer functions.
+    * Moved `basic_complete` from utils into `cmd2.Cmd` class.
+    * Moved `CompletionError` to exceptions.py
+
 ## 1.3.3 (August 13, 2020)
 * Breaking changes
     * CommandSet command functions (do_, complete_, help_) will no longer have the cmd2 app

@@ -74,40 +74,13 @@ def str_to_bool(val: str) -> bool:
     raise ValueError("must be True or False (case-insensitive)")
 
 
-class CompletionError(Exception):
-    """
-    Raised during tab completion operations to report any sort of error you want printed. This can also be used
-    just to display a message, even if it's not an error. For instance, ArgparseCompleter raises CompletionErrors
-    to display tab completion hints and sets apply_style to False so hints aren't colored like error text.
-
-    Example use cases
-
-    - Reading a database to retrieve a tab completion data set failed
-    - A previous command line argument that determines the data set being completed is invalid
-    - Tab completion hints
-    """
-    def __init__(self, *args, apply_style: bool = True, **kwargs):
-        """
-        Initializer for CompletionError
-        :param apply_style: If True, then ansi.style_error will be applied to the message text when printed.
-                            Set to False in cases where the message text already has the desired style.
-                            Defaults to True.
-        """
-        self.apply_style = apply_style
-
-        # noinspection PyArgumentList
-        super().__init__(*args, **kwargs)
-
-
 class Settable:
     """Used to configure a cmd2 instance member to be settable via the set command in the CLI"""
     def __init__(self, name: str, val_type: Callable, description: str, *,
                  onchange_cb: Callable[[str, Any, Any], Any] = None,
                  choices: Iterable = None,
-                 choices_function: Optional[Callable] = None,
-                 choices_method: Optional[Callable] = None,
-                 completer_function: Optional[Callable] = None,
-                 completer_method: Optional[Callable] = None):
+                 choices_provider: Optional[Callable] = None,
+                 completer: Optional[Callable] = None):
         """
         Settable Initializer
 
@@ -129,17 +102,8 @@ class Settable:
         same settings in argparse-based tab completion. A maximum of one of these should be provided.
 
         :param choices: iterable of accepted values
-        :param choices_function: function that provides choices for this argument
-        :param choices_method: cmd2-app method that provides choices for this argument (See note below)
-        :param completer_function: tab completion function that provides choices for this argument
-        :param completer_method: cmd2-app tab completion method that provides choices
-                                 for this argument (See note below)
-
-        Note:
-        For choices_method and completer_method, do not set them to a bound method. This is because
-        ArgparseCompleter passes the self argument explicitly to these functions.
-
-        Therefore instead of passing something like self.path_complete, pass cmd2.Cmd.path_complete.
+        :param choices_provider: function that provides choices for this argument
+        :param completer: tab completion function that provides choices for this argument
         """
         if val_type == bool:
             val_type = str_to_bool
@@ -150,10 +114,8 @@ class Settable:
         self.description = description
         self.onchange_cb = onchange_cb
         self.choices = choices
-        self.choices_function = choices_function
-        self.choices_method = choices_method
-        self.completer_function = completer_function
-        self.completer_method = completer_method
+        self.choices_provider = choices_provider
+        self.completer = completer
 
 
 def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
@@ -687,22 +649,6 @@ class RedirectionSavedState:
         # Used to restore values after command ends regardless of whether the command redirected
         self.saved_pipe_proc_reader = pipe_proc_reader
         self.saved_redirecting = saved_redirecting
-
-
-# noinspection PyUnusedLocal
-def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against: Iterable) -> List[str]:
-    """
-    Basic tab completion function that matches against a list of strings without considering line contents
-    or cursor position. The args required by this function are defined in the header of Python's cmd.py.
-
-    :param text: the string prefix we are attempting to match (all matches must begin with it)
-    :param line: the current input line with leading whitespace removed
-    :param begidx: the beginning index of the prefix text
-    :param endidx: the ending index of the prefix text
-    :param match_against: the strings being matched against
-    :return: a list of possible tab completions
-    """
-    return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
 
 class TextAlignment(Enum):
