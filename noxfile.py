@@ -6,6 +6,7 @@ def docs(session):
     session.install('sphinx',
                     'sphinx-rtd-theme',
                     '.',
+                    'plugins/ext_test',
                     )
     session.chdir('docs')
     tmpdir = session.create_tmp()

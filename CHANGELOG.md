@@ -8,6 +8,15 @@
     * Moved `basic_complete` from utils into `cmd2.Cmd` class.
     * Moved `CompletionError` to exceptions.py
 
+## 1.3.4 (August 20, 2020)
+* Bug Fixes
+    * Fixed `AttributeError` when `CommandSet` that uses `as_subcommand_to` decorator is loaded during
+    `cmd2.Cmd.__init__()`.
+* Enhancements
+    * Improved exception messages when using mock without `spec=True`.
+    See [testing](https://cmd2.readthedocs.io/en/latest/testing.html) documentation for more details on testing
+    cmd2-based applications with mock.
+
 ## 1.3.3 (August 13, 2020)
 * Breaking changes
     * CommandSet command functions (do_, complete_, help_) will no longer have the cmd2 app

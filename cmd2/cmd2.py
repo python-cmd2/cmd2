@@ -260,22 +260,6 @@ class Cmd(cmd.Cmd):
                                                 multiline_commands=multiline_commands,
                                                 shortcuts=shortcuts)
 
-        # Load modular commands
-        self._installed_command_sets = []  # type: List[CommandSet]
-        self._cmd_to_command_sets = {}  # type: Dict[str, CommandSet]
-        if command_sets:
-            for command_set in command_sets:
-                self.register_command_set(command_set)
-
-        if auto_load_commands:
-            self._autoload_commands()
-
-        # Verify commands don't have invalid names (like starting with a shortcut)
-        for cur_cmd in self.get_all_commands():
-            valid, errmsg = self.statement_parser.is_valid_command(cur_cmd)
-            if not valid:
-                raise ValueError("Invalid command name {!r}: {}".format(cur_cmd, errmsg))
-
         # Stores results from the last command run to enable usage of results in a Python script or interactive console
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
         self.last_result = None
@@ -413,6 +397,28 @@ class Cmd(cmd.Cmd):
         # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
         self.matches_sorted = False
 
+        ############################################################################################################
+        # The following code block loads CommandSets, verifies command names, and registers subcommands.
+        # This block should appear after all attributes have been created since the registration code
+        # depends on them and it's possible a module's on_register() method may need to access some.
+        ############################################################################################################
+        # Load modular commands
+        self._installed_command_sets = []  # type: List[CommandSet]
+        self._cmd_to_command_sets = {}  # type: Dict[str, CommandSet]
+        if command_sets:
+            for command_set in command_sets:
+                self.register_command_set(command_set)
+
+        if auto_load_commands:
+            self._autoload_commands()
+
+        # Verify commands don't have invalid names (like starting with a shortcut)
+        for cur_cmd in self.get_all_commands():
+            valid, errmsg = self.statement_parser.is_valid_command(cur_cmd)
+            if not valid:
+                raise ValueError("Invalid command name {!r}: {}".format(cur_cmd, errmsg))
+
+        # Add functions decorated to be subcommands
         self._register_subcommands(self)
 
     def find_commandsets(self, commandset_type: Type[CommandSet], *, subclass_match: bool = False) -> List[CommandSet]:
@@ -632,9 +638,13 @@ class Cmd(cmd.Cmd):
 
         # iterate through all matching methods
         for method_name, method in methods:
-            subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
+            subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)  # type: str
             full_command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)  # type: str
             subcmd_parser = getattr(method, constants.CMD_ATTR_ARGPARSER)
+
+            subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
+            if not subcommand_valid:
+                raise CommandSetRegistrationError('Subcommand {} is not valid: {}'.format(str(subcommand_name), errmsg))
 
             command_tokens = full_command_name.split()
             command_name = command_tokens[0]

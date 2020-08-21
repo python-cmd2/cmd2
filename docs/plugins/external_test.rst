@@ -5,11 +5,13 @@ Overview
 ~~~~~~~~
 
 .. _cmd2_external_test_plugin:
-   https://github.com/python-cmd2/cmd2-ext-test/
+   https://github.com/python-cmd2/cmd2/tree/cmdset_settables/plugins/ext_test
 
-The cmd2_external_test_plugin_ supports testing of a cmd2 application by exposing access cmd2 commands with the same
-context as from within a cmd2 pyscript.  This allows for verification of an application's support for pyscripts and
-enables the cmd2 application to be tested as part of a larger system integration test.
+The `External Test Plugin <cmd2_external_test_plugin_>`_ supports testing of a cmd2 application by exposing access cmd2
+commands with the same context as from within a cmd2 :ref:`Python Scripts <scripting-python-scripts>`.  This interface
+captures ``stdout``, ``stderr``, as well as any application-specific data returned by the command.  This also allows
+for verification of an application's support for :ref:`Python Scripts <scripting-python-scripts>` and enables the cmd2
+application to be tested as part of a larger system integration test.
 
 
 Example cmd2 Application
@@ -59,11 +61,11 @@ In your test, define a fixture for your cmd2 application
 Writing Tests
 ~~~~~~~~~~~~~
 
-Now write your tests that validate your application using the `app_cmd` function to access
-the cmd2 application's commands. This allows invocation of the application's commands in the
+Now write your tests that validate your application using the :meth:`~cmd2_ext_test.ExternalTestMixin.app_cmd()`
+function to access the cmd2 application's commands. This allows invocation of the application's commands in the
 same format as a user would type. The results from calling a command matches what is returned
-from running an python script with cmd2's pyscript command, which provides stdout, stderr, and
-the command's result data.
+from running an python script with cmd2's :ref:`feature-builtin-commands-run-pyscript` command, which provides
+``stdout``, ``stderr``, and the command's result data.
 
 .. code-block:: python
 
