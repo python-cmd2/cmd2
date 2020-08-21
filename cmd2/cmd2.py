@@ -825,7 +825,7 @@ class Cmd(cmd.Cmd):
     def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
 
-        Also handles BrokenPipeError exceptions for when a commands's output has
+        Also handles BrokenPipeError exceptions for when a command's output has
         been piped to another process and that process terminates before the
         cmd2 command is finished executing.
 
