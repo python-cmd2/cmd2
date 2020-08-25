@@ -663,7 +663,9 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError('Could not find argparser for command "{}" needed by subcommand: {}'
                                                   .format(command_name, str(method)))
 
-            subcmd_parser.set_defaults(cmd2_handler=method)
+            # Set the subcommand handler function
+            defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
+            subcmd_parser.set_defaults(**defaults)
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
                 if not subcmd_names:

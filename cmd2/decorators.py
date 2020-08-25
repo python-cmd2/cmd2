@@ -1,7 +1,6 @@
 # coding=utf-8
 """Decorators for ``cmd2`` commands"""
 import argparse
-import types
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from . import constants
@@ -190,6 +189,7 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
              of unknown argument strings. A member called ``__statement__`` is added to the
              ``Namespace`` to provide command functions access to the :class:`cmd2.Statement`
              object. This can be useful if the command function needs to know the command line.
+             ``__statement__`` can also be retrieved by calling ``get_statement()`` on the ``Namespace``.
 
     :Example:
 
@@ -228,6 +228,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
     :return: function that gets passed the argparse-parsed args in a Namespace
              A member called __statement__ is added to the Namespace to provide command functions access to the
              Statement object. This can be useful if the command function needs to know the command line.
+             ``__statement__`` can also be retrieved by calling ``get_statement()`` on the ``Namespace``.
 
     :Example:
 
@@ -297,12 +298,13 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             except SystemExit:
                 raise Cmd2ArgparseError
             else:
-                setattr(ns, '__statement__', statement)
+                # Add statement to Namespace and a getter function for it
+                setattr(ns, constants.NS_ATTR_STATEMENT, statement)
+                setattr(ns, 'get_statement', lambda: statement)
 
-                def get_handler(ns_self: argparse.Namespace) -> Optional[Callable]:
-                    return getattr(ns_self, constants.SUBCMD_HANDLER, None)
-
-                setattr(ns, 'get_handler', types.MethodType(get_handler, ns))
+                # Add getter function for subcmd handler, which can be None
+                subcmd_handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
+                setattr(ns, 'get_handler', lambda: subcmd_handler)
 
                 args_list = _arg_swap(args, statement, *new_args)
                 return func(*args_list, **kwargs)

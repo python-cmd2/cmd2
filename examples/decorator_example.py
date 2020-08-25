@@ -67,7 +67,7 @@ class CmdLineApp(cmd2.Cmd):
     def do_tag(self, args: argparse.Namespace):
         """create an html tag"""
         # The Namespace always includes the Statement object created when parsing the command line
-        statement = args.__statement__
+        statement = args.get_statement()
 
         self.poutput("The command line you ran was: {}".format(statement.command_and_args))
         self.poutput("It generated this tag:")
