@@ -221,7 +221,7 @@ import re
 import sys
 # noinspection PyUnresolvedReferences,PyProtectedMember
 from argparse import ONE_OR_MORE, ZERO_OR_MORE, ArgumentError, _
-from typing import Callable, Optional, Tuple, Type, Union
+from typing import Any, Callable, Optional, Tuple, Type, Union
 
 from . import ansi, constants
 
@@ -902,6 +902,24 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             if file is None:
                 file = sys.stderr
             ansi.style_aware_write(file, message)
+
+
+class Cmd2AttributeWrapper:
+    """
+    Wraps a cmd2-specific attribute added to an argparse Namespace.
+    This makes it easy to know which attributes in a Namespace are
+    arguments from a parser and which were added by cmd2.
+    """
+    def __init__(self, attribute: Any):
+        self.__attribute = attribute
+
+    def get(self) -> Any:
+        """Get the value of the attribute"""
+        return self.__attribute
+
+    def set(self, new_val: Any) -> None:
+        """Set the value of the attribute"""
+        self.__attribute = new_val
 
 
 # The default ArgumentParser class for a cmd2 app

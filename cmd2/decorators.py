@@ -4,6 +4,7 @@ import argparse
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from . import constants
+from .argparse_custom import Cmd2AttributeWrapper
 from .exceptions import Cmd2ArgparseError
 from .parsing import Statement
 
@@ -186,10 +187,10 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
                         needs to be prepopulated with state data that affects parsing.
     :param preserve_quotes: if ``True``, then arguments passed to argparse maintain their quotes
     :return: function that gets passed argparse-parsed args in a ``Namespace`` and a list
-             of unknown argument strings. A member called ``__statement__`` is added to the
-             ``Namespace`` to provide command functions access to the :class:`cmd2.Statement`
-             object. This can be useful if the command function needs to know the command line.
-             ``__statement__`` can also be retrieved by calling ``get_statement()`` on the ``Namespace``.
+             of unknown argument strings. A :class:`cmd2.argparse_custom.Cmd2AttributeWrapper` called
+             ``cmd2_statement`` is included in the ``Namespace`` to provide access to the :class:`cmd2.Statement`
+             object. that was created when parsing the command line. This can be useful if the command function
+             needs to know the command line.
 
     :Example:
 
@@ -223,12 +224,12 @@ def with_argparser(parser: argparse.ArgumentParser, *,
     :param ns_provider: An optional function that accepts a cmd2.Cmd object as an argument and returns an
                         argparse.Namespace. This is useful if the Namespace needs to be prepopulated with
                         state data that affects parsing.
-    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
+    :param preserve_quotes: if ``True``, then arguments passed to argparse maintain their quotes
     :param with_unknown_args: if true, then capture unknown args
-    :return: function that gets passed the argparse-parsed args in a Namespace
-             A member called __statement__ is added to the Namespace to provide command functions access to the
-             Statement object. This can be useful if the command function needs to know the command line.
-             ``__statement__`` can also be retrieved by calling ``get_statement()`` on the ``Namespace``.
+    :return: function that gets passed argparse-parsed args in a ``Namespace``
+             A :class:`cmd2.argparse_custom.Cmd2AttributeWrapper` called ``cmd2_statement`` is included
+             in the ``Namespace`` to provide access to the :class:`cmd2.Statement` object that was created when
+             parsing the command line. This can be useful if the command function needs to know the command line.
 
     :Example:
 
@@ -298,13 +299,20 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             except SystemExit:
                 raise Cmd2ArgparseError
             else:
-                # Add statement to Namespace and a getter function for it
+                # Add statement to Namespace as __statement__ (this is deprecated and will be removed in 2.0)
                 setattr(ns, constants.NS_ATTR_STATEMENT, statement)
-                setattr(ns, 'get_statement', lambda: statement)
 
-                # Add getter function for subcmd handler, which can be None
-                subcmd_handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
-                setattr(ns, 'get_handler', lambda: subcmd_handler)
+                # Add wrapped statement to Namespace as cmd2_statement
+                setattr(ns, 'cmd2_statement', Cmd2AttributeWrapper(statement))
+
+                # Add wrapped subcmd handler (which can be None) to Namespace as cmd2_handler
+                handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
+                setattr(ns, 'cmd2_handler', Cmd2AttributeWrapper(handler))
+
+                # Remove the subcmd handler attribute from the Namespace
+                # since cmd2_handler is how a developer accesses it.
+                if hasattr(ns, constants.NS_ATTR_SUBCMD_HANDLER):
+                    delattr(ns, constants.NS_ATTR_SUBCMD_HANDLER)
 
                 args_list = _arg_swap(args, statement, *new_args)
                 return func(*args_list, **kwargs)

@@ -1,3 +1,11 @@
+## 1.3.6 (August 26, 2020)
+* Breaking changes
+    * The functions cmd2 adds to Namespaces (`get_statement()` and `get_handler()`) are now 
+    `Cmd2AttributeWrapper` objects named `cmd2_statement` and `cmd2_handler`. This makes it
+    easy to filter out which attributes in an `argparse.Namespace` were added by `cmd2`.
+* Deprecations
+    * ``Namespace.__statement__`` will be removed in `cmd2` 2.0.0. Use `Namespace.get_statement()` going forward.
+
 ## 1.3.5 (August 25, 2020)
 * Bug Fixes
     * Fixed `RecursionError` when printing an `argparse.Namespace` caused by custom attribute cmd2 was adding
