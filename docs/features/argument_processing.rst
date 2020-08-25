@@ -383,3 +383,18 @@ fashion.
 
 .. _decorator_primer: https://realpython.com/primer-on-python-decorators
 .. _help_categories: https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py
+
+
+Reserved Argument Names
+-----------------------
+``cmd2`` argparse decorators add the following attributes to argparse
+Namespaces. To avoid naming collisions, do not use any of the names for your
+argparse arguments.
+
+- ``__statement__`` - ``cmd2.Statement`` object that was created when parsing
+  the command line.
+- ``get_statement()`` - convenience function which returns the ``Statement``
+- ``__subcmd_handler__`` - points to subcommand handler function. This is added
+  when using the ``@cmd2.as_subcommand_to`` decorator.
+- ``get_handler()`` - convenience function which returns the subcommand handler
+  or ``None`` if one was not set

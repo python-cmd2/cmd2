@@ -1,4 +1,4 @@
-## 1.3.5 (TBD)
+## 1.3.5 (August 25, 2020)
 * Bug Fixes
     * Fixed `RecursionError` when printing an `argparse.Namespace` caused by custom attribute cmd2 was adding
 * Enhancements
