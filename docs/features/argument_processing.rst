@@ -14,7 +14,8 @@ handles the following for you:
 3. Passes the resulting ``argparse.Namespace`` object to your command function.
    The ``Namespace`` includes the ``Statement`` object that was created when
    parsing the command line. It is stored in the ``__statement__`` attribute of
-   the ``Namespace``.
+   the ``Namespace`` and can also be retrieved by calling ``get_statement()``
+   on the ``Namespace``.
 
 4. Adds the usage message from the argument parser to your command.
 
