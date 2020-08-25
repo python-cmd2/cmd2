@@ -37,10 +37,6 @@ HELP_FUNC_PREFIX = 'help_'
 # All command completer functions start with this
 COMPLETER_FUNC_PREFIX = 'complete_'
 
-##############################################################################
-# The following are optional attributes added to do_* command functions
-##############################################################################
-
 # The custom help category a command belongs to
 CMD_ATTR_HELP_CATEGORY = 'help_category'
 
@@ -50,9 +46,6 @@ CMD_ATTR_ARGPARSER = 'argparser'
 # Whether or not tokens are unquoted before sending to argparse
 CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
 
-# optional attribute
-SUBCMD_HANDLER = 'cmd2_handler'
-
 # subcommand attributes for the base command name and the subcommand name
 SUBCMD_ATTR_COMMAND = 'parent_command'
 SUBCMD_ATTR_NAME = 'subcommand_name'
@@ -60,3 +53,7 @@ SUBCMD_ATTR_ADD_PARSER_KWARGS = 'subcommand_add_parser_kwargs'
 
 # arpparse attribute linking to command set instance
 PARSER_ATTR_COMMANDSET = 'command_set'
+
+# custom attributes added to argparse Namespaces
+NS_ATTR_SUBCMD_HANDLER = '__subcmd_handler__'
+NS_ATTR_STATEMENT = '__statement__'

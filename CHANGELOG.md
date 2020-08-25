@@ -8,6 +8,12 @@
     * Moved `basic_complete` from utils into `cmd2.Cmd` class.
     * Moved `CompletionError` to exceptions.py
 
+## 1.3.5 (August 25, 2020)
+* Bug Fixes
+    * Fixed `RecursionError` when printing an `argparse.Namespace` caused by custom attribute cmd2 was adding
+* Enhancements
+    * Added `get_statement()` function to `argparse.Namespace` which returns `__statement__` attribute
+
 ## 1.3.4 (August 20, 2020)
 * Bug Fixes
     * Fixed `AttributeError` when `CommandSet` that uses `as_subcommand_to` decorator is loaded during

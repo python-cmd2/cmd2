@@ -290,6 +290,24 @@ class SubcommandApp(cmd2.Cmd):
         func(self, args)
 
 
+    # Add a subcommand using as_subcommand_to decorator
+    has_subcmd_parser = cmd2.Cmd2ArgumentParser(description="Tests as_subcmd_to decorator")
+    has_subcmd_subparsers = has_subcmd_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+    has_subcmd_subparsers.required = True
+
+    @cmd2.with_argparser(has_subcmd_parser)
+    def do_test_subcmd_decorator(self, args: argparse.Namespace):
+        handler = args.get_handler()
+        handler(args)
+
+    subcmd_parser = cmd2.Cmd2ArgumentParser(add_help=False, description="The subcommand")
+
+    @cmd2.as_subcommand_to('test_subcmd_decorator', 'subcmd', subcmd_parser, help='the subcommand')
+    def subcmd_func(self, args: argparse.Namespace):
+        # Make sure printing the Namespace works. The way we originally added get_hander()
+        # to it resulted in a RecursionError when printing.
+        print(args)
+
 @pytest.fixture
 def subcommand_app():
     app = SubcommandApp()
@@ -371,6 +389,11 @@ def test_add_another_subcommand(subcommand_app):
     """
     new_parser = subcommand_app.base_subparsers.add_parser('new_sub', help="stuff")
     assert new_parser.prog == "base new_sub"
+
+
+def test_subcmd_decorator(subcommand_app):
+    out, err = run_cmd(subcommand_app, 'test_subcmd_decorator subcmd')
+    assert out[0].startswith('Namespace(')
 
 
 def test_unittest_mock():

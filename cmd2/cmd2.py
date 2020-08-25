@@ -664,7 +664,9 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError('Could not find argparser for command "{}" needed by subcommand: {}'
                                                   .format(command_name, str(method)))
 
-            subcmd_parser.set_defaults(cmd2_handler=method)
+            # Set the subcommand handler function
+            defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
+            subcmd_parser.set_defaults(**defaults)
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
                 if not subcmd_names:
@@ -826,7 +828,7 @@ class Cmd(cmd.Cmd):
     def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
 
-        Also handles BrokenPipeError exceptions for when a commands's output has
+        Also handles BrokenPipeError exceptions for when a command's output has
         been piped to another process and that process terminates before the
         cmd2 command is finished executing.
 

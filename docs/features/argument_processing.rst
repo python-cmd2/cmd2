@@ -14,7 +14,8 @@ handles the following for you:
 3. Passes the resulting ``argparse.Namespace`` object to your command function.
    The ``Namespace`` includes the ``Statement`` object that was created when
    parsing the command line. It is stored in the ``__statement__`` attribute of
-   the ``Namespace``.
+   the ``Namespace`` and can also be retrieved by calling ``get_statement()``
+   on the ``Namespace``.
 
 4. Adds the usage message from the argument parser to your command.
 
@@ -382,3 +383,18 @@ fashion.
 
 .. _decorator_primer: https://realpython.com/primer-on-python-decorators
 .. _help_categories: https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py
+
+
+Reserved Argument Names
+-----------------------
+``cmd2`` argparse decorators add the following attributes to argparse
+Namespaces. To avoid naming collisions, do not use any of the names for your
+argparse arguments.
+
+- ``__statement__`` - ``cmd2.Statement`` object that was created when parsing
+  the command line.
+- ``get_statement()`` - convenience function which returns the ``Statement``
+- ``__subcmd_handler__`` - points to subcommand handler function. This is added
+  when using the ``@cmd2.as_subcommand_to`` decorator.
+- ``get_handler()`` - convenience function which returns the subcommand handler
+  or ``None`` if one was not set
