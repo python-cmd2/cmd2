@@ -1,3 +1,8 @@
+## 1.3.7 (August 27, 2020)
+* Bug Fixes
+    * Fixes an issue introduced in 1.3.0 with processing command strings containing terminator/separator 
+      character(s) that are manually passed to a command that uses argparse.
+
 ## 1.3.6 (August 27, 2020)
 * Breaking changes
     * The functions cmd2 adds to Namespaces (`get_statement()` and `get_handler()`) are now 
