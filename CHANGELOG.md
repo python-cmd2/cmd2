@@ -1,4 +1,4 @@
-## 1.3.6 (August 26, 2020)
+## 1.3.6 (August 27, 2020)
 * Breaking changes
     * The functions cmd2 adds to Namespaces (`get_statement()` and `get_handler()`) are now 
     `Cmd2AttributeWrapper` objects named `cmd2_statement` and `cmd2_handler`. This makes it
