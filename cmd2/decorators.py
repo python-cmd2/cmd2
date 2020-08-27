@@ -299,9 +299,6 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             except SystemExit:
                 raise Cmd2ArgparseError
             else:
-                # Add statement to Namespace as __statement__ (this is deprecated and will be removed in 2.0)
-                setattr(ns, constants.NS_ATTR_STATEMENT, statement)
-
                 # Add wrapped statement to Namespace as cmd2_statement
                 setattr(ns, 'cmd2_statement', Cmd2AttributeWrapper(statement))
 
