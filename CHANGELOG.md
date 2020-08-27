@@ -7,6 +7,16 @@
         argument` to choices_provider and completer functions.
     * Moved `basic_complete` from utils into `cmd2.Cmd` class.
     * Moved `CompletionError` to exceptions.py
+    * ``Namespace.__statement__`` has been removed. Use `Namespace.cmd2_statement.get()` instead.
+
+## 1.3.6 (August 27, 2020)
+* Breaking changes
+    * The functions cmd2 adds to Namespaces (`get_statement()` and `get_handler()`) are now 
+    `Cmd2AttributeWrapper` objects named `cmd2_statement` and `cmd2_handler`. This makes it
+    easy to filter out which attributes in an `argparse.Namespace` were added by `cmd2`.
+* Deprecations
+    * ``Namespace.__statement__`` will be removed in `cmd2` 2.0.0. Use `Namespace.cmd2_statement.get()`
+    going forward.
 
 ## 1.3.5 (August 25, 2020)
 * Bug Fixes

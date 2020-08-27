@@ -16,7 +16,7 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
     pass
 
 from .ansi import style, fg, bg
-from .argparse_custom import Cmd2ArgumentParser, CompletionItem, set_default_argument_parser
+from .argparse_custom import Cmd2ArgumentParser, Cmd2AttributeWrapper, CompletionItem, set_default_argument_parser
 
 # Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER
 import argparse

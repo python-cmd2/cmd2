@@ -13,9 +13,8 @@ handles the following for you:
 
 3. Passes the resulting ``argparse.Namespace`` object to your command function.
    The ``Namespace`` includes the ``Statement`` object that was created when
-   parsing the command line. It is stored in the ``__statement__`` attribute of
-   the ``Namespace`` and can also be retrieved by calling ``get_statement()``
-   on the ``Namespace``.
+   parsing the command line. It can be retrieved by calling
+   ``cmd2_statement.get()`` on the ``Namespace``.
 
 4. Adds the usage message from the argument parser to your command.
 
@@ -391,10 +390,13 @@ Reserved Argument Names
 Namespaces. To avoid naming collisions, do not use any of the names for your
 argparse arguments.
 
+- ``cmd2_statement`` - ``cmd2.Cmd2AttributeWrapper`` object containing
+  ``cmd2.Statement`` object that was created when parsing the command line.
 - ``__statement__`` - ``cmd2.Statement`` object that was created when parsing
-  the command line.
-- ``get_statement()`` - convenience function which returns the ``Statement``
-- ``__subcmd_handler__`` - points to subcommand handler function. This is added
-  when using the ``@cmd2.as_subcommand_to`` decorator.
-- ``get_handler()`` - convenience function which returns the subcommand handler
-  or ``None`` if one was not set
+  the command line. (This is deprecated and will be removed in 2.0.0.) Use
+  ``cmd2_statement`` instead.
+
+- ``__subcmd_handler__`` - used by cmd2 to identify the handler for a
+  subcommand created with ``@cmd2.as_subcommand_to`` decorator.
+- ``cmd2_handler`` - ``cmd2.Cmd2AttributeWrapper`` object containing
+  a subcommand handler function or ``None`` if one was not set.

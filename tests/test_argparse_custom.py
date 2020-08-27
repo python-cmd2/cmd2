@@ -259,3 +259,13 @@ def test_apcustom_metavar_tuple():
     parser = Cmd2ArgumentParser()
     parser.add_argument('--aflag', nargs=2, metavar=('foo', 'bar'), help='This is a test')
     assert '[--aflag foo bar]' in parser.format_help()
+
+
+def test_cmd2_attribute_wrapper():
+    initial_val = 5
+    wrapper = cmd2.Cmd2AttributeWrapper(initial_val)
+    assert wrapper.get() == initial_val
+
+    new_val = 22
+    wrapper.set(new_val)
+    assert wrapper.get() == new_val
