@@ -316,7 +316,7 @@ command and each CommandSet
 
         @with_argparser(cut_parser)
         def do_cut(self, ns: argparse.Namespace):
-            handler = ns.get_handler()
+            handler = ns.cmd2_handler.get()
             if handler is not None:
                 # Call whatever subcommand function was selected
                 handler(ns)

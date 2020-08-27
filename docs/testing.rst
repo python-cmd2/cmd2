@@ -38,7 +38,7 @@ this, you should always mock with `Autospeccing <python_mock_autospeccing_>`_ or
 enabled.
 
 Example of spec=True
-====================
+~~~~~~~~~~~~~~~~~~~~
 .. code-block:: python
 
     def test_mocked_methods():

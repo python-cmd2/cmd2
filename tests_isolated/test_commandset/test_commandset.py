@@ -72,7 +72,7 @@ class CommandSetA(CommandSetBase):
     @cmd2.with_argparser(main_parser)
     def do_main(self, args: argparse.Namespace) -> None:
         # Call handler for whatever subcommand was selected
-        handler = args.get_handler()
+        handler = args.cmd2_handler.get()
         handler(args)
 
     # main -> sub
@@ -309,7 +309,7 @@ class LoadableBase(cmd2.CommandSet):
     @cmd2.with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace):
         """Cut something"""
-        handler = ns.get_handler()
+        handler = ns.cmd2_handler.get()
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
@@ -330,7 +330,7 @@ class LoadableBase(cmd2.CommandSet):
             self._cmd.poutput('Need to cut before stirring')
             return
 
-        handler = ns.get_handler()
+        handler = ns.cmd2_handler.get()
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
@@ -345,7 +345,7 @@ class LoadableBase(cmd2.CommandSet):
 
     @cmd2.as_subcommand_to('stir', 'pasta', stir_pasta_parser)
     def stir_pasta(self, ns: argparse.Namespace):
-        handler = ns.get_handler()
+        handler = ns.cmd2_handler.get()
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
@@ -360,7 +360,7 @@ class LoadableBadBase(cmd2.CommandSet):
 
     def do_cut(self, ns: argparse.Namespace):
         """Cut something"""
-        handler = ns.get_handler()
+        handler = ns.cmd2_handler.get()
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
@@ -598,7 +598,7 @@ class AppWithSubCommands(cmd2.Cmd):
     @cmd2.with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace):
         """Cut something"""
-        handler = ns.get_handler()
+        handler = ns.cmd2_handler.get()
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
