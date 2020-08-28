@@ -9,6 +9,20 @@
     * Moved `CompletionError` to exceptions.py
     * ``Namespace.__statement__`` has been removed. Use `Namespace.cmd2_statement.get()` instead.
 
+## 1.3.8 (August 28, 2020)
+* Bug Fixes
+    * Fixed issue where subcommand added with `@as_subcommand_to` decorator did not display help
+    when called with `-h/--help`.
+* Enhancements
+    * `add_help=False` no longer has to be passed to parsers used in `@as_subcommand_to` decorator.
+      Only pass this if your subcommand should not have the `-h/--help` help option (as stated in
+      argparse documentation).
+
+## 1.3.7 (August 27, 2020)
+* Bug Fixes
+    * Fixes an issue introduced in 1.3.0 with processing command strings containing terminator/separator 
+      character(s) that are manually passed to a command that uses argparse.
+
 ## 1.3.6 (August 27, 2020)
 * Breaking changes
     * The functions cmd2 adds to Namespaces (`get_statement()` and `get_handler()`) are now 

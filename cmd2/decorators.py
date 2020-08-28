@@ -35,7 +35,7 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 ##########################
-# The _parse_positionals and _swap_args decorators allow for additional positional args to be preserved
+# The _parse_positionals and _arg_swap functions allow for additional positional args to be preserved
 # in cmd2 command functions/callables. As long as the 2-ple of arguments we expect to be there can be
 # found we can swap out the statement with each decorator's specific parameters
 ##########################
@@ -276,9 +276,9 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             :return: return value of command function
             :raises: Cmd2ArgparseError if argparse has error parsing command line
             """
-            cmd2_app, statement = _parse_positionals(args)
+            cmd2_app, statement_arg = _parse_positionals(args)
             statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
-                                                                                       statement,
+                                                                                       statement_arg,
                                                                                        preserve_quotes)
 
             if ns_provider is None:
@@ -311,7 +311,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
                 if hasattr(ns, constants.NS_ATTR_SUBCMD_HANDLER):
                     delattr(ns, constants.NS_ATTR_SUBCMD_HANDLER)
 
-                args_list = _arg_swap(args, statement, *new_args)
+                args_list = _arg_swap(args, statement_arg, *new_args)
                 return func(*args_list, **kwargs)
 
         # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command

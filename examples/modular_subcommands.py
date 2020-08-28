@@ -24,7 +24,7 @@ class LoadableFruits(CommandSet):
         self._cmd.poutput('Apple')
 
     banana_description = "Cut a banana"
-    banana_parser = cmd2.Cmd2ArgumentParser(add_help=False, description=banana_description)
+    banana_parser = cmd2.Cmd2ArgumentParser(description=banana_description)
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
     @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help=banana_description.lower())
@@ -42,7 +42,7 @@ class LoadableVegetables(CommandSet):
         self._cmd.poutput('Arugula')
 
     bokchoy_description = "Cut some bokchoy"
-    bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False, description=bokchoy_description)
+    bokchoy_parser = cmd2.Cmd2ArgumentParser(description=bokchoy_description)
     bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser, help=bokchoy_description.lower())

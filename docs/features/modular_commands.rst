@@ -244,7 +244,7 @@ command and each CommandSet
         def do_apple(self, _: cmd2.Statement):
             self._cmd.poutput('Apple')
 
-        banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+        banana_parser = cmd2.Cmd2ArgumentParser()
         banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
         @cmd2.as_subcommand_to('cut', 'banana', banana_parser)
@@ -261,7 +261,7 @@ command and each CommandSet
         def do_arugula(self, _: cmd2.Statement):
             self._cmd.poutput('Arugula')
 
-        bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+        bokchoy_parser = cmd2.Cmd2ArgumentParser()
         bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
 
         @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)

@@ -217,6 +217,23 @@ def test_shell_last_result(base_app):
     run_cmd(base_app, 'shell fake')
     assert base_app.last_result is not None
 
+
+def test_shell_manual_call(base_app):
+    # Verifies crash from Issue #986 doesn't happen
+    cmds = [
+        'echo "hi"',
+        'echo "there"',
+        'echo "cmd2!"'
+    ]
+    cmd = ';'.join(cmds)
+
+    base_app.do_shell(cmd)
+
+    cmd = '&&'.join(cmds)
+
+    base_app.do_shell(cmd)
+
+
 def test_base_py(base_app):
     # Make sure py can't edit Cmd.py_locals. It used to be that cmd2 was passing its py_locals
     # dictionary to the py environment instead of a shallow copy.
