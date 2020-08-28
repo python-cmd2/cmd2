@@ -76,7 +76,7 @@ class CommandSetA(CommandSetBase):
         handler(args)
 
     # main -> sub
-    subcmd_parser = cmd2.Cmd2ArgumentParser(add_help=False, description="Sub Command")
+    subcmd_parser = cmd2.Cmd2ArgumentParser(description="Sub Command")
 
     @cmd2.as_subcommand_to('main', 'sub', subcmd_parser, help="sub command")
     def subcmd_func(self, args: argparse.Namespace) -> None:
@@ -339,7 +339,7 @@ class LoadableBase(cmd2.CommandSet):
             self._cmd.pwarning('This command does nothing without sub-parsers registered')
             self._cmd.do_help('stir')
 
-    stir_pasta_parser = cmd2.Cmd2ArgumentParser('pasta', add_help=False)
+    stir_pasta_parser = cmd2.Cmd2ArgumentParser()
     stir_pasta_parser.add_argument('--option', '-o')
     stir_pasta_parser.add_subparsers(title='style', help='Stir style')
 
@@ -379,7 +379,7 @@ class LoadableFruits(cmd2.CommandSet):
     def do_apple(self, _: cmd2.Statement):
         self._cmd.poutput('Apple')
 
-    banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+    banana_parser = cmd2.Cmd2ArgumentParser()
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
     @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
@@ -393,7 +393,7 @@ class LoadablePastaStir(cmd2.CommandSet):
         super(LoadablePastaStir, self).__init__()
         self._dummy = dummy  # prevents autoload
 
-    stir_pasta_vigor_parser = cmd2.Cmd2ArgumentParser('vigor', add_help=False)
+    stir_pasta_vigor_parser = cmd2.Cmd2ArgumentParser()
     stir_pasta_vigor_parser.add_argument('frequency')
 
     @cmd2.as_subcommand_to('stir pasta', 'vigorously', stir_pasta_vigor_parser)
@@ -413,7 +413,7 @@ class LoadableVegetables(cmd2.CommandSet):
     def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return ['quartered', 'diced']
 
-    bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+    bokchoy_parser = cmd2.Cmd2ArgumentParser()
     bokchoy_parser.add_argument('style', completer_method=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
@@ -561,7 +561,7 @@ def test_nested_subcommands(command_sets_manual):
             super(BadNestedSubcommands, self).__init__()
             self._dummy = dummy  # prevents autoload
 
-        stir_pasta_vigor_parser = cmd2.Cmd2ArgumentParser('vigor', add_help=False)
+        stir_pasta_vigor_parser = cmd2.Cmd2ArgumentParser()
         stir_pasta_vigor_parser.add_argument('frequency')
 
         # stir sauce doesn't exist anywhere, this should fail
@@ -607,7 +607,7 @@ class AppWithSubCommands(cmd2.Cmd):
             self.poutput('This command does nothing without sub-parsers registered')
             self.do_help('cut')
 
-    banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+    banana_parser = cmd2.Cmd2ArgumentParser()
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
     @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
@@ -618,7 +618,7 @@ class AppWithSubCommands(cmd2.Cmd):
     def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return ['quartered', 'diced']
 
-    bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+    bokchoy_parser = cmd2.Cmd2ArgumentParser()
     bokchoy_parser.add_argument('style', completer_method=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
@@ -861,7 +861,7 @@ def test_bad_subcommand():
             """Cut something"""
             pass
 
-        banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+        banana_parser = cmd2.Cmd2ArgumentParser()
         banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
         @cmd2.as_subcommand_to('cut', 'bad name', banana_parser, help='This should fail')
