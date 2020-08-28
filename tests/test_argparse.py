@@ -289,23 +289,31 @@ class SubcommandApp(cmd2.Cmd):
         func = getattr(args, 'func')
         func(self, args)
 
-    # Add a subcommand using as_subcommand_to decorator
-    has_subcmd_parser = cmd2.Cmd2ArgumentParser(description="Tests as_subcmd_to decorator")
-    has_subcmd_subparsers = has_subcmd_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    has_subcmd_subparsers.required = True
+    # Add subcommands using as_subcommand_to decorator
+    has_subcmds_parser = cmd2.Cmd2ArgumentParser(description="Tests as_subcmd_to decorator")
+    has_subcmds_subparsers = has_subcmds_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+    has_subcmds_subparsers.required = True
 
-    @cmd2.with_argparser(has_subcmd_parser)
+    @cmd2.with_argparser(has_subcmds_parser)
     def do_test_subcmd_decorator(self, args: argparse.Namespace):
         handler = args.cmd2_handler.get()
         handler(args)
 
-    subcmd_parser = cmd2.Cmd2ArgumentParser(add_help=False, description="The subcommand")
+    subcmd_parser = cmd2.Cmd2ArgumentParser(description="A subcommand")
 
-    @cmd2.as_subcommand_to('test_subcmd_decorator', 'subcmd', subcmd_parser, help='the subcommand')
+    @cmd2.as_subcommand_to('test_subcmd_decorator', 'subcmd', subcmd_parser, help=subcmd_parser.description.lower())
     def subcmd_func(self, args: argparse.Namespace):
-        # Make sure printing the Namespace works. The way we originally added get_hander()
-        # to it resulted in a RecursionError when printing.
+        # Make sure printing the Namespace works. The way we originally added cmd2_hander to it resulted in a RecursionError.
         self.poutput(args)
+
+    helpless_subcmd_parser = cmd2.Cmd2ArgumentParser(add_help=False, description="A subcommand with no help")
+
+    @cmd2.as_subcommand_to('test_subcmd_decorator', 'helpless_subcmd', helpless_subcmd_parser,
+                           help=helpless_subcmd_parser.description.lower())
+    def helpless_subcmd_func(self, args: argparse.Namespace):
+        # Make sure vars(Namespace) works. The way we originally added cmd2_hander to it resulted in a RecursionError.
+        self.poutput(vars(args))
+
 
 @pytest.fixture
 def subcommand_app():
@@ -391,8 +399,28 @@ def test_add_another_subcommand(subcommand_app):
 
 
 def test_subcmd_decorator(subcommand_app):
+    # Test subcommand that has help option
     out, err = run_cmd(subcommand_app, 'test_subcmd_decorator subcmd')
     assert out[0].startswith('Namespace(')
+
+    out, err = run_cmd(subcommand_app, 'help test_subcmd_decorator subcmd')
+    assert out[0] == 'Usage: test_subcmd_decorator subcmd [-h]'
+
+    out, err = run_cmd(subcommand_app, 'test_subcmd_decorator subcmd -h')
+    assert out[0] == 'Usage: test_subcmd_decorator subcmd [-h]'
+
+    # Test subcommand that has no help option
+    out, err = run_cmd(subcommand_app, 'test_subcmd_decorator helpless_subcmd')
+    assert "'subcommand': 'helpless_subcmd'" in out[0]
+
+    out, err = run_cmd(subcommand_app, 'help test_subcmd_decorator helpless_subcmd')
+    assert out[0] == 'Usage: test_subcmd_decorator helpless_subcmd'
+    assert not err
+
+    out, err = run_cmd(subcommand_app, 'test_subcmd_decorator helpless_subcmd -h')
+    assert not out
+    assert err[0] == 'Usage: test_subcmd_decorator [-h] SUBCOMMAND ...'
+    assert err[1] == 'Error: unrecognized arguments: -h'
 
 
 def test_unittest_mock():
