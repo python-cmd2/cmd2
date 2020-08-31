@@ -705,7 +705,7 @@ class SubclassCommandSetCase2(cmd2.CommandSet):
 def test_cross_commandset_completer(command_sets_manual):
     global complete_states_expected_self
     # This tests the different ways to locate the matching CommandSet when completing an argparse argument.
-    # Exercises the `_complete_for_arg` function of `ArgparseCompleter` in `argparse_completer.py`
+    # Exercises the `_complete_arg` function of `ArgparseCompleter` in `argparse_completer.py`
 
     ####################################################################################################################
     # This exercises Case 1

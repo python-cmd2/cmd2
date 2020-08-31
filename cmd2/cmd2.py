@@ -1618,7 +1618,10 @@ class Cmd(cmd.Cmd):
         :param endidx: the ending index of the prefix text
         :param custom_settings: optional prepopulated completion settings
         """
+        from .argparse_completer import ArgparseCompleter
+
         unclosed_quote = ''
+        command = None
 
         # If custom_settings is None, then we are completing a command's arguments
         if custom_settings is None:
@@ -1630,7 +1633,6 @@ class Cmd(cmd.Cmd):
             if not command:
                 return
 
-            cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
             expanded_line = statement.command_and_args
 
             # We overwrote line with a properly formatted but fully stripped version
@@ -1648,6 +1650,15 @@ class Cmd(cmd.Cmd):
             # Overwrite line to pass into completers
             line = expanded_line
 
+        # Get all tokens through the one being completed
+        tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
+
+        # Check if we had a parsing error
+        if len(tokens) == 0:
+            return
+
+        # Determine the completer function to use
+        if command is not None:
             # Check if a macro was entered
             if command in self.macros:
                 completer_func = self.path_complete
@@ -1663,9 +1674,12 @@ class Cmd(cmd.Cmd):
                     argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
 
                     if func is not None and argparser is not None:
-                        completer_func = functools.partial(self._argparse_complete,
-                                                           argparser=argparser,
-                                                           preserve_quotes=getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES),
+                        cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
+                        completer = ArgparseCompleter(argparser, self)
+                        preserve_quotes = getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES)
+
+                        completer_func = functools.partial(completer.complete,
+                                                           tokens=raw_tokens[1:] if preserve_quotes else tokens[1:],
                                                            cmd_set=cmd_set)
                     else:
                         completer_func = self.completedefault
@@ -1680,17 +1694,10 @@ class Cmd(cmd.Cmd):
 
         # Otherwise we are completing the command token or performing custom completion
         else:
-            completer_func = functools.partial(self._argparse_complete,
-                                               argparser=custom_settings.parser,
-                                               preserve_quotes=custom_settings.preserve_quotes,
+            completer = ArgparseCompleter(custom_settings.parser, self)
+            completer_func = functools.partial(completer.complete,
+                                               tokens=raw_tokens if custom_settings.preserve_quotes else tokens,
                                                cmd_set=None)
-
-        # Get all tokens through the one being completed
-        tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
-
-        # Check if we had a parsing error
-        if len(tokens) == 0:
-            return
 
         # Text we need to remove from completions later
         text_to_remove = ''
@@ -1872,20 +1879,6 @@ class Cmd(cmd.Cmd):
             self.pexcept(e)
             rl_force_redisplay()
             return None
-
-    def _argparse_complete(self, text: str, line: str, begidx: int, endidx: int, *,
-                           argparser: argparse.ArgumentParser,
-                           preserve_quotes: bool,
-                           cmd_set: Optional[CommandSet] = None) -> List[str]:
-        """Perform argparse-based tab completion"""
-        from .argparse_completer import ArgparseCompleter
-        completer = ArgparseCompleter(argparser, self)
-        tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
-
-        # To have tab completion parsing match command line parsing behavior,
-        # use preserve_quotes to determine if we parse the quoted or unquoted tokens.
-        tokens_to_parse = raw_tokens if preserve_quotes else tokens
-        return completer.complete_command(tokens_to_parse, text, line, begidx, endidx, cmd_set=cmd_set)
 
     def in_script(self) -> bool:
         """Return whether a text script is running"""
@@ -2555,7 +2548,8 @@ class Cmd(cmd.Cmd):
         :param prompt: prompt to display to user
         :param history: optional list of strings to use for up-arrow history. If completion_mode is
                         CompletionMode.COMMANDS and this is None, then cmd2's command list history will
-                        be used. Defaults to None.
+                        be used. The passed in history will not be edited. It is the caller's responsibility
+                        to add the returned input to history if desired. Defaults to None.
         :param completion_mode: tells what type of tab completion to support. Tab completion only works when
                                 self.use_rawinput is True and sys.stdin is a terminal. Defaults to
                                 CompletionMode.NONE.
@@ -2565,9 +2559,9 @@ class Cmd(cmd.Cmd):
 
         A maximum of one of these should be provided:
 
-        :param choices: iterable of accepted values
-        :param choices_provider: function that provides choices for this argument
-        :param completer: tab completion function that provides choices for this argument
+        :param choices: iterable of accepted values for single argument
+        :param choices_provider: function that provides choices for single argument
+        :param completer: tab completion function that provides choices for single argument
         :param parser: an argument parser which supports the tab completion of multiple arguments
 
         :return: the line read from stdin with all trailing new lines removed
@@ -3138,12 +3132,9 @@ class Cmd(cmd.Cmd):
         if func is None or argparser is None:
             return []
 
-        # Combine the command and its subcommand tokens for the ArgparseCompleter
-        tokens = [command] + arg_tokens['subcommands']
-
         from .argparse_completer import ArgparseCompleter
         completer = ArgparseCompleter(argparser, self)
-        return completer.complete_subcommand_help(tokens, text, line, begidx, endidx)
+        return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
 
     help_parser = DEFAULT_ARGUMENT_PARSER(description="List available commands or provide "
                                                       "detailed help for a specific command")
@@ -3174,10 +3165,9 @@ class Cmd(cmd.Cmd):
             if func is not None and argparser is not None:
                 from .argparse_completer import ArgparseCompleter
                 completer = ArgparseCompleter(argparser, self)
-                tokens = [args.command] + args.subcommands
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
-                self.poutput(completer.format_help(tokens), end='')
+                self.poutput(completer.format_help(args.subcommands), end='')
 
             # If there is no help information then print an error
             elif help_func is None and (func is None or not func.__doc__):
@@ -3382,10 +3372,6 @@ class Cmd(cmd.Cmd):
             if not response:
                 continue
 
-            if rl_type != RlType.NONE:
-                hlen = readline.get_current_history_length()
-                if hlen >= 1:
-                    readline.remove_history_item(hlen - 1)
             try:
                 choice = int(response)
                 if choice < 1:
@@ -3420,7 +3406,7 @@ class Cmd(cmd.Cmd):
 
         # Use raw_tokens since quotes have been preserved
         _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
-        return completer.complete_command(raw_tokens, text, line, begidx, endidx)
+        return completer.complete(text, line, begidx, endidx, raw_tokens[1:])
 
     # When tab completing value, we recreate the set command parser with a value argument specific to
     # the settable being edited. To make this easier, define a parent parser with all the common elements.
