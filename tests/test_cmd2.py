@@ -2247,7 +2247,7 @@ def test_disable_and_enable_category(disable_commands_app):
 
     # Make sure neither function completes
     text = ''
-    line = 'has_helper_funcs'
+    line = 'has_helper_funcs {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -2255,7 +2255,7 @@ def test_disable_and_enable_category(disable_commands_app):
     assert first_match is None
 
     text = ''
-    line = 'has_no_helper_funcs'
+    line = 'has_no_helper_funcs {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -2291,7 +2291,7 @@ def test_disable_and_enable_category(disable_commands_app):
 
     # has_helper_funcs should complete now
     text = ''
-    line = 'has_helper_funcs'
+    line = 'has_helper_funcs {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -2300,7 +2300,7 @@ def test_disable_and_enable_category(disable_commands_app):
 
     # has_no_helper_funcs had no completer originally, so there should be no results
     text = ''
-    line = 'has_no_helper_funcs'
+    line = 'has_no_helper_funcs {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 

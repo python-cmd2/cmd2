@@ -95,6 +95,22 @@ except ImportError:  # pragma: no cover
     ipython_available = False
 
 
+class _CustomCompletionSettings:
+    """Used to tab complete things other than command arguments"""
+    def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False):
+        """
+        Initializer
+        :param parser: arg parser defining format of string being tab completed
+        :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
+                                ArgparseCompleter. This is helpful in cases when you're tab completing
+                                flag-like tokens (e.g. -o, --option) and you don't want them to be
+                                treated as argparse flags when quoted. Set this to True if you plan
+                                on passing the string to argparse with the tokens still quoted.
+        """
+        self.parser = parser
+        self.preserve_quotes = preserve_quotes
+
+
 class _SavedReadlineSettings:
     """readline settings that are backed up when switching between readline environments"""
 
@@ -1572,47 +1588,90 @@ class Cmd(cmd.Cmd):
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
 
-    def _completion_for_command(self, text: str, line: str, begidx: int,
-                                endidx: int, shortcut_to_restore: str) -> None:
+    def _perform_completion(self, text: str, line: str, begidx: int, endidx: int,
+                            custom_setting: Optional[_CustomCompletionSettings] = None) -> None:
         """
-        Helper function for complete() that performs command-specific tab completion
+        Helper function for complete() that performs the actual completion
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param shortcut_to_restore: if not blank, then this shortcut was removed from text and needs to be
-                                    prepended to all the matches
+        :param custom_setting: optional prepopulated completion settings
         """
+        import functools
         unclosed_quote = ''
 
-        # Parse the command line
-        statement = self.statement_parser.parse_command_only(line)
-        command = statement.command
-        cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
-        expanded_line = statement.command_and_args
+        # If custom_setting is None, then we are completing a command's arguments
+        if custom_setting is None:
+            # Parse the command line
+            statement = self.statement_parser.parse_command_only(line)
+            command = statement.command
 
-        # We overwrote line with a properly formatted but fully stripped version
-        # Restore the end spaces since line is only supposed to be lstripped when
-        # passed to completer functions according to Python docs
-        rstripped_len = len(line) - len(line.rstrip())
-        expanded_line += ' ' * rstripped_len
+            # Malformed command line (e.g. quoted command token)
+            if not command:
+                return
 
-        # Fix the index values if expanded_line has a different size than line
-        if len(expanded_line) != len(line):
-            diff = len(expanded_line) - len(line)
-            begidx += diff
-            endidx += diff
+            cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
+            expanded_line = statement.command_and_args
 
-        # Overwrite line to pass into completers
-        line = expanded_line
+            # We overwrote line with a properly formatted but fully stripped version
+            # Restore the end spaces since line is only supposed to be lstripped when
+            # passed to completer functions according to Python docs
+            rstripped_len = len(line) - len(line.rstrip())
+            expanded_line += ' ' * rstripped_len
+
+            # Fix the index values if expanded_line has a different size than line
+            if len(expanded_line) != len(line):
+                diff = len(expanded_line) - len(line)
+                begidx += diff
+                endidx += diff
+
+            # Overwrite line to pass into completers
+            line = expanded_line
+
+            # Check if a macro was entered
+            if command in self.macros:
+                compfunc = self.path_complete
+
+            # Check if a command was entered
+            elif command in self.get_all_commands():
+                # Get the completer function for this command
+                compfunc = getattr(self, constants.COMPLETER_FUNC_PREFIX + command, None)
+
+                if compfunc is None:
+                    # There's no completer function, next see if the command uses argparse
+                    func = self.cmd_func(command)
+                    argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
+
+                    if func is not None and argparser is not None:
+                        compfunc = functools.partial(self._complete_argparse_command,
+                                                     argparser=argparser,
+                                                     preserve_quotes=getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES),
+                                                     cmd_set=cmd_set)
+                    else:
+                        compfunc = self.completedefault
+
+            # Not a recognized macro or command
+            else:
+                # Check if this command should be run as a shell command
+                if self.default_to_shell and command in utils.get_exes_in_path(command):
+                    compfunc = self.path_complete
+                else:
+                    compfunc = self.completedefault
+
+        # Otherwise we are completing the command token or performing custom completion
+        else:
+            compfunc = functools.partial(self._complete_argparse_command,
+                                         argparser=custom_setting.parser,
+                                         preserve_quotes=custom_setting.preserve_quotes,
+                                         cmd_set=None)
 
         # Get all tokens through the one being completed
         tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
-        # Check if we either had a parsing error or are trying to complete the command token
-        # The latter can happen if " or ' was entered as the command
-        if len(tokens) <= 1:
+        # Check if we had a parsing error
+        if len(tokens) == 0:
             return
 
         # Text we need to remove from completions later
@@ -1641,37 +1700,6 @@ class Cmd(cmd.Cmd):
                 # get unbroken search text to complete on.
                 text = text_to_remove + text
                 begidx = actual_begidx
-
-        # Check if a macro was entered
-        if command in self.macros:
-            compfunc = self.path_complete
-
-        # Check if a command was entered
-        elif command in self.get_all_commands():
-            # Get the completer function for this command
-            compfunc = getattr(self, constants.COMPLETER_FUNC_PREFIX + command, None)
-
-            if compfunc is None:
-                # There's no completer function, next see if the command uses argparse
-                func = self.cmd_func(command)
-                argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
-
-                if func is not None and argparser is not None:
-                    import functools
-                    compfunc = functools.partial(self._complete_argparse_command,
-                                                 argparser=argparser,
-                                                 preserve_quotes=getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES),
-                                                 cmd_set=cmd_set)
-                else:
-                    compfunc = self.completedefault
-
-        # Not a recognized macro or command
-        else:
-            # Check if this command should be run as a shell command
-            if self.default_to_shell and command in utils.get_exes_in_path(command):
-                compfunc = self.path_complete
-            else:
-                compfunc = self.completedefault
 
         # Attempt tab completion for redirection first, and if that isn't occurring,
         # call the completer function for the current command
@@ -1725,16 +1753,11 @@ class Cmd(cmd.Cmd):
             elif text_to_remove:
                 self.completion_matches = [match.replace(text_to_remove, '', 1) for match in self.completion_matches]
 
-            # Check if we need to restore a shortcut in the tab completions
-            # so it doesn't get erased from the command line
-            if shortcut_to_restore:
-                self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
-
             # If we have one result, then add a closing quote if needed and allowed
             if len(self.completion_matches) == 1 and self.allow_closing_quote and unclosed_quote:
                 self.completion_matches[0] += unclosed_quote
 
-    def complete(self, text: str, state: int) -> Optional[str]:
+    def complete(self, text: str, state: int, custom_setting: Optional[_CustomCompletionSettings] = None) -> Optional[str]:
         """Override of cmd2's complete method which returns the next possible completion for 'text'
 
         This completer function is called by readline as complete(text, state), for state in 0, 1, 2, …,
@@ -1746,6 +1769,7 @@ class Cmd(cmd.Cmd):
 
         :param text: the current word that user is typing
         :param state: non-negative integer
+        :param custom_setting: used when not tab completing the main command line
         :return: the next possible completion for text or None
         """
         # noinspection PyBroadException
@@ -1756,7 +1780,7 @@ class Cmd(cmd.Cmd):
                 # Check if we are completing a multiline command
                 if self._at_continuation_prompt:
                     # lstrip and prepend the previously typed portion of this multiline command
-                    lstripped_previous = self._multiline_in_progress.lstrip()
+                    lstripped_previous = self._multiline_in_progress.lstrip().replace(constants.LINE_FEED, ' ')
                     line = lstripped_previous + readline.get_line_buffer()
 
                     # Increment the indexes to account for the prepended text
@@ -1775,9 +1799,9 @@ class Cmd(cmd.Cmd):
 
                 # Shortcuts are not word break characters when tab completing. Therefore shortcuts become part
                 # of the text variable if there isn't a word break, like a space, after it. We need to remove it
-                # from text and update the indexes. This only applies if we are at the the beginning of the line.
+                # from text and update the indexes. This only applies if we are at the beginning of the command line.
                 shortcut_to_restore = ''
-                if begidx == 0:
+                if begidx == 0 and custom_setting is None:
                     for (shortcut, _) in self.statement_parser.shortcuts:
                         if text.startswith(shortcut):
                             # Save the shortcut to restore later
@@ -1787,15 +1811,18 @@ class Cmd(cmd.Cmd):
                             text = text[len(shortcut_to_restore):]
                             begidx += len(shortcut_to_restore)
                             break
+                    else:
+                        parser = DEFAULT_ARGUMENT_PARSER(add_help=False)
+                        parser.add_argument('command', metavar="COMMAND", help="command, alias, or macro name",
+                                            choices=self._get_commands_aliases_and_macros_for_completion())
+                        custom_setting = _CustomCompletionSettings(parser)
 
-                # If begidx is greater than 0, then we are no longer completing the first token (command name)
-                if begidx > 0:
-                    self._completion_for_command(text, line, begidx, endidx, shortcut_to_restore)
+                self._perform_completion(text, line, begidx, endidx, custom_setting)
 
-                # Otherwise complete token against anything a user can run
-                else:
-                    match_against = self._get_commands_aliases_and_macros_for_completion()
-                    self.completion_matches = self.basic_complete(text, line, begidx, endidx, match_against)
+                # Check if we need to restore a shortcut in the tab completions
+                # so it doesn't get erased from the command line
+                if shortcut_to_restore:
+                    self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
 
                 # If we have one result and we are at the end of the line, then add a space if allowed
                 if len(self.completion_matches) == 1 and endidx == len(line) and self.allow_appended_space:
@@ -2595,7 +2622,7 @@ class Cmd(cmd.Cmd):
 
     def _set_up_cmd2_readline(self) -> _SavedReadlineSettings:
         """
-        Set up readline with cmd2-specific settings
+        Called at beginning of command loop to set up readline with cmd2-specific settings
 
         :return: Class containing saved readline settings
         """
@@ -2630,7 +2657,7 @@ class Cmd(cmd.Cmd):
 
     def _restore_readline(self, readline_settings: _SavedReadlineSettings):
         """
-        Restore saved readline settings
+        Called at end of command loop to restore saved readline settings
 
         :param readline_settings: the readline settings to restore
         """

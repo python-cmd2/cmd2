@@ -858,9 +858,9 @@ def test_no_completer(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
 
-def test_quote_as_command(cmd2_app):
+def test_wordbreak_in_command(cmd2_app):
     text = ''
-    line = '" {}'.format(text)
+    line = '"{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
