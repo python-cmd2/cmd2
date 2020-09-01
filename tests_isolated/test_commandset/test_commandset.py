@@ -21,6 +21,18 @@ class CommandSetBase(cmd2.CommandSet):
 
 @cmd2.with_default_category('Fruits')
 class CommandSetA(CommandSetBase):
+    def on_register(self, cmd) -> None:
+        super().on_register(cmd)
+        print("in on_register now")
+
+    def on_registered(self) -> None:
+        super().on_registered()
+        print("in on_registered now")
+
+    def on_unregister(self) -> None:
+        print("in on_unregister now")
+        super().on_unregister()
+
     def do_apple(self, statement: cmd2.Statement):
         self._cmd.poutput('Apple!')
 
@@ -158,7 +170,7 @@ def test_custom_construct_commandsets():
     assert command_set_2 not in matches
 
 
-def test_load_commands(command_sets_manual):
+def test_load_commands(command_sets_manual, capsys):
 
     # now install a command set and verify the commands are now present
     cmd_set = CommandSetA()
@@ -170,6 +182,11 @@ def test_load_commands(command_sets_manual):
 
     assert command_sets_manual.find_commandsets(CommandSetA)[0] is cmd_set
     assert command_sets_manual.find_commandset_for_command('elderberry') is cmd_set
+
+    # Make sure registration callbacks ran
+    out, err = capsys.readouterr()
+    assert "in on_register now" in out
+    assert "in on_registered now" in out
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
 
@@ -191,6 +208,10 @@ def test_load_commands(command_sets_manual):
 
     assert 'Alone' not in cmds_cats
     assert 'Fruits' not in cmds_cats
+
+    # Make sure unregistration callback ran
+    out, err = capsys.readouterr()
+    assert "in on_unregister now" in out
 
     # uninstall a second time and verify no errors happen
     command_sets_manual.unregister_command_set(cmd_set)
