@@ -1,6 +1,10 @@
 cmd2.Cmd
 ========
 
+.. autoclass:: cmd2.CompletionMode
+    :members:
+    :undoc-members:
+
 .. autoclass:: cmd2.Cmd
     :members:
 

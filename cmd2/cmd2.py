@@ -2554,7 +2554,8 @@ class Cmd(cmd.Cmd):
                                 self.use_rawinput is True and sys.stdin is a terminal. Defaults to
                                 CompletionMode.NONE.
 
-        The following optional settings apply when completion_mode is CompletionMode.CUSTOM.
+        The following optional settings apply when completion_mode is CompletionMode.CUSTOM:
+
         :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
                                 ArgparseCompleter. This is helpful in cases when you're tab completing
                                 flag-like tokens (e.g. -o, --option) and you don't want them to be
