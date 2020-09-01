@@ -1,3 +1,8 @@
+## 1.3.9 (September 01, 2020)
+* Enhancements
+    * Added `on_registered()` callback to `CommandSet` class. This is called by `cmd2.Cmd` after a
+    `CommandSet` is registered and all its commands have been added to the CLI.
+
 ## 1.3.8 (August 28, 2020)
 * Bug Fixes
     * Fixed issue where subcommand added with `@as_subcommand_to` decorator did not display help

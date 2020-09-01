@@ -503,6 +503,7 @@ class Cmd(cmd.Cmd):
             self._installed_command_sets.append(cmdset)
 
             self._register_subcommands(cmdset)
+            cmdset.on_registered()
         except Exception:
             for attrib in installed_attributes:
                 delattr(self, attrib)

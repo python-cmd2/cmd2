@@ -53,7 +53,7 @@ class CommandSet(object):
     def __init__(self):
         self._cmd = None  # type: Optional[cmd2.Cmd]
 
-    def on_register(self, cmd):
+    def on_register(self, cmd) -> None:
         """
         Called by cmd2.Cmd when a CommandSet is registered. Subclasses can override this
         to perform an initialization requiring access to the Cmd object.
@@ -66,7 +66,14 @@ class CommandSet(object):
         else:
             raise CommandSetRegistrationError('This CommandSet has already been registered')
 
-    def on_unregister(self):
+    def on_registered(self) -> None:
+        """
+        Called by cmd2.Cmd after a CommandSet is registered and all its commands have been added
+        to the CLI. Subclasses can override this to perform custom steps.
+        """
+        pass
+
+    def on_unregister(self) -> None:
         """
         Called by ``cmd2.Cmd`` when a CommandSet is unregistered and removed.
 
