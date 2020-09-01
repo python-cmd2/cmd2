@@ -101,17 +101,17 @@ class CompletionMode(enum.Enum):
     """Enum for what type of tab completion to perform in read_input"""
     # Tab completion will be disabled during read_input() call
     # Use of custom up-arrow history supported
-    NONE = enum.auto()
+    NONE = 1
 
     # read_input() will tab complete cmd2 commands and their arguments
     # cmd2's command line history will be used for up arrow if history is not provided.
     # Otherwise use of custom up-arrow history supported.
-    COMMANDS = enum.auto()
+    COMMANDS = 2
 
     # read_input() will tab complete based on one of its following parameters:
     #     choices, choices_provider, completer, parser
     # Use of custom up-arrow history supported
-    CUSTOM = enum.auto()
+    CUSTOM = 3
 
 
 class _CustomCompletionSettings:
