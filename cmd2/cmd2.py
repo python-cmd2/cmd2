@@ -2555,7 +2555,11 @@ class Cmd(cmd.Cmd):
                                 CompletionMode.NONE.
 
         The following optional settings apply when completion_mode is CompletionMode.CUSTOM.
-        :param preserve_quotes:
+        :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
+                                ArgparseCompleter. This is helpful in cases when you're tab completing
+                                flag-like tokens (e.g. -o, --option) and you don't want them to be
+                                treated as argparse flags when quoted. Set this to True if you plan
+                                on passing the string to argparse with the tokens still quoted.
 
         A maximum of one of these should be provided:
 

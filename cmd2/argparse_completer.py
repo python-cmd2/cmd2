@@ -191,7 +191,7 @@ class ArgparseCompleter:
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param tokens: list of argument tokens to parse
+        :param tokens: list of argument tokens being passed to the parser
         :param cmd_set: if tab completing a command, the CommandSet the command's function belongs to, if applicable.
                         Defaults to None.
 
