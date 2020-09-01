@@ -3375,7 +3375,7 @@ class Cmd(cmd.Cmd):
                 self.poutput(result_str)
 
     shell_parser = DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt")
-    shell_parser.add_argument('command', help='the command to run', completer_method=shell_cmd_complete)
+    shell_parser.add_argument('command', nargs='?', default='bash', help='the command to run', completer_method=shell_cmd_complete)
     shell_parser.add_argument('command_args', nargs=argparse.REMAINDER, help='arguments to pass to command',
                               completer_method=path_complete)
 
