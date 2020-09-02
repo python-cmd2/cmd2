@@ -171,7 +171,7 @@ You may need to disable command auto-loading if you need dynamically load comman
             self._fruits = LoadableFruits()
             self._vegetables = LoadableVegetables()
 
-        load_parser = cmd2.Cmd2ArgumentParser('load')
+        load_parser = cmd2.Cmd2ArgumentParser()
         load_parser.add_argument('cmds', choices=['fruits', 'vegetables'])
 
         @with_argparser(load_parser)
@@ -281,7 +281,7 @@ command and each CommandSet
             self._fruits = LoadableFruits()
             self._vegetables = LoadableVegetables()
 
-        load_parser = cmd2.Cmd2ArgumentParser('load')
+        load_parser = cmd2.Cmd2ArgumentParser()
         load_parser.add_argument('cmds', choices=['fruits', 'vegetables'])
 
         @with_argparser(load_parser)
@@ -311,8 +311,8 @@ command and each CommandSet
                 self.unregister_command_set(self._vegetables)
                 self.poutput('Vegetables unloaded')
 
-        cut_parser = cmd2.Cmd2ArgumentParser('cut')
-        cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut', unloadable=True)
+        cut_parser = cmd2.Cmd2ArgumentParser()
+        cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
         @with_argparser(cut_parser)
         def do_cut(self, ns: argparse.Namespace):

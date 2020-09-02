@@ -40,7 +40,7 @@ class CommandSetA(CommandSetBase):
         """Banana Command"""
         self._cmd.poutput('Banana!!')
 
-    cranberry_parser = cmd2.Cmd2ArgumentParser('cranberry')
+    cranberry_parser = cmd2.Cmd2ArgumentParser()
     cranberry_parser.add_argument('arg1', choices=['lemonade', 'juice', 'sauce'])
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
@@ -65,7 +65,7 @@ class CommandSetA(CommandSetBase):
     def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return utils.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
 
-    elderberry_parser = cmd2.Cmd2ArgumentParser('elderberry')
+    elderberry_parser = cmd2.Cmd2ArgumentParser()
     elderberry_parser.add_argument('arg1')
 
     @cmd2.with_category('Alone')
@@ -319,7 +319,7 @@ class LoadableBase(cmd2.CommandSet):
         self._dummy = dummy  # prevents autoload
         self._cut_called = False
 
-    cut_parser = cmd2.Cmd2ArgumentParser('cut')
+    cut_parser = cmd2.Cmd2ArgumentParser()
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     def namespace_provider(self) -> argparse.Namespace:
@@ -340,8 +340,7 @@ class LoadableBase(cmd2.CommandSet):
             self._cmd.pwarning('This command does nothing without sub-parsers registered')
             self._cmd.do_help('cut')
 
-
-    stir_parser = cmd2.Cmd2ArgumentParser('stir')
+    stir_parser = cmd2.Cmd2ArgumentParser()
     stir_subparsers = stir_parser.add_subparsers(title='item', help='what to stir')
 
     @cmd2.with_argparser(stir_parser, ns_provider=namespace_provider)
@@ -613,7 +612,7 @@ class AppWithSubCommands(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super(AppWithSubCommands, self).__init__(*args, **kwargs)
 
-    cut_parser = cmd2.Cmd2ArgumentParser('cut')
+    cut_parser = cmd2.Cmd2ArgumentParser()
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     @cmd2.with_argparser(cut_parser)
@@ -874,7 +873,7 @@ def test_bad_subcommand():
         def __init__(self, *args, **kwargs):
             super(BadSubcommandApp, self).__init__(*args, **kwargs)
 
-        cut_parser = cmd2.Cmd2ArgumentParser('cut')
+        cut_parser = cmd2.Cmd2ArgumentParser()
         cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
         @cmd2.with_argparser(cut_parser)
