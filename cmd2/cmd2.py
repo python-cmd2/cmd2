@@ -2589,7 +2589,10 @@ class Cmd(cmd.Cmd):
 
                 # Disable completion
                 if completion_mode == CompletionMode.NONE:
-                    complete_func = lambda *args, **kwargs: None
+                    # noinspection PyUnusedLocal
+                    def complete_none(text: str, state: int) -> Optional[str]:
+                        return None
+                    complete_func = complete_none
 
                 # Complete commands
                 elif completion_mode == CompletionMode.COMMANDS:
