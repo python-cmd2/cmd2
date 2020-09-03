@@ -30,8 +30,12 @@ class CommandSetA(CommandSetBase):
         print("in on_registered now")
 
     def on_unregister(self) -> None:
-        print("in on_unregister now")
         super().on_unregister()
+        print("in on_unregister now")
+
+    def on_unregistered(self) -> None:
+        super().on_unregistered()
+        print("in on_unregistered now")
 
     def do_apple(self, statement: cmd2.Statement):
         self._cmd.poutput('Apple!')
@@ -209,9 +213,10 @@ def test_load_commands(command_sets_manual, capsys):
     assert 'Alone' not in cmds_cats
     assert 'Fruits' not in cmds_cats
 
-    # Make sure unregistration callback ran
+    # Make sure unregistration callbacks ran
     out, err = capsys.readouterr()
     assert "in on_unregister now" in out
+    assert "in on_unregistered now" in out
 
     # uninstall a second time and verify no errors happen
     command_sets_manual.unregister_command_set(cmd_set)

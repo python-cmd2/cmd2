@@ -55,8 +55,9 @@ class CommandSet(object):
 
     def on_register(self, cmd) -> None:
         """
-        Called by cmd2.Cmd when a CommandSet is registered. Subclasses can override this
-        to perform an initialization requiring access to the Cmd object.
+        Called by cmd2.Cmd as the first step to registering a CommandSet. The commands defined in this class have
+        not be added to the CLI object at this point. Subclasses can override this to perform any initialization
+        requiring access to the Cmd object (e.g. configure commands and their parsers based on CLI state data).
 
         :param cmd: The cmd2 main application
         :type cmd: cmd2.Cmd
@@ -68,16 +69,22 @@ class CommandSet(object):
 
     def on_registered(self) -> None:
         """
-        Called by cmd2.Cmd after a CommandSet is registered and all its commands have been added
-        to the CLI. Subclasses can override this to perform custom steps.
+        Called by cmd2.Cmd after a CommandSet is registered and all its commands have been added to the CLI.
+        Subclasses can override this to perform custom steps related to the newly added commands (e.g. setting
+        them to a disabled state).
         """
         pass
 
     def on_unregister(self) -> None:
         """
-        Called by ``cmd2.Cmd`` when a CommandSet is unregistered and removed.
+        Called by ``cmd2.Cmd`` as the first step to unregistering a CommandSet. Subclasses can override this to
+        perform any cleanup steps which require their commands being registered in the CLI.
+        """
+        pass
 
-        :param cmd:
-        :type cmd: cmd2.Cmd
+    def on_unregistered(self) -> None:
+        """
+        Called by ``cmd2.Cmd`` after a CommandSet has been unregistered and all its commands removed from the CLI.
+        Subclasses can override this to perform remaining cleanup steps.
         """
         self._cmd = None
