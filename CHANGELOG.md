@@ -13,6 +13,16 @@
       See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
       for an example.
 
+## 1.3.9 (September 03, 2020)
+* Breaking Changes
+    * `CommandSet.on_unregister()` is now called as first step in unregistering a `CommandSet` and not
+    the last. `CommandSet.on_unregistered()` is now the last step.
+* Enhancements
+    * Added `CommandSet.on_registered()`. This is called by `cmd2.Cmd` after a `CommandSet` is registered
+    and all its commands have been added to the CLI.
+    * Added `CommandSet.on_unregistered()`. This is called by `cmd2.Cmd` after a `CommandSet` is unregistered
+    and all its commands have been removed from the CLI.
+
 ## 1.3.8 (August 28, 2020)
 * Bug Fixes
     * Fixed issue where subcommand added with `@as_subcommand_to` decorator did not display help

@@ -19,7 +19,7 @@ class CommandSetA(cmd2.CommandSet):
         """Banana Command"""
         self._cmd.poutput('Banana!!')
 
-    cranberry_parser = cmd2.Cmd2ArgumentParser('cranberry')
+    cranberry_parser = cmd2.Cmd2ArgumentParser()
     cranberry_parser.add_argument('arg1', choices=['lemonade', 'juice', 'sauce'])
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
@@ -43,7 +43,7 @@ class CommandSetA(cmd2.CommandSet):
     def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return self._cmd.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
 
-    elderberry_parser = cmd2.Cmd2ArgumentParser('elderberry')
+    elderberry_parser = cmd2.Cmd2ArgumentParser()
     elderberry_parser.add_argument('arg1')
 
     @cmd2.with_category('Alone')
