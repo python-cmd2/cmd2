@@ -647,7 +647,7 @@ class AppWithSubCommands(cmd2.Cmd):
     bokchoy_parser.add_argument('style', completer_method=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
-    def cut_bokchoy(self, _: cmd2.Statement):
+    def cut_bokchoy(self, _: argparse.Namespace):
         self.poutput('Bok Choy')
 
 

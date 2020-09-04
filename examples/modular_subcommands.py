@@ -46,7 +46,7 @@ class LoadableVegetables(CommandSet):
     bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser, help=bokchoy_description.lower())
-    def cut_bokchoy(self, _: cmd2.Statement):
+    def cut_bokchoy(self, _: argparse.Namespace):
         self._cmd.poutput('Bok Choy')
 
 
