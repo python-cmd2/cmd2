@@ -4,7 +4,7 @@ Modular Commands
 Overview
 --------
 
-Cmd2 also enables developers to modularize their command definitions into Command Sets. Command sets represent
+Cmd2 also enables developers to modularize their command definitions into ``CommandSet`` objects. CommandSets represent
 a logical grouping of commands within an cmd2 application. By default, all CommandSets will be discovered and loaded
 automatically when the cmd2.Cmd class is instantiated with this mixin. This also enables the developer to
 dynamically add/remove commands from the cmd2 application. This could be useful for loadable plugins that
@@ -21,9 +21,13 @@ Features
 * Dynamically Loadable/Unloadable Commands - Command functions and CommandSets can both be loaded and unloaded
   dynamically during application execution. This can enable features such as dynamically loaded modules that
   add additional commands.
+* Events handlers - Four event handlers are provided in ``CommandSet`` class for custom initialization
+  and cleanup steps. See :ref:`features/modular_commands:Event Handlers`.
 * Subcommand Injection - Subcommands can be defined separately from the base command. This allows for a more
   action-centric instead of object-centric command system while still organizing your code and handlers around the
   objects being managed.
+
+See API documentation for :attr:`cmd2.command_definition.CommandSet`
 
 See the examples for more details: https://github.com/python-cmd2/cmd2/tree/master/plugins/command_sets/examples
 
@@ -205,6 +209,30 @@ You may need to disable command auto-loading if you need dynamically load comman
     if __name__ == '__main__':
         app = ExampleApp()
         app.cmdloop()
+
+
+Event Handlers
+--------------
+The following functions are called at different points in the ``CommandSet`` life cycle.
+
+``on_register(self, cmd) -> None`` - Called by cmd2.Cmd as the first step to
+registering a CommandSet. The commands defined in this class have not be
+added to the CLI object at this point. Subclasses can override this to
+perform any initialization requiring access to the Cmd object
+(e.g. configure commands and their parsers based on CLI state data).
+
+``on_registered(self) -> None`` - Called by cmd2.Cmd after a CommandSet is
+registered and all its commands have been added to the CLI. Subclasses can
+override this to perform custom steps related to the newly added commands
+(e.g. setting them to a disabled state).
+
+``on_unregister(self) -> None`` - Called by ``cmd2.Cmd`` as the first step to
+unregistering a CommandSet. Subclasses can override this to perform any cleanup
+steps which require their commands being registered in the CLI.
+
+``on_unregistered(self) -> None`` - Called by ``cmd2.Cmd`` after a CommandSet
+has been unregistered and all its commands removed from the CLI. Subclasses can
+override this to perform remaining cleanup steps.
 
 
 Injecting Subcommands
