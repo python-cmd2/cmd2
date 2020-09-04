@@ -21,6 +21,22 @@ class CommandSetBase(cmd2.CommandSet):
 
 @cmd2.with_default_category('Fruits')
 class CommandSetA(CommandSetBase):
+    def on_register(self, cmd) -> None:
+        super().on_register(cmd)
+        print("in on_register now")
+
+    def on_registered(self) -> None:
+        super().on_registered()
+        print("in on_registered now")
+
+    def on_unregister(self) -> None:
+        super().on_unregister()
+        print("in on_unregister now")
+
+    def on_unregistered(self) -> None:
+        super().on_unregistered()
+        print("in on_unregistered now")
+
     def do_apple(self, statement: cmd2.Statement):
         self._cmd.poutput('Apple!')
 
@@ -28,7 +44,7 @@ class CommandSetA(CommandSetBase):
         """Banana Command"""
         self._cmd.poutput('Banana!!')
 
-    cranberry_parser = cmd2.Cmd2ArgumentParser('cranberry')
+    cranberry_parser = cmd2.Cmd2ArgumentParser()
     cranberry_parser.add_argument('arg1', choices=['lemonade', 'juice', 'sauce'])
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
@@ -53,7 +69,7 @@ class CommandSetA(CommandSetBase):
     def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return self._cmd.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
 
-    elderberry_parser = cmd2.Cmd2ArgumentParser('elderberry')
+    elderberry_parser = cmd2.Cmd2ArgumentParser()
     elderberry_parser.add_argument('arg1')
 
     @cmd2.with_category('Alone')
@@ -158,7 +174,7 @@ def test_custom_construct_commandsets():
     assert command_set_2 not in matches
 
 
-def test_load_commands(command_sets_manual):
+def test_load_commands(command_sets_manual, capsys):
 
     # now install a command set and verify the commands are now present
     cmd_set = CommandSetA()
@@ -170,6 +186,11 @@ def test_load_commands(command_sets_manual):
 
     assert command_sets_manual.find_commandsets(CommandSetA)[0] is cmd_set
     assert command_sets_manual.find_commandset_for_command('elderberry') is cmd_set
+
+    # Make sure registration callbacks ran
+    out, err = capsys.readouterr()
+    assert "in on_register now" in out
+    assert "in on_registered now" in out
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
 
@@ -191,6 +212,11 @@ def test_load_commands(command_sets_manual):
 
     assert 'Alone' not in cmds_cats
     assert 'Fruits' not in cmds_cats
+
+    # Make sure unregistration callbacks ran
+    out, err = capsys.readouterr()
+    assert "in on_unregister now" in out
+    assert "in on_unregistered now" in out
 
     # uninstall a second time and verify no errors happen
     command_sets_manual.unregister_command_set(cmd_set)
@@ -298,7 +324,7 @@ class LoadableBase(cmd2.CommandSet):
         self._dummy = dummy  # prevents autoload
         self._cut_called = False
 
-    cut_parser = cmd2.Cmd2ArgumentParser('cut')
+    cut_parser = cmd2.Cmd2ArgumentParser()
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     def namespace_provider(self) -> argparse.Namespace:
@@ -319,7 +345,7 @@ class LoadableBase(cmd2.CommandSet):
             self._cmd.pwarning('This command does nothing without sub-parsers registered')
             self._cmd.do_help('cut')
 
-    stir_parser = cmd2.Cmd2ArgumentParser('stir')
+    stir_parser = cmd2.Cmd2ArgumentParser()
     stir_subparsers = stir_parser.add_subparsers(title='item', help='what to stir')
 
     @cmd2.with_argparser(stir_parser, ns_provider=namespace_provider)
@@ -591,7 +617,7 @@ class AppWithSubCommands(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super(AppWithSubCommands, self).__init__(*args, **kwargs)
 
-    cut_parser = cmd2.Cmd2ArgumentParser('cut')
+    cut_parser = cmd2.Cmd2ArgumentParser()
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     @cmd2.with_argparser(cut_parser)
@@ -621,7 +647,7 @@ class AppWithSubCommands(cmd2.Cmd):
     bokchoy_parser.add_argument('style', completer=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
-    def cut_bokchoy(self, _: cmd2.Statement):
+    def cut_bokchoy(self, _: argparse.Namespace):
         self.poutput('Bok Choy')
 
 
@@ -852,7 +878,7 @@ def test_bad_subcommand():
         def __init__(self, *args, **kwargs):
             super(BadSubcommandApp, self).__init__(*args, **kwargs)
 
-        cut_parser = cmd2.Cmd2ArgumentParser('cut')
+        cut_parser = cmd2.Cmd2ArgumentParser()
         cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
         @cmd2.with_argparser(cut_parser)

@@ -50,7 +50,7 @@ class ExampleApp(cmd2.Cmd):
         self._fruits = LoadableFruits()
         self._vegetables = LoadableVegetables()
 
-    load_parser = cmd2.Cmd2ArgumentParser('load')
+    load_parser = cmd2.Cmd2ArgumentParser()
     load_parser.add_argument('cmds', choices=['fruits', 'vegetables'])
 
     @with_argparser(load_parser)

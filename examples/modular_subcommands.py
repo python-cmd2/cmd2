@@ -46,7 +46,7 @@ class LoadableVegetables(CommandSet):
     bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser, help=bokchoy_description.lower())
-    def cut_bokchoy(self, _: cmd2.Statement):
+    def cut_bokchoy(self, _: argparse.Namespace):
         self._cmd.poutput('Bok Choy')
 
 
@@ -62,7 +62,7 @@ class ExampleApp(cmd2.Cmd):
         self._fruits = LoadableFruits()
         self._vegetables = LoadableVegetables()
 
-    load_parser = cmd2.Cmd2ArgumentParser('load')
+    load_parser = cmd2.Cmd2ArgumentParser()
     load_parser.add_argument('cmds', choices=['fruits', 'vegetables'])
 
     @with_argparser(load_parser)
@@ -92,7 +92,7 @@ class ExampleApp(cmd2.Cmd):
             self.unregister_command_set(self._vegetables)
             self.poutput('Vegetables unloaded')
 
-    cut_parser = cmd2.Cmd2ArgumentParser('cut')
+    cut_parser = cmd2.Cmd2ArgumentParser()
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     @with_argparser(cut_parser)

@@ -504,7 +504,9 @@ class Cmd(cmd.Cmd):
             self._installed_command_sets.append(cmdset)
 
             self._register_subcommands(cmdset)
+            cmdset.on_registered()
         except Exception:
+            cmdset.on_unregister()
             for attrib in installed_attributes:
                 delattr(self, attrib)
             if cmdset in self._installed_command_sets:
@@ -512,7 +514,7 @@ class Cmd(cmd.Cmd):
             if cmdset in self._cmd_to_command_sets.values():
                 self._cmd_to_command_sets = \
                     {key: val for key, val in self._cmd_to_command_sets.items() if val is not cmdset}
-            cmdset.on_unregister()
+            cmdset.on_unregistered()
             raise
 
     def _install_command_function(self, command: str, command_wrapper: Callable, context=''):
@@ -560,6 +562,7 @@ class Cmd(cmd.Cmd):
         """
         if cmdset in self._installed_command_sets:
             self._check_uninstallable(cmdset)
+            cmdset.on_unregister()
             self._unregister_subcommands(cmdset)
 
             methods = inspect.getmembers(
@@ -585,7 +588,7 @@ class Cmd(cmd.Cmd):
                 if hasattr(self, HELP_FUNC_PREFIX + cmd_name):
                     delattr(self, HELP_FUNC_PREFIX + cmd_name)
 
-            cmdset.on_unregister()
+            cmdset.on_unregistered()
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet):
