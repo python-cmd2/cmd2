@@ -1084,7 +1084,7 @@ class Cmd(cmd.Cmd):
                     tmp_line = line[:endidx]
                     tmp_line += unclosed_quote
                     tmp_endidx = endidx + 1
-                else:
+                else:  # pragma: no cover
                     # The parsing error is not caused by unclosed quotes.
                     # Return empty lists since this means the line is malformed.
                     return [], []
@@ -1199,7 +1199,7 @@ class Cmd(cmd.Cmd):
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if not tokens:
+        if not tokens:  # pragma: no cover
             return []
 
         completions_matches = []
@@ -1241,7 +1241,7 @@ class Cmd(cmd.Cmd):
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if not tokens:
+        if not tokens:  # pragma: no cover
             return []
 
         matches = []
@@ -1451,7 +1451,7 @@ class Cmd(cmd.Cmd):
         # Get all tokens through the one being completed. We want the raw tokens
         # so we can tell if redirection strings are quoted and ignore them.
         _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
-        if not raw_tokens:
+        if not raw_tokens:  # pragma: no cover
             return []
 
         # Must at least have the command
@@ -1676,9 +1676,7 @@ class Cmd(cmd.Cmd):
 
         # Get all tokens through the one being completed
         tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
-
-        # Check if we had a parsing error
-        if len(tokens) == 0:
+        if not tokens:  # pragma: no cover
             return
 
         # Determine the completer function to use
