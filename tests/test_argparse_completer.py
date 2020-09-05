@@ -92,6 +92,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     flag_parser.add_argument('-c', '--count_flag', help='count flag', action='count')
     flag_parser.add_argument('-s', '--suppressed_flag', help=argparse.SUPPRESS, action='store_true')
     flag_parser.add_argument('-r', '--remainder_flag', nargs=argparse.REMAINDER, help='a remainder flag')
+    flag_parser.add_argument('-q', '--required_flag', required=True, help='a required flag', action='store_true')
 
     @with_argparser(flag_parser)
     def do_flag(self, args: argparse.Namespace) -> None:
@@ -100,6 +101,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     # Uses non-default flag prefix value (+)
     plus_flag_parser = Cmd2ArgumentParser(prefix_chars='+')
     plus_flag_parser.add_argument('+n', '++normal_flag', help='a normal flag', action='store_true')
+    plus_flag_parser.add_argument('+q', '++required_flag', required=True, help='a required flag', action='store_true')
 
     @with_argparser(plus_flag_parser)
     def do_plus_flag(self, args: argparse.Namespace) -> None:
@@ -356,61 +358,77 @@ def test_subcommand_completions(ac_app, subcommand, text, completions):
     assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
-@pytest.mark.parametrize('command_and_args, text, completions', [
+@pytest.mark.parametrize('command_and_args, text, completion_matches, display_matches', [
     # Complete all flags (suppressed will not show)
-    ('flag', '-', ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--normal_flag',
-                   '--remainder_flag', '-a', '-c', '-h', '-n', '-o', '-r']),
-    ('flag', '--', ['--append_const_flag', '--append_flag', '--count_flag', '--help',
-                    '--normal_flag', '--remainder_flag']),
+    ('flag', '-',
+     ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--normal_flag',
+      '--remainder_flag', '--required_flag', '-a', '-c', '-h', '-n', '-o', '-q', '-r'],
+     ['-q, --required_flag', '[-o, --append_const_flag]', '[-a, --append_flag]', '[-c, --count_flag]', '[-h, --help]',
+      '[-n, --normal_flag]', '[-r, --remainder_flag]']),
+    ('flag', '--',
+     ['--append_const_flag', '--append_flag', '--count_flag', '--help',
+      '--normal_flag', '--remainder_flag', '--required_flag'],
+     ['--required_flag', '[--append_const_flag]', '[--append_flag]', '[--count_flag]', '[--help]',
+      '[--normal_flag]', '[--remainder_flag]']),
 
     # Complete individual flag
-    ('flag', '-n', ['-n ']),
-    ('flag', '--n', ['--normal_flag ']),
+    ('flag', '-n', ['-n '], ['[-n]']),
+    ('flag', '--n', ['--normal_flag '], ['[--normal_flag]']),
 
     # No flags should complete until current flag has its args
-    ('flag --append_flag', '-', []),
+    ('flag --append_flag', '-', [], []),
 
     # Complete REMAINDER flag name
-    ('flag', '-r', ['-r ']),
-    ('flag', '--r', ['--remainder_flag ']),
+    ('flag', '-r', ['-r '], ['[-r]']),
+    ('flag', '--rem', ['--remainder_flag '], ['[--remainder_flag]']),
 
     # No flags after a REMAINDER should complete
-    ('flag -r value', '-', []),
-    ('flag --remainder_flag value', '--', []),
+    ('flag -r value', '-', [], []),
+    ('flag --remainder_flag value', '--', [], []),
 
     # Suppressed flag should not complete
-    ('flag', '-s', []),
-    ('flag', '--s', []),
+    ('flag', '-s', [], []),
+    ('flag', '--s', [], []),
 
     # A used flag should not show in completions
-    ('flag -n', '--', ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--remainder_flag']),
+    ('flag -n', '--',
+     ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--remainder_flag', '--required_flag'],
+     ['--required_flag', '[--append_const_flag]', '[--append_flag]', '[--count_flag]', '[--help]', '[--remainder_flag]']),
 
     # Flags with actions set to append, append_const, and count will always show even if they've been used
-    ('flag --append_const_flag -c --append_flag value', '--', ['--append_const_flag', '--append_flag', '--count_flag',
-                                                               '--help', '--normal_flag', '--remainder_flag']),
+    ('flag --append_const_flag -c --append_flag value', '--',
+     ['--append_const_flag', '--append_flag', '--count_flag', '--help',
+      '--normal_flag', '--remainder_flag', '--required_flag'],
+     ['--required_flag', '[--append_const_flag]', '[--append_flag]', '[--count_flag]', '[--help]',
+      '[--normal_flag]', '[--remainder_flag]']),
 
     # Non-default flag prefix character (+)
-    ('plus_flag', '+', ['++help', '++normal_flag', '+h', '+n']),
-    ('plus_flag', '++', ['++help', '++normal_flag']),
+    ('plus_flag', '+',
+     ['++help', '++normal_flag', '+h', '+n', '+q', '++required_flag'],
+     ['+q, ++required_flag', '[+h, ++help]', '[+n, ++normal_flag]']),
+    ('plus_flag', '++',
+     ['++help', '++normal_flag', '++required_flag'],
+     ['++required_flag', '[++help]', '[++normal_flag]']),
 
     # Flag completion should not occur after '--' since that tells argparse all remaining arguments are non-flags
-    ('flag --', '--', []),
-    ('flag --help --', '--', []),
-    ('plus_flag --', '++', []),
-    ('plus_flag ++help --', '++', [])
+    ('flag --', '--', [], []),
+    ('flag --help --', '--', [], []),
+    ('plus_flag --', '++', [], []),
+    ('plus_flag ++help --', '++', [], [])
 ])
-def test_autcomp_flag_completion(ac_app, command_and_args, text, completions):
+def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matches, display_matches):
     line = '{} {}'.format(command_and_args, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    if completions:
+    if completion_matches:
         assert first_match is not None
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
+    assert (ac_app.completion_matches == sorted(completion_matches, key=ac_app.default_sort_key) and
+            ac_app.display_matches == sorted(display_matches, key=ac_app.default_sort_key))
 
 
 @pytest.mark.parametrize('flag, text, completions', [
