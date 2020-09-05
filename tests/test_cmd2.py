@@ -1437,6 +1437,42 @@ def test_read_input_rawinput_true(capsys, monkeypatch):
         line = app.read_input(prompt_str)
         assert line == input_str
 
+        # Run custom history code
+        import readline
+        readline.add_history('old_history')
+        custom_history = ['cmd1', 'cmd2']
+        line = app.read_input(prompt_str, history=custom_history, completion_mode=cmd2.CompletionMode.NONE)
+        assert line == input_str
+        readline.clear_history()
+
+        # Run all completion modes
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.NONE)
+        assert line == input_str
+
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.COMMANDS)
+        assert line == input_str
+
+        # custom choices
+        custom_choices = ['choice1', 'choice2']
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM,
+                              choices=custom_choices)
+        assert line == input_str
+
+        # custom choices_provider
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM,
+                              choices_provider=cmd2.Cmd.get_all_commands)
+        assert line == input_str
+
+        # custom completer
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM,
+                              completer=cmd2.Cmd.path_complete)
+        assert line == input_str
+
+        # custom parser
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM,
+                              parser=cmd2.Cmd2ArgumentParser())
+        assert line == input_str
+
     # isatty is False
     with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=False)):
         # echo True

@@ -2607,6 +2607,9 @@ class Cmd(cmd.Cmd):
             nonlocal saved_history
             nonlocal parser
 
+            if readline_configured:  # pragma: no cover
+                return
+
             # Configure tab completion
             if self._completion_supported():
                 saved_completer = readline.get_completer()
@@ -2614,7 +2617,7 @@ class Cmd(cmd.Cmd):
                 # Disable completion
                 if completion_mode == CompletionMode.NONE:
                     # noinspection PyUnusedLocal
-                    def complete_none(text: str, state: int) -> Optional[str]:
+                    def complete_none(text: str, state: int):  # pragma: no cover
                         return None
                     complete_func = complete_none
 
@@ -2651,7 +2654,7 @@ class Cmd(cmd.Cmd):
         def restore_readline():
             """Restore readline tab completion and history"""
             nonlocal readline_configured
-            if not readline_configured:
+            if not readline_configured:  # pragma: no cover
                 return
 
             if self._completion_supported():
