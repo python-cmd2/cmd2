@@ -322,6 +322,7 @@ example/transcript_regex.txt:
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
 allow_style: '/(Terminal|Always|Never)/'
+always_show_hint: False
 debug: False
 echo: False
 editor: /.*?/

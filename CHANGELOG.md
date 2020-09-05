@@ -1,3 +1,11 @@
+## 1.4.0 (TBD, 2020)
+* Enhancements
+    * Added user-settable option called `always_show_hint`. If True, then tab completion hints will always
+    display even when tab completion suggestions print. Arguments whose help or hint text is suppressed will
+    not display hints even when this setting is True.
+* Bug Fixes
+    * Fixed issue where flag names weren't always sorted correctly in argparse tab completion
+
 ## 1.3.9 (September 03, 2020)
 * Breaking Changes
     * `CommandSet.on_unregister()` is now called as first step in unregistering a `CommandSet` and not
