@@ -209,6 +209,7 @@ class Cmd(cmd.Cmd):
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
 
         # Attributes which ARE dynamically settable via the set command at runtime
+        self.always_show_hint = False
         self.debug = False
         self.echo = False
         self.editor = Cmd.DEFAULT_EDITOR
@@ -376,17 +377,21 @@ class Cmd(cmd.Cmd):
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
-        # An optional header that prints above the tab completion suggestions
+        # An optional hint which prints above tab completion suggestions
+        self.completion_hint = ''
+
+        # Header which prints above CompletionItem tables
         self.completion_header = ''
 
         # Used by complete() for readline tab completion
         self.completion_matches = []
 
-        # Use this list if you are completing strings that contain a common delimiter and you only want to
-        # display the final portion of the matches as the tab completion suggestions. The full matches
-        # still must be returned from your completer function. For an example, look at path_complete()
-        # which uses this to show only the basename of paths as the suggestions. delimiter_complete() also
-        # populates this list.
+        # Use this list if you need to display tab completion suggestions that are different than the actual text
+        # of the matches. For instance, if you are completing strings that contain a common delimiter and you only
+        # want to display the final portion of the matches as the tab completion suggestions. The full matches
+        # still must be returned from your completer function. For an example, look at path_complete() which
+        # uses this to show only the basename of paths as the suggestions. delimiter_complete() also populates
+        # this list.
         self.display_matches = []
 
         # Used by functions like path_complete() and delimiter_complete() to properly
@@ -789,6 +794,8 @@ class Cmd(cmd.Cmd):
                                                         ansi.STYLE_NEVER),
                                    choices=[ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER]))
 
+        self.add_settable(Settable('always_show_hint', bool,
+                                   'Display tab completion hint even when completion suggestions print'))
         self.add_settable(Settable('debug', bool, "Show full traceback on exception"))
         self.add_settable(Settable('echo', bool, "Echo command issued into output"))
         self.add_settable(Settable('editor', str, "Program used by 'edit'"))
@@ -985,6 +992,7 @@ class Cmd(cmd.Cmd):
         """
         self.allow_appended_space = True
         self.allow_closing_quote = True
+        self.completion_hint = ''
         self.completion_header = ''
         self.completion_matches = []
         self.display_matches = []
@@ -1495,6 +1503,22 @@ class Cmd(cmd.Cmd):
 
         return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
+    def _build_completion_metadata_string(self) -> str:  # pragma: no cover
+        """Build completion metadata string which can contain a hint and CompletionItem table header"""
+        metadata = ''
+
+        # Add hint if one exists and we are supposed to display it
+        if self.always_show_hint and self.completion_hint:
+            metadata += '\n' + self.completion_hint
+
+        # Add table header if one exists
+        if self.completion_header:
+            if not metadata:
+                metadata += '\n'
+            metadata += '\n' + self.completion_header
+
+        return metadata
+
     def _display_matches_gnu_readline(self, substitution: str, matches: List[str],
                                       longest_match_length: int) -> None:  # pragma: no cover
         """Prints a match list using GNU readline's rl_display_match_list()
@@ -1539,9 +1563,8 @@ class Cmd(cmd.Cmd):
             strings_array[1:-1] = encoded_matches
             strings_array[-1] = None
 
-            # Print the header if one exists
-            if self.completion_header:
-                sys.stdout.write('\n\n' + self.completion_header)
+            # Print any metadata like a hint or table header
+            sys.stdout.write(self._build_completion_metadata_string())
 
             # Call readline's display function
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
@@ -1567,10 +1590,8 @@ class Cmd(cmd.Cmd):
             # Add padding for visual appeal
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
 
-            # Print the header if one exists
-            if self.completion_header:
-                # noinspection PyUnresolvedReferences
-                readline.rl.mode.console.write('\n\n' + self.completion_header)
+            # Print any metadata like a hint or table header
+            readline.rl.mode.console.write(sys.stdout.write(self._build_completion_metadata_string()))
 
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
@@ -3331,7 +3352,7 @@ class Cmd(cmd.Cmd):
     # Create the parser for the set command
     set_parser = DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
     set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='new value for settable',
-                            completer=complete_set_value)
+                            completer=complete_set_value, suppress_tab_hint=True)
 
     # Preserve quotes so users can pass in quoted empty strings and flags (e.g. -h) as the value
     @with_argparser(set_parser, preserve_quotes=True)

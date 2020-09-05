@@ -35,6 +35,22 @@ DEFAULT_DESCRIPTIVE_HEADER = 'Description'
 ARG_TOKENS = 'arg_tokens'
 
 
+# noinspection PyProtectedMember
+def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) -> str:
+    """Build tab completion hint for a given argument"""
+    # Check if hinting is disabled for this argument
+    suppress_hint = getattr(arg_action, ATTR_SUPPRESS_TAB_HINT, False)
+    if suppress_hint or arg_action.help == argparse.SUPPRESS:
+        return ''
+    else:
+        # Use the parser's help formatter to display just this action's help text
+        formatter = parser._get_formatter()
+        formatter.start_section("Hint")
+        formatter.add_argument(arg_action)
+        formatter.end_section()
+        return formatter.format_help()
+
+
 def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
     """Returns if a token is just a single flag prefix character"""
     return len(token) == 1 and token[0] in parser.prefix_chars
@@ -115,7 +131,6 @@ class _UnfinishedFlagError(CompletionError):
         super().__init__(error)
 
 
-# noinspection PyProtectedMember
 class _NoResultsError(CompletionError):
     def __init__(self, parser: argparse.ArgumentParser, arg_action: argparse.Action) -> None:
         """
@@ -124,19 +139,8 @@ class _NoResultsError(CompletionError):
         :param parser: ArgumentParser instance which owns the action being tab completed
         :param arg_action: action being tab completed
         """
-        # Check if hinting is disabled
-        suppress_hint = getattr(arg_action, ATTR_SUPPRESS_TAB_HINT, False)
-        if suppress_hint or arg_action.help == argparse.SUPPRESS:
-            hint_str = ''
-        else:
-            # Use the parser's help formatter to print just this action's help text
-            formatter = parser._get_formatter()
-            formatter.start_section("Hint")
-            formatter.add_argument(arg_action)
-            formatter.end_section()
-            hint_str = formatter.format_help()
         # Set apply_style to False because we don't want hints to look like errors
-        super().__init__(hint_str, apply_style=False)
+        super().__init__(_build_hint(parser, arg_action), apply_style=False)
 
 
 # noinspection PyProtectedMember
@@ -411,6 +415,7 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completion_results:
+                self._cmd2_app.completion_hint = _build_hint(self._parser, flag_arg_state.action)
                 return completion_results
 
             # Otherwise, print a hint if the flag isn't finished or text isn't possibly the start of a flag
@@ -432,6 +437,7 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completion_results:
+                self._cmd2_app.completion_hint = _build_hint(self._parser, pos_arg_state.action)
                 return completion_results
 
             # Otherwise, print a hint if text isn't possibly the start of a flag
@@ -566,12 +572,21 @@ class ArgparseCompleter:
         """
         # Check if the arg provides choices to the user
         if arg_state.action.choices is not None:
-            arg_choices = arg_state.action.choices
+            arg_choices = list(arg_state.action.choices)
+            if not arg_choices:
+                return []
+
+            # If these choices are numbers, then sort them now
+            if all(isinstance(x, numbers.Number) for x in arg_choices):
+                arg_choices.sort()
+                self._cmd2_app.matches_sorted = True
+
+            # Since choices can be various types, convert them all to strings
+            arg_choices = [str(x) for x in arg_choices]
         else:
             arg_choices = getattr(arg_state.action, ATTR_CHOICES_CALLABLE, None)
-
-        if arg_choices is None:
-            return []
+            if arg_choices is None:
+                return []
 
         # If we are going to call a completer/choices function, then set up the common arguments
         args = []
@@ -611,24 +626,17 @@ class ArgparseCompleter:
             if isinstance(arg_choices, ChoicesCallable) and not arg_choices.is_completer:
                 arg_choices = arg_choices.to_call(*args, **kwargs)
 
-            # Since arg_choices can be any iterable type, convert to a list
-            arg_choices = list(arg_choices)
-
-            # If these choices are numbers, and have not yet been sorted, then sort them now
-            if not self._cmd2_app.matches_sorted and all(isinstance(x, numbers.Number) for x in arg_choices):
-                arg_choices.sort()
-                self._cmd2_app.matches_sorted = True
-
-            # Since choices can be various types like int, we must convert them to strings
-            for index, choice in enumerate(arg_choices):
-                if not isinstance(choice, str):
-                    arg_choices[index] = str(choice)
-
             # Filter out arguments we already used
             used_values = consumed_arg_values.get(arg_state.action.dest, [])
             arg_choices = [choice for choice in arg_choices if choice not in used_values]
 
             # Do tab completion on the choices
             results = self._cmd2_app.basic_complete(text, line, begidx, endidx, arg_choices)
+
+        if not results:
+            # Reset the value for matches_sorted. This is because completion of flag names
+            # may still be attempted after we return and they haven't been sorted yet.
+            self._cmd2_app.matches_sorted = False
+            return []
 
         return self._format_completions(arg_state, results)

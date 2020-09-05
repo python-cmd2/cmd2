@@ -4,6 +4,7 @@
 Unit/functional testing for argparse completer in cmd2
 """
 import argparse
+import numbers
 from typing import List
 
 import pytest
@@ -28,7 +29,7 @@ def standalone_completer(cli: cmd2.Cmd, text: str, line: str, begidx: int, endid
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal,PyProtectedMember
-class AutoCompleteTester(cmd2.Cmd):
+class ArgparseCompleterTester(cmd2.Cmd):
     """Cmd2 app that exercises ArgparseCompleter class"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -84,7 +85,9 @@ class AutoCompleteTester(cmd2.Cmd):
     TUPLE_METAVAR = ('arg1', 'others')
     CUSTOM_DESC_HEADER = "Custom Header"
 
-    static_int_choices_list = [-1, 1, -2, 2, 0, -12]
+    # Lists used in our tests (there is a mix of sorted and unsorted on purpose)
+    non_negative_int_choices = [1, 2, 3, 0, 22]
+    int_choices = [-1, 1, -2, 2, 0, -12]
     static_choices_list = ['static', 'choices', 'stop', 'here']
     choices_from_provider = ['choices', 'provider', 'probably', 'improved']
 
@@ -116,13 +119,17 @@ class AutoCompleteTester(cmd2.Cmd):
                                 choices_provider=completion_item_method, metavar=TUPLE_METAVAR,
                                 nargs=argparse.ONE_OR_MORE)
     choices_parser.add_argument('-i', '--int', type=int, help='a flag with an int type',
-                                choices=static_int_choices_list)
+                                choices=int_choices)
 
     # Positional args for choices command
     choices_parser.add_argument("list_pos", help="a positional populated with a choices list",
                                 choices=static_choices_list)
     choices_parser.add_argument("method_pos", help="a positional populated with a choices provider",
                                 choices_provider=choices_provider)
+    choices_parser.add_argument('non_negative_int', type=int, help='a positional with non-negative int choices',
+                                choices=non_negative_int_choices)
+    choices_parser.add_argument('empty_choices', help='a positional with empty choices',
+                                choices=[])
 
     @with_argparser(choices_parser)
     def do_choices(self, args: argparse.Namespace) -> None:
@@ -290,7 +297,7 @@ class AutoCompleteTester(cmd2.Cmd):
 
 @pytest.fixture
 def ac_app():
-    app = AutoCompleteTester()
+    app = ArgparseCompleterTester()
     app.stdout = StdSim(app.stdout)
     return app
 
@@ -417,18 +424,16 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completions):
 
 
 @pytest.mark.parametrize('flag, text, completions', [
-    ('-l', '', AutoCompleteTester.static_choices_list),
+    ('-l', '', ArgparseCompleterTester.static_choices_list),
     ('--list', 's', ['static', 'stop']),
-    ('-p', '', AutoCompleteTester.choices_from_provider),
+    ('-p', '', ArgparseCompleterTester.choices_from_provider),
     ('--provider', 'pr', ['provider', 'probably']),
-    ('-i', '', AutoCompleteTester.static_int_choices_list),
+    ('-i', '', ArgparseCompleterTester.int_choices),
     ('--int', '1', ['1 ']),
     ('--int', '-', [-1, -2, -12]),
     ('--int', '-1', [-1, -12])
 ])
 def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
-    import numbers
-
     line = 'choices {} {}'.format(flag, text)
     endidx = len(line)
     begidx = endidx - len(text)
@@ -440,7 +445,7 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
         assert first_match is None
 
     # Numbers will be sorted in ascending order and then converted to strings by ArgparseCompleter
-    if all(isinstance(x, numbers.Number) for x in completions):
+    if completions and all(isinstance(x, numbers.Number) for x in completions):
         completions.sort()
         completions = [str(x) for x in completions]
     else:
@@ -450,10 +455,13 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
 
 
 @pytest.mark.parametrize('pos, text, completions', [
-    (1, '', AutoCompleteTester.static_choices_list),
+    (1, '', ArgparseCompleterTester.static_choices_list),
     (1, 's', ['static', 'stop']),
-    (2, '', AutoCompleteTester.choices_from_provider),
+    (2, '', ArgparseCompleterTester.choices_from_provider),
     (2, 'pr', ['provider', 'probably']),
+    (3, '', ArgparseCompleterTester.non_negative_int_choices),
+    (3, '2', [2, 22]),
+    (4, '', []),
 ])
 def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     # Generate line were preceding positionals are already filled
@@ -467,11 +475,39 @@ def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
+    # Numbers will be sorted in ascending order and then converted to strings by ArgparseCompleter
+    if completions and all(isinstance(x, numbers.Number) for x in completions):
+        completions.sort()
+        completions = [str(x) for x in completions]
+    else:
+        completions.sort(key=ac_app.default_sort_key)
+
+    assert ac_app.completion_matches == completions
+
+
+def test_flag_sorting(ac_app):
+    # This test exercises the case where a positional arg has non-negative integers for its choices.
+    # ArgparseCompleter will sort these numerically before converting them to strings. As a result,
+    # cmd2.matches_sorted gets set to True. If no completion matches are returned and the entered
+    # text looks like the beginning of a flag (e.g -), then ArgparseCompleter will try to complete
+    # flag names next. Before it does this, cmd2.matches_sorted is reset to make sure the flag names
+    # get sorted correctly.
+    option_strings = []
+    for action in ac_app.choices_parser._actions:
+        option_strings.extend(action.option_strings)
+    option_strings.sort(key=ac_app.default_sort_key)
+
+    text = '-'
+    line = 'choices arg1 arg2 arg3 {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None and ac_app.completion_matches == option_strings
 
 
 @pytest.mark.parametrize('flag, text, completions', [
-    ('-c', '', AutoCompleteTester.completions_for_flag),
+    ('-c', '', ArgparseCompleterTester.completions_for_flag),
     ('--completer', 'f', ['flag', 'fairly'])
 ])
 def test_autocomp_flag_completers(ac_app, flag, text, completions):
@@ -489,9 +525,9 @@ def test_autocomp_flag_completers(ac_app, flag, text, completions):
 
 
 @pytest.mark.parametrize('pos, text, completions', [
-    (1, '', AutoCompleteTester.completions_for_pos_1),
+    (1, '', ArgparseCompleterTester.completions_for_pos_1),
     (1, 'p', ['positional_1', 'probably']),
-    (2, '', AutoCompleteTester.completions_for_pos_2),
+    (2, '', ArgparseCompleterTester.completions_for_pos_2),
     (2, 'm', ['missed', 'me']),
 ])
 def test_autocomp_positional_completers(ac_app, pos, text, completions):
@@ -524,7 +560,7 @@ def test_autocomp_blank_token(ac_app):
     completer = ArgparseCompleter(ac_app.completer_parser, ac_app)
     tokens = ['completer', '-c', blank, text]
     completions = completer.complete_command(tokens, text, line, begidx, endidx)
-    assert sorted(completions) == sorted(AutoCompleteTester.completions_for_pos_1)
+    assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_1)
 
     # Blank arg for first positional will be consumed. Therefore we expect to be completing the second positional.
     text = ''
@@ -535,7 +571,7 @@ def test_autocomp_blank_token(ac_app):
     completer = ArgparseCompleter(ac_app.completer_parser, ac_app)
     tokens = ['completer', blank, text]
     completions = completer.complete_command(tokens, text, line, begidx, endidx)
-    assert sorted(completions) == sorted(AutoCompleteTester.completions_for_pos_2)
+    assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_2)
 
 
 @pytest.mark.parametrize('num_aliases, show_description', [
@@ -569,54 +605,54 @@ def test_completion_items(ac_app, num_aliases, show_description):
 
 @pytest.mark.parametrize('args, completions', [
     # Flag with nargs = 2
-    ('--set_value', AutoCompleteTester.set_value_choices),
+    ('--set_value', ArgparseCompleterTester.set_value_choices),
     ('--set_value set', ['value', 'choices']),
 
     # Both args are filled. At positional arg now.
-    ('--set_value set value', AutoCompleteTester.positional_choices),
+    ('--set_value set value', ArgparseCompleterTester.positional_choices),
 
     # Using the flag again will reset the choices available
-    ('--set_value set value --set_value', AutoCompleteTester.set_value_choices),
+    ('--set_value set value --set_value', ArgparseCompleterTester.set_value_choices),
 
     # Flag with nargs = ONE_OR_MORE
-    ('--one_or_more', AutoCompleteTester.one_or_more_choices),
+    ('--one_or_more', ArgparseCompleterTester.one_or_more_choices),
     ('--one_or_more one', ['or', 'more', 'choices']),
 
     # Flag with nargs = OPTIONAL
-    ('--optional', AutoCompleteTester.optional_choices),
+    ('--optional', ArgparseCompleterTester.optional_choices),
 
     # Only one arg allowed for an OPTIONAL. At positional now.
-    ('--optional optional', AutoCompleteTester.positional_choices),
+    ('--optional optional', ArgparseCompleterTester.positional_choices),
 
     # Flag with nargs range (1, 2)
-    ('--range', AutoCompleteTester.range_choices),
+    ('--range', ArgparseCompleterTester.range_choices),
     ('--range some', ['range', 'choices']),
 
     # Already used 2 args so at positional
-    ('--range some range', AutoCompleteTester.positional_choices),
+    ('--range some range', ArgparseCompleterTester.positional_choices),
 
     # Flag with nargs = REMAINDER
-    ('--remainder', AutoCompleteTester.remainder_choices),
+    ('--remainder', ArgparseCompleterTester.remainder_choices),
     ('--remainder remainder ', ['choices ']),
 
     # No more flags can appear after a REMAINDER flag)
     ('--remainder choices --set_value', ['remainder ']),
 
     # Double dash ends the current flag
-    ('--range choice --', AutoCompleteTester.positional_choices),
+    ('--range choice --', ArgparseCompleterTester.positional_choices),
 
     # Double dash ends a REMAINDER flag
-    ('--remainder remainder --', AutoCompleteTester.positional_choices),
+    ('--remainder remainder --', ArgparseCompleterTester.positional_choices),
 
     # No more flags after a double dash
-    ('-- --one_or_more ', AutoCompleteTester.positional_choices),
+    ('-- --one_or_more ', ArgparseCompleterTester.positional_choices),
 
     # Consume positional
-    ('', AutoCompleteTester.positional_choices),
+    ('', ArgparseCompleterTester.positional_choices),
     ('positional', ['the', 'choices']),
 
     # Intermixed flag and positional
-    ('positional --set_value', AutoCompleteTester.set_value_choices),
+    ('positional --set_value', ArgparseCompleterTester.set_value_choices),
     ('positional --set_value set', ['choices', 'value']),
 
     # Intermixed flag and positional with flag finishing
@@ -624,12 +660,12 @@ def test_completion_items(ac_app, num_aliases, show_description):
     ('positional --range choice --', ['the', 'choices']),
 
     # REMAINDER positional
-    ('the positional', AutoCompleteTester.remainder_choices),
+    ('the positional', ArgparseCompleterTester.remainder_choices),
     ('the positional remainder', ['choices ']),
     ('the positional remainder choices', []),
 
     # REMAINDER positional. Flags don't work in REMAINDER
-    ('the positional --set_value', AutoCompleteTester.remainder_choices),
+    ('the positional --set_value', ArgparseCompleterTester.remainder_choices),
     ('the positional remainder --set_value', ['choices '])
 ])
 def test_autcomp_nargs(ac_app, args, completions):

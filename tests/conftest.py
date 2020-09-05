@@ -93,6 +93,7 @@ SHORTCUTS_TXT = """Shortcuts for other commands:
 
 # Output from the show command with default settings
 SHOW_TXT = """allow_style: 'Terminal'
+always_show_hint: False
 debug: False
 echo: False
 editor: 'vim'
@@ -104,6 +105,7 @@ timing: False
 
 SHOW_LONG = """
 allow_style: 'Terminal'   # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
+always_show_hint: False   # Display tab completion hint even when completion suggestions print
 debug: False              # Show full traceback on exception
 echo: False               # Echo command issued into output
 editor: 'vim'             # Program used by 'edit'
