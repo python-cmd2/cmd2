@@ -477,11 +477,7 @@ class StdSim:
         """
         if not isinstance(s, str):
             raise TypeError('write() argument must be str, not {}'.format(type(s)))
-
-        if not self.pause_storage:
-            self.buffer.byte_buf += s.encode(encoding=self.encoding, errors=self.errors)
-        if self.echo:
-            self.inner_stream.write(s)
+        self.buffer.write(s.encode(self.encoding, errors=self.errors))
 
     def getvalue(self) -> str:
         """Get the internal contents as a str"""
