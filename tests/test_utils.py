@@ -154,6 +154,13 @@ def test_stdsim_read(stdout_sim):
     assert stdout_sim.read() == my_str
     assert stdout_sim.getvalue() == ''
 
+    stdout_sim.write(my_str)
+
+    assert stdout_sim.getvalue() == my_str
+    assert stdout_sim.read(2) == my_str[:2]
+    assert stdout_sim.getvalue() == my_str[2:]
+
+
 def test_stdsim_read_bytes(stdout_sim):
     b_str = b'Hello World'
     stdout_sim.buffer.write(b_str)
