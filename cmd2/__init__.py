@@ -36,4 +36,4 @@ from .exceptions import Cmd2ArgparseError, CommandSetRegistrationError, Completi
 from . import plugin
 from .parsing import Statement
 from .py_bridge import CommandResult
-from .utils import categorize, Settable
+from .utils import categorize, CompletionMode, CustomCompletionSettings, Settable

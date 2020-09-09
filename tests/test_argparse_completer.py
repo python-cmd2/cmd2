@@ -576,8 +576,8 @@ def test_autocomp_blank_token(ac_app):
     begidx = endidx - len(text)
 
     completer = ArgparseCompleter(ac_app.completer_parser, ac_app)
-    tokens = ['completer', '-c', blank, text]
-    completions = completer.complete_command(tokens, text, line, begidx, endidx)
+    tokens = ['-c', blank, text]
+    completions = completer.complete(text, line, begidx, endidx, tokens)
     assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_1)
 
     # Blank arg for first positional will be consumed. Therefore we expect to be completing the second positional.
@@ -587,8 +587,8 @@ def test_autocomp_blank_token(ac_app):
     begidx = endidx - len(text)
 
     completer = ArgparseCompleter(ac_app.completer_parser, ac_app)
-    tokens = ['completer', blank, text]
-    completions = completer.complete_command(tokens, text, line, begidx, endidx)
+    tokens = [blank, text]
+    completions = completer.complete(text, line, begidx, endidx, tokens)
     assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_2)
 
 
@@ -1001,7 +1001,7 @@ def test_complete_command_no_tokens(ac_app):
     parser = Cmd2ArgumentParser()
     ac = ArgparseCompleter(parser, ac_app)
 
-    completions = ac.complete_command(tokens=[], text='', line='', begidx=0, endidx=0)
+    completions = ac.complete(text='', line='', begidx=0, endidx=0, tokens=[])
     assert not completions
 
 
@@ -1011,7 +1011,7 @@ def test_complete_command_help_no_tokens(ac_app):
     parser = Cmd2ArgumentParser()
     ac = ArgparseCompleter(parser, ac_app)
 
-    completions = ac.complete_subcommand_help(tokens=[], text='', line='', begidx=0, endidx=0)
+    completions = ac.complete_subcommand_help(text='', line='', begidx=0, endidx=0, tokens=[])
     assert not completions
 
 

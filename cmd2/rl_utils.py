@@ -2,8 +2,8 @@
 """
 Imports the proper readline for the platform and provides utility functions for it
 """
+import enum
 import sys
-from enum import Enum
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
@@ -19,7 +19,7 @@ except ImportError:
         pass
 
 
-class RlType(Enum):
+class RlType(enum.Enum):
     """Readline library types we recognize"""
     GNU = 1
     PYREADLINE = 2

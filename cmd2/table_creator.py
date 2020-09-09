@@ -6,10 +6,10 @@ The general use case is to inherit from TableCreator to create a table class wit
 There are already implemented and ready-to-use examples of this below TableCreator's code.
 """
 import copy
+import enum
 import functools
 import io
 from collections import deque
-from enum import Enum
 from typing import Any, Optional, Sequence, Tuple, Union
 
 from wcwidth import wcwidth
@@ -39,14 +39,14 @@ EMPTY = ''
 SPACE = ' '
 
 
-class HorizontalAlignment(Enum):
+class HorizontalAlignment(enum.Enum):
     """Horizontal alignment of text in a cell"""
     LEFT = 1
     CENTER = 2
     RIGHT = 3
 
 
-class VerticalAlignment(Enum):
+class VerticalAlignment(enum.Enum):
     """Vertical alignment of text in a cell"""
     TOP = 1
     MIDDLE = 2

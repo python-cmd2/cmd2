@@ -186,10 +186,19 @@ class ArgparseCompleter:
                 if isinstance(action, argparse._SubParsersAction):
                     self._subcommand_action = action
 
-    def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int, *,
-                         cmd_set: Optional[CommandSet] = None) -> List[str]:
+    def complete(self, text: str, line: str, begidx: int, endidx: int, tokens: List[str], *,
+                 cmd_set: Optional[CommandSet] = None) -> List[str]:
         """
-        Complete the command using the argparse metadata and provided argument dictionary
+        Complete text using argparse metadata
+
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param tokens: list of argument tokens being passed to the parser
+        :param cmd_set: if tab completing a command, the CommandSet the command's function belongs to, if applicable.
+                        Defaults to None.
+
         :raises: CompletionError for various types of tab completion errors
         """
         if not tokens:
@@ -266,7 +275,7 @@ class ArgparseCompleter:
         #############################################################################################
         # Parse all but the last token
         #############################################################################################
-        for token_index, token in enumerate(tokens[1:-1], start=1):
+        for token_index, token in enumerate(tokens[:-1]):
 
             # If we're in a positional REMAINDER arg, force all future tokens to go to that
             if pos_arg_state is not None and pos_arg_state.is_remainder:
@@ -364,8 +373,8 @@ class ArgparseCompleter:
 
                                 completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app,
                                                               parent_tokens=parent_tokens)
-                                return completer.complete_command(tokens[token_index:], text, line, begidx, endidx,
-                                                                  cmd_set=cmd_set)
+                                return completer.complete(text, line, begidx, endidx, tokens[token_index + 1:],
+                                                          cmd_set=cmd_set)
                             else:
                                 # Invalid subcommand entered, so no way to complete remaining tokens
                                 return []
@@ -409,9 +418,8 @@ class ArgparseCompleter:
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            completion_results = self._complete_for_arg(flag_arg_state, text, line,
-                                                        begidx, endidx, consumed_arg_values,
-                                                        cmd_set=cmd_set)
+            completion_results = self._complete_arg(text, line, begidx, endidx, flag_arg_state, consumed_arg_values,
+                                                    cmd_set=cmd_set)
 
             # If we have results, then return them
             if completion_results:
@@ -431,9 +439,8 @@ class ArgparseCompleter:
                 action = remaining_positionals.popleft()
                 pos_arg_state = _ArgumentState(action)
 
-            completion_results = self._complete_for_arg(pos_arg_state, text, line,
-                                                        begidx, endidx, consumed_arg_values,
-                                                        cmd_set=cmd_set)
+            completion_results = self._complete_arg(text, line, begidx, endidx, pos_arg_state, consumed_arg_values,
+                                                    cmd_set=cmd_set)
 
             # If we have results, then return them
             if completion_results:
@@ -538,23 +545,23 @@ class ArgparseCompleter:
 
         return completions
 
-    def complete_subcommand_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_subcommand_help(self, text: str, line: str, begidx: int, endidx: int, tokens: List[str]) -> List[str]:
         """
         Supports cmd2's help command in the completion of subcommand names
-        :param tokens: command line tokens
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
+        :param tokens: arguments passed to command/subcommand
         :return: List of subcommand completions
         """
         # If our parser has subcommands, we must examine the tokens and check if they are subcommands
         # If so, we will let the subcommand's parser handle the rest of the tokens via another ArgparseCompleter.
         if self._subcommand_action is not None:
-            for token_index, token in enumerate(tokens[1:], start=1):
+            for token_index, token in enumerate(tokens):
                 if token in self._subcommand_action.choices:
                     completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app)
-                    return completer.complete_subcommand_help(tokens[token_index:], text, line, begidx, endidx)
+                    return completer.complete_subcommand_help(text, line, begidx, endidx, tokens[token_index + 1:])
                 elif token_index == len(tokens) - 1:
                     # Since this is the last token, we will attempt to complete it
                     return self._cmd2_app.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
@@ -565,24 +572,23 @@ class ArgparseCompleter:
     def format_help(self, tokens: List[str]) -> str:
         """
         Supports cmd2's help command in the retrieval of help text
-        :param tokens: command line tokens
+        :param tokens: arguments passed to help command
         :return: help text of the command being queried
         """
         # If our parser has subcommands, we must examine the tokens and check if they are subcommands
         # If so, we will let the subcommand's parser handle the rest of the tokens via another ArgparseCompleter.
         if self._subcommand_action is not None:
-            for token_index, token in enumerate(tokens[1:], start=1):
+            for token_index, token in enumerate(tokens):
                 if token in self._subcommand_action.choices:
                     completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app)
-                    return completer.format_help(tokens[token_index:])
+                    return completer.format_help(tokens[token_index + 1:])
                 else:
                     break
         return self._parser.format_help()
 
-    def _complete_for_arg(self, arg_state: _ArgumentState,
-                          text: str, line: str, begidx: int, endidx: int,
-                          consumed_arg_values: Dict[str, List[str]], *,
-                          cmd_set: Optional[CommandSet] = None) -> List[str]:
+    def _complete_arg(self, text: str, line: str, begidx: int, endidx: int,
+                      arg_state: _ArgumentState, consumed_arg_values: Dict[str, List[str]], *,
+                      cmd_set: Optional[CommandSet] = None) -> List[str]:
         """
         Tab completion routine for an argparse argument
         :return: list of completions

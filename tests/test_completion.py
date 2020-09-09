@@ -22,7 +22,6 @@ import pytest
 import cmd2
 from cmd2 import utils
 from examples.subcommands import SubcommandsExample
-
 from .conftest import complete_tester, normalize, run_cmd
 
 # List of strings used with completion functions
@@ -858,9 +857,9 @@ def test_no_completer(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
 
-def test_quote_as_command(cmd2_app):
+def test_wordbreak_in_command(cmd2_app):
     text = ''
-    line = '" {}'.format(text)
+    line = '"{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
