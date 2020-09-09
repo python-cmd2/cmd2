@@ -465,7 +465,25 @@ class ArgparseCompleter:
                 if action.help != argparse.SUPPRESS:
                     match_against.append(flag)
 
-        return basic_complete(text, line, begidx, endidx, match_against)
+        matches = basic_complete(text, line, begidx, endidx, match_against)
+
+        # Build a dictionary linking actions with their matched flag names
+        matched_actions = dict()  # type: Dict[argparse.Action, List[str]]
+        for flag in matches:
+            action = self._flag_to_action[flag]
+            matched_actions.setdefault(action, [])
+            matched_actions[action].append(flag)
+
+        # For tab completion suggestions, group matched flags by action
+        for action, option_strings in matched_actions.items():
+            flag_text = ', '.join(option_strings)
+
+            # Mark optional flags with brackets
+            if not action.required:
+                flag_text = '[' + flag_text + ']'
+            self._cmd2_app.display_matches.append(flag_text)
+
+        return matches
 
     def _format_completions(self, arg_state: _ArgumentState, completions: List[Union[str, CompletionItem]]) -> List[str]:
         # Check if the results are CompletionItems and that there aren't too many to display
