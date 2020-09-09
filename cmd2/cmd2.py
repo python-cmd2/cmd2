@@ -2075,8 +2075,7 @@ class Cmd(cmd.Cmd):
                 # we need to run the finalization hooks
                 raise EmptyStatement
 
-            # This will be a utils.RedirectionSavedState object for the command
-            redir_saved_state = None
+            redir_saved_state = None  # type: Optional[utils.RedirectionSavedState]
 
             try:
                 # Get sigint protection while we set up redirection
