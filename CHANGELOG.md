@@ -14,6 +14,8 @@
     * Added user-settable option called `always_show_hint`. If True, then tab completion hints will always
     display even when tab completion suggestions print. Arguments whose help or hint text is suppressed will
     not display hints even when this setting is True.
+    * argparse tab completion now groups flag names which run the same action. Optional flags are wrapped
+    in brackets like it is done in argparse usage text.
 * Bug Fixes
     * Fixed issue where flag names weren't always sorted correctly in argparse tab completion
 
