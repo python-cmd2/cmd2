@@ -102,15 +102,16 @@ within a running application:
 
 .. code-block:: text
 
-    (Cmd) set --long
-    allow_style: Terminal          # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
-    debug: False                   # Show full traceback on exception
-    echo: False                    # Echo command issued into output
-    editor: vim                    # Program used by 'edit'
-    feedback_to_output: False      # include nonessentials in '|', '>' results
-    max_completion_items: 50       # Maximum number of CompletionItems to display during tab completion
-    quiet: False                   # Don't print nonessential feedback
-    timing: False                  # Report execution times
+    (Cmd) set --verbose
+    allow_style: 'Terminal'   # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
+    always_show_hint: False   # Display tab completion hint even when completion suggestions print
+    debug: True               # Show full traceback on exception
+    echo: False               # Echo command issued into output
+    editor: 'vi'              # Program used by 'edit'
+    feedback_to_output: False # Include nonessentials in '|', '>' results
+    max_completion_items: 50  # Maximum number of CompletionItems to display during tab completion
+    quiet: False              # Don't print nonessential feedback
+    timing: False             # Report execution times
 
 Any of these user-settable parameters can be set while running your app with
 the ``set`` command like so:
