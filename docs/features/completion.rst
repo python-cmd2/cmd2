@@ -89,6 +89,7 @@ completion hints.
 
 .. _argparse-based:
 
+
 Tab Completion Using argparse Decorators
 ----------------------------------------
 
@@ -131,6 +132,17 @@ any of the 3 completion parameters: ``choices``, ``choices_provider``, and
 
 See the argparse_completion_ example or the implementation of the built-in
 :meth:`~cmd2.Cmd.do_set` command for demonstration of how this is used.
+
+
+Custom Completion with ``read_input()``
+--------------------------------------------------
+
+``cmd2`` provides :attr:`cmd2.Cmd.read_input` as an alternative to Python's
+``input()`` function. ``read_input`` supports configurable tab completion and
+up-arrow history at the prompt. See read_input_ example for a demonstration.
+
+.. _read_input: https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py
+
 
 For More Information
 --------------------

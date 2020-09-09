@@ -1826,6 +1826,7 @@ class Cmd(cmd.Cmd):
                             begidx += len(shortcut_to_restore)
                             break
                     else:
+                        # No shortcut was found. Complete the command token.
                         parser = DEFAULT_ARGUMENT_PARSER(add_help=False)
                         parser.add_argument('command', metavar="COMMAND", help="command, alias, or macro name",
                                             choices=self._get_commands_aliases_and_macros_for_completion())
