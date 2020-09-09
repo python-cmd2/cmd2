@@ -30,7 +30,6 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 # setting is True
 import argparse
 import cmd
-import enum
 import functools
 import glob
 import inspect
@@ -95,40 +94,6 @@ try:
     from IPython import embed
 except ImportError:  # pragma: no cover
     ipython_available = False
-
-
-class CompletionMode(enum.Enum):
-    """Enum for what type of tab completion to perform in cmd2.Cmd.read_input()"""
-    # Tab completion will be disabled during read_input() call
-    # Use of custom up-arrow history supported
-    NONE = 1
-
-    # read_input() will tab complete cmd2 commands and their arguments
-    # cmd2's command line history will be used for up arrow if history is not provided.
-    # Otherwise use of custom up-arrow history supported.
-    COMMANDS = 2
-
-    # read_input() will tab complete based on one of its following parameters:
-    #     choices, choices_provider, completer, parser
-    # Use of custom up-arrow history supported
-    CUSTOM = 3
-
-
-class CustomCompletionSettings:
-    """Used by cmd2.Cmd.complete() to tab complete strings other than command arguments"""
-    def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False):
-        """
-        Initializer
-
-        :param parser: arg parser defining format of string being tab completed
-        :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
-                                ArgparseCompleter. This is helpful in cases when you're tab completing
-                                flag-like tokens (e.g. -o, --option) and you don't want them to be
-                                treated as argparse flags when quoted. Set this to True if you plan
-                                on passing the string to argparse with the tokens still quoted.
-        """
-        self.parser = parser
-        self.preserve_quotes = preserve_quotes
 
 
 class _SavedReadlineSettings:
@@ -1633,7 +1598,7 @@ class Cmd(cmd.Cmd):
             orig_pyreadline_display(matches_to_display)
 
     def _perform_completion(self, text: str, line: str, begidx: int, endidx: int,
-                            custom_settings: Optional[CustomCompletionSettings] = None) -> None:
+                            custom_settings: Optional[utils.CustomCompletionSettings] = None) -> None:
         """
         Helper function for complete() that performs the actual completion
 
@@ -1805,7 +1770,8 @@ class Cmd(cmd.Cmd):
             if len(self.completion_matches) == 1 and self.allow_closing_quote and unclosed_quote:
                 self.completion_matches[0] += unclosed_quote
 
-    def complete(self, text: str, state: int, custom_settings: Optional[CustomCompletionSettings] = None) -> Optional[str]:
+    def complete(self, text: str, state: int,
+                 custom_settings: Optional[utils.CustomCompletionSettings] = None) -> Optional[str]:
         """Override of cmd2's complete method which returns the next possible completion for 'text'
 
         This completer function is called by readline as complete(text, state), for state in 0, 1, 2, …,
@@ -1863,7 +1829,7 @@ class Cmd(cmd.Cmd):
                         parser = DEFAULT_ARGUMENT_PARSER(add_help=False)
                         parser.add_argument('command', metavar="COMMAND", help="command, alias, or macro name",
                                             choices=self._get_commands_aliases_and_macros_for_completion())
-                        custom_settings = CustomCompletionSettings(parser)
+                        custom_settings = utils.CustomCompletionSettings(parser)
 
                 self._perform_completion(text, line, begidx, endidx, custom_settings)
 
@@ -2557,7 +2523,7 @@ class Cmd(cmd.Cmd):
 
     def read_input(self, prompt: str, *,
                    history: Optional[List[str]] = None,
-                   completion_mode: CompletionMode = CompletionMode.NONE,
+                   completion_mode: utils.CompletionMode = utils.CompletionMode.NONE,
                    preserve_quotes: bool = False,
                    choices: Iterable = None,
                    choices_provider: Optional[Callable] = None,
@@ -2613,14 +2579,14 @@ class Cmd(cmd.Cmd):
                 saved_completer = readline.get_completer()
 
                 # Disable completion
-                if completion_mode == CompletionMode.NONE:
+                if completion_mode == utils.CompletionMode.NONE:
                     # noinspection PyUnusedLocal
                     def complete_none(text: str, state: int):  # pragma: no cover
                         return None
                     complete_func = complete_none
 
                 # Complete commands
-                elif completion_mode == CompletionMode.COMMANDS:
+                elif completion_mode == utils.CompletionMode.COMMANDS:
                     complete_func = self.complete
 
                 # Set custom completion settings
@@ -2630,13 +2596,13 @@ class Cmd(cmd.Cmd):
                         parser.add_argument('arg', suppress_tab_hint=True, choices=choices,
                                             choices_provider=choices_provider, completer=completer)
 
-                    custom_settings = CustomCompletionSettings(parser, preserve_quotes=preserve_quotes)
+                    custom_settings = utils.CustomCompletionSettings(parser, preserve_quotes=preserve_quotes)
                     complete_func = functools.partial(self.complete, custom_settings=custom_settings)
 
                 readline.set_completer(complete_func)
 
             # Overwrite history if not completing commands or new history was provided
-            if completion_mode != CompletionMode.COMMANDS or history is not None:
+            if completion_mode != utils.CompletionMode.COMMANDS or history is not None:
                 saved_history = []
                 for i in range(1, readline.get_current_history_length() + 1):
                     # noinspection PyArgumentList
@@ -2721,7 +2687,7 @@ class Cmd(cmd.Cmd):
                 self.terminal_lock.release()
             except RuntimeError:
                 pass
-            return self.read_input(prompt, completion_mode=CompletionMode.COMMANDS)
+            return self.read_input(prompt, completion_mode=utils.CompletionMode.COMMANDS)
         except EOFError:
             return 'eof'
         finally:

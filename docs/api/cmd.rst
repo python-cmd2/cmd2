@@ -65,26 +65,3 @@ cmd2.Cmd
         The symbol name which :ref:`features/scripting:Python Scripts` run
         using the :ref:`features/builtin_commands:run_pyscript` command can use
         to reference the parent ``cmd2`` application.
-
-.. autoclass:: cmd2.CompletionMode
-
-    .. attribute:: NONE
-
-        Tab completion will be disabled during read_input() call. Use of custom
-        up-arrow history supported.
-
-    .. attribute:: COMMANDS
-
-        read_input() will tab complete cmd2 commands and their arguments.
-        cmd2's command line history will be used for up arrow if history is not
-        provided. Otherwise use of custom up-arrow history supported.
-
-    .. attribute:: CUSTOM
-
-        read_input() will tab complete based on one of its following parameters
-        (choices, choices_provider, completer, parser). Use of custom up-arrow
-        history supported
-
-.. autoclass:: cmd2.cmd2.CustomCompletionSettings
-
-    .. automethod:: __init__
