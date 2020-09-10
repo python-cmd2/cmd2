@@ -46,7 +46,7 @@ from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .command_definition import CommandSet
-from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
+from .constants import CLASS_ATTR_DEFAULT_HELP_CATEGORY, COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser, as_subcommand_to
 from .exceptions import (
     CommandSetRegistrationError,
@@ -483,6 +483,8 @@ class Cmd(cmd.Cmd):
             predicate=lambda meth: isinstance(meth, Callable)
             and hasattr(meth, '__name__') and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
 
+        default_category = getattr(cmdset, CLASS_ATTR_DEFAULT_HELP_CATEGORY, None)
+
         installed_attributes = []
         try:
             for method_name, method in methods:
@@ -504,6 +506,9 @@ class Cmd(cmd.Cmd):
                     installed_attributes.append(help_func_name)
 
                 self._cmd_to_command_sets[command] = cmdset
+
+                if default_category and not hasattr(method, constants.CMD_ATTR_HELP_CATEGORY):
+                    utils.categorize(method, default_category)
 
             self._installed_command_sets.append(cmdset)
 

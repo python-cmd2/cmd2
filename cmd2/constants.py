@@ -39,6 +39,7 @@ COMPLETER_FUNC_PREFIX = 'complete_'
 
 # The custom help category a command belongs to
 CMD_ATTR_HELP_CATEGORY = 'help_category'
+CLASS_ATTR_DEFAULT_HELP_CATEGORY = 'cmd2_default_help_category'
 
 # The argparse parser for the command
 CMD_ATTR_ARGPARSER = 'argparser'

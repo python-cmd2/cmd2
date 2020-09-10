@@ -5,6 +5,8 @@
     not display hints even when this setting is True.
     * argparse tab completion now groups flag names which run the same action. Optional flags are wrapped
     in brackets like it is done in argparse usage text.
+    * default category decorators are now heritable by default and will propagate the category down the
+    class hierarchy until overridden. There's a new optional flag to set heritable to false.
 * Bug Fixes
     * Fixed issue where flag names weren't always sorted correctly in argparse tab completion
 
