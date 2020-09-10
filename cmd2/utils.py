@@ -1038,7 +1038,10 @@ def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None
         for item in func:
             setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
     else:
-        setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
+        if inspect.ismethod(func):
+            setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)
+        else:
+            setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
 
 
 def get_defining_class(meth):
