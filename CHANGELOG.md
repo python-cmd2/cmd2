@@ -5,6 +5,10 @@
     not display hints even when this setting is True.
     * argparse tab completion now groups flag names which run the same action. Optional flags are wrapped
     in brackets like it is done in argparse usage text.
+    * Added `--silent` flag to `alias/macro create`. If used, then no confirmation message will be printed
+    when aliases and macros are created or overwritten.
+    * Added `--with_silent` flag to `alias/macro list`. Use this option when saving to a startup script
+    that should silently create aliases and macros.
 * Bug Fixes
     * Fixed issue where flag names weren't always sorted correctly in argparse tab completion
 
