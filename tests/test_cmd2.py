@@ -1624,6 +1624,21 @@ def test_alias_create(base_app):
     out, err = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake run_pyscript')
 
+    # Overwrite alias
+    out, err = run_cmd(base_app, 'alias create fake help')
+    assert out == normalize("Alias 'fake' overwritten")
+
+    # Look up the updated alias
+    out, err = run_cmd(base_app, 'alias list fake')
+    assert out == normalize('alias create fake help')
+
+    # Test silent flag
+    out, err = run_cmd(base_app, 'alias create --silent fake set')
+    assert not out
+
+    out, err = run_cmd(base_app, 'alias list --with_silent fake')
+    assert out == normalize('alias create --silent fake set')
+
 def test_alias_create_with_quoted_value(base_app):
     """Demonstrate that quotes in alias value will be preserved (except for redirectors and terminators)"""
 
@@ -1717,6 +1732,21 @@ def test_macro_create(base_app):
     # Look up the new macro
     out, err = run_cmd(base_app, 'macro list fake')
     assert out == normalize('macro create fake run_pyscript')
+
+    # Overwrite macro
+    out, err = run_cmd(base_app, 'macro create fake help')
+    assert out == normalize("Macro 'fake' overwritten")
+
+    # Look up the updated macro
+    out, err = run_cmd(base_app, 'macro list fake')
+    assert out == normalize('macro create fake help')
+
+    # Test silent flag
+    out, err = run_cmd(base_app, 'macro create --silent fake set')
+    assert not out
+
+    out, err = run_cmd(base_app, 'macro list --with_silent fake')
+    assert out == normalize('macro create --silent fake set')
 
 def test_macro_create_with_quoted_value(base_app):
     """Demonstrate that quotes in macro value will be preserved (except for redirectors and terminators)"""

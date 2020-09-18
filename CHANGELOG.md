@@ -1,4 +1,4 @@
-## 1.4.0 (TBD, 2020)
+## 1.3.10 (September 17, 2020)
 * Enhancements
     * Added user-settable option called `always_show_hint`. If True, then tab completion hints will always
     display even when tab completion suggestions print. Arguments whose help or hint text is suppressed will
@@ -7,6 +7,10 @@
     in brackets like it is done in argparse usage text.
     * default category decorators are now heritable by default and will propagate the category down the
     class hierarchy until overridden. There's a new optional flag to set heritable to false.
+    * Added `--silent` flag to `alias/macro create`. If used, then no confirmation message will be printed
+    when aliases and macros are created or overwritten.
+    * Added `--with_silent` flag to `alias/macro list`. Use this option when saving to a startup script
+    that should silently create aliases and macros.
 * Bug Fixes
     * Fixed issue where flag names weren't always sorted correctly in argparse tab completion
 
