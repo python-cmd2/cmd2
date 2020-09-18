@@ -2771,11 +2771,11 @@ class Cmd(cmd.Cmd):
             value += ' ' + ' '.join(args.command_args)
 
         # Set the alias
-        result = "overwritten" if args.name in self.aliases else "created"
-        self.aliases[args.name] = value
-
         if not args.silent:
+            result = "overwritten" if args.name in self.aliases else "created"
             self.poutput("Alias '{}' {}".format(args.name, result))
+
+        self.aliases[args.name] = value
 
     # alias -> delete
     alias_delete_help = "delete aliases"
@@ -2980,11 +2980,11 @@ class Cmd(cmd.Cmd):
                 break
 
         # Set the macro
-        result = "overwritten" if args.name in self.macros else "created"
-        self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
-
         if not args.silent:
+            result = "overwritten" if args.name in self.macros else "created"
             self.poutput("Macro '{}' {}".format(args.name, result))
+
+        self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
 
     # macro -> delete
     macro_delete_help = "delete macros"
