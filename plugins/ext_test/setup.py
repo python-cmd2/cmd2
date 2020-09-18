@@ -28,17 +28,17 @@ setuptools.setup(
 
     author='Eric Lin',
     author_email='anselor@gmail.com',
-    url='https://github.com/python-cmd2/cmd2-ext-test',
+    url='https://github.com/python-cmd2/cmd2/tree/master/plugins/ext_test',
     license='MIT',
 
     packages=['cmd2_ext_test'],
 
-    python_requires='>=3.4',
+    python_requires='>=3.5',
     install_requires=['cmd2 >= 0.9.4, <=2'],
     setup_requires=['setuptools_scm >= 3.0'],
 
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
@@ -48,6 +48,8 @@ setuptools.setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
 
     # dependencies for development and testing

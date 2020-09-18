@@ -685,6 +685,7 @@ def test_static_subcommands(static_subcommands_app):
 complete_states_expected_self = None
 
 
+@cmd2.with_default_category('With Completer')
 class WithCompleterCommandSet(cmd2.CommandSet):
     states = ['alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware']
 
@@ -751,6 +752,8 @@ def test_cross_commandset_completer(command_sets_manual):
 
     assert first_match == 'alabama'
     assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
+
+    assert getattr(command_sets_manual.cmd_func('case1').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY) == 'With Completer'
 
     command_sets_manual.unregister_command_set(case1_set)
 
