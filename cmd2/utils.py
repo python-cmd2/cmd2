@@ -11,9 +11,10 @@ import re
 import subprocess
 import sys
 import threading
+
 import unicodedata
 from enum import Enum
-from typing import Any, Callable, Dict, Iterable, List, Optional, TextIO, Union
+from typing import Any, Callable, Dict, IO, Iterable, List, Optional, TextIO, Type, Union
 
 from . import constants
 
@@ -470,10 +471,15 @@ class StdSim:
         """Get the internal contents as bytes"""
         return bytes(self.buffer.byte_buf)
 
-    def read(self) -> str:
+    def read(self, size: Optional[int] = -1) -> str:
         """Read from the internal contents as a str and then clear them out"""
-        result = self.getvalue()
-        self.clear()
+        if size is None or size == -1:
+            result = self.getvalue()
+            self.clear()
+        else:
+            result = self.buffer.byte_buf[:size].decode(encoding=self.encoding, errors=self.errors)
+            self.buffer.byte_buf = self.buffer.byte_buf[size:]
+
         return result
 
     def readbytes(self) -> bytes:
@@ -668,7 +674,7 @@ class ContextFlag:
 
 class RedirectionSavedState:
     """Created by each command to store information required to restore state after redirection"""
-    def __init__(self, self_stdout: Union[StdSim, TextIO], sys_stdout: Union[StdSim, TextIO],
+    def __init__(self, self_stdout: Union[StdSim, IO[str]], sys_stdout: Union[StdSim, IO[str]],
                  pipe_proc_reader: Optional[ProcReader], saved_redirecting: bool) -> None:
         """
         RedirectionSavedState initializer
@@ -1025,11 +1031,12 @@ def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None
 
     :Example:
 
+    >>> import cmd2
     >>> class MyApp(cmd2.Cmd):
     >>>   def do_echo(self, arglist):
     >>>     self.poutput(' '.join(arglist)
     >>>
-    >>>   utils.categorize(do_echo, "Text Processing")
+    >>>   cmd2.utils.categorize(do_echo, "Text Processing")
 
     For an alternative approach to categorizing commands using a decorator, see
     :func:`~cmd2.decorators.with_category`
@@ -1038,10 +1045,13 @@ def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None
         for item in func:
             setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
     else:
-        setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
+        if inspect.ismethod(func):
+            setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)
+        else:
+            setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
 
 
-def get_defining_class(meth):
+def get_defining_class(meth) -> Type:
     """
     Attempts to resolve the class that defined a method.
 
