@@ -676,10 +676,6 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError('Could not find argparser for command "{}" needed by subcommand: {}'
                                                   .format(command_name, str(method)))
 
-            # Set the subcommand handler function
-            defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
-            subcmd_parser.set_defaults(**defaults)
-
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
                 if not subcmd_names:
                     return action
@@ -720,6 +716,12 @@ class Cmd(cmd.Cmd):
                     add_parser_kwargs['add_help'] = False
 
                     attached_parser = action.add_parser(subcommand_name, **add_parser_kwargs)
+
+                    # Set the subcommand handler
+                    defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
+                    attached_parser.set_defaults(**defaults)
+
+                    # Set what instance the handler is bound to
                     setattr(attached_parser, constants.PARSER_ATTR_COMMANDSET, cmdset)
                     break
 
