@@ -1639,16 +1639,17 @@ def test_alias_create(base_app):
     out, err = run_cmd(base_app, 'alias list --with_silent fake')
     assert out == normalize('alias create --silent fake set')
 
-def test_alias_create_with_quoted_value(base_app):
-    """Demonstrate that quotes in alias value will be preserved (except for redirectors and terminators)"""
+def test_alias_create_with_quoted_tokens(base_app):
+    """Demonstrate that quotes in alias value will be preserved"""
+    create_command = 'alias create fake help ">" "out file.txt" ";"'
 
     # Create the alias
-    out, err = run_cmd(base_app, 'alias create fake help ">" "out file.txt" ";"')
+    out, err = run_cmd(base_app, create_command)
     assert out == normalize("Alias 'fake' created")
 
-    # Look up the new alias (Only the redirector should be unquoted)
+    # Look up the new alias and verify all quotes are preserved
     out, err = run_cmd(base_app, 'alias list fake')
-    assert out == normalize('alias create fake help > "out file.txt" ;')
+    assert out == normalize(create_command)
 
 @pytest.mark.parametrize('alias_name', invalid_command_name)
 def test_alias_create_invalid_name(base_app, alias_name, capsys):
@@ -1748,15 +1749,17 @@ def test_macro_create(base_app):
     out, err = run_cmd(base_app, 'macro list --with_silent fake')
     assert out == normalize('macro create --silent fake set')
 
-def test_macro_create_with_quoted_value(base_app):
-    """Demonstrate that quotes in macro value will be preserved (except for redirectors and terminators)"""
+def test_macro_create_with_quoted_tokens(base_app):
+    """Demonstrate that quotes in macro value will be preserved"""
+    create_command = 'macro create fake help ">" "out file.txt" ";"'
+
     # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake help ">" "out file.txt" ";"')
+    out, err = run_cmd(base_app, create_command)
     assert out == normalize("Macro 'fake' created")
 
-    # Look up the new macro (Only the redirector should be unquoted)
+    # Look up the new macro and verify all quotes are preserved
     out, err = run_cmd(base_app, 'macro list fake')
-    assert out == normalize('macro create fake help > "out file.txt" ;')
+    assert out == normalize(create_command)
 
 @pytest.mark.parametrize('macro_name', invalid_command_name)
 def test_macro_create_invalid_name(base_app, macro_name):

@@ -1,3 +1,8 @@
+## 1.3.11 (TBD, 2020)
+* Bug Fixes
+    * Fixed issue where quoted redirectors and terminators in aliases and macros were not being
+    restored when read from a startup script.
+
 ## 1.3.10 (September 17, 2020)
 * Enhancements
     * Added user-settable option called `always_show_hint`. If True, then tab completion hints will always
