@@ -550,6 +550,7 @@ argparse.ArgumentParser._match_argument = _match_argument_wrapper
 # Patch argparse._SubParsersAction to add remove_parser function
 ############################################################################################################
 
+# noinspection PyPep8Naming
 def _SubParsersAction_remove_parser(self, name: str):
     """
     Removes a sub-parser from a sub-parsers group
@@ -558,23 +559,23 @@ def _SubParsersAction_remove_parser(self, name: str):
     class so cmd2 can remove subcommands from a parser.
 
     :param self: instance of the _SubParsersAction being edited
-    :param name: name of the sub-parser to remove
+    :param name: name of the subcommand for the sub-parser to remove
     """
+    # Remove this subcommand from its base command's help text
     for choice_action in self._choices_actions:
         if choice_action.dest == name:
             self._choices_actions.remove(choice_action)
             break
 
-    subparser = self._name_parser_map[name]
-    to_remove = []
-    for name, parser in self._name_parser_map.items():
-        if parser is subparser:
-            to_remove.append(name)
-    for name in to_remove:
-        del self._name_parser_map[name]
-
-    if name in self.choices:
-        del self.choices[name]
+    # Remove this subcommand and all its aliases from the base command
+    subparser = self._name_parser_map.get(name)
+    if subparser is not None:
+        to_remove = []
+        for cur_name, cur_parser in self._name_parser_map.items():
+            if cur_parser is subparser:
+                to_remove.append(cur_name)
+        for cur_name in to_remove:
+            del self._name_parser_map[cur_name]
 
 
 # noinspection PyProtectedMember
@@ -733,6 +734,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 return ', '.join(action.option_strings) + ' ' + args_string
             # End cmd2 customization
 
+    # noinspection PyMethodMayBeStatic
     def _determine_metavar(self, action, default_metavar) -> Union[str, Tuple]:
         """Custom method to determine what to use as the metavar value of an action"""
         if action.metavar is not None:
