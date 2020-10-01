@@ -1,4 +1,4 @@
-## 1.3.11 (TBD, 2020)
+## 1.3.11 (October 1, 2020)
 * Bug Fixes
     * Fixed issue where quoted redirectors and terminators in aliases and macros were not being
     restored when read from a startup script.
