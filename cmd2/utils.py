@@ -318,17 +318,29 @@ def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
     return sorted(list_to_sort, key=natural_keys)
 
 
-def unquote_specific_tokens(args: List[str], tokens_to_unquote: List[str]) -> None:
+def quote_specific_tokens(tokens: List[str], tokens_to_quote: List[str]) -> None:
     """
-    Unquote a specific tokens in a list of command-line arguments
-    This is used when certain tokens have to be passed to another command
-    :param args: the command line args
-    :param tokens_to_unquote: the tokens, which if present in args, to unquote
+    Quote specific tokens in a list
+
+    :param tokens: token list being edited
+    :param tokens_to_quote: the tokens, which if present in tokens, to quote
     """
-    for i, arg in enumerate(args):
-        unquoted_arg = strip_quotes(arg)
-        if unquoted_arg in tokens_to_unquote:
-            args[i] = unquoted_arg
+    for i, token in enumerate(tokens):
+        if token in tokens_to_quote:
+            tokens[i] = quote_string(token)
+
+
+def unquote_specific_tokens(tokens: List[str], tokens_to_unquote: List[str]) -> None:
+    """
+    Unquote specific tokens in a list
+
+    :param tokens: token list being edited
+    :param tokens_to_unquote: the tokens, which if present in tokens, to unquote
+    """
+    for i, token in enumerate(tokens):
+        unquoted_token = strip_quotes(token)
+        if unquoted_token in tokens_to_unquote:
+            tokens[i] = unquoted_token
 
 
 def expand_user(token: str) -> str:

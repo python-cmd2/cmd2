@@ -2821,20 +2821,39 @@ class Cmd(cmd.Cmd):
 
     @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_delete_help)
     def _alias_list(self, args: argparse.Namespace) -> None:
-        """List some or all aliases"""
+        """List some or all aliases as 'alias create' commands"""
         create_cmd = "alias create"
         if args.with_silent:
             create_cmd += " --silent"
 
+        tokens_to_quote = constants.REDIRECTION_TOKENS
+        tokens_to_quote.extend(self.statement_parser.terminators)
+
         if args.names:
-            for cur_name in utils.remove_duplicates(args.names):
-                if cur_name in self.aliases:
-                    self.poutput("{} {} {}".format(create_cmd, cur_name, self.aliases[cur_name]))
-                else:
-                    self.perror("Alias '{}' not found".format(cur_name))
+            to_list = utils.remove_duplicates(args.names)
         else:
-            for cur_alias in sorted(self.aliases, key=self.default_sort_key):
-                self.poutput("{} {} {}".format(create_cmd, cur_alias, self.aliases[cur_alias]))
+            to_list = sorted(self.aliases, key=self.default_sort_key)
+
+        not_found = []  # type: List[str]
+        for name in to_list:
+            if name not in self.aliases:
+                not_found.append(name)
+                continue
+
+            # Quote redirection and terminator tokens for the 'alias create' command
+            tokens = shlex_split(self.aliases[name])
+            command = tokens[0]
+            args = tokens[1:]
+            utils.quote_specific_tokens(args, tokens_to_quote)
+
+            val = command
+            if args:
+                val += ' ' + ' '.join(args)
+
+            self.poutput("{} {} {}".format(create_cmd, name, val))
+
+        for name in not_found:
+            self.perror("Alias '{}' not found".format(name))
 
     #############################################################
     # Parsers and functions for macro command and subcommands
@@ -3029,20 +3048,39 @@ class Cmd(cmd.Cmd):
 
     @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
     def _macro_list(self, args: argparse.Namespace) -> None:
-        """List some or all macros"""
+        """List some or all macros as 'macro create' commands"""
         create_cmd = "macro create"
         if args.with_silent:
             create_cmd += " --silent"
 
+        tokens_to_quote = constants.REDIRECTION_TOKENS
+        tokens_to_quote.extend(self.statement_parser.terminators)
+
         if args.names:
-            for cur_name in utils.remove_duplicates(args.names):
-                if cur_name in self.macros:
-                    self.poutput("{} {} {}".format(create_cmd, cur_name, self.macros[cur_name].value))
-                else:
-                    self.perror("Macro '{}' not found".format(cur_name))
+            to_list = utils.remove_duplicates(args.names)
         else:
-            for cur_macro in sorted(self.macros, key=self.default_sort_key):
-                self.poutput("{} {} {}".format(create_cmd, cur_macro, self.macros[cur_macro].value))
+            to_list = sorted(self.macros, key=self.default_sort_key)
+
+        not_found = []  # type: List[str]
+        for name in to_list:
+            if name not in self.macros:
+                not_found.append(name)
+                continue
+
+            # Quote redirection and terminator tokens for the 'macro create' command
+            tokens = shlex_split(self.macros[name].value)
+            command = tokens[0]
+            args = tokens[1:]
+            utils.quote_specific_tokens(args, tokens_to_quote)
+
+            val = command
+            if args:
+                val += ' ' + ' '.join(args)
+
+            self.poutput("{} {} {}".format(create_cmd, name, val))
+
+        for name in not_found:
+            self.perror("Macro '{}' not found".format(name))
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
