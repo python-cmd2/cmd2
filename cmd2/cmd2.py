@@ -692,6 +692,14 @@ class Cmd(cmd.Cmd):
 
             for action in target_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
+                    # Temporary workaround for avoiding subcommand help text repeatedly getting added to
+                    # action._choices_actions. Until we have instance-specific parser objects, we will remove
+                    # any existing subcommand which has the same name before replacing it. This problem is
+                    # exercised when more than one cmd2.Cmd-based object is created and the same subcommands
+                    # get added each time. Argparse overwrites the previous subcommand but keeps growing the help
+                    # text which is shown by running something like 'alias -h'.
+                    action.remove_parser(subcommand_name)
+
                     # Get the kwargs for add_parser()
                     add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
 

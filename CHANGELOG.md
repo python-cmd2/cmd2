@@ -2,6 +2,8 @@
 * Bug Fixes
     * Fixed issue where quoted redirectors and terminators in aliases and macros were not being
     restored when read from a startup script.
+    * Fixed issue where instantiating more than one cmd2-based class which uses the `@as_subcommand_to`
+    decorator resulted in duplicated help text in the base command the subcommands belong to.
 
 ## 1.3.10 (September 17, 2020)
 * Enhancements
