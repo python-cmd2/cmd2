@@ -34,6 +34,7 @@ import glob
 import inspect
 import os
 import pickle
+import pydoc
 import re
 import sys
 import threading
@@ -3155,16 +3156,21 @@ class Cmd(cmd.Cmd):
                 # Set end to blank so the help output matches how it looks when "command -h" is used
                 self.poutput(completer.format_help(tokens), end='')
 
+            # If there is a help func delegate to do_help
+            elif help_func:
+                super().do_help(args.command)
+
+            # If there's no help_func __doc__ then format and output it
+            elif func and func.__doc__:
+                self.poutput(pydoc.getdoc(func))
+
             # If there is no help information then print an error
-            elif help_func is None and (func is None or not func.__doc__):
+            else:
                 err_msg = self.help_error.format(args.command)
 
                 # Set apply_style to False so help_error's style is not overridden
                 self.perror(err_msg, apply_style=False)
 
-            # Otherwise delegate to cmd base class do_help()
-            else:
-                super().do_help(args.command)
 
     def _help_menu(self, verbose: bool = False) -> None:
         """Show a list of commands which help can be displayed for"""

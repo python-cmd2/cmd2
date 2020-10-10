@@ -981,6 +981,16 @@ class HelpApp(cmd2.Cmd):
     def do_undoc(self, arg):
         pass
 
+    def do_multiline_docstr(self, arg):
+        """
+        This documentation
+        is multiple lines
+        and there are no
+        tabs
+        """
+        pass
+
+
 @pytest.fixture
 def help_app():
     app = HelpApp()
@@ -1002,6 +1012,11 @@ def test_help_undocumented(help_app):
 def test_help_overridden_method(help_app):
     out, err = run_cmd(help_app, 'help edit')
     expected = normalize('This overrides the edit command and does nothing.')
+    assert out == expected
+
+def test_help_multiline_docstring(help_app):
+    out, err = run_cmd(help_app, 'help multiline_docstr')
+    expected = normalize('This documentation\nis multiple lines\nand there are no\ntabs')
     assert out == expected
 
 
