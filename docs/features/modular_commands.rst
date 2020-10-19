@@ -127,7 +127,7 @@ CommandSets and pass in the constructor to Cmd2.
 Dynamic Commands
 ~~~~~~~~~~~~~~~~
 
-You man also dynamically load and unload commands by installing and removing CommandSets at runtime. For example,
+You can also dynamically load and unload commands by installing and removing CommandSets at runtime. For example,
 if you could support runtime loadable plugins or add/remove commands based on your state.
 
 You may need to disable command auto-loading if you need dynamically load commands at runtime.
