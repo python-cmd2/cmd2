@@ -3171,7 +3171,6 @@ class Cmd(cmd.Cmd):
                 # Set apply_style to False so help_error's style is not overridden
                 self.perror(err_msg, apply_style=False)
 
-
     def _help_menu(self, verbose: bool = False) -> None:
         """Show a list of commands which help can be displayed for"""
         cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
