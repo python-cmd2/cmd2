@@ -134,9 +134,9 @@ changes a setting, and will receive both the old value and the new value.
 
 .. code-block:: text
 
-   (Cmd) set -v | grep sunny
+   (Cmd) set --verbose | grep sunny
    sunny: False                # Is it sunny outside?
-   (Cmd) set -v | grep degrees
+   (Cmd) set --verbose | grep degrees
    degrees_c: 22               # Temperature in Celsius
    (Cmd) sunbathe
    Too dim.
