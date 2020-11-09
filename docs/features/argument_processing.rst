@@ -35,7 +35,6 @@ applications.
 passed to commands:
 
 * :func:`cmd2.decorators.with_argparser`
-* :func:`cmd2.decorators.with_argparser_and_unknown_args`
 * :func:`cmd2.decorators.with_argument_list`
 
 All of these decorators accept an optional **preserve_quotes** argument which
@@ -262,12 +261,12 @@ Unknown Positional Arguments
 
 If you want all unknown arguments to be passed to your command as a list of
 strings, then decorate the command method with the
-``@with_argparser_and_unknown_args`` decorator.
+``@with_argparser(..., with_unknown_args=True)`` decorator.
 
 Here's what it looks like::
 
     import argparse
-    from cmd2 import with_argparser_and_unknown_args
+    from cmd2 import with_argparser
 
     dir_parser = argparse.ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
@@ -292,9 +291,8 @@ Using A Custom Namespace
 
 In some cases, it may be necessary to write custom ``argparse`` code that is
 dependent on state data of your application.  To support this ability while
-still allowing use of the decorators, both ``@with_argparser`` and
-``@with_argparser_and_unknown_args`` have an optional argument called
-``ns_provider``.
+still allowing use of the decorators, ``@with_argparser`` has an optional
+argument called ``ns_provider``.
 
 ``ns_provider`` is a Callable that accepts a ``cmd2.Cmd`` object as an argument
 and returns an ``argparse.Namespace``::
@@ -320,9 +318,8 @@ logic.
 Subcommands
 ------------
 
-Subcommands are supported for commands using either the ``@with_argparser`` or
-``@with_argparser_and_unknown_args`` decorator.  The syntax for supporting them
-is based on argparse sub-parsers.
+Subcommands are supported for commands using the ``@with_argparser`` decorator.
+The syntax is based on argparse sub-parsers.
 
 You may add multiple layers of subcommands for your command. ``cmd2`` will
 automatically traverse and tab complete subcommands for all commands using
@@ -350,8 +347,8 @@ help output.
 Decorator Order
 ---------------
 
-If you are using custom decorators in combination with either
-``@cmd2.with_argparser`` or ``@cmd2.with_argparser_and_unknown_args``, then the
+If you are using custom decorators in combination with
+``@cmd2.with_argparser``, then the
 order of your custom decorator(s) relative to the ``cmd2`` decorator matters
 when it comes to runtime behavior and ``argparse`` errors.  There is nothing
 ``cmd2``-specific here, this is just a side-effect of how decorators work in
