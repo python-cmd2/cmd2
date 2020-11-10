@@ -123,9 +123,8 @@ Instructions for implementing each feature follow.
     example in conjunction with the [conditional.py](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py) script
 
 - Parsing commands with `argparse`
-    - Two decorators provide built-in capability for using `argparse.ArgumentParser` to parse command arguments
-        - `cmd2.with_argparser` - all arguments are parsed by the `ArgumentParser`
-        - `cmd2.with_argparser_and_unknown_args` - any arguments not parsed by the `ArgumentParser` get passed as a list
+    - The built-in `cmd2.with_argparser` decorator will parse arguments using `argparse.ArgumentParser`
+      - Optionally, `cmd2.with_argparser(.., with_unknown_args=True)` can be used to pass all unknown arguments as a list
 
     ```Python
     import argparse
