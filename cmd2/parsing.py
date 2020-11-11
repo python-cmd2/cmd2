@@ -91,9 +91,8 @@ class Statement(str):
     Tips:
 
     1. `argparse <https://docs.python.org/3/library/argparse.html>`_ is your
-       friend for anything complex. ``cmd2`` has two decorators
-       (:func:`~cmd2.decorators.with_argparser`, and
-       :func:`~cmd2.decorators.with_argparser_and_unknown_args`) which you can
+       friend for anything complex. ``cmd2`` has the decorator
+       (:func:`~cmd2.decorators.with_argparser`) which you can
        use to make your command method receive a namespace of parsed arguments,
        whether positional or denoted with switches.
 
