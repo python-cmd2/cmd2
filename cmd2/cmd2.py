@@ -3157,11 +3157,11 @@ class Cmd(cmd.Cmd):
                 self.poutput(completer.format_help(tokens), end='')
 
             # If there is a help func delegate to do_help
-            elif help_func:
+            elif help_func is not None:
                 super().do_help(args.command)
 
             # If there's no help_func __doc__ then format and output it
-            elif func and func.__doc__:
+            elif func is not None and func.__doc__ is not None:
                 self.poutput(pydoc.getdoc(func))
 
             # If there is no help information then print an error
