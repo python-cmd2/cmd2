@@ -1,6 +1,8 @@
-## 1.4.0 (TBD XX, 2020)
+## 1.4.0 (November 11, 2020)
 * Bug Fixes
     * Fixed tab completion crash on Windows
+* Enhancements
+    * Changed how multiline doc string help is formatted to match style of other help messages
 
 ## 1.3.11 (October 1, 2020)
 * Bug Fixes
