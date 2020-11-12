@@ -415,7 +415,9 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completion_results:
-                self._cmd2_app.completion_hint = _build_hint(self._parser, flag_arg_state.action)
+                # Don't overwrite an existing hint
+                if not self._cmd2_app.completion_hint:
+                    self._cmd2_app.completion_hint = _build_hint(self._parser, flag_arg_state.action)
                 return completion_results
 
             # Otherwise, print a hint if the flag isn't finished or text isn't possibly the start of a flag
@@ -437,7 +439,9 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completion_results:
-                self._cmd2_app.completion_hint = _build_hint(self._parser, pos_arg_state.action)
+                # Don't overwrite an existing hint
+                if not self._cmd2_app.completion_hint:
+                    self._cmd2_app.completion_hint = _build_hint(self._parser, pos_arg_state.action)
                 return completion_results
 
             # Otherwise, print a hint if text isn't possibly the start of a flag

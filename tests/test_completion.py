@@ -972,6 +972,7 @@ def test_complete_set_value(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match == "SUCCESS "
+    assert cmd2_app.completion_hint == "Hint:\n  value  a settable param\n"
 
 def test_complete_set_value_invalid_settable(cmd2_app, capsys):
     text = ''
