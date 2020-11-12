@@ -1591,7 +1591,7 @@ class Cmd(cmd.Cmd):
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
 
             # Print any metadata like a hint or table header
-            readline.rl.mode.console.write(sys.stdout.write(self._build_completion_metadata_string()))
+            readline.rl.mode.console.write(self._build_completion_metadata_string())
 
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)

@@ -1,3 +1,7 @@
+## 1.4.0 (TBD XX, 2020)
+* Bug Fixes
+    * Fixed tab completion crash on Windows
+
 ## 1.3.11 (October 1, 2020)
 * Bug Fixes
     * Fixed issue where quoted redirectors and terminators in aliases and macros were not being
