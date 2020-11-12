@@ -1,3 +1,7 @@
+## 1.4.1 (TBD, 2020)
+* Bug Fixes
+    * Fixed bug where setting `always_show_hint=True` did not show a hint when completing `Settables`
+
 ## 1.4.0 (November 11, 2020)
 * Bug Fixes
     * Fixed tab completion crash on Windows
