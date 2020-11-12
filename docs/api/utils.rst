@@ -22,6 +22,10 @@ Quote Handling
 
 .. autofunction:: cmd2.utils.strip_quotes
 
+.. autofunction:: cmd2.utils.quote_specific_tokens
+
+.. autofunction:: cmd2.utils.unquote_specific_tokens
+
 
 IO Handling
 -----------

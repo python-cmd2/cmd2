@@ -13,6 +13,19 @@
       See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
       for an example.
 
+## 1.4.0 (November 11, 2020)
+* Bug Fixes
+    * Fixed tab completion crash on Windows
+* Enhancements
+    * Changed how multiline doc string help is formatted to match style of other help messages
+
+## 1.3.11 (October 1, 2020)
+* Bug Fixes
+    * Fixed issue where quoted redirectors and terminators in aliases and macros were not being
+    restored when read from a startup script.
+    * Fixed issue where instantiating more than one cmd2-based class which uses the `@as_subcommand_to`
+    decorator resulted in duplicated help text in the base command the subcommands belong to.
+
 ## 1.3.10 (September 17, 2020)
 * Enhancements
     * Added user-settable option called `always_show_hint`. If True, then tab completion hints will always

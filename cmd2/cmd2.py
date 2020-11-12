@@ -35,6 +35,7 @@ import glob
 import inspect
 import os
 import pickle
+import pydoc
 import re
 import sys
 import threading
@@ -678,10 +679,6 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError('Could not find argparser for command "{}" needed by subcommand: {}'
                                                   .format(command_name, str(method)))
 
-            # Set the subcommand handler function
-            defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
-            subcmd_parser.set_defaults(**defaults)
-
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
                 if not subcmd_names:
                     return action
@@ -698,6 +695,14 @@ class Cmd(cmd.Cmd):
 
             for action in target_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
+                    # Temporary workaround for avoiding subcommand help text repeatedly getting added to
+                    # action._choices_actions. Until we have instance-specific parser objects, we will remove
+                    # any existing subcommand which has the same name before replacing it. This problem is
+                    # exercised when more than one cmd2.Cmd-based object is created and the same subcommands
+                    # get added each time. Argparse overwrites the previous subcommand but keeps growing the help
+                    # text which is shown by running something like 'alias -h'.
+                    action.remove_parser(subcommand_name)
+
                     # Get the kwargs for add_parser()
                     add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
 
@@ -722,6 +727,12 @@ class Cmd(cmd.Cmd):
                     add_parser_kwargs['add_help'] = False
 
                     attached_parser = action.add_parser(subcommand_name, **add_parser_kwargs)
+
+                    # Set the subcommand handler
+                    defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
+                    attached_parser.set_defaults(**defaults)
+
+                    # Set what instance the handler is bound to
                     setattr(attached_parser, constants.PARSER_ATTR_COMMANDSET, cmdset)
                     break
 
@@ -1597,7 +1608,7 @@ class Cmd(cmd.Cmd):
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
 
             # Print any metadata like a hint or table header
-            readline.rl.mode.console.write(sys.stdout.write(self._build_completion_metadata_string()))
+            readline.rl.mode.console.write(self._build_completion_metadata_string())
 
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
@@ -2914,20 +2925,39 @@ class Cmd(cmd.Cmd):
 
     @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_delete_help)
     def _alias_list(self, args: argparse.Namespace) -> None:
-        """List some or all aliases"""
+        """List some or all aliases as 'alias create' commands"""
         create_cmd = "alias create"
         if args.with_silent:
             create_cmd += " --silent"
 
+        tokens_to_quote = constants.REDIRECTION_TOKENS
+        tokens_to_quote.extend(self.statement_parser.terminators)
+
         if args.names:
-            for cur_name in utils.remove_duplicates(args.names):
-                if cur_name in self.aliases:
-                    self.poutput("{} {} {}".format(create_cmd, cur_name, self.aliases[cur_name]))
-                else:
-                    self.perror("Alias '{}' not found".format(cur_name))
+            to_list = utils.remove_duplicates(args.names)
         else:
-            for cur_alias in sorted(self.aliases, key=self.default_sort_key):
-                self.poutput("{} {} {}".format(create_cmd, cur_alias, self.aliases[cur_alias]))
+            to_list = sorted(self.aliases, key=self.default_sort_key)
+
+        not_found = []  # type: List[str]
+        for name in to_list:
+            if name not in self.aliases:
+                not_found.append(name)
+                continue
+
+            # Quote redirection and terminator tokens for the 'alias create' command
+            tokens = shlex_split(self.aliases[name])
+            command = tokens[0]
+            args = tokens[1:]
+            utils.quote_specific_tokens(args, tokens_to_quote)
+
+            val = command
+            if args:
+                val += ' ' + ' '.join(args)
+
+            self.poutput("{} {} {}".format(create_cmd, name, val))
+
+        for name in not_found:
+            self.perror("Alias '{}' not found".format(name))
 
     #############################################################
     # Parsers and functions for macro command and subcommands
@@ -3122,20 +3152,39 @@ class Cmd(cmd.Cmd):
 
     @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
     def _macro_list(self, args: argparse.Namespace) -> None:
-        """List some or all macros"""
+        """List some or all macros as 'macro create' commands"""
         create_cmd = "macro create"
         if args.with_silent:
             create_cmd += " --silent"
 
+        tokens_to_quote = constants.REDIRECTION_TOKENS
+        tokens_to_quote.extend(self.statement_parser.terminators)
+
         if args.names:
-            for cur_name in utils.remove_duplicates(args.names):
-                if cur_name in self.macros:
-                    self.poutput("{} {} {}".format(create_cmd, cur_name, self.macros[cur_name].value))
-                else:
-                    self.perror("Macro '{}' not found".format(cur_name))
+            to_list = utils.remove_duplicates(args.names)
         else:
-            for cur_macro in sorted(self.macros, key=self.default_sort_key):
-                self.poutput("{} {} {}".format(create_cmd, cur_macro, self.macros[cur_macro].value))
+            to_list = sorted(self.macros, key=self.default_sort_key)
+
+        not_found = []  # type: List[str]
+        for name in to_list:
+            if name not in self.macros:
+                not_found.append(name)
+                continue
+
+            # Quote redirection and terminator tokens for the 'macro create' command
+            tokens = shlex_split(self.macros[name].value)
+            command = tokens[0]
+            args = tokens[1:]
+            utils.quote_specific_tokens(args, tokens_to_quote)
+
+            val = command
+            if args:
+                val += ' ' + ' '.join(args)
+
+            self.poutput("{} {} {}".format(create_cmd, name, val))
+
+        for name in not_found:
+            self.perror("Macro '{}' not found".format(name))
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
@@ -3198,16 +3247,20 @@ class Cmd(cmd.Cmd):
                 # Set end to blank so the help output matches how it looks when "command -h" is used
                 self.poutput(completer.format_help(args.subcommands), end='')
 
+            # If there is a help func delegate to do_help
+            elif help_func is not None:
+                super().do_help(args.command)
+
+            # If there's no help_func __doc__ then format and output it
+            elif func is not None and func.__doc__ is not None:
+                self.poutput(pydoc.getdoc(func))
+
             # If there is no help information then print an error
-            elif help_func is None and (func is None or not func.__doc__):
+            else:
                 err_msg = self.help_error.format(args.command)
 
                 # Set apply_style to False so help_error's style is not overridden
                 self.perror(err_msg, apply_style=False)
-
-            # Otherwise delegate to cmd base class do_help()
-            else:
-                super().do_help(args.command)
 
     def _help_menu(self, verbose: bool = False) -> None:
         """Show a list of commands which help can be displayed for"""
