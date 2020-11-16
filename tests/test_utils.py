@@ -3,11 +3,17 @@
 """
 Unit testing for cmd2/utils.py module.
 """
+import os
 import signal
 import sys
 import time
 
 import pytest
+
+try:
+    import mock
+except ImportError:
+    from unittest import mock
 
 import cmd2.utils as cu
 from cmd2.constants import HORIZONTAL_ELLIPSIS
@@ -634,3 +640,56 @@ def test_str_to_bool_invalid():
 def test_str_to_bool_bad_input():
     with pytest.raises(ValueError):
         cu.str_to_bool(1)
+
+@mock.patch('cmd2.utils.probe_editors')
+def test_find_editor_specified(mock_probe_editors):
+    expected_editor = 'vim'
+    with mock.patch.dict(os.environ, {'EDITOR': expected_editor}):
+        editor = cu.find_editor()
+    assert editor == expected_editor
+    mock_probe_editors.assert_not_called()
+
+@pytest.mark.skipif(sys.platform.startswith('win'),
+                    reason="test 'find_editor' unix codepath")
+def test_find_editor_not_specified_unix():
+    expected_editor = 'vim'
+    with mock.patch.dict(os.environ, {'EDITOR': ''}):
+        with mock.patch(
+            'cmd2.utils.probe_editors',
+            return_value=expected_editor
+        ) as mock_probe_editors:
+            editor = cu.find_editor()
+    assert editor == expected_editor
+    mock_probe_editors.assert_called_once()
+
+@pytest.mark.skipif(not sys.platform.startswith('win'),
+                    reason="test 'find_editor' win codepath")
+def test_find_editor_not_specified_win():
+    expected_editor = 'notepad'
+    with mock.patch.dict(os.environ, {'EDITOR': ''}):
+        with mock.patch('cmd2.utils.probe_editors') as mock_probe_editors:
+            editor = cu.find_editor()
+    assert editor == expected_editor
+    mock_probe_editors.assert_not_called()
+
+@pytest.mark.skipif(sys.platform.startswith('win'),
+                    reason="test 'probe_editors' codepath")
+def test_probe_editors(tmpdir):
+    path = tmpdir.mkdir('bin')
+    vi_path = str(path.join('vi'))
+    with mock.patch.dict(os.environ, {'PATH': str(path)}):
+        editor = cu.probe_editors()
+    assert not editor
+
+    def mock_is_executable(p):
+        print(p, vi_path)
+        if p == vi_path:
+            return True
+
+    with mock.patch.dict(os.environ, {'PATH': str(path)}):
+        with mock.patch(
+            'cmd2.utils.is_executable',
+            mock_is_executable
+        ):
+            editor = cu.probe_editors()
+    assert editor == vi_path

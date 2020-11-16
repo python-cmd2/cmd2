@@ -1275,24 +1275,6 @@ optional arguments:
   -s, --shout  N00B EMULATION MODE
 """
 
-@pytest.mark.skipif(sys.platform.startswith('win'),
-                    reason="utils.which function only used on Mac and Linux")
-def test_which_editor_good():
-    editor = cmd2.Cmd.DEFAULT_EDITOR
-    path = utils.which(editor)
-
-    # Assert that the editor was found because some editor should exist on all Mac and Linux systems
-    assert path
-
-@pytest.mark.skipif(sys.platform.startswith('win'),
-                    reason="utils.which function only used on Mac and Linux")
-def test_which_editor_bad():
-    nonexistent_editor = 'this_editor_does_not_exist.exe'
-    path = utils.which(nonexistent_editor)
-    # Assert that the non-existent editor wasn't found
-    assert path is None
-
-
 class MultilineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, multiline_commands=['orate'], **kwargs)
