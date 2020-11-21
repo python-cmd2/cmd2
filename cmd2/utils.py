@@ -8,6 +8,7 @@ import enum
 import functools
 import glob
 import inspect
+import itertools
 import os
 import re
 import subprocess
@@ -149,23 +150,6 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
         prototype = T(*default_values)
     T.__new__.__defaults__ = tuple(prototype)
     return T
-
-
-def which(exe_name: str) -> Optional[str]:
-    """Find the full path of a given executable on a Linux or Mac machine
-
-    :param exe_name: name of the executable to check, ie 'vi' or 'ls'
-    :return: a full path or None if exe not found
-    """
-    if sys.platform.startswith('win'):
-        return None
-
-    try:
-        exe_path = subprocess.check_output(['which', exe_name], stderr=subprocess.STDOUT).strip()
-        exe_path = exe_path.decode()
-    except subprocess.CalledProcessError:
-        exe_path = None
-    return exe_path
 
 
 def is_text_file(file_path: str) -> bool:
@@ -336,6 +320,24 @@ def expand_user_in_tokens(tokens: List[str]) -> None:
         tokens[index] = expand_user(tokens[index])
 
 
+def is_executable(path) -> bool:
+    """Return True if specified path is executable file, otherwise False."""
+    return os.path.isfile(path) and os.access(path, os.X_OK)
+
+
+def probe_editors() -> str:
+    """Find a favor editor in system path."""
+    editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']
+    paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
+    for editor, path in itertools.product(editors, paths):
+        editor_path = os.path.join(path, editor)
+        if is_executable(editor_path):
+            break
+    else:
+        editor_path = None
+    return editor_path
+
+
 def find_editor() -> str:
     """Find a reasonable editor to use by default for the system that the cmd2 application is running on."""
     editor = os.environ.get('EDITOR')
@@ -343,10 +345,7 @@ def find_editor() -> str:
         if sys.platform[:3] == 'win':
             editor = 'notepad'
         else:
-            # Favor command-line editors first so we don't leave the terminal to edit
-            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
-                if which(editor):
-                    break
+            editor = probe_editors()
     return editor
 
 
