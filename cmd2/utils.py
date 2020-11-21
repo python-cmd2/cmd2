@@ -368,7 +368,7 @@ def find_editor() -> Optional[str]:
         if sys.platform[:3] == 'win':
             editors = ['code.cmd', 'notepad++.exe', 'notepad.exe']
         else:
-            editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'code', 'subl', 'geany', 'atom']
+            editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'joe', 'code', 'subl', 'atom', 'gedit', 'geany', 'kate']
 
         paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
         for editor, path in itertools.product(editors, paths):
