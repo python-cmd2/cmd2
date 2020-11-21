@@ -652,7 +652,7 @@ def test_find_editor_not_specified():
     editor = cu.find_editor()
     assert editor
 
-    # Overwrite path env setting with invalid path. No editor should be found.
-    with mock.patch.dict(os.environ, {'PATH': 'fake_dir'}):
+    # Overwrite path env setting with invalid path, clear all other env vars so no editor should be found.
+    with mock.patch.dict(os.environ, {'PATH': 'fake_dir'}, clear=True):
         editor = cu.find_editor()
     assert editor is None
