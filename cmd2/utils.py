@@ -357,32 +357,30 @@ def expand_user_in_tokens(tokens: List[str]) -> None:
         tokens[index] = expand_user(tokens[index])
 
 
-def is_executable(path) -> bool:
-    """Return True if specified path is executable file, otherwise False."""
-    return os.path.isfile(path) and os.access(path, os.X_OK)
-
-
-def probe_editors() -> str:
-    """Find a favor editor in system path."""
-    editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']
-    paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
-    for editor, path in itertools.product(editors, paths):
-        editor_path = os.path.join(path, editor)
-        if is_executable(editor_path):
-            break
-    else:
-        editor_path = None
-    return editor_path
-
-
-def find_editor() -> str:
-    """Find a reasonable editor to use by default for the system that the cmd2 application is running on."""
+def find_editor() -> Optional[str]:
+    """
+    Used to set cmd2.Cmd.DEFAULT_EDITOR. If EDITOR env variable is set, that will be used.
+    Otherwise the function will look for a known editor in directories specified by PATH env variable.
+    :return: Default editor or None
+    """
     editor = os.environ.get('EDITOR')
     if not editor:
         if sys.platform[:3] == 'win':
-            editor = 'notepad'
+            editors = ['code.cmd', 'notepad++.exe', 'notepad.exe']
         else:
-            editor = probe_editors()
+            editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'joe', 'code', 'subl', 'atom', 'gedit', 'geany', 'kate']
+
+        paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
+        for editor, path in itertools.product(editors, paths):
+            editor_path = os.path.join(path, editor)
+            if os.path.isfile(editor_path) and os.access(editor_path, os.X_OK):
+                if sys.platform[:3] == 'win':
+                    # Remove extension from Windows file names
+                    editor = os.path.splitext(editor)[0]
+                break
+        else:
+            editor = None
+
     return editor
 
 
