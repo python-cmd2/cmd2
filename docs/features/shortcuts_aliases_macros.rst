@@ -24,7 +24,7 @@ defined:
 To define more shortcuts, update the dict ``App.shortcuts`` with the
 {'shortcut': 'command_name'} (omit ``do_``)::
 
-  class App(Cmd2):
+  class App(Cmd):
       def __init__(self):
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'*': 'sneeze', '~': 'squirm'})
