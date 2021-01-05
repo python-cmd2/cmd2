@@ -13,7 +13,6 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 scm_version = {
     'root': '../..',
-    'relative_to': __file__,
     'git_describe_command': 'git describe --dirty --tags --long --match "plugin-ext-test*"',
 }
 
