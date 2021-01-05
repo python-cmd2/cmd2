@@ -4,12 +4,19 @@ History management classes
 """
 
 import re
-from typing import List, Union
+from typing import (
+    List,
+    Union,
+)
 
 import attr
 
-from . import utils
-from .parsing import Statement
+from . import (
+    utils,
+)
+from .parsing import (
+    Statement,
+)
 
 
 @attr.s(frozen=True)

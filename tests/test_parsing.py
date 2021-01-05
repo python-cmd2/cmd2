@@ -7,8 +7,15 @@ import attr
 import pytest
 
 import cmd2
-from cmd2 import constants, exceptions, utils
-from cmd2.parsing import StatementParser, shlex_split
+from cmd2 import (
+    constants,
+    exceptions,
+    utils,
+)
+from cmd2.parsing import (
+    StatementParser,
+    shlex_split,
+)
 
 
 @pytest.fixture

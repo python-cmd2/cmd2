@@ -5,12 +5,25 @@ setting the window title, and asynchronous alerts.
  """
 import functools
 import re
-from enum import Enum
-from typing import IO, Any, List, Union
+from enum import (
+    Enum,
+)
+from typing import (
+    IO,
+    Any,
+    List,
+    Union,
+)
 
 import colorama
-from colorama import Back, Fore, Style
-from wcwidth import wcswidth
+from colorama import (
+    Back,
+    Fore,
+    Style,
+)
+from wcwidth import (
+    wcswidth,
+)
 
 # On Windows, filter ANSI escape codes out of text sent to stdout/stderr, and replace them with equivalent Win32 calls
 colorama.init(strip=False)

@@ -8,13 +8,29 @@ There are already implemented and ready-to-use examples of this below TableCreat
 import copy
 import functools
 import io
-from collections import deque
-from enum import Enum
-from typing import Any, Optional, Sequence, Tuple, Union
+from collections import (
+    deque,
+)
+from enum import (
+    Enum,
+)
+from typing import (
+    Any,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
-from wcwidth import wcwidth
+from wcwidth import (
+    wcwidth,
+)
 
-from . import ansi, constants, utils
+from . import (
+    ansi,
+    constants,
+    utils,
+)
 
 # This is needed for compatibility with early versions of Python 3.5 prior to 3.5.4
 try:

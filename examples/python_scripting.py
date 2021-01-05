@@ -24,7 +24,9 @@ import argparse
 import os
 
 import cmd2
-from cmd2 import ansi
+from cmd2 import (
+    ansi,
+)
 
 
 class CmdLineApp(cmd2.Cmd):

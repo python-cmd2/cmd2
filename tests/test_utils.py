@@ -10,13 +10,16 @@ import time
 
 import pytest
 
+import cmd2.utils as cu
+from cmd2.constants import (
+    HORIZONTAL_ELLIPSIS,
+)
+
 try:
     import mock
 except ImportError:
     from unittest import mock
 
-import cmd2.utils as cu
-from cmd2.constants import HORIZONTAL_ELLIPSIS
 
 HELLO_WORLD = 'Hello, world!'
 

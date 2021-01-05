@@ -11,8 +11,14 @@ The `load` and `unload` command will load and unload the CommandSets. The availa
 subcommands to the `cut` command will change depending on which CommandSets are loaded.
 """
 import argparse
+
 import cmd2
-from cmd2 import CommandSet, with_argparser, with_category, with_default_category
+from cmd2 import (
+    CommandSet,
+    with_argparser,
+    with_category,
+    with_default_category,
+)
 
 
 @with_default_category('Fruits')

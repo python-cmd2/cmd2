@@ -9,7 +9,11 @@ import argparse
 import pytest
 
 import cmd2
-from .conftest import run_cmd, WithCommandSets
+
+from .conftest import (
+    WithCommandSets,
+    run_cmd,
+)
 
 
 class SubcommandSet(cmd2.CommandSet):

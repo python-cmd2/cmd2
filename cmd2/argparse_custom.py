@@ -220,10 +220,25 @@ import argparse
 import re
 import sys
 # noinspection PyUnresolvedReferences,PyProtectedMember
-from argparse import ONE_OR_MORE, ZERO_OR_MORE, ArgumentError, _
-from typing import Any, Callable, Optional, Tuple, Type, Union
+from argparse import (
+    ONE_OR_MORE,
+    ZERO_OR_MORE,
+    ArgumentError,
+    _,
+)
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
 
-from . import ansi, constants
+from . import (
+    ansi,
+    constants,
+)
 
 ############################################################################################################
 # The following are names of custom argparse argument attributes added by cmd2

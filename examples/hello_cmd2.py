@@ -3,7 +3,9 @@
 """
 This is intended to be a completely bare-bones cmd2 application suitable for rapid testing and debugging.
 """
-from cmd2 import cmd2
+from cmd2 import (
+    cmd2,
+)
 
 if __name__ == '__main__':
     import sys

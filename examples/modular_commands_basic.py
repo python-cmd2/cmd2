@@ -5,7 +5,10 @@ Simple example demonstrating basic CommandSet usage.
 """
 
 import cmd2
-from cmd2 import CommandSet, with_default_category
+from cmd2 import (
+    CommandSet,
+    with_default_category,
+)
 
 
 @with_default_category('My Category')
