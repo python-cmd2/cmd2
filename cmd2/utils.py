@@ -12,12 +12,26 @@ import re
 import subprocess
 import sys
 import threading
-
 import unicodedata
-from enum import Enum
-from typing import Any, Callable, Dict, IO, Iterable, List, Optional, TextIO, Type, Union
+from enum import (
+    Enum,
+)
+from typing import (
+    IO,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    TextIO,
+    Type,
+    Union,
+)
 
-from . import constants
+from . import (
+    constants,
+)
 
 
 def is_quoted(arg: str) -> bool:

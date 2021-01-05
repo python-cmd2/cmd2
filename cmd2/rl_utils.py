@@ -3,7 +3,9 @@
 Imports the proper readline for the platform and provides utility functions for it
 """
 import sys
-from enum import Enum
+from enum import (
+    Enum,
+)
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:

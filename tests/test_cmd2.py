@@ -9,12 +9,22 @@ import io
 import os
 import sys
 import tempfile
-from code import InteractiveConsole
+from code import (
+    InteractiveConsole,
+)
 
 import pytest
 
 import cmd2
-from cmd2 import COMMAND_NAME, ansi, clipboard, constants, exceptions, plugin, utils
+from cmd2 import (
+    COMMAND_NAME,
+    ansi,
+    clipboard,
+    constants,
+    exceptions,
+    plugin,
+    utils,
+)
 
 from .conftest import (
     HELP_HISTORY,

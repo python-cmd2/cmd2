@@ -3,15 +3,30 @@
 Cmd2 unit/functional testing
 """
 import sys
-from contextlib import redirect_stderr, redirect_stdout
-from typing import List, Optional, Union
-from unittest import mock
+from contextlib import (
+    redirect_stderr,
+    redirect_stdout,
+)
+from typing import (
+    List,
+    Optional,
+    Union,
+)
+from unittest import (
+    mock,
+)
 
-from pytest import fixture
+from pytest import (
+    fixture,
+)
 
 import cmd2
-from cmd2_ext_test import ExternalTestMixin
-from cmd2.utils import StdSim
+from cmd2.utils import (
+    StdSim,
+)
+from cmd2_ext_test import (
+    ExternalTestMixin,
+)
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:

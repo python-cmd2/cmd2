@@ -8,7 +8,10 @@ This is meant to be run within a cmd2 session using run_pyscript.
 import argparse
 import os
 import sys
-from typing import List, TextIO
+from typing import (
+    List,
+    TextIO,
+)
 
 ASTERISKS = "********************************************************"
 

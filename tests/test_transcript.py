@@ -9,15 +9,25 @@ import random
 import re
 import sys
 import tempfile
-from unittest import mock
+from unittest import (
+    mock,
+)
 
 import pytest
 
 import cmd2
-from cmd2 import transcript
-from cmd2.utils import Settable, StdSim
+from cmd2 import (
+    transcript,
+)
+from cmd2.utils import (
+    Settable,
+    StdSim,
+)
 
-from .conftest import run_cmd, verify_help_text
+from .conftest import (
+    run_cmd,
+    verify_help_text,
+)
 
 
 class CmdLineApp(cmd2.Cmd):

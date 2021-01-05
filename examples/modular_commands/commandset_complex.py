@@ -5,10 +5,14 @@ Test CommandSet
 """
 
 import argparse
-from typing import List
+from typing import (
+    List,
+)
 
 import cmd2
-from cmd2 import utils
+from cmd2 import (
+    utils,
+)
 
 
 @cmd2.with_default_category('Fruits')

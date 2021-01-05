@@ -1,12 +1,30 @@
 # coding=utf-8
 """Decorators for ``cmd2`` commands"""
 import argparse
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
-from . import constants
-from .argparse_custom import Cmd2AttributeWrapper
-from .exceptions import Cmd2ArgparseError
-from .parsing import Statement
+from . import (
+    constants,
+)
+from .argparse_custom import (
+    Cmd2AttributeWrapper,
+)
+from .exceptions import (
+    Cmd2ArgparseError,
+)
+from .parsing import (
+    Statement,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2

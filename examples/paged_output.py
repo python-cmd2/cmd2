@@ -3,7 +3,9 @@
 """A simple example demonstrating the using paged output via the ppaged() method.
 """
 import os
-from typing import List
+from typing import (
+    List,
+)
 
 import cmd2
 

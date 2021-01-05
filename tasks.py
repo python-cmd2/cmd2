@@ -16,7 +16,9 @@ import sys
 
 import invoke
 
-from plugins import tasks as plugin_tasks
+from plugins import (
+    tasks as plugin_tasks,
+)
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
@@ -96,7 +98,7 @@ namespace_clean.add_task(pytest_clean, 'pytest')
 def mypy(context):
     """Run mypy optional static type checker"""
     with context.cd(TASK_ROOT_STR):
-        context.run("mypy main.py")
+        context.run("mypy cmd2")
 
 
 namespace.add_task(mypy)

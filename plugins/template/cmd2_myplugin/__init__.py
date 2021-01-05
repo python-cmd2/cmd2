@@ -5,7 +5,10 @@
 An overview of what myplugin does.
 """
 
-from .myplugin import MyPluginMixin, empty_decorator  # noqa: F401
+from .myplugin import (  # noqa: F401
+    MyPluginMixin,
+    empty_decorator,
+)
 
 try:
     # For python 3.8 and later
