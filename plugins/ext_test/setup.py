@@ -11,15 +11,15 @@ here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
+scm_version = {
+    'root': '../..',
+    'relative_to': __file__,
+    'git_describe_command': 'git describe --dirty --tags --long --match "plugin-ext-test*"',
+}
+
 setuptools.setup(
     name='cmd2-ext-test',
-    version='0.2.0',
-    # TODO: Figure out why this doesn't work on CI Server
-    # use_scm_version={
-    #     'root': '../..',
-    #     'relative_to': __file__,
-    #     'git_describe_command': 'git describe --dirty --tags --long --match plugin-ext-test*'
-    # },
+    version=scm_version,
 
     description='External test plugin for cmd2. Allows for external invocation of commands as if from a cmd2 pyscript',
     long_description=long_description,
@@ -35,7 +35,9 @@ setuptools.setup(
 
     python_requires='>=3.5',
     install_requires=['cmd2 >= 0.9.4, <=2'],
-    setup_requires=['setuptools_scm >= 3.0'],
+    setup_requires=[
+        'setuptools >= 42',
+        'setuptools_scm >= 3.4'],
 
     classifiers=[
         'Development Status :: 5 - Production/Stable',
