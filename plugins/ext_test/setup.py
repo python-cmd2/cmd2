@@ -16,6 +16,10 @@ scm_version = {
     'git_describe_command': 'git describe --dirty --tags --long --match "plugin-ext-test*"',
 }
 
+PACKAGE_DATA = {
+    'cmd2_ext_test': ['py.typed'],
+}
+
 setuptools.setup(
     name='cmd2-ext-test',
     version=scm_version,
@@ -30,6 +34,7 @@ setuptools.setup(
     url='https://github.com/python-cmd2/cmd2/tree/master/plugins/ext_test',
     license='MIT',
 
+    package_data=PACKAGE_DATA,
     packages=['cmd2_ext_test'],
 
     python_requires='>=3.5',
