@@ -199,7 +199,7 @@ class Cmd(cmd.Cmd):
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, *,
                  persistent_history_file: str = '', persistent_history_length: int = 1000,
-                 startup_script: str = '', use_ipython: bool = False,
+                 startup_script: str = '', silent_startup_script = False, use_ipython: bool = False,
                  allow_cli_args: bool = True, transcript_files: Optional[List[str]] = None,
                  allow_redirection: bool = True, multiline_commands: Optional[List[str]] = None,
                  terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None,
@@ -215,6 +215,8 @@ class Cmd(cmd.Cmd):
         :param persistent_history_length: max number of history items to write
                                           to the persistent history file
         :param startup_script: file path to a script to execute at startup
+        :param silent_startup_script: if ``True``, then the startup script's output will be
+                                      suppressed. Anything written to stderr will still display.
         :param use_ipython: should the "ipy" command be included for an embedded IPython shell
         :param allow_cli_args: if ``True``, then :meth:`cmd2.Cmd.__init__` will process command
                                line arguments as either commands to be run or, if ``-t`` or
@@ -363,7 +365,10 @@ class Cmd(cmd.Cmd):
         if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script):
-                self._startup_commands.append("run_script {}".format(utils.quote_string(startup_script)))
+                script_cmd = "run_script {}".format(utils.quote_string(startup_script))
+                if silent_startup_script:
+                    script_cmd += "> {}".format(os.devnull)
+                self._startup_commands.append(script_cmd)
 
         # Transcript files to run instead of interactive command loop
         self._transcript_files = None  # type: Optional[List[str]]
