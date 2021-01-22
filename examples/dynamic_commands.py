@@ -5,7 +5,10 @@
 import functools
 
 import cmd2
-from cmd2.constants import COMMAND_FUNC_PREFIX, HELP_FUNC_PREFIX
+from cmd2.constants import (
+    COMMAND_FUNC_PREFIX,
+    HELP_FUNC_PREFIX,
+)
 
 COMMAND_LIST = ['foo', 'bar']
 CATEGORY = 'Dynamic Commands'

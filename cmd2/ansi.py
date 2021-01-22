@@ -3,14 +3,27 @@
 Support for ANSI escape sequences which are used for things like applying style to text,
 setting the window title, and asynchronous alerts.
  """
-import enum
 import functools
 import re
-from typing import IO, Any, List, Union
+from enum import (
+    Enum,
+)
+from typing import (
+    IO,
+    Any,
+    List,
+    Union,
+)
 
 import colorama
-from colorama import Back, Fore, Style
-from wcwidth import wcswidth
+from colorama import (
+    Back,
+    Fore,
+    Style,
+)
+from wcwidth import (
+    wcswidth,
+)
 
 # On Windows, filter ANSI escape codes out of text sent to stdout/stderr, and replace them with equivalent Win32 calls
 colorama.init(strip=False)
@@ -49,7 +62,7 @@ The default is ``STYLE_TERMINAL``.
 ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 
 
-class ColorBase(enum.Enum):
+class ColorBase(Enum):
     """
     Base class used for defining color enums. See fg and bg classes for examples.
 

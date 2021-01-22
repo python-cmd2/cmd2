@@ -3,10 +3,21 @@
 """Examples of using the cmd2 table creation API"""
 import functools
 import sys
-from typing import Any, List
+from typing import (
+    Any,
+    List,
+)
 
-from cmd2 import ansi
-from cmd2.table_creator import AlternatingTable, BorderedTable, Column, HorizontalAlignment, SimpleTable
+from cmd2 import (
+    ansi,
+)
+from cmd2.table_creator import (
+    AlternatingTable,
+    BorderedTable,
+    Column,
+    HorizontalAlignment,
+    SimpleTable,
+)
 
 
 class DollarFormatter:

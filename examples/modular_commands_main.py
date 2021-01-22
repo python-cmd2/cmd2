@@ -5,13 +5,27 @@ A complex example demonstrating a variety of methods to load CommandSets using a
 with examples of how to integrate tab completion with argparse-based commands.
 """
 import argparse
-from typing import Iterable, List, Optional
+from typing import (
+    Iterable,
+    List,
+    Optional,
+)
 
-from modular_commands.commandset_basic import BasicCompletionCommandSet  # noqa: F401
-from modular_commands.commandset_complex import CommandSetA  # noqa: F401
-from modular_commands.commandset_custominit import CustomInitCommandSet  # noqa: F401
-
-from cmd2 import Cmd, Cmd2ArgumentParser, CommandSet, with_argparser
+from cmd2 import (
+    Cmd,
+    Cmd2ArgumentParser,
+    CommandSet,
+    with_argparser,
+)
+from modular_commands.commandset_basic import (  # noqa: F401
+    BasicCompletionCommandSet,
+)
+from modular_commands.commandset_complex import (  # noqa: F401
+    CommandSetA,
+)
+from modular_commands.commandset_custominit import (
+    CustomInitCommandSet,  # noqa: F401
+)
 
 
 class WithCommandSets(Cmd):

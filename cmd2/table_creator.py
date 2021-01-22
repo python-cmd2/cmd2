@@ -6,15 +6,31 @@ The general use case is to inherit from TableCreator to create a table class wit
 There are already implemented and ready-to-use examples of this below TableCreator's code.
 """
 import copy
-import enum
 import functools
 import io
-from collections import deque
-from typing import Any, Optional, Sequence, Tuple, Union
+from collections import (
+    deque,
+)
+from enum import (
+    Enum,
+)
+from typing import (
+    Any,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
-from wcwidth import wcwidth
+from wcwidth import (
+    wcwidth,
+)
 
-from . import ansi, constants, utils
+from . import (
+    ansi,
+    constants,
+    utils,
+)
 
 # This is needed for compatibility with early versions of Python 3.5 prior to 3.5.4
 try:
@@ -39,14 +55,14 @@ EMPTY = ''
 SPACE = ' '
 
 
-class HorizontalAlignment(enum.Enum):
+class HorizontalAlignment(Enum):
     """Horizontal alignment of text in a cell"""
     LEFT = 1
     CENTER = 2
     RIGHT = 3
 
 
-class VerticalAlignment(enum.Enum):
+class VerticalAlignment(Enum):
     """Vertical alignment of text in a cell"""
     TOP = 1
     MIDDLE = 2

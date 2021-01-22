@@ -4,13 +4,17 @@
 Cmd2 testing for argument parsing
 """
 import argparse
-from typing import Optional
+from typing import (
+    Optional,
+)
 
 import pytest
 
 import cmd2
 
-from .conftest import run_cmd
+from .conftest import (
+    run_cmd,
+)
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
@@ -457,4 +461,3 @@ def test_pytest_mock_invalid(mocker):
 def test_pytest_mock_valid(mocker, spec_param):
     mocker.patch.object(ArgparseApp, 'namespace_provider', **spec_param)
     app = ArgparseApp()
-

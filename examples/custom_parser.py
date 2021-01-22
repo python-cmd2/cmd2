@@ -4,7 +4,11 @@ Defines the CustomParser used with override_parser.py example
 """
 import sys
 
-from cmd2 import Cmd2ArgumentParser, ansi, set_default_argument_parser
+from cmd2 import (
+    Cmd2ArgumentParser,
+    ansi,
+    set_default_argument_parser,
+)
 
 
 # First define the parser

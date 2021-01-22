@@ -20,9 +20,18 @@ import sys
 import pytest
 
 import cmd2
-from cmd2 import utils
-from examples.subcommands import SubcommandsExample
-from .conftest import complete_tester, normalize, run_cmd
+from cmd2 import (
+    utils,
+)
+from examples.subcommands import (
+    SubcommandsExample,
+)
+
+from .conftest import (
+    complete_tester,
+    normalize,
+    run_cmd,
+)
 
 # List of strings used with completion functions
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato', 'Cheese "Pizza"']

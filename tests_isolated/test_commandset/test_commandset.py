@@ -5,14 +5,24 @@ Test CommandSet
 """
 
 import argparse
-from typing import List
+from typing import (
+    List,
+)
 
 import pytest
 
 import cmd2
-from cmd2 import utils
-from .conftest import complete_tester, WithCommandSets
-from cmd2.exceptions import CommandSetRegistrationError
+from cmd2 import (
+    utils,
+)
+from cmd2.exceptions import (
+    CommandSetRegistrationError,
+)
+
+from .conftest import (
+    WithCommandSets,
+    complete_tester,
+)
 
 
 class CommandSetBase(cmd2.CommandSet):

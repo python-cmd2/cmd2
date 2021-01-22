@@ -5,7 +5,9 @@ Unit testing for cmd2/table_creator.py module
 """
 import pytest
 
-from cmd2 import ansi
+from cmd2 import (
+    ansi,
+)
 from cmd2.table_creator import (
     AlternatingTable,
     BorderedTable,

@@ -2,9 +2,18 @@
 """
 A simple example demonstrating a loadable command set
 """
-from typing import List
+from typing import (
+    List,
+)
 
-from cmd2 import Cmd, CommandSet, CompletionError, Statement, with_category, with_default_category
+from cmd2 import (
+    Cmd,
+    CommandSet,
+    CompletionError,
+    Statement,
+    with_category,
+    with_default_category,
+)
 
 
 @with_default_category('Basic Completion')

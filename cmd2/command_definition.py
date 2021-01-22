@@ -2,10 +2,18 @@
 """
 Supports the definition of commands in separate classes to be composed into cmd2.Cmd
 """
-from typing import Optional, Type
+from typing import (
+    Optional,
+    Type,
+)
 
-from .constants import CLASS_ATTR_DEFAULT_HELP_CATEGORY, COMMAND_FUNC_PREFIX
-from .exceptions import CommandSetRegistrationError
+from .constants import (
+    CLASS_ATTR_DEFAULT_HELP_CATEGORY,
+    COMMAND_FUNC_PREFIX,
+)
+from .exceptions import (
+    CommandSetRegistrationError,
+)
 
 # Allows IDEs to resolve types without impacting imports at runtime, breaking circular dependency issues
 try:  # pragma: no cover

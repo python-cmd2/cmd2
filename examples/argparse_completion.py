@@ -4,9 +4,18 @@
 A simple example demonstrating how to integrate tab completion with argparse-based commands.
 """
 import argparse
-from typing import Dict, List
+from typing import (
+    Dict,
+    List,
+)
 
-from cmd2 import Cmd, Cmd2ArgumentParser, CompletionError, CompletionItem, with_argparser
+from cmd2 import (
+    Cmd,
+    Cmd2ArgumentParser,
+    CompletionError,
+    CompletionItem,
+    with_argparser,
+)
 
 # Data source for argparse.choices
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']

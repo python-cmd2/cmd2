@@ -4,12 +4,24 @@
 
 import re
 import shlex
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import (
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import attr
 
-from . import constants, utils
-from .exceptions import Cmd2ShlexError
+from . import (
+    constants,
+    utils,
+)
+from .exceptions import (
+    Cmd2ShlexError,
+)
 
 
 def shlex_split(str_to_split: str) -> List[str]:

@@ -4,7 +4,10 @@
 import pytest
 
 import cmd2_ext_test
-from cmd2 import CommandResult, cmd2
+from cmd2 import (
+    CommandResult,
+    cmd2,
+)
 
 ######
 #

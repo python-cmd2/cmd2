@@ -5,14 +5,27 @@ Unit/functional testing for argparse completer in cmd2
 """
 import argparse
 import numbers
-from typing import List
+from typing import (
+    List,
+)
 
 import pytest
 
 import cmd2
-from cmd2 import Cmd2ArgumentParser, CompletionError, CompletionItem, with_argparser
-from cmd2.utils import StdSim
-from .conftest import complete_tester, run_cmd
+from cmd2 import (
+    Cmd2ArgumentParser,
+    CompletionError,
+    CompletionItem,
+    with_argparser,
+)
+from cmd2.utils import (
+    StdSim,
+)
+
+from .conftest import (
+    complete_tester,
+    run_cmd,
+)
 
 # Data and functions for testing standalone choice_provider and completer
 standalone_choices = ['standalone', 'provider']

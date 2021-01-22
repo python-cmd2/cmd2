@@ -39,30 +39,89 @@ import pydoc
 import re
 import sys
 import threading
-from code import InteractiveConsole
-from collections import namedtuple
-from contextlib import redirect_stdout
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
+from code import (
+    InteractiveConsole,
+)
+from collections import (
+    namedtuple,
+)
+from contextlib import (
+    redirect_stdout,
+)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
 
-from . import ansi, constants, plugin, utils
-from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
-from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .command_definition import CommandSet
-from .constants import CLASS_ATTR_DEFAULT_HELP_CATEGORY, COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
-from .decorators import with_argparser, as_subcommand_to
+from . import (
+    ansi,
+    constants,
+    plugin,
+    utils,
+)
+from .argparse_custom import (
+    DEFAULT_ARGUMENT_PARSER,
+    CompletionItem,
+)
+from .clipboard import (
+    can_clip,
+    get_paste_buffer,
+    write_to_paste_buffer,
+)
+from .command_definition import (
+    CommandSet,
+)
+from .constants import (
+    CLASS_ATTR_DEFAULT_HELP_CATEGORY,
+    COMMAND_FUNC_PREFIX,
+    COMPLETER_FUNC_PREFIX,
+    HELP_FUNC_PREFIX,
+)
+from .decorators import (
+    as_subcommand_to,
+    with_argparser,
+)
 from .exceptions import (
-    CommandSetRegistrationError,
     Cmd2ShlexError,
+    CommandSetRegistrationError,
     CompletionError,
     EmbeddedConsoleExit,
     EmptyStatement,
     RedirectionError,
-    SkipPostcommandHooks
+    SkipPostcommandHooks,
 )
-from .history import History, HistoryItem
-from .parsing import Macro, MacroArg, Statement, StatementParser, shlex_split
-from .rl_utils import RlType, rl_get_point, rl_make_safe_prompt, rl_set_prompt, rl_type, rl_warning, vt100_support
-from .utils import get_defining_class, Settable
+from .history import (
+    History,
+    HistoryItem,
+)
+from .parsing import (
+    Macro,
+    MacroArg,
+    Statement,
+    StatementParser,
+    shlex_split,
+)
+from .rl_utils import (
+    RlType,
+    rl_get_point,
+    rl_make_safe_prompt,
+    rl_set_prompt,
+    rl_type,
+    rl_warning,
+    vt100_support,
+)
+from .utils import (
+    Settable,
+    get_defining_class,
+)
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover

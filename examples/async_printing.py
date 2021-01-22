@@ -7,10 +7,15 @@ and changes the window title
 import random
 import threading
 import time
-from typing import List
+from typing import (
+    List,
+)
 
 import cmd2
-from cmd2 import fg, style
+from cmd2 import (
+    fg,
+    style,
+)
 
 ALERTS = ["Watch as this application prints alerts and updates the prompt",
           "This will only happen when the prompt is present",
