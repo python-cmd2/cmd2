@@ -1155,7 +1155,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
 
 @pytest.fixture
 def scu_app():
-    """Declare test fixture for with_argparser_and_unknown_args"""
+    """Declare test fixture for with_argparser decorator"""
     app = SubcommandsWithUnknownExample()
     return app
 

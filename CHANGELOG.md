@@ -10,6 +10,7 @@
     * ``Namespace.__statement__`` has been removed. Use `Namespace.cmd2_statement.get()` instead.
     * Removed `--silent` flag from `alias/macro create` since startup scripts can be run silently.
     * Removed `--with_silent` flag from `alias/macro list` since startup scripts can be run silently.
+    * Removed `with_argparser_and_unknown_args` since it was deprecated in 1.3.0.
 * Enhancements
     * Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
       See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
