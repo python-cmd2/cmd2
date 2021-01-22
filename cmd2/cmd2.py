@@ -2899,9 +2899,6 @@ class Cmd(cmd.Cmd):
                            "  alias create save_results print_results \">\" out.txt\n")
 
     alias_create_parser = DEFAULT_ARGUMENT_PARSER(description=alias_create_description, epilog=alias_create_epilog)
-    alias_create_parser.add_argument('-s', '--silent', action='store_true',
-                                     help='do not print message confirming alias was created or\n'
-                                          'overwritten')
     alias_create_parser.add_argument('name', help='name of this alias')
     alias_create_parser.add_argument('command', help='what the alias resolves to',
                                      choices_provider=_get_commands_aliases_and_macros_for_completion)
@@ -2936,9 +2933,8 @@ class Cmd(cmd.Cmd):
             value += ' ' + ' '.join(args.command_args)
 
         # Set the alias
-        if not args.silent:
-            result = "overwritten" if args.name in self.aliases else "created"
-            self.poutput("Alias '{}' {}".format(args.name, result))
+        result = "overwritten" if args.name in self.aliases else "created"
+        self.poutput("Alias '{}' {}".format(args.name, result))
 
         self.aliases[args.name] = value
 
@@ -2975,20 +2971,12 @@ class Cmd(cmd.Cmd):
                               "Without arguments, all aliases will be listed.")
 
     alias_list_parser = DEFAULT_ARGUMENT_PARSER(description=alias_list_description)
-    alias_list_parser.add_argument('-w', '--with_silent', action='store_true',
-                                   help="include --silent flag with listed aliases\n"
-                                        "Use this option when saving to a startup script that\n"
-                                        "should silently create aliases.")
     alias_list_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='alias(es) to list',
                                    choices_provider=_get_alias_completion_items, descriptive_header='Value')
 
     @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_delete_help)
     def _alias_list(self, args: argparse.Namespace) -> None:
         """List some or all aliases as 'alias create' commands"""
-        create_cmd = "alias create"
-        if args.with_silent:
-            create_cmd += " --silent"
-
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
 
@@ -3013,7 +3001,7 @@ class Cmd(cmd.Cmd):
             if args:
                 val += ' ' + ' '.join(args)
 
-            self.poutput("{} {} {}".format(create_cmd, name, val))
+            self.poutput("alias create {} {}".format(name, val))
 
         for name in not_found:
             self.perror("Alias '{}' not found".format(name))
@@ -3080,9 +3068,6 @@ class Cmd(cmd.Cmd):
                            "  will only complete paths while typing a macro.")
 
     macro_create_parser = DEFAULT_ARGUMENT_PARSER(description=macro_create_description, epilog=macro_create_epilog)
-    macro_create_parser.add_argument('-s', '--silent', action='store_true',
-                                     help='do not print message confirming macro was created or\n'
-                                          'overwritten')
     macro_create_parser.add_argument('name', help='name of this macro')
     macro_create_parser.add_argument('command', help='what the macro resolves to',
                                      choices_provider=_get_commands_aliases_and_macros_for_completion)
@@ -3164,9 +3149,8 @@ class Cmd(cmd.Cmd):
                 break
 
         # Set the macro
-        if not args.silent:
-            result = "overwritten" if args.name in self.macros else "created"
-            self.poutput("Macro '{}' {}".format(args.name, result))
+        result = "overwritten" if args.name in self.macros else "created"
+        self.poutput("Macro '{}' {}".format(args.name, result))
 
         self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
 
@@ -3202,20 +3186,12 @@ class Cmd(cmd.Cmd):
                               "Without arguments, all macros will be listed.")
 
     macro_list_parser = DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
-    macro_list_parser.add_argument('-w', '--with_silent', action='store_true',
-                                   help="include --silent flag with listed macros\n"
-                                        "Use this option when saving to a startup script that\n"
-                                        "should silently create macros.")
     macro_list_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='macro(s) to list',
                                    choices_provider=_get_macro_completion_items, descriptive_header='Value')
 
     @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
     def _macro_list(self, args: argparse.Namespace) -> None:
         """List some or all macros as 'macro create' commands"""
-        create_cmd = "macro create"
-        if args.with_silent:
-            create_cmd += " --silent"
-
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
 
@@ -3240,7 +3216,7 @@ class Cmd(cmd.Cmd):
             if args:
                 val += ' ' + ' '.join(args)
 
-            self.poutput("{} {} {}".format(create_cmd, name, val))
+            self.poutput("macro create {} {}".format(name, val))
 
         for name in not_found:
             self.perror("Macro '{}' not found".format(name))
