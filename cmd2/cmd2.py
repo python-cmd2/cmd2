@@ -199,7 +199,7 @@ class Cmd(cmd.Cmd):
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, *,
                  persistent_history_file: str = '', persistent_history_length: int = 1000,
-                 startup_script: str = '', silent_startup_script = False, use_ipython: bool = False,
+                 startup_script: str = '', silent_startup_script: bool = False, use_ipython: bool = False,
                  allow_cli_args: bool = True, transcript_files: Optional[List[str]] = None,
                  allow_redirection: bool = True, multiline_commands: Optional[List[str]] = None,
                  terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None,
