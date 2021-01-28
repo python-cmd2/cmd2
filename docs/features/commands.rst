@@ -127,7 +127,7 @@ without errors), and that ``cmd2`` should prompt the user for more input.
 If you return ``True`` from a command method, that indicates to ``cmd2`` that
 it should stop prompting for user input and cleanly exit. ``cmd2`` already
 includes a ``quit`` command, but if you wanted to make another one called
-``finis`` you could::
+``finish`` you could::
 
     def do_finish(self, line):
         """Exit the application"""
@@ -156,7 +156,7 @@ system shell::
         """A simple cmd2 application."""
 
     def do_bail(self, line):
-        """Exit the application""
+        """Exit the application"""
         self.perror("fatal error, exiting")
         self.exit_code = 2
         return true
