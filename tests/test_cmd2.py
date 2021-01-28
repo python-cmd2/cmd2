@@ -2421,15 +2421,24 @@ def test_disabled_message_command_name(disable_commands_app):
     out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
     assert err[0].startswith('has_helper_funcs is currently disabled')
 
-
-def test_startup_script(request):
+@pytest.mark.parametrize('silent_startup_script', [
+    True,
+    False
+])
+def test_startup_script(request, capsys, silent_startup_script):
     test_dir = os.path.dirname(request.module.__file__)
     startup_script = os.path.join(test_dir, '.cmd2rc')
-    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
+    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script, silent_startup_script=silent_startup_script)
     assert len(app._startup_commands) == 1
-    assert app._startup_commands[0] == "run_script {}".format(utils.quote_string(startup_script))
     app._startup_commands.append('quit')
     app.cmdloop()
+
+    out, err = capsys.readouterr()
+    if silent_startup_script:
+        assert not out
+    else:
+        assert out
+
     out, err = run_cmd(app, 'alias list')
     assert len(out) > 1
     assert 'alias create ls' in out[0]

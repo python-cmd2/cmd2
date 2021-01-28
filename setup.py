@@ -70,6 +70,10 @@ EXTRAS_REQUIRE = {
             ]
 }
 
+PACKAGE_DATA = {
+    'cmd2': ['py.typed'],
+}
+
 setup(
     name="cmd2",
     use_scm_version={
@@ -84,6 +88,7 @@ setup(
     url='https://github.com/python-cmd2/cmd2',
     license='MIT',
     platforms=['any'],
+    package_data=PACKAGE_DATA,
     packages=['cmd2'],
     keywords='command prompt console cmd',
     python_requires='>=3.5',
