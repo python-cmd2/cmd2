@@ -83,7 +83,7 @@ class Column:
         :param header: label for column header
         :param width: display width of column. This does not account for any borders or padding which
                       may be added (e.g pre_line, inter_cell, and post_line). Header and data text wrap within
-                      this width using word-based wrapping (defaults to width of header or 1 if header is blank)
+                      this width using word-based wrapping (defaults to actual width of header or 1 if header is blank)
         :param header_horiz_align: horizontal alignment of header cells (defaults to left)
         :param header_vert_align: vertical alignment of header cells (defaults to bottom)
         :param data_horiz_align: horizontal alignment of data cells (defaults to left)
@@ -95,12 +95,7 @@ class Column:
         """
         self.header = header
 
-        if width is None:
-            # Use the width of the widest line in the header or 1 if the header has no width
-            line_widths = [ansi.style_aware_wcswidth(line) for line in self.header.splitlines()]
-            line_widths.append(1)
-            self.width = max(line_widths)
-        elif width < 1:
+        if width is not None and width < 1:
             raise ValueError("Column width cannot be less than 1")
         else:
             self.width = width
@@ -141,8 +136,20 @@ class TableCreator:
         self.cols = copy.copy(cols)
         self.tab_width = tab_width
 
+        for col in self.cols:
+            # Replace tabs before calculating width of header strings
+            col.header = col.header.replace('\t', SPACE * self.tab_width)
+
+            # For headers with the width not yet set, use the width of the
+            # widest line in the header or 1 if the header has no width
+            if col.width is None:
+                line_widths = [ansi.style_aware_wcswidth(line) for line in col.header.splitlines()]
+                line_widths.append(1)
+                col.width = max(line_widths)
+
     @staticmethod
-    def _wrap_long_word(word: str, max_width: int, max_lines: Union[int, float], is_last_word: bool) -> Tuple[str, int, int]:
+    def _wrap_long_word(word: str, max_width: int, max_lines: Union[int, float],
+                        is_last_word: bool) -> Tuple[str, int, int]:
         """
         Used by _wrap_text() to wrap a long word over multiple lines
 
@@ -351,14 +358,16 @@ class TableCreator:
 
             # Stop line loop if we've written to max_lines
             if total_lines == max_lines:
-                # If this isn't the last data line and there is space left on the final wrapped line, then add an ellipsis
+                # If this isn't the last data line and there is space
+                # left on the final wrapped line, then add an ellipsis
                 if data_line_index < len(data_str_lines) - 1 and cur_line_width < max_width:
                     wrapped_buf.write(constants.HORIZONTAL_ELLIPSIS)
                 break
 
         return wrapped_buf.getvalue()
 
-    def _generate_cell_lines(self, cell_data: Any, is_header: bool, col: Column, fill_char: str) -> Tuple[Deque[str], int]:
+    def _generate_cell_lines(self, cell_data: Any, is_header: bool,
+                             col: Column, fill_char: str) -> Tuple[Deque[str], int]:
         """
         Generate the lines of a table cell
 
@@ -398,14 +407,14 @@ class TableCreator:
 
         :param row_data: If this is None then a header row is generated. Otherwise data should have an entry for each
                          column in the row. (Defaults to None)
-        :param fill_char: character that fills remaining space in a cell. Defaults to space. If this is a tab, then it will
-                          be converted to one space. (Cannot be a line breaking character)
+        :param fill_char: character that fills remaining space in a cell. Defaults to space. If this is a tab,
+                          then it will be converted to one space. (Cannot be a line breaking character)
         :param pre_line: string to print before each line of a row. This can be used for a left row border and
                          padding before the first cell's text. (Defaults to blank)
         :param inter_cell: string to print where two cells meet. This can be used for a border between cells and padding
                            between it and the 2 cells' text. (Defaults to 2 spaces)
-        :param post_line: string to print after each line of a row. This can be used for padding after the last cell's text
-                          and a right row border. (Defaults to blank)
+        :param post_line: string to print after each line of a row. This can be used for padding after
+                          the last cell's text and a right row border. (Defaults to blank)
         :return: row string
         :raises: ValueError if data isn't the same length as self.cols
         :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
@@ -608,7 +617,8 @@ class SimpleTable(TableCreator):
         :param table_data: Data with an entry for each data row of the table. Each entry should have data for
                            each column in the row.
         :param include_header: If True, then a header will be included at top of table. (Defaults to True)
-        :param row_spacing: A number 0 or greater specifying how many blank lines to place between each row (Defaults to 1)
+        :param row_spacing: A number 0 or greater specifying how many blank lines to place between
+                            each row (Defaults to 1)
         :raises: ValueError if row_spacing is less than 0
         """
         if row_spacing < 0:
@@ -820,8 +830,8 @@ class BorderedTable(TableCreator):
 
 class AlternatingTable(BorderedTable):
     """
-    Implementation of BorderedTable which uses background colors to distinguish between rows instead of row border lines.
-    This class can be used to create the whole table at once or one row at a time.
+    Implementation of BorderedTable which uses background colors to distinguish between rows instead of row border
+    lines. This class can be used to create the whole table at once or one row at a time.
     """
     def __init__(self, cols: Sequence[Column], *, tab_width: int = 4, column_borders: bool = True, padding: int = 1,
                  bg_odd: Optional[ansi.bg] = None, bg_even: Optional[ansi.bg] = ansi.bg.bright_black) -> None:
