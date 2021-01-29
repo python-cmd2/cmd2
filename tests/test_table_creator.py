@@ -259,6 +259,10 @@ def test_tabs():
                           inter_cell='\t', post_line='\t')
     assert row == '  Col  1                Col 2  '
 
+    with pytest.raises(ValueError) as excinfo:
+        TableCreator([column_1, column_2], tab_width=0)
+    assert "Tab width cannot be less than 1" in str(excinfo.value)
+
 
 def test_simple_table_creation():
     column_1 = Column("Col 1", width=16)

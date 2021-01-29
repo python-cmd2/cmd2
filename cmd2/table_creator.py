@@ -132,7 +132,11 @@ class TableCreator:
         :param cols: column definitions for this table
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
                           then it will be converted to one space.
+        :raises: ValueError if tab_width is less than 1
         """
+        if tab_width < 1:
+            raise ValueError("Tab width cannot be less than 1")
+
         self.cols = copy.copy(cols)
         self.tab_width = tab_width
 
