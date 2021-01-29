@@ -37,8 +37,8 @@ vt100_support = False
 # Explanation for why readline wasn't loaded
 _rl_warn_reason = ''
 
-# The order of this check matters since importing pyreadline will also show readline in the modules list
-if 'pyreadline' in sys.modules:
+# The order of this check matters since importing pyreadline/pyreadline3 will also show readline in the modules list
+if 'pyreadline' in sys.modules or 'pyreadline3' in sys.modules:
     rl_type = RlType.PYREADLINE
 
     from ctypes import byref

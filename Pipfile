@@ -22,7 +22,8 @@ ipython = "*"
 isort = "*"
 mock = {version = "*",markers = "python_version < '3.6'"}
 plumbum = "*"
-pyreadline = {version = "*",sys_platform = "== 'win32'"}
+pyreadline = {version = "*",sys_platform = "== 'win32'",markers = "python_version < '3.8'"}
+pyreadline3 = {version = "*",sys_platform = "== 'win32'",markers = "python_version >= '3.8'"}
 pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
