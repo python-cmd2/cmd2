@@ -29,7 +29,7 @@ Features
 
 See API documentation for :attr:`cmd2.command_definition.CommandSet`
 
-See the examples for more details: https://github.com/python-cmd2/cmd2/tree/master/plugins/command_sets/examples
+See [the examples](https://github.com/python-cmd2/cmd2/tree/master/examples/modular_commands) for more details.
 
 
 Defining Commands
