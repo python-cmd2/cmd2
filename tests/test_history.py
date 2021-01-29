@@ -520,7 +520,7 @@ def test_history_run_one_command(base_app):
     out2, err2 = run_cmd(base_app, 'history -r 1')
     assert out1 == out2
 
-def test_history_clear(hist_file):
+def test_history_clear(mocker, hist_file):
     # Add commands to history
     app = cmd2.Cmd(persistent_history_file=hist_file)
     run_cmd(app, 'help')
@@ -537,6 +537,17 @@ def test_history_clear(hist_file):
     out, err = run_cmd(app, 'history')
     assert out == []
     assert not os.path.exists(hist_file)
+
+    # Clear the history again and make sure the FileNotFoundError from trying to delete missing history file is silent
+    run_cmd(app, 'history --clear')
+
+    # Cause os.remove to fail and make sure error gets printed
+    mock_remove = mocker.patch('os.remove')
+    mock_remove.side_effect = OSError
+
+    out, err = run_cmd(app, 'history --clear')
+    assert out == []
+    assert 'Error removing history file' in err[0]
 
 def test_history_verbose_with_other_options(base_app):
     # make sure -v shows a usage error if any other options are present
