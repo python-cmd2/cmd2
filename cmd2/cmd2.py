@@ -3989,7 +3989,10 @@ class Cmd(cmd.Cmd):
             self.history.clear()
 
             if self.persistent_history_file:
-                os.remove(self.persistent_history_file)
+                try:
+                    os.remove(self.persistent_history_file)
+                except FileNotFoundError:
+                    pass
 
             if rl_type != RlType.NONE:
                 readline.clear_history()
