@@ -49,4 +49,4 @@ jobs:
       - name: Run tests and post coverage results
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python -m nox --non-interactive --session matrix.python-version
+        run: python -m nox --non-interactive --session $${{ matrix.python-version }}
