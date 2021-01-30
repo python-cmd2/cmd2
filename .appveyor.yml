@@ -4,20 +4,16 @@ build: off
 environment:
   PYTHONUNBUFFERED: 1
   matrix:
-    - PYTHON: "C:\\Miniconda36-x64"
-      PYTHON_VERSION: "3.6.x"
+    - PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "64"
       NOXSESSION: "tests-3.6"
 
-    - PYTHON: "C:\\Miniconda37-x64"
-      PYTHON_VERSION: "3.7.x"
+    - PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "64"
       NOXSESSION: "tests-3.7"
 
 init:
   - "%PYTHON%/python -V"
-  - mkdir C:\Users\appveyor\.conda
-  - call %PYTHON%\Scripts\activate.bat
 
 install:
   # Prepend the right Python version to the PATH of this build
@@ -27,13 +23,8 @@ install:
   - "python --version"
   - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
 
-  # Update conda stuff to make sure pip, setuptools, wheel etc are up to date
-  - "conda update --all -y"
-
-  # Install nox
-  - "python -m pip install --upgrade nox"
-
-
+  # Update Python stuff to make sure pip, setuptools, wheel etc are up to date
+  - "python -m pip install -U --user pip setuptools setuptools_scm flake8 nox"
 
 test_script:
 - "nox --non-interactive --session %NOXSESSION%"
