@@ -12,9 +12,6 @@ environment:
       PYTHON_ARCH: "64"
       NOXSESSION: "tests-3.7"
 
-init:
-  - "%PYTHON%/python -V"
-
 install:
   # Prepend the right Python version to the PATH of this build
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
