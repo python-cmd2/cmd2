@@ -20,18 +20,6 @@ from cmd2.table_creator import (
 
 
 def test_column_creation():
-    # No width specified, blank label
-    c = Column("")
-    assert c.width == 1
-
-    # No width specified, label isn't blank but has no width
-    c = Column(ansi.style('', fg=ansi.fg.green))
-    assert c.width == 1
-
-    # No width specified, label has width
-    c = Column("short\nreally long")
-    assert c.width == ansi.style_aware_wcswidth("really long")
-
     # Width less than 1
     with pytest.raises(ValueError) as excinfo:
         Column("Column 1", width=0)
@@ -45,6 +33,36 @@ def test_column_creation():
     with pytest.raises(ValueError) as excinfo:
         Column("Column 1", max_data_lines=0)
     assert "Max data lines cannot be less than 1" in str(excinfo.value)
+
+    # No width specified, blank label
+    c = Column("")
+    assert c.width is None
+    tc = TableCreator([c])
+    assert tc.cols[0].width == 1
+
+    # No width specified, label isn't blank but has no width
+    c = Column(ansi.style('', fg=ansi.fg.green))
+    assert c.width is None
+    tc = TableCreator([c])
+    assert tc.cols[0].width == 1
+
+    # No width specified, label has width
+    c = Column("a line")
+    assert c.width is None
+    tc = TableCreator([c])
+    assert tc.cols[0].width == ansi.style_aware_wcswidth("a line")
+
+    # No width specified, label has width and multiple lines
+    c = Column("short\nreally long")
+    assert c.width is None
+    tc = TableCreator([c])
+    assert tc.cols[0].width == ansi.style_aware_wcswidth("really long")
+
+    # No width specified, label has tabs
+    c = Column("line\twith\ttabs")
+    assert c.width is None
+    tc = TableCreator([c])
+    assert tc.cols[0].width == ansi.style_aware_wcswidth("line    with    tabs")
 
 
 def test_column_alignment():
@@ -240,6 +258,10 @@ def test_tabs():
     row = tc.generate_row(fill_char='\t', pre_line='\t',
                           inter_cell='\t', post_line='\t')
     assert row == '  Col  1                Col 2  '
+
+    with pytest.raises(ValueError) as excinfo:
+        TableCreator([column_1, column_2], tab_width=0)
+    assert "Tab width cannot be less than 1" in str(excinfo.value)
 
 
 def test_simple_table_creation():

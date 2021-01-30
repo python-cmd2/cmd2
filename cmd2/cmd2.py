@@ -4049,7 +4049,13 @@ class Cmd(cmd.Cmd):
             self.history.clear()
 
             if self.persistent_history_file:
-                os.remove(self.persistent_history_file)
+                try:
+                    os.remove(self.persistent_history_file)
+                except FileNotFoundError:
+                    pass
+                except OSError as ex:
+                    self.pexcept("Error removing history file '{}': {}".format(self.persistent_history_file, ex))
+                    return
 
             if rl_type != RlType.NONE:
                 readline.clear_history()

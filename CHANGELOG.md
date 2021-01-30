@@ -20,9 +20,12 @@
 * Bug Fixes
     * Fixed bug where setting `always_show_hint=True` did not show a hint when completing `Settables`
     * Fixed bug in editor detection logic on Linux systems that do not have `which`
+    * Fixed bug in table creator where column headers with tabs would result in an incorrect width calculation
+    * Fixed `FileNotFoundError` which occurred when running `history --clear` and no history file existed.
 * Enhancements
     * Added `silent_startup_script` option to `cmd2.Cmd.__init__()`. If `True`, then the startup script's
       output will be suppressed. Anything written to stderr will still display.
+    * cmd2 now uses pyreadline3 when running Python 3.8 or greater on Windows  
 
 ## 1.4.0 (November 11, 2020)
 * Bug Fixes

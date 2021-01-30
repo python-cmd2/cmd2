@@ -26,10 +26,13 @@ Windows Considerations
 
 If you would like to use :ref:`features/completion:Completion`, and you want
 your application to run on Windows, you will need to ensure you install the
-``pyreadline`` package. Make sure to include the following in your
-``setup.py``::
+``pyreadline3`` or ``pyreadline`` package. Make sure to include the following
+in your ``setup.py``::
 
   install_requires=[
     'cmd2>=1,<2',
-    ":sys_platform=='win32'": ['pyreadline'],
+    ":sys_platform=='win32'": [
+        "pyreadline ; python_version<'3.8'",
+        "pyreadline3 ; python_version>='3.8'",  # pyreadline3 is a drop-in replacement for Python 3.8 and above
+    ],
   ]
