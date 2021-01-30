@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8, 3.9, 3.10-dev]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10-dev]  ## Doubles as the nox session
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -49,4 +49,4 @@ jobs:
       - name: Run tests and post coverage results
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python -m nox --non-interactive --session $${{ matrix.python-version }}
+        run: python -m nox --non-interactive --session ${{ matrix.python-version }}  # Run nox for a single version of Python
