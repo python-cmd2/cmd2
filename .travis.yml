@@ -3,15 +3,6 @@ language: python
 matrix:
     include:
         - os: linux
-          python: 3.5.2
-          env: NOXSESSION=tests-3.5.2
-        - os: linux
-          python: 3.5.3
-          env: NOXSESSION=tests-3.5.3
-        - os: linux
-          python: 3.5
-          env: NOXSESSION=tests-3.5
-        - os: linux
           python: 3.6
           env: NOXSESSION=tests-3.6
         - os: linux
@@ -27,7 +18,7 @@ matrix:
           dist: xenial
           env: NOXSESSION=tests-3.9
         - os: linux
-          python: 3.7
+          python: 3.8
           env: NOXSESSION=docs
 #        # Warning: Don't try to use code coverage analysis with pypy as it is insanely slow
 #        - os: linux
