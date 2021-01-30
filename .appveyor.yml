@@ -24,4 +24,4 @@ install:
   - "python -m pip install -U --user pip setuptools setuptools_scm flake8 nox"
 
 test_script:
-- "nox --non-interactive --session %NOXSESSION%"
+- "python -m nox --non-interactive --session %NOXSESSION%"
