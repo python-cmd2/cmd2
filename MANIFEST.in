@@ -3,4 +3,4 @@ recursive-include examples *
 recursive-include tests *
 recursive-include docs *
 recursive-exclude docs/_build *
-exclude .appveyor.yml .github .gitignore azure-pipelines.yml tasks.py
+exclude .github .gitignore azure-pipelines.yml tasks.py
