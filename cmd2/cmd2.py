@@ -4001,36 +4001,11 @@ class Cmd(cmd.Cmd):
                 readline.clear_history()
             return
 
-        # If an argument was supplied, then retrieve partial contents of the history
-        cowardly_refuse_to_run = False
-        if args.arg:
-            # If a character indicating a slice is present, retrieve
-            # a slice of the history
-            arg = args.arg
-            arg_is_int = False
-            try:
-                int(arg)
-                arg_is_int = True
-            except ValueError:
-                pass
-
-            if '..' in arg or ':' in arg:
-                # Get a slice of history
-                history = self.history.span(arg, args.all)
-            elif arg_is_int:
-                history = [self.history.get(arg)]
-            elif arg.startswith(r'/') and arg.endswith(r'/'):
-                history = self.history.regex_search(arg, args.all)
-            else:
-                history = self.history.str_search(arg, args.all)
-        else:
-            # If no arg given, then retrieve the entire history
-            cowardly_refuse_to_run = True
-            # Get a copy of the history so it doesn't get mutated while we are using it
-            history = self.history.span(':', args.all)
+        # If an argument was supplied, then retrieve partial contents of the history, otherwise retrieve it all
+        history = self._get_history(args)
 
         if args.run:
-            if cowardly_refuse_to_run:
+            if not args.arg:
                 self.perror("Cowardly refusing to run all previously entered commands.")
                 self.perror("If this is what you want to do, specify '1:' as the range of history.")
             else:
@@ -4069,6 +4044,32 @@ class Cmd(cmd.Cmd):
             # Display the history items retrieved
             for hi in history:
                 self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
+
+    def _get_history(self, args: argparse.Namespace) -> List[HistoryItem]:
+        """If an argument was supplied, then retrieve partial contents of the history; otherwise retrieve entire history."""
+        if args.arg:
+            # If a character indicating a slice is present, retrieve a slice of the history
+            arg = args.arg
+            arg_is_int = False
+            try:
+                int(arg)
+                arg_is_int = True
+            except ValueError:
+                pass
+
+            if '..' in arg or ':' in arg:
+                # Get a slice of history
+                history = self.history.span(arg, args.all)
+            elif arg_is_int:
+                history = [self.history.get(arg)]
+            elif arg.startswith(r'/') and arg.endswith(r'/'):
+                history = self.history.regex_search(arg, args.all)
+            else:
+                history = self.history.str_search(arg, args.all)
+        else:
+            # Get a copy of the history so it doesn't get mutated while we are using it
+            history = self.history.span(':', args.all)
+        return history
 
     def _initialize_history(self, hist_file):
         """Initialize history using history related attributes
