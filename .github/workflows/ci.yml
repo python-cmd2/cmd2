@@ -33,24 +33,20 @@ jobs:
         uses: actions/setup-python@v2  # https://github.com/actions/setup-python
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache dependencies
-        id: cache-deps
-        uses: actions/cache@v2  # https://github.com/actions/cache
-        with:
-          path: |
-            ${{ env.pythonLocation }}/bin/*
-            ${{ env.pythonLocation }}/lib/*
-            ${{ env.pythonLocation }}/scripts/*
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('setup.py', 'requirements.txt') }}
+#      - name: Cache dependencies
+#        id: cache-deps
+#        uses: actions/cache@v2  # https://github.com/actions/cache
+#        with:
+#          path: ~/.cache/pip
+#          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('setup.py') }}
       - name: Install python prerequisites
-        # Cache step doesnt seems to work right on windows, so install Python prerequisites on Windows regardless
-        if: matrix.os == 'windows-latest' || steps.cache-deps.outputs.cache-hit != 'true'
-        run: |
-          pip install -U --user pip setuptools setuptools-scm flake8 nox
+        # Only install dependencies when there is a cache miss
+#        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: pip install -U --user pip setuptools setuptools-scm flake8 nox
       - name: Lint
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == env.PYTHON_LATEST
         run: flake8 . --count --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics ;
       - name: Run tests and post coverage results
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python -m nox --non-interactive
+        run: python -m nox --non-interactive --session matrix.python-version
