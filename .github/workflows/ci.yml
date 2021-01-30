@@ -40,7 +40,6 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: |
           pip install -U pip setuptools setuptools-scm flake8 nox
-          python setup.py develop
       - name: Lint
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == env.PYTHON_LATEST
         run: flake8 . --count --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics ;
