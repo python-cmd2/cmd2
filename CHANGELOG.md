@@ -7,6 +7,7 @@
 * Enhancements
     * Added `silent_startup_script` option to `cmd2.Cmd.__init__()`. If `True`, then the startup script's
       output will be suppressed. Anything written to stderr will still display.
+    * cmd2 now uses pyreadline3 when running Python 3.8 or greater on Windows  
 
 ## 1.4.0 (November 11, 2020)
 * Bug Fixes
