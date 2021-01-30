@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8, 3.9, 3.10-dev]
+        python-version: [3.6, 3.7, 3.8, 3.9, 3.10]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -45,7 +45,7 @@ jobs:
         run: pip install -U --user pip setuptools setuptools-scm flake8 nox
       - name: Lint
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == env.PYTHON_LATEST
-        run: flake8 . --count --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics ;
+        run: python -m flake8 . --count --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics ;
       - name: Run tests and post coverage results
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
