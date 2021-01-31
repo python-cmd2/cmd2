@@ -1,8 +1,7 @@
 cmd2: a tool for building interactive command line apps
 =======================================================
 [![Latest Version](https://img.shields.io/pypi/v/cmd2.svg?style=flat-square&label=latest%20stable%20version)](https://pypi.python.org/pypi/cmd2/)
-[![Build status](https://img.shields.io/travis/python-cmd2/cmd2.svg?style=flat-square&label=unix%20build)](https://travis-ci.org/python-cmd2/cmd2)
-[![Appveyor build status](https://img.shields.io/appveyor/ci/FedericoCeratto/cmd2.svg?style=flat-square&label=windows%20build)](https://ci.appveyor.com/project/FedericoCeratto/cmd2)
+[![GitHub Actions](https://github.com/python-cmd2/cmd2/workflows/CI/badge.svg)](https://github.com/python-cmd2/cmd2/actions?query=workflow%3ACI)
 [![Azure Build status](https://python-cmd2.visualstudio.com/cmd2/_apis/build/status/python-cmd2.cmd2?branch=master)](https://python-cmd2.visualstudio.com/cmd2/_build/latest?definitionId=1&branch=master)
 [![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/master/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
 [![Documentation Status](https://readthedocs.org/projects/cmd2/badge/?version=latest)](http://cmd2.readthedocs.io/en/latest/?badge=latest)
@@ -46,13 +45,15 @@ Main Features
 - Alerts that seamlessly print while user enters text at prompt
 - Colored and stylized output using `ansi.style()`
 
-Python 3.5 support ending soon
-------------------------------
-`cmd2` will end support for Python 3.5 on August 31, 2020.  Python 3.5 was [released](https://docs.python.org/3/whatsnew/3.5.html)
-on Sept. 13, 2015 and its [end-of-life](https://devguide.python.org/#status-of-python-branches) is planned for September 2020. 
+Python 3.5 support ended
+------------------------
+The last release of `cmd2` to support Python 3.5 was the 1.5.0 release on January 31, 2021.  Python 3.5 was 
+[released](https://docs.python.org/3/whatsnew/3.5.html) on Sept. 13, 2015 and it reached
+[end-of-life](https://devguide.python.org/#status-of-python-branches) on September 5, 2020. 
 
-New versions of `cmd2` will stop supporting Python 3.5 in a few months. We are very much looking forward to being able to use 
-[features added in Python 3.6](https://docs.python.org/3/whatsnew/3.6.html) such as [f-strings](https://realpython.com/python-f-strings/).
+We are very much looking forward to being able to use 
+[features added in Python 3.6](https://docs.python.org/3/whatsnew/3.6.html) such as 
+[f-strings](https://realpython.com/python-f-strings/).
 
 Installation
 ------------

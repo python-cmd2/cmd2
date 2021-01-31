@@ -14,9 +14,6 @@ jobs:
   # Run the pipeline with multiple Python versions
   strategy:
     matrix:
-      Python35:
-        python.version: '3.5'
-        NOXSESSION: 'tests-3.5'
       Python36:
         python.version: '3.6'
         NOXSESSION: 'tests-3.6'
@@ -26,6 +23,9 @@ jobs:
       Python38:
         python.version: '3.8'
         NOXSESSION: 'tests-3.8'
+      Python39:
+        python.version: '3.9'
+        NOXSESSION: 'tests-3.9'
     # Increase the maxParallel value to simultaneously run the job for all versions in the matrix (max 10 for free open-source)
     maxParallel: 4
 

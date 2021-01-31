@@ -1,6 +1,6 @@
-include LICENSE README.md CHANGELOG.md CONTRIBUTING.md noxfile.py Pipfile
+include LICENSE README.md CHANGELOG.md noxfile.py Pipfile
 recursive-include examples *
 recursive-include tests *
 recursive-include docs *
 recursive-exclude docs/_build *
-exclude .appveyor.yml .gitignore .travis.yml azure-pipelines.yml CODEOWNERS tasks.py
+exclude .github .gitignore azure-pipelines.yml tasks.py
