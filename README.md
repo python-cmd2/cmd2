@@ -45,13 +45,15 @@ Main Features
 - Alerts that seamlessly print while user enters text at prompt
 - Colored and stylized output using `ansi.style()`
 
-Python 3.5 support ending soon
-------------------------------
-`cmd2` will end support for Python 3.5 on August 31, 2020.  Python 3.5 was [released](https://docs.python.org/3/whatsnew/3.5.html)
-on Sept. 13, 2015 and its [end-of-life](https://devguide.python.org/#status-of-python-branches) is planned for September 2020. 
+Python 3.5 support ended
+------------------------
+The last release of `cmd2` to support Python 3.5 was the 1.5.0 release on January 31, 2021.  Python 3.5 was 
+[released](https://docs.python.org/3/whatsnew/3.5.html) on Sept. 13, 2015 and it reached
+[end-of-life](https://devguide.python.org/#status-of-python-branches) on September 5, 2020. 
 
-New versions of `cmd2` will stop supporting Python 3.5 in a few months. We are very much looking forward to being able to use 
-[features added in Python 3.6](https://docs.python.org/3/whatsnew/3.6.html) such as [f-strings](https://realpython.com/python-f-strings/).
+We are very much looking forward to being able to use 
+[features added in Python 3.6](https://docs.python.org/3/whatsnew/3.6.html) such as 
+[f-strings](https://realpython.com/python-f-strings/).
 
 Installation
 ------------
