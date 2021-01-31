@@ -16,7 +16,7 @@ env:
   PYTHON_LATEST: 3.9
 
 jobs:
-  ci:
+  lint:
     strategy:
       matrix:
         os: [ubuntu-latest]
