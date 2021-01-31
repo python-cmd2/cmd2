@@ -36,4 +36,4 @@ jobs:
       - name: Install python prerequisites
         run: pip install -U --user pip setuptools setuptools-scm nox
       - name: Sphinx documentation build
-          run: python -m nox --non-interactive --session docs
+        run: python -m nox --non-interactive --session docs
