@@ -33,15 +33,9 @@ jobs:
         uses: actions/setup-python@v2  # https://github.com/actions/setup-python
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache dependencies
-        id: cache-deps
-        uses: actions/cache@v2  # https://github.com/actions/cache
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('setup.py') }}
       - name: Install python prerequisites
         # Only install dependencies when there is a cache miss
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: pip install -U --user pip setuptools setuptools-scm flake8 nox
+        run: pip install -U --user pip setuptools setuptools-scm nox
       - name: Sphinx documentation build
           run: python -m nox --non-interactive --session docs
