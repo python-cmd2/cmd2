@@ -2,15 +2,7 @@
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
 name: Lint
 
-on:
-  push:
-    branches:
-      - master
-      - 2.0
-  pull_request:
-    branches:
-      - master
-      - 2.0
+on: [push, pull_request]
 
 env:
   PYTHON_LATEST: 3.9
