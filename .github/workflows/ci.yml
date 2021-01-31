@@ -1,0 +1,30 @@
+# For documentation on GitHub Actions Workflows, see:
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  ci:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2  # https://github.com/actions/checkout
+        with:
+          # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
+          # Set fetch-depth: 0 to fetch all history for all branches and tags.
+          fetch-depth: 0 # Needed for setuptools_scm to work correctly
+      - name: Set up Python
+        uses: actions/setup-python@v2  # https://github.com/actions/setup-python
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install python prerequisites
+        run: pip install -U --user pip setuptools setuptools-scm nox
+      - name: Run tests and post coverage results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python -m nox --non-interactive --session tests-${{ matrix.python-version }}  # Run nox for a single version of Python

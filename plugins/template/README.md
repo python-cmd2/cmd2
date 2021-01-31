@@ -210,8 +210,8 @@ tiered testing strategy to accomplish this objective.
 - [pytest](https://pytest.org) runs the unit tests
 - [nox](https://nox.thea.codes/en/stable/) runs the unit tests on multiple versions
   of python
-- [AppVeyor](https://www.appveyor.com/) and [TravisCI](https://travis-ci.com)
-  run the tests on the various supported platforms
+- [GitHub Actions](https://github.com/features/actions) runs the tests on the various 
+  supported platforms
 
 This plugin template is set up to use the same strategy.
 
@@ -307,9 +307,7 @@ $ nox
 
 ### Run unit tests on multiple platforms
 
-[AppVeyor](https://github.com/marketplace/appveyor) and
-[TravisCI](https://docs.travis-ci.com/user/getting-started/) offer free plans
-for open source projects.
+[GitHub Actions](https://github.com/features/actions) offers free plans for open source projects
 
 
 ## Packaging and Distribution

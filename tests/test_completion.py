@@ -491,8 +491,6 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     # Currently path completion doesn't accept wildcards, so will always return empty results
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
-@pytest.mark.skipif(sys.platform == 'win32', reason="getpass.getuser() does not work on Windows in AppVeyor because "
-                                                    "no user name environment variables are set")
 def test_path_completion_complete_user(cmd2_app):
     import getpass
     user = getpass.getuser()

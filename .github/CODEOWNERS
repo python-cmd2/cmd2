@@ -1,3 +1,12 @@
+# -------------------------------------------------
+# CODEOWNERS - For automated review request for
+# high impact files.
+#
+# Important: The order in this file cascades.
+#
+# https://help.github.com/articles/about-codeowners
+# -------------------------------------------------
+
 # Lines starting with '#' are comments.
 # Each line is a file pattern followed by one or more owners.
 # Owners of code are automatically nominated to review PRs involving that code.
@@ -60,7 +69,8 @@ tests/test_transcript.py      @kotfu
 tests_isolated/test_commandset/*    @anselor
 
 # Top-level project stuff
-CONTRIBUTING.md         @tleonhardt @kotfu
 setup.py                @tleonhardt @kotfu
 tasks.py                @kotfu
 
+# GitHub stuff
+.github/*               @tleonhardt

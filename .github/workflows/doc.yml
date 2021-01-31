@@ -1,0 +1,28 @@
+# For documentation on GitHub Actions Workflows, see:
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+name: Doc
+
+on: [push, pull_request]
+
+jobs:
+  doc:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.9]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2  # https://github.com/actions/checkout
+        with:
+          # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
+          # Set fetch-depth: 0 to fetch all history for all branches and tags.
+          fetch-depth: 0 # Needed for setuptools_scm to work correctly
+      - name: Set up Python
+        uses: actions/setup-python@v2  # https://github.com/actions/setup-python
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install python prerequisites
+        run: pip install -U --user pip setuptools setuptools-scm nox
+      - name: Sphinx documentation build
+        run: python -m nox --non-interactive --session docs
