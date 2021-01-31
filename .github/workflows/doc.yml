@@ -34,8 +34,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install python prerequisites
-        # Only install dependencies when there is a cache miss
-        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: pip install -U --user pip setuptools setuptools-scm nox
       - name: Sphinx documentation build
           run: python -m nox --non-interactive --session docs
