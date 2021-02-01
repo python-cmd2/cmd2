@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install python prerequisites
-        run: pip install -U --user pip setuptools setuptools-scm black
+        run: pip install -U --user pip setuptools setuptools-scm black isort
       - name: Black
         run: python -m black --check --diff .
       - name: isort
