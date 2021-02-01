@@ -21,5 +21,6 @@ exclude = '''
   | cmd2.egg-info
   | cmd2_history.dat
   | dist
+  | htmlcov
 )/
 '''
