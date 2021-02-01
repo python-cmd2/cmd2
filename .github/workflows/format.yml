@@ -25,4 +25,4 @@ jobs:
       - name: Install python prerequisites
         run: pip install -U --user pip setuptools setuptools-scm black
       - name: Black
-        run: python -m black
+        run: python -m black --check .
