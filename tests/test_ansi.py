@@ -144,7 +144,10 @@ def test_cast_color_as_str():
 
 
 def test_color_str_building():
-    from cmd2.ansi import fg, bg
+    from cmd2.ansi import (
+        bg,
+        fg,
+    )
 
     assert fg.blue + "hello" == fg.blue.value + "hello"
     assert bg.blue + "hello" == bg.blue.value + "hello"

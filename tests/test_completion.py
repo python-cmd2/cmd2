@@ -20,8 +20,12 @@ import sys
 import pytest
 
 import cmd2
-from cmd2 import utils
-from examples.subcommands import SubcommandsExample
+from cmd2 import (
+    utils,
+)
+from examples.subcommands import (
+    SubcommandsExample,
+)
 
 from .conftest import (
     complete_tester,

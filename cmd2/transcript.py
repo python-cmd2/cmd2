@@ -11,7 +11,9 @@ class is used in cmd2.py::run_transcript_tests()
 """
 import re
 import unittest
-from typing import Tuple
+from typing import (
+    Tuple,
+)
 
 from . import (
     ansi,

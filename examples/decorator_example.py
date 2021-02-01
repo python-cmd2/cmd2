@@ -11,7 +11,9 @@ all the commands in the transcript against decorator_example.py,
 verifying that the output produced matches the transcript.
 """
 import argparse
-from typing import List
+from typing import (
+    List,
+)
 
 import cmd2
 

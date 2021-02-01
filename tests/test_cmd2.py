@@ -9,7 +9,9 @@ import io
 import os
 import sys
 import tempfile
-from code import InteractiveConsole
+from code import (
+    InteractiveConsole,
+)
 
 import pytest
 
@@ -40,7 +42,9 @@ from .conftest import (
 try:
     import mock
 except ImportError:
-    from unittest import mock
+    from unittest import (
+        mock,
+    )
 
 
 def CreateOutsimApp():
@@ -1018,14 +1022,18 @@ def test_default_to_shell(base_app, monkeypatch):
 
 
 def test_ansi_prompt_not_esacped(base_app):
-    from cmd2.rl_utils import rl_make_safe_prompt
+    from cmd2.rl_utils import (
+        rl_make_safe_prompt,
+    )
 
     prompt = '(Cmd) '
     assert rl_make_safe_prompt(prompt) == prompt
 
 
 def test_ansi_prompt_escaped():
-    from cmd2.rl_utils import rl_make_safe_prompt
+    from cmd2.rl_utils import (
+        rl_make_safe_prompt,
+    )
 
     app = cmd2.Cmd()
     color = 'cyan'
@@ -2072,7 +2080,9 @@ def test_multiple_macros(base_app):
 
 
 def test_nonexistent_macro(base_app):
-    from cmd2.parsing import StatementParser
+    from cmd2.parsing import (
+        StatementParser,
+    )
 
     exception = None
 

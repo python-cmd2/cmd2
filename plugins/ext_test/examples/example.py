@@ -1,9 +1,10 @@
 #
 # coding=utf-8
 # import cmd2
+import cmd2_ext_test
+
 import cmd2
 import cmd2.py_bridge
-import cmd2_ext_test
 
 
 class Example(cmd2.Cmd):

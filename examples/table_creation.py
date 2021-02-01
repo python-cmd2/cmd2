@@ -8,7 +8,9 @@ from typing import (
     List,
 )
 
-from cmd2 import ansi
+from cmd2 import (
+    ansi,
+)
 from cmd2.table_creator import (
     AlternatingTable,
     BorderedTable,

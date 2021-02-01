@@ -1,8 +1,9 @@
 #
 # coding=utf-8
 
-import cmd2
 import cmd2_myplugin
+
+import cmd2
 
 
 class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):

@@ -38,9 +38,15 @@ import pydoc
 import re
 import sys
 import threading
-from code import InteractiveConsole
-from collections import namedtuple
-from contextlib import redirect_stdout
+from code import (
+    InteractiveConsole,
+)
+from collections import (
+    namedtuple,
+)
+from contextlib import (
+    redirect_stdout,
+)
 from typing import (
     Any,
     Callable,
@@ -69,7 +75,9 @@ from .clipboard import (
     get_paste_buffer,
     write_to_paste_buffer,
 )
-from .command_definition import CommandSet
+from .command_definition import (
+    CommandSet,
+)
 from .constants import (
     CLASS_ATTR_DEFAULT_HELP_CATEGORY,
     COMMAND_FUNC_PREFIX,
@@ -118,7 +126,10 @@ from .utils import (
 if rl_type == RlType.NONE:  # pragma: no cover
     sys.stderr.write(ansi.style_warning(rl_warning))
 else:
-    from .rl_utils import rl_force_redisplay, readline
+    from .rl_utils import (
+        readline,
+        rl_force_redisplay,
+    )
 
     # Used by rlcompleter in Python console loaded by py command
     orig_rl_delims = readline.get_completer_delims()
@@ -133,7 +144,10 @@ else:
 
         # Get the readline lib so we can make changes to it
         import ctypes
-        from .rl_utils import readline_lib
+
+        from .rl_utils import (
+            readline_lib,
+        )
 
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
         orig_rl_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
@@ -142,7 +156,9 @@ else:
 ipython_available = True
 try:
     # noinspection PyUnresolvedReferences,PyPackageRequirements
-    from IPython import embed
+    from IPython import (
+        embed,
+    )
 except ImportError:  # pragma: no cover
     ipython_available = False
 
@@ -1976,7 +1992,9 @@ class Cmd(cmd.Cmd):
         cmd_set: Optional[CommandSet] = None
     ) -> List[str]:
         """Completion function for argparse commands"""
-        from .argparse_completer import ArgparseCompleter
+        from .argparse_completer import (
+            ArgparseCompleter,
+        )
 
         completer = ArgparseCompleter(argparser, self)
         tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
@@ -3283,7 +3301,9 @@ class Cmd(cmd.Cmd):
         # Combine the command and its subcommand tokens for the ArgparseCompleter
         tokens = [command] + arg_tokens['subcommands']
 
-        from .argparse_completer import ArgparseCompleter
+        from .argparse_completer import (
+            ArgparseCompleter,
+        )
 
         completer = ArgparseCompleter(argparser, self)
         return completer.complete_subcommand_help(tokens, text, line, begidx, endidx)
@@ -3322,7 +3342,9 @@ class Cmd(cmd.Cmd):
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
-                from .argparse_completer import ArgparseCompleter
+                from .argparse_completer import (
+                    ArgparseCompleter,
+                )
 
                 completer = ArgparseCompleter(argparser, self)
                 tokens = [args.command] + args.subcommands
@@ -3573,7 +3595,9 @@ class Cmd(cmd.Cmd):
             completer_method=settable.completer_method,
         )
 
-        from .argparse_completer import ArgparseCompleter
+        from .argparse_completer import (
+            ArgparseCompleter,
+        )
 
         completer = ArgparseCompleter(settable_parser, self)
 
@@ -3861,7 +3885,9 @@ class Cmd(cmd.Cmd):
             """Function callable from the interactive Python console to exit that environment"""
             raise EmbeddedConsoleExit
 
-        from .py_bridge import PyBridge
+        from .py_bridge import (
+            PyBridge,
+        )
 
         py_bridge = PyBridge(self)
         saved_sys_path = None
@@ -4016,7 +4042,9 @@ class Cmd(cmd.Cmd):
 
             :return: True if running of commands should stop
             """
-            from .py_bridge import PyBridge
+            from .py_bridge import (
+                PyBridge,
+            )
 
             # noinspection PyUnusedLocal
             def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
@@ -4559,8 +4587,12 @@ class Cmd(cmd.Cmd):
         """
         import time
         import unittest
+
         import cmd2
-        from .transcript import Cmd2TestCase
+
+        from .transcript import (
+            Cmd2TestCase,
+        )
 
         class TestMyAppCase(Cmd2TestCase):
             cmdapp = self

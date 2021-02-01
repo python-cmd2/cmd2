@@ -16,7 +16,9 @@ import sys
 
 import invoke
 
-from plugins import tasks as plugin_tasks
+from plugins import (
+    tasks as plugin_tasks,
+)
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)

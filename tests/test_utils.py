@@ -11,12 +11,16 @@ import time
 import pytest
 
 import cmd2.utils as cu
-from cmd2.constants import HORIZONTAL_ELLIPSIS
+from cmd2.constants import (
+    HORIZONTAL_ELLIPSIS,
+)
 
 try:
     import mock
 except ImportError:
-    from unittest import mock
+    from unittest import (
+        mock,
+    )
 
 
 HELLO_WORLD = 'Hello, world!'
@@ -388,7 +392,9 @@ def test_truncate_line_tabs():
 
 
 def test_truncate_with_style():
-    from cmd2 import ansi
+    from cmd2 import (
+        ansi,
+    )
 
     before_style = ansi.fg.blue + ansi.UNDERLINE_ENABLE
     after_style = ansi.fg.reset + ansi.UNDERLINE_DISABLE
@@ -421,7 +427,9 @@ def test_align_text_fill_char_is_tab():
 
 
 def test_align_text_with_style():
-    from cmd2 import ansi
+    from cmd2 import (
+        ansi,
+    )
 
     # Single line with only left fill
     text = ansi.style('line1', fg=ansi.fg.bright_blue)
@@ -539,7 +547,10 @@ def test_align_text_has_unprintable():
 
 def test_align_text_term_width():
     import shutil
-    from cmd2 import ansi
+
+    from cmd2 import (
+        ansi,
+    )
 
     text = 'foo'
     fill_char = ' '

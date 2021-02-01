@@ -9,12 +9,16 @@ import random
 import re
 import sys
 import tempfile
-from unittest import mock
+from unittest import (
+    mock,
+)
 
 import pytest
 
 import cmd2
-from cmd2 import transcript
+from cmd2 import (
+    transcript,
+)
 from cmd2.utils import (
     Settable,
     StdSim,

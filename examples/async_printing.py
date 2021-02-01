@@ -7,7 +7,9 @@ and changes the window title
 import random
 import threading
 import time
-from typing import List
+from typing import (
+    List,
+)
 
 import cmd2
 from cmd2 import (

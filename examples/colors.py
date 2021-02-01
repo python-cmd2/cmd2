@@ -24,7 +24,9 @@ Always
     regardless of the output destination
 """
 import argparse
-from typing import Any
+from typing import (
+    Any,
+)
 
 from colorama import (
     Back,
@@ -33,7 +35,9 @@ from colorama import (
 )
 
 import cmd2
-from cmd2 import ansi
+from cmd2 import (
+    ansi,
+)
 
 
 class CmdLineApp(cmd2.Cmd):

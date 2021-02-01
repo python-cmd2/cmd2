@@ -11,8 +11,12 @@ from typing import (
 
 import attr
 
-from . import utils
-from .parsing import Statement
+from . import (
+    utils,
+)
+from .parsing import (
+    Statement,
+)
 
 
 @attr.s(frozen=True)

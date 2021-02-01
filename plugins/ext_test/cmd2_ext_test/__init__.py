@@ -17,6 +17,8 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
     # package is not installed
     __version__ = 'unknown'
 
-from .cmd2_ext_test import ExternalTestMixin
+from .cmd2_ext_test import (
+    ExternalTestMixin,
+)
 
 __all__ = ['ExternalTestMixin']

@@ -11,9 +11,13 @@ from cmd2 import (
     Cmd2ArgumentParser,
     constants,
 )
-from cmd2.argparse_custom import generate_range_error
+from cmd2.argparse_custom import (
+    generate_range_error,
+)
 
-from .conftest import run_cmd
+from .conftest import (
+    run_cmd,
+)
 
 
 class ApCustomTestApp(cmd2.Cmd):
@@ -264,7 +268,10 @@ def test_apcustom_required_options():
 
 def test_override_parser():
     import importlib
-    from cmd2 import DEFAULT_ARGUMENT_PARSER
+
+    from cmd2 import (
+        DEFAULT_ARGUMENT_PARSER,
+    )
 
     # The standard parser is Cmd2ArgumentParser
     assert DEFAULT_ARGUMENT_PARSER == Cmd2ArgumentParser
@@ -272,10 +279,14 @@ def test_override_parser():
     # Set our parser module and force a reload of cmd2 so it loads the module
     argparse.cmd2_parser_module = 'examples.custom_parser'
     importlib.reload(cmd2)
-    from cmd2 import DEFAULT_ARGUMENT_PARSER
+    from cmd2 import (
+        DEFAULT_ARGUMENT_PARSER,
+    )
 
     # Verify DEFAULT_ARGUMENT_PARSER is now our CustomParser
-    from examples.custom_parser import CustomParser
+    from examples.custom_parser import (
+        CustomParser,
+    )
 
     assert DEFAULT_ARGUMENT_PARSER == CustomParser
 

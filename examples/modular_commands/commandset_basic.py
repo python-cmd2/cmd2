@@ -2,7 +2,9 @@
 """
 A simple example demonstrating a loadable command set
 """
-from typing import List
+from typing import (
+    List,
+)
 
 from cmd2 import (
     Cmd,
@@ -11,7 +13,9 @@ from cmd2 import (
     with_category,
     with_default_category,
 )
-from cmd2.utils import CompletionError
+from cmd2.utils import (
+    CompletionError,
+)
 
 
 @with_default_category('Basic Completion')

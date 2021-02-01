@@ -1,9 +1,9 @@
 #
 # coding=utf-8
 
+import cmd2_ext_test
 import pytest
 
-import cmd2_ext_test
 from cmd2 import (
     CommandResult,
     cmd2,

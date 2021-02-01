@@ -5,7 +5,9 @@ setting the window title, and asynchronous alerts.
  """
 import functools
 import re
-from enum import Enum
+from enum import (
+    Enum,
+)
 from typing import (
     IO,
     Any,
@@ -19,7 +21,9 @@ from colorama import (
     Fore,
     Style,
 )
-from wcwidth import wcswidth
+from wcwidth import (
+    wcswidth,
+)
 
 # On Windows, filter ANSI escape codes out of text sent to stdout/stderr, and replace them with equivalent Win32 calls
 colorama.init(strip=False)
@@ -319,7 +323,9 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     :param alert_msg: the message to display to the user
     :return: the correct string so that the alert message appears to the user to be printed above the current line.
     """
-    from colorama import Cursor
+    from colorama import (
+        Cursor,
+    )
 
     # Split the prompt lines since it can contain newline characters.
     prompt_lines = prompt.splitlines()

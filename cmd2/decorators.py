@@ -13,10 +13,18 @@ from typing import (
     Union,
 )
 
-from . import constants
-from .argparse_custom import Cmd2AttributeWrapper
-from .exceptions import Cmd2ArgparseError
-from .parsing import Statement
+from . import (
+    constants,
+)
+from .argparse_custom import (
+    Cmd2AttributeWrapper,
+)
+from .exceptions import (
+    Cmd2ArgparseError,
+)
+from .parsing import (
+    Statement,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2
@@ -40,7 +48,9 @@ def with_category(category: str) -> Callable:
     """
 
     def cat_decorator(func):
-        from .utils import categorize
+        from .utils import (
+            categorize,
+        )
 
         categorize(func, category)
         return func
@@ -63,7 +73,10 @@ def _parse_positionals(args: Tuple) -> Tuple[Union['cmd2.Cmd', 'cmd2.CommandSet'
     :return: The cmd2.Cmd reference and the command line statement
     """
     for pos, arg in enumerate(args):
-        from cmd2 import Cmd, CommandSet
+        from cmd2 import (
+            Cmd,
+            CommandSet,
+        )
 
         if (isinstance(arg, Cmd) or isinstance(arg, CommandSet)) and len(args) > pos:
             if isinstance(arg, CommandSet):

@@ -12,12 +12,18 @@ from typing import (
     Optional,
     Union,
 )
-from unittest import mock
+from unittest import (
+    mock,
+)
 
-from pytest import fixture
+from pytest import (
+    fixture,
+)
 
 import cmd2
-from cmd2.utils import StdSim
+from cmd2.utils import (
+    StdSim,
+)
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:

@@ -10,7 +10,9 @@ import argparse
 
 import cmd2
 import cmd2.ansi
-from cmd2.constants import MULTILINE_TERMINATOR
+from cmd2.constants import (
+    MULTILINE_TERMINATOR,
+)
 
 
 class Pirate(cmd2.Cmd):

@@ -9,7 +9,9 @@ from contextlib import (
     redirect_stderr,
     redirect_stdout,
 )
-from typing import Optional
+from typing import (
+    Optional,
+)
 
 from .utils import (
     StdSim,

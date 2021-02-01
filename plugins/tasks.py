@@ -10,8 +10,12 @@ Make sure you satisfy the following Python module requirements if you are trying
 """
 import invoke
 
-from plugins.ext_test import tasks as ext_test_tasks
-from plugins.template import tasks as template_tasks
+from plugins.ext_test import (
+    tasks as ext_test_tasks,
+)
+from plugins.template import (
+    tasks as template_tasks,
+)
 
 # create namespaces
 namespace = invoke.Collection(

@@ -11,11 +11,15 @@ from .constants import (
     CLASS_ATTR_DEFAULT_HELP_CATEGORY,
     COMMAND_FUNC_PREFIX,
 )
-from .exceptions import CommandSetRegistrationError
+from .exceptions import (
+    CommandSetRegistrationError,
+)
 
 # Allows IDEs to resolve types without impacting imports at runtime, breaking circular dependency issues
 try:  # pragma: no cover
-    from typing import TYPE_CHECKING
+    from typing import (
+        TYPE_CHECKING,
+    )
 
     if TYPE_CHECKING:
         import cmd2
@@ -47,9 +51,14 @@ def with_default_category(category: str, *, heritable: bool = True):
         if heritable:
             setattr(cls, CLASS_ATTR_DEFAULT_HELP_CATEGORY, category)
 
-        from .constants import CMD_ATTR_HELP_CATEGORY
         import inspect
-        from .decorators import with_category
+
+        from .constants import (
+            CMD_ATTR_HELP_CATEGORY,
+        )
+        from .decorators import (
+            with_category,
+        )
 
         # get members of the class that meet the following criteria:
         # 1. Must be a function

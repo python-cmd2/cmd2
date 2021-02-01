@@ -10,7 +10,9 @@ import argparse
 import inspect
 import numbers
 import shutil
-from collections import deque
+from collections import (
+    deque,
+)
 from typing import (
     Dict,
     List,
@@ -32,7 +34,9 @@ from .argparse_custom import (
     CompletionItem,
     generate_range_error,
 )
-from .command_definition import CommandSet
+from .command_definition import (
+    CommandSet,
+)
 from .table_creator import (
     Column,
     SimpleTable,

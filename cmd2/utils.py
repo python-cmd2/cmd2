@@ -13,7 +13,9 @@ import subprocess
 import sys
 import threading
 import unicodedata
-from enum import Enum
+from enum import (
+    Enum,
+)
 from typing import (
     IO,
     Any,
@@ -27,7 +29,9 @@ from typing import (
     Union,
 )
 
-from . import constants
+from . import (
+    constants,
+)
 
 
 def is_quoted(arg: str) -> bool:
@@ -784,7 +788,9 @@ def align_text(
     import io
     import shutil
 
-    from . import ansi
+    from . import (
+        ansi,
+    )
 
     if width is None:
         width = shutil.get_terminal_size().columns
@@ -983,7 +989,10 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     :raises: ValueError if max_width is less than 1
     """
     import io
-    from . import ansi
+
+    from . import (
+        ansi,
+    )
 
     # Handle tabs
     line = line.replace('\t', ' ' * tab_width)
@@ -1046,7 +1055,9 @@ def get_styles_in_text(text: str) -> Dict[int, str]:
 
     :param text: text to search for style sequences
     """
-    from . import ansi
+    from . import (
+        ansi,
+    )
 
     start = 0
     styles = collections.OrderedDict()

@@ -19,7 +19,9 @@ from . import (
     constants,
     utils,
 )
-from .exceptions import Cmd2ShlexError
+from .exceptions import (
+    Cmd2ShlexError,
+)
 
 
 def shlex_split(str_to_split: str) -> List[str]:

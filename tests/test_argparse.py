@@ -4,13 +4,17 @@
 Cmd2 testing for argument parsing
 """
 import argparse
-from typing import Optional
+from typing import (
+    Optional,
+)
 
 import pytest
 
 import cmd2
 
-from .conftest import run_cmd
+from .conftest import (
+    run_cmd,
+)
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
@@ -425,8 +429,13 @@ def test_subcmd_decorator(subcommand_app):
 
 
 def test_unittest_mock():
-    from unittest import mock
-    from cmd2 import CommandSetRegistrationError
+    from unittest import (
+        mock,
+    )
+
+    from cmd2 import (
+        CommandSetRegistrationError,
+    )
 
     with mock.patch.object(ArgparseApp, 'namespace_provider'):
         with pytest.raises(CommandSetRegistrationError):
@@ -443,7 +452,9 @@ def test_unittest_mock():
 
 
 def test_pytest_mock_invalid(mocker):
-    from cmd2 import CommandSetRegistrationError
+    from cmd2 import (
+        CommandSetRegistrationError,
+    )
 
     mocker.patch.object(ArgparseApp, 'namespace_provider')
     with pytest.raises(CommandSetRegistrationError):

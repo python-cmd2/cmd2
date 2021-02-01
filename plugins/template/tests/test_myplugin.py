@@ -2,7 +2,10 @@
 # coding=utf-8
 
 import cmd2_myplugin
-from cmd2 import cmd2
+
+from cmd2 import (
+    cmd2,
+)
 
 ######
 #

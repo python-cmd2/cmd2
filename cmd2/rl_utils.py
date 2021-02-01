@@ -3,7 +3,9 @@
 Imports the proper readline for the platform and provides utility functions for it
 """
 import sys
-from enum import Enum
+from enum import (
+    Enum,
+)
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
@@ -40,9 +42,14 @@ _rl_warn_reason = ''
 if 'pyreadline' in sys.modules or 'pyreadline3' in sys.modules:
     rl_type = RlType.PYREADLINE
 
-    from ctypes import byref
-    from ctypes.wintypes import DWORD, HANDLE
     import atexit
+    from ctypes import (
+        byref,
+    )
+    from ctypes.wintypes import (
+        DWORD,
+        HANDLE,
+    )
 
     # Check if we are running in a terminal
     if sys.stdout.isatty():  # pragma: no cover

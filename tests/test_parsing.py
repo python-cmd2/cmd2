@@ -997,7 +997,9 @@ def test_is_valid_command_valid(parser):
 
 def test_macro_normal_arg_pattern():
     # This pattern matches digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
-    from cmd2.parsing import MacroArg
+    from cmd2.parsing import (
+        MacroArg,
+    )
 
     pattern = MacroArg.macro_normal_arg_pattern
 
@@ -1049,7 +1051,9 @@ def test_macro_normal_arg_pattern():
 
 def test_macro_escaped_arg_pattern():
     # This pattern matches digits surrounded by 2 or more braces on both sides
-    from cmd2.parsing import MacroArg
+    from cmd2.parsing import (
+        MacroArg,
+    )
 
     pattern = MacroArg.macro_escaped_arg_pattern
 

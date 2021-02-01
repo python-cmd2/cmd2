@@ -13,7 +13,9 @@ familiar with argparse. The recommended approach for tab completing positional t
 argparse-based completion. For an example integrating tab completion with argparse, see argparse_completion.py
 """
 import functools
-from typing import List
+from typing import (
+    List,
+)
 
 import cmd2
 

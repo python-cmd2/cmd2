@@ -20,7 +20,9 @@ from cmd2 import (
 try:
     import mock
 except ImportError:
-    from unittest import mock
+    from unittest import (
+        mock,
+    )
 
 
 class Plugin:

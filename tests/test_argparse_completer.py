@@ -5,7 +5,9 @@ Unit/functional testing for argparse completer in cmd2
 """
 import argparse
 import numbers
-from typing import List
+from typing import (
+    List,
+)
 
 import pytest
 
@@ -664,7 +666,9 @@ def test_autocomp_positional_completers(ac_app, pos, text, completions):
 
 def test_autocomp_blank_token(ac_app):
     """Force a blank token to make sure ArgparseCompleter consumes them like argparse does"""
-    from cmd2.argparse_completer import ArgparseCompleter
+    from cmd2.argparse_completer import (
+        ArgparseCompleter,
+    )
 
     blank = ''
 
@@ -883,7 +887,9 @@ def test_completion_items_arg_header(ac_app):
 
 
 def test_completion_items_descriptive_header(ac_app):
-    from cmd2.argparse_completer import DEFAULT_DESCRIPTIVE_HEADER
+    from cmd2.argparse_completer import (
+        DEFAULT_DESCRIPTIVE_HEADER,
+    )
 
     # This argument provided a descriptive header
     text = ''
@@ -1045,7 +1051,9 @@ def test_complete_mutex_group(ac_app, command_and_args, text, output_contains, f
 
 
 def test_single_prefix_char():
-    from cmd2.argparse_completer import _single_prefix_char
+    from cmd2.argparse_completer import (
+        _single_prefix_char,
+    )
 
     parser = Cmd2ArgumentParser(prefix_chars='-+')
 
@@ -1062,7 +1070,9 @@ def test_single_prefix_char():
 
 
 def test_looks_like_flag():
-    from cmd2.argparse_completer import _looks_like_flag
+    from cmd2.argparse_completer import (
+        _looks_like_flag,
+    )
 
     parser = Cmd2ArgumentParser()
 
@@ -1080,7 +1090,9 @@ def test_looks_like_flag():
 
 
 def test_complete_command_no_tokens(ac_app):
-    from cmd2.argparse_completer import ArgparseCompleter
+    from cmd2.argparse_completer import (
+        ArgparseCompleter,
+    )
 
     parser = Cmd2ArgumentParser()
     ac = ArgparseCompleter(parser, ac_app)
@@ -1090,7 +1102,9 @@ def test_complete_command_no_tokens(ac_app):
 
 
 def test_complete_command_help_no_tokens(ac_app):
-    from cmd2.argparse_completer import ArgparseCompleter
+    from cmd2.argparse_completer import (
+        ArgparseCompleter,
+    )
 
     parser = Cmd2ArgumentParser()
     ac = ArgparseCompleter(parser, ac_app)

@@ -12,7 +12,9 @@ import cmd2
 
 # Python 3.5 had some regressions in the unitest.mock module, so use
 # 3rd party mock if available
-from cmd2.parsing import StatementParser
+from cmd2.parsing import (
+    StatementParser,
+)
 
 from .conftest import (
     HELP_HISTORY,
@@ -23,14 +25,18 @@ from .conftest import (
 try:
     import mock
 except ImportError:
-    from unittest import mock
+    from unittest import (
+        mock,
+    )
 
 
 #
 # readline tests
 #
 def test_readline_remove_history_item(base_app):
-    from cmd2.rl_utils import readline
+    from cmd2.rl_utils import (
+        readline,
+    )
 
     assert readline.get_current_history_length() == 0
     readline.add_history('this is a test')
@@ -44,8 +50,13 @@ def test_readline_remove_history_item(base_app):
 #
 @pytest.fixture
 def hist():
-    from cmd2.parsing import Statement
-    from cmd2.cmd2 import History, HistoryItem
+    from cmd2.cmd2 import (
+        History,
+        HistoryItem,
+    )
+    from cmd2.parsing import (
+        Statement,
+    )
 
     h = History(
         [
@@ -60,8 +71,13 @@ def hist():
 
 @pytest.fixture
 def persisted_hist():
-    from cmd2.parsing import Statement
-    from cmd2.cmd2 import History, HistoryItem
+    from cmd2.cmd2 import (
+        History,
+        HistoryItem,
+    )
+    from cmd2.parsing import (
+        Statement,
+    )
 
     h = History(
         [
@@ -281,8 +297,12 @@ def test_history_max_length(hist):
 #
 @pytest.fixture
 def histitem():
-    from cmd2.parsing import Statement
-    from cmd2.history import HistoryItem
+    from cmd2.history import (
+        HistoryItem,
+    )
+    from cmd2.parsing import (
+        Statement,
+    )
 
     statement = Statement(
         'history',
@@ -296,7 +316,9 @@ def histitem():
 
 @pytest.fixture
 def parser():
-    from cmd2.parsing import StatementParser
+    from cmd2.parsing import (
+        StatementParser,
+    )
 
     parser = StatementParser(
         terminators=[';', '&'],
@@ -314,7 +336,9 @@ def parser():
 
 
 def test_multiline_histitem(parser):
-    from cmd2.history import History
+    from cmd2.history import (
+        History,
+    )
 
     line = 'multiline foo\nbar\n\n'
     statement = parser.parse(line)
@@ -328,7 +352,9 @@ def test_multiline_histitem(parser):
 
 
 def test_multiline_histitem_verbose(parser):
-    from cmd2.history import History
+    from cmd2.history import (
+        History,
+    )
 
     line = 'multiline foo\nbar\n\n'
     statement = parser.parse(line)
@@ -343,8 +369,12 @@ def test_multiline_histitem_verbose(parser):
 
 
 def test_history_item_instantiate():
-    from cmd2.parsing import Statement
-    from cmd2.history import HistoryItem
+    from cmd2.history import (
+        HistoryItem,
+    )
+    from cmd2.parsing import (
+        Statement,
+    )
 
     statement = Statement(
         'history',
@@ -822,7 +852,9 @@ def test_history_populates_readline(hist_file):
     # readline only adds a single entry for multiple sequential identical commands
     # so we check to make sure that cmd2 populated the readline history
     # using the same rules
-    from cmd2.rl_utils import readline
+    from cmd2.rl_utils import (
+        readline,
+    )
 
     assert readline.get_current_history_length() == 3
     assert readline.get_history_item(1) == 'help'

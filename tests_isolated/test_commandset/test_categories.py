@@ -3,7 +3,9 @@
 """
 Simple example demonstrating basic CommandSet usage.
 """
-from typing import Any
+from typing import (
+    Any,
+)
 
 import cmd2
 from cmd2 import (

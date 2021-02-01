@@ -8,7 +8,9 @@ It also demonstrates the effects of decorator order when it comes to argparse er
 import functools
 
 import cmd2
-from cmd2 import COMMAND_NAME
+from cmd2 import (
+    COMMAND_NAME,
+)
 
 
 def my_decorator(f):
