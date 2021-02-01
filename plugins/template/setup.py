@@ -42,7 +42,12 @@ setuptools.setup(
     # dependencies for development and testing
     # $ pip install -e .[dev]
     extras_require={
-        'test': ['codecov', 'coverage', 'pytest', 'pytest-cov',],
+        'test': [
+            'codecov',
+            'coverage',
+            'pytest',
+            'pytest-cov',
+        ],
         'dev': ['setuptools_scm', 'pytest', 'codecov', 'pytest-cov', 'pylint', 'invoke', 'wheel', 'twine'],
     },
 )

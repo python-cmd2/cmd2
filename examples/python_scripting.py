@@ -55,8 +55,8 @@ class CmdLineApp(cmd2.Cmd):
     @cmd2.with_argument_list
     def do_cd(self, arglist):
         """Change directory.
-    Usage:
-        cd <new_dir>
+        Usage:
+            cd <new_dir>
         """
         # Expect 1 argument, the directory to change to
         if not arglist or len(arglist) != 1:

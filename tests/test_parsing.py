@@ -130,7 +130,14 @@ def test_command_and_args(parser, tokens, command, args):
     assert args == parsed_args
 
 
-@pytest.mark.parametrize('line', ['plainword', '"one word"', "'one word'",])
+@pytest.mark.parametrize(
+    'line',
+    [
+        'plainword',
+        '"one word"',
+        "'one word'",
+    ],
+)
 def test_parse_single_word(parser, line):
     statement = parser.parse(line)
     assert statement.command == line
@@ -149,7 +156,13 @@ def test_parse_single_word(parser, line):
 
 
 @pytest.mark.parametrize(
-    'line,terminator', [('termbare;', ';'), ('termbare ;', ';'), ('termbare&', '&'), ('termbare &', '&'),]
+    'line,terminator',
+    [
+        ('termbare;', ';'),
+        ('termbare ;', ';'),
+        ('termbare&', '&'),
+        ('termbare &', '&'),
+    ],
 )
 def test_parse_word_plus_terminator(parser, line, terminator):
     statement = parser.parse(line)
@@ -163,7 +176,12 @@ def test_parse_word_plus_terminator(parser, line, terminator):
 
 @pytest.mark.parametrize(
     'line,terminator',
-    [('termbare;  suffx', ';'), ('termbare ;suffx', ';'), ('termbare&  suffx', '&'), ('termbare &suffx', '&'),],
+    [
+        ('termbare;  suffx', ';'),
+        ('termbare ;suffx', ';'),
+        ('termbare&  suffx', '&'),
+        ('termbare &suffx', '&'),
+    ],
 )
 def test_parse_suffix_after_terminator(parser, line, terminator):
     statement = parser.parse(line)
@@ -228,7 +246,13 @@ def test_parse_embedded_comment_char(parser):
     assert statement.arg_list == statement.argv[1:]
 
 
-@pytest.mark.parametrize('line', ['simple | piped', 'simple|piped',])
+@pytest.mark.parametrize(
+    'line',
+    [
+        'simple | piped',
+        'simple|piped',
+    ],
+)
 def test_parse_simple_pipe(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'simple'
@@ -265,7 +289,13 @@ def test_parse_complex_pipe(parser):
 
 
 @pytest.mark.parametrize(
-    'line,output', [('help > out.txt', '>'), ('help>out.txt', '>'), ('help >> out.txt', '>>'), ('help>>out.txt', '>>'),]
+    'line,output',
+    [
+        ('help > out.txt', '>'),
+        ('help>out.txt', '>'),
+        ('help >> out.txt', '>>'),
+        ('help>>out.txt', '>>'),
+    ],
 )
 def test_parse_redirect(parser, line, output):
     statement = parser.parse(line)
@@ -277,7 +307,13 @@ def test_parse_redirect(parser, line, output):
     assert statement.expanded_command_line == statement.command + ' ' + statement.output + ' ' + statement.output_to
 
 
-@pytest.mark.parametrize('dest', ['afile.txt', 'python-cmd2/afile.txt',])  # without dashes  # with dashes in path
+@pytest.mark.parametrize(
+    'dest',
+    [
+        'afile.txt',
+        'python-cmd2/afile.txt',
+    ],
+)  # without dashes  # with dashes in path
 def test_parse_redirect_with_args(parser, dest):
     line = 'output into > {}'.format(dest)
     statement = parser.parse(line)
@@ -668,7 +704,12 @@ def test_parse_alias_on_multiline_command(parser):
 
 @pytest.mark.parametrize(
     'line,output',
-    [('helpalias > out.txt', '>'), ('helpalias>out.txt', '>'), ('helpalias >> out.txt', '>>'), ('helpalias>>out.txt', '>>'),],
+    [
+        ('helpalias > out.txt', '>'),
+        ('helpalias>out.txt', '>'),
+        ('helpalias >> out.txt', '>>'),
+        ('helpalias>>out.txt', '>>'),
+    ],
 )
 def test_parse_alias_redirection(parser, line, output):
     statement = parser.parse(line)
@@ -679,7 +720,13 @@ def test_parse_alias_redirection(parser, line, output):
     assert statement.output_to == 'out.txt'
 
 
-@pytest.mark.parametrize('line', ['helpalias | less', 'helpalias|less',])
+@pytest.mark.parametrize(
+    'line',
+    [
+        'helpalias | less',
+        'helpalias|less',
+    ],
+)
 def test_parse_alias_pipe(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'help'
@@ -689,7 +736,15 @@ def test_parse_alias_pipe(parser, line):
 
 
 @pytest.mark.parametrize(
-    'line', ['helpalias;', 'helpalias;;', 'helpalias;; ;', 'helpalias ;', 'helpalias ; ;', 'helpalias ;; ;',]
+    'line',
+    [
+        'helpalias;',
+        'helpalias;;',
+        'helpalias;; ;',
+        'helpalias ;',
+        'helpalias ; ;',
+        'helpalias ;; ;',
+    ],
 )
 def test_parse_alias_terminator_no_whitespace(parser, line):
     statement = parser.parse(line)
@@ -814,7 +869,22 @@ def test_parse_command_only_specialchars(parser, line, args):
     assert statement.output_to == ''
 
 
-@pytest.mark.parametrize('line', ['', ';', ';;', ';; ;', '&', '& &', ' && &', '>', "'", '"', '|',])
+@pytest.mark.parametrize(
+    'line',
+    [
+        '',
+        ';',
+        ';;',
+        ';; ;',
+        '&',
+        '& &',
+        ' && &',
+        '>',
+        "'",
+        '"',
+        '|',
+    ],
+)
 def test_parse_command_only_empty(parser, line):
     statement = parser.parse_command_only(line)
     assert statement == ''

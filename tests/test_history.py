@@ -284,7 +284,12 @@ def histitem():
     from cmd2.parsing import Statement
     from cmd2.history import HistoryItem
 
-    statement = Statement('history', raw='help history', command='help', arg_list=['history'],)
+    statement = Statement(
+        'history',
+        raw='help history',
+        command='help',
+        arg_list=['history'],
+    )
     histitem = HistoryItem(statement, 1)
     return histitem
 
@@ -341,7 +346,12 @@ def test_history_item_instantiate():
     from cmd2.parsing import Statement
     from cmd2.history import HistoryItem
 
-    statement = Statement('history', raw='help history', command='help', arg_list=['history'],)
+    statement = Statement(
+        'history',
+        raw='help history',
+        command='help',
+        arg_list=['history'],
+    )
     with pytest.raises(TypeError):
         _ = HistoryItem()
     with pytest.raises(TypeError):

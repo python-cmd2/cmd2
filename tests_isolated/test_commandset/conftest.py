@@ -123,7 +123,7 @@ timing: False             # Report execution times
 
 
 def normalize(block):
-    """ Normalize a block of text to perform comparison.
+    """Normalize a block of text to perform comparison.
 
     Strip newlines from the very beginning and very end  Then split into separate lines and strip trailing whitespace
     from each line.

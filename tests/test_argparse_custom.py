@@ -132,7 +132,15 @@ def test_apcustom_nargs_range_validation(cust_app):
     assert not err
 
 
-@pytest.mark.parametrize('nargs_tuple', [(), ('f', 5), (5, 'f'), (1, 2, 3),])
+@pytest.mark.parametrize(
+    'nargs_tuple',
+    [
+        (),
+        ('f', 5),
+        (5, 'f'),
+        (1, 2, 3),
+    ],
+)
 def test_apcustom_narg_invalid_tuples(nargs_tuple):
     with pytest.raises(ValueError) as excinfo:
         parser = Cmd2ArgumentParser()

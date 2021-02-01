@@ -2600,7 +2600,7 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyMethodOverriding
     def onecmd(self, statement: Union[Statement, str], *, add_to_history: bool = True) -> bool:
-        """ This executes the actual do_* method for a command.
+        """This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes default() instead.
 
@@ -3496,15 +3496,15 @@ class Cmd(cmd.Cmd):
 
     def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str = 'Your choice? ') -> str:
         """Presents a numbered menu to the user.  Modeled after
-           the bash shell's SELECT.  Returns the item chosen.
+        the bash shell's SELECT.  Returns the item chosen.
 
-           Argument ``opts`` can be:
+        Argument ``opts`` can be:
 
-             | a single string -> will be split into one-word options
-             | a list of strings -> will be offered as options
-             | a list of tuples -> interpreted as (value, text), so
-                                   that the return value can differ from
-                                   the text advertised to the user """
+          | a single string -> will be split into one-word options
+          | a list of strings -> will be offered as options
+          | a list of tuples -> interpreted as (value, text), so
+                                that the return value can differ from
+                                the text advertised to the user"""
 
         local_opts = opts
         if isinstance(opts, str):
@@ -4914,7 +4914,13 @@ class Cmd(cmd.Cmd):
         # validate that the callable has the right number of parameters
         nparam = len(signature.parameters)
         if nparam != count:
-            raise TypeError('{} has {} positional arguments, expected {}'.format(func.__name__, nparam, count,))
+            raise TypeError(
+                '{} has {} positional arguments, expected {}'.format(
+                    func.__name__,
+                    nparam,
+                    count,
+                )
+            )
 
     @classmethod
     def _validate_prepostloop_callable(cls, func: Callable[[None], None]) -> None:
@@ -4923,7 +4929,11 @@ class Cmd(cmd.Cmd):
         # make sure there is no return notation
         signature = inspect.signature(func)
         if signature.return_annotation is not None:
-            raise TypeError("{} must declare return a return type of 'None'".format(func.__name__,))
+            raise TypeError(
+                "{} must declare return a return type of 'None'".format(
+                    func.__name__,
+                )
+            )
 
     def register_preloop_hook(self, func: Callable[[None], None]) -> None:
         """Register a function to be called at the beginning of the command loop."""
@@ -4964,15 +4974,26 @@ class Cmd(cmd.Cmd):
         param = signature.parameters[paramname]
         if param.annotation != data_type:
             raise TypeError(
-                'argument 1 of {} has incompatible type {}, expected {}'.format(func.__name__, param.annotation, data_type,)
+                'argument 1 of {} has incompatible type {}, expected {}'.format(
+                    func.__name__,
+                    param.annotation,
+                    data_type,
+                )
             )
         # validate the return value has the right annotation
         if signature.return_annotation == signature.empty:
-            raise TypeError('{} does not have a declared return type, expected {}'.format(func.__name__, data_type,))
+            raise TypeError(
+                '{} does not have a declared return type, expected {}'.format(
+                    func.__name__,
+                    data_type,
+                )
+            )
         if signature.return_annotation != data_type:
             raise TypeError(
                 '{} has incompatible return type {}, expected {}'.format(
-                    func.__name__, signature.return_annotation, data_type,
+                    func.__name__,
+                    signature.return_annotation,
+                    data_type,
                 )
             )
 

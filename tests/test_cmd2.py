@@ -2273,10 +2273,9 @@ class ReplWithExitCode(cmd2.Cmd):
     def do_exit(self, arg_list) -> bool:
         """Exit the application with an optional exit code.
 
-Usage:  exit [exit_code]
-    Where:
-        * exit_code - integer exit code to return to the shell
-"""
+        Usage:  exit [exit_code]
+            Where:
+                * exit_code - integer exit code to return to the shell"""
         # If an argument was provided
         if arg_list:
             try:

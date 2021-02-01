@@ -4,7 +4,10 @@ import nox
 @nox.session(python=['3.9'])
 def docs(session):
     session.install(
-        'sphinx', 'sphinx-rtd-theme', '.', 'plugins/ext_test',
+        'sphinx',
+        'sphinx-rtd-theme',
+        '.',
+        'plugins/ext_test',
     )
     session.chdir('docs')
     tmpdir = session.create_tmp()
@@ -30,5 +33,9 @@ def tests(session, plugin):
 
         # cd into test directory to run other unit test
         session.run(
-            'invoke', 'plugin.{}.pytest'.format(plugin.replace('_', '-')), '--junit', '--no-pty', '--append-cov',
+            'invoke',
+            'plugin.{}.pytest'.format(plugin.replace('_', '-')),
+            '--junit',
+            '--no-pty',
+            '--append-cov',
         )

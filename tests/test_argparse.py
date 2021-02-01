@@ -450,7 +450,14 @@ def test_pytest_mock_invalid(mocker):
         app = ArgparseApp()
 
 
-@pytest.mark.parametrize('spec_param', [{'spec': True}, {'spec_set': True}, {'autospec': True},])
+@pytest.mark.parametrize(
+    'spec_param',
+    [
+        {'spec': True},
+        {'spec_set': True},
+        {'autospec': True},
+    ],
+)
 def test_pytest_mock_valid(mocker, spec_param):
     mocker.patch.object(ArgparseApp, 'namespace_provider', **spec_param)
     app = ArgparseApp()
