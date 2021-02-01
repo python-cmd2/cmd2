@@ -25,4 +25,4 @@ jobs:
       - name: Install python prerequisites
         run: pip install -U --user pip setuptools setuptools-scm black
       - name: Black
-        run: python -m black --check .
+        run: python -m black --check -l 127 --skip-string-normalization .
