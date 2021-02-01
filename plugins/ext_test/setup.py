@@ -23,26 +23,19 @@ PACKAGE_DATA = {
 setuptools.setup(
     name='cmd2-ext-test',
     version=scm_version,
-
     description='External test plugin for cmd2. Allows for external invocation of commands as if from a cmd2 pyscript',
     long_description=long_description,
     long_description_content_type='text/markdown',
     keywords='cmd2 test plugin',
-
     author='Eric Lin',
     author_email='anselor@gmail.com',
     url='https://github.com/python-cmd2/cmd2/tree/master/plugins/ext_test',
     license='MIT',
-
     package_data=PACKAGE_DATA,
     packages=['cmd2_ext_test'],
-
     python_requires='>=3.5',
     install_requires=['cmd2 >= 0.9.4, <=2'],
-    setup_requires=[
-        'setuptools >= 42',
-        'setuptools_scm >= 3.4'],
-
+    setup_requires=['setuptools >= 42', 'setuptools_scm >= 3.4'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
@@ -57,17 +50,10 @@ setuptools.setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
-
     # dependencies for development and testing
     # $ pip install -e .[dev]
     extras_require={
-        'test': [
-            'codecov',
-            'coverage',
-            'pytest',
-            'pytest-cov',
-        ],
-        'dev': ['setuptools_scm', 'pytest', 'codecov', 'pytest-cov',
-                'pylint', 'invoke', 'wheel', 'twine']
+        'test': ['codecov', 'coverage', 'pytest', 'pytest-cov'],
+        'dev': ['setuptools_scm', 'pytest', 'codecov', 'pytest-cov', 'pylint', 'invoke', 'wheel', 'twine'],
     },
 )

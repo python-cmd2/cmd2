@@ -2,9 +2,7 @@
 # coding=utf-8
 """A simple example demonstrating the following how to emit a non-zero exit code in your cmd2 application.
 """
-from typing import (
-    List,
-)
+from typing import List
 
 import cmd2
 
@@ -36,6 +34,7 @@ Usage:  exit [exit_code]
 
 if __name__ == '__main__':
     import sys
+
     app = ReplWithExitCode()
     sys_exit_code = app.cmdloop()
     app.poutput('{!r} exiting with code: {}'.format(sys.argv[0], sys_exit_code))

@@ -27,5 +27,6 @@ class RemoveBuiltinCommands(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     app = RemoveBuiltinCommands()
     sys.exit(app.cmdloop())

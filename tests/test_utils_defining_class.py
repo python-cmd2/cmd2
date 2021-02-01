@@ -77,7 +77,7 @@ def test_get_defining_class():
     assert cu.get_defining_class(partial_unbound) is ParentClass
     assert cu.get_defining_class(nested_partial_unbound) is ParentClass
 
-    partial_bound =  functools.partial(parent_instance.parent_only_func, 1)
-    nested_partial_bound =  functools.partial(partial_bound, 2)
+    partial_bound = functools.partial(parent_instance.parent_only_func, 1)
+    nested_partial_bound = functools.partial(partial_bound, 2)
     assert cu.get_defining_class(partial_bound) is ParentClass
     assert cu.get_defining_class(nested_partial_bound) is ParentClass

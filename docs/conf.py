@@ -30,11 +30,13 @@ import cmd2
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.autosectionlabel',
-              'sphinx.ext.intersphinx',
-              'sphinx.ext.doctest',
-              'sphinx.ext.todo']
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosectionlabel',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.doctest',
+    'sphinx.ext.todo',
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -116,15 +118,12 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -134,8 +133,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'cmd2.tex', 'cmd2 Documentation',
-     'Catherine Devlin and Todd Leonhardt', 'manual'),
+    (master_doc, 'cmd2.tex', 'cmd2 Documentation', 'Catherine Devlin and Todd Leonhardt', 'manual'),
 ]
 
 
@@ -143,10 +141,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'cmd2', 'cmd2 Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, 'cmd2', 'cmd2 Documentation', [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -155,9 +150,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'cmd2', 'cmd2 Documentation',
-     author, 'cmd2', 'A python package for building powerful command-line interpreter (CLI) programs.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        'cmd2',
+        'cmd2 Documentation',
+        author,
+        'cmd2',
+        'A python package for building powerful command-line interpreter (CLI) programs.',
+        'Miscellaneous',
+    ),
 ]
 
 
@@ -166,9 +167,7 @@ texinfo_documents = [
 intersphinx_mapping = {'http://docs.python.org/': None}
 
 # options for autodoc
-autodoc_default_options = {
-    'member-order': 'bysource'
-}
+autodoc_default_options = {'member-order': 'bysource'}
 
 # Ignore nitpicky warnings from autodoc which are occurring for very new versions of Sphinx and autodoc
 # They seem to be happening because autodoc is now trying to add hyperlinks to docs for typehint classes

@@ -2,9 +2,7 @@
 # coding=utf-8
 
 import cmd2_myplugin
-from cmd2 import (
-    cmd2,
-)
+from cmd2 import cmd2
 
 ######
 #
@@ -15,12 +13,14 @@ from cmd2 import (
 
 class MyApp(cmd2_myplugin.MyPluginMixin, cmd2.Cmd):
     """Simple subclass of cmd2.Cmd with our SayMixin plugin included."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     @cmd2_myplugin.empty_decorator
     def do_empty(self, args):
         self.poutput("running the empty command")
+
 
 #
 # You can't use a fixture to instantiate your app if you want to use
@@ -44,6 +44,7 @@ def init_app():
 # unit tests
 #
 #####
+
 
 def test_say(capsys):
     # call our initialization function instead of using a fixture

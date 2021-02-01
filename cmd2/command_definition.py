@@ -11,17 +11,16 @@ from .constants import (
     CLASS_ATTR_DEFAULT_HELP_CATEGORY,
     COMMAND_FUNC_PREFIX,
 )
-from .exceptions import (
-    CommandSetRegistrationError,
-)
+from .exceptions import CommandSetRegistrationError
 
 # Allows IDEs to resolve types without impacting imports at runtime, breaking circular dependency issues
 try:  # pragma: no cover
     from typing import TYPE_CHECKING
+
     if TYPE_CHECKING:
         import cmd2
 
-except ImportError:   # pragma: no cover
+except ImportError:  # pragma: no cover
     pass
 
 
@@ -51,19 +50,23 @@ def with_default_category(category: str, *, heritable: bool = True):
         from .constants import CMD_ATTR_HELP_CATEGORY
         import inspect
         from .decorators import with_category
+
         # get members of the class that meet the following criteria:
         # 1. Must be a function
         # 2. Must start with COMMAND_FUNC_PREFIX (do_)
         # 3. Must be a member of the class being decorated and not one inherited from a parent declaration
         methods = inspect.getmembers(
             cls,
-            predicate=lambda meth: inspect.isfunction(meth) and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
-            and meth in inspect.getmro(cls)[0].__dict__.values())
+            predicate=lambda meth: inspect.isfunction(meth)
+            and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+            and meth in inspect.getmro(cls)[0].__dict__.values(),
+        )
         category_decorator = with_category(category)
         for method in methods:
             if not hasattr(method[1], CMD_ATTR_HELP_CATEGORY):
                 setattr(cls, method[0], category_decorator(method[1]))
         return cls
+
     return decorate_class
 
 

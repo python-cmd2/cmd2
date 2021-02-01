@@ -64,5 +64,6 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     app = ArgumentAndOptionPrinter()
     sys.exit(app.cmdloop())

@@ -69,8 +69,7 @@ class SubcommandSet(cmd2.CommandSet):
 
 @pytest.fixture
 def subcommand_app():
-    app = WithCommandSets(auto_load_commands=False,
-                          command_sets=[SubcommandSet(1)])
+    app = WithCommandSets(auto_load_commands=False, command_sets=[SubcommandSet(1)])
     return app
 
 

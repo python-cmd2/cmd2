@@ -56,5 +56,6 @@ class FirstApp(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     c = FirstApp()
     sys.exit(c.cmdloop())

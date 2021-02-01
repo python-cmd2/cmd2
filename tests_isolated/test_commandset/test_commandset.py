@@ -5,19 +5,13 @@ Test CommandSet
 """
 
 import argparse
-from typing import (
-    List,
-)
+from typing import List
 
 import pytest
 
 import cmd2
-from cmd2 import (
-    utils,
-)
-from cmd2.exceptions import (
-    CommandSetRegistrationError,
-)
+from cmd2 import utils
+from cmd2.exceptions import CommandSetRegistrationError
 
 from .conftest import (
     WithCommandSets,
@@ -61,9 +55,8 @@ class CommandSetA(CommandSetBase):
     def do_cranberry(self, ns: argparse.Namespace, unknown: List[str]):
         self._cmd.poutput('Cranberry {}!!'.format(ns.arg1))
         if unknown and len(unknown):
-            self._cmd.poutput('Unknown: ' + ', '.join(['{}']*len(unknown)).format(*unknown))
-        self._cmd.last_result = {'arg1': ns.arg1,
-                           'unknown': unknown}
+            self._cmd.poutput('Unknown: ' + ', '.join(['{}'] * len(unknown)).format(*unknown))
+        self._cmd.last_result = {'arg1': ns.arg1, 'unknown': unknown}
 
     def help_cranberry(self):
         self._cmd.stdout.write('This command does diddly squat...\n')
@@ -73,7 +66,7 @@ class CommandSetA(CommandSetBase):
     def do_durian(self, args: List[str]):
         """Durian Command"""
         self._cmd.poutput('{} Arguments: '.format(len(args)))
-        self._cmd.poutput(', '.join(['{}']*len(args)).format(*args))
+        self._cmd.poutput(', '.join(['{}'] * len(args)).format(*args))
         self._cmd.last_result = {'args': args}
 
     def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
@@ -577,6 +570,7 @@ def test_subcommands(command_sets_manual):
     command_sets_manual.unregister_command_set(veg_cmds)
     command_sets_manual.unregister_command_set(base_cmds)
 
+
 def test_nested_subcommands(command_sets_manual):
     base_cmds = LoadableBase(1)
     pasta_cmds = LoadablePastaStir(1)
@@ -624,6 +618,7 @@ def test_nested_subcommands(command_sets_manual):
 
 class AppWithSubCommands(cmd2.Cmd):
     """Class for testing usage of `as_subcommand_to` decorator directly in a Cmd2 subclass."""
+
     def __init__(self, *args, **kwargs):
         super(AppWithSubCommands, self).__init__(*args, **kwargs)
 

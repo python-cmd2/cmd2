@@ -4,17 +4,13 @@
 Cmd2 testing for argument parsing
 """
 import argparse
-from typing import (
-    Optional,
-)
+from typing import Optional
 
 import pytest
 
 import cmd2
 
-from .conftest import (
-    run_cmd,
-)
+from .conftest import run_cmd
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
@@ -312,8 +308,9 @@ class SubcommandApp(cmd2.Cmd):
 
     helpless_subcmd_parser = cmd2.Cmd2ArgumentParser(add_help=False, description="A subcommand with no help")
 
-    @cmd2.as_subcommand_to('test_subcmd_decorator', 'helpless_subcmd', helpless_subcmd_parser,
-                           help=helpless_subcmd_parser.description.lower())
+    @cmd2.as_subcommand_to(
+        'test_subcmd_decorator', 'helpless_subcmd', helpless_subcmd_parser, help=helpless_subcmd_parser.description.lower()
+    )
     def helpless_subcmd_func(self, args: argparse.Namespace):
         # Make sure vars(Namespace) works. The way we originally added cmd2_hander to it resulted in a RecursionError.
         self.poutput(vars(args))
@@ -453,11 +450,7 @@ def test_pytest_mock_invalid(mocker):
         app = ArgparseApp()
 
 
-@pytest.mark.parametrize('spec_param', [
-    {'spec': True},
-    {'spec_set': True},
-    {'autospec': True},
-])
+@pytest.mark.parametrize('spec_param', [{'spec': True}, {'spec_set': True}, {'autospec': True},])
 def test_pytest_mock_valid(mocker, spec_param):
     mocker.patch.object(ArgparseApp, 'namespace_provider', **spec_param)
     app = ArgparseApp()

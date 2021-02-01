@@ -7,9 +7,7 @@ and changes the window title
 import random
 import threading
 import time
-from typing import (
-    List,
-)
+from typing import List
 
 import cmd2
 from cmd2 import (
@@ -17,17 +15,18 @@ from cmd2 import (
     style,
 )
 
-ALERTS = ["Watch as this application prints alerts and updates the prompt",
-          "This will only happen when the prompt is present",
-          "Notice how it doesn't interfere with your typing or cursor location",
-          "Go ahead and type some stuff and move the cursor throughout the line",
-          "Keep typing...",
-          "Move that cursor...",
-          "Pretty seamless, eh?",
-          "Feedback can also be given in the window title. Notice the alert count up there?",
-          "You can stop and start the alerts by typing stop_alerts and start_alerts",
-          "This demo will now continue to print alerts at random intervals"
-          ]
+ALERTS = [
+    "Watch as this application prints alerts and updates the prompt",
+    "This will only happen when the prompt is present",
+    "Notice how it doesn't interfere with your typing or cursor location",
+    "Go ahead and type some stuff and move the cursor throughout the line",
+    "Keep typing...",
+    "Move that cursor...",
+    "Pretty seamless, eh?",
+    "Feedback can also be given in the window title. Notice the alert count up there?",
+    "You can stop and start the alerts by typing stop_alerts and start_alerts",
+    "This demo will now continue to print alerts at random intervals",
+]
 
 
 class AlerterApp(cmd2.Cmd):
@@ -201,6 +200,7 @@ class AlerterApp(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     app = AlerterApp()
     app.set_window_title("Asynchronous Printer Test")
     sys.exit(app.cmdloop())

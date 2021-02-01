@@ -7,6 +7,7 @@ import cmd2_myplugin
 
 class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
     """An class to show how to use a plugin"""
+
     def __init__(self, *args, **kwargs):
         # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, **kwargs)

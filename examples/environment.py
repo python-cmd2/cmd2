@@ -13,11 +13,7 @@ class EnvironmentApp(cmd2.Cmd):
         super().__init__()
         self.degrees_c = 22
         self.sunny = False
-        self.add_settable(cmd2.Settable('degrees_c',
-                                        int,
-                                        'Temperature in Celsius',
-                                        onchange_cb=self._onchange_degrees_c
-                                        ))
+        self.add_settable(cmd2.Settable('degrees_c', int, 'Temperature in Celsius', onchange_cb=self._onchange_degrees_c))
         self.add_settable(cmd2.Settable('sunny', bool, 'Is it sunny outside?'))
 
     def do_sunbathe(self, arg):
@@ -38,5 +34,6 @@ class EnvironmentApp(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     c = EnvironmentApp()
     sys.exit(c.cmdloop())

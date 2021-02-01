@@ -11,17 +11,14 @@ from typing import (
 
 import attr
 
-from . import (
-    utils,
-)
-from .parsing import (
-    Statement,
-)
+from . import utils
+from .parsing import Statement
 
 
 @attr.s(frozen=True)
-class HistoryItem():
+class HistoryItem:
     """Class used to represent one command in the history list"""
+
     _listformat = ' {:>4}  {}'
     _ex_listformat = ' {:>4}x {}'
 
@@ -97,6 +94,7 @@ class History(list):
     Developers interested in accessing previously entered commands can use this
     class to gain access to the historical record.
     """
+
     def __init__(self, seq=()) -> None:
         super().__init__(seq)
         self.session_start_index = 0
@@ -230,7 +228,7 @@ class History(list):
             if include_persisted:
                 result = self[:end]
             else:
-                result = self[self.session_start_index:end]
+                result = self[self.session_start_index : end]
         elif start is not None:
             # there was no separator so it's either a positive or negative integer
             result = [self[start]]
@@ -239,7 +237,7 @@ class History(list):
             if include_persisted:
                 result = self[:]
             else:
-                result = self[self.session_start_index:]
+                result = self[self.session_start_index :]
         return result
 
     def str_search(self, search: str, include_persisted: bool = False) -> List[HistoryItem]:
@@ -249,6 +247,7 @@ class History(list):
         :param include_persisted: if True, then search full history including persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
+
         def isin(history_item):
             """filter function for string search of history"""
             sloppy = utils.norm_fold(search)
@@ -256,7 +255,7 @@ class History(list):
             inexpanded = sloppy in utils.norm_fold(history_item.expanded)
             return inraw or inexpanded
 
-        search_list = self if include_persisted else self[self.session_start_index:]
+        search_list = self if include_persisted else self[self.session_start_index :]
         return [item for item in search_list if isin(item)]
 
     def regex_search(self, regex: str, include_persisted: bool = False) -> List[HistoryItem]:
@@ -275,7 +274,7 @@ class History(list):
             """filter function for doing a regular expression search of history"""
             return finder.search(hi.raw) or finder.search(hi.expanded)
 
-        search_list = self if include_persisted else self[self.session_start_index:]
+        search_list = self if include_persisted else self[self.session_start_index :]
         return [itm for itm in search_list if isin(itm)]
 
     def truncate(self, max_length: int) -> None:

@@ -19,9 +19,7 @@ from . import (
     constants,
     utils,
 )
-from .exceptions import (
-    Cmd2ShlexError,
-)
+from .exceptions import Cmd2ShlexError
 
 
 def shlex_split(str_to_split: str) -> List[str]:
@@ -42,6 +40,7 @@ class MacroArg:
     Normal argument syntax:    {5}
     Escaped argument syntax:  {{5}}
     """
+
     # The starting index of this argument in the macro value
     start_index = attr.ib(validator=attr.validators.instance_of(int))
 
@@ -114,6 +113,7 @@ class Statement(str):
     3. If you don't want to have to worry about quoted arguments, see
        :attr:`argv` for a trick which strips quotes off for you.
     """
+
     # the arguments, but not the command, nor the output redirection clauses.
     args = attr.ib(default='', validator=attr.validators.instance_of(str))
 
@@ -221,11 +221,14 @@ class Statement(str):
 
 class StatementParser:
     """Parse user input as a string into discrete command components."""
-    def __init__(self,
-                 terminators: Optional[Iterable[str]] = None,
-                 multiline_commands: Optional[Iterable[str]] = None,
-                 aliases: Optional[Dict[str, str]] = None,
-                 shortcuts: Optional[Dict[str, str]] = None) -> None:
+
+    def __init__(
+        self,
+        terminators: Optional[Iterable[str]] = None,
+        multiline_commands: Optional[Iterable[str]] = None,
+        aliases: Optional[Dict[str, str]] = None,
+        shortcuts: Optional[Dict[str, str]] = None,
+    ) -> None:
         """Initialize an instance of StatementParser.
 
         The following will get converted to an immutable tuple before storing internally:
@@ -418,7 +421,7 @@ class StatementParser:
             arg_list = tokens[1:terminator_pos]
             # we will set the suffix later
             # remove all the tokens before and including the terminator
-            tokens = tokens[terminator_pos + 1:]
+            tokens = tokens[terminator_pos + 1 :]
         else:
             (testcommand, testargs) = self._command_and_args(tokens)
             if testcommand in self.multiline_commands:
@@ -454,7 +457,7 @@ class StatementParser:
         if pipe_index < redir_index and pipe_index < append_index:
 
             # Get the tokens for the pipe command and expand ~ where needed
-            pipe_to_tokens = tokens[pipe_index + 1:]
+            pipe_to_tokens = tokens[pipe_index + 1 :]
             utils.expand_user_in_tokens(pipe_to_tokens)
 
             # Build the pipe command line string
@@ -499,16 +502,18 @@ class StatementParser:
             multiline_command = ''
 
         # build the statement
-        statement = Statement(args,
-                              raw=line,
-                              command=command,
-                              arg_list=arg_list,
-                              multiline_command=multiline_command,
-                              terminator=terminator,
-                              suffix=suffix,
-                              pipe_to=pipe_to,
-                              output=output,
-                              output_to=output_to)
+        statement = Statement(
+            args,
+            raw=line,
+            command=command,
+            arg_list=arg_list,
+            multiline_command=multiline_command,
+            terminator=terminator,
+            suffix=suffix,
+            pipe_to=pipe_to,
+            output=output,
+            output_to=output_to,
+        )
         return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
@@ -550,7 +555,7 @@ class StatementParser:
             # take everything from the end of the first match group to
             # the end of the line as the arguments (stripping leading
             # and trailing spaces)
-            args = line[match.end(1):].strip()
+            args = line[match.end(1) :].strip()
             # if the command is empty that means the input was either empty
             # or something weird like '>'. args should be empty if we couldn't
             # parse a command
@@ -564,14 +569,12 @@ class StatementParser:
             multiline_command = ''
 
         # build the statement
-        statement = Statement(args,
-                              raw=rawinput,
-                              command=command,
-                              multiline_command=multiline_command)
+        statement = Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)
         return statement
 
-    def get_command_arg_list(self, command_name: str, to_parse: Union[Statement, str],
-                             preserve_quotes: bool) -> Tuple[Statement, List[str]]:
+    def get_command_arg_list(
+        self, command_name: str, to_parse: Union[Statement, str], preserve_quotes: bool
+    ) -> Tuple[Statement, List[str]]:
         """
         Convenience method used by the argument parsing decorators.
 
@@ -622,7 +625,7 @@ class StatementParser:
                 # Check if this command matches an alias that wasn't already processed
                 if command in remaining_aliases:
                     # rebuild line with the expanded alias
-                    line = self.aliases[command] + match.group(2) + line[match.end(2):]
+                    line = self.aliases[command] + match.group(2) + line[match.end(2) :]
                     remaining_aliases.remove(command)
                     keep_expanding = bool(remaining_aliases)
 

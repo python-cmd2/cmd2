@@ -13,9 +13,7 @@ import subprocess
 import sys
 import threading
 import unicodedata
-from enum import (
-    Enum,
-)
+from enum import Enum
 from typing import (
     IO,
     Any,
@@ -29,9 +27,7 @@ from typing import (
     Union,
 )
 
-from . import (
-    constants,
-)
+from . import constants
 
 
 def is_quoted(arg: str) -> bool:
@@ -102,6 +98,7 @@ class CompletionError(Exception):
     - A previous command line argument that determines the data set being completed is invalid
     - Tab completion hints
     """
+
     def __init__(self, *args, apply_style: bool = True, **kwargs):
         """
         Initializer for CompletionError
@@ -117,13 +114,20 @@ class CompletionError(Exception):
 
 class Settable:
     """Used to configure a cmd2 instance member to be settable via the set command in the CLI"""
-    def __init__(self, name: str, val_type: Callable, description: str, *,
-                 onchange_cb: Callable[[str, Any, Any], Any] = None,
-                 choices: Iterable = None,
-                 choices_function: Optional[Callable] = None,
-                 choices_method: Optional[Callable] = None,
-                 completer_function: Optional[Callable] = None,
-                 completer_method: Optional[Callable] = None):
+
+    def __init__(
+        self,
+        name: str,
+        val_type: Callable,
+        description: str,
+        *,
+        onchange_cb: Callable[[str, Any, Any], Any] = None,
+        choices: Iterable = None,
+        choices_function: Optional[Callable] = None,
+        choices_method: Optional[Callable] = None,
+        completer_function: Optional[Callable] = None,
+        completer_method: Optional[Callable] = None
+    ):
         """
         Settable Initializer
 
@@ -172,8 +176,7 @@ class Settable:
         self.completer_method = completer_method
 
 
-def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
-                             default_values: collections_abc.Iterable = ()):
+def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]], default_values: collections_abc.Iterable = ()):
     """
     Convenience function for defining a namedtuple with default values
 
@@ -460,8 +463,8 @@ class StdSim:
     Class to simulate behavior of sys.stdout or sys.stderr.
     Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
     """
-    def __init__(self, inner_stream, *, echo: bool = False,
-                 encoding: str = 'utf-8', errors: str = 'replace') -> None:
+
+    def __init__(self, inner_stream, *, echo: bool = False, encoding: str = 'utf-8', errors: str = 'replace') -> None:
         """
         StdSim Initializer
         :param inner_stream: the wrapped stream. Should be a TextIO or StdSim instance.
@@ -544,6 +547,7 @@ class ByteBuf:
     """
     Used by StdSim to write binary data and stores the actual bytes written
     """
+
     # Used to know when to flush the StdSim
     NEWLINES = [b'\n', b'\r']
 
@@ -574,8 +578,8 @@ class ProcReader:
     Used to capture stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
     If neither are pipes, then the process will run normally and no output will be captured.
     """
-    def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, TextIO],
-                 stderr: Union[StdSim, TextIO]) -> None:
+
+    def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, TextIO], stderr: Union[StdSim, TextIO]) -> None:
         """
         ProcReader initializer
         :param proc: the Popen process being read from
@@ -586,11 +590,9 @@ class ProcReader:
         self._stdout = stdout
         self._stderr = stderr
 
-        self._out_thread = threading.Thread(name='out_thread', target=self._reader_thread_func,
-                                            kwargs={'read_stdout': True})
+        self._out_thread = threading.Thread(name='out_thread', target=self._reader_thread_func, kwargs={'read_stdout': True})
 
-        self._err_thread = threading.Thread(name='out_thread', target=self._reader_thread_func,
-                                            kwargs={'read_stdout': False})
+        self._err_thread = threading.Thread(name='out_thread', target=self._reader_thread_func, kwargs={'read_stdout': False})
 
         # Start the reader threads for pipes only
         if self._proc.stdout is not None:
@@ -601,6 +603,7 @@ class ProcReader:
     def send_sigint(self) -> None:
         """Send a SIGINT to the process similar to if <Ctrl>+C were pressed"""
         import signal
+
         if sys.platform.startswith('win'):
             # cmd2 started the Windows process in a new process group. Therefore
             # a CTRL_C_EVENT can't be sent to it. Send a CTRL_BREAK_EVENT instead.
@@ -678,6 +681,7 @@ class ContextFlag:
     while a critical code section has set the flag to True. Because signal handling is always done on the
     main thread, this class is not thread-safe since there is no need.
     """
+
     def __init__(self) -> None:
         # When this flag has a positive value, it is considered set.
         # When it is 0, it is not set. It should never go below 0.
@@ -697,8 +701,14 @@ class ContextFlag:
 
 class RedirectionSavedState:
     """Created by each command to store information required to restore state after redirection"""
-    def __init__(self, self_stdout: Union[StdSim, IO[str]], sys_stdout: Union[StdSim, IO[str]],
-                 pipe_proc_reader: Optional[ProcReader], saved_redirecting: bool) -> None:
+
+    def __init__(
+        self,
+        self_stdout: Union[StdSim, IO[str]],
+        sys_stdout: Union[StdSim, IO[str]],
+        pipe_proc_reader: Optional[ProcReader],
+        saved_redirecting: bool,
+    ) -> None:
         """
         RedirectionSavedState initializer
         :param self_stdout: saved value of Cmd.stdout
@@ -736,13 +746,21 @@ def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against
 
 class TextAlignment(Enum):
     """Horizontal text alignment"""
+
     LEFT = 1
     CENTER = 2
     RIGHT = 3
 
 
-def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
-               width: Optional[int] = None, tab_width: int = 4, truncate: bool = False) -> str:
+def align_text(
+    text: str,
+    alignment: TextAlignment,
+    *,
+    fill_char: str = ' ',
+    width: Optional[int] = None,
+    tab_width: int = 4,
+    truncate: bool = False
+) -> str:
     """
     Align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
@@ -823,7 +841,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
 
         line_width = ansi.style_aware_wcswidth(line)
         if line_width == -1:
-            raise(ValueError("Text to align contains an unprintable character"))
+            raise (ValueError("Text to align contains an unprintable character"))
 
         # Get the styles in this line
         line_styles = get_styles_in_text(line)
@@ -874,8 +892,9 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
     return text_buf.getvalue()
 
 
-def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
-               tab_width: int = 4, truncate: bool = False) -> str:
+def align_left(
+    text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
+) -> str:
     """
     Left align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
@@ -893,12 +912,12 @@ def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     :raises: ValueError if text or fill_char contains an unprintable character
     :raises: ValueError if width is less than 1
     """
-    return align_text(text, TextAlignment.LEFT, fill_char=fill_char, width=width,
-                      tab_width=tab_width, truncate=truncate)
+    return align_text(text, TextAlignment.LEFT, fill_char=fill_char, width=width, tab_width=tab_width, truncate=truncate)
 
 
-def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
-                 tab_width: int = 4, truncate: bool = False) -> str:
+def align_center(
+    text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
+) -> str:
     """
     Center text for display within a given width. Supports characters with display widths greater than 1.
     ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
@@ -916,12 +935,12 @@ def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None
     :raises: ValueError if text or fill_char contains an unprintable character
     :raises: ValueError if width is less than 1
     """
-    return align_text(text, TextAlignment.CENTER, fill_char=fill_char, width=width,
-                      tab_width=tab_width, truncate=truncate)
+    return align_text(text, TextAlignment.CENTER, fill_char=fill_char, width=width, tab_width=tab_width, truncate=truncate)
 
 
-def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
-                tab_width: int = 4, truncate: bool = False) -> str:
+def align_right(
+    text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
+) -> str:
     """
     Right align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
@@ -939,8 +958,7 @@ def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     :raises: ValueError if text or fill_char contains an unprintable character
     :raises: ValueError if width is less than 1
     """
-    return align_text(text, TextAlignment.RIGHT, fill_char=fill_char, width=width,
-                      tab_width=tab_width, truncate=truncate)
+    return align_text(text, TextAlignment.RIGHT, fill_char=fill_char, width=width, tab_width=tab_width, truncate=truncate)
 
 
 def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
@@ -1091,16 +1109,15 @@ def get_defining_class(meth) -> Type:
     """
     if isinstance(meth, functools.partial):
         return get_defining_class(meth.func)
-    if inspect.ismethod(meth) or (inspect.isbuiltin(meth)
-                                  and getattr(meth, '__self__') is not None
-                                  and getattr(meth.__self__, '__class__')):
+    if inspect.ismethod(meth) or (
+        inspect.isbuiltin(meth) and getattr(meth, '__self__') is not None and getattr(meth.__self__, '__class__')
+    ):
         for cls in inspect.getmro(meth.__self__.__class__):
             if meth.__name__ in cls.__dict__:
                 return cls
         meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing
     if inspect.isfunction(meth):
-        cls = getattr(inspect.getmodule(meth),
-                      meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
+        cls = getattr(inspect.getmodule(meth), meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
         if isinstance(cls, type):
             return cls
     return getattr(meth, '__objclass__', None)  # handle special descriptor objects

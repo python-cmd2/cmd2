@@ -219,6 +219,7 @@ more details.
 import argparse
 import re
 import sys
+
 # noinspection PyUnresolvedReferences,PyProtectedMember
 from argparse import (
     ONE_OR_MORE,
@@ -285,6 +286,7 @@ class CompletionItem(str):
 
     See header of this file for more information
     """
+
     def __new__(cls, value: object, *args, **kwargs) -> str:
         return super().__new__(cls, value)
 
@@ -310,6 +312,7 @@ class ChoicesCallable:
     Enables using a callable as the choices provider for an argparse argument.
     While argparse has the built-in choices attribute, it is limited to an iterable.
     """
+
     def __init__(self, is_method: bool, is_completer: bool, to_call: Callable):
         """
         Initializer
@@ -332,12 +335,16 @@ def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCall
     """
     # Verify consistent use of parameters
     if action.choices is not None:
-        err_msg = ("None of the following parameters can be used alongside a choices parameter:\n"
-                   "choices_function, choices_method, completer_function, completer_method")
+        err_msg = (
+            "None of the following parameters can be used alongside a choices parameter:\n"
+            "choices_function, choices_method, completer_function, completer_method"
+        )
         raise (TypeError(err_msg))
     elif action.nargs == 0:
-        err_msg = ("None of the following parameters can be used on an action that takes no arguments:\n"
-                   "choices_function, choices_method, completer_function, completer_method")
+        err_msg = (
+            "None of the following parameters can be used on an action that takes no arguments:\n"
+            "choices_function, choices_method, completer_function, completer_method"
+        )
         raise (TypeError(err_msg))
 
     setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
@@ -372,15 +379,18 @@ def set_completer_method(action: argparse.Action, completer_method: Callable) ->
 orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
-def _add_argument_wrapper(self, *args,
-                          nargs: Union[int, str, Tuple[int], Tuple[int, int], None] = None,
-                          choices_function: Optional[Callable] = None,
-                          choices_method: Optional[Callable] = None,
-                          completer_function: Optional[Callable] = None,
-                          completer_method: Optional[Callable] = None,
-                          suppress_tab_hint: bool = False,
-                          descriptive_header: Optional[str] = None,
-                          **kwargs) -> argparse.Action:
+def _add_argument_wrapper(
+    self,
+    *args,
+    nargs: Union[int, str, Tuple[int], Tuple[int, int], None] = None,
+    choices_function: Optional[Callable] = None,
+    choices_method: Optional[Callable] = None,
+    completer_function: Optional[Callable] = None,
+    completer_method: Optional[Callable] = None,
+    suppress_tab_hint: bool = False,
+    descriptive_header: Optional[str] = None,
+    **kwargs
+) -> argparse.Action:
     """
     Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
 
@@ -420,8 +430,10 @@ def _add_argument_wrapper(self, *args,
     num_params_set = len(choices_callables) - choices_callables.count(None)
 
     if num_params_set > 1:
-        err_msg = ("Only one of the following parameters may be used at a time:\n"
-                   "choices_function, choices_method, completer_function, completer_method")
+        err_msg = (
+            "Only one of the following parameters may be used at a time:\n"
+            "choices_function, choices_method, completer_function, completer_method"
+        )
         raise (ValueError(err_msg))
 
     # Pre-process special ranged nargs
@@ -436,8 +448,11 @@ def _add_argument_wrapper(self, *args,
                 nargs = (nargs[0], constants.INFINITY)
 
             # Validate nargs tuple
-            if len(nargs) != 2 or not isinstance(nargs[0], int) or \
-                    not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY):
+            if (
+                len(nargs) != 2
+                or not isinstance(nargs[0], int)
+                or not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY)
+            ):
                 raise ValueError('Ranged values for nargs must be a tuple of 1 or 2 integers')
             if nargs[0] >= nargs[1]:
                 raise ValueError('Invalid nargs range. The first value must be less than the second')
@@ -684,7 +699,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                     if line:
                         lines.append(indent + ' '.join(line))
                     if prefix is not None:
-                        lines[0] = lines[0][len(indent):]
+                        lines[0] = lines[0][len(indent) :]
                     return lines
 
                 # if prog is short, follow it with optionals or positionals
@@ -727,7 +742,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     def _format_action_invocation(self, action) -> str:
         if not action.option_strings:
             default = self._get_default_metavar_for_positional(action)
-            metavar, = self._metavar_formatter(action, default)(1)
+            (metavar,) = self._metavar_formatter(action, default)(1)
             return metavar
 
         else:
@@ -771,7 +786,8 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             if isinstance(metavar, tuple):
                 return metavar
             else:
-                return (metavar, ) * tuple_size
+                return (metavar,) * tuple_size
+
         return format
 
     # noinspection PyProtectedMember
@@ -807,19 +823,21 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output"""
 
-    def __init__(self,
-                 prog=None,
-                 usage=None,
-                 description=None,
-                 epilog=None,
-                 parents=None,
-                 formatter_class=Cmd2HelpFormatter,
-                 prefix_chars='-',
-                 fromfile_prefix_chars=None,
-                 argument_default=None,
-                 conflict_handler='error',
-                 add_help=True,
-                 allow_abbrev=True) -> None:
+    def __init__(
+        self,
+        prog=None,
+        usage=None,
+        description=None,
+        epilog=None,
+        parents=None,
+        formatter_class=Cmd2HelpFormatter,
+        prefix_chars='-',
+        fromfile_prefix_chars=None,
+        argument_default=None,
+        conflict_handler='error',
+        add_help=True,
+        allow_abbrev=True,
+    ) -> None:
         super(Cmd2ArgumentParser, self).__init__(
             prog=prog,
             usage=usage,
@@ -832,7 +850,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             argument_default=argument_default,
             conflict_handler=conflict_handler,
             add_help=add_help,
-            allow_abbrev=allow_abbrev)
+            allow_abbrev=allow_abbrev,
+        )
 
     def add_subparsers(self, **kwargs):
         """
@@ -868,8 +887,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         formatter = self._get_formatter()
 
         # usage
-        formatter.add_usage(self.usage, self._actions,
-                            self._mutually_exclusive_groups)
+        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)
 
         # description
         formatter.add_text(self.description)
@@ -927,6 +945,7 @@ class Cmd2AttributeWrapper:
     This makes it easy to know which attributes in a Namespace are
     arguments from a parser and which were added by cmd2.
     """
+
     def __init__(self, attribute: Any):
         self.__attribute = attribute
 

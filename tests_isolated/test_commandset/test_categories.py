@@ -3,9 +3,7 @@
 """
 Simple example demonstrating basic CommandSet usage.
 """
-from typing import (
-    Any,
-)
+from typing import Any
 
 import cmd2
 from cmd2 import (
@@ -17,6 +15,7 @@ from cmd2 import (
 @with_default_category('Default Category')
 class MyBaseCommandSet(CommandSet):
     """Defines a default category for all sub-class CommandSets"""
+
     def __init__(self, _: Any):
         super(MyBaseCommandSet, self).__init__()
 
@@ -25,6 +24,7 @@ class ChildInheritsParentCategories(MyBaseCommandSet):
     """
     This subclass doesn't declare any categories so all commands here are also categorized under 'Default Category'
     """
+
     def do_hello(self, _: cmd2.Statement):
         self._cmd.poutput('Hello')
 
@@ -38,6 +38,7 @@ class ChildOverridesParentCategoriesNonHeritable(MyBaseCommandSet):
     This subclass overrides the 'Default Category' from the parent, but in a non-heritable fashion. Sub-classes of this
     CommandSet will not inherit this category and will, instead, inherit 'Default Category'
     """
+
     def do_goodbye(self, _: cmd2.Statement):
         self._cmd.poutput('Goodbye')
 
@@ -47,6 +48,7 @@ class GrandchildInheritsGrandparentCategory(ChildOverridesParentCategoriesNonHer
     This subclass's parent class declared its default category non-heritable. Instead, it inherits the category defined
     by the grandparent class.
     """
+
     def do_aloha(self, _: cmd2.Statement):
         self._cmd.poutput('Aloha')
 
@@ -57,6 +59,7 @@ class ChildOverridesParentCategories(MyBaseCommandSet):
     This subclass is decorated with a default category that is heritable. This overrides the parent class's default
     category declaration.
     """
+
     def do_bonjour(self, _: cmd2.Statement):
         self._cmd.poutput('Bonjour')
 
@@ -66,6 +69,7 @@ class GrandchildInheritsHeritable(ChildOverridesParentCategories):
     This subclass's parent declares a default category that overrides its parent. As a result, commands in this
     CommandSet will be categorized under 'Heritable Category'
     """
+
     def do_monde(self, _: cmd2.Statement):
         self._cmd.poutput('Monde')
 

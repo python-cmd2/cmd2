@@ -57,7 +57,7 @@ def pytest(context, junit=False, pty=True, append_cov=False):
             command_str += ' --cov-append'
         if junit:
             command_str += ' --junitxml=junit/test-results.xml'
-        command_str += ' ' + str((TASK_ROOT/'tests').relative_to(ROOT_PATH))
+        command_str += ' ' + str((TASK_ROOT / 'tests').relative_to(ROOT_PATH))
         context.run(command_str, pty=pty)
 
 
@@ -71,8 +71,8 @@ def pytest_clean(context):
     with context.cd(TASK_ROOT_STR):
         dirs = ['.pytest_cache', '.cache', 'htmlcov', '.coverage']
         rmrf(dirs)
-        
-        
+
+
 namespace_clean.add_task(pytest_clean, 'pytest')
 
 
@@ -140,6 +140,8 @@ namespace_clean.add_task(dist_clean, 'dist')
 #
 # make a dummy clean task which runs all the tasks in the clean namespace
 clean_tasks = list(namespace_clean.tasks.values())
+
+
 @invoke.task(pre=list(namespace_clean.tasks.values()), default=True)
 def clean_all(context):
     """Run all clean tasks"""
@@ -195,8 +197,10 @@ namespace.add_task(pypi_test)
 def flake8(context):
     """Run flake8 linter and tool for style guide enforcement"""
     with context.cd(TASK_ROOT_STR):
-        context.run("flake8 --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics "
-                    "--exclude=.git,__pycache__,.tox,.nox,.eggs,*.egg,.venv,.idea,.pytest_cache,.vscode,build,dist,htmlcov")
+        context.run(
+            "flake8 --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics "
+            "--exclude=.git,__pycache__,.tox,.nox,.eggs,*.egg,.venv,.idea,.pytest_cache,.vscode,build,dist,htmlcov"
+        )
 
 
 namespace.add_task(flake8)

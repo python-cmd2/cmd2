@@ -68,6 +68,7 @@ class SubcommandsExample(cmd2.Cmd):
     Example cmd2 application where we a base command which has a couple subcommands
     and the "sport" subcommand has tab completion enabled.
     """
+
     def __init__(self):
         super().__init__()
 
@@ -114,5 +115,6 @@ class SubcommandsExample(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     app = SubcommandsExample()
     sys.exit(app.cmdloop())

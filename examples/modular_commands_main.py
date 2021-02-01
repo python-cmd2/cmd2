@@ -23,15 +23,9 @@ from cmd2.utils import (
     CompletionError,
     basic_complete,
 )
-from modular_commands.commandset_basic import (  # noqa: F401
-    BasicCompletionCommandSet,
-)
-from modular_commands.commandset_complex import (  # noqa: F401
-    CommandSetA,
-)
-from modular_commands.commandset_custominit import (
-    CustomInitCommandSet,  # noqa: F401
-)
+from modular_commands.commandset_basic import BasicCompletionCommandSet  # noqa: F401
+from modular_commands.commandset_complex import CommandSetA  # noqa: F401
+from modular_commands.commandset_custominit import CustomInitCommandSet  # noqa: F401
 
 # Data source for argparse.choices
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
@@ -54,12 +48,7 @@ def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[s
 
 def choices_completion_item() -> List[CompletionItem]:
     """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
-    items = \
-        {
-            1: "My item",
-            2: "Another item",
-            3: "Yet another item"
-        }
+    items = {1: "My item", 2: "Another item", 3: "Yet another item"}
     return [CompletionItem(item_id, description) for item_id, description in items.items()]
 
 
@@ -101,38 +90,48 @@ class WithCommandSets(Cmd):
         raise CompletionError("debug must be true")
 
     # Parser for example command
-    example_parser = Cmd2ArgumentParser(description="Command demonstrating tab completion with argparse\n"
-                                                    "Notice even the flags of this command tab complete")
+    example_parser = Cmd2ArgumentParser(
+        description="Command demonstrating tab completion with argparse\n" "Notice even the flags of this command tab complete"
+    )
 
     # Tab complete from a list using argparse choices. Set metavar if you don't
     # want the entire choices list showing in the usage text for this command.
-    example_parser.add_argument('--choices', choices=food_item_strs, metavar="CHOICE",
-                                help="tab complete using choices")
+    example_parser.add_argument('--choices', choices=food_item_strs, metavar="CHOICE", help="tab complete using choices")
 
     # Tab complete from choices provided by a choices function and choices method
-    example_parser.add_argument('--choices_function', choices_function=choices_function,
-                                help="tab complete using a choices_function")
-    example_parser.add_argument('--choices_method', choices_method=choices_method,
-                                help="tab complete using a choices_method")
+    example_parser.add_argument(
+        '--choices_function', choices_function=choices_function, help="tab complete using a choices_function"
+    )
+    example_parser.add_argument('--choices_method', choices_method=choices_method, help="tab complete using a choices_method")
 
     # Tab complete using a completer function and completer method
-    example_parser.add_argument('--completer_function', completer_function=completer_function,
-                                help="tab complete using a completer_function")
-    example_parser.add_argument('--completer_method', completer_method=Cmd.path_complete,
-                                help="tab complete using a completer_method")
+    example_parser.add_argument(
+        '--completer_function', completer_function=completer_function, help="tab complete using a completer_function"
+    )
+    example_parser.add_argument(
+        '--completer_method', completer_method=Cmd.path_complete, help="tab complete using a completer_method"
+    )
 
     # Demonstrate raising a CompletionError while tab completing
-    example_parser.add_argument('--completion_error', choices_method=choices_completion_error,
-                                help="raise a CompletionError while tab completing if debug is False")
+    example_parser.add_argument(
+        '--completion_error',
+        choices_method=choices_completion_error,
+        help="raise a CompletionError while tab completing if debug is False",
+    )
 
     # Demonstrate returning CompletionItems instead of strings
-    example_parser.add_argument('--completion_item', choices_function=choices_completion_item, metavar="ITEM_ID",
-                                descriptive_header="Description",
-                                help="demonstrate use of CompletionItems")
+    example_parser.add_argument(
+        '--completion_item',
+        choices_function=choices_completion_item,
+        metavar="ITEM_ID",
+        descriptive_header="Description",
+        help="demonstrate use of CompletionItems",
+    )
 
     # Demonstrate use of arg_tokens dictionary
-    example_parser.add_argument('--arg_tokens', choices_function=choices_arg_tokens,
-                                help="demonstrate use of arg_tokens dictionary")
+    example_parser.add_argument(
+        '--arg_tokens', choices_function=choices_arg_tokens, help="demonstrate use of arg_tokens dictionary"
+    )
 
     @with_argparser(example_parser)
     def do_example(self, _: argparse.Namespace) -> None:

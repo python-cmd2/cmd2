@@ -16,9 +16,7 @@ import sys
 
 import invoke
 
-from plugins import (
-    tasks as plugin_tasks,
-)
+from plugins import tasks as plugin_tasks
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
@@ -72,7 +70,7 @@ def pytest(context, junit=False, pty=True, base=False, isolated=False):
             tests_cmd = command_str + ' tests'
             context.run(tests_cmd, pty=pty)
         if isolated:
-            for root, dirnames, _ in os.walk(str(TASK_ROOT/'tests_isolated')):
+            for root, dirnames, _ in os.walk(str(TASK_ROOT / 'tests_isolated')):
                 for dir in dirnames:
                     if dir.startswith('test_'):
                         context.run(command_str + ' tests_isolated/' + dir)
@@ -85,7 +83,7 @@ namespace.add_task(pytest)
 def pytest_clean(context):
     """Remove pytest cache and code coverage files and directories"""
     # pylint: disable=unused-argument
-    with context.cd(str(TASK_ROOT/'tests')):
+    with context.cd(str(TASK_ROOT / 'tests')):
         dirs = ['.pytest_cache', '.cache', 'htmlcov', '.coverage']
         rmrf(dirs)
     rmrf(dirs)
@@ -134,7 +132,7 @@ namespace_clean.add_task(nox_clean, 'nox')
 #####
 DOCS_SRCDIR = 'docs'
 DOCS_BUILDDIR = os.path.join('docs', '_build')
-SPHINX_OPTS = '-nvWT'   # Be nitpicky, verbose, and treat warnings as errors
+SPHINX_OPTS = '-nvWT'  # Be nitpicky, verbose, and treat warnings as errors
 
 
 @invoke.task()
@@ -172,7 +170,7 @@ namespace_clean.add_task(docs_clean, name='docs')
 @invoke.task()
 def linkcheck(context):
     """Check external links in Sphinx documentation for integrity."""
-    with context.cd(str(TASK_ROOT/'docs')):
+    with context.cd(str(TASK_ROOT / 'docs')):
         context.run('make linkcheck', pty=True)
 
 
@@ -349,8 +347,7 @@ namespace.add_task(pypi_test)
 def flake8(context):
     """Run flake8 linter and tool for style guide enforcement"""
     with context.cd(TASK_ROOT_STR):
-        context.run("flake8 --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics "
-                    "--exclude=.git,__pycache__,.tox,.nox,.eggs,*.egg,.venv,.idea,.pytest_cache,.vscode,build,dist,htmlcov")
+        context.run("flake8")
 
 
 namespace.add_task(flake8)

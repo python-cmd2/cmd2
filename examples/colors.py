@@ -24,9 +24,7 @@ Always
     regardless of the output destination
 """
 import argparse
-from typing import (
-    Any,
-)
+from typing import Any
 
 from colorama import (
     Back,
@@ -35,13 +33,12 @@ from colorama import (
 )
 
 import cmd2
-from cmd2 import (
-    ansi,
-)
+from cmd2 import ansi
 
 
 class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application demonstrating colorized output."""
+
     def __init__(self):
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         super().__init__(use_ipython=True)
@@ -106,5 +103,6 @@ class CmdLineApp(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     c = CmdLineApp()
     sys.exit(c.cmdloop())

@@ -3,10 +3,9 @@
 This module provides basic ability to copy from and paste to the clipboard/pastebuffer.
 """
 import pyperclip
+
 # noinspection PyProtectedMember
-from pyperclip import (
-    PyperclipException,
-)
+from pyperclip import PyperclipException
 
 # Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
 try:

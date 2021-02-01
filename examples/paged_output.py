@@ -3,9 +3,7 @@
 """A simple example demonstrating the using paged output via the ppaged() method.
 """
 import os
-from typing import (
-    List,
-)
+from typing import List
 
 import cmd2
 
@@ -57,5 +55,6 @@ class PagedOutput(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     app = PagedOutput()
     sys.exit(app.cmdloop())
