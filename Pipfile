@@ -11,6 +11,7 @@ setuptools = ">=34.4"
 wcwidth = ">=0.1.7"
 
 [dev-packages]
+black = "*"
 cmd2 = {editable = true,path = "."}
 cmd2_ext_test = {editable = true,path = "plugins/ext_test"}
 codecov = "*"
@@ -32,3 +33,6 @@ sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
 tableformatter="*"
 twine = ">=1.11"
+
+[pipenv]
+allow_prereleases = true
