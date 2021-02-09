@@ -1,2 +1,26 @@
 [build-system]
 requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+
+[tool.black]
+skip-string-normalization = true
+line-length = 127
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.github
+  | \.idea
+  | \.mypy_cache
+  | \.pytest_cache
+  | \.tox
+  | \.venv
+  | \.vscode
+  | _build
+  | build
+  | cmd2.egg-info
+  | cmd2_history.dat
+  | dist
+  | htmlcov
+)/
+'''
