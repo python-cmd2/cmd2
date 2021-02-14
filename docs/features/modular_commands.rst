@@ -44,7 +44,7 @@ functions with ``help_``, and completer functions with ``complete_``.
 
 A new decorator ``with_default_category`` is provided to categorize all commands within a CommandSet in the
 same command category.  Individual commands in a CommandSet may be override the default category by specifying a
-specific category with ``cmd.with_category``.
+specific category with ``cmd2.with_category``.
 
 CommandSet command methods will always expect the same parameters as when defined in a ``cmd2.Cmd`` sub-class,
 except that ``self`` will now refer to the ``CommandSet`` instead of the cmd2 instance. The cmd2 instance can
