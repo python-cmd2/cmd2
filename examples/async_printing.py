@@ -40,7 +40,7 @@ class AlerterApp(cmd2.Cmd):
         self.prompt = "(APR)> "
 
         # The thread that will asynchronously alert the user of events
-        self._stop_thread = False
+        self._stop_event = threading.Event()
         self._alerter_thread = threading.Thread()
         self._alert_count = 0
         self._next_alert_time = 0
@@ -55,7 +55,7 @@ class AlerterApp(cmd2.Cmd):
         # Therefore this is the best place to start the alerter thread since there is no risk of it alerting
         # before the prompt is displayed. You can also start it via a command if its not something that should
         # be running during the entire application. See do_start_alerts().
-        self._stop_thread = False
+        self._stop_event.clear()
 
         self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
         self._alerter_thread.start()
@@ -66,7 +66,7 @@ class AlerterApp(cmd2.Cmd):
         # After this function returns, cmdloop() releases self.terminal_lock which could make the alerter
         # thread think the prompt is on screen. Therefore this is the best place to stop the alerter thread.
         # You can also stop it via a command. See do_stop_alerts().
-        self._stop_thread = True
+        self._stop_event.set()
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
 
@@ -75,13 +75,13 @@ class AlerterApp(cmd2.Cmd):
         if self._alerter_thread.is_alive():
             print("The alert thread is already started")
         else:
-            self._stop_thread = False
+            self._stop_event.clear()
             self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
             self._alerter_thread.start()
 
     def do_stop_alerts(self, _):
         """ Stops the alerter thread """
-        self._stop_thread = True
+        self._stop_event.set()
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
         else:
@@ -171,7 +171,7 @@ class AlerterApp(cmd2.Cmd):
         self._alert_count = 0
         self._next_alert_time = 0
 
-        while not self._stop_thread:
+        while not self._stop_event.is_set():
             # Always acquire terminal_lock before printing alerts or updating the prompt
             # To keep the app responsive, do not block on this call
             if self.terminal_lock.acquire(blocking=False):
@@ -196,7 +196,7 @@ class AlerterApp(cmd2.Cmd):
                 # Don't forget to release the lock
                 self.terminal_lock.release()
 
-            time.sleep(0.5)
+            self._stop_event.wait(0.5)
 
 
 if __name__ == '__main__':

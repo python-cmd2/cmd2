@@ -77,7 +77,7 @@ class CommandSetA(CommandSetBase):
         self._cmd.last_result = {'args': args}
 
     def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        return utils.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
+        return self._cmd.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
 
     elderberry_parser = cmd2.Cmd2ArgumentParser()
     elderberry_parser.add_argument('arg1')
@@ -449,7 +449,7 @@ class LoadableVegetables(cmd2.CommandSet):
         return ['quartered', 'diced']
 
     bokchoy_parser = cmd2.Cmd2ArgumentParser()
-    bokchoy_parser.add_argument('style', completer_method=complete_style_arg)
+    bokchoy_parser.add_argument('style', completer=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
     def cut_bokchoy(self, ns: argparse.Namespace):
@@ -654,7 +654,7 @@ class AppWithSubCommands(cmd2.Cmd):
         return ['quartered', 'diced']
 
     bokchoy_parser = cmd2.Cmd2ArgumentParser()
-    bokchoy_parser.add_argument('style', completer_method=complete_style_arg)
+    bokchoy_parser.add_argument('style', completer=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
     def cut_bokchoy(self, _: argparse.Namespace):
@@ -705,12 +705,12 @@ class WithCompleterCommandSet(cmd2.CommandSet):
 
     def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         assert self is complete_states_expected_self
-        return utils.basic_complete(text, line, begidx, endidx, self.states)
+        return self._cmd.basic_complete(text, line, begidx, endidx, self.states)
 
 
 class SubclassCommandSetCase1(WithCompleterCommandSet):
     parser = cmd2.Cmd2ArgumentParser()
-    parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
+    parser.add_argument('state', type=str, completer=WithCompleterCommandSet.complete_states)
 
     @cmd2.with_argparser(parser)
     def do_case1(self, ns: argparse.Namespace):
@@ -719,7 +719,7 @@ class SubclassCommandSetCase1(WithCompleterCommandSet):
 
 class SubclassCommandSetErrorCase2(WithCompleterCommandSet):
     parser = cmd2.Cmd2ArgumentParser()
-    parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
+    parser.add_argument('state', type=str, completer=WithCompleterCommandSet.complete_states)
 
     @cmd2.with_argparser(parser)
     def do_error2(self, ns: argparse.Namespace):
@@ -732,7 +732,7 @@ class SubclassCommandSetCase2(cmd2.CommandSet):
         super(SubclassCommandSetCase2, self).__init__()
 
     parser = cmd2.Cmd2ArgumentParser()
-    parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
+    parser.add_argument('state', type=str, completer=WithCompleterCommandSet.complete_states)
 
     @cmd2.with_argparser(parser)
     def do_case2(self, ns: argparse.Namespace):
@@ -742,7 +742,7 @@ class SubclassCommandSetCase2(cmd2.CommandSet):
 def test_cross_commandset_completer(command_sets_manual):
     global complete_states_expected_self
     # This tests the different ways to locate the matching CommandSet when completing an argparse argument.
-    # Exercises the `_complete_for_arg` function of `ArgparseCompleter` in `argparse_completer.py`
+    # Exercises the `_complete_arg` function of `ArgparseCompleter` in `argparse_completer.py`
 
     ####################################################################################################################
     # This exercises Case 1
@@ -863,7 +863,7 @@ class CommandSetWithPathComplete(cmd2.CommandSet):
         super(CommandSetWithPathComplete, self).__init__()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', nargs='+', help='paths', completer_method=cmd2.Cmd.path_complete)
+    parser.add_argument('path', nargs='+', help='paths', completer=cmd2.Cmd.path_complete)
 
     @cmd2.with_argparser(parser)
     def do_path(self, app: cmd2.Cmd, args):

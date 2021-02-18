@@ -14,13 +14,12 @@ import pytest
 import cmd2
 from cmd2 import (
     Cmd2ArgumentParser,
+    CompletionError,
     CompletionItem,
     with_argparser,
 )
 from cmd2.utils import (
-    CompletionError,
     StdSim,
-    basic_complete,
 )
 
 from .conftest import (
@@ -28,45 +27,18 @@ from .conftest import (
     run_cmd,
 )
 
-# Lists used in our tests (there is a mix of sorted and unsorted on purpose)
-non_negative_int_choices = [1, 2, 3, 0, 22]
-int_choices = [-1, 1, -2, 2, 0, -12]
-static_choices_list = ['static', 'choices', 'stop', 'here']
-choices_from_function = ['choices', 'function', 'chatty', 'smith']
-choices_from_method = ['choices', 'method', 'most', 'improved']
-
-set_value_choices = ['set', 'value', 'choices']
-one_or_more_choices = ['one', 'or', 'more', 'choices']
-optional_choices = ['a', 'few', 'optional', 'choices']
-range_choices = ['some', 'range', 'choices']
-remainder_choices = ['remainder', 'choices']
-
-positional_choices = ['the', 'positional', 'choices']
-
-completions_from_function = ['completions', 'function', 'fairly', 'complete']
-completions_from_method = ['completions', 'method', 'missed', 'spot']
+# Data and functions for testing standalone choice_provider and completer
+standalone_choices = ['standalone', 'provider']
+standalone_completions = ['standalone', 'completer']
 
 
-def choices_function() -> List[str]:
-    """Function that provides choices"""
-    return choices_from_function
+# noinspection PyUnusedLocal
+def standalone_choice_provider(cli: cmd2.Cmd) -> List[str]:
+    return standalone_choices
 
 
-def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[str]:
-    """Tab completion function"""
-    return basic_complete(text, line, begidx, endidx, completions_from_function)
-
-
-def choices_takes_arg_tokens(arg_tokens: argparse.Namespace) -> List[str]:
-    """Choices function that receives arg_tokens from ArgparseCompleter"""
-    return [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
-
-
-def completer_takes_arg_tokens(text: str, line: str, begidx: int, endidx: int,
-                               arg_tokens: argparse.Namespace) -> List[str]:
-    """Completer function that receives arg_tokens from ArgparseCompleter"""
-    match_against = [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
-    return basic_complete(text, line, begidx, endidx, match_against)
+def standalone_completer(cli: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    return cli.basic_complete(text, line, begidx, endidx, standalone_completions)
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal,PyProtectedMember
@@ -122,15 +94,21 @@ class ArgparseCompleterTester(cmd2.Cmd):
         pass
 
     ############################################################################################################
-    # Begin code related to testing choices, choices_function, and choices_method parameters
+    # Begin code related to testing choices and choices_provider parameters
     ############################################################################################################
     STR_METAVAR = "HEADLESS"
     TUPLE_METAVAR = ('arg1', 'others')
     CUSTOM_DESC_HEADER = "Custom Header"
 
-    def choices_method(self) -> List[str]:
+    # Lists used in our tests (there is a mix of sorted and unsorted on purpose)
+    non_negative_int_choices = [1, 2, 3, 0, 22]
+    int_choices = [-1, 1, -2, 2, 0, -12]
+    static_choices_list = ['static', 'choices', 'stop', 'here']
+    choices_from_provider = ['choices', 'provider', 'probably', 'improved']
+
+    def choices_provider(self) -> List[str]:
         """Method that provides choices"""
-        return choices_from_method
+        return self.choices_from_provider
 
     def completion_item_method(self) -> List[CompletionItem]:
         """Choices method that returns CompletionItems"""
@@ -145,17 +123,15 @@ class ArgparseCompleterTester(cmd2.Cmd):
     # Flag args for choices command. Include string and non-string arg types.
     choices_parser.add_argument("-l", "--list", help="a flag populated with a choices list",
                                 choices=static_choices_list)
-    choices_parser.add_argument("-f", "--function", help="a flag populated with a choices function",
-                                choices_function=choices_function)
-    choices_parser.add_argument("-m", "--method", help="a flag populated with a choices method",
-                                choices_method=choices_method)
+    choices_parser.add_argument("-p", "--provider", help="a flag populated with a choices provider",
+                                choices_provider=choices_provider)
     choices_parser.add_argument('-d', "--desc_header", help='this arg has a descriptive header',
-                                choices_method=completion_item_method,
+                                choices_provider=completion_item_method,
                                 descriptive_header=CUSTOM_DESC_HEADER)
     choices_parser.add_argument('-n', "--no_header", help='this arg has no descriptive header',
-                                choices_method=completion_item_method, metavar=STR_METAVAR)
+                                choices_provider=completion_item_method, metavar=STR_METAVAR)
     choices_parser.add_argument('-t', "--tuple_metavar", help='this arg has tuple for a metavar',
-                                choices_method=completion_item_method, metavar=TUPLE_METAVAR,
+                                choices_provider=completion_item_method, metavar=TUPLE_METAVAR,
                                 nargs=argparse.ONE_OR_MORE)
     choices_parser.add_argument('-i', '--int', type=int, help='a flag with an int type',
                                 choices=int_choices)
@@ -163,10 +139,8 @@ class ArgparseCompleterTester(cmd2.Cmd):
     # Positional args for choices command
     choices_parser.add_argument("list_pos", help="a positional populated with a choices list",
                                 choices=static_choices_list)
-    choices_parser.add_argument("function_pos", help="a positional populated with a choices function",
-                                choices_function=choices_function)
-    choices_parser.add_argument("method_pos", help="a positional populated with a choices method",
-                                choices_method=choices_method)
+    choices_parser.add_argument("method_pos", help="a positional populated with a choices provider",
+                                choices_provider=choices_provider)
     choices_parser.add_argument('non_negative_int', type=int, help='a positional with non-negative int choices',
                                 choices=non_negative_int_choices)
     choices_parser.add_argument('empty_choices', help='a positional with empty choices',
@@ -177,25 +151,32 @@ class ArgparseCompleterTester(cmd2.Cmd):
         pass
 
     ############################################################################################################
-    # Begin code related to testing completer_function and completer_method parameters
+    # Begin code related to testing completer parameter
     ############################################################################################################
-    def completer_method(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Tab completion method"""
-        return basic_complete(text, line, begidx, endidx, completions_from_method)
+    completions_for_flag = ['completions', 'flag', 'fairly', 'complete']
+    completions_for_pos_1 = ['completions', 'positional_1', 'probably', 'missed', 'spot']
+    completions_for_pos_2 = ['completions', 'positional_2', 'probably', 'missed', 'me']
+
+    def flag_completer(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        return self.basic_complete(text, line, begidx, endidx, self.completions_for_flag)
+
+    def pos_1_completer(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        return self.basic_complete(text, line, begidx, endidx, self.completions_for_pos_1)
+
+    def pos_2_completer(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        return self.basic_complete(text, line, begidx, endidx, self.completions_for_pos_2)
 
     completer_parser = Cmd2ArgumentParser()
 
     # Flag args for completer command
-    completer_parser.add_argument("-f", "--function", help="a flag using a completer function",
-                                  completer_function=completer_function)
-    completer_parser.add_argument("-m", "--method", help="a flag using a completer method",
-                                  completer_method=completer_method)
+    completer_parser.add_argument("-c", "--completer", help="a flag using a completer",
+                                  completer=flag_completer)
 
     # Positional args for completer command
-    completer_parser.add_argument("function_pos", help="a positional using a completer function",
-                                  completer_function=completer_function)
-    completer_parser.add_argument("method_pos", help="a positional using a completer method",
-                                  completer_method=completer_method)
+    completer_parser.add_argument("pos_1", help="a positional using a completer method",
+                                  completer=pos_1_completer)
+    completer_parser.add_argument("pos_2", help="a positional using a completer method",
+                                  completer=pos_2_completer)
 
     @with_argparser(completer_parser)
     def do_completer(self, args: argparse.Namespace) -> None:
@@ -204,6 +185,13 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to nargs
     ############################################################################################################
+    set_value_choices = ['set', 'value', 'choices']
+    one_or_more_choices = ['one', 'or', 'more', 'choices']
+    optional_choices = ['a', 'few', 'optional', 'choices']
+    range_choices = ['some', 'range', 'choices']
+    remainder_choices = ['remainder', 'choices']
+    positional_choices = ['the', 'positional', 'choices']
+
     nargs_parser = Cmd2ArgumentParser()
 
     # Flag args for nargs command
@@ -255,10 +243,10 @@ class ArgparseCompleterTester(cmd2.Cmd):
         raise CompletionError('choice broke something')
 
     comp_error_parser = Cmd2ArgumentParser()
-    comp_error_parser.add_argument('completer', help='positional arg',
-                                   completer_method=completer_raise_error)
+    comp_error_parser.add_argument('completer_pos', help='positional arg',
+                                   completer=completer_raise_error)
     comp_error_parser.add_argument('--choice', help='flag arg',
-                                   choices_method=choice_raise_error)
+                                   choices_provider=choice_raise_error)
 
     @with_argparser(comp_error_parser)
     def do_raise_completion_error(self, args: argparse.Namespace) -> None:
@@ -267,6 +255,16 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to receiving arg_tokens
     ############################################################################################################
+    def choices_takes_arg_tokens(self, arg_tokens: argparse.Namespace) -> List[str]:
+        """Choices function that receives arg_tokens from ArgparseCompleter"""
+        return [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
+
+    def completer_takes_arg_tokens(self, text: str, line: str, begidx: int, endidx: int,
+                                   arg_tokens: argparse.Namespace) -> List[str]:
+        """Completer function that receives arg_tokens from ArgparseCompleter"""
+        match_against = [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
+        return self.basic_complete(text, line, begidx, endidx, match_against)
+
     arg_tokens_parser = Cmd2ArgumentParser()
     arg_tokens_parser.add_argument('parent_arg', help='arg from a parent parser')
 
@@ -274,8 +272,8 @@ class ArgparseCompleterTester(cmd2.Cmd):
     arg_tokens_subparser = arg_tokens_parser.add_subparsers(dest='subcommand')
     arg_tokens_subcmd_parser = arg_tokens_subparser.add_parser('subcmd')
 
-    arg_tokens_subcmd_parser.add_argument('choices_pos', choices_function=choices_takes_arg_tokens)
-    arg_tokens_subcmd_parser.add_argument('completer_pos', completer_function=completer_takes_arg_tokens)
+    arg_tokens_subcmd_parser.add_argument('choices_pos', choices_provider=choices_takes_arg_tokens)
+    arg_tokens_subcmd_parser.add_argument('completer_pos', completer=completer_takes_arg_tokens)
 
     # Used to override parent_arg in arg_tokens_parser
     arg_tokens_subcmd_parser.add_argument('--parent_arg')
@@ -298,6 +296,17 @@ class ArgparseCompleterTester(cmd2.Cmd):
 
     @with_argparser(mutex_parser)
     def do_mutex(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
+    # Begin code related to standalone functions
+    ############################################################################################################
+    standalone_parser = Cmd2ArgumentParser()
+    standalone_parser.add_argument('--provider', help='standalone provider', choices_provider=standalone_choice_provider)
+    standalone_parser.add_argument('--completer', help='standalone completer', completer=standalone_completer)
+
+    @with_argparser(standalone_parser)
+    def do_standalone(self, args: argparse.Namespace) -> None:
         pass
 
 
@@ -446,13 +455,11 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matc
 
 
 @pytest.mark.parametrize('flag, text, completions', [
-    ('-l', '', static_choices_list),
+    ('-l', '', ArgparseCompleterTester.static_choices_list),
     ('--list', 's', ['static', 'stop']),
-    ('-f', '', choices_from_function),
-    ('--function', 'ch', ['choices', 'chatty']),
-    ('-m', '', choices_from_method),
-    ('--method', 'm', ['method', 'most']),
-    ('-i', '', int_choices),
+    ('-p', '', ArgparseCompleterTester.choices_from_provider),
+    ('--provider', 'pr', ['provider', 'probably']),
+    ('-i', '', ArgparseCompleterTester.int_choices),
     ('--int', '1', ['1 ']),
     ('--int', '-', [-1, -2, -12]),
     ('--int', '-1', [-1, -12])
@@ -479,15 +486,13 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
 
 
 @pytest.mark.parametrize('pos, text, completions', [
-    (1, '', static_choices_list),
+    (1, '', ArgparseCompleterTester.static_choices_list),
     (1, 's', ['static', 'stop']),
-    (2, '', choices_from_function),
-    (2, 'ch', ['choices', 'chatty']),
-    (3, '', choices_from_method),
-    (3, 'm', ['method', 'most']),
-    (4, '', non_negative_int_choices),
-    (4, '2', [2, 22]),
-    (5, '', []),
+    (2, '', ArgparseCompleterTester.choices_from_provider),
+    (2, 'pr', ['provider', 'probably']),
+    (3, '', ArgparseCompleterTester.non_negative_int_choices),
+    (3, '2', [2, 22]),
+    (4, '', []),
 ])
 def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     # Generate line were preceding positionals are already filled
@@ -533,10 +538,8 @@ def test_flag_sorting(ac_app):
 
 
 @pytest.mark.parametrize('flag, text, completions', [
-    ('-f', '', completions_from_function),
-    ('--function', 'f', ['function', 'fairly']),
-    ('-m', '', completions_from_method),
-    ('--method', 'm', ['method', 'missed'])
+    ('-c', '', ArgparseCompleterTester.completions_for_flag),
+    ('--completer', 'f', ['flag', 'fairly'])
 ])
 def test_autocomp_flag_completers(ac_app, flag, text, completions):
     line = 'completer {} {}'.format(flag, text)
@@ -553,10 +556,10 @@ def test_autocomp_flag_completers(ac_app, flag, text, completions):
 
 
 @pytest.mark.parametrize('pos, text, completions', [
-    (1, '', completions_from_function),
-    (1, 'c', ['completions', 'complete']),
-    (2, '', completions_from_method),
-    (2, 'm', ['method', 'missed'])
+    (1, '', ArgparseCompleterTester.completions_for_pos_1),
+    (1, 'p', ['positional_1', 'probably']),
+    (2, '', ArgparseCompleterTester.completions_for_pos_2),
+    (2, 'm', ['missed', 'me']),
 ])
 def test_autocomp_positional_completers(ac_app, pos, text, completions):
     # Generate line were preceding positionals are already filled
@@ -579,27 +582,27 @@ def test_autocomp_blank_token(ac_app):
 
     blank = ''
 
-    # Blank flag arg
+    # Blank flag arg will be consumed. Therefore we expect to be completing the first positional.
     text = ''
-    line = 'completer -m {} {}'.format(blank, text)
+    line = 'completer -c {} {}'.format(blank, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     completer = ArgparseCompleter(ac_app.completer_parser, ac_app)
-    tokens = ['completer', '-f', blank, text]
-    completions = completer.complete_command(tokens, text, line, begidx, endidx)
-    assert completions == completions_from_function
+    tokens = ['-c', blank, text]
+    completions = completer.complete(text, line, begidx, endidx, tokens)
+    assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_1)
 
-    # Blank positional arg
+    # Blank arg for first positional will be consumed. Therefore we expect to be completing the second positional.
     text = ''
     line = 'completer {} {}'.format(blank, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     completer = ArgparseCompleter(ac_app.completer_parser, ac_app)
-    tokens = ['completer', blank, text]
-    completions = completer.complete_command(tokens, text, line, begidx, endidx)
-    assert completions == completions_from_method
+    tokens = [blank, text]
+    completions = completer.complete(text, line, begidx, endidx, tokens)
+    assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_2)
 
 
 @pytest.mark.parametrize('num_aliases, show_description', [
@@ -633,54 +636,54 @@ def test_completion_items(ac_app, num_aliases, show_description):
 
 @pytest.mark.parametrize('args, completions', [
     # Flag with nargs = 2
-    ('--set_value', set_value_choices),
+    ('--set_value', ArgparseCompleterTester.set_value_choices),
     ('--set_value set', ['value', 'choices']),
 
     # Both args are filled. At positional arg now.
-    ('--set_value set value', positional_choices),
+    ('--set_value set value', ArgparseCompleterTester.positional_choices),
 
     # Using the flag again will reset the choices available
-    ('--set_value set value --set_value', set_value_choices),
+    ('--set_value set value --set_value', ArgparseCompleterTester.set_value_choices),
 
     # Flag with nargs = ONE_OR_MORE
-    ('--one_or_more', one_or_more_choices),
+    ('--one_or_more', ArgparseCompleterTester.one_or_more_choices),
     ('--one_or_more one', ['or', 'more', 'choices']),
 
     # Flag with nargs = OPTIONAL
-    ('--optional', optional_choices),
+    ('--optional', ArgparseCompleterTester.optional_choices),
 
     # Only one arg allowed for an OPTIONAL. At positional now.
-    ('--optional optional', positional_choices),
+    ('--optional optional', ArgparseCompleterTester.positional_choices),
 
     # Flag with nargs range (1, 2)
-    ('--range', range_choices),
+    ('--range', ArgparseCompleterTester.range_choices),
     ('--range some', ['range', 'choices']),
 
     # Already used 2 args so at positional
-    ('--range some range', positional_choices),
+    ('--range some range', ArgparseCompleterTester.positional_choices),
 
     # Flag with nargs = REMAINDER
-    ('--remainder', remainder_choices),
+    ('--remainder', ArgparseCompleterTester.remainder_choices),
     ('--remainder remainder ', ['choices ']),
 
     # No more flags can appear after a REMAINDER flag)
     ('--remainder choices --set_value', ['remainder ']),
 
     # Double dash ends the current flag
-    ('--range choice --', positional_choices),
+    ('--range choice --', ArgparseCompleterTester.positional_choices),
 
     # Double dash ends a REMAINDER flag
-    ('--remainder remainder --', positional_choices),
+    ('--remainder remainder --', ArgparseCompleterTester.positional_choices),
 
     # No more flags after a double dash
-    ('-- --one_or_more ', positional_choices),
+    ('-- --one_or_more ', ArgparseCompleterTester.positional_choices),
 
     # Consume positional
-    ('', positional_choices),
+    ('', ArgparseCompleterTester.positional_choices),
     ('positional', ['the', 'choices']),
 
     # Intermixed flag and positional
-    ('positional --set_value', set_value_choices),
+    ('positional --set_value', ArgparseCompleterTester.set_value_choices),
     ('positional --set_value set', ['choices', 'value']),
 
     # Intermixed flag and positional with flag finishing
@@ -688,12 +691,12 @@ def test_completion_items(ac_app, num_aliases, show_description):
     ('positional --range choice --', ['the', 'choices']),
 
     # REMAINDER positional
-    ('the positional', remainder_choices),
+    ('the positional', ArgparseCompleterTester.remainder_choices),
     ('the positional remainder', ['choices ']),
     ('the positional remainder choices', []),
 
     # REMAINDER positional. Flags don't work in REMAINDER
-    ('the positional --set_value', remainder_choices),
+    ('the positional --set_value', ArgparseCompleterTester.remainder_choices),
     ('the positional remainder --set_value', ['choices '])
 ])
 def test_autcomp_nargs(ac_app, args, completions):
@@ -1011,7 +1014,7 @@ def test_complete_command_no_tokens(ac_app):
     parser = Cmd2ArgumentParser()
     ac = ArgparseCompleter(parser, ac_app)
 
-    completions = ac.complete_command(tokens=[], text='', line='', begidx=0, endidx=0)
+    completions = ac.complete(text='', line='', begidx=0, endidx=0, tokens=[])
     assert not completions
 
 
@@ -1021,5 +1024,20 @@ def test_complete_command_help_no_tokens(ac_app):
     parser = Cmd2ArgumentParser()
     ac = ArgparseCompleter(parser, ac_app)
 
-    completions = ac.complete_subcommand_help(tokens=[], text='', line='', begidx=0, endidx=0)
+    completions = ac.complete_subcommand_help(text='', line='', begidx=0, endidx=0, tokens=[])
     assert not completions
+
+
+@pytest.mark.parametrize('flag, completions', [
+    ('--provider', standalone_choices),
+    ('--completer', standalone_completions)
+])
+def test_complete_standalone(ac_app, flag, completions):
+    text = ''
+    line = 'standalone {} {}'.format(flag, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)

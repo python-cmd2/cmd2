@@ -188,49 +188,6 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str):
             break
 
 
-def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
-                                    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
-                                    preserve_quotes: bool = False) -> \
-        Callable[[argparse.Namespace, List], Optional[bool]]:
-    """
-    Deprecated decorator. Use `with_argparser(parser, with_unknown_args=True)` instead.
-
-    A decorator to alter a cmd2 method to populate its ``args`` argument by parsing
-    arguments with the given instance of argparse.ArgumentParser, but also returning
-    unknown args as a list.
-
-    :param parser: unique instance of ArgumentParser
-    :param ns_provider: An optional function that accepts a cmd2.Cmd object as an argument
-                        and returns an argparse.Namespace. This is useful if the Namespace
-                        needs to be prepopulated with state data that affects parsing.
-    :param preserve_quotes: if ``True``, then arguments passed to argparse maintain their quotes
-    :return: function that gets passed argparse-parsed args in a ``Namespace`` and a list
-             of unknown argument strings. A :class:`cmd2.argparse_custom.Cmd2AttributeWrapper` called
-             ``cmd2_statement`` is included in the ``Namespace`` to provide access to the :class:`cmd2.Statement`
-             object. that was created when parsing the command line. This can be useful if the command function
-             needs to know the command line.
-
-    :Example:
-
-    >>> parser = argparse.ArgumentParser()
-    >>> parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    >>> parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    >>>
-    >>> class MyApp(cmd2.Cmd):
-    >>>     @cmd2.with_argparser(parser, with_unknown_args=True)
-    >>>     def do_argprint(self, args, unknown):
-    >>>         "Print the options and argument list this options command was called with."
-    >>>         self.poutput('args: {!r}'.format(args))
-    >>>         self.poutput('unknowns: {}'.format(unknown))
-    """
-    import warnings
-    warnings.warn('This decorator will be deprecated. Use `with_argparser(parser, with_unknown_args=True)`.',
-                  PendingDeprecationWarning, stacklevel=2)
-
-    return with_argparser(parser, ns_provider=ns_provider, preserve_quotes=preserve_quotes, with_unknown_args=True)
-
-
 def with_argparser(parser: argparse.ArgumentParser, *,
                    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
                    preserve_quotes: bool = False,
@@ -317,9 +274,6 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             except SystemExit:
                 raise Cmd2ArgparseError
             else:
-                # Add statement to Namespace as __statement__ (this is deprecated and will be removed in 2.0)
-                setattr(ns, constants.NS_ATTR_STATEMENT, statement)
-
                 # Add wrapped statement to Namespace as cmd2_statement
                 setattr(ns, 'cmd2_statement', Cmd2AttributeWrapper(statement))
 

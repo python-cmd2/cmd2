@@ -38,7 +38,7 @@ Included Tab Completion Functions
 ---------------------------------
 ``cmd2`` provides the following tab completion functions
 
-- :attr:`cmd2.utils.basic_complete` - helper method for tab completion against
+- :attr:`cmd2.Cmd.basic_complete` - helper method for tab completion against
   a list
 - :attr:`cmd2.Cmd.path_complete` - helper method provides flexible tab
   completion of file system paths
@@ -79,7 +79,7 @@ to be reported to the user. These include the following example cases:
   is invalid
 - Tab completion hints
 
-``cmd2`` provides the :class:`cmd2.utils.CompletionError` exception class for
+``cmd2`` provides the :class:`cmd2.exceptions.CompletionError` exception class for
 this capability. If an error occurs in which it is more desirable to display
 a message than a stack trace, then raise a ``CompletionError``. By default, the
 message displays in red like an error. However, ``CompletionError`` has a
@@ -89,24 +89,25 @@ completion hints.
 
 .. _argparse-based:
 
+
 Tab Completion Using argparse Decorators
 ----------------------------------------
 
 When using one the argparse-based :ref:`api/decorators:cmd2.decorators`,
 ``cmd2`` provides automatic tab completion of flag names.
 
-Tab completion of argument values can be configured by using one of five
+Tab completion of argument values can be configured by using one of three
 parameters to :meth:`argparse.ArgumentParser.add_argument`
 
 - ``choices``
-- ``choices_function`` or ``choices_method``
-- ``completer_function`` or ``completer_method``
+- ``choices_provider``
+- ``completer``
 
 See the arg_decorators_ or colors_ example for a demonstration of how to
 use the ``choices`` parameter. See the argparse_completion_ example for a
-demonstration of how to use the ``choices_function`` and ``choices_method``
-parameters. See the arg_decorators_ or argparse_completion_ example for a
-demonstration of how to use the ``completer_method`` parameter.
+demonstration of how to use the ``choices_provider`` parameter. See the
+arg_decorators_ or argparse_completion_ example for a demonstration
+of how to use the ``completer`` parameter.
 
 When tab completing flags or argument values for a ``cmd2`` command using
 one of these decorators, ``cmd2`` keeps track of state so that once a flag has
@@ -126,11 +127,22 @@ When tab completing things like a unique ID from a database, it can often be
 beneficial to provide the user with some extra context about the item being
 completed, such as a description.  To facilitate this, ``cmd2`` defines the
 :class:`cmd2.argparse_custom.CompletionItem` class which can be returned from
-any of the 4 completion functions: ``choices_function``, ``choices_method``,
-``completion_function``, or ``completion_method``.
+any of the 3 completion parameters: ``choices``, ``choices_provider``, and
+``completer``.
 
 See the argparse_completion_ example or the implementation of the built-in
 :meth:`~cmd2.Cmd.do_set` command for demonstration of how this is used.
+
+
+Custom Completion with ``read_input()``
+--------------------------------------------------
+
+``cmd2`` provides :attr:`cmd2.Cmd.read_input` as an alternative to Python's
+``input()`` function. ``read_input`` supports configurable tab completion and
+up-arrow history at the prompt. See read_input_ example for a demonstration.
+
+.. _read_input: https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py
+
 
 For More Information
 --------------------

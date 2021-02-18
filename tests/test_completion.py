@@ -73,13 +73,13 @@ class CompletionsExample(cmd2.Cmd):
         cmd2.Cmd.__init__(self, multiline_commands=['test_multiline'])
         self.foo = 'bar'
         self.add_settable(utils.Settable('foo', str, description="a settable param",
-                                         completer_method=CompletionsExample.complete_foo_val))
+                                         completer=CompletionsExample.complete_foo_val))
 
     def do_test_basic(self, args):
         pass
 
     def complete_test_basic(self, text, line, begidx, endidx):
-        return utils.basic_complete(text, line, begidx, endidx, food_item_strs)
+        return self.basic_complete(text, line, begidx, endidx, food_item_strs)
 
     def do_test_delimited(self, args):
         pass
@@ -92,7 +92,7 @@ class CompletionsExample(cmd2.Cmd):
 
     def complete_test_sort_key(self, text, line, begidx, endidx):
         num_strs = ['2', '11', '1']
-        return utils.basic_complete(text, line, begidx, endidx, num_strs)
+        return self.basic_complete(text, line, begidx, endidx, num_strs)
 
     def do_test_raise_exception(self, args):
         pass
@@ -104,7 +104,7 @@ class CompletionsExample(cmd2.Cmd):
         pass
 
     def complete_test_multiline(self, text, line, begidx, endidx):
-        return utils.basic_complete(text, line, begidx, endidx, sport_item_strs)
+        return self.basic_complete(text, line, begidx, endidx, sport_item_strs)
 
     def do_test_no_completer(self, args):
         """Completing this should result in completedefault() being called"""
@@ -547,7 +547,7 @@ def test_basic_completion_single(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert utils.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
+    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
 def test_basic_completion_multiple(cmd2_app):
     text = ''
@@ -555,7 +555,7 @@ def test_basic_completion_multiple(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    matches = sorted(utils.basic_complete(text, line, begidx, endidx, food_item_strs))
+    matches = sorted(cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs))
     assert matches == sorted(food_item_strs)
 
 def test_basic_completion_nomatch(cmd2_app):
@@ -564,7 +564,7 @@ def test_basic_completion_nomatch(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert utils.basic_complete(text, line, begidx, endidx, food_item_strs) == []
+    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
 def test_delimiter_completion(cmd2_app):
     text = '/home/'
@@ -864,9 +864,9 @@ def test_no_completer(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
 
-def test_quote_as_command(cmd2_app):
+def test_wordbreak_in_command(cmd2_app):
     text = ''
-    line = '" {}'.format(text)
+    line = '"{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1153,7 +1153,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
 
 @pytest.fixture
 def scu_app():
-    """Declare test fixture for with_argparser_and_unknown_args"""
+    """Declare test fixture for with_argparser decorator"""
     app = SubcommandsWithUnknownExample()
     return app
 

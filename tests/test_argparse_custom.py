@@ -48,13 +48,9 @@ def fake_func():
 
 
 @pytest.mark.parametrize('kwargs, is_valid', [
-    ({'choices_function': fake_func}, True),
-    ({'choices_method': fake_func}, True),
-    ({'completer_function': fake_func}, True),
-    ({'completer_method': fake_func}, True),
-    ({'choices_function': fake_func, 'choices_method': fake_func}, False),
-    ({'choices_method': fake_func, 'completer_function': fake_func}, False),
-    ({'completer_function': fake_func, 'completer_method': fake_func}, False),
+    ({'choices_provider': fake_func}, True),
+    ({'completer': fake_func}, True),
+    ({'choices_provider': fake_func, 'completer': fake_func}, False),
 ])
 def test_apcustom_choices_callable_count(kwargs, is_valid):
     parser = Cmd2ArgumentParser()
@@ -67,10 +63,8 @@ def test_apcustom_choices_callable_count(kwargs, is_valid):
 
 
 @pytest.mark.parametrize('kwargs', [
-    ({'choices_function': fake_func}),
-    ({'choices_method': fake_func}),
-    ({'completer_function': fake_func}),
-    ({'completer_method': fake_func})
+    ({'choices_provider': fake_func}),
+    ({'completer': fake_func})
 ])
 def test_apcustom_no_choices_callables_alongside_choices(kwargs):
     with pytest.raises(TypeError) as excinfo:
@@ -80,10 +74,8 @@ def test_apcustom_no_choices_callables_alongside_choices(kwargs):
 
 
 @pytest.mark.parametrize('kwargs', [
-    ({'choices_function': fake_func}),
-    ({'choices_method': fake_func}),
-    ({'completer_function': fake_func}),
-    ({'completer_method': fake_func})
+    ({'choices_provider': fake_func}),
+    ({'completer': fake_func})
 ])
 def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs):
     with pytest.raises(TypeError) as excinfo:

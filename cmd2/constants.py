@@ -57,4 +57,3 @@ PARSER_ATTR_COMMANDSET = 'command_set'
 
 # custom attributes added to argparse Namespaces
 NS_ATTR_SUBCMD_HANDLER = '__subcmd_handler__'
-NS_ATTR_STATEMENT = '__statement__'
