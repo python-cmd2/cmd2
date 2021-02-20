@@ -1590,6 +1590,7 @@ def test_read_input_rawinput_true(capsys, monkeypatch):
 
         # Run custom history code
         import readline
+
         readline.add_history('old_history')
         custom_history = ['cmd1', 'cmd2']
         line = app.read_input(prompt_str, history=custom_history, completion_mode=cmd2.CompletionMode.NONE)
@@ -1605,23 +1606,21 @@ def test_read_input_rawinput_true(capsys, monkeypatch):
 
         # custom choices
         custom_choices = ['choice1', 'choice2']
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM,
-                              choices=custom_choices)
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices=custom_choices)
         assert line == input_str
 
         # custom choices_provider
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM,
-                              choices_provider=cmd2.Cmd.get_all_commands)
+        line = app.read_input(
+            prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices_provider=cmd2.Cmd.get_all_commands
+        )
         assert line == input_str
 
         # custom completer
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM,
-                              completer=cmd2.Cmd.path_complete)
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, completer=cmd2.Cmd.path_complete)
         assert line == input_str
 
         # custom parser
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM,
-                              parser=cmd2.Cmd2ArgumentParser())
+        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, parser=cmd2.Cmd2ArgumentParser())
         assert line == input_str
 
     # isatty is False
@@ -1832,6 +1831,7 @@ def test_alias_create(base_app):
     out, err = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake help')
 
+
 def test_alias_create_with_quoted_tokens(base_app):
     """Demonstrate that quotes in alias value will be preserved"""
     create_command = 'alias create fake help ">" "out file.txt" ";"'
@@ -1946,6 +1946,7 @@ def test_macro_create(base_app):
     # Look up the updated macro
     out, err = run_cmd(base_app, 'macro list fake')
     assert out == normalize('macro create fake help')
+
 
 def test_macro_create_with_quoted_tokens(base_app):
     """Demonstrate that quotes in macro value will be preserved"""

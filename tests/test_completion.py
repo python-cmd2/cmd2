@@ -69,8 +69,9 @@ class CompletionsExample(cmd2.Cmd):
     def __init__(self):
         cmd2.Cmd.__init__(self, multiline_commands=['test_multiline'])
         self.foo = 'bar'
-        self.add_settable(utils.Settable('foo', str, description="a settable param",
-                                         completer=CompletionsExample.complete_foo_val))
+        self.add_settable(
+            utils.Settable('foo', str, description="a settable param", completer=CompletionsExample.complete_foo_val)
+        )
 
     def do_test_basic(self, args):
         pass
@@ -912,6 +913,7 @@ def test_no_completer(cmd2_app):
     expected = ['default ']
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
+
 
 def test_wordbreak_in_command(cmd2_app):
     text = ''

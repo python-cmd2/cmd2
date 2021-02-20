@@ -34,7 +34,10 @@ except ImportError:
 # readline tests
 #
 def test_readline_remove_history_item(base_app):
-    from cmd2.rl_utils import readline
+    from cmd2.rl_utils import (
+        readline,
+    )
+
     readline.clear_history()
     assert readline.get_current_history_length() == 0
     readline.add_history('this is a test')

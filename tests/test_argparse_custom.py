@@ -48,11 +48,14 @@ def fake_func():
     pass
 
 
-@pytest.mark.parametrize('kwargs, is_valid', [
-    ({'choices_provider': fake_func}, True),
-    ({'completer': fake_func}, True),
-    ({'choices_provider': fake_func, 'completer': fake_func}, False),
-])
+@pytest.mark.parametrize(
+    'kwargs, is_valid',
+    [
+        ({'choices_provider': fake_func}, True),
+        ({'completer': fake_func}, True),
+        ({'choices_provider': fake_func, 'completer': fake_func}, False),
+    ],
+)
 def test_apcustom_choices_callable_count(kwargs, is_valid):
     parser = Cmd2ArgumentParser()
     try:
@@ -63,10 +66,7 @@ def test_apcustom_choices_callable_count(kwargs, is_valid):
         assert 'Only one of the following parameters' in str(ex)
 
 
-@pytest.mark.parametrize('kwargs', [
-    ({'choices_provider': fake_func}),
-    ({'completer': fake_func})
-])
+@pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
 def test_apcustom_no_choices_callables_alongside_choices(kwargs):
     with pytest.raises(TypeError) as excinfo:
         parser = Cmd2ArgumentParser()
@@ -74,10 +74,7 @@ def test_apcustom_no_choices_callables_alongside_choices(kwargs):
     assert 'None of the following parameters can be used alongside a choices parameter' in str(excinfo.value)
 
 
-@pytest.mark.parametrize('kwargs', [
-    ({'choices_provider': fake_func}),
-    ({'completer': fake_func})
-])
+@pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
 def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs):
     with pytest.raises(TypeError) as excinfo:
         parser = Cmd2ArgumentParser()

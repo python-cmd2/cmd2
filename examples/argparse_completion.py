@@ -45,12 +45,7 @@ class ArgparseCompletion(Cmd):
     # noinspection PyMethodMayBeStatic
     def choices_completion_item(self) -> List[CompletionItem]:
         """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
-        items = \
-            {
-                1: "My item",
-                2: "Another item",
-                3: "Yet another item"
-            }
+        items = {1: "My item", 2: "Another item", 3: "Yet another item"}
         return [CompletionItem(item_id, description) for item_id, description in items.items()]
 
     # noinspection PyMethodMayBeStatic
@@ -78,29 +73,36 @@ class ArgparseCompletion(Cmd):
     # want the entire choices list showing in the usage text for this command.
     example_parser.add_argument('--choices', choices=food_item_strs, metavar="CHOICE", help="tab complete using choices")
 
-    example_parser.add_argument('--choices', choices=food_item_strs, metavar="CHOICE",
-                                help="tab complete using choices")
+    example_parser.add_argument('--choices', choices=food_item_strs, metavar="CHOICE", help="tab complete using choices")
 
     # Tab complete from choices provided by a choices_provider
-    example_parser.add_argument('--choices_provider', choices_provider=choices_provider,
-                                help="tab complete using a choices_provider")
+    example_parser.add_argument(
+        '--choices_provider', choices_provider=choices_provider, help="tab complete using a choices_provider"
+    )
 
     # Tab complete using a completer
-    example_parser.add_argument('--completer', completer=Cmd.path_complete,
-                                help="tab complete using a completer")
+    example_parser.add_argument('--completer', completer=Cmd.path_complete, help="tab complete using a completer")
 
     # Demonstrate raising a CompletionError while tab completing
-    example_parser.add_argument('--completion_error', choices_provider=choices_completion_error,
-                                help="raise a CompletionError while tab completing if debug is False")
+    example_parser.add_argument(
+        '--completion_error',
+        choices_provider=choices_completion_error,
+        help="raise a CompletionError while tab completing if debug is False",
+    )
 
     # Demonstrate returning CompletionItems instead of strings
-    example_parser.add_argument('--completion_item', choices_provider=choices_completion_item, metavar="ITEM_ID",
-                                descriptive_header="Description",
-                                help="demonstrate use of CompletionItems")
+    example_parser.add_argument(
+        '--completion_item',
+        choices_provider=choices_completion_item,
+        metavar="ITEM_ID",
+        descriptive_header="Description",
+        help="demonstrate use of CompletionItems",
+    )
 
     # Demonstrate use of arg_tokens dictionary
-    example_parser.add_argument('--arg_tokens', choices_provider=choices_arg_tokens,
-                                help="demonstrate use of arg_tokens dictionary")
+    example_parser.add_argument(
+        '--arg_tokens', choices_provider=choices_arg_tokens, help="demonstrate use of arg_tokens dictionary"
+    )
 
     @with_argparser(example_parser)
     def do_example(self, _: argparse.Namespace) -> None:

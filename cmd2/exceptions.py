@@ -48,6 +48,7 @@ class CompletionError(Exception):
     - A previous command line argument that determines the data set being completed is invalid
     - Tab completion hints
     """
+
     def __init__(self, *args, apply_style: bool = True, **kwargs):
         """
         Initializer for CompletionError
@@ -59,6 +60,7 @@ class CompletionError(Exception):
 
         # noinspection PyArgumentList
         super().__init__(*args, **kwargs)
+
 
 ############################################################################################################
 # The following exceptions are NOT part of the public API and are intended for internal use only.

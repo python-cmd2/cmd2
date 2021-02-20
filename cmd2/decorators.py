@@ -196,10 +196,13 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str):
             break
 
 
-def with_argparser(parser: argparse.ArgumentParser, *,
-                   ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
-                   preserve_quotes: bool = False,
-                   with_unknown_args: bool = False) -> Callable[[argparse.Namespace], Optional[bool]]:
+def with_argparser(
+    parser: argparse.ArgumentParser,
+    *,
+    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
+    preserve_quotes: bool = False,
+    with_unknown_args: bool = False
+) -> Callable[[argparse.Namespace], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 

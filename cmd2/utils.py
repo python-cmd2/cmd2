@@ -93,11 +93,18 @@ def str_to_bool(val: str) -> bool:
 
 class Settable:
     """Used to configure a cmd2 instance member to be settable via the set command in the CLI"""
-    def __init__(self, name: str, val_type: Callable, description: str, *,
-                 onchange_cb: Callable[[str, Any, Any], Any] = None,
-                 choices: Iterable = None,
-                 choices_provider: Optional[Callable] = None,
-                 completer: Optional[Callable] = None):
+
+    def __init__(
+        self,
+        name: str,
+        val_type: Callable,
+        description: str,
+        *,
+        onchange_cb: Callable[[str, Any, Any], Any] = None,
+        choices: Iterable = None,
+        choices_provider: Optional[Callable] = None,
+        completer: Optional[Callable] = None
+    ):
         """
         Settable Initializer
 
@@ -1075,6 +1082,7 @@ def get_defining_class(meth) -> Type:
 
 class CompletionMode(Enum):
     """Enum for what type of tab completion to perform in cmd2.Cmd.read_input()"""
+
     # Tab completion will be disabled during read_input() call
     # Use of custom up-arrow history supported
     NONE = 1
@@ -1092,6 +1100,7 @@ class CompletionMode(Enum):
 
 class CustomCompletionSettings:
     """Used by cmd2.Cmd.complete() to tab complete strings other than command arguments"""
+
     def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False):
         """
         Initializer

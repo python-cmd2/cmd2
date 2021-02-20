@@ -285,6 +285,7 @@ class ChoicesCallable:
     Enables using a callable as the choices provider for an argparse argument.
     While argparse has the built-in choices attribute, it is limited to an iterable.
     """
+
     def __init__(self, is_completer: bool, to_call: Callable):
         """
         Initializer
@@ -305,12 +306,13 @@ def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCall
     """
     # Verify consistent use of parameters
     if action.choices is not None:
-        err_msg = ("None of the following parameters can be used alongside a choices parameter:\n"
-                   "choices_provider, completer")
+        err_msg = "None of the following parameters can be used alongside a choices parameter:\n" "choices_provider, completer"
         raise (TypeError(err_msg))
     elif action.nargs == 0:
-        err_msg = ("None of the following parameters can be used on an action that takes no arguments:\n"
-                   "choices_provider, completer")
+        err_msg = (
+            "None of the following parameters can be used on an action that takes no arguments:\n"
+            "choices_provider, completer"
+        )
         raise (TypeError(err_msg))
 
     setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
@@ -335,13 +337,16 @@ def set_completer(action: argparse.Action, completer: Callable) -> None:
 orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
-def _add_argument_wrapper(self, *args,
-                          nargs: Union[int, str, Tuple[int], Tuple[int, int], None] = None,
-                          choices_provider: Optional[Callable] = None,
-                          completer: Optional[Callable] = None,
-                          suppress_tab_hint: bool = False,
-                          descriptive_header: Optional[str] = None,
-                          **kwargs) -> argparse.Action:
+def _add_argument_wrapper(
+    self,
+    *args,
+    nargs: Union[int, str, Tuple[int], Tuple[int, int], None] = None,
+    choices_provider: Optional[Callable] = None,
+    completer: Optional[Callable] = None,
+    suppress_tab_hint: bool = False,
+    descriptive_header: Optional[str] = None,
+    **kwargs
+) -> argparse.Action:
     """
     Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
 
@@ -379,8 +384,7 @@ def _add_argument_wrapper(self, *args,
     num_params_set = len(choices_callables) - choices_callables.count(None)
 
     if num_params_set > 1:
-        err_msg = ("Only one of the following parameters may be used at a time:\n"
-                   "choices_provider, completer")
+        err_msg = "Only one of the following parameters may be used at a time:\n" "choices_provider, completer"
         raise (ValueError(err_msg))
 
     # Pre-process special ranged nargs
