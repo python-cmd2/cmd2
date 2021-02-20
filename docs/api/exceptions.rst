@@ -12,3 +12,6 @@ Custom cmd2 exceptions
 
 .. autoclass:: cmd2.exceptions.CommandSetRegistrationError
     :members:
+
+.. autoclass:: cmd2.exceptions.CompletionError
+    :members:

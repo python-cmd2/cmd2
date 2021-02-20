@@ -10,9 +10,6 @@ from typing import (
 )
 
 import cmd2
-from cmd2 import (
-    utils,
-)
 
 
 @cmd2.with_default_category('Fruits')
@@ -45,7 +42,7 @@ class CommandSetA(cmd2.CommandSet):
         self._cmd.poutput(', '.join(['{}'] * len(args)).format(*args))
 
     def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        return utils.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
+        return self._cmd.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
 
     elderberry_parser = cmd2.Cmd2ArgumentParser()
     elderberry_parser.add_argument('arg1')

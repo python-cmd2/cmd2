@@ -389,11 +389,7 @@ argparse arguments.
 
 - ``cmd2_statement`` - ``cmd2.Cmd2AttributeWrapper`` object containing
   ``cmd2.Statement`` object that was created when parsing the command line.
-- ``__statement__`` - ``cmd2.Statement`` object that was created when parsing
-  the command line. (This is deprecated and will be removed in 2.0.0.) Use
-  ``cmd2_statement`` instead.
-
-- ``__subcmd_handler__`` - used by cmd2 to identify the handler for a
-  subcommand created with ``@cmd2.as_subcommand_to`` decorator.
 - ``cmd2_handler`` - ``cmd2.Cmd2AttributeWrapper`` object containing
   a subcommand handler function or ``None`` if one was not set.
+- ``__subcmd_handler__`` - used by cmd2 to identify the handler for a
+  subcommand created with ``@cmd2.as_subcommand_to`` decorator.

@@ -1,3 +1,21 @@
+## 2.0.0 (TBD, 2021)
+* Breaking changes
+    * Argparse Completion / Settables
+        * Replaced `choices_function` / `choices_method` with `choices_provider`.
+        * Replaced `completer_function` / `completer_method` with `completer`.
+        * ArgparseCompleter now always passes `cmd2.Cmd` or `CommandSet` instance as the first positional
+        argument to choices_provider and completer functions.
+    * Moved `basic_complete` from utils into `cmd2.Cmd` class.
+    * Moved `CompletionError` to exceptions.py
+    * ``Namespace.__statement__`` has been removed. Use `Namespace.cmd2_statement.get()` instead.
+    * Removed `--silent` flag from `alias/macro create` since startup scripts can be run silently.
+    * Removed `--with_silent` flag from `alias/macro list` since startup scripts can be run silently.
+    * Removed `with_argparser_and_unknown_args` since it was deprecated in 1.3.0.
+* Enhancements
+    * Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
+      See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
+      for an example.
+
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes
     * Fixed bug where setting `always_show_hint=True` did not show a hint when completing `Settables`

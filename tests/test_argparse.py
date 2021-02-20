@@ -195,7 +195,7 @@ def test_argparser_correct_args_with_quotes_and_midline_options(argparse_app):
 
 
 def test_argparser_and_unknown_args_kwargs(argparse_app, capsys):
-    """Test with_argparser_and_unknown_args wrapper passes through kwargs to command function"""
+    """Test with_argparser wrapper passing through kwargs to command function"""
     argparse_app.do_speak('', keyword_arg="foo")
     out, err = capsys.readouterr()
     assert out == "foo\n"

@@ -32,9 +32,9 @@ from .argparse_custom import DEFAULT_ARGUMENT_PARSER
 from .cmd2 import Cmd
 from .command_definition import CommandSet, with_default_category
 from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
-from .decorators import with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category, as_subcommand_to
-from .exceptions import Cmd2ArgparseError, SkipPostcommandHooks, CommandSetRegistrationError
+from .decorators import with_argument_list, with_argparser, with_category, as_subcommand_to
+from .exceptions import Cmd2ArgparseError, CommandSetRegistrationError, CompletionError, SkipPostcommandHooks
 from . import plugin
 from .parsing import Statement
 from .py_bridge import CommandResult
-from .utils import categorize, CompletionError, Settable
+from .utils import categorize, CompletionMode, CustomCompletionSettings, Settable
