@@ -19,10 +19,9 @@ class ReplWithExitCode(cmd2.Cmd):
     def do_exit(self, arg_list: List[str]) -> bool:
         """Exit the application with an optional exit code.
 
-Usage:  exit [exit_code]
-    Where:
-        * exit_code - integer exit code to return to the shell
-"""
+        Usage:  exit [exit_code]
+            Where:
+                * exit_code - integer exit code to return to the shell"""
         # If an argument was provided
         if arg_list:
             try:
@@ -36,6 +35,7 @@ Usage:  exit [exit_code]
 
 if __name__ == '__main__':
     import sys
+
     app = ReplWithExitCode()
     sys_exit_code = app.cmdloop()
     app.poutput('{!r} exiting with code: {}'.format(sys.argv[0], sys_exit_code))

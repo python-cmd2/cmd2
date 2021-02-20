@@ -18,7 +18,9 @@ from cmd2.constants import (
 try:
     import mock
 except ImportError:
-    from unittest import mock
+    from unittest import (
+        mock,
+    )
 
 
 HELLO_WORLD = 'Hello, world!'
@@ -29,18 +31,22 @@ def test_strip_quotes_no_quotes():
     stripped = cu.strip_quotes(base_str)
     assert base_str == stripped
 
+
 def test_strip_quotes_with_quotes():
     base_str = '"' + HELLO_WORLD + '"'
     stripped = cu.strip_quotes(base_str)
     assert stripped == HELLO_WORLD
 
+
 def test_remove_duplicates_no_duplicates():
     no_dups = [5, 4, 3, 2, 1]
     assert cu.remove_duplicates(no_dups) == no_dups
 
+
 def test_remove_duplicates_with_duplicates():
     duplicates = [1, 1, 2, 3, 9, 9, 7, 8]
     assert cu.remove_duplicates(duplicates) == [1, 2, 3, 9, 7, 8]
+
 
 def test_unicode_normalization():
     s1 = 'café'
@@ -48,17 +54,20 @@ def test_unicode_normalization():
     assert s1 != s2
     assert cu.norm_fold(s1) == cu.norm_fold(s2)
 
+
 def test_unicode_casefold():
     micro = 'µ'
     micro_cf = micro.casefold()
     assert micro != micro_cf
     assert cu.norm_fold(micro) == cu.norm_fold(micro_cf)
 
+
 def test_alphabetical_sort():
     my_list = ['café', 'µ', 'A', 'micro', 'unity', 'cafeteria']
     assert cu.alphabetical_sort(my_list) == ['A', 'cafeteria', 'café', 'micro', 'unity', 'µ']
     my_list = ['a3', 'a22', 'A2', 'A11', 'a1']
     assert cu.alphabetical_sort(my_list) == ['a1', 'A11', 'A2', 'a22', 'a3']
+
 
 def test_try_int_or_force_to_lower_case():
     str1 = '17'
@@ -70,6 +79,7 @@ def test_try_int_or_force_to_lower_case():
     str1 = ''
     assert cu.try_int_or_force_to_lower_case(str1) == ''
 
+
 def test_natural_keys():
     my_list = ['café', 'µ', 'A', 'micro', 'unity', 'x1', 'X2', 'X11', 'X0', 'x22']
     my_list.sort(key=cu.natural_keys)
@@ -78,11 +88,13 @@ def test_natural_keys():
     my_list.sort(key=cu.natural_keys)
     assert my_list == ['a1', 'A2', 'a3', 'A11', 'a22']
 
+
 def test_natural_sort():
     my_list = ['café', 'µ', 'A', 'micro', 'unity', 'x1', 'X2', 'X11', 'X0', 'x22']
     assert cu.natural_sort(my_list) == ['A', 'café', 'micro', 'unity', 'X0', 'x1', 'X2', 'X11', 'x22', 'µ']
     my_list = ['a3', 'a22', 'A2', 'A11', 'a1']
     assert cu.natural_sort(my_list) == ['a1', 'A2', 'a3', 'A11', 'a22']
+
 
 def test_is_quoted_short():
     my_str = ''
@@ -90,11 +102,13 @@ def test_is_quoted_short():
     your_str = '"'
     assert not cu.is_quoted(your_str)
 
+
 def test_is_quoted_yes():
     my_str = '"This is a test"'
     assert cu.is_quoted(my_str)
     your_str = "'of the emergengy broadcast system'"
     assert cu.is_quoted(your_str)
+
 
 def test_is_quoted_no():
     my_str = '"This is a test'
@@ -103,6 +117,7 @@ def test_is_quoted_no():
     assert not cu.is_quoted(your_str)
     simple_str = "hello world"
     assert not cu.is_quoted(simple_str)
+
 
 def test_quote_string():
     my_str = "Hello World"
@@ -114,11 +129,13 @@ def test_quote_string():
     my_str = '"Hello World"'
     assert cu.quote_string(my_str) == "'" + my_str + "'"
 
+
 def test_quote_string_if_needed_yes():
     my_str = "Hello World"
     assert cu.quote_string_if_needed(my_str) == '"' + my_str + '"'
     your_str = '"foo" bar'
     assert cu.quote_string_if_needed(your_str) == "'" + your_str + "'"
+
 
 def test_quote_string_if_needed_no():
     my_str = "HelloWorld"
@@ -138,10 +155,12 @@ def test_stdsim_write_str(stdout_sim):
     stdout_sim.write(my_str)
     assert stdout_sim.getvalue() == my_str
 
+
 def test_stdsim_write_bytes(stdout_sim):
     b_str = b'Hello World'
     with pytest.raises(TypeError):
         stdout_sim.write(b_str)
+
 
 def test_stdsim_buffer_write_bytes(stdout_sim):
     b_str = b'Hello World'
@@ -149,10 +168,12 @@ def test_stdsim_buffer_write_bytes(stdout_sim):
     assert stdout_sim.getvalue() == b_str.decode()
     assert stdout_sim.getbytes() == b_str
 
+
 def test_stdsim_buffer_write_str(stdout_sim):
     my_str = 'Hello World'
     with pytest.raises(TypeError):
         stdout_sim.buffer.write(my_str)
+
 
 def test_stdsim_read(stdout_sim):
     my_str = 'Hello World'
@@ -179,12 +200,14 @@ def test_stdsim_read_bytes(stdout_sim):
     assert stdout_sim.readbytes() == b_str
     assert stdout_sim.getbytes() == b''
 
+
 def test_stdsim_clear(stdout_sim):
     my_str = 'Hello World'
     stdout_sim.write(my_str)
     assert stdout_sim.getvalue() == my_str
     stdout_sim.clear()
     assert stdout_sim.getvalue() == ''
+
 
 def test_stdsim_getattr_exist(stdout_sim):
     # Here the StdSim getattr is allowing us to access methods within StdSim
@@ -193,9 +216,11 @@ def test_stdsim_getattr_exist(stdout_sim):
     val_func = getattr(stdout_sim, 'getvalue')
     assert val_func() == my_str
 
+
 def test_stdsim_getattr_noexist(stdout_sim):
     # Here the StdSim getattr is allowing us to access methods defined by the inner stream
     assert not stdout_sim.isatty()
+
 
 def test_stdsim_pause_storage(stdout_sim):
     # Test pausing storage for string data
@@ -220,11 +245,13 @@ def test_stdsim_pause_storage(stdout_sim):
     stdout_sim.buffer.write(b_str)
     assert stdout_sim.getbytes() == b''
 
+
 def test_stdsim_line_buffering(base_app):
     # This exercises the case of writing binary data that contains new lines/carriage returns to a StdSim
     # when line buffering is on. The output should immediately be flushed to the underlying stream.
     import os
     import tempfile
+
     file = tempfile.NamedTemporaryFile(mode='wt')
     file.line_buffering = True
 
@@ -259,6 +286,7 @@ def pr_none():
     pr = cu.ProcReader(proc, None, None)
     return pr
 
+
 def test_proc_reader_send_sigint(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.send_sigint()
@@ -276,6 +304,7 @@ def test_proc_reader_send_sigint(pr_none):
         assert ret_code is not None
     else:
         assert ret_code == -signal.SIGINT
+
 
 def test_proc_reader_terminate(pr_none):
     assert pr_none._proc.poll() is None
@@ -300,10 +329,12 @@ def test_proc_reader_terminate(pr_none):
 def context_flag():
     return cu.ContextFlag()
 
+
 def test_context_flag_bool(context_flag):
     assert not context_flag
     with context_flag:
         assert context_flag
+
 
 def test_context_flag_exit_err(context_flag):
     with pytest.raises(ValueError):
@@ -316,11 +347,13 @@ def test_truncate_line():
     truncated = cu.truncate_line(line, max_width)
     assert truncated == 'lo' + HORIZONTAL_ELLIPSIS
 
+
 def test_truncate_line_already_fits():
     line = 'long'
     max_width = 4
     truncated = cu.truncate_line(line, max_width)
     assert truncated == line
+
 
 def test_truncate_line_with_newline():
     line = 'fo\no'
@@ -328,17 +361,20 @@ def test_truncate_line_with_newline():
     with pytest.raises(ValueError):
         cu.truncate_line(line, max_width)
 
+
 def test_truncate_line_width_is_too_small():
     line = 'foo'
     max_width = 0
     with pytest.raises(ValueError):
         cu.truncate_line(line, max_width)
 
+
 def test_truncate_line_wide_text():
     line = '苹苹other'
     max_width = 6
     truncated = cu.truncate_line(line, max_width)
     assert truncated == '苹苹o' + HORIZONTAL_ELLIPSIS
+
 
 def test_truncate_line_split_wide_text():
     """Test when truncation results in a string which is shorter than max_width"""
@@ -347,14 +383,18 @@ def test_truncate_line_split_wide_text():
     truncated = cu.truncate_line(line, max_width)
     assert truncated == '1' + HORIZONTAL_ELLIPSIS
 
+
 def test_truncate_line_tabs():
     line = 'has\ttab'
     max_width = 9
     truncated = cu.truncate_line(line, max_width)
     assert truncated == 'has    t' + HORIZONTAL_ELLIPSIS
 
+
 def test_truncate_with_style():
-    from cmd2 import ansi
+    from cmd2 import (
+        ansi,
+    )
 
     before_style = ansi.fg.blue + ansi.UNDERLINE_ENABLE
     after_style = ansi.fg.reset + ansi.UNDERLINE_DISABLE
@@ -377,6 +417,7 @@ def test_truncate_with_style():
     truncated = cu.truncate_line(line, max_width)
     assert truncated == 'lo' + HORIZONTAL_ELLIPSIS + after_style
 
+
 def test_align_text_fill_char_is_tab():
     text = 'foo'
     fill_char = '\t'
@@ -384,8 +425,11 @@ def test_align_text_fill_char_is_tab():
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == text + '  '
 
+
 def test_align_text_with_style():
-    from cmd2 import ansi
+    from cmd2 import (
+        ansi,
+    )
 
     # Single line with only left fill
     text = ansi.style('line1', fg=ansi.fg.bright_blue)
@@ -425,8 +469,8 @@ def test_align_text_with_style():
     line_1_text = ansi.fg.bright_blue + 'line1'
     line_2_text = ansi.fg.bright_blue + 'line2' + ansi.FG_RESET
 
-    assert aligned == (left_fill + line_1_text + right_fill + '\n' +
-                       left_fill + line_2_text + right_fill)
+    assert aligned == (left_fill + line_1_text + right_fill + '\n' + left_fill + line_2_text + right_fill)
+
 
 def test_align_text_width_is_too_small():
     text = 'foo'
@@ -435,12 +479,14 @@ def test_align_text_width_is_too_small():
     with pytest.raises(ValueError):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
+
 def test_align_text_fill_char_is_too_long():
     text = 'foo'
     fill_char = 'fill'
     width = 5
     with pytest.raises(TypeError):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
+
 
 def test_align_text_fill_char_is_newline():
     text = 'foo'
@@ -449,12 +495,14 @@ def test_align_text_fill_char_is_newline():
     with pytest.raises(ValueError):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
+
 def test_align_text_has_tabs():
     text = '\t\tfoo'
     fill_char = '-'
     width = 10
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, tab_width=2)
     assert aligned == '    ' + 'foo' + '---'
+
 
 def test_align_text_blank():
     text = ''
@@ -463,6 +511,7 @@ def test_align_text_blank():
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == fill_char * width
 
+
 def test_align_text_wider_than_width():
     text = 'long text field'
     fill_char = '-'
@@ -470,12 +519,14 @@ def test_align_text_wider_than_width():
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == text
 
+
 def test_align_text_wider_than_width_truncate():
     text = 'long text field'
     fill_char = '-'
     width = 8
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
     assert aligned == 'long te' + HORIZONTAL_ELLIPSIS
+
 
 def test_align_text_wider_than_width_truncate_add_fill():
     """Test when truncation results in a string which is shorter than width and align_text adds filler"""
@@ -485,6 +536,7 @@ def test_align_text_wider_than_width_truncate_add_fill():
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
     assert aligned == '1' + HORIZONTAL_ELLIPSIS + fill_char
 
+
 def test_align_text_has_unprintable():
     text = 'foo\x02'
     fill_char = '-'
@@ -492,9 +544,14 @@ def test_align_text_has_unprintable():
     with pytest.raises(ValueError):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
+
 def test_align_text_term_width():
     import shutil
-    from cmd2 import ansi
+
+    from cmd2 import (
+        ansi,
+    )
+
     text = 'foo'
     fill_char = ' '
 
@@ -504,6 +561,7 @@ def test_align_text_term_width():
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char)
     assert aligned == text + expected_fill
 
+
 def test_align_left():
     text = 'foo'
     fill_char = '-'
@@ -511,13 +569,14 @@ def test_align_left():
     aligned = cu.align_left(text, fill_char=fill_char, width=width)
     assert aligned == text + fill_char + fill_char
 
+
 def test_align_left_multiline():
     text = "foo\nshoes"
     fill_char = '-'
     width = 7
     aligned = cu.align_left(text, fill_char=fill_char, width=width)
-    assert aligned == ('foo----\n'
-                       'shoes--')
+    assert aligned == ('foo----\n' 'shoes--')
+
 
 def test_align_left_wide_text():
     text = '苹'
@@ -526,12 +585,14 @@ def test_align_left_wide_text():
     aligned = cu.align_left(text, fill_char=fill_char, width=width)
     assert aligned == text + fill_char + fill_char
 
+
 def test_align_left_wide_fill():
     text = 'foo'
     fill_char = '苹'
     width = 5
     aligned = cu.align_left(text, fill_char=fill_char, width=width)
     assert aligned == text + fill_char
+
 
 def test_align_left_wide_fill_needs_padding():
     """Test when fill_char's display width does not divide evenly into gap"""
@@ -541,6 +602,7 @@ def test_align_left_wide_fill_needs_padding():
     aligned = cu.align_left(text, fill_char=fill_char, width=width)
     assert aligned == text + fill_char + ' '
 
+
 def test_align_center():
     text = 'foo'
     fill_char = '-'
@@ -548,13 +610,14 @@ def test_align_center():
     aligned = cu.align_center(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + text + fill_char
 
+
 def test_align_center_multiline():
     text = "foo\nshoes"
     fill_char = '-'
     width = 7
     aligned = cu.align_center(text, fill_char=fill_char, width=width)
-    assert aligned == ('--foo--\n'
-                       '-shoes-')
+    assert aligned == ('--foo--\n' '-shoes-')
+
 
 def test_align_center_wide_text():
     text = '苹'
@@ -563,12 +626,14 @@ def test_align_center_wide_text():
     aligned = cu.align_center(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + text + fill_char
 
+
 def test_align_center_wide_fill():
     text = 'foo'
     fill_char = '苹'
     width = 7
     aligned = cu.align_center(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + text + fill_char
+
 
 def test_align_center_wide_fill_needs_right_padding():
     """Test when fill_char's display width does not divide evenly into right gap"""
@@ -578,6 +643,7 @@ def test_align_center_wide_fill_needs_right_padding():
     aligned = cu.align_center(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + text + fill_char + ' '
 
+
 def test_align_center_wide_fill_needs_left_and_right_padding():
     """Test when fill_char's display width does not divide evenly into either gap"""
     text = 'foo'
@@ -586,6 +652,7 @@ def test_align_center_wide_fill_needs_left_and_right_padding():
     aligned = cu.align_center(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + ' ' + text + fill_char + ' '
 
+
 def test_align_right():
     text = 'foo'
     fill_char = '-'
@@ -593,13 +660,14 @@ def test_align_right():
     aligned = cu.align_right(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + fill_char + text
 
+
 def test_align_right_multiline():
     text = "foo\nshoes"
     fill_char = '-'
     width = 7
     aligned = cu.align_right(text, fill_char=fill_char, width=width)
-    assert aligned == ('----foo\n'
-                       '--shoes')
+    assert aligned == ('----foo\n' '--shoes')
+
 
 def test_align_right_wide_text():
     text = '苹'
@@ -608,12 +676,14 @@ def test_align_right_wide_text():
     aligned = cu.align_right(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + fill_char + text
 
+
 def test_align_right_wide_fill():
     text = 'foo'
     fill_char = '苹'
     width = 5
     aligned = cu.align_right(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + text
+
 
 def test_align_right_wide_fill_needs_padding():
     """Test when fill_char's display width does not divide evenly into gap"""
@@ -630,25 +700,30 @@ def test_str_to_bool_true():
     assert cu.str_to_bool('TRUE')
     assert cu.str_to_bool('tRuE')
 
+
 def test_str_to_bool_false():
     assert not cu.str_to_bool('false')
     assert not cu.str_to_bool('False')
     assert not cu.str_to_bool('FALSE')
     assert not cu.str_to_bool('fAlSe')
 
+
 def test_str_to_bool_invalid():
     with pytest.raises(ValueError):
         cu.str_to_bool('other')
 
+
 def test_str_to_bool_bad_input():
     with pytest.raises(ValueError):
         cu.str_to_bool(1)
+
 
 def test_find_editor_specified():
     expected_editor = os.path.join('fake_dir', 'editor')
     with mock.patch.dict(os.environ, {'EDITOR': expected_editor}):
         editor = cu.find_editor()
     assert editor == expected_editor
+
 
 def test_find_editor_not_specified():
     # Use existing path env setting. Something in the editor list should be found.

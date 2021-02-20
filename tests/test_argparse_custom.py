@@ -22,6 +22,7 @@ from .conftest import (
 
 class ApCustomTestApp(cmd2.Cmd):
     """Test app for cmd2's argparse customization"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -47,11 +48,14 @@ def fake_func():
     pass
 
 
-@pytest.mark.parametrize('kwargs, is_valid', [
-    ({'choices_provider': fake_func}, True),
-    ({'completer': fake_func}, True),
-    ({'choices_provider': fake_func, 'completer': fake_func}, False),
-])
+@pytest.mark.parametrize(
+    'kwargs, is_valid',
+    [
+        ({'choices_provider': fake_func}, True),
+        ({'completer': fake_func}, True),
+        ({'choices_provider': fake_func, 'completer': fake_func}, False),
+    ],
+)
 def test_apcustom_choices_callable_count(kwargs, is_valid):
     parser = Cmd2ArgumentParser()
     try:
@@ -62,10 +66,7 @@ def test_apcustom_choices_callable_count(kwargs, is_valid):
         assert 'Only one of the following parameters' in str(ex)
 
 
-@pytest.mark.parametrize('kwargs', [
-    ({'choices_provider': fake_func}),
-    ({'completer': fake_func})
-])
+@pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
 def test_apcustom_no_choices_callables_alongside_choices(kwargs):
     with pytest.raises(TypeError) as excinfo:
         parser = Cmd2ArgumentParser()
@@ -73,10 +74,7 @@ def test_apcustom_no_choices_callables_alongside_choices(kwargs):
     assert 'None of the following parameters can be used alongside a choices parameter' in str(excinfo.value)
 
 
-@pytest.mark.parametrize('kwargs', [
-    ({'choices_provider': fake_func}),
-    ({'completer': fake_func})
-])
+@pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
 def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs):
     with pytest.raises(TypeError) as excinfo:
         parser = Cmd2ArgumentParser()
@@ -118,12 +116,15 @@ def test_apcustom_nargs_range_validation(cust_app):
     assert not err
 
 
-@pytest.mark.parametrize('nargs_tuple', [
-    (),
-    ('f', 5),
-    (5, 'f'),
-    (1, 2, 3),
-])
+@pytest.mark.parametrize(
+    'nargs_tuple',
+    [
+        (),
+        ('f', 5),
+        (5, 'f'),
+        (1, 2, 3),
+    ],
+)
 def test_apcustom_narg_invalid_tuples(nargs_tuple):
     with pytest.raises(ValueError) as excinfo:
         parser = Cmd2ArgumentParser()
@@ -199,6 +200,7 @@ def test_apcustom_narg_tuple_other_ranges():
 
 def test_apcustom_print_message(capsys):
     import sys
+
     test_message = 'The test message'
 
     # Specify the file
@@ -246,7 +248,10 @@ def test_apcustom_required_options():
 
 def test_override_parser():
     import importlib
-    from cmd2 import DEFAULT_ARGUMENT_PARSER
+
+    from cmd2 import (
+        DEFAULT_ARGUMENT_PARSER,
+    )
 
     # The standard parser is Cmd2ArgumentParser
     assert DEFAULT_ARGUMENT_PARSER == Cmd2ArgumentParser
@@ -254,10 +259,15 @@ def test_override_parser():
     # Set our parser module and force a reload of cmd2 so it loads the module
     argparse.cmd2_parser_module = 'examples.custom_parser'
     importlib.reload(cmd2)
-    from cmd2 import DEFAULT_ARGUMENT_PARSER
+    from cmd2 import (
+        DEFAULT_ARGUMENT_PARSER,
+    )
 
     # Verify DEFAULT_ARGUMENT_PARSER is now our CustomParser
-    from examples.custom_parser import CustomParser
+    from examples.custom_parser import (
+        CustomParser,
+    )
+
     assert DEFAULT_ARGUMENT_PARSER == CustomParser
 
 

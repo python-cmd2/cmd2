@@ -31,18 +31,19 @@ class CmdLineApp(cmd.Cmd):
         """Mumbles what you tell me to."""
         words = line.split(' ')
         output = []
-        if random.random() < .33:
+        if random.random() < 0.33:
             output.append(random.choice(self.MUMBLE_FIRST))
         for word in words:
-            if random.random() < .40:
+            if random.random() < 0.40:
                 output.append(random.choice(self.MUMBLES))
             output.append(word)
-        if random.random() < .25:
+        if random.random() < 0.25:
             output.append(random.choice(self.MUMBLE_LAST))
         print(' '.join(output), file=self.stdout)
 
 
 if __name__ == '__main__':
     import sys
+
     c = CmdLineApp()
     sys.exit(c.cmdloop())

@@ -20,9 +20,11 @@ from .argparse_custom import Cmd2ArgumentParser, Cmd2AttributeWrapper, Completio
 
 # Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER
 import argparse
+
 cmd2_parser_module = getattr(argparse, 'cmd2_parser_module', None)
 if cmd2_parser_module is not None:
     import importlib
+
     importlib.import_module(cmd2_parser_module)
 
 # Get the current value for argparse_custom.DEFAULT_ARGUMENT_PARSER

@@ -27,13 +27,14 @@ WARNING: This example requires the plumbum package, which isn't normally require
 """
 import argparse
 
-import cmd2
-from cmd2 import (
-    ansi,
-)
 from plumbum.colors import (
     bg,
     fg,
+)
+
+import cmd2
+from cmd2 import (
+    ansi,
 )
 
 
@@ -75,6 +76,7 @@ ansi.bg_lookup = get_bg
 
 class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application demonstrating colorized output."""
+
     def __init__(self):
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         super().__init__(use_ipython=True)

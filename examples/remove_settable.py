@@ -7,7 +7,6 @@ import cmd2
 
 
 class MyApp(cmd2.Cmd):
-
     def __init__(self):
         super().__init__()
         self.remove_settable('debug')
@@ -15,5 +14,6 @@ class MyApp(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     c = MyApp()
     sys.exit(c.cmdloop())

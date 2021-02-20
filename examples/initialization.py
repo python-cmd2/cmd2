@@ -24,8 +24,12 @@ class BasicApp(cmd2.Cmd):
     CUSTOM_CATEGORY = 'My Custom Commands'
 
     def __init__(self):
-        super().__init__(multiline_commands=['echo'], persistent_history_file='cmd2_history.dat',
-                         startup_script='scripts/startup.txt', use_ipython=True)
+        super().__init__(
+            multiline_commands=['echo'],
+            persistent_history_file='cmd2_history.dat',
+            startup_script='scripts/startup.txt',
+            use_ipython=True,
+        )
 
         # Prints an intro banner once upon application startup
         self.intro = style('Welcome to cmd2!', fg=fg.red, bg=bg.white, bold=True)
@@ -46,8 +50,9 @@ class BasicApp(cmd2.Cmd):
         self.foreground_color = 'cyan'
 
         # Make echo_fg settable at runtime
-        self.add_settable(cmd2.Settable('foreground_color', str, 'Foreground color to use with echo command',
-                                        choices=fg.colors()))
+        self.add_settable(
+            cmd2.Settable('foreground_color', str, 'Foreground color to use with echo command', choices=fg.colors())
+        )
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_intro(self, _):

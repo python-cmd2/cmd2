@@ -21,6 +21,4 @@ from .cmd2_ext_test import (
     ExternalTestMixin,
 )
 
-__all__ = [
-    'ExternalTestMixin'
-]
+__all__ = ['ExternalTestMixin']

@@ -16,6 +16,7 @@ CATEGORY = 'Dynamic Commands'
 
 class CommandsInLoop(cmd2.Cmd):
     """Example of dynamically adding do_* commands."""
+
     def __init__(self):
         # Add dynamic commands before calling cmd2.Cmd's init since it validates command names
         for command in COMMAND_LIST:

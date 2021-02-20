@@ -72,6 +72,7 @@ class ColorBase(Enum):
 
         value: anything that when cast to a string returns an ANSI sequence
     """
+
     def __str__(self) -> str:
         """
         Return ANSI color sequence instead of enum name
@@ -105,6 +106,7 @@ class ColorBase(Enum):
 # noinspection PyPep8Naming
 class fg(ColorBase):
     """Enum class for foreground colors"""
+
     black = Fore.BLACK
     red = Fore.RED
     green = Fore.GREEN
@@ -128,6 +130,7 @@ class fg(ColorBase):
 # noinspection PyPep8Naming
 class bg(ColorBase):
     """Enum class for background colors"""
+
     black = Back.BLACK
     red = Back.RED
     green = Back.GREEN
@@ -197,8 +200,7 @@ def style_aware_write(fileobj: IO, msg: str) -> None:
     :param fileobj: the file object being written to
     :param msg: the string being written
     """
-    if allow_style.lower() == STYLE_NEVER.lower() or \
-            (allow_style.lower() == STYLE_TERMINAL.lower() and not fileobj.isatty()):
+    if allow_style.lower() == STYLE_NEVER.lower() or (allow_style.lower() == STYLE_TERMINAL.lower() and not fileobj.isatty()):
         msg = strip_style(msg)
     fileobj.write(msg)
 
@@ -240,8 +242,15 @@ def bg_lookup(bg_name: Union[str, bg]) -> str:
 
 
 # noinspection PyShadowingNames
-def style(text: Any, *, fg: Union[str, fg] = '', bg: Union[str, bg] = '', bold: bool = False,
-          dim: bool = False, underline: bool = False) -> str:
+def style(
+    text: Any,
+    *,
+    fg: Union[str, fg] = '',
+    bg: Union[str, bg] = '',
+    bold: bool = False,
+    dim: bool = False,
+    underline: bool = False
+) -> str:
     """
     Apply ANSI colors and/or styles to a string and return it.
     The styling is self contained which means that at the end of the string reset code(s) are issued
@@ -314,7 +323,10 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     :param alert_msg: the message to display to the user
     :return: the correct string so that the alert message appears to the user to be printed above the current line.
     """
-    from colorama import Cursor
+    from colorama import (
+        Cursor,
+    )
+
     # Split the prompt lines since it can contain newline characters.
     prompt_lines = prompt.splitlines()
 

@@ -3,7 +3,9 @@
 """
 A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion
 """
-from typing import List
+from typing import (
+    List,
+)
 
 import cmd2
 
@@ -50,8 +52,12 @@ class ReadInputApp(cmd2.Cmd):
         """Call read_input to use custom history and choices"""
         self.poutput("Tab completing with static choices list and using custom history")
         try:
-            input_str = self.read_input("> ", history=self.custom_history, completion_mode=cmd2.CompletionMode.CUSTOM,
-                                        choices=['choice_1', 'choice_2', 'choice_3'])
+            input_str = self.read_input(
+                "> ",
+                history=self.custom_history,
+                completion_mode=cmd2.CompletionMode.CUSTOM,
+                choices=['choice_1', 'choice_2', 'choice_3'],
+            )
         except EOFError:
             pass
         else:
@@ -67,8 +73,12 @@ class ReadInputApp(cmd2.Cmd):
         """Call read_input to use custom history and choices provider function"""
         self.poutput("Tab completing with choices from provider function and using custom history")
         try:
-            input_str = self.read_input("> ", history=self.custom_history, completion_mode=cmd2.CompletionMode.CUSTOM,
-                                        choices_provider=ReadInputApp.choices_provider)
+            input_str = self.read_input(
+                "> ",
+                history=self.custom_history,
+                completion_mode=cmd2.CompletionMode.CUSTOM,
+                choices_provider=ReadInputApp.choices_provider,
+            )
         except EOFError:
             pass
         else:
@@ -79,8 +89,9 @@ class ReadInputApp(cmd2.Cmd):
         """all read_input to use custom history and completer function"""
         self.poutput("Tab completing paths and using custom history")
         try:
-            input_str = self.read_input("> ", history=self.custom_history, completion_mode=cmd2.CompletionMode.CUSTOM,
-                                        completer=cmd2.Cmd.path_complete)
+            input_str = self.read_input(
+                "> ", history=self.custom_history, completion_mode=cmd2.CompletionMode.CUSTOM, completer=cmd2.Cmd.path_complete
+            )
             self.custom_history.append(input_str)
         except EOFError:
             pass
@@ -90,16 +101,16 @@ class ReadInputApp(cmd2.Cmd):
         """Call read_input to use a custom history and an argument parser"""
         parser = cmd2.Cmd2ArgumentParser(prog='', description="An example parser")
         parser.add_argument('-o', '--option', help="an optional arg")
-        parser.add_argument('arg_1', help="a choice for this arg", metavar='arg_1',
-                            choices=['my_choice', 'your_choice'])
+        parser.add_argument('arg_1', help="a choice for this arg", metavar='arg_1', choices=['my_choice', 'your_choice'])
         parser.add_argument('arg_2', help="path of something", completer=cmd2.Cmd.path_complete)
 
         self.poutput("Tab completing with argument parser and using custom history")
         self.poutput(parser.format_usage())
 
         try:
-            input_str = self.read_input("> ", history=self.custom_history, completion_mode=cmd2.CompletionMode.CUSTOM,
-                                        parser=parser)
+            input_str = self.read_input(
+                "> ", history=self.custom_history, completion_mode=cmd2.CompletionMode.CUSTOM, parser=parser
+            )
         except EOFError:
             pass
         else:
@@ -108,5 +119,6 @@ class ReadInputApp(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     app = ReadInputApp()
     sys.exit(app.cmdloop())

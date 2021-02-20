@@ -22,6 +22,7 @@ from cmd2.table_creator import (
 
 class DollarFormatter:
     """Example class to show that any object type can be passed as data to TableCreator and converted to a string"""
+
     def __init__(self, val: float) -> None:
         self.val = val
 
@@ -39,27 +40,28 @@ green = functools.partial(ansi.style, fg=ansi.fg.green)
 columns: List[Column] = list()
 columns.append(Column("Name", width=20))
 columns.append(Column("Address", width=38))
-columns.append(Column("Income", width=14,
-                      header_horiz_align=HorizontalAlignment.RIGHT,
-                      data_horiz_align=HorizontalAlignment.RIGHT))
+columns.append(
+    Column("Income", width=14, header_horiz_align=HorizontalAlignment.RIGHT, data_horiz_align=HorizontalAlignment.RIGHT)
+)
 
 # Table data which demonstrates handling of wrapping and text styles
 data_list: List[List[Any]] = list()
-data_list.append(["Billy Smith",
-                  "123 Sesame St.\n"
-                  "Fake Town, USA 33445", DollarFormatter(100333.03)])
-data_list.append(["William Longfellow Marmaduke III",
-                  "984 Really Long Street Name Which Will Wrap Nicely\n"
-                  "Apt 22G\n"
-                  "Pensacola, FL 32501", DollarFormatter(55135.22)])
-data_list.append(["James " + blue("Bluestone"),
-                  bold_yellow("This address has line feeds,\n"
-                              "text styles, and wrapping. ") + blue("Style is preserved across lines."),
-                  DollarFormatter(300876.10)])
-data_list.append(["John Jones",
-                  "9235 Highway 32\n"
-                  + green("Greenville") + ", SC 29604",
-                  DollarFormatter(82987.71)])
+data_list.append(["Billy Smith", "123 Sesame St.\n" "Fake Town, USA 33445", DollarFormatter(100333.03)])
+data_list.append(
+    [
+        "William Longfellow Marmaduke III",
+        "984 Really Long Street Name Which Will Wrap Nicely\n" "Apt 22G\n" "Pensacola, FL 32501",
+        DollarFormatter(55135.22),
+    ]
+)
+data_list.append(
+    [
+        "James " + blue("Bluestone"),
+        bold_yellow("This address has line feeds,\n" "text styles, and wrapping. ") + blue("Style is preserved across lines."),
+        DollarFormatter(300876.10),
+    ]
+)
+data_list.append(["John Jones", "9235 Highway 32\n" + green("Greenville") + ", SC 29604", DollarFormatter(82987.71)])
 
 
 def ansi_print(text):

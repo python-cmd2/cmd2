@@ -76,16 +76,16 @@ class CmdLineApp(cmd2.Cmd):
     def do_mumble(self, opts, arg):
         """Mumbles what you tell me to."""
         repetitions = opts.repeat or 1
-        #arg = arg.split()
+        # arg = arg.split()
         for _ in range(min(repetitions, self.maxrepeats)):
             output = []
-            if random.random() < .33:
+            if random.random() < 0.33:
                 output.append(random.choice(self.MUMBLE_FIRST))
             for word in arg:
-                if random.random() < .40:
+                if random.random() < 0.40:
                     output.append(random.choice(self.MUMBLES))
                 output.append(word)
-            if random.random() < .25:
+            if random.random() < 0.25:
                 output.append(random.choice(self.MUMBLE_LAST))
             self.poutput(' '.join(output))
 
@@ -108,23 +108,27 @@ def test_commands_at_invocation():
     out = app.stdout.getvalue()
     assert out == expected
 
-@pytest.mark.parametrize('filename,feedback_to_output', [
-    ('bol_eol.txt', False),
-    ('characterclass.txt', False),
-    ('dotstar.txt', False),
-    ('extension_notation.txt', False),
-    ('from_cmdloop.txt', True),
-    ('multiline_no_regex.txt', False),
-    ('multiline_regex.txt', False),
-    ('no_output.txt', False),
-    ('no_output_last.txt', False),
-    ('regex_set.txt', False),
-    ('singleslash.txt', False),
-    ('slashes_escaped.txt', False),
-    ('slashslash.txt', False),
-    ('spaces.txt', False),
-    ('word_boundaries.txt', False),
-    ])
+
+@pytest.mark.parametrize(
+    'filename,feedback_to_output',
+    [
+        ('bol_eol.txt', False),
+        ('characterclass.txt', False),
+        ('dotstar.txt', False),
+        ('extension_notation.txt', False),
+        ('from_cmdloop.txt', True),
+        ('multiline_no_regex.txt', False),
+        ('multiline_regex.txt', False),
+        ('no_output.txt', False),
+        ('no_output_last.txt', False),
+        ('regex_set.txt', False),
+        ('singleslash.txt', False),
+        ('slashes_escaped.txt', False),
+        ('slashslash.txt', False),
+        ('spaces.txt', False),
+        ('word_boundaries.txt', False),
+    ],
+)
 def test_transcript(request, capsys, filename, feedback_to_output):
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
@@ -150,6 +154,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     _, err = capsys.readouterr()
     assert err.startswith(expected_start)
     assert err.endswith(expected_end)
+
 
 def test_history_transcript():
     app = CmdLineApp()
@@ -177,6 +182,7 @@ this is a \/multiline\/ command
         xscript = f.read()
 
     assert xscript == expected
+
 
 def test_history_transcript_bad_filename():
     app = CmdLineApp()
@@ -257,27 +263,30 @@ def test_generate_transcript_stop(capsys):
     assert err.startswith("Interrupting this command\nCommand 2 triggered a stop")
 
 
-@pytest.mark.parametrize('expected, transformed', [
-    # strings with zero or one slash or with escaped slashes means no regular
-    # expression present, so the result should just be what re.escape returns.
-    # we don't use static strings in these tests because re.escape behaves
-    # differently in python 3.7 than in prior versions
-    ( 'text with no slashes', re.escape('text with no slashes') ),
-    ( 'specials .*', re.escape('specials .*') ),
-    ( 'use 2/3 cup', re.escape('use 2/3 cup') ),
-    ( '/tmp is nice', re.escape('/tmp is nice') ),
-    ( 'slash at end/', re.escape('slash at end/') ),
-    # escaped slashes
-    ( r'not this slash\/ or this one\/', re.escape('not this slash/ or this one/' ) ),
-    # regexes
-    ( '/.*/', '.*' ),
-    ( 'specials ^ and + /[0-9]+/', re.escape('specials ^ and + ') + '[0-9]+' ),
-    ( r'/a{6}/ but not \/a{6} with /.*?/ more', 'a{6}' + re.escape(' but not /a{6} with ') + '.*?' + re.escape(' more') ),
-    ( r'not \/, use /\|?/, not \/', re.escape('not /, use ') + r'\|?' + re.escape(', not /') ),
-    # inception: slashes in our regex. backslashed on input, bare on output
-    ( r'not \/, use /\/?/, not \/', re.escape('not /, use ') + '/?' + re.escape(', not /') ),
-    ( r'lots /\/?/ more /.*/ stuff', re.escape('lots ') + '/?' + re.escape(' more ') + '.*' + re.escape(' stuff') ),
-    ])
+@pytest.mark.parametrize(
+    'expected, transformed',
+    [
+        # strings with zero or one slash or with escaped slashes means no regular
+        # expression present, so the result should just be what re.escape returns.
+        # we don't use static strings in these tests because re.escape behaves
+        # differently in python 3.7 than in prior versions
+        ('text with no slashes', re.escape('text with no slashes')),
+        ('specials .*', re.escape('specials .*')),
+        ('use 2/3 cup', re.escape('use 2/3 cup')),
+        ('/tmp is nice', re.escape('/tmp is nice')),
+        ('slash at end/', re.escape('slash at end/')),
+        # escaped slashes
+        (r'not this slash\/ or this one\/', re.escape('not this slash/ or this one/')),
+        # regexes
+        ('/.*/', '.*'),
+        ('specials ^ and + /[0-9]+/', re.escape('specials ^ and + ') + '[0-9]+'),
+        (r'/a{6}/ but not \/a{6} with /.*?/ more', 'a{6}' + re.escape(' but not /a{6} with ') + '.*?' + re.escape(' more')),
+        (r'not \/, use /\|?/, not \/', re.escape('not /, use ') + r'\|?' + re.escape(', not /')),
+        # inception: slashes in our regex. backslashed on input, bare on output
+        (r'not \/, use /\/?/, not \/', re.escape('not /, use ') + '/?' + re.escape(', not /')),
+        (r'lots /\/?/ more /.*/ stuff', re.escape('lots ') + '/?' + re.escape(' more ') + '.*' + re.escape(' stuff')),
+    ],
+)
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
 

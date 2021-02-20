@@ -18,9 +18,10 @@ from plugins.template import (
 )
 
 # create namespaces
-namespace = invoke.Collection(ext_test=ext_test_tasks,
-                              template=template_tasks,
-                              )
+namespace = invoke.Collection(
+    ext_test=ext_test_tasks,
+    template=template_tasks,
+)
 namespace_clean = invoke.Collection('clean')
 namespace.add_collection(namespace_clean, 'clean')
 

@@ -65,11 +65,19 @@ def test_style_multi():
     base_str = HELLO_WORLD
     fg_color = 'blue'
     bg_color = 'green'
-    ansi_str = (ansi.fg[fg_color].value + ansi.bg[bg_color].value +
-                ansi.INTENSITY_BRIGHT + ansi.INTENSITY_DIM + ansi.UNDERLINE_ENABLE +
-                base_str +
-                ansi.FG_RESET + ansi.BG_RESET +
-                ansi.INTENSITY_NORMAL + ansi.INTENSITY_NORMAL + ansi.UNDERLINE_DISABLE)
+    ansi_str = (
+        ansi.fg[fg_color].value
+        + ansi.bg[bg_color].value
+        + ansi.INTENSITY_BRIGHT
+        + ansi.INTENSITY_DIM
+        + ansi.UNDERLINE_ENABLE
+        + base_str
+        + ansi.FG_RESET
+        + ansi.BG_RESET
+        + ansi.INTENSITY_NORMAL
+        + ansi.INTENSITY_NORMAL
+        + ansi.UNDERLINE_DISABLE
+    )
     assert ansi.style(base_str, fg=fg_color, bg=bg_color, bold=True, dim=True, underline=True) == ansi_str
 
 
@@ -110,14 +118,23 @@ def test_set_title_str():
     assert ansi.set_title_str(title) == OSC + '2;' + title + BEL
 
 
-@pytest.mark.parametrize('cols, prompt, line, cursor, msg, expected', [
-    (127, '(Cmd) ', 'help his', 12, ansi.style('Hello World!', fg='magenta'), '\x1b[2K\r\x1b[35mHello World!\x1b[39m'),
-    (127, '\n(Cmd) ', 'help ', 5, 'foo', '\x1b[2K\x1b[1A\x1b[2K\rfoo'),
-    (10, '(Cmd) ', 'help history of the american republic', 4, 'boo', '\x1b[3B\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\rboo')
-])
+@pytest.mark.parametrize(
+    'cols, prompt, line, cursor, msg, expected',
+    [
+        (127, '(Cmd) ', 'help his', 12, ansi.style('Hello World!', fg='magenta'), '\x1b[2K\r\x1b[35mHello World!\x1b[39m'),
+        (127, '\n(Cmd) ', 'help ', 5, 'foo', '\x1b[2K\x1b[1A\x1b[2K\rfoo'),
+        (
+            10,
+            '(Cmd) ',
+            'help history of the american republic',
+            4,
+            'boo',
+            '\x1b[3B\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\rboo',
+        ),
+    ],
+)
 def test_async_alert_str(cols, prompt, line, cursor, msg, expected):
-    alert_str = ansi.async_alert_str(terminal_columns=cols, prompt=prompt, line=line, cursor_offset=cursor,
-                                     alert_msg=msg)
+    alert_str = ansi.async_alert_str(terminal_columns=cols, prompt=prompt, line=line, cursor_offset=cursor, alert_msg=msg)
     assert alert_str == expected
 
 
@@ -127,19 +144,26 @@ def test_cast_color_as_str():
 
 
 def test_color_str_building():
-    from cmd2.ansi import fg, bg
+    from cmd2.ansi import (
+        bg,
+        fg,
+    )
+
     assert fg.blue + "hello" == fg.blue.value + "hello"
     assert bg.blue + "hello" == bg.blue.value + "hello"
     assert fg.blue + "hello" + fg.reset == fg.blue.value + "hello" + fg.reset.value
     assert bg.blue + "hello" + bg.reset == bg.blue.value + "hello" + bg.reset.value
-    assert fg.blue + bg.white + "hello" + fg.reset + bg.reset == \
-           fg.blue.value + bg.white.value + "hello" + fg.reset.value + bg.reset.value
+    assert (
+        fg.blue + bg.white + "hello" + fg.reset + bg.reset
+        == fg.blue.value + bg.white.value + "hello" + fg.reset.value + bg.reset.value
+    )
 
 
 def test_color_nonunique_values():
     class Matching(ansi.ColorBase):
         magenta = ansi.fg_lookup('magenta')
         purple = ansi.fg_lookup('magenta')
+
     assert sorted(Matching.colors()) == ['magenta', 'purple']
 
 

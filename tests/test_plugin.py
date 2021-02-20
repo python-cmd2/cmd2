@@ -20,12 +20,14 @@ from cmd2 import (
 try:
     import mock
 except ImportError:
-    from unittest import mock
-
+    from unittest import (
+        mock,
+    )
 
 
 class Plugin:
     """A mixin class for testing hook registration and calling"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.reset_counters()
@@ -227,14 +229,16 @@ class Plugin:
         self.called_cmdfinalization += 1
         raise ValueError
 
-    def cmdfinalization_hook_system_exit(self, data: cmd2.plugin.CommandFinalizationData) -> \
-            cmd2.plugin.CommandFinalizationData:
+    def cmdfinalization_hook_system_exit(
+        self, data: cmd2.plugin.CommandFinalizationData
+    ) -> cmd2.plugin.CommandFinalizationData:
         """A command finalization hook which raises a SystemExit"""
         self.called_cmdfinalization += 1
         raise SystemExit
 
-    def cmdfinalization_hook_keyboard_interrupt(self, data: cmd2.plugin.CommandFinalizationData) -> \
-            cmd2.plugin.CommandFinalizationData:
+    def cmdfinalization_hook_keyboard_interrupt(
+        self, data: cmd2.plugin.CommandFinalizationData
+    ) -> cmd2.plugin.CommandFinalizationData:
         """A command finalization hook which raises a KeyboardInterrupt"""
         self.called_cmdfinalization += 1
         raise KeyboardInterrupt
@@ -243,8 +247,9 @@ class Plugin:
         """A command finalization hook with no parameters."""
         pass
 
-    def cmdfinalization_hook_too_many_parameters(self, one: plugin.CommandFinalizationData, two: str) -> \
-            plugin.CommandFinalizationData:
+    def cmdfinalization_hook_too_many_parameters(
+        self, one: plugin.CommandFinalizationData, two: str
+    ) -> plugin.CommandFinalizationData:
         """A command finalization hook with too many parameters."""
         return one
 
@@ -267,6 +272,7 @@ class Plugin:
 
 class PluggedApp(Plugin, cmd2.Cmd):
     """A sample app with a plugin mixed in"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -286,6 +292,7 @@ class PluggedApp(Plugin, cmd2.Cmd):
         """Repeat back the arguments"""
         self.poutput(namespace.cmd2_statement.get())
 
+
 ###
 #
 # test pre and postloop hooks
@@ -296,10 +303,12 @@ def test_register_preloop_hook_too_many_parameters():
     with pytest.raises(TypeError):
         app.register_preloop_hook(app.prepost_hook_too_many_parameters)
 
+
 def test_register_preloop_hook_with_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_preloop_hook(app.prepost_hook_with_wrong_return_annotation)
+
 
 def test_preloop_hook(capsys):
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
@@ -313,6 +322,7 @@ def test_preloop_hook(capsys):
     out, err = capsys.readouterr()
     assert out == 'one\nhello\n'
     assert not err
+
 
 def test_preloop_hooks(capsys):
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
@@ -328,15 +338,18 @@ def test_preloop_hooks(capsys):
     assert out == 'one\ntwo\nhello\n'
     assert not err
 
+
 def test_register_postloop_hook_too_many_parameters():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postloop_hook(app.prepost_hook_too_many_parameters)
 
+
 def test_register_postloop_hook_with_wrong_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postloop_hook(app.prepost_hook_with_wrong_return_annotation)
+
 
 def test_postloop_hook(capsys):
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
@@ -350,6 +363,7 @@ def test_postloop_hook(capsys):
     out, err = capsys.readouterr()
     assert out == 'hello\none\n'
     assert not err
+
 
 def test_postloop_hooks(capsys):
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
@@ -365,6 +379,7 @@ def test_postloop_hooks(capsys):
     assert out == 'hello\none\ntwo\n'
     assert not err
 
+
 ###
 #
 # test preparse hook
@@ -379,6 +394,7 @@ def test_preparse(capsys):
     assert not err
     assert app.called_preparse == 1
 
+
 ###
 #
 # test postparsing hooks
@@ -389,25 +405,30 @@ def test_postparsing_hook_too_many_parameters():
     with pytest.raises(TypeError):
         app.register_postparsing_hook(app.postparse_hook_too_many_parameters)
 
+
 def test_postparsing_hook_undeclared_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postparsing_hook(app.postparse_hook_undeclared_parameter_annotation)
+
 
 def test_postparsing_hook_wrong_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postparsing_hook(app.postparse_hook_wrong_parameter_annotation)
 
+
 def test_postparsing_hook_undeclared_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postparsing_hook(app.postparse_hook_undeclared_return_annotation)
 
+
 def test_postparsing_hook_wrong_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postparsing_hook(app.postparse_hook_wrong_return_annotation)
+
 
 def test_postparsing_hook(capsys):
     app = PluggedApp()
@@ -434,6 +455,7 @@ def test_postparsing_hook(capsys):
     assert not err
     assert app.called_postparsing == 2
 
+
 def test_postparsing_hook_stop_first(capsys):
     app = PluggedApp()
     app.register_postparsing_hook(app.postparse_hook_stop)
@@ -447,6 +469,7 @@ def test_postparsing_hook_stop_first(capsys):
     stop = app.onecmd_plus_hooks('say hello')
     assert app.called_postparsing == 1
     assert stop
+
 
 def test_postparsing_hook_stop_second(capsys):
     app = PluggedApp()
@@ -469,6 +492,7 @@ def test_postparsing_hook_stop_second(capsys):
     assert app.called_postparsing == 2
     assert stop
 
+
 def test_postparsing_hook_emptystatement_first(capsys):
     app = PluggedApp()
     app.register_postparsing_hook(app.postparse_hook_emptystatement)
@@ -488,6 +512,7 @@ def test_postparsing_hook_emptystatement_first(capsys):
     assert not out
     assert not err
     assert app.called_postparsing == 1
+
 
 def test_postparsing_hook_emptystatement_second(capsys):
     app = PluggedApp()
@@ -519,6 +544,7 @@ def test_postparsing_hook_emptystatement_second(capsys):
     assert not err
     assert app.called_postparsing == 2
 
+
 def test_postparsing_hook_exception(capsys):
     app = PluggedApp()
     app.register_postparsing_hook(app.postparse_hook_exception)
@@ -539,6 +565,7 @@ def test_postparsing_hook_exception(capsys):
     assert err
     assert app.called_postparsing == 1
 
+
 ###
 #
 # test precmd hooks
@@ -551,25 +578,30 @@ def test_register_precmd_hook_parameter_count():
     with pytest.raises(TypeError):
         app.register_precmd_hook(app.precmd_hook_too_many_parameters)
 
+
 def test_register_precmd_hook_no_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_precmd_hook(app.precmd_hook_no_parameter_annotation)
+
 
 def test_register_precmd_hook_wrong_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_precmd_hook(app.precmd_hook_wrong_parameter_annotation)
 
+
 def test_register_precmd_hook_no_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_precmd_hook(app.precmd_hook_no_return_annotation)
 
+
 def test_register_precmd_hook_wrong_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_precmd_hook(app.precmd_hook_wrong_return_annotation)
+
 
 def test_precmd_hook(capsys):
     app = PluggedApp()
@@ -599,6 +631,7 @@ def test_precmd_hook(capsys):
     # with two hooks registered, we should get precmd() and both hooks
     assert app.called_precmd == 3
 
+
 def test_precmd_hook_emptystatement_first(capsys):
     app = PluggedApp()
     app.register_precmd_hook(app.precmd_hook_emptystatement)
@@ -623,6 +656,7 @@ def test_precmd_hook_emptystatement_first(capsys):
     # hook from being called, and it also prevents precmd() from being
     # called
     assert app.called_precmd == 1
+
 
 def test_precmd_hook_emptystatement_second(capsys):
     app = PluggedApp()
@@ -660,6 +694,7 @@ def test_precmd_hook_emptystatement_second(capsys):
     # if a registered hook throws an exception, precmd() is never called
     assert app.called_precmd == 2
 
+
 ###
 #
 # test postcmd hooks
@@ -672,25 +707,30 @@ def test_register_postcmd_hook_parameter_count():
     with pytest.raises(TypeError):
         app.register_postcmd_hook(app.postcmd_hook_too_many_parameters)
 
+
 def test_register_postcmd_hook_no_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postcmd_hook(app.postcmd_hook_no_parameter_annotation)
+
 
 def test_register_postcmd_hook_wrong_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postcmd_hook(app.postcmd_hook_wrong_parameter_annotation)
 
+
 def test_register_postcmd_hook_no_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postcmd_hook(app.postcmd_hook_no_return_annotation)
 
+
 def test_register_postcmd_hook_wrong_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_postcmd_hook(app.postcmd_hook_wrong_return_annotation)
+
 
 def test_postcmd(capsys):
     app = PluggedApp()
@@ -720,6 +760,7 @@ def test_postcmd(capsys):
     # with two hooks registered, we should get precmd() and both hooks
     assert app.called_postcmd == 3
 
+
 def test_postcmd_exception_first(capsys):
     app = PluggedApp()
     app.register_postcmd_hook(app.postcmd_hook_exception)
@@ -746,6 +787,7 @@ def test_postcmd_exception_first(capsys):
     # called
     assert app.called_postcmd == 1
 
+
 def test_postcmd_exception_second(capsys):
     app = PluggedApp()
     app.register_postcmd_hook(app.postcmd_hook)
@@ -771,6 +813,7 @@ def test_postcmd_exception_second(capsys):
     # the exception
     assert app.called_postcmd == 2
 
+
 ##
 #
 # command finalization
@@ -783,25 +826,30 @@ def test_register_cmdfinalization_hook_parameter_count():
     with pytest.raises(TypeError):
         app.register_cmdfinalization_hook(app.cmdfinalization_hook_too_many_parameters)
 
+
 def test_register_cmdfinalization_hook_no_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_cmdfinalization_hook(app.cmdfinalization_hook_no_parameter_annotation)
+
 
 def test_register_cmdfinalization_hook_wrong_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_cmdfinalization_hook(app.cmdfinalization_hook_wrong_parameter_annotation)
 
+
 def test_register_cmdfinalization_hook_no_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_cmdfinalization_hook(app.cmdfinalization_hook_no_return_annotation)
 
+
 def test_register_cmdfinalization_hook_wrong_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
         app.register_cmdfinalization_hook(app.cmdfinalization_hook_wrong_return_annotation)
+
 
 def test_cmdfinalization(capsys):
     app = PluggedApp()
@@ -827,6 +875,7 @@ def test_cmdfinalization(capsys):
     assert not err
     assert app.called_cmdfinalization == 2
 
+
 def test_cmdfinalization_stop_first(capsys):
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_stop)
@@ -838,6 +887,7 @@ def test_cmdfinalization_stop_first(capsys):
     assert app.called_cmdfinalization == 2
     assert stop
 
+
 def test_cmdfinalization_stop_second(capsys):
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook)
@@ -848,6 +898,7 @@ def test_cmdfinalization_stop_second(capsys):
     assert not err
     assert app.called_cmdfinalization == 2
     assert stop
+
 
 def test_cmdfinalization_hook_exception(capsys):
     app = PluggedApp()
@@ -869,12 +920,14 @@ def test_cmdfinalization_hook_exception(capsys):
     assert err
     assert app.called_cmdfinalization == 1
 
+
 def test_cmdfinalization_hook_system_exit(capsys):
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_system_exit)
     stop = app.onecmd_plus_hooks('say hello')
     assert stop
     assert app.called_cmdfinalization == 1
+
 
 def test_cmdfinalization_hook_keyboard_interrupt(capsys):
     app = PluggedApp()
@@ -898,6 +951,7 @@ def test_cmdfinalization_hook_keyboard_interrupt(capsys):
     assert stop
     assert app.called_cmdfinalization == 1
 
+
 def test_skip_postcmd_hooks(capsys):
     app = PluggedApp()
     app.register_postcmd_hook(app.postcmd_hook)
@@ -909,6 +963,7 @@ def test_skip_postcmd_hooks(capsys):
     assert "In do_skip_postcmd_hooks" in out
     assert app.called_postcmd == 0
     assert app.called_cmdfinalization == 1
+
 
 def test_cmd2_argparse_exception(capsys):
     """

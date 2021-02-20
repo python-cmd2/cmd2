@@ -23,6 +23,7 @@ except ImportError:
 
 class RlType(Enum):
     """Readline library types we recognize"""
+
     GNU = 1
     PYREADLINE = 2
     NONE = 3
@@ -41,9 +42,14 @@ _rl_warn_reason = ''
 if 'pyreadline' in sys.modules or 'pyreadline3' in sys.modules:
     rl_type = RlType.PYREADLINE
 
-    from ctypes import byref
-    from ctypes.wintypes import DWORD, HANDLE
     import atexit
+    from ctypes import (
+        byref,
+    )
+    from ctypes.wintypes import (
+        DWORD,
+        HANDLE,
+    )
 
     # Check if we are running in a terminal
     if sys.stdout.isatty():  # pragma: no cover
@@ -107,7 +113,7 @@ if 'pyreadline' in sys.modules or 'pyreadline3' in sys.modules:
             saved_cursor = readline.rl.mode._history.history_cursor
 
             # Delete the history item
-            del(readline.rl.mode._history.history[pos])
+            del readline.rl.mode._history.history[pos]
 
             # Update the cursor if needed
             if saved_cursor > pos:
@@ -121,10 +127,13 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
         try:
             # Load the readline lib so we can access members of it
             import ctypes
+
             readline_lib = ctypes.CDLL(readline.__file__)
         except AttributeError:  # pragma: no cover
-            _rl_warn_reason = ("this application is running in a non-standard Python environment in\n"
-                               "which readline is not loaded dynamically from a shared library file.")
+            _rl_warn_reason = (
+                "this application is running in a non-standard Python environment in\n"
+                "which readline is not loaded dynamically from a shared library file."
+            )
         else:
             rl_type = RlType.GNU
             vt100_support = sys.stdout.isatty()
@@ -132,10 +141,11 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
 # Check if readline was loaded
 if rl_type == RlType.NONE:  # pragma: no cover
     if not _rl_warn_reason:
-        _rl_warn_reason = ("no supported version of readline was found. To resolve this, install\n"
-                           "pyreadline on Windows or gnureadline on Mac.")
-    rl_warning = ("Readline features including tab completion have been disabled because\n"
-                  + _rl_warn_reason + '\n\n')
+        _rl_warn_reason = (
+            "no supported version of readline was found. To resolve this, install\n"
+            "pyreadline on Windows or gnureadline on Mac."
+        )
+    rl_warning = "Readline features including tab completion have been disabled because\n" + _rl_warn_reason + '\n\n'
 else:
     rl_warning = ''
 

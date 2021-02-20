@@ -11,20 +11,21 @@ from typing import (
     Optional,
 )
 
-from cmd2 import (
-    Cmd,
-    Cmd2ArgumentParser,
-    CommandSet,
-    with_argparser,
-)
 from modular_commands.commandset_basic import (  # noqa: F401
     BasicCompletionCommandSet,
 )
 from modular_commands.commandset_complex import (  # noqa: F401
     CommandSetA,
 )
-from modular_commands.commandset_custominit import (
-    CustomInitCommandSet,  # noqa: F401
+from modular_commands.commandset_custominit import (  # noqa: F401
+    CustomInitCommandSet,
+)
+
+from cmd2 import (
+    Cmd,
+    Cmd2ArgumentParser,
+    CommandSet,
+    with_argparser,
 )
 
 
@@ -38,21 +39,23 @@ class WithCommandSets(Cmd):
         return self.sport_item_strs
 
     # Parser for example command
-    example_parser = Cmd2ArgumentParser(description="Command demonstrating tab completion with argparse\n"
-                                                    "Notice even the flags of this command tab complete")
+    example_parser = Cmd2ArgumentParser(
+        description="Command demonstrating tab completion with argparse\n" "Notice even the flags of this command tab complete"
+    )
 
     # Tab complete from a list using argparse choices. Set metavar if you don't
     # want the entire choices list showing in the usage text for this command.
-    example_parser.add_argument('--choices', choices=['some', 'choices', 'here'], metavar="CHOICE",
-                                help="tab complete using choices")
+    example_parser.add_argument(
+        '--choices', choices=['some', 'choices', 'here'], metavar="CHOICE", help="tab complete using choices"
+    )
 
     # Tab complete from choices provided by a choices provider
-    example_parser.add_argument('--choices_provider', choices_provider=choices_provider,
-                                help="tab complete using a choices_provider")
+    example_parser.add_argument(
+        '--choices_provider', choices_provider=choices_provider, help="tab complete using a choices_provider"
+    )
 
     # Tab complete using a completer
-    example_parser.add_argument('--completer', completer=Cmd.path_complete,
-                                help="tab complete using a completer")
+    example_parser.add_argument('--completer', completer=Cmd.path_complete, help="tab complete using a completer")
 
     @with_argparser(example_parser)
     def do_example(self, _: argparse.Namespace) -> None:

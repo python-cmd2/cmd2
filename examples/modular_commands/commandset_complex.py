@@ -28,9 +28,8 @@ class CommandSetA(cmd2.CommandSet):
     def do_cranberry(self, ns: argparse.Namespace, unknown: List[str]):
         self._cmd.poutput('Cranberry {}!!'.format(ns.arg1))
         if unknown and len(unknown):
-            self._cmd.poutput('Unknown: ' + ', '.join(['{}']*len(unknown)).format(*unknown))
-        self._cmd.last_result = {'arg1': ns.arg1,
-                           'unknown': unknown}
+            self._cmd.poutput('Unknown: ' + ', '.join(['{}'] * len(unknown)).format(*unknown))
+        self._cmd.last_result = {'arg1': ns.arg1, 'unknown': unknown}
 
     def help_cranberry(self):
         self._cmd.stdout.write('This command does diddly squat...\n')
@@ -40,7 +39,7 @@ class CommandSetA(cmd2.CommandSet):
     def do_durian(self, args: List[str]):
         """Durian Command"""
         self._cmd.poutput('{} Arguments: '.format(len(args)))
-        self._cmd.poutput(', '.join(['{}']*len(args)).format(*args))
+        self._cmd.poutput(', '.join(['{}'] * len(args)).format(*args))
 
     def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return self._cmd.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])

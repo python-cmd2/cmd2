@@ -1,9 +1,9 @@
 #
 # coding=utf-8
 
+import cmd2_ext_test
 import pytest
 
-import cmd2_ext_test
 from cmd2 import (
     CommandResult,
     cmd2,
@@ -20,6 +20,7 @@ OUT_MSG = 'this is the something command'
 
 class ExampleApp(cmd2.Cmd):
     """An class to show how to use a plugin"""
+
     def __init__(self, *args, **kwargs):
         # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, **kwargs)
@@ -31,10 +32,12 @@ class ExampleApp(cmd2.Cmd):
 
 # Define a tester class that brings in the external test mixin
 
+
 class ExampleTester(cmd2_ext_test.ExternalTestMixin, ExampleApp):
     def __init__(self, *args, **kwargs):
         # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, **kwargs)
+
 
 #
 # You can't use a fixture to instantiate your app if you want to use
@@ -61,6 +64,7 @@ def example_app():
 # unit tests
 #
 #####
+
 
 def test_something(example_app):
     # load our fixture

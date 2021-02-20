@@ -30,6 +30,7 @@ class Cmd2TestCase(unittest.TestCase):
 
     See example.py
     """
+
     cmdapp = None
 
     def setUp(self):
@@ -72,7 +73,7 @@ class Cmd2TestCase(unittest.TestCase):
                     finished = True
                     break
                 line_num += 1
-            command = [line[len(self.cmdapp.visible_prompt):]]
+            command = [line[len(self.cmdapp.visible_prompt) :]]
             try:
                 line = next(transcript)
             except StopIteration:
@@ -80,12 +81,13 @@ class Cmd2TestCase(unittest.TestCase):
             line_num += 1
             # Read the entirety of a multi-line command
             while line.startswith(self.cmdapp.continuation_prompt):
-                command.append(line[len(self.cmdapp.continuation_prompt):])
+                command.append(line[len(self.cmdapp.continuation_prompt) :])
                 try:
                     line = next(transcript)
                 except StopIteration as exc:
-                    msg = 'Transcript broke off while reading command beginning at line {} with\n{}'.format(line_num,
-                                                                                                            command[0])
+                    msg = 'Transcript broke off while reading command beginning at line {} with\n{}'.format(
+                        line_num, command[0]
+                    )
                     raise StopIteration(msg) from exc
                 line_num += 1
             command = ''.join(command)
@@ -96,7 +98,8 @@ class Cmd2TestCase(unittest.TestCase):
             # Read the expected result from transcript
             if ansi.strip_style(line).startswith(self.cmdapp.visible_prompt):
                 message = '\nFile {}, line {}\nCommand was:\n{}\nExpected: (nothing)\nGot:\n{}\n'.format(
-                          fname, line_num, command, result)
+                    fname, line_num, command, result
+                )
                 self.assertTrue(not (result.strip()), message)
                 # If the command signaled the application to quit there should be no more commands
                 self.assertFalse(stop, stop_msg)
@@ -119,7 +122,8 @@ class Cmd2TestCase(unittest.TestCase):
             expected = ''.join(expected)
             expected = self._transform_transcript_expected(expected)
             message = '\nFile {}, line {}\nCommand was:\n{}\nExpected:\n{}\nGot:\n{}\n'.format(
-                      fname, line_num, command, expected, result)
+                fname, line_num, command, expected, result
+            )
             self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
     def _transform_transcript_expected(self, s: str) -> str:
@@ -165,7 +169,7 @@ class Cmd2TestCase(unittest.TestCase):
                 else:
                     # No closing slash, we have to add the first slash,
                     # and the rest of the text
-                    regex += re.escape(s[start - 1:])
+                    regex += re.escape(s[start - 1 :])
                     break
         return regex
 
@@ -192,18 +196,18 @@ class Cmd2TestCase(unittest.TestCase):
                 break
             else:
                 # check if the slash is preceeded by a backslash
-                if s[pos - 1:pos] == '\\':
+                if s[pos - 1 : pos] == '\\':
                     # it is.
                     if in_regex:
                         # add everything up to the backslash as a
                         # regular expression
-                        regex += s[start:pos - 1]
+                        regex += s[start : pos - 1]
                         # skip the backslash, and add the slash
                         regex += s[pos]
                     else:
                         # add everything up to the backslash as escaped
                         # plain text
-                        regex += re.escape(s[start:pos - 1])
+                        regex += re.escape(s[start : pos - 1])
                         # and then add the slash as escaped
                         # plain text
                         regex += re.escape(s[pos])

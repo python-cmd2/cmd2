@@ -72,13 +72,13 @@ class CmdLineApp(cmd2.Cmd):
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
             output = []
-            if random.random() < .33:
+            if random.random() < 0.33:
                 output.append(random.choice(self.MUMBLE_FIRST))
             for word in args.words:
-                if random.random() < .40:
+                if random.random() < 0.40:
                     output.append(random.choice(self.MUMBLES))
                 output.append(word)
-            if random.random() < .25:
+            if random.random() < 0.25:
                 output.append(random.choice(self.MUMBLE_LAST))
             self.poutput(' '.join(output))
 
@@ -86,15 +86,11 @@ class CmdLineApp(cmd2.Cmd):
 def main(argv=None):
     """Run when invoked from the operating system shell"""
 
-    parser = argparse.ArgumentParser(
-        description='Commands as arguments'
-    )
+    parser = argparse.ArgumentParser(description='Commands as arguments')
     command_help = 'optional command to run, if no command given, enter an interactive shell'
-    parser.add_argument('command', nargs='?',
-                        help=command_help)
+    parser.add_argument('command', nargs='?', help=command_help)
     arg_help = 'optional arguments for command'
-    parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                        help=arg_help)
+    parser.add_argument('command_args', nargs=argparse.REMAINDER, help=arg_help)
 
     args = parser.parse_args(argv)
 
@@ -113,4 +109,5 @@ def main(argv=None):
 
 if __name__ == '__main__':
     import sys
+
     sys.exit(main())

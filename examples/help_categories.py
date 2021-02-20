@@ -18,6 +18,7 @@ def my_decorator(f):
     def wrapper(*args, **kwds):
         print('Calling decorated function')
         return f(*args, **kwds)
+
     return wrapper
 
 
@@ -72,8 +73,9 @@ class HelpCategories(cmd2.Cmd):
         """Redeploy command"""
         self.poutput('Redeploy')
 
-    restart_parser = cmd2.DEFAULT_ARGUMENT_PARSER(description='Restart',
-                                                  epilog='my_decorator does not run when argparse errors')
+    restart_parser = cmd2.DEFAULT_ARGUMENT_PARSER(
+        description='Restart', epilog='my_decorator does not run when argparse errors'
+    )
     restart_parser.add_argument('when', choices=START_TIMES, help='Specify when to restart')
 
     @cmd2.with_argparser(restart_parser)
@@ -100,15 +102,10 @@ class HelpCategories(cmd2.Cmd):
         self.poutput('Find Leakers')
 
     # Tag the above command functions under the category Application Management
-    cmd2.categorize((do_list,
-                     do_deploy,
-                     do_start,
-                     do_sessions,
-                     do_redeploy,
-                     do_expire,
-                     do_undeploy,
-                     do_stop,
-                     do_findleakers), CMD_CAT_APP_MGMT)
+    cmd2.categorize(
+        (do_list, do_deploy, do_start, do_sessions, do_redeploy, do_expire, do_undeploy, do_stop, do_findleakers),
+        CMD_CAT_APP_MGMT,
+    )
 
     def do_resources(self, _):
         """Resources command"""
@@ -162,8 +159,7 @@ class HelpCategories(cmd2.Cmd):
     @cmd2.with_category("Command Management")
     def do_disable_commands(self, _):
         """Disable the Application Management commands"""
-        message_to_print = "{} is not available while {} commands are disabled".format(COMMAND_NAME,
-                                                                                       self.CMD_CAT_APP_MGMT)
+        message_to_print = "{} is not available while {} commands are disabled".format(COMMAND_NAME, self.CMD_CAT_APP_MGMT)
         self.disable_category(self.CMD_CAT_APP_MGMT, message_to_print)
         self.poutput("The Application Management commands have been disabled")
 

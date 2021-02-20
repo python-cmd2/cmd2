@@ -23,12 +23,14 @@ def parser():
     parser = StatementParser(
         terminators=[';', '&'],
         multiline_commands=['multiline'],
-        aliases={'helpalias': 'help',
-                 '42': 'theanswer',
-                 'l': '!ls -al',
-                 'anothermultiline': 'multiline',
-                 'fake': 'run_pyscript'},
-        shortcuts={'?': 'help', '!': 'shell'}
+        aliases={
+            'helpalias': 'help',
+            '42': 'theanswer',
+            'l': '!ls -al',
+            'anothermultiline': 'multiline',
+            'fake': 'run_pyscript',
+        },
+        shortcuts={'?': 'help', '!': 'shell'},
     )
     return parser
 
@@ -75,34 +77,40 @@ def test_parse_empty_string_default(default_parser):
     assert statement.argv == statement.arg_list
 
 
-@pytest.mark.parametrize('line,tokens', [
-    ('command', ['command']),
-    (constants.COMMENT_CHAR + 'comment', []),
-    ('not ' + constants.COMMENT_CHAR + ' a comment', ['not', constants.COMMENT_CHAR, 'a', 'comment']),
-    ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
-    ('termbare; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
-    ('termbare & > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
-    ('termbare& > /tmp/output', ['termbare&', '>', '/tmp/output']),
-    ('help|less', ['help', '|', 'less']),
-])
+@pytest.mark.parametrize(
+    'line,tokens',
+    [
+        ('command', ['command']),
+        (constants.COMMENT_CHAR + 'comment', []),
+        ('not ' + constants.COMMENT_CHAR + ' a comment', ['not', constants.COMMENT_CHAR, 'a', 'comment']),
+        ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+        ('termbare; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+        ('termbare & > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
+        ('termbare& > /tmp/output', ['termbare&', '>', '/tmp/output']),
+        ('help|less', ['help', '|', 'less']),
+    ],
+)
 def test_tokenize_default(default_parser, line, tokens):
     tokens_to_test = default_parser.tokenize(line)
     assert tokens_to_test == tokens
 
 
-@pytest.mark.parametrize('line,tokens', [
-    ('command', ['command']),
-    ('# comment', []),
-    ('not ' + constants.COMMENT_CHAR + ' a comment', ['not', constants.COMMENT_CHAR, 'a', 'comment']),
-    ('42 arg1 arg2', ['theanswer', 'arg1', 'arg2']),
-    ('l', ['shell', 'ls', '-al']),
-    ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
-    ('termbare; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
-    ('termbare & > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
-    ('termbare& > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
-    ('help|less', ['help', '|', 'less']),
-    ('l|less', ['shell', 'ls', '-al', '|', 'less']),
-])
+@pytest.mark.parametrize(
+    'line,tokens',
+    [
+        ('command', ['command']),
+        ('# comment', []),
+        ('not ' + constants.COMMENT_CHAR + ' a comment', ['not', constants.COMMENT_CHAR, 'a', 'comment']),
+        ('42 arg1 arg2', ['theanswer', 'arg1', 'arg2']),
+        ('l', ['shell', 'ls', '-al']),
+        ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+        ('termbare; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+        ('termbare & > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
+        ('termbare& > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
+        ('help|less', ['help', '|', 'less']),
+        ('l|less', ['shell', 'ls', '-al', '|', 'less']),
+    ],
+)
 def test_tokenize(parser, line, tokens):
     tokens_to_test = parser.tokenize(line)
     assert tokens_to_test == tokens
@@ -113,22 +121,23 @@ def test_tokenize_unclosed_quotes(parser):
         _ = parser.tokenize('command with "unclosed quotes')
 
 
-@pytest.mark.parametrize('tokens,command,args', [
-    ([], '', ''),
-    (['command'], 'command', ''),
-    (['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')
-])
+@pytest.mark.parametrize(
+    'tokens,command,args', [([], '', ''), (['command'], 'command', ''), (['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')]
+)
 def test_command_and_args(parser, tokens, command, args):
     (parsed_command, parsed_args) = parser._command_and_args(tokens)
     assert command == parsed_command
     assert args == parsed_args
 
 
-@pytest.mark.parametrize('line', [
-    'plainword',
-    '"one word"',
-    "'one word'",
-])
+@pytest.mark.parametrize(
+    'line',
+    [
+        'plainword',
+        '"one word"',
+        "'one word'",
+    ],
+)
 def test_parse_single_word(parser, line):
     statement = parser.parse(line)
     assert statement.command == line
@@ -146,12 +155,15 @@ def test_parse_single_word(parser, line):
     assert statement.command_and_args == line
 
 
-@pytest.mark.parametrize('line,terminator', [
-    ('termbare;', ';'),
-    ('termbare ;', ';'),
-    ('termbare&', '&'),
-    ('termbare &', '&'),
-])
+@pytest.mark.parametrize(
+    'line,terminator',
+    [
+        ('termbare;', ';'),
+        ('termbare ;', ';'),
+        ('termbare&', '&'),
+        ('termbare &', '&'),
+    ],
+)
 def test_parse_word_plus_terminator(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.command == 'termbare'
@@ -162,12 +174,15 @@ def test_parse_word_plus_terminator(parser, line, terminator):
     assert statement.expanded_command_line == statement.command + statement.terminator
 
 
-@pytest.mark.parametrize('line,terminator', [
-    ('termbare;  suffx', ';'),
-    ('termbare ;suffx', ';'),
-    ('termbare&  suffx', '&'),
-    ('termbare &suffx', '&'),
-])
+@pytest.mark.parametrize(
+    'line,terminator',
+    [
+        ('termbare;  suffx', ';'),
+        ('termbare ;suffx', ';'),
+        ('termbare&  suffx', '&'),
+        ('termbare &suffx', '&'),
+    ],
+)
 def test_parse_suffix_after_terminator(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.command == 'termbare'
@@ -231,10 +246,13 @@ def test_parse_embedded_comment_char(parser):
     assert statement.arg_list == statement.argv[1:]
 
 
-@pytest.mark.parametrize('line', [
-    'simple | piped',
-    'simple|piped',
-])
+@pytest.mark.parametrize(
+    'line',
+    [
+        'simple | piped',
+        'simple|piped',
+    ],
+)
 def test_parse_simple_pipe(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'simple'
@@ -270,12 +288,15 @@ def test_parse_complex_pipe(parser):
     assert statement.pipe_to == 'piped'
 
 
-@pytest.mark.parametrize('line,output', [
-    ('help > out.txt', '>'),
-    ('help>out.txt', '>'),
-    ('help >> out.txt', '>>'),
-    ('help>>out.txt', '>>'),
-])
+@pytest.mark.parametrize(
+    'line,output',
+    [
+        ('help > out.txt', '>'),
+        ('help>out.txt', '>'),
+        ('help >> out.txt', '>>'),
+        ('help>>out.txt', '>>'),
+    ],
+)
 def test_parse_redirect(parser, line, output):
     statement = parser.parse(line)
     assert statement.command == 'help'
@@ -286,10 +307,13 @@ def test_parse_redirect(parser, line, output):
     assert statement.expanded_command_line == statement.command + ' ' + statement.output + ' ' + statement.output_to
 
 
-@pytest.mark.parametrize('dest', [
-    'afile.txt',                # without dashes
-    'python-cmd2/afile.txt',    # with dashes in path
-])
+@pytest.mark.parametrize(
+    'dest',
+    [
+        'afile.txt',
+        'python-cmd2/afile.txt',
+    ],
+)  # without dashes  # with dashes in path
 def test_parse_redirect_with_args(parser, dest):
     line = 'output into > {}'.format(dest)
     statement = parser.parse(line)
@@ -489,16 +513,19 @@ def test_parse_redirect_inside_terminator(parser):
     assert statement.terminator == ';'
 
 
-@pytest.mark.parametrize('line,terminator', [
-    ('multiline with | inside;', ';'),
-    ('multiline with | inside ;', ';'),
-    ('multiline with | inside;;;', ';'),
-    ('multiline with | inside;; ;;', ';'),
-    ('multiline with | inside&', '&'),
-    ('multiline with | inside &;', '&'),
-    ('multiline with | inside&&;', '&'),
-    ('multiline with | inside &; &;', '&'),
-])
+@pytest.mark.parametrize(
+    'line,terminator',
+    [
+        ('multiline with | inside;', ';'),
+        ('multiline with | inside ;', ';'),
+        ('multiline with | inside;;;', ';'),
+        ('multiline with | inside;; ;;', ';'),
+        ('multiline with | inside&', '&'),
+        ('multiline with | inside &;', '&'),
+        ('multiline with | inside&&;', '&'),
+        ('multiline with | inside &; &;', '&'),
+    ],
+)
 def test_parse_multiple_terminators(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
@@ -534,13 +561,16 @@ def test_parse_basic_multiline_command(parser):
     assert statement.terminator == '\n'
 
 
-@pytest.mark.parametrize('line,terminator', [
-    ('multiline has > inside;', ';'),
-    ('multiline has > inside;;;', ';'),
-    ('multiline has > inside;; ;;', ';'),
-    ('multiline has > inside &', '&'),
-    ('multiline has > inside & &', '&'),
-])
+@pytest.mark.parametrize(
+    'line,terminator',
+    [
+        ('multiline has > inside;', ';'),
+        ('multiline has > inside;;;', ';'),
+        ('multiline has > inside;; ;;', ';'),
+        ('multiline has > inside &', '&'),
+        ('multiline has > inside & &', '&'),
+    ],
+)
 def test_parse_multiline_command_ignores_redirectors_within_it(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
@@ -563,14 +593,17 @@ def test_parse_multiline_terminated_by_empty_line(parser):
     assert statement.terminator == '\n'
 
 
-@pytest.mark.parametrize('line,terminator', [
-    ('multiline command "with\nembedded newline";', ';'),
-    ('multiline command "with\nembedded newline";;;', ';'),
-    ('multiline command "with\nembedded newline";; ;;', ';'),
-    ('multiline command "with\nembedded newline" &', '&'),
-    ('multiline command "with\nembedded newline" & &', '&'),
-    ('multiline command "with\nembedded newline"\n\n', '\n'),
-])
+@pytest.mark.parametrize(
+    'line,terminator',
+    [
+        ('multiline command "with\nembedded newline";', ';'),
+        ('multiline command "with\nembedded newline";;;', ';'),
+        ('multiline command "with\nembedded newline";; ;;', ';'),
+        ('multiline command "with\nembedded newline" &', '&'),
+        ('multiline command "with\nembedded newline" & &', '&'),
+        ('multiline command "with\nembedded newline"\n\n', '\n'),
+    ],
+)
 def test_parse_multiline_with_embedded_newline(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
@@ -640,15 +673,18 @@ def test_empty_statement_raises_exception():
         app._complete_statement(' ')
 
 
-@pytest.mark.parametrize('line,command,args', [
-    ('helpalias', 'help', ''),
-    ('helpalias mycommand', 'help', 'mycommand'),
-    ('42', 'theanswer', ''),
-    ('42 arg1 arg2', 'theanswer', 'arg1 arg2'),
-    ('!ls', 'shell', 'ls'),
-    ('!ls -al /tmp', 'shell', 'ls -al /tmp'),
-    ('l', 'shell', 'ls -al')
-])
+@pytest.mark.parametrize(
+    'line,command,args',
+    [
+        ('helpalias', 'help', ''),
+        ('helpalias mycommand', 'help', 'mycommand'),
+        ('42', 'theanswer', ''),
+        ('42 arg1 arg2', 'theanswer', 'arg1 arg2'),
+        ('!ls', 'shell', 'ls'),
+        ('!ls -al /tmp', 'shell', 'ls -al /tmp'),
+        ('l', 'shell', 'ls -al'),
+    ],
+)
 def test_parse_alias_and_shortcut_expansion(parser, line, command, args):
     statement = parser.parse(line)
     assert statement.command == command
@@ -666,12 +702,15 @@ def test_parse_alias_on_multiline_command(parser):
     assert statement.terminator == ''
 
 
-@pytest.mark.parametrize('line,output', [
-    ('helpalias > out.txt', '>'),
-    ('helpalias>out.txt', '>'),
-    ('helpalias >> out.txt', '>>'),
-    ('helpalias>>out.txt', '>>'),
-])
+@pytest.mark.parametrize(
+    'line,output',
+    [
+        ('helpalias > out.txt', '>'),
+        ('helpalias>out.txt', '>'),
+        ('helpalias >> out.txt', '>>'),
+        ('helpalias>>out.txt', '>>'),
+    ],
+)
 def test_parse_alias_redirection(parser, line, output):
     statement = parser.parse(line)
     assert statement.command == 'help'
@@ -681,10 +720,13 @@ def test_parse_alias_redirection(parser, line, output):
     assert statement.output_to == 'out.txt'
 
 
-@pytest.mark.parametrize('line', [
-    'helpalias | less',
-    'helpalias|less',
-])
+@pytest.mark.parametrize(
+    'line',
+    [
+        'helpalias | less',
+        'helpalias|less',
+    ],
+)
 def test_parse_alias_pipe(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'help'
@@ -693,14 +735,17 @@ def test_parse_alias_pipe(parser, line):
     assert statement.pipe_to == 'less'
 
 
-@pytest.mark.parametrize('line', [
-    'helpalias;',
-    'helpalias;;',
-    'helpalias;; ;',
-    'helpalias ;',
-    'helpalias ; ;',
-    'helpalias ;; ;',
-])
+@pytest.mark.parametrize(
+    'line',
+    [
+        'helpalias;',
+        'helpalias;;',
+        'helpalias;; ;',
+        'helpalias ;',
+        'helpalias ; ;',
+        'helpalias ;; ;',
+    ],
+)
 def test_parse_alias_terminator_no_whitespace(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'help'
@@ -796,16 +841,19 @@ def test_parse_command_only_quoted_args(parser):
     assert statement.output_to == ''
 
 
-@pytest.mark.parametrize('line,args', [
-    ('helpalias > out.txt', '> out.txt'),
-    ('helpalias>out.txt', '>out.txt'),
-    ('helpalias >> out.txt', '>> out.txt'),
-    ('helpalias>>out.txt', '>>out.txt'),
-    ('help|less', '|less'),
-    ('helpalias;', ';'),
-    ('help ;;', ';;'),
-    ('help; ;;', '; ;;'),
-])
+@pytest.mark.parametrize(
+    'line,args',
+    [
+        ('helpalias > out.txt', '> out.txt'),
+        ('helpalias>out.txt', '>out.txt'),
+        ('helpalias >> out.txt', '>> out.txt'),
+        ('helpalias>>out.txt', '>>out.txt'),
+        ('help|less', '|less'),
+        ('helpalias;', ';'),
+        ('help ;;', ';;'),
+        ('help; ;;', '; ;;'),
+    ],
+)
 def test_parse_command_only_specialchars(parser, line, args):
     statement = parser.parse_command_only(line)
     assert statement == args
@@ -821,19 +869,22 @@ def test_parse_command_only_specialchars(parser, line, args):
     assert statement.output_to == ''
 
 
-@pytest.mark.parametrize('line', [
-    '',
-    ';',
-    ';;',
-    ';; ;',
-    '&',
-    '& &',
-    ' && &',
-    '>',
-    "'",
-    '"',
-    '|',
-])
+@pytest.mark.parametrize(
+    'line',
+    [
+        '',
+        ';',
+        ';;',
+        ';; ;',
+        '&',
+        '& &',
+        ' && &',
+        '>',
+        "'",
+        '"',
+        '|',
+    ],
+)
 def test_parse_command_only_empty(parser, line):
     statement = parser.parse_command_only(line)
     assert statement == ''
@@ -946,7 +997,10 @@ def test_is_valid_command_valid(parser):
 
 def test_macro_normal_arg_pattern():
     # This pattern matches digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
-    from cmd2.parsing import MacroArg
+    from cmd2.parsing import (
+        MacroArg,
+    )
+
     pattern = MacroArg.macro_normal_arg_pattern
 
     # Valid strings
@@ -997,7 +1051,10 @@ def test_macro_normal_arg_pattern():
 
 def test_macro_escaped_arg_pattern():
     # This pattern matches digits surrounded by 2 or more braces on both sides
-    from cmd2.parsing import MacroArg
+    from cmd2.parsing import (
+        MacroArg,
+    )
+
     pattern = MacroArg.macro_escaped_arg_pattern
 
     # Valid strings

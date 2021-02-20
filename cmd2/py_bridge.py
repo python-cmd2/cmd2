@@ -55,6 +55,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
        Named tuples are immutable. The contents are there for access,
        not for modification.
     """
+
     def __bool__(self) -> bool:
         """Returns True if the command succeeded, otherwise False"""
 
@@ -69,6 +70,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
 
 class PyBridge:
     """Provides a Python API wrapper for application commands."""
+
     def __init__(self, cmd2_app):
         self._cmd2_app = cmd2_app
         self.cmd_echo = False
@@ -117,8 +119,10 @@ class PyBridge:
                 self.stop = stop or self.stop
 
         # Save the output. If stderr is empty, set it to None.
-        result = CommandResult(stdout=copy_cmd_stdout.getvalue(),
-                               stderr=copy_stderr.getvalue() if copy_stderr.getvalue() else None,
-                               stop=stop,
-                               data=self._cmd2_app.last_result)
+        result = CommandResult(
+            stdout=copy_cmd_stdout.getvalue(),
+            stderr=copy_stderr.getvalue() if copy_stderr.getvalue() else None,
+            stop=stop,
+            data=self._cmd2_app.last_result,
+        )
         return result

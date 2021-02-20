@@ -20,12 +20,14 @@ import cmd2
 
 class CmdLineApp(cmd2.Cmd):
     """ Example cmd2 application. """
+
     def __init__(self, ip_addr=None, port=None, transcript_files=None):
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'&': 'speak'})
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        super().__init__(use_ipython=False, transcript_files=transcript_files, multiline_commands=['orate'],
-                         shortcuts=shortcuts)
+        super().__init__(
+            use_ipython=False, transcript_files=transcript_files, multiline_commands=['orate'], shortcuts=shortcuts
+        )
 
         self.maxrepeats = 3
         # Make maxrepeats settable at runtime

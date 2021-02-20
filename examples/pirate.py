@@ -17,6 +17,7 @@ from cmd2.constants import (
 
 class Pirate(cmd2.Cmd):
     """A piratical example cmd2 application involving looting and drinking."""
+
     def __init__(self):
         """Initialize the base class as well as this one"""
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
@@ -90,6 +91,7 @@ class Pirate(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     # Create an instance of the Pirate derived class and enter the REPL with cmdloop().
     pirate = Pirate()
     sys_exit_code = pirate.cmdloop()

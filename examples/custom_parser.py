@@ -14,6 +14,7 @@ from cmd2 import (
 # First define the parser
 class CustomParser(Cmd2ArgumentParser):
     """Overrides error class"""
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 

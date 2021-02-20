@@ -46,11 +46,17 @@ def with_category(category: str) -> Callable:
     For an alternative approach to categorizing commands using a function, see
     :func:`~cmd2.utils.categorize`
     """
+
     def cat_decorator(func):
-        from .utils import categorize
+        from .utils import (
+            categorize,
+        )
+
         categorize(func, category)
         return func
+
     return cat_decorator
+
 
 ##########################
 # The _parse_positionals and _arg_swap functions allow for additional positional args to be preserved
@@ -67,7 +73,11 @@ def _parse_positionals(args: Tuple) -> Tuple[Union['cmd2.Cmd', 'cmd2.CommandSet'
     :return: The cmd2.Cmd reference and the command line statement
     """
     for pos, arg in enumerate(args):
-        from cmd2 import Cmd, CommandSet
+        from cmd2 import (
+            Cmd,
+            CommandSet,
+        )
+
         if (isinstance(arg, Cmd) or isinstance(arg, CommandSet)) and len(args) > pos:
             if isinstance(arg, CommandSet):
                 arg = arg._cmd
@@ -90,7 +100,7 @@ def _arg_swap(args: Union[Tuple[Any], List[Any]], search_arg: Any, *replace_arg:
     """
     index = args.index(search_arg)
     args_list = list(args)
-    args_list[index:index + 1] = replace_arg
+    args_list[index : index + 1] = replace_arg
     return args_list
 
 
@@ -127,13 +137,11 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
             :return: return value of command function
             """
             cmd2_app, statement = _parse_positionals(args)
-            _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
-                                                                               statement,
-                                                                               preserve_quotes)
+            _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name, statement, preserve_quotes)
             args_list = _arg_swap(args, statement, parsed_arglist)
             return func(*args_list, **kwargs)
 
-        command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
+        command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
         cmd_wrapper.__doc__ = func.__doc__
         return cmd_wrapper
 
@@ -188,10 +196,13 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str):
             break
 
 
-def with_argparser(parser: argparse.ArgumentParser, *,
-                   ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
-                   preserve_quotes: bool = False,
-                   with_unknown_args: bool = False) -> Callable[[argparse.Namespace], Optional[bool]]:
+def with_argparser(
+    parser: argparse.ArgumentParser,
+    *,
+    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
+    preserve_quotes: bool = False,
+    with_unknown_args: bool = False
+) -> Callable[[argparse.Namespace], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
@@ -252,9 +263,9 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             :raises: Cmd2ArgparseError if argparse has error parsing command line
             """
             cmd2_app, statement_arg = _parse_positionals(args)
-            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
-                                                                                       statement_arg,
-                                                                                       preserve_quotes)
+            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(
+                command_name, statement_arg, preserve_quotes
+            )
 
             if ns_provider is None:
                 namespace = None
@@ -269,7 +280,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
                 if with_unknown_args:
                     new_args = parser.parse_known_args(parsed_arglist, namespace)
                 else:
-                    new_args = (parser.parse_args(parsed_arglist, namespace), )
+                    new_args = (parser.parse_args(parsed_arglist, namespace),)
                 ns = new_args[0]
             except SystemExit:
                 raise Cmd2ArgparseError
@@ -290,7 +301,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
                 return func(*args_list, **kwargs)
 
         # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
-        command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
+        command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
         _set_parser_prog(parser, command_name)
 
         # If the description has not been set, then use the method docstring if one exists
@@ -310,12 +321,14 @@ def with_argparser(parser: argparse.ArgumentParser, *,
     return arg_decorator
 
 
-def as_subcommand_to(command: str,
-                     subcommand: str,
-                     parser: argparse.ArgumentParser,
-                     *,
-                     help: Optional[str] = None,
-                     aliases: Iterable[str] = None) -> Callable[[argparse.Namespace], Optional[bool]]:
+def as_subcommand_to(
+    command: str,
+    subcommand: str,
+    parser: argparse.ArgumentParser,
+    *,
+    help: Optional[str] = None,
+    aliases: Iterable[str] = None
+) -> Callable[[argparse.Namespace], Optional[bool]]:
     """
     Tag this method as a subcommand to an existing argparse decorated command.
 
@@ -328,6 +341,7 @@ def as_subcommand_to(command: str,
                     ArgumentParser.add_subparser().
     :return: Wrapper function that can receive an argparse.Namespace
     """
+
     def arg_decorator(func: Callable):
         _set_parser_prog(parser, command + ' ' + subcommand)
 
