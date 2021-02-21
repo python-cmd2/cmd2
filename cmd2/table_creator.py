@@ -16,6 +16,7 @@ from enum import (
 )
 from typing import (
     Any,
+    Deque,
     Optional,
     Sequence,
     Tuple,
@@ -31,26 +32,6 @@ from . import (
     constants,
     utils,
 )
-
-# This is needed for compatibility with early versions of Python 3.5 prior to 3.5.4
-try:
-    from typing import (
-        Deque,
-    )
-except ImportError:  # pragma: no cover
-    import typing
-
-    # The following copied from the implementation of Deque in Python 3.5.4
-    # noinspection PyProtectedMember, PyUnresolvedReferences
-    class Deque(deque, typing.MutableSequence[typing.T]):
-        __slots__ = ()
-        __extra__ = deque
-
-        def __new__(cls, *args, **kwds):
-            if typing._geqv(cls, Deque):
-                raise TypeError('Type Deque cannot be instantiated; use deque() instead')
-            return typing._generic_new(deque, cls, *args, **kwds)
-
 
 # Constants
 EMPTY = ''

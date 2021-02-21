@@ -507,7 +507,7 @@ class ArgparseCompleter:
         matches = self._cmd2_app.basic_complete(text, line, begidx, endidx, match_against)
 
         # Build a dictionary linking actions with their matched flag names
-        matched_actions = dict()  # type: Dict[argparse.Action, List[str]]
+        matched_actions: Dict[argparse.Action, List[str]] = dict()
         for flag in matches:
             action = self._flag_to_action[flag]
             matched_actions.setdefault(action, [])

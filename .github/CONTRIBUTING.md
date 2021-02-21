@@ -47,7 +47,7 @@ The tables below list all prerequisites along with the minimum required version 
 
 | Prerequisite                                        | Minimum Version |
 | --------------------------------------------------- | --------------- |
-| [python](https://www.python.org/downloads/)         | `3.5`           |
+| [python](https://www.python.org/downloads/)         | `3.6`           |
 | [attrs](https://github.com/python-attrs/attrs)      | `16.3`          |
 | [colorama](https://github.com/tartley/colorama)     | `0.3.7`         |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |

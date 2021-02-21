@@ -307,7 +307,7 @@ class Cmd(cmd.Cmd):
         self.max_completion_items = 50
 
         # A dictionary mapping settable names to their Settable instance
-        self.settables = dict()  # type: Dict[str, Settable]
+        self.settables: Dict[str, Settable] = dict()
         self.build_settables()
 
         # Use as prompt for multiline commands on the 2nd+ line of input
@@ -327,7 +327,7 @@ class Cmd(cmd.Cmd):
         self.exclude_from_history = ['eof', 'history']
 
         # Dictionary of macro names and their values
-        self.macros = dict()  # type: Dict[str, Macro]
+        self.macros: Dict[str, Macro] = dict()
 
         # Keeps track of typed command history in the Python shell
         self._py_history = []
@@ -350,14 +350,14 @@ class Cmd(cmd.Cmd):
         self.last_result = None
 
         # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
-        self._script_dir = []  # type: List[str]
+        self._script_dir: List[str] = []
 
         # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
         self.sigint_protection = utils.ContextFlag()
 
         # If the current command created a process to pipe to, then this will be a ProcReader object.
         # Otherwise it will be None. It's used to know when a pipe process can be killed and/or waited upon.
-        self._cur_pipe_proc_reader = None  # type: Optional[utils.ProcReader]
+        self._cur_pipe_proc_reader: Optional[utils.ProcReader] = None
 
         # Used to keep track of whether we are redirecting or piping output
         self._redirecting = False
@@ -381,7 +381,7 @@ class Cmd(cmd.Cmd):
         self.broken_pipe_warning = ''
 
         # Commands that will run at the beginning of the command loop
-        self._startup_commands = []  # type: List[str]
+        self._startup_commands: List[str] = []
 
         # If a startup script is provided and exists, then execute it in the startup commands
         if startup_script:
@@ -393,7 +393,7 @@ class Cmd(cmd.Cmd):
                 self._startup_commands.append(script_cmd)
 
         # Transcript files to run instead of interactive command loop
-        self._transcript_files = None  # type: Optional[List[str]]
+        self._transcript_files: Optional[List[str]] = None
 
         # Check for command line args
         if allow_cli_args:
@@ -436,7 +436,7 @@ class Cmd(cmd.Cmd):
         # Commands that have been disabled from use. This is to support commands that are only available
         # during specific states of the application. This dictionary's keys are the command names and its
         # values are DisabledCommand objects.
-        self.disabled_commands = dict()  # type: Dict[str, DisabledCommand]
+        self.disabled_commands: Dict[str, DisabledCommand] = dict()
 
         # If any command has been categorized, then all other commands that haven't been categorized
         # will display under this section in the help output.
@@ -494,8 +494,8 @@ class Cmd(cmd.Cmd):
         # depends on them and it's possible a module's on_register() method may need to access some.
         ############################################################################################################
         # Load modular commands
-        self._installed_command_sets = []  # type: List[CommandSet]
-        self._cmd_to_command_sets = {}  # type: Dict[str, CommandSet]
+        self._installed_command_sets: List[CommandSet] = []
+        self._cmd_to_command_sets: Dict[str, CommandSet] = {}
         if command_sets:
             for command_set in command_sets:
                 self.register_command_set(command_set)
@@ -749,8 +749,8 @@ class Cmd(cmd.Cmd):
 
         # iterate through all matching methods
         for method_name, method in methods:
-            subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)  # type: str
-            full_command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)  # type: str
+            subcommand_name: str = getattr(method, constants.SUBCMD_ATTR_NAME)
+            full_command_name: str = getattr(method, constants.SUBCMD_ATTR_COMMAND)
             subcmd_parser = getattr(method, constants.CMD_ATTR_ARGPARSER)
 
             subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
@@ -2200,7 +2200,7 @@ class Cmd(cmd.Cmd):
                 # we need to run the finalization hooks
                 raise EmptyStatement
 
-            redir_saved_state = None  # type: Optional[utils.RedirectionSavedState]
+            redir_saved_state: Optional[utils.RedirectionSavedState] = None
 
             try:
                 # Get sigint protection while we set up redirection
@@ -2489,7 +2489,7 @@ class Cmd(cmd.Cmd):
         redir_saved_state = utils.RedirectionSavedState(self.stdout, sys.stdout, self._cur_pipe_proc_reader, self._redirecting)
 
         # The ProcReader for this command
-        cmd_pipe_proc_reader = None  # type: Optional[utils.ProcReader]
+        cmd_pipe_proc_reader: Optional[utils.ProcReader] = None
 
         if not self.allow_redirection:
             # Don't return since we set some state variables at the end of the function
@@ -2727,8 +2727,8 @@ class Cmd(cmd.Cmd):
         :raises: any exceptions raised by input() and stdin.readline()
         """
         readline_configured = False
-        saved_completer = None  # type: Optional[Callable]
-        saved_history = None  # type: Optional[List[str]]
+        saved_completer: Optional[Callable] = None
+        saved_history: Optional[List[str]] = None
 
         def configure_readline():
             """Configure readline tab completion and history"""
@@ -3094,7 +3094,7 @@ class Cmd(cmd.Cmd):
         else:
             to_list = sorted(self.aliases, key=self.default_sort_key)
 
-        not_found = []  # type: List[str]
+        not_found: List[str] = []
         for name in to_list:
             if name not in self.aliases:
                 not_found.append(name)
@@ -3320,7 +3320,7 @@ class Cmd(cmd.Cmd):
         else:
             to_list = sorted(self.macros, key=self.default_sort_key)
 
-        not_found = []  # type: List[str]
+        not_found: List[str] = []
         for name in to_list:
             if name not in self.macros:
                 not_found.append(name)
@@ -5135,7 +5135,7 @@ class Cmd(cmd.Cmd):
             else:
                 # Search all registered CommandSets
                 func_self = None
-                candidate_sets = []  # type: List[CommandSet]
+                candidate_sets: List[CommandSet] = []
                 for installed_cmd_set in self._installed_command_sets:
                     if type(installed_cmd_set) == func_class:
                         # Case 2: CommandSet is an exact type match for the function's CommandSet

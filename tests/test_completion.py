@@ -6,16 +6,13 @@ Unit/functional testing for readline tab completion functions in the cmd2.py mod
 These are primarily tests related to readline completer functions which handle tab completion of cmd2/cmd commands,
 file system paths, and shell commands.
 """
-# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
-try:
-    import mock
-except ImportError:
-    from unittest import mock
-
 import argparse
 import enum
 import os
 import sys
+from unittest import (
+    mock,
+)
 
 import pytest
 
