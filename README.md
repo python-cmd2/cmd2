@@ -38,7 +38,7 @@ Main Features
 - Unicode character support
 - Good tab completion of commands, subcommands, file system paths, and shell commands
 - Automatic tab completion of `argparse` flags when using one of the `cmd2` `argparse` decorators
-- Support for Python 3.5+ on Windows, macOS, and Linux
+- Support for Python 3.6+ on Windows, macOS, and Linux
 - Trivial to provide built-in help for all commands
 - Built-in regression testing framework for your applications (transcript-based testing)
 - Transcripts for use with built-in regression can be automatically generated from `history -t` or `run_script -t`
@@ -63,7 +63,7 @@ On all operating systems, the latest stable version of `cmd2` can be installed u
 pip install -U cmd2
 ```
 
-cmd2 works with Python 3.5+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party dependencies.
+cmd2 works with Python 3.6+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party dependencies.
 
 For information on other installation options, see
 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html) in the cmd2
