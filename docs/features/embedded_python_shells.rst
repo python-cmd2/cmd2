@@ -28,9 +28,12 @@ More Python examples:
     (Cmd) py print("-".join("spelling"))
     s-p-e-l-l-i-n-g
     (Cmd) py
-    Python 3.5.3 (default, Jan 19 2017, 14:11:04)
-    [GCC 6.3.0 20170118] on linux
+    Python 3.9.0 (default, Nov 11 2020, 21:21:51)
+    [Clang 12.0.0 (clang-1200.0.32.21)] on darwin
     Type "help", "copyright", "credits" or "license" for more information.
+
+    End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.
+    Non-Python commands can be issued with: app("your command")
     (CmdLineApp)
 
     End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.

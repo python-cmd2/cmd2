@@ -89,7 +89,7 @@ class CommandSet(object):
     """
 
     def __init__(self):
-        self._cmd = None  # type: Optional[cmd2.Cmd]
+        self._cmd: Optional[cmd2.Cmd] = None
 
     def on_register(self, cmd) -> None:
         """

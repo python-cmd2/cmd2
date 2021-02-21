@@ -28,11 +28,11 @@ Intended Audience :: System Administrators
 License :: OSI Approved :: MIT License
 Programming Language :: Python
 Programming Language :: Python :: 3
-Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
 Programming Language :: Python :: 3.8
 Programming Language :: Python :: 3.9
+Programming Language :: Python :: 3.10
 Programming Language :: Python :: Implementation :: CPython
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines(),
@@ -57,7 +57,6 @@ EXTRAS_REQUIRE = {
     # Extra dependencies for running unit tests
     'test': [
         "gnureadline; sys_platform=='darwin'",  # include gnureadline on macOS to ensure it is available in nox env
-        "mock ; python_version<'3.6'",  # for python 3.5 we need the third party mock module
         'codecov',
         'coverage',
         'pytest>=4.6',
@@ -66,13 +65,11 @@ EXTRAS_REQUIRE = {
     ],
     # development only dependencies:  install with 'pip install -e .[dev]'
     'dev': [
-        "mock ; python_version<'3.6'",  # for python 3.5 we need the third party mock module
         "pytest>=4.6",
         'codecov',
         'pytest-cov',
         'pytest-mock',
-        "nox==2019.11.9 ; python_version=='3.5.2'",
-        "nox ; python_version>'3.5.2'",
+        'nox',
         'flake8',
         'sphinx',
         'sphinx-rtd-theme',
@@ -102,7 +99,7 @@ setup(
     package_data=PACKAGE_DATA,
     packages=['cmd2'],
     keywords='command prompt console cmd',
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     setup_requires=SETUP_REQUIRES,
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,

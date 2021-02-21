@@ -5,6 +5,9 @@ Unit/functional testing for run_pytest in cmd2
 """
 import builtins
 import os
+from unittest import (
+    mock,
+)
 
 import pytest
 
@@ -17,14 +20,6 @@ from .conftest import (
     odd_file_names,
     run_cmd,
 )
-
-# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
-try:
-    import mock
-except ImportError:
-    from unittest import (
-        mock,
-    )
 
 HOOK_OUTPUT = "TEST_OUTPUT"
 

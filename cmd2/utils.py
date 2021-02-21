@@ -1049,20 +1049,15 @@ def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None
             setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
 
 
-def get_defining_class(meth) -> Type:
+def get_defining_class(meth: Callable) -> Optional[Type]:
     """
     Attempts to resolve the class that defined a method.
 
     Inspired by implementation published here:
         https://stackoverflow.com/a/25959545/1956611
 
-    TODO: Python 3.5.2 is unable to handle the type hints Callable and Optional[Type].
-          Restore proper type hints after we drop 3.5.2 support
-
     :param meth: method to inspect
-    :type meth: Callable
     :return: class type in which the supplied method was defined. None if it couldn't be resolved.
-    :rtype: Optional[Type]
     """
     if isinstance(meth, functools.partial):
         return get_defining_class(meth.func)
