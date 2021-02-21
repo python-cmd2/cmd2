@@ -49,7 +49,7 @@ class CompletionError(Exception):
     - Tab completion hints
     """
 
-    def __init__(self, *args, apply_style: bool = True, **kwargs):
+    def __init__(self, *args, apply_style: bool = True):
         """
         Initializer for CompletionError
         :param apply_style: If True, then ansi.style_error will be applied to the message text when printed.
@@ -59,7 +59,7 @@ class CompletionError(Exception):
         self.apply_style = apply_style
 
         # noinspection PyArgumentList
-        super().__init__(*args, **kwargs)
+        super().__init__(*args)
 
 
 ############################################################################################################

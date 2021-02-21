@@ -24,7 +24,9 @@ from typing import (
     Dict,
     Iterable,
     List,
+    NamedTuple,
     Optional,
+    OrderedDict,
     TextIO,
     Type,
     Union,
@@ -161,7 +163,7 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]], 
         >>> Node(4)
         Node(val=4, left=None, right=7)
     """
-    T = collections.namedtuple(typename, field_names)
+    T: NamedTuple = collections.namedtuple(typename, field_names)
     # noinspection PyProtectedMember,PyUnresolvedReferences
     T.__new__.__defaults__ = (None,) * len(T._fields)
     if isinstance(default_values, collections_abc.Mapping):
@@ -215,7 +217,7 @@ def remove_duplicates(list_to_prune: List) -> List:
     :param list_to_prune: the list being pruned of duplicates
     :return: The pruned list
     """
-    temp_dict = collections.OrderedDict()
+    temp_dict: OrderedDict = collections.OrderedDict()
     for item in list_to_prune:
         temp_dict[item] = None
 
@@ -353,7 +355,13 @@ def find_editor() -> Optional[str]:
         else:
             editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'joe', 'code', 'subl', 'atom', 'gedit', 'geany', 'kate']
 
-        paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
+        # Get a list of every directory in the PATH environment variable and ignore symbolic links
+        env_path = os.getenv('PATH')
+        if env_path is None:
+            paths = []
+        else:
+            paths = [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
+
         for editor, path in itertools.product(editors, paths):
             editor_path = os.path.join(path, editor)
             if os.path.isfile(editor_path) and os.access(editor_path, os.X_OK):
@@ -408,7 +416,11 @@ def get_exes_in_path(starts_with: str) -> List[str]:
             return []
 
     # Get a list of every directory in the PATH environment variable and ignore symbolic links
-    paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
+    env_path = os.getenv('PATH')
+    if env_path is None:
+        paths = []
+    else:
+        paths = [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
 
     # Use a set to store exe names since there can be duplicates
     exes_set = set()

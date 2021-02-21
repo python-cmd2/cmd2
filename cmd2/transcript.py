@@ -60,6 +60,9 @@ class Cmd2TestCase(unittest.TestCase):
             tfile.close()
 
     def _test_transcript(self, fname: str, transcript):
+        if self.cmdapp is None:
+            return
+
         line_num = 0
         finished = False
         line = ansi.strip_style(next(transcript))
