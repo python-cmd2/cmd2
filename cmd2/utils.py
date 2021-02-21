@@ -26,7 +26,6 @@ from typing import (
     List,
     NamedTuple,
     Optional,
-    OrderedDict,
     TextIO,
     Type,
     Union,
@@ -217,7 +216,7 @@ def remove_duplicates(list_to_prune: List) -> List:
     :param list_to_prune: the list being pruned of duplicates
     :return: The pruned list
     """
-    temp_dict: OrderedDict = collections.OrderedDict()
+    temp_dict = collections.OrderedDict()
     for item in list_to_prune:
         temp_dict[item] = None
 
