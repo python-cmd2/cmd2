@@ -203,6 +203,7 @@ from argparse import (
 from typing import (
     Any,
     Callable,
+    NoReturn,
     Optional,
     Tuple,
     Type,
@@ -264,7 +265,7 @@ class CompletionItem(str):
         return super().__new__(cls, value)
 
     # noinspection PyUnusedLocal
-    def __init__(self, value: object, desc: str = '', *args, **kwargs) -> None:
+    def __init__(self, value: object, desc: str = '', *args) -> None:
         """
         CompletionItem Initializer
 
@@ -273,7 +274,7 @@ class CompletionItem(str):
         :param args: args for str __init__
         :param kwargs: kwargs for str __init__
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args)
         self.description = desc
 
 
@@ -340,7 +341,7 @@ orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 def _add_argument_wrapper(
     self,
     *args,
-    nargs: Union[int, str, Tuple[int], Tuple[int, int], None] = None,
+    nargs: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None] = None,
     choices_provider: Optional[Callable] = None,
     completer: Optional[Callable] = None,
     suppress_tab_hint: bool = False,
@@ -812,7 +813,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         return super().add_subparsers(**kwargs)
 
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> NoReturn:
         """Custom override that applies custom formatting to the error message"""
         lines = message.split('\n')
         linum = 0
