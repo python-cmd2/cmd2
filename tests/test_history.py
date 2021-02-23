@@ -51,10 +51,10 @@ def hist():
 
     h = History(
         [
-            HistoryItem(Statement('', raw='first'), 1),
-            HistoryItem(Statement('', raw='second'), 2),
-            HistoryItem(Statement('', raw='third'), 3),
-            HistoryItem(Statement('', raw='fourth'), 4),
+            HistoryItem(Statement('', raw='first')),
+            HistoryItem(Statement('', raw='second')),
+            HistoryItem(Statement('', raw='third')),
+            HistoryItem(Statement('', raw='fourth')),
         ]
     )
     return h
@@ -72,10 +72,10 @@ def persisted_hist():
 
     h = History(
         [
-            HistoryItem(Statement('', raw='first'), 1),
-            HistoryItem(Statement('', raw='second'), 2),
-            HistoryItem(Statement('', raw='third'), 3),
-            HistoryItem(Statement('', raw='fourth'), 4),
+            HistoryItem(Statement('', raw='first')),
+            HistoryItem(Statement('', raw='second')),
+            HistoryItem(Statement('', raw='third')),
+            HistoryItem(Statement('', raw='fourth')),
         ]
     )
     h.start_session()
@@ -85,185 +85,158 @@ def persisted_hist():
 
 
 def test_history_class_span(hist):
-    for tryit in ['*', ':', '-', 'all', 'ALL']:
-        assert hist.span(tryit) == hist
-
-    assert hist.span('3')[0].statement.raw == 'third'
-    assert hist.span('-1')[0].statement.raw == 'fourth'
-
     span = hist.span('2..')
     assert len(span) == 3
-    assert span[0].statement.raw == 'second'
-    assert span[1].statement.raw == 'third'
-    assert span[2].statement.raw == 'fourth'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
 
     span = hist.span('2:')
     assert len(span) == 3
-    assert span[0].statement.raw == 'second'
-    assert span[1].statement.raw == 'third'
-    assert span[2].statement.raw == 'fourth'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
 
     span = hist.span('-2..')
     assert len(span) == 2
-    assert span[0].statement.raw == 'third'
-    assert span[1].statement.raw == 'fourth'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
 
     span = hist.span('-2:')
     assert len(span) == 2
-    assert span[0].statement.raw == 'third'
-    assert span[1].statement.raw == 'fourth'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
 
     span = hist.span('1..3')
     assert len(span) == 3
-    assert span[0].statement.raw == 'first'
-    assert span[1].statement.raw == 'second'
-    assert span[2].statement.raw == 'third'
+    assert span[1].statement.raw == 'first'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
 
     span = hist.span('1:3')
     assert len(span) == 3
-    assert span[0].statement.raw == 'first'
-    assert span[1].statement.raw == 'second'
-    assert span[2].statement.raw == 'third'
+    assert span[1].statement.raw == 'first'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
 
     span = hist.span('2:-1')
     assert len(span) == 3
-    assert span[0].statement.raw == 'second'
-    assert span[1].statement.raw == 'third'
-    assert span[2].statement.raw == 'fourth'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
 
     span = hist.span('-3:4')
     assert len(span) == 3
-    assert span[0].statement.raw == 'second'
-    assert span[1].statement.raw == 'third'
-    assert span[2].statement.raw == 'fourth'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
 
     span = hist.span('-4:-2')
     assert len(span) == 3
-    assert span[0].statement.raw == 'first'
-    assert span[1].statement.raw == 'second'
-    assert span[2].statement.raw == 'third'
+    assert span[1].statement.raw == 'first'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
 
     span = hist.span(':-2')
     assert len(span) == 3
-    assert span[0].statement.raw == 'first'
-    assert span[1].statement.raw == 'second'
-    assert span[2].statement.raw == 'third'
+    assert span[1].statement.raw == 'first'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
 
     span = hist.span('..-2')
     assert len(span) == 3
-    assert span[0].statement.raw == 'first'
-    assert span[1].statement.raw == 'second'
-    assert span[2].statement.raw == 'third'
+    assert span[1].statement.raw == 'first'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
 
-    value_errors = ['fred', 'fred:joe', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    value_errors = ['fred', 'fred:joe', '2', '-2', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
     for tryit in value_errors:
         with pytest.raises(ValueError):
             hist.span(tryit)
 
 
 def test_persisted_history_span(persisted_hist):
-    for tryit in ['*', ':', '-', 'all', 'ALL']:
-        assert persisted_hist.span(tryit, include_persisted=True) == persisted_hist
-        assert persisted_hist.span(tryit, include_persisted=False) != persisted_hist
-
-    assert persisted_hist.span('3')[0].statement.raw == 'third'
-    assert persisted_hist.span('-1')[0].statement.raw == 'sixth'
-
     span = persisted_hist.span('2..')
     assert len(span) == 5
-    assert span[0].statement.raw == 'second'
-    assert span[1].statement.raw == 'third'
-    assert span[2].statement.raw == 'fourth'
-    assert span[3].statement.raw == 'fifth'
-    assert span[4].statement.raw == 'sixth'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
+    assert span[5].statement.raw == 'fifth'
+    assert span[6].statement.raw == 'sixth'
 
     span = persisted_hist.span('-2..')
     assert len(span) == 2
-    assert span[0].statement.raw == 'fifth'
-    assert span[1].statement.raw == 'sixth'
+    assert span[5].statement.raw == 'fifth'
+    assert span[6].statement.raw == 'sixth'
 
     span = persisted_hist.span('1..3')
     assert len(span) == 3
-    assert span[0].statement.raw == 'first'
-    assert span[1].statement.raw == 'second'
-    assert span[2].statement.raw == 'third'
+    assert span[1].statement.raw == 'first'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
 
     span = persisted_hist.span('2:-1')
     assert len(span) == 5
-    assert span[0].statement.raw == 'second'
-    assert span[1].statement.raw == 'third'
-    assert span[2].statement.raw == 'fourth'
-    assert span[3].statement.raw == 'fifth'
-    assert span[4].statement.raw == 'sixth'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
+    assert span[5].statement.raw == 'fifth'
+    assert span[6].statement.raw == 'sixth'
 
     span = persisted_hist.span('-3:4')
     assert len(span) == 1
-    assert span[0].statement.raw == 'fourth'
+    assert span[4].statement.raw == 'fourth'
 
     span = persisted_hist.span(':-2', include_persisted=True)
     assert len(span) == 5
-    assert span[0].statement.raw == 'first'
-    assert span[1].statement.raw == 'second'
-    assert span[2].statement.raw == 'third'
-    assert span[3].statement.raw == 'fourth'
-    assert span[4].statement.raw == 'fifth'
+    assert span[1].statement.raw == 'first'
+    assert span[2].statement.raw == 'second'
+    assert span[3].statement.raw == 'third'
+    assert span[4].statement.raw == 'fourth'
+    assert span[5].statement.raw == 'fifth'
 
     span = persisted_hist.span(':-2', include_persisted=False)
     assert len(span) == 1
-    assert span[0].statement.raw == 'fifth'
+    assert span[5].statement.raw == 'fifth'
 
-    value_errors = ['fred', 'fred:joe', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    value_errors = ['fred', 'fred:joe', '2', '-2', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
     for tryit in value_errors:
         with pytest.raises(ValueError):
             persisted_hist.span(tryit)
 
 
 def test_history_class_get(hist):
-    assert hist.get('1').statement.raw == 'first'
+    assert hist.get(1).statement.raw == 'first'
     assert hist.get(3).statement.raw == 'third'
-    assert hist.get('-2') == hist[-2]
+    assert hist.get(-2) == hist[-2]
     assert hist.get(-1).statement.raw == 'fourth'
 
     with pytest.raises(IndexError):
         hist.get(0)
-    with pytest.raises(IndexError):
-        hist.get('0')
 
     with pytest.raises(IndexError):
-        hist.get('5')
-    with pytest.raises(ValueError):
-        hist.get('2-3')
-    with pytest.raises(ValueError):
-        hist.get('1..2')
-    with pytest.raises(ValueError):
-        hist.get('3:4')
-    with pytest.raises(ValueError):
-        hist.get('fred')
-    with pytest.raises(ValueError):
-        hist.get('')
-    with pytest.raises(TypeError):
-        hist.get(None)
+        hist.get(5)
 
 
 def test_history_str_search(hist):
     items = hist.str_search('ir')
     assert len(items) == 2
-    assert items[0].statement.raw == 'first'
-    assert items[1].statement.raw == 'third'
+    assert items[1].statement.raw == 'first'
+    assert items[3].statement.raw == 'third'
 
     items = hist.str_search('rth')
     assert len(items) == 1
-    assert items[0].statement.raw == 'fourth'
+    assert items[4].statement.raw == 'fourth'
 
 
 def test_history_regex_search(hist):
     items = hist.regex_search('/i.*d/')
     assert len(items) == 1
-    assert items[0].statement.raw == 'third'
+    assert items[3].statement.raw == 'third'
 
     items = hist.regex_search('s[a-z]+ond')
     assert len(items) == 1
-    assert items[0].statement.raw == 'second'
+    assert items[2].statement.raw == 'second'
 
 
 def test_history_max_length_zero(hist):
@@ -301,7 +274,7 @@ def histitem():
         command='help',
         arg_list=['history'],
     )
-    histitem = HistoryItem(statement, 1)
+    histitem = HistoryItem(statement)
     return histitem
 
 
@@ -338,7 +311,7 @@ def test_multiline_histitem(parser):
     assert len(history) == 1
     hist_item = history[0]
     assert hist_item.raw == line
-    pr_lines = hist_item.pr().splitlines()
+    pr_lines = hist_item.pr(1).splitlines()
     assert pr_lines[0].endswith('multiline foo bar')
 
 
@@ -354,7 +327,7 @@ def test_multiline_histitem_verbose(parser):
     assert len(history) == 1
     hist_item = history[0]
     assert hist_item.raw == line
-    pr_lines = hist_item.pr(verbose=True).splitlines()
+    pr_lines = hist_item.pr(1, verbose=True).splitlines()
     assert pr_lines[0].endswith('multiline foo')
     assert pr_lines[1] == 'bar'
 
@@ -375,12 +348,6 @@ def test_history_item_instantiate():
     )
     with pytest.raises(TypeError):
         _ = HistoryItem()
-    with pytest.raises(TypeError):
-        _ = HistoryItem(idx=1)
-    with pytest.raises(TypeError):
-        _ = HistoryItem(statement=statement)
-    with pytest.raises(TypeError):
-        _ = HistoryItem(statement=statement, idx='hi')
 
 
 def test_history_item_properties(histitem):
