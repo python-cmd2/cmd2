@@ -1,5 +1,7 @@
 ## 2.0.0 (TBD, 2021)
-* Breaking changes
+* Bug Fixes
+  * Fixed issue where TableCreator was tossing blank last lines
+* Breaking Changes
     * `cmd2` 2.0 supports Python 3.6+ (removed support for Python 3.5)
     * Argparse Completion / Settables
         * Replaced `choices_function` / `choices_method` with `choices_provider`.
