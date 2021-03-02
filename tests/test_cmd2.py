@@ -534,7 +534,7 @@ def test_in_script(request):
 
 
 def test_system_exit_in_command(base_app, capsys):
-    """Test raising SystemExit from a command"""
+    """Test raising SystemExit in a command"""
     import types
 
     def do_system_exit(self, _):
@@ -544,6 +544,21 @@ def test_system_exit_in_command(base_app, capsys):
 
     stop = base_app.onecmd_plus_hooks('system_exit')
     assert stop
+
+
+def test_passthrough_exception_in_command(base_app):
+    """Test raising a PassThroughException in a command"""
+    import types
+
+    def do_passthrough(self, _):
+        wrapped_ex = OSError("Pass me up")
+        raise exceptions.PassThroughException(wrapped_ex=wrapped_ex)
+
+    setattr(base_app, 'do_passthrough', types.MethodType(do_passthrough, base_app))
+
+    with pytest.raises(OSError) as excinfo:
+        base_app.onecmd_plus_hooks('passthrough')
+    assert 'Pass me up' in str(excinfo.value)
 
 
 def test_output_redirection(base_app):

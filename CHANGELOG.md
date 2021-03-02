@@ -18,6 +18,7 @@
     * Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
       See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
       for an example.
+    * Added `cmd2.exceptions.PassThroughException` to raise unhandled command exceptions instead of printing them.
 
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes
