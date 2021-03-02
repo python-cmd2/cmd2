@@ -23,6 +23,7 @@
       for an example.
     * Added `cmd2.exceptions.PassThroughException` to raise unhandled command exceptions instead of printing them.
     * Added support for ANSI styles and newlines in tab completion results using `cmd2.Cmd.formatted_completions`.
+      `cmd2` provides this capability automatically if you return argparse completion matches as `CompletionItems`.
 
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes
