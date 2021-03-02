@@ -18,6 +18,10 @@ from cmd2.table_creator import (
     VerticalAlignment,
 )
 
+# Turn off black formatting for entire file so multiline strings
+# can be visually aligned to match the tables being tested.
+# fmt: off
+
 
 def test_column_creation():
     # Width less than 1
@@ -119,6 +123,17 @@ def test_column_alignment():
     )
 
 
+def test_blank_last_line():
+    """This tests that an empty line is inserted when the last data line is blank"""
+    column_1 = Column("Col 1", width=10)
+    tc = TableCreator([column_1])
+
+    row_data = ['my line\n\n']
+    row = tc.generate_row(row_data=row_data)
+    assert row == ('my line   \n'
+                   '          ')
+
+
 def test_wrap_text():
     column_1 = Column("Col 1", width=10)
     tc = TableCreator([column_1])
@@ -126,12 +141,19 @@ def test_wrap_text():
     # Test normal wrapping
     row_data = ['Some text to wrap\nA new line that will wrap\nNot wrap\n 1  2   3']
     row = tc.generate_row(row_data=row_data)
-    assert row == ('Some text \n' 'to wrap   \n' 'A new line\n' 'that will \n' 'wrap      \n' 'Not wrap  \n' ' 1  2   3 ')
+    assert row == ('Some text \n'
+                   'to wrap   \n'
+                   'A new line\n'
+                   'that will \n'
+                   'wrap      \n'
+                   'Not wrap  \n'
+                   ' 1  2   3 ')
 
     # Test preserving a multiple space sequence across a line break
     row_data = ['First      last one']
     row = tc.generate_row(row_data=row_data)
-    assert row == ('First     \n' ' last one ')
+    assert row == ('First     \n'
+                   ' last one ')
 
 
 def test_wrap_text_max_lines():
@@ -141,27 +163,32 @@ def test_wrap_text_max_lines():
     # Test not needing to truncate the final line
     row_data = ['First line last line']
     row = tc.generate_row(row_data=row_data)
-    assert row == ('First line\n' 'last line ')
+    assert row == ('First line\n'
+                   'last line ')
 
     # Test having to truncate the last word because it's too long for the final line
     row_data = ['First line last lineextratext']
     row = tc.generate_row(row_data=row_data)
-    assert row == ('First line\n' 'last line…')
+    assert row == ('First line\n'
+                   'last line…')
 
     # Test having to truncate the last word because it fits the final line but there is more text not being included
     row_data = ['First line thistxtfit extra']
     row = tc.generate_row(row_data=row_data)
-    assert row == ('First line\n' 'thistxtfi…')
+    assert row == ('First line\n'
+                   'thistxtfi…')
 
     # Test having to truncate the last word because it fits the final line but there are more lines not being included
     row_data = ['First line thistxtfit\nextra']
     row = tc.generate_row(row_data=row_data)
-    assert row == ('First line\n' 'thistxtfi…')
+    assert row == ('First line\n'
+                   'thistxtfi…')
 
     # Test having space left on the final line and adding an ellipsis because there are more lines not being included
     row_data = ['First line last line\nextra line']
     row = tc.generate_row(row_data=row_data)
-    assert row == ('First line\n' 'last line…')
+    assert row == ('First line\n'
+                   'last line…')
 
 
 def test_wrap_long_word():
@@ -174,7 +201,8 @@ def test_wrap_long_word():
 
     # Test header row
     header = tc.generate_row()
-    assert header == ('LongColumn            \n' 'Name        Col 2     ')
+    assert header == ('LongColumn            \n'
+                      'Name        Col 2     ')
 
     # Test data row
     row_data = list()
@@ -230,7 +258,8 @@ def test_wrap_long_word_max_data_lines():
     row_data.append("A LongerThan10RunsOverLast")
 
     row = tc.generate_row(row_data=row_data)
-    assert row == ('LongerThan  LongerThan  LongerThan  A LongerT…\n' '10FitsLast  10FitsLas…  10RunsOve…            ')
+    assert row == ('LongerThan  LongerThan  LongerThan  A LongerT…\n'
+                   '10FitsLast  10FitsLas…  10RunsOve…            ')
 
 
 def test_wrap_long_char_wider_than_max_width():
@@ -318,7 +347,10 @@ def test_simple_table_creation():
     table = st.generate_table(row_data)
 
     assert table == (
-        'Col 1             Col 2           \n' 'Col 1 Row 1       Col 2 Row 1     \n' '\n' 'Col 1 Row 2       Col 2 Row 2     '
+        'Col 1             Col 2           \n'
+        'Col 1 Row 1       Col 2 Row 1     \n'
+        '\n'
+        'Col 1 Row 2       Col 2 Row 2     '
     )
 
     # No row spacing
@@ -335,7 +367,9 @@ def test_simple_table_creation():
     st = SimpleTable([column_1, column_2])
     table = st.generate_table(row_data, include_header=False)
 
-    assert table == ('Col 1 Row 1       Col 2 Row 1     \n' '\n' 'Col 1 Row 2       Col 2 Row 2     ')
+    assert table == ('Col 1 Row 1       Col 2 Row 1     \n'
+                     '\n'
+                     'Col 1 Row 2       Col 2 Row 2     ')
 
     # Wide custom divider (divider needs no padding)
     st = SimpleTable([column_1, column_2], divider_char='深')
