@@ -20,7 +20,20 @@ def test_strip_style():
 def test_style_aware_wcswidth():
     base_str = HELLO_WORLD
     ansi_str = ansi.style(base_str, fg='green')
-    assert ansi.style_aware_wcswidth(ansi_str) != len(ansi_str)
+    assert ansi.style_aware_wcswidth(HELLO_WORLD) == ansi.style_aware_wcswidth(ansi_str)
+
+    assert ansi.style_aware_wcswidth('i have a tab\t') == -1
+    assert ansi.style_aware_wcswidth('i have a newline\n') == -1
+
+
+def test_widest_line():
+    text = ansi.style('i have\n3 lines\nThis is the longest one', fg='green')
+    assert ansi.widest_line(text) == ansi.style_aware_wcswidth("This is the longest one")
+
+    text = "I'm just one line"
+    assert ansi.widest_line(text) == ansi.style_aware_wcswidth(text)
+
+    assert ansi.widest_line('i have a tab\t') == -1
 
 
 def test_style_none():

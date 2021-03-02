@@ -184,13 +184,37 @@ def strip_style(text: str) -> str:
 
 def style_aware_wcswidth(text: str) -> int:
     """
-    Wrap wcswidth to make it compatible with strings that contains ANSI style sequences
+    Wrap wcswidth to make it compatible with strings that contains ANSI style sequences.
+    This is intended for single line strings. If text contains a newline, this
+    function will return -1. For multiline strings, call widest_line() instead.
 
     :param text: the string being measured
-    :return: the width of the string when printed to the terminal
+    :return: The width of the string when printed to the terminal if no errors occur.
+             If text contains characters with no absolute width (i.e. tabs),
+             then this function returns -1. Replace tabs with spaces before calling this.
     """
     # Strip ANSI style sequences since they cause wcswidth to return -1
     return wcswidth(strip_style(text))
+
+
+def widest_line(text: str) -> int:
+    """
+    Return the width of the widest line in a multiline string. This wraps style_aware_wcswidth()
+    so it handles ANSI style sequences and has the same restrictions on non-printable characters.
+
+    :param text: the string being measured
+    :return: The width of the string when printed to the terminal if no errors occur.
+             If text contains characters with no absolute width (i.e. tabs),
+             then this function returns -1. Replace tabs with spaces before calling this.
+    """
+    if not text:
+        return 0
+
+    lines_widths = [style_aware_wcswidth(line) for line in text.splitlines()]
+    if -1 in lines_widths:
+        return -1
+
+    return max(lines_widths)
 
 
 def style_aware_write(fileobj: IO, msg: str) -> None:

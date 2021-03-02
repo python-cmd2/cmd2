@@ -24,6 +24,7 @@ from cmd2.utils import (
 
 from .conftest import (
     complete_tester,
+    normalize,
     run_cmd,
 )
 
@@ -720,8 +721,12 @@ def test_completion_items(ac_app, num_aliases, show_description):
     assert len(ac_app.completion_matches) == num_aliases
     assert len(ac_app.display_matches) == num_aliases
 
-    # If show_description is True, the alias's value will be in the display text
-    assert ('help' in ac_app.display_matches[0]) == show_description
+    assert bool(ac_app.formatted_completions) == show_description
+    if show_description:
+        # If show_description is True, the table will show both the alias name and result
+        first_result_line = normalize(ac_app.formatted_completions)[1]
+        assert 'fake_alias0' in first_result_line
+        assert 'help' in first_result_line
 
 
 @pytest.mark.parametrize(
@@ -842,7 +847,7 @@ def test_completion_items_arg_header(ac_app):
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert "DESC_HEADER" in ac_app.completion_header
+    assert "DESC_HEADER" in normalize(ac_app.formatted_completions)[0]
 
     # Test when metavar is a string
     text = ''
@@ -851,7 +856,7 @@ def test_completion_items_arg_header(ac_app):
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.STR_METAVAR in ac_app.completion_header
+    assert ac_app.STR_METAVAR in normalize(ac_app.formatted_completions)[0]
 
     # Test when metavar is a tuple
     text = ''
@@ -861,7 +866,7 @@ def test_completion_items_arg_header(ac_app):
 
     # We are completing the first argument of this flag. The first element in the tuple should be the column header.
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.TUPLE_METAVAR[0].upper() in ac_app.completion_header
+    assert ac_app.TUPLE_METAVAR[0].upper() in normalize(ac_app.formatted_completions)[0]
 
     text = ''
     line = 'choices --tuple_metavar token_1 {}'.format(text)
@@ -870,7 +875,7 @@ def test_completion_items_arg_header(ac_app):
 
     # We are completing the second argument of this flag. The second element in the tuple should be the column header.
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.TUPLE_METAVAR[1].upper() in ac_app.completion_header
+    assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[0]
 
     text = ''
     line = 'choices --tuple_metavar token_1 token_2 {}'.format(text)
@@ -880,7 +885,7 @@ def test_completion_items_arg_header(ac_app):
     # We are completing the third argument of this flag. It should still be the second tuple element
     # in the column header since the tuple only has two strings in it.
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.TUPLE_METAVAR[1].upper() in ac_app.completion_header
+    assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[0]
 
 
 def test_completion_items_descriptive_header(ac_app):
@@ -895,7 +900,7 @@ def test_completion_items_descriptive_header(ac_app):
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.CUSTOM_DESC_HEADER in ac_app.completion_header
+    assert ac_app.CUSTOM_DESC_HEADER in normalize(ac_app.formatted_completions)[0]
 
     # This argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADER
     text = ''
@@ -904,7 +909,7 @@ def test_completion_items_descriptive_header(ac_app):
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert DEFAULT_DESCRIPTIVE_HEADER in ac_app.completion_header
+    assert DEFAULT_DESCRIPTIVE_HEADER in normalize(ac_app.formatted_completions)[0]
 
 
 @pytest.mark.parametrize(
