@@ -238,6 +238,14 @@ class Plugin:
         self.called_cmdfinalization += 1
         raise KeyboardInterrupt
 
+    def cmdfinalization_hook_passthrough_exception(
+        self, data: cmd2.plugin.CommandFinalizationData
+    ) -> cmd2.plugin.CommandFinalizationData:
+        """A command finalization hook which raises a PassThroughException"""
+        self.called_cmdfinalization += 1
+        wrapped_ex = OSError("Pass me up")
+        raise exceptions.PassThroughException(wrapped_ex=wrapped_ex)
+
     def cmdfinalization_hook_not_enough_parameters(self) -> plugin.CommandFinalizationData:
         """A command finalization hook with no parameters."""
         pass
@@ -916,7 +924,7 @@ def test_cmdfinalization_hook_exception(capsys):
     assert app.called_cmdfinalization == 1
 
 
-def test_cmdfinalization_hook_system_exit(capsys):
+def test_cmdfinalization_hook_system_exit():
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_system_exit)
     stop = app.onecmd_plus_hooks('say hello')
@@ -924,7 +932,7 @@ def test_cmdfinalization_hook_system_exit(capsys):
     assert app.called_cmdfinalization == 1
 
 
-def test_cmdfinalization_hook_keyboard_interrupt(capsys):
+def test_cmdfinalization_hook_keyboard_interrupt():
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_keyboard_interrupt)
 
@@ -944,6 +952,16 @@ def test_cmdfinalization_hook_keyboard_interrupt(capsys):
     app.reset_counters()
     stop = app.onecmd_plus_hooks('quit', raise_keyboard_interrupt=True)
     assert stop
+    assert app.called_cmdfinalization == 1
+
+
+def test_cmdfinalization_hook_passthrough_exception():
+    app = PluggedApp()
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook_passthrough_exception)
+
+    with pytest.raises(OSError) as excinfo:
+        app.onecmd_plus_hooks('say hello')
+    assert 'Pass me up' in str(excinfo.value)
     assert app.called_cmdfinalization == 1
 
 
