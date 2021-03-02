@@ -133,6 +133,14 @@ def test_blank_last_line():
     assert row == ('my line   \n'
                    '          ')
 
+    row_data = ['\n']
+    row = tc.generate_row(row_data=row_data)
+    assert row == '          '
+
+    row_data = ['']
+    row = tc.generate_row(row_data=row_data)
+    assert row == '          '
+
 
 def test_wrap_text():
     column_1 = Column("Col 1", width=10)
