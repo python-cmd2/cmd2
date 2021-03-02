@@ -351,6 +351,10 @@ class TableCreator:
                 last_word = data_line_index == len(data_str_lines) - 1 and char_index == len(data_line)
                 add_word(cur_word_buf.getvalue(), last_word)
 
+            # If the last line is empty, then add a newline
+            elif data_line_index == len(data_str_lines) - 1:
+                wrapped_buf.write('\n')
+
             # Stop line loop if we've written to max_lines
             if total_lines == max_lines:
                 # If this isn't the last data line and there is space
