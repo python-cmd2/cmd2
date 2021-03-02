@@ -184,7 +184,7 @@ def strip_style(text: str) -> str:
 
 def style_aware_wcswidth(text: str) -> int:
     """
-    Wrap wcswidth to make it compatible with strings that contains ANSI style sequences.
+    Wrap wcswidth to make it compatible with strings that contain ANSI style sequences.
     This is intended for single line strings. If text contains a newline, this
     function will return -1. For multiline strings, call widest_line() instead.
 
