@@ -788,7 +788,7 @@ class Cmd(cmd.Cmd):
                             if choice_name == cur_subcmd:
                                 return find_subcommand(choice, subcmd_names)
                         break
-                raise CommandSetRegistrationError('Could not find sub-command "{}"'.format(full_command_name))
+                raise CommandSetRegistrationError('Could not find subcommand "{}"'.format(full_command_name))
 
             target_parser = find_subcommand(command_parser, subcommand_names)
 
@@ -4235,13 +4235,13 @@ class Cmd(cmd.Cmd):
                 self.perror("Cowardly refusing to run all previously entered commands.")
                 self.perror("If this is what you want to do, specify '1:' as the range of history.")
             else:
-                return self.runcmds_plus_hooks(history)
+                return self.runcmds_plus_hooks(list(history.values()))
         elif args.edit:
             import tempfile
 
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             with os.fdopen(fd, 'w') as fobj:
-                for command in history:
+                for command in history.values():
                     if command.statement.multiline_command:
                         fobj.write('{}\n'.format(command.expanded))
                     else:
@@ -4255,7 +4255,7 @@ class Cmd(cmd.Cmd):
         elif args.output_file:
             try:
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
-                    for item in history:
+                    for item in history.values():
                         if item.statement.multiline_command:
                             fobj.write('{}\n'.format(item.expanded))
                         else:
@@ -4266,33 +4266,31 @@ class Cmd(cmd.Cmd):
             else:
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
         elif args.transcript:
-            self._generate_transcript(history, args.transcript)
+            self._generate_transcript(list(history.values()), args.transcript)
         else:
             # Display the history items retrieved
-            for hi in history:
-                self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
+            for idx, hi in history.items():
+                self.poutput(hi.pr(idx, script=args.script, expanded=args.expanded, verbose=args.verbose))
 
-    def _get_history(self, args: argparse.Namespace) -> List[HistoryItem]:
-        """If an argument was supplied, then retrieve partial contents of the history; otherwise retrieve entire history."""
+    def _get_history(self, args: argparse.Namespace) -> Dict[int, HistoryItem]:
+        """If an argument was supplied, then retrieve partial contents of the history; otherwise retrieve entire history.
+
+        This function returns a dictionary with history items keyed by their 1-based index in ascending order.
+        """
         if args.arg:
-            # If a character indicating a slice is present, retrieve a slice of the history
-            arg = args.arg
-            arg_is_int = False
             try:
-                int(arg)
-                arg_is_int = True
+                int_arg = int(args.arg)
+                return {int_arg: self.history.get(int_arg)}
             except ValueError:
                 pass
 
-            if '..' in arg or ':' in arg:
+            if '..' in args.arg or ':' in args.arg:
                 # Get a slice of history
-                history = self.history.span(arg, args.all)
-            elif arg_is_int:
-                history = [self.history.get(arg)]
-            elif arg.startswith(r'/') and arg.endswith(r'/'):
-                history = self.history.regex_search(arg, args.all)
+                history = self.history.span(args.arg, args.all)
+            elif args.arg.startswith(r'/') and args.arg.endswith(r'/'):
+                history = self.history.regex_search(args.arg, args.all)
             else:
-                history = self.history.str_search(arg, args.all)
+                history = self.history.str_search(args.arg, args.all)
         else:
             # Get a copy of the history so it doesn't get mutated while we are using it
             history = self.history.span(':', args.all)
@@ -5118,7 +5116,7 @@ class Cmd(cmd.Cmd):
         instance of each type, using type is a reasonably safe way to resolve the correct object instance
 
         :param cmd_support_func: command support function. This could be a completer or namespace provider
-        :param cmd_self: The `self` associated with the command or sub-command
+        :param cmd_self: The `self` associated with the command or subcommand
         :return:
         """
         # figure out what class the command support function was defined in
