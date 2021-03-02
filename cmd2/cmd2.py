@@ -95,6 +95,7 @@ from .exceptions import (
     CompletionError,
     EmbeddedConsoleExit,
     EmptyStatement,
+    PassThroughException,
     RedirectionError,
     SkipPostcommandHooks,
 )
@@ -2259,6 +2260,8 @@ class Cmd(cmd.Cmd):
                 raise ex
         except SystemExit:
             stop = True
+        except PassThroughException as ex:
+            raise ex.wrapped_ex
         except Exception as ex:
             self.pexcept(ex)
         finally:
@@ -2269,6 +2272,8 @@ class Cmd(cmd.Cmd):
                     raise ex
             except SystemExit:
                 stop = True
+            except PassThroughException as ex:
+                raise ex.wrapped_ex
             except Exception as ex:
                 self.pexcept(ex)
 

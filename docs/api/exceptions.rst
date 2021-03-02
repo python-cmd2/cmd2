@@ -15,3 +15,6 @@ Custom cmd2 exceptions
 
 .. autoclass:: cmd2.exceptions.CompletionError
     :members:
+
+.. autoclass:: cmd2.exceptions.PassThroughException
+    :members:
