@@ -139,9 +139,7 @@ class TableCreator:
             # For headers with the width not yet set, use the width of the
             # widest line in the header or 1 if the header has no width
             if col.width is None:
-                line_widths = [ansi.style_aware_wcswidth(line) for line in col.header.splitlines()]
-                line_widths.append(1)
-                col.width = max(line_widths)
+                col.width = max(1, ansi.widest_line(col.header))
 
     @staticmethod
     def _wrap_long_word(word: str, max_width: int, max_lines: Union[int, float], is_last_word: bool) -> Tuple[str, int, int]:
@@ -396,7 +394,7 @@ class TableCreator:
         aligned_text = utils.align_text(wrapped_text, fill_char=fill_char, width=col.width, alignment=text_alignment)
 
         lines = deque(aligned_text.splitlines())
-        cell_width = max([ansi.style_aware_wcswidth(line) for line in lines])
+        cell_width = ansi.widest_line(aligned_text)
         return lines, cell_width
 
     def generate_row(

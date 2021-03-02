@@ -9,7 +9,6 @@ See the header of argparse_custom.py for instructions on how to use these featur
 import argparse
 import inspect
 import numbers
-import shutil
 from collections import (
     deque,
 )
@@ -527,6 +526,7 @@ class ArgparseCompleter:
     def _format_completions(self, arg_state: _ArgumentState, completions: List[Union[str, CompletionItem]]) -> List[str]:
         # Check if the results are CompletionItems and that there aren't too many to display
         if 1 < len(completions) <= self._cmd2_app.max_completion_items and isinstance(completions[0], CompletionItem):
+            four_spaces = 4 * ' '
 
             # If the user has not already sorted the CompletionItems, then sort them before appending the descriptions
             if not self._cmd2_app.matches_sorted:
@@ -549,30 +549,27 @@ class ArgparseCompleter:
             if desc_header is None:
                 desc_header = DEFAULT_DESCRIPTIVE_HEADER
 
+            # Replace tabs with 4 spaces so we can calculate width
+            desc_header = desc_header.replace('\t', four_spaces)
+
             # Calculate needed widths for the token and description columns of the table
             token_width = ansi.style_aware_wcswidth(destination)
-            desc_width = ansi.style_aware_wcswidth(desc_header)
+            desc_width = ansi.widest_line(desc_header)
 
             for item in completions:
                 token_width = max(ansi.style_aware_wcswidth(item), token_width)
-                desc_width = max(ansi.style_aware_wcswidth(item.description), desc_width)
 
-            # Create a table that's over half the width of the terminal.
-            # This will force readline to place each entry on its own line.
-            min_width = int(shutil.get_terminal_size().columns * 0.6)
-            base_width = SimpleTable.base_width(2)
-            initial_width = base_width + token_width + desc_width
-
-            if initial_width < min_width:
-                desc_width += min_width - initial_width
+                # Replace tabs with 4 spaces so we can calculate width
+                item.description = item.description.replace('\t', four_spaces)
+                desc_width = max(ansi.widest_line(item.description), desc_width)
 
             cols = list()
             cols.append(Column(destination.upper(), width=token_width))
             cols.append(Column(desc_header, width=desc_width))
 
             hint_table = SimpleTable(cols, divider_char=None)
-            self._cmd2_app.completion_header = hint_table.generate_header()
-            self._cmd2_app.display_matches = [hint_table.generate_data_row([item, item.description]) for item in completions]
+            table_data = [[item, item.description] for item in completions]
+            self._cmd2_app.formatted_completions = hint_table.generate_table(table_data, row_spacing=0)
 
         return completions
 

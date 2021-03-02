@@ -467,8 +467,10 @@ class Cmd(cmd.Cmd):
         # An optional hint which prints above tab completion suggestions
         self.completion_hint = ''
 
-        # Header which prints above CompletionItem tables
-        self.completion_header = ''
+        # Already formatted completion results. If this is populated, then cmd2 will print it instead
+        # of using readline's columnized results. ANSI style sequences and newlines in tab completion
+        # results are supported by this member. ArgparseCompleter uses this to print tab completion tables.
+        self.formatted_completions = ''
 
         # Used by complete() for readline tab completion
         self.completion_matches = []
@@ -1118,7 +1120,7 @@ class Cmd(cmd.Cmd):
         self.allow_appended_space = True
         self.allow_closing_quote = True
         self.completion_hint = ''
-        self.completion_header = ''
+        self.formatted_completions = ''
         self.completion_matches = []
         self.display_matches = []
         self.matches_delimited = False
@@ -1645,22 +1647,6 @@ class Cmd(cmd.Cmd):
 
         return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
-    def _build_completion_metadata_string(self) -> str:  # pragma: no cover
-        """Build completion metadata string which can contain a hint and CompletionItem table header"""
-        metadata = ''
-
-        # Add hint if one exists and we are supposed to display it
-        if self.always_show_hint and self.completion_hint:
-            metadata += '\n' + self.completion_hint
-
-        # Add table header if one exists
-        if self.completion_header:
-            if not metadata:
-                metadata += '\n'
-            metadata += '\n' + self.completion_header
-
-        return metadata
-
     def _display_matches_gnu_readline(
         self, substitution: str, matches: List[str], longest_match_length: int
     ) -> None:  # pragma: no cover
@@ -1673,45 +1659,55 @@ class Cmd(cmd.Cmd):
         """
         if rl_type == RlType.GNU:
 
-            # Check if we should show display_matches
-            if self.display_matches:
-                matches_to_display = self.display_matches
+            # Print hint if one exists and we are supposed to display it
+            hint_printed = False
+            if self.always_show_hint and self.completion_hint:
+                hint_printed = True
+                sys.stdout.write('\n' + self.completion_hint)
 
-                # Recalculate longest_match_length for display_matches
-                longest_match_length = 0
+            # Check if we already have formatted results to print
+            if self.formatted_completions:
+                if not hint_printed:
+                    sys.stdout.write('\n')
+                sys.stdout.write('\n' + self.formatted_completions + '\n\n')
 
-                for cur_match in matches_to_display:
-                    cur_length = ansi.style_aware_wcswidth(cur_match)
-                    if cur_length > longest_match_length:
-                        longest_match_length = cur_length
+            # Otherwise use readline's formatter
             else:
-                matches_to_display = matches
+                # Check if we should show display_matches
+                if self.display_matches:
+                    matches_to_display = self.display_matches
 
-            # Add padding for visual appeal
-            matches_to_display, padding_length = self._pad_matches_to_display(matches_to_display)
-            longest_match_length += padding_length
+                    # Recalculate longest_match_length for display_matches
+                    longest_match_length = 0
 
-            # We will use readline's display function (rl_display_match_list()), so we
-            # need to encode our string as bytes to place in a C array.
-            encoded_substitution = bytes(substitution, encoding='utf-8')
-            encoded_matches = [bytes(cur_match, encoding='utf-8') for cur_match in matches_to_display]
+                    for cur_match in matches_to_display:
+                        cur_length = ansi.style_aware_wcswidth(cur_match)
+                        if cur_length > longest_match_length:
+                            longest_match_length = cur_length
+                else:
+                    matches_to_display = matches
 
-            # rl_display_match_list() expects matches to be in argv format where
-            # substitution is the first element, followed by the matches, and then a NULL.
-            # noinspection PyCallingNonCallable,PyTypeChecker
-            strings_array = (ctypes.c_char_p * (1 + len(encoded_matches) + 1))()
+                # Add padding for visual appeal
+                matches_to_display, padding_length = self._pad_matches_to_display(matches_to_display)
+                longest_match_length += padding_length
 
-            # Copy in the encoded strings and add a NULL to the end
-            strings_array[0] = encoded_substitution
-            strings_array[1:-1] = encoded_matches
-            strings_array[-1] = None
+                # We will use readline's display function (rl_display_match_list()), so we
+                # need to encode our string as bytes to place in a C array.
+                encoded_substitution = bytes(substitution, encoding='utf-8')
+                encoded_matches = [bytes(cur_match, encoding='utf-8') for cur_match in matches_to_display]
 
-            # Print any metadata like a hint or table header
-            sys.stdout.write(self._build_completion_metadata_string())
+                # rl_display_match_list() expects matches to be in argv format where
+                # substitution is the first element, followed by the matches, and then a NULL.
+                # noinspection PyCallingNonCallable,PyTypeChecker
+                strings_array = (ctypes.c_char_p * (1 + len(encoded_matches) + 1))()
 
-            # Call readline's display function
-            # rl_display_match_list(strings_array, number of completion matches, longest match length)
-            readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
+                # Copy in the encoded strings and add a NULL to the end
+                strings_array[0] = encoded_substitution
+                strings_array[1:-1] = encoded_matches
+                strings_array[-1] = None
+
+                # rl_display_match_list(strings_array, number of completion matches, longest match length)
+                readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
 
             # Redraw prompt and input line
             rl_force_redisplay()
@@ -1724,20 +1720,34 @@ class Cmd(cmd.Cmd):
         """
         if rl_type == RlType.PYREADLINE:
 
-            # Check if we should show display_matches
-            if self.display_matches:
-                matches_to_display = self.display_matches
+            # Print hint if one exists and we are supposed to display it
+            hint_printed = False
+            if self.always_show_hint and self.completion_hint:
+                hint_printed = True
+                readline.rl.mode.console.write('\n' + self.completion_hint)
+
+            # Check if we already have formatted results to print
+            if self.formatted_completions:
+                if not hint_printed:
+                    readline.rl.mode.console.write('\n')
+                readline.rl.mode.console.write('\n' + self.formatted_completions + '\n\n')
+
+                # Redraw the prompt and input lines
+                rl_force_redisplay()
+
+            # Otherwise use pyreadline's formatter
             else:
-                matches_to_display = matches
+                # Check if we should show display_matches
+                if self.display_matches:
+                    matches_to_display = self.display_matches
+                else:
+                    matches_to_display = matches
 
-            # Add padding for visual appeal
-            matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
+                # Add padding for visual appeal
+                matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
 
-            # Print any metadata like a hint or table header
-            readline.rl.mode.console.write(self._build_completion_metadata_string())
-
-            # Display matches using actual display function. This also redraws the prompt and line.
-            orig_pyreadline_display(matches_to_display)
+                # Display matches using actual display function. This also redraws the prompt and input lines.
+                orig_pyreadline_display(matches_to_display)
 
     def _perform_completion(
         self, text: str, line: str, begidx: int, endidx: int, custom_settings: Optional[utils.CustomCompletionSettings] = None
