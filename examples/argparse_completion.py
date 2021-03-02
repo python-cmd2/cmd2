@@ -14,6 +14,7 @@ from cmd2 import (
     Cmd2ArgumentParser,
     CompletionError,
     CompletionItem,
+    ansi,
     with_argparser,
 )
 
@@ -45,7 +46,9 @@ class ArgparseCompletion(Cmd):
     # noinspection PyMethodMayBeStatic
     def choices_completion_item(self) -> List[CompletionItem]:
         """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
-        items = {1: "My item", 2: "Another item", 3: "Yet another item"}
+        fancy_item = "These things can\ncontain newlines and\n"
+        fancy_item += ansi.style("styled text!!", fg=ansi.fg.bright_yellow, underline=True)
+        items = {1: "My item", 2: "Another item", 3: "Yet another item", 4: fancy_item}
         return [CompletionItem(item_id, description) for item_id, description in items.items()]
 
     # noinspection PyMethodMayBeStatic
@@ -71,8 +74,6 @@ class ArgparseCompletion(Cmd):
 
     # Tab complete from a list using argparse choices. Set metavar if you don't
     # want the entire choices list showing in the usage text for this command.
-    example_parser.add_argument('--choices', choices=food_item_strs, metavar="CHOICE", help="tab complete using choices")
-
     example_parser.add_argument('--choices', choices=food_item_strs, metavar="CHOICE", help="tab complete using choices")
 
     # Tab complete from choices provided by a choices_provider
