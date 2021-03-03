@@ -467,9 +467,11 @@ class Cmd(cmd.Cmd):
         # An optional hint which prints above tab completion suggestions
         self.completion_hint = ''
 
-        # Already formatted completion results. If this is populated, then cmd2 will print it instead
-        # of using readline's columnized results. ANSI style sequences and newlines in tab completion
-        # results are supported by this member. ArgparseCompleter uses this to print tab completion tables.
+        # Normally cmd2 uses readline's formatter to columnize the list of completion suggestions.
+        # If a custom format is preferred, write the formatted completions to this string. cmd2 will
+        # then print it instead of the readline format. ANSI style sequences and newlines are supported
+        # when using this value. Even when using formatted_completions, the full matches must still be returned
+        # from your completer function. ArgparseCompleter writes its tab completion tables to this string.
         self.formatted_completions = ''
 
         # Used by complete() for readline tab completion
@@ -480,7 +482,7 @@ class Cmd(cmd.Cmd):
         # want to display the final portion of the matches as the tab completion suggestions. The full matches
         # still must be returned from your completer function. For an example, look at path_complete() which
         # uses this to show only the basename of paths as the suggestions. delimiter_complete() also populates
-        # this list.
+        # this list. These are ignored if self.formatted_completions is populated.
         self.display_matches = []
 
         # Used by functions like path_complete() and delimiter_complete() to properly
@@ -489,6 +491,7 @@ class Cmd(cmd.Cmd):
 
         # Set to True before returning matches to complete() in cases where matches have already been sorted.
         # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
+        # This does not affect self.formatted_completions.
         self.matches_sorted = False
 
         ############################################################################################################
@@ -1651,7 +1654,6 @@ class Cmd(cmd.Cmd):
         self, substitution: str, matches: List[str], longest_match_length: int
     ) -> None:  # pragma: no cover
         """Prints a match list using GNU readline's rl_display_match_list()
-        This exists to print self.display_matches if it has data. Otherwise matches prints.
 
         :param substitution: the substitution written to the command line
         :param matches: the tab completion matches to display
@@ -1714,7 +1716,6 @@ class Cmd(cmd.Cmd):
 
     def _display_matches_pyreadline(self, matches: List[str]) -> None:  # pragma: no cover
         """Prints a match list using pyreadline's _display_completions()
-        This exists to print self.display_matches if it has data. Otherwise matches prints.
 
         :param matches: the tab completion matches to display
         """
