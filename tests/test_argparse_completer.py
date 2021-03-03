@@ -107,6 +107,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     int_choices = [-1, 1, -2, 2, 0, -12]
     static_choices_list = ['static', 'choices', 'stop', 'here']
     choices_from_provider = ['choices', 'provider', 'probably', 'improved']
+    completion_item_choices = [CompletionItem('choice_1', 'A description'), CompletionItem('choice_2', 'Another description')]
 
     def choices_provider(self) -> List[str]:
         """Method that provides choices"""
@@ -150,6 +151,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         nargs=argparse.ONE_OR_MORE,
     )
     choices_parser.add_argument('-i', '--int', type=int, help='a flag with an int type', choices=int_choices)
+    choices_parser.add_argument('--completion_items', help='choices are CompletionItems', choices=completion_item_choices)
 
     # Positional args for choices command
     choices_parser.add_argument("list_pos", help="a positional populated with a choices list", choices=static_choices_list)
@@ -727,6 +729,23 @@ def test_completion_items(ac_app, num_aliases, show_description):
         first_result_line = normalize(ac_app.formatted_completions)[1]
         assert 'fake_alias0' in first_result_line
         assert 'help' in first_result_line
+
+
+def test_completion_item_choices(ac_app):
+    text = ''
+    line = 'choices --completion_items {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None
+    assert len(ac_app.completion_matches) == len(ac_app.completion_item_choices)
+    assert len(ac_app.display_matches) == len(ac_app.completion_item_choices)
+
+    # Make sure a completion table was created
+    first_result_line = normalize(ac_app.formatted_completions)[1]
+    assert 'choice_1' in first_result_line
+    assert 'A description' in first_result_line
 
 
 @pytest.mark.parametrize(

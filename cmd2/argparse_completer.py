@@ -641,8 +641,11 @@ class ArgparseCompleter:
                 arg_choices.sort()
                 self._cmd2_app.matches_sorted = True
 
-            # Since choices can be various types, convert them all to strings
-            arg_choices = [str(x) for x in arg_choices]
+            # Since choices can be various types, make sure they are all strings
+            for index, choice in enumerate(arg_choices):
+                # Prevent converting anything that is already a str (i.e. CompletionItem)
+                if not isinstance(choice, str):
+                    arg_choices[index] = str(choice)
         else:
             arg_choices = getattr(arg_state.action, ATTR_CHOICES_CALLABLE, None)
             if arg_choices is None:
