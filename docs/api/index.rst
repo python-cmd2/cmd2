@@ -44,6 +44,8 @@ This documentation is for ``cmd2`` version |version|.
   ``argparse``-based tab completion
 - :ref:`api/argparse_custom:cmd2.argparse_custom` - classes and functions
   for extending ``argparse``
+- :ref:`api/command_definition:cmd2.command_definition` - supports the
+  definition of commands in separate classes to be composed into cmd2.Cmd
 - :ref:`api/constants:cmd2.constants` - just like it says on the tin
 - :ref:`api/decorators:cmd2.decorators` - decorators for ``cmd2``
   commands
