@@ -3,33 +3,37 @@
 """Classes for the cmd2 plugin system"""
 import attr
 
+from .parsing import (
+    Statement,
+)
 
-@attr.s
+
+@attr.s(auto_attribs=True)
 class PostparsingData:
     """Data class containing information passed to postparsing hook methods"""
 
-    stop = attr.ib()
-    statement = attr.ib()
+    stop: bool
+    statement: Statement
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class PrecommandData:
     """Data class containing information passed to precommand hook methods"""
 
-    statement = attr.ib()
+    statement: Statement
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class PostcommandData:
     """Data class containing information passed to postcommand hook methods"""
 
-    stop = attr.ib()
-    statement = attr.ib()
+    stop: bool
+    statement: Statement
 
 
-@attr.s
+@attr.s(auto_attribs=True)
 class CommandFinalizationData:
     """Data class containing information passed to command finalization hook methods"""
 
-    stop = attr.ib()
-    statement = attr.ib()
+    stop: bool
+    statement: Statement
