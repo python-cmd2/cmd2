@@ -13,15 +13,17 @@ import pytest
 
 import cmd2
 from cmd2 import (
-    utils,
+    Settable,
 )
 from cmd2.exceptions import (
     CommandSetRegistrationError,
 )
 
 from .conftest import (
-    WithCommandSets,
     complete_tester,
+    normalize,
+    run_cmd,
+    WithCommandSets,
 )
 
 
@@ -910,3 +912,97 @@ def test_bad_subcommand():
 
     with pytest.raises(CommandSetRegistrationError):
         app = BadSubcommandApp()
+
+
+def test_commandset_settables():
+    # Define an arbitrary class with some attribute
+    class Arbitrary:
+        def __init__(self):
+            self.some_value = 5
+
+    # Declare a CommandSet with a settable of some arbitrary property
+    class WithSettablesA(CommandSetBase):
+        def __init__(self):
+            super(WithSettablesA, self).__init__()
+
+            self._arbitrary = Arbitrary()
+            self._settable_prefix = 'addon'
+
+            self.add_settable(
+                Settable(
+                    'arbitrary_value',
+                    int,
+                    'Some settable value',
+                    settable_object=self._arbitrary,
+                    settable_attrib_name='some_value',
+                )
+            )
+
+    # create the command set and cmd2
+    cmdset = WithSettablesA()
+    arbitrary2 = Arbitrary()
+    app = cmd2.Cmd(command_sets=[cmdset])
+    app.add_settable(Settable('always_prefix_settables', bool, 'Prefix settables'))
+
+    assert 'arbitrary_value' in app.settables.keys()
+    assert 'always_prefix_settables' in app.settables.keys()
+
+    # verify the settable shows up
+    out, err = run_cmd(app, 'set')
+    assert 'arbitrary_value: 5' in out
+    out, err = run_cmd(app, 'set arbitrary_value')
+    assert out == ['arbitrary_value: 5']
+
+    # change the value and verify the value changed
+    out, err = run_cmd(app, 'set arbitrary_value 10')
+    expected = """
+arbitrary_value - was: 5
+now: 10
+"""
+    assert out == normalize(expected)
+    out, err = run_cmd(app, 'set arbitrary_value')
+    assert out == ['arbitrary_value: 10']
+
+    # can't add to cmd2 now because commandset already has this settable
+    with pytest.raises(KeyError):
+        app.add_settable(Settable('arbitrary_value', int, 'This should fail'))
+
+    cmdset.add_settable(
+        Settable('arbitrary_value', int, 'Replaced settable', settable_object=arbitrary2, settable_attrib_name='some_value')
+    )
+
+    # Can't add a settable to the commandset that already exists in cmd2
+    with pytest.raises(KeyError):
+        cmdset.add_settable(Settable('always_prefix_settables', int, 'This should also fail'))
+
+    # Can't remove a settable from the CommandSet if it is elsewhere and not in the CommandSet
+    with pytest.raises(KeyError):
+        cmdset.remove_settable('always_prefix_settables')
+
+    # unregister the CommandSet and verify the settable is now gone
+    app.unregister_command_set(cmdset)
+    out, err = run_cmd(app, 'set')
+    assert 'arbitrary_value' not in out
+    out, err = run_cmd(app, 'set arbitrary_value')
+    expected = """
+Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
+"""
+    assert err == normalize(expected)
+
+    # turn on prefixes and add the commandset back
+    app.always_prefix_settables = True
+    app.register_command_set(cmdset)
+
+    # Verify the settable is back with the defined prefix.
+
+    assert 'addon.arbitrary_value' in app.settables.keys()
+
+    # rename the prefix and verify that the prefix changes everywhere
+    cmdset._settable_prefix = 'some'
+    assert 'addon.arbitrary_value' not in app.settables.keys()
+    assert 'some.arbitrary_value' in app.settables.keys()
+
+    out, err = run_cmd(app, 'set')
+    assert 'some.arbitrary_value: 5' in out
+    out, err = run_cmd(app, 'set some.arbitrary_value')
+    assert out == ['some.arbitrary_value: 5']
