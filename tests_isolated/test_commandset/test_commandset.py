@@ -20,10 +20,10 @@ from cmd2.exceptions import (
 )
 
 from .conftest import (
+    WithCommandSets,
     complete_tester,
     normalize,
     run_cmd,
-    WithCommandSets,
 )
 
 

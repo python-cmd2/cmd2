@@ -13,15 +13,16 @@ from typing import (
     Any,
     List,
     Union,
+    cast,
 )
 
-import colorama
+import colorama  # type: ignore [import]
 from colorama import (
     Back,
     Fore,
     Style,
 )
-from wcwidth import (
+from wcwidth import (  # type: ignore [import]
     wcswidth,
 )
 
@@ -86,14 +87,14 @@ class ColorBase(Enum):
         Support building a color string when self is the left operand
         e.g. fg.blue + "hello"
         """
-        return str(self) + other
+        return cast(str, str(self) + other)
 
     def __radd__(self, other: Any) -> str:
         """
         Support building a color string when self is the right operand
         e.g. "hello" + fg.reset
         """
-        return other + str(self)
+        return cast(str, other + str(self))
 
     @classmethod
     def colors(cls) -> List[str]:
@@ -194,7 +195,7 @@ def style_aware_wcswidth(text: str) -> int:
              then this function returns -1. Replace tabs with spaces before calling this.
     """
     # Strip ANSI style sequences since they cause wcswidth to return -1
-    return wcswidth(strip_style(text))
+    return cast(int, wcswidth(strip_style(text)))
 
 
 def widest_line(text: str) -> int:
@@ -217,7 +218,7 @@ def widest_line(text: str) -> int:
     return max(lines_widths)
 
 
-def style_aware_write(fileobj: IO, msg: str) -> None:
+def style_aware_write(fileobj: IO[str], msg: str) -> None:
     """
     Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting
 
@@ -229,7 +230,7 @@ def style_aware_write(fileobj: IO, msg: str) -> None:
     fileobj.write(msg)
 
 
-def fg_lookup(fg_name: Union[str, fg]) -> str:
+def fg_lookup(fg_name: Union[str, fg]) -> Fore:
     """
     Look up ANSI escape codes based on foreground color name.
 
@@ -247,7 +248,7 @@ def fg_lookup(fg_name: Union[str, fg]) -> str:
     return ansi_escape
 
 
-def bg_lookup(bg_name: Union[str, bg]) -> str:
+def bg_lookup(bg_name: Union[str, bg]) -> Back:
     """
     Look up ANSI escape codes based on background color name.
 
@@ -321,7 +322,7 @@ def style(
         removals.append(UNDERLINE_DISABLE)
 
     # Combine the ANSI style sequences with the text
-    return "".join(additions) + text + "".join(removals)
+    return cast(str, "".join(additions) + text + "".join(removals))
 
 
 # Default styles for printing strings of various types.
@@ -400,4 +401,4 @@ def set_title_str(title: str) -> str:
     :param title: new title for the window
     :return: string to write to sys.stderr in order to set the window title to the desired test
     """
-    return colorama.ansi.set_title(title)
+    return cast(str, colorama.ansi.set_title(title))
