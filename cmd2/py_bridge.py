@@ -10,16 +10,17 @@ from contextlib import (
     redirect_stdout,
 )
 from typing import (
+    Any,
+    NamedTuple,
     Optional,
 )
 
-from .utils import (
+from .utils import (  # namedtuple_with_defaults,
     StdSim,
-    namedtuple_with_defaults,
 )
 
 
-class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr', 'stop', 'data'])):
+class CommandResult(NamedTuple):
     """Encapsulates the results from a cmd2 app command
 
     :stdout: str - output captured from stdout while this command is executing
@@ -55,6 +56,11 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
        Named tuples are immutable. The contents are there for access,
        not for modification.
     """
+
+    stdout: str = ''
+    stderr: str = ''
+    stop: bool = False
+    data: Any = None
 
     def __bool__(self) -> bool:
         """Returns True if the command succeeded, otherwise False"""

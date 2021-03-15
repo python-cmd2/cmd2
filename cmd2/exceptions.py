@@ -1,6 +1,9 @@
 # coding=utf-8
 """Custom exceptions for cmd2"""
 
+from typing import (
+    Any,
+)
 
 ############################################################################################################
 # The following exceptions are part of the public API
@@ -49,7 +52,7 @@ class CompletionError(Exception):
     - Tab completion hints
     """
 
-    def __init__(self, *args, apply_style: bool = True):
+    def __init__(self, *args: Any, apply_style: bool = True) -> None:
         """
         Initializer for CompletionError
         :param apply_style: If True, then ansi.style_error will be applied to the message text when printed.
@@ -68,7 +71,7 @@ class PassThroughException(Exception):
     This class is used to wrap an exception that should be raised instead of printed.
     """
 
-    def __init__(self, *args, wrapped_ex: BaseException):
+    def __init__(self, *args: Any, wrapped_ex: BaseException) -> None:
         """
         Initializer for PassThroughException
         :param wrapped_ex: the exception that will be raised

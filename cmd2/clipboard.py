@@ -2,7 +2,11 @@
 """
 This module provides basic ability to copy from and paste to the clipboard/pastebuffer.
 """
-import pyperclip
+from typing import (
+    cast,
+)
+
+import pyperclip  # type: ignore [import]
 
 # noinspection PyProtectedMember
 from pyperclip import (
@@ -26,7 +30,7 @@ def get_paste_buffer() -> str:
 
     :return: contents of the clipboard
     """
-    pb_str = pyperclip.paste()
+    pb_str = cast(str, pyperclip.paste())
     return pb_str
 
 

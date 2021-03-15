@@ -90,8 +90,6 @@ Miscellaneous
 
 .. autofunction:: cmd2.utils.str_to_bool
 
-.. autofunction:: cmd2.utils.namedtuple_with_defaults
-
 .. autofunction:: cmd2.utils.categorize
 
 .. autofunction:: cmd2.utils.remove_duplicates

@@ -198,16 +198,21 @@ from argparse import (
     ONE_OR_MORE,
     ZERO_OR_MORE,
     ArgumentError,
-    _,
+)
+from gettext import (
+    gettext,
 )
 from typing import (
     Any,
     Callable,
+    Iterable,
+    List,
     NoReturn,
     Optional,
     Tuple,
     Type,
     Union,
+    cast,
 )
 
 from . import (
@@ -261,11 +266,11 @@ class CompletionItem(str):
     See header of this file for more information
     """
 
-    def __new__(cls, value: object, *args, **kwargs) -> str:
-        return super().__new__(cls, value)
+    def __new__(cls, value: object, *args: Any, **kwargs: Any) -> 'CompletionItem':
+        return cast(CompletionItem, super(CompletionItem, cls).__new__(cls, value))  # type: ignore [call-arg]
 
     # noinspection PyUnusedLocal
-    def __init__(self, value: object, desc: str = '', *args) -> None:
+    def __init__(self, value: object, desc: str = '', *args: Any) -> None:
         """
         CompletionItem Initializer
 
@@ -287,7 +292,11 @@ class ChoicesCallable:
     While argparse has the built-in choices attribute, it is limited to an iterable.
     """
 
-    def __init__(self, is_completer: bool, to_call: Callable):
+    def __init__(
+        self,
+        is_completer: bool,
+        to_call: Union[Callable[[], List[str]], Callable[[str, str, int, int], List[str]]],
+    ) -> None:
         """
         Initializer
         :param is_completer: True if to_call is a tab completion routine which expects
@@ -319,12 +328,12 @@ def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCall
     setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
 
 
-def set_choices_provider(action: argparse.Action, choices_provider: Callable) -> None:
+def set_choices_provider(action: argparse.Action, choices_provider: Callable[[], List[str]]) -> None:
     """Set choices_provider on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_completer=False, to_call=choices_provider))
 
 
-def set_completer(action: argparse.Action, completer: Callable) -> None:
+def set_completer(action: argparse.Action, completer: Callable[[str, str, int, int], List[str]]) -> None:
     """Set completer on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_completer=True, to_call=completer))
 
@@ -339,14 +348,14 @@ orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
 def _add_argument_wrapper(
-    self,
-    *args,
+    self: argparse._ActionsContainer,
+    *args: Any,
     nargs: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None] = None,
-    choices_provider: Optional[Callable] = None,
-    completer: Optional[Callable] = None,
+    choices_provider: Optional[Callable[[], List[str]]] = None,
+    completer: Optional[Callable[[str, str, int, int], List[str]]] = None,
     suppress_tab_hint: bool = False,
     descriptive_header: Optional[str] = None,
-    **kwargs
+    **kwargs: Any
 ) -> argparse.Action:
     """
     Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
@@ -392,6 +401,7 @@ def _add_argument_wrapper(
     nargs_range = None
 
     if nargs is not None:
+        nargs_adjusted: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None]
         # Check if nargs was given as a range
         if isinstance(nargs, tuple):
 
@@ -402,11 +412,11 @@ def _add_argument_wrapper(
             # Validate nargs tuple
             if (
                 len(nargs) != 2
-                or not isinstance(nargs[0], int)
-                or not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY)
+                or not isinstance(nargs[0], int)  # type: ignore[unreachable]
+                or not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY)  # type: ignore[misc]
             ):
                 raise ValueError('Ranged values for nargs must be a tuple of 1 or 2 integers')
-            if nargs[0] >= nargs[1]:
+            if nargs[0] >= nargs[1]:  # type: ignore[misc]
                 raise ValueError('Invalid nargs range. The first value must be less than the second')
             if nargs[0] < 0:
                 raise ValueError('Negative numbers are invalid for nargs range')
@@ -414,7 +424,7 @@ def _add_argument_wrapper(
             # Save the nargs tuple as our range setting
             nargs_range = nargs
             range_min = nargs_range[0]
-            range_max = nargs_range[1]
+            range_max = nargs_range[1]  # type: ignore[misc]
 
             # Convert nargs into a format argparse recognizes
             if range_min == 0:
@@ -460,7 +470,7 @@ def _add_argument_wrapper(
 
 # Overwrite _ActionsContainer.add_argument with our wrapper
 # noinspection PyProtectedMember
-argparse._ActionsContainer.add_argument = _add_argument_wrapper
+setattr(argparse._ActionsContainer, 'add_argument', _add_argument_wrapper)
 
 ############################################################################################################
 # Patch ArgumentParser._get_nargs_pattern with our wrapper to nargs ranges
@@ -472,7 +482,7 @@ orig_argument_parser_get_nargs_pattern = argparse.ArgumentParser._get_nargs_patt
 
 
 # noinspection PyProtectedMember
-def _get_nargs_pattern_wrapper(self, action) -> str:
+def _get_nargs_pattern_wrapper(self: argparse.ArgumentParser, action: argparse.Action) -> str:
     # Wrapper around ArgumentParser._get_nargs_pattern behavior to support nargs ranges
     nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
     if nargs_range is not None:
@@ -494,7 +504,7 @@ def _get_nargs_pattern_wrapper(self, action) -> str:
 
 # Overwrite ArgumentParser._get_nargs_pattern with our wrapper
 # noinspection PyProtectedMember
-argparse.ArgumentParser._get_nargs_pattern = _get_nargs_pattern_wrapper
+setattr(argparse.ArgumentParser, '_get_nargs_pattern', _get_nargs_pattern_wrapper)
 
 
 ############################################################################################################
@@ -505,7 +515,7 @@ orig_argument_parser_match_argument = argparse.ArgumentParser._match_argument
 
 
 # noinspection PyProtectedMember
-def _match_argument_wrapper(self, action, arg_strings_pattern) -> int:
+def _match_argument_wrapper(self: argparse.ArgumentParser, action: argparse.Action, arg_strings_pattern: str) -> int:
     # Wrapper around ArgumentParser._match_argument behavior to support nargs ranges
     nargs_pattern = self._get_nargs_pattern(action)
     match = re.match(nargs_pattern, arg_strings_pattern)
@@ -521,7 +531,7 @@ def _match_argument_wrapper(self, action, arg_strings_pattern) -> int:
 
 # Overwrite ArgumentParser._match_argument with our wrapper
 # noinspection PyProtectedMember
-argparse.ArgumentParser._match_argument = _match_argument_wrapper
+setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 
 
 ############################################################################################################
@@ -529,7 +539,7 @@ argparse.ArgumentParser._match_argument = _match_argument_wrapper
 ############################################################################################################
 
 # noinspection PyPep8Naming
-def _SubParsersAction_remove_parser(self, name: str):
+def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:
     """
     Removes a sub-parser from a sub-parsers group
 
@@ -572,20 +582,26 @@ setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_pa
 class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
-    def _format_usage(self, usage, actions, groups, prefix) -> str:
+    def _format_usage(
+        self,
+        usage: Optional[str],
+        actions: Iterable[argparse.Action],
+        groups: Iterable[argparse._ArgumentGroup],
+        prefix: Optional[str] = None,
+    ) -> str:
         if prefix is None:
-            prefix = _('Usage: ')
+            prefix = gettext('Usage: ')
 
         # if usage is specified, use that
         if usage is not None:
             usage %= dict(prog=self._prog)
 
         # if no optionals or positionals are available, usage is just prog
-        elif usage is None and not actions:
+        elif not actions:
             usage = '%(prog)s' % dict(prog=self._prog)
 
         # if optionals and positionals are available, calculate usage
-        elif usage is None:
+        else:
             prog = '%(prog)s' % dict(prog=self._prog)
 
             # split optionals from positionals
@@ -630,7 +646,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
                 # helper for wrapping lines
                 # noinspection PyMissingOrEmptyDocstring,PyShadowingNames
-                def get_lines(parts, indent, prefix=None):
+                def get_lines(parts: List[str], indent: str, prefix: Optional[str] = None):
                     lines = []
                     line = []
                     if prefix is not None:
