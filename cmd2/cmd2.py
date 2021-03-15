@@ -56,6 +56,7 @@ from typing import (
     List,
     Mapping,
     Optional,
+    Set,
     Tuple,
     Type,
     Union,
@@ -226,7 +227,7 @@ class Cmd(cmd.Cmd):
         terminators: Optional[List[str]] = None,
         shortcuts: Optional[Dict[str, str]] = None,
         command_sets: Optional[Iterable[CommandSet]] = None,
-        auto_load_commands: bool = True
+        auto_load_commands: bool = True,
     ) -> None:
         """An easy but powerful framework for writing line-oriented command
         interpreters. Extends Python's cmd package.
@@ -310,11 +311,12 @@ class Cmd(cmd.Cmd):
         # A dictionary mapping settable names to their Settable instance
         self._settables: Dict[str, Settable] = dict()
         self.always_prefix_settables: bool = False
-        self.build_settables()
 
         # CommandSet containers
-        self._installed_command_sets: List[CommandSet] = []
+        self._installed_command_sets: Set[CommandSet] = set()
         self._cmd_to_command_sets: Dict[str, CommandSet] = {}
+
+        self.build_settables()
 
         # Use as prompt for multiline commands on the 2nd+ line of input
         self.continuation_prompt = '> '
@@ -622,7 +624,7 @@ class Cmd(cmd.Cmd):
                 if default_category and not hasattr(method, constants.CMD_ATTR_HELP_CATEGORY):
                     utils.categorize(method, default_category)
 
-            self._installed_command_sets.append(cmdset)
+            self._installed_command_sets.add(cmdset)
 
             self._register_subcommands(cmdset)
             cmdset.on_registered()
@@ -918,6 +920,9 @@ class Cmd(cmd.Cmd):
 
         :param settable: Settable object being added
         """
+        if not self.always_prefix_settables:
+            if settable.name in self.settables.keys() and settable.name not in self._settables.keys():
+                raise KeyError(f'Duplicate settable: {settable.name}')
         if settable.settable_obj is None:
             settable.settable_obj = self
         self._settables[settable.name] = settable
@@ -1310,7 +1315,7 @@ class Cmd(cmd.Cmd):
         endidx: int,
         flag_dict: Dict[str, Union[Iterable, Callable]],
         *,
-        all_else: Union[None, Iterable, Callable] = None
+        all_else: Union[None, Iterable, Callable] = None,
     ) -> List[str]:
         """Tab completes based on a particular flag preceding the token being completed.
 
@@ -1359,7 +1364,7 @@ class Cmd(cmd.Cmd):
         endidx: int,
         index_dict: Mapping[int, Union[Iterable, Callable]],
         *,
-        all_else: Union[None, Iterable, Callable] = None
+        all_else: Union[None, Iterable, Callable] = None,
     ) -> List[str]:
         """Tab completes based on a fixed position in the input string.
 
@@ -2561,7 +2566,7 @@ class Cmd(cmd.Cmd):
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
                 stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                 shell=True,
-                **kwargs
+                **kwargs,
             )
 
             # Popen was called with shell=True so the user can chain pipe commands and redirect their output
@@ -2735,7 +2740,7 @@ class Cmd(cmd.Cmd):
         choices: Iterable = None,
         choices_provider: Optional[Callable] = None,
         completer: Optional[Callable] = None,
-        parser: Optional[argparse.ArgumentParser] = None
+        parser: Optional[argparse.ArgumentParser] = None,
     ) -> str:
         """
         Read input from appropriate stdin value. Also supports tab completion and up-arrow history while

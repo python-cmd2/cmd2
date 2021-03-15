@@ -229,7 +229,8 @@ def onchange_app():
 
 def test_set_onchange_hook(onchange_app):
     out, err = run_cmd(onchange_app, 'set quiet True')
-    expected = normalize("""
+    expected = normalize(
+        """
 You changed quiet
 quiet - was: False
 now: True
