@@ -48,6 +48,12 @@ from collections import (
 from contextlib import (
     redirect_stdout,
 )
+from pathlib import (
+    Path,
+)
+from types import (
+    ModuleType,
+)
 from typing import (
     Any,
     Callable,
@@ -57,9 +63,11 @@ from typing import (
     Mapping,
     Optional,
     Set,
+    TextIO,
     Tuple,
     Type,
     Union,
+    cast,
 )
 
 from . import (
@@ -159,7 +167,7 @@ else:
 ipython_available = True
 try:
     # noinspection PyUnresolvedReferences,PyPackageRequirements
-    from IPython import (
+    from IPython import (  # type: ignore[import]
         embed,
     )
 except ImportError:  # pragma: no cover
@@ -169,7 +177,7 @@ except ImportError:  # pragma: no cover
 class _SavedReadlineSettings:
     """readline settings that are backed up when switching between readline environments"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.completer = None
         self.delims = ''
         self.basic_quotes = None
@@ -178,12 +186,12 @@ class _SavedReadlineSettings:
 class _SavedCmd2Env:
     """cmd2 environment settings that are backed up when entering an interactive Python shell"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.readline_settings = _SavedReadlineSettings()
-        self.readline_module = None
-        self.history = []
-        self.sys_stdout = None
-        self.sys_stdin = None
+        self.readline_module: Optional[ModuleType] = None
+        self.history: List[str] = []
+        self.sys_stdout: Optional[TextIO] = None
+        self.sys_stdin: Optional[TextIO] = None
 
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
@@ -212,12 +220,12 @@ class Cmd(cmd.Cmd):
     def __init__(
         self,
         completekey: str = 'tab',
-        stdin=None,
-        stdout=None,
+        stdin: Optional[TextIO] = None,
+        stdout: Optional[TextIO] = None,
         *,
-        persistent_history_file: str = '',
+        persistent_history_file: Path = '',
         persistent_history_length: int = 1000,
-        startup_script: str = '',
+        startup_script: Path = '',
         silent_startup_script: bool = False,
         use_ipython: bool = False,
         allow_cli_args: bool = True,
@@ -310,7 +318,7 @@ class Cmd(cmd.Cmd):
 
         # A dictionary mapping settable names to their Settable instance
         self._settables: Dict[str, Settable] = dict()
-        self.always_prefix_settables: bool = False
+        self._always_prefix_settables: bool = False
 
         # CommandSet containers
         self._installed_command_sets: Set[CommandSet] = set()
@@ -338,13 +346,13 @@ class Cmd(cmd.Cmd):
         self.macros: Dict[str, Macro] = dict()
 
         # Keeps track of typed command history in the Python shell
-        self._py_history = []
+        self._py_history: List[str] = []
 
         # The name by which Python environments refer to the PyBridge to call app commands
         self.py_bridge_name = 'app'
 
         # Defines app-specific variables/functions available in Python shells and pyscripts
-        self.py_locals = dict()
+        self.py_locals: Dict[str, Any] = dict()
 
         # True if running inside a Python script or interactive console, False otherwise
         self._in_py = False
@@ -482,7 +490,7 @@ class Cmd(cmd.Cmd):
         self.formatted_completions = ''
 
         # Used by complete() for readline tab completion
-        self.completion_matches = []
+        self.completion_matches: List[str] = []
 
         # Use this list if you need to display tab completion suggestions that are different than the actual text
         # of the matches. For instance, if you are completing strings that contain a common delimiter and you only
@@ -490,7 +498,7 @@ class Cmd(cmd.Cmd):
         # still must be returned from your completer function. For an example, look at path_complete() which
         # uses this to show only the basename of paths as the suggestions. delimiter_complete() also populates
         # this list. These are ignored if self.formatted_completions is populated.
-        self.display_matches = []
+        self.display_matches: List[str] = []
 
         # Used by functions like path_complete() and delimiter_complete() to properly
         # quote matches that are completed in a delimited fashion
@@ -552,7 +560,7 @@ class Cmd(cmd.Cmd):
         all_commandset_defs = CommandSet.__subclasses__()
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
 
-        def load_commandset_by_type(commandset_types: List[Type]) -> None:
+        def load_commandset_by_type(commandset_types: List[Type[CommandSet]]) -> None:
             for cmdset_type in commandset_types:
                 # check if the type has sub-classes. We will only auto-load leaf class types.
                 subclasses = cmdset_type.__subclasses__()
@@ -580,19 +588,24 @@ class Cmd(cmd.Cmd):
         if type(cmdset) in existing_commandset_types:
             raise CommandSetRegistrationError('CommandSet ' + type(cmdset).__name__ + ' is already installed')
 
+        all_settables = self.settables
         if self.always_prefix_settables:
-            if len(cmdset.settable_prefix.strip()) == 0:
+            if not cmdset.settable_prefix.strip():
                 raise CommandSetRegistrationError('CommandSet settable prefix must not be empty')
+            for key in cmdset.settables.keys():
+                prefixed_name = f'{cmdset.settable_prefix}.{key}'
+                if prefixed_name in all_settables:
+                    raise CommandSetRegistrationError(f'Duplicate settable: {key}')
+
         else:
-            all_settables = self.settables
             for key in cmdset.settables.keys():
                 if key in all_settables:
-                    raise KeyError(f'Duplicate settable {key} is already registered')
+                    raise CommandSetRegistrationError(f'Duplicate settable {key} is already registered')
 
         cmdset.on_register(self)
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)
+            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
             and hasattr(meth, '__name__')
             and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
         )
@@ -639,7 +652,7 @@ class Cmd(cmd.Cmd):
             cmdset.on_unregistered()
             raise
 
-    def _install_command_function(self, command: str, command_wrapper: Callable, context=''):
+    def _install_command_function(self, command: str, command_wrapper: Callable, context: str = '') -> None:
         cmd_func_name = COMMAND_FUNC_PREFIX + command
 
         # Make sure command function doesn't share name with existing attribute
@@ -663,23 +676,24 @@ class Cmd(cmd.Cmd):
 
         setattr(self, cmd_func_name, command_wrapper)
 
-    def _install_completer_function(self, cmd_name: str, cmd_completer: Callable):
+    def _install_completer_function(self, cmd_name: str, cmd_completer: Callable) -> None:
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
 
         if hasattr(self, completer_func_name):
             raise CommandSetRegistrationError('Attribute already exists: {}'.format(completer_func_name))
         setattr(self, completer_func_name, cmd_completer)
 
-    def _install_help_function(self, cmd_name: str, cmd_help: Callable):
+    def _install_help_function(self, cmd_name: str, cmd_help: Callable) -> None:
         help_func_name = HELP_FUNC_PREFIX + cmd_name
 
         if hasattr(self, help_func_name):
             raise CommandSetRegistrationError('Attribute already exists: {}'.format(help_func_name))
         setattr(self, help_func_name, cmd_help)
 
-    def unregister_command_set(self, cmdset: CommandSet):
+    def unregister_command_set(self, cmdset: CommandSet) -> None:
         """
         Uninstalls a CommandSet and unloads all associated commands
+
         :param cmdset: CommandSet to uninstall
         """
         if cmdset in self._installed_command_sets:
@@ -715,7 +729,7 @@ class Cmd(cmd.Cmd):
             cmdset.on_unregistered()
             self._installed_command_sets.remove(cmdset)
 
-    def _check_uninstallable(self, cmdset: CommandSet):
+    def _check_uninstallable(self, cmdset: CommandSet) -> None:
         methods = inspect.getmembers(
             cmdset,
             predicate=lambda meth: isinstance(meth, Callable)
@@ -732,9 +746,9 @@ class Cmd(cmd.Cmd):
             else:
                 command_func = self.cmd_func(command_name)
 
-            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
+            command_parser = cast(argparse.ArgumentParser, getattr(command_func, constants.CMD_ATTR_ARGPARSER, None))
 
-            def check_parser_uninstallable(parser):
+            def check_parser_uninstallable(parser: argparse.ArgumentParser) -> None:
                 for action in parser._actions:
                     if isinstance(action, argparse._SubParsersAction):
                         for subparser in action.choices.values():
@@ -903,7 +917,38 @@ class Cmd(cmd.Cmd):
                     break
 
     @property
+    def always_prefix_settables(self) -> bool:
+        """
+        Flags whether CommandSet settable values should always be prefixed
+
+        :return: True if CommandSet settable values will always be prefixed. False if not.
+        """
+        return self._always_prefix_settables
+
+    @always_prefix_settables.setter
+    def always_prefix_settables(self, new_value: bool) -> None:
+        """
+        Set whether CommandSet settable values should always be prefixed.
+
+        :param new_value: True if CommandSet settable values should always be prefixed. False if not.
+        :raises ValueError: If a registered CommandSet does not have a defined prefix
+        """
+        if not self._always_prefix_settables and new_value:
+            for cmd_set in self._installed_command_sets:
+                if not cmd_set.settable_prefix:
+                    raise ValueError(
+                        f'Cannot force settable prefixes. CommandSet {cmd_set.__class__.__name__} does '
+                        f'not have a settable prefix defined.'
+                    )
+        self._always_prefix_settables = new_value
+
+    @property
     def settables(self) -> Mapping[str, Settable]:
+        """
+        Get all available user-settable attributes. This includes settables defined in installed CommandSets
+
+        :return: Mapping from attribute-name to Settable of all user-settable attributes from
+        """
         all_settables = dict(self._settables)
         for cmd_set in self._installed_command_sets:
             cmdset_settables = cmd_set.settables
@@ -916,15 +961,13 @@ class Cmd(cmd.Cmd):
 
     def add_settable(self, settable: Settable) -> None:
         """
-        Convenience method to add a settable parameter to ``self.settables``
+        Add a settable parameter to ``self.settables``
 
         :param settable: Settable object being added
         """
         if not self.always_prefix_settables:
             if settable.name in self.settables.keys() and settable.name not in self._settables.keys():
                 raise KeyError(f'Duplicate settable: {settable.name}')
-        if settable.settable_obj is None:
-            settable.settable_obj = self
         self._settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
@@ -939,7 +982,7 @@ class Cmd(cmd.Cmd):
         except KeyError:
             raise KeyError(name + " is not a settable parameter")
 
-    def build_settables(self):
+    def build_settables(self) -> None:
         """Create the dictionary of user-settable parameters"""
         self.add_settable(
             Settable(
@@ -947,22 +990,28 @@ class Cmd(cmd.Cmd):
                 str,
                 'Allow ANSI text style sequences in output (valid values: '
                 '{}, {}, {})'.format(ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER),
+                self,
                 choices=[ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER],
             )
         )
 
         self.add_settable(
-            Settable('always_show_hint', bool, 'Display tab completion hint even when completion suggestions print')
+            Settable(
+                'always_show_hint',
+                bool,
+                'Display tab completion hint even when completion suggestions print',
+                self,
+            )
         )
-        self.add_settable(Settable('debug', bool, "Show full traceback on exception"))
-        self.add_settable(Settable('echo', bool, "Echo command issued into output"))
-        self.add_settable(Settable('editor', str, "Program used by 'edit'"))
-        self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|', '>' results"))
+        self.add_settable(Settable('debug', bool, "Show full traceback on exception", self))
+        self.add_settable(Settable('echo', bool, "Echo command issued into output", self))
+        self.add_settable(Settable('editor', str, "Program used by 'edit'", self))
+        self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|', '>' results", self))
         self.add_settable(
-            Settable('max_completion_items', int, "Maximum number of CompletionItems to display during tab completion")
+            Settable('max_completion_items', int, "Maximum number of CompletionItems to display during tab completion", self)
         )
-        self.add_settable(Settable('quiet', bool, "Don't print nonessential feedback"))
-        self.add_settable(Settable('timing', bool, "Report execution times"))
+        self.add_settable(Settable('quiet', bool, "Don't print nonessential feedback", self))
+        self.add_settable(Settable('timing', bool, "Report execution times", self))
 
     # -----  Methods related to presenting output to the user -----
 
@@ -984,7 +1033,7 @@ class Cmd(cmd.Cmd):
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported"""
-        return self.use_rawinput and self.completekey and rl_type != RlType.NONE
+        return self.use_rawinput and bool(self.completekey) and rl_type != RlType.NONE
 
     @property
     def visible_prompt(self) -> str:
@@ -1231,7 +1280,14 @@ class Cmd(cmd.Cmd):
         return tokens, raw_tokens
 
     # noinspection PyMethodMayBeStatic, PyUnusedLocal
-    def basic_complete(self, text: str, line: str, begidx: int, endidx: int, match_against: Iterable) -> List[str]:
+    def basic_complete(
+        self,
+        text: str,
+        line: str,
+        begidx: int,
+        endidx: int,
+        match_against: Iterable[str],
+    ) -> List[str]:
         """
         Basic tab completion function that matches against a list of strings without considering line contents
         or cursor position. The args required by this function are defined in the header of Python's cmd.py.
@@ -1246,7 +1302,13 @@ class Cmd(cmd.Cmd):
         return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
     def delimiter_complete(
-        self, text: str, line: str, begidx: int, endidx: int, match_against: Iterable, delimiter: str
+        self,
+        text: str,
+        line: str,
+        begidx: int,
+        endidx: int,
+        match_against: Iterable[str],
+        delimiter: str,
     ) -> List[str]:
         """
         Performs tab completion against a list but each match is split on a delimiter and only
@@ -3743,8 +3805,6 @@ class Cmd(cmd.Cmd):
         if args.param:
             try:
                 settable = self.settables[args.param]
-                if settable.settable_obj is None:
-                    settable.settable_obj = self
             except KeyError:
                 self.perror("Parameter '{}' not supported (type 'set' for list of parameters).".format(args.param))
                 return
@@ -4333,7 +4393,7 @@ class Cmd(cmd.Cmd):
             history = self.history.span(':', args.all)
         return history
 
-    def _initialize_history(self, hist_file):
+    def _initialize_history(self, hist_file: str) -> None:
         """Initialize history using history related attributes
 
         This function can determine whether history is saved in the prior text-based

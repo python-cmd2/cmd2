@@ -18,6 +18,9 @@
     * Removed `with_argparser_and_unknown_args` since it was deprecated in 1.3.0.
     * Replaced `cmd2.Cmd.completion_header` with `cmd2.Cmd.formatted_completions`. See Enhancements
       for description of this new class member.
+    * Settables now have new initialization parameters. It is now a required parameter to supply the reference to the
+      object that holds the settable attribute. `cmd2.Cmd.settables` is no longer a public dict attribute - it is now a
+      property that aggregates all Settables across all registered CommandSets.
 * Enhancements
     * Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
       See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
@@ -25,7 +28,12 @@
     * Added `cmd2.exceptions.PassThroughException` to raise unhandled command exceptions instead of printing them.
     * Added support for ANSI styles and newlines in tab completion results using `cmd2.Cmd.formatted_completions`.
       `cmd2` provides this capability automatically if you return argparse completion matches as `CompletionItems`.
-
+    * Settables enhancements:
+        * Settables may be optionally scoped to a CommandSet. Settables added to CommandSets will appear when a
+          CommandSet is registered and disappear when a CommandSet is unregistered. Optionally, scoped Settables
+          may have a prepended prefix.
+        * Settables now allow changes to be applied to any arbitrary object attribute. It no longer needs to match an
+          attribute added to the cmd2 instance itself.
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes
     * Fixed bug where setting `always_show_hint=True` did not show a hint when completing `Settables`

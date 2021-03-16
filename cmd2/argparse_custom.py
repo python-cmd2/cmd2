@@ -203,12 +203,15 @@ from gettext import (
     gettext,
 )
 from typing import (
+    IO,
     Any,
     Callable,
+    Dict,
     Iterable,
     List,
     NoReturn,
     Optional,
+    Sequence,
     Tuple,
     Type,
     Union,
@@ -219,6 +222,15 @@ from . import (
     ansi,
     constants,
 )
+
+try:
+    from typing import (
+        Protocol,
+    )
+except ImportError:
+    from typing_extensions import (  # type: ignore[misc]
+        Protocol,
+    )
 
 ############################################################################################################
 # The following are names of custom argparse argument attributes added by cmd2
@@ -286,6 +298,59 @@ class CompletionItem(str):
 ############################################################################################################
 # Class and functions related to ChoicesCallable
 ############################################################################################################
+
+
+class ChoicesProviderFunc(Protocol):
+    """
+    Function that returns a list of choices in support of tab completion
+    """
+
+    def __call__(self) -> List[str]:
+        ...  # pragma: no cover
+
+
+class ChoicesProviderFuncWithTokens(Protocol):
+    """
+    Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments.
+    """
+
+    def __call__(self, *, arg_tokens: Dict[str, List[str]]) -> List[str]:
+        ...  # pragma: no cover
+
+
+class CompleterFunc(Protocol):
+    """
+    Function to support tab completion with the provided state of the user prompt
+    """
+
+    def __call__(
+        self,
+        text: str,
+        line: str,
+        begidx: int,
+        endidx: int,
+    ) -> List[str]:
+        ...  # pragma: no cover
+
+
+class CompleterFuncWithTokens(Protocol):
+    """
+    Function to support tab completion with the provided state of the user prompt and accepts a dictionary of prior
+    arguments.
+    """
+
+    def __call__(
+        self,
+        text: str,
+        line: str,
+        begidx: int,
+        endidx: int,
+        *,
+        arg_tokens: Dict[str, List[str]],
+    ) -> List[str]:
+        ...  # pragma: no cover
+
+
 class ChoicesCallable:
     """
     Enables using a callable as the choices provider for an argparse argument.
@@ -295,7 +360,7 @@ class ChoicesCallable:
     def __init__(
         self,
         is_completer: bool,
-        to_call: Union[Callable[[], List[str]], Callable[[str, str, int, int], List[str]]],
+        to_call: Union[CompleterFunc, CompleterFuncWithTokens, ChoicesProviderFunc, ChoicesProviderFuncWithTokens],
     ) -> None:
         """
         Initializer
@@ -328,12 +393,18 @@ def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCall
     setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
 
 
-def set_choices_provider(action: argparse.Action, choices_provider: Callable[[], List[str]]) -> None:
+def set_choices_provider(
+    action: argparse.Action,
+    choices_provider: Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens],
+) -> None:
     """Set choices_provider on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_completer=False, to_call=choices_provider))
 
 
-def set_completer(action: argparse.Action, completer: Callable[[str, str, int, int], List[str]]) -> None:
+def set_completer(
+    action: argparse.Action,
+    completer: Union[CompleterFunc, CompleterFuncWithTokens],
+) -> None:
     """Set completer on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_completer=True, to_call=completer))
 
@@ -351,11 +422,11 @@ def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
     nargs: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None] = None,
-    choices_provider: Optional[Callable[[], List[str]]] = None,
-    completer: Optional[Callable[[str, str, int, int], List[str]]] = None,
+    choices_provider: Optional[Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens]] = None,
+    completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None,
     suppress_tab_hint: bool = False,
     descriptive_header: Optional[str] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> argparse.Action:
     """
     Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
@@ -646,9 +717,9 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
                 # helper for wrapping lines
                 # noinspection PyMissingOrEmptyDocstring,PyShadowingNames
-                def get_lines(parts: List[str], indent: str, prefix: Optional[str] = None):
-                    lines = []
-                    line = []
+                def get_lines(parts: List[str], indent: str, prefix: Optional[str] = None) -> List[str]:
+                    lines: List[str] = []
+                    line: List[str] = []
                     if prefix is not None:
                         line_len = len(prefix) - 1
                     else:
@@ -703,14 +774,14 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         # prefix with 'Usage:'
         return '%s%s\n\n' % (prefix, usage)
 
-    def _format_action_invocation(self, action) -> str:
+    def _format_action_invocation(self, action: argparse.Action) -> str:
         if not action.option_strings:
             default = self._get_default_metavar_for_positional(action)
             (metavar,) = self._metavar_formatter(action, default)(1)
             return metavar
 
         else:
-            parts = []
+            parts: List[str] = []
 
             # if the Optional doesn't take a value, format is:
             #    -s, --long
@@ -729,7 +800,11 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             # End cmd2 customization
 
     # noinspection PyMethodMayBeStatic
-    def _determine_metavar(self, action, default_metavar) -> Union[str, Tuple]:
+    def _determine_metavar(
+        self,
+        action: argparse.Action,
+        default_metavar: Union[str, Tuple[str, ...]],
+    ) -> Union[str, Tuple[str, ...]]:
         """Custom method to determine what to use as the metavar value of an action"""
         if action.metavar is not None:
             result = action.metavar
@@ -742,11 +817,15 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             result = default_metavar
         return result
 
-    def _metavar_formatter(self, action, default_metavar) -> Callable:
+    def _metavar_formatter(
+        self,
+        action: argparse.Action,
+        default_metavar: Union[str, Tuple[str, ...]],
+    ) -> Callable[[int], Tuple[str, ...]]:
         metavar = self._determine_metavar(action, default_metavar)
 
         # noinspection PyMissingOrEmptyDocstring
-        def format(tuple_size):
+        def format(tuple_size: int) -> Tuple[str, ...]:
             if isinstance(metavar, tuple):
                 return metavar
             else:
@@ -755,7 +834,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         return format
 
     # noinspection PyProtectedMember
-    def _format_args(self, action, default_metavar) -> str:
+    def _format_args(self, action: argparse.Action, default_metavar: Union[str, Tuple[str, ...]]) -> str:
         """Customized to handle ranged nargs and make other output less verbose"""
         metavar = self._determine_metavar(action, default_metavar)
         metavar_formatter = self._metavar_formatter(action, default_metavar)
@@ -780,7 +859,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             elif isinstance(action.nargs, int) and action.nargs > 1:
                 return '{}{{{}}}'.format('%s' % metavar_formatter(1), action.nargs)
 
-        return super()._format_args(action, default_metavar)
+        return super()._format_args(action, default_metavar)  # type: ignore[arg-type]
 
 
 # noinspection PyCompatibility
@@ -789,18 +868,18 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
     def __init__(
         self,
-        prog=None,
-        usage=None,
-        description=None,
-        epilog=None,
-        parents=None,
-        formatter_class=Cmd2HelpFormatter,
-        prefix_chars='-',
-        fromfile_prefix_chars=None,
-        argument_default=None,
-        conflict_handler='error',
-        add_help=True,
-        allow_abbrev=True,
+        prog: Optional[str] = None,
+        usage: Optional[str] = None,
+        description: Optional[str] = None,
+        epilog: Optional[str] = None,
+        parents: Sequence[argparse.ArgumentParser] = [],
+        formatter_class: Type[argparse.HelpFormatter] = Cmd2HelpFormatter,
+        prefix_chars: str = '-',
+        fromfile_prefix_chars: Optional[str] = None,
+        argument_default: Optional[str] = None,
+        conflict_handler: str = 'error',
+        add_help: bool = True,
+        allow_abbrev: bool = True,
     ) -> None:
         super(Cmd2ArgumentParser, self).__init__(
             prog=prog,
@@ -817,7 +896,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             allow_abbrev=allow_abbrev,
         )
 
-    def add_subparsers(self, **kwargs):
+    def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:
         """
         Custom override. Sets a default title if one was not given.
 
@@ -895,7 +974,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # determine help from format above
         return formatter.format_help() + '\n'
 
-    def _print_message(self, message, file=None):
+    def _print_message(self, message: str, file: Optional[IO[str]] = None) -> None:
         # Override _print_message to use style_aware_write() since we use ANSI escape characters to support color
         if message:
             if file is None:
@@ -923,7 +1002,7 @@ class Cmd2AttributeWrapper:
 
 
 # The default ArgumentParser class for a cmd2 app
-DEFAULT_ARGUMENT_PARSER = Cmd2ArgumentParser
+DEFAULT_ARGUMENT_PARSER: Type[argparse.ArgumentParser] = Cmd2ArgumentParser
 
 
 def set_default_argument_parser(parser: Type[argparse.ArgumentParser]) -> None:
