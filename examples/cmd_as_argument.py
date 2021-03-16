@@ -36,7 +36,7 @@ class CmdLineApp(cmd2.Cmd):
         self.self_in_py = True
         self.maxrepeats = 3
         # Make maxrepeats settable at runtime
-        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
+        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')

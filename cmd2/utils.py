@@ -35,9 +35,18 @@ from typing import (
 from . import (
     constants,
 )
+from .argparse_custom import (
+    ChoicesProviderFunc,
+    ChoicesProviderFuncWithTokens,
+    CompleterFunc,
+    CompleterFuncWithTokens,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2  # noqa: F401
+
+
+_T = TypeVar('_T')
 
 
 def is_quoted(arg: str) -> bool:
@@ -104,13 +113,13 @@ class Settable:
         name: str,
         val_type: Union[Type[Any], Callable[[Any], Any]],
         description: str,
+        settable_object: object,
         *,
-        settable_object: Optional[object] = None,
         settable_attrib_name: Optional[str] = None,
-        onchange_cb: Optional[Callable[[str, Any, Any], Any]] = None,
+        onchange_cb: Optional[Callable[[str, _T, _T], Any]] = None,
         choices: Optional[Iterable[Any]] = None,
-        choices_provider: Optional[Callable[[], List[str]]] = None,
-        completer: Optional[Callable[[str, str, int, int], List[str]]] = None
+        choices_provider: Optional[Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens]] = None,
+        completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None,
     ):
         """
         Settable Initializer
@@ -120,9 +129,9 @@ class Settable:
                          even validate its value. Setting this to bool provides tab completion for true/false and
                          validation using str_to_bool(). The val_type function should raise an exception if it fails.
                          This exception will be caught and printed by Cmd.do_set().
+        :param description: string describing this setting
         :param settable_object: Object to configure with the set command
         :param settable_attrib_name: Attribute name to be modified. Defaults to `name` if not specified.
-        :param description: string describing this setting
         :param onchange_cb: optional function or method to call when the value of this settable is altered
                             by the set command. (e.g. onchange_cb=self.debug_changed)
 
@@ -211,9 +220,6 @@ def is_text_file(file_path: str) -> bool:
             pass
 
     return valid_text_file
-
-
-_T = TypeVar('_T')
 
 
 def remove_duplicates(list_to_prune: List[_T]) -> List[_T]:
@@ -447,9 +453,17 @@ class StdSim:
     Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
     """
 
-    def __init__(self, inner_stream: TextIO, *, echo: bool = False, encoding: str = 'utf-8', errors: str = 'replace') -> None:
+    def __init__(
+        self,
+        inner_stream: Union[TextIO, 'StdSim'],
+        *,
+        echo: bool = False,
+        encoding: str = 'utf-8',
+        errors: str = 'replace',
+    ) -> None:
         """
         StdSim Initializer
+
         :param inner_stream: the wrapped stream. Should be a TextIO or StdSim instance.
         :param echo: if True, then all input will be echoed to inner_stream
         :param encoding: codec for encoding/decoding strings (defaults to utf-8)
@@ -463,7 +477,11 @@ class StdSim:
         self.buffer = ByteBuf(self)
 
     def write(self, s: str) -> None:
-        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream"""
+        """
+        Add str to internal bytes buffer and if echo is True, echo contents to inner stream
+
+        :param s: String to write to the stream
+        """
         if not isinstance(s, str):
             raise TypeError('write() argument must be str, not {}'.format(type(s)))
 
@@ -481,7 +499,11 @@ class StdSim:
         return bytes(self.buffer.byte_buf)
 
     def read(self, size: Optional[int] = -1) -> str:
-        """Read from the internal contents as a str and then clear them out"""
+        """
+        Read from the internal contents as a str and then clear them out
+
+        :param size: Number of bytes to read from the stream
+        """
         if size is None or size == -1:
             result = self.getvalue()
             self.clear()
@@ -726,7 +748,7 @@ def align_text(
     fill_char: str = ' ',
     width: Optional[int] = None,
     tab_width: int = 4,
-    truncate: bool = False
+    truncate: bool = False,
 ) -> str:
     """
     Align text for display within a given width. Supports characters with display widths greater than 1.
@@ -1060,7 +1082,7 @@ def categorize(func: Union[Callable[..., Any], Iterable[Callable[..., Any]]], ca
         for item in func:
             setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
     else:
-        if inspect.ismethod(func) and hasattr(func, '__func__'):
+        if inspect.ismethod(func):
             setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)  # type: ignore[attr-defined]
         else:
             setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)

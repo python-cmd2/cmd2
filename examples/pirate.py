@@ -28,7 +28,7 @@ class Pirate(cmd2.Cmd):
         self.songcolor = 'blue'
 
         # Make songcolor settable at runtime
-        self.add_settable(cmd2.Settable('songcolor', str, 'Color to ``sing``', choices=cmd2.ansi.fg.colors()))
+        self.add_settable(cmd2.Settable('songcolor', str, 'Color to ``sing``', self, choices=cmd2.ansi.fg.colors()))
 
         # prompts and defaults
         self.gold = 0

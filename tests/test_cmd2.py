@@ -214,7 +214,7 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
 class OnChangeHookApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.add_settable(utils.Settable('quiet', bool, "my description", onchange_cb=self._onchange_quiet))
+        self.add_settable(utils.Settable('quiet', bool, "my description", self, onchange_cb=self._onchange_quiet))
 
     def _onchange_quiet(self, name, old, new) -> None:
         """Runs when quiet is changed via set command"""

@@ -42,7 +42,7 @@ class CmdLineApp(cmd2.Cmd):
         super().__init__(*args, multiline_commands=['orate'], **kwargs)
 
         # Make maxrepeats settable at runtime
-        self.add_settable(Settable('maxrepeats', int, 'Max number of `--repeat`s allowed'))
+        self.add_settable(Settable('maxrepeats', int, 'Max number of `--repeat`s allowed', self))
 
         self.intro = 'This is an intro banner ...'
 

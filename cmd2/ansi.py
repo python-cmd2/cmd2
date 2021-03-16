@@ -230,7 +230,7 @@ def style_aware_write(fileobj: IO[str], msg: str) -> None:
     fileobj.write(msg)
 
 
-def fg_lookup(fg_name: Union[str, fg]) -> Fore:
+def fg_lookup(fg_name: Union[str, fg]) -> str:
     """
     Look up ANSI escape codes based on foreground color name.
 
@@ -239,16 +239,16 @@ def fg_lookup(fg_name: Union[str, fg]) -> Fore:
     :raises: ValueError: if the color cannot be found
     """
     if isinstance(fg_name, fg):
-        return fg_name.value
+        return str(fg_name.value)
 
     try:
         ansi_escape = fg[fg_name.lower()].value
     except KeyError:
         raise ValueError('Foreground color {!r} does not exist; must be one of: {}'.format(fg_name, fg.colors()))
-    return ansi_escape
+    return str(ansi_escape)
 
 
-def bg_lookup(bg_name: Union[str, bg]) -> Back:
+def bg_lookup(bg_name: Union[str, bg]) -> str:
     """
     Look up ANSI escape codes based on background color name.
 
@@ -257,13 +257,13 @@ def bg_lookup(bg_name: Union[str, bg]) -> Back:
     :raises: ValueError: if the color cannot be found
     """
     if isinstance(bg_name, bg):
-        return bg_name.value
+        return str(bg_name.value)
 
     try:
         ansi_escape = bg[bg_name.lower()].value
     except KeyError:
         raise ValueError('Background color {!r} does not exist; must be one of: {}'.format(bg_name, bg.colors()))
-    return ansi_escape
+    return str(ansi_escape)
 
 
 # noinspection PyShadowingNames
@@ -292,13 +292,13 @@ def style(
     :return: the stylized string
     """
     # List of strings that add style
-    additions = []
+    additions: List[str] = []
 
     # List of strings that remove style
-    removals = []
+    removals: List[str] = []
 
     # Convert the text object into a string if it isn't already one
-    text = "{}".format(text)
+    text_formatted = "{}".format(text)
 
     # Process the style settings
     if fg:
@@ -322,7 +322,7 @@ def style(
         removals.append(UNDERLINE_DISABLE)
 
     # Combine the ANSI style sequences with the text
-    return cast(str, "".join(additions) + text + "".join(removals))
+    return "".join(additions) + text_formatted + "".join(removals)
 
 
 # Default styles for printing strings of various types.
