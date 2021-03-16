@@ -927,6 +927,45 @@ def test_commandset_settables():
 
             self._arbitrary = Arbitrary()
             self._settable_prefix = 'addon'
+            self.my_int = 11
+
+            self.add_settable(
+                Settable(
+                    'arbitrary_value',
+                    int,
+                    'Some settable value',
+                    settable_object=self._arbitrary,
+                    settable_attrib_name='some_value',
+                )
+            )
+
+    # Declare a CommandSet with an empty settable prefix
+    class WithSettablesNoPrefix(CommandSetBase):
+        def __init__(self):
+            super(WithSettablesNoPrefix, self).__init__()
+
+            self._arbitrary = Arbitrary()
+            self._settable_prefix = ''
+            self.my_int = 11
+
+            self.add_settable(
+                Settable(
+                    'another_value',
+                    float,
+                    'Some settable value',
+                    settable_object=self._arbitrary,
+                    settable_attrib_name='some_value',
+                )
+            )
+
+    # Declare a commandset with duplicate settable name
+    class WithSettablesB(CommandSetBase):
+        def __init__(self):
+            super(WithSettablesB, self).__init__()
+
+            self._arbitrary = Arbitrary()
+            self._settable_prefix = 'some'
+            self.my_int = 11
 
             self.add_settable(
                 Settable(
@@ -941,11 +980,14 @@ def test_commandset_settables():
     # create the command set and cmd2
     cmdset = WithSettablesA()
     arbitrary2 = Arbitrary()
-    app = cmd2.Cmd(command_sets=[cmdset])
-    app.add_settable(Settable('always_prefix_settables', bool, 'Prefix settables'))
+    app = cmd2.Cmd(command_sets=[cmdset], auto_load_commands=False)
+    setattr(app, 'str_value', '')
+    app.add_settable(Settable('always_prefix_settables', bool, 'Prefix settables', app))
+    app._settables['str_value'] = Settable('str_value', str, 'String value', app)
 
     assert 'arbitrary_value' in app.settables.keys()
     assert 'always_prefix_settables' in app.settables.keys()
+    assert 'str_value' in app.settables.keys()
 
     # verify the settable shows up
     out, err = run_cmd(app, 'set')
@@ -965,7 +1007,7 @@ now: 10
 
     # can't add to cmd2 now because commandset already has this settable
     with pytest.raises(KeyError):
-        app.add_settable(Settable('arbitrary_value', int, 'This should fail'))
+        app.add_settable(Settable('arbitrary_value', int, 'This should fail', app))
 
     cmdset.add_settable(
         Settable('arbitrary_value', int, 'Replaced settable', settable_object=arbitrary2, settable_attrib_name='some_value')
@@ -973,11 +1015,16 @@ now: 10
 
     # Can't add a settable to the commandset that already exists in cmd2
     with pytest.raises(KeyError):
-        cmdset.add_settable(Settable('always_prefix_settables', int, 'This should also fail'))
+        cmdset.add_settable(Settable('always_prefix_settables', int, 'This should also fail', cmdset))
 
     # Can't remove a settable from the CommandSet if it is elsewhere and not in the CommandSet
     with pytest.raises(KeyError):
         cmdset.remove_settable('always_prefix_settables')
+
+    # verify registering a commandset with duplicate settable names fails
+    cmdset_dupname = WithSettablesB()
+    with pytest.raises(CommandSetRegistrationError):
+        app.register_command_set(cmdset_dupname)
 
     # unregister the CommandSet and verify the settable is now gone
     app.unregister_command_set(cmdset)
@@ -989,12 +1036,24 @@ Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
 """
     assert err == normalize(expected)
 
+    # Add a commandset with no prefix
+    cmdset_nopfx = WithSettablesNoPrefix()
+    app.register_command_set(cmdset_nopfx)
+
+    with pytest.raises(ValueError):
+        app.always_prefix_settables = True
+
+    app.unregister_command_set(cmdset_nopfx)
+
     # turn on prefixes and add the commandset back
     app.always_prefix_settables = True
+
+    with pytest.raises(CommandSetRegistrationError):
+        app.register_command_set(cmdset_nopfx)
+
     app.register_command_set(cmdset)
 
     # Verify the settable is back with the defined prefix.
-
     assert 'addon.arbitrary_value' in app.settables.keys()
 
     # rename the prefix and verify that the prefix changes everywhere
@@ -1006,3 +1065,22 @@ Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
     assert 'some.arbitrary_value: 5' in out
     out, err = run_cmd(app, 'set some.arbitrary_value')
     assert out == ['some.arbitrary_value: 5']
+
+    # verify registering a commandset with duplicate prefix and settable names fails
+    with pytest.raises(CommandSetRegistrationError):
+        app.register_command_set(cmdset_dupname)
+
+    cmdset_dupname.remove_settable('arbitrary_value')
+
+    app.register_command_set(cmdset_dupname)
+
+    with pytest.raises(KeyError):
+        cmdset_dupname.add_settable(
+            Settable(
+                'arbitrary_value',
+                int,
+                'Some settable value',
+                settable_object=cmdset_dupname._arbitrary,
+                settable_attrib_name='some_value',
+            )
+        )

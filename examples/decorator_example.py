@@ -31,7 +31,7 @@ class CmdLineApp(cmd2.Cmd):
 
         self.maxrepeats = 3
         # Make maxrepeats settable at runtime
-        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
+        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
 
         # Example of args set from the command-line (but they aren't being used here)
         self._ip = ip_addr

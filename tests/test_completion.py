@@ -67,7 +67,13 @@ class CompletionsExample(cmd2.Cmd):
         cmd2.Cmd.__init__(self, multiline_commands=['test_multiline'])
         self.foo = 'bar'
         self.add_settable(
-            utils.Settable('foo', str, description="a settable param", completer=CompletionsExample.complete_foo_val)
+            utils.Settable(
+                'foo',
+                str,
+                description="a settable param",
+                settable_object=self,
+                completer=CompletionsExample.complete_foo_val,
+            )
         )
 
     def do_test_basic(self, args):

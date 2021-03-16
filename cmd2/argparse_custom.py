@@ -205,6 +205,7 @@ from gettext import (
 from typing import (
     Any,
     Callable,
+    Dict,
     Iterable,
     List,
     NoReturn,
@@ -219,6 +220,15 @@ from . import (
     ansi,
     constants,
 )
+
+try:
+    from typing import (
+        Protocol,
+    )
+except ImportError:
+    from typing_extensions import (
+        Protocol,
+    )
 
 ############################################################################################################
 # The following are names of custom argparse argument attributes added by cmd2
@@ -286,6 +296,26 @@ class CompletionItem(str):
 ############################################################################################################
 # Class and functions related to ChoicesCallable
 ############################################################################################################
+
+
+class ChoicesCallableFunc(Protocol):
+    def __call__(self, *, arg_tokens: Dict[str, List[str]]) -> List[str]:
+        ...
+
+
+class ChoicesCompleterFunc(Protocol):
+    def __call__(
+        self,
+        text: str,
+        line: str,
+        begidx: int,
+        endidx: int,
+        *,
+        arg_tokens: Dict[str, List[str]],
+    ) -> List[str]:
+        ...
+
+
 class ChoicesCallable:
     """
     Enables using a callable as the choices provider for an argparse argument.
@@ -295,7 +325,7 @@ class ChoicesCallable:
     def __init__(
         self,
         is_completer: bool,
-        to_call: Union[Callable[[], List[str]], Callable[[str, str, int, int], List[str]]],
+        to_call: Union[ChoicesCompleterFunc, ChoicesCallableFunc],
     ) -> None:
         """
         Initializer
@@ -328,12 +358,12 @@ def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCall
     setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
 
 
-def set_choices_provider(action: argparse.Action, choices_provider: Callable[[], List[str]]) -> None:
+def set_choices_provider(action: argparse.Action, choices_provider: ChoicesCallableFunc) -> None:
     """Set choices_provider on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_completer=False, to_call=choices_provider))
 
 
-def set_completer(action: argparse.Action, completer: Callable[[str, str, int, int], List[str]]) -> None:
+def set_completer(action: argparse.Action, completer: ChoicesCompleterFunc) -> None:
     """Set completer on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_completer=True, to_call=completer))
 
@@ -351,11 +381,11 @@ def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
     nargs: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None] = None,
-    choices_provider: Optional[Callable[[], List[str]]] = None,
-    completer: Optional[Callable[[str, str, int, int], List[str]]] = None,
+    choices_provider: Optional[ChoicesCallableFunc] = None,
+    completer: Optional[ChoicesCompleterFunc] = None,
     suppress_tab_hint: bool = False,
     descriptive_header: Optional[str] = None,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> argparse.Action:
     """
     Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2

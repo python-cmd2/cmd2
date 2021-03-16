@@ -62,11 +62,11 @@ class BgColors(ansi.ColorBase):
     purple = bg.Purple
 
 
-def get_fg(name: str):
+def get_fg(name: str) -> str:
     return str(FgColors[name])
 
 
-def get_bg(name: str):
+def get_bg(name: str) -> str:
     return str(BgColors[name])
 
 
@@ -83,7 +83,7 @@ class CmdLineApp(cmd2.Cmd):
 
         self.maxrepeats = 3
         # Make maxrepeats settable at runtime
-        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
+        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
 
         # Should ANSI color output be allowed
         self.allow_style = ansi.STYLE_TERMINAL

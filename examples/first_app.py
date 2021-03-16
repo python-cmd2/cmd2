@@ -27,7 +27,7 @@ class FirstApp(cmd2.Cmd):
 
         # Make maxrepeats settable at runtime
         self.maxrepeats = 3
-        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
+        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
