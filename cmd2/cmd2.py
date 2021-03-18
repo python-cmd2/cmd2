@@ -3099,7 +3099,7 @@ class Cmd(cmd.Cmd):
         descriptive_header='Value',
     )
 
-    @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_delete_help)
+    @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_list_help)
     def _alias_list(self, args: argparse.Namespace) -> None:
         """List some or all aliases as 'alias create' commands"""
         tokens_to_quote = constants.REDIRECTION_TOKENS
