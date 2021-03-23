@@ -34,6 +34,9 @@
           may have a prepended prefix.
         * Settables now allow changes to be applied to any arbitrary object attribute. It no longer needs to match an
           attribute added to the cmd2 instance itself.
+    * Raising ``SystemExit`` or calling ``sys.exit()`` in a command or hook function will set ``self.exit_code``
+      to the exit code used in those calls. It will also result in the command loop stopping.
+
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes
     * Fixed bug where setting `always_show_hint=True` did not show a hint when completing `Settables`

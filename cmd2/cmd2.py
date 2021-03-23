@@ -2362,7 +2362,8 @@ class Cmd(cmd.Cmd):
         except KeyboardInterrupt as ex:
             if raise_keyboard_interrupt and not stop:
                 raise ex
-        except SystemExit:
+        except SystemExit as ex:
+            self.exit_code = ex.code
             stop = True
         except PassThroughException as ex:
             raise ex.wrapped_ex
@@ -2374,7 +2375,8 @@ class Cmd(cmd.Cmd):
             except KeyboardInterrupt as ex:
                 if raise_keyboard_interrupt and not stop:
                     raise ex
-            except SystemExit:
+            except SystemExit as ex:
+                self.exit_code = ex.code
                 stop = True
             except PassThroughException as ex:
                 raise ex.wrapped_ex

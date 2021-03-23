@@ -175,6 +175,9 @@ the following interaction::
     2
 
 
+Raising ``SystemExit(code)`` or calling ``sys.exit(code)`` in a command
+or hook function also sets ``self.exit_code`` and stops the program.
+
 Exception Handling
 ------------------
 

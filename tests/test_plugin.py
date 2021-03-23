@@ -229,7 +229,7 @@ class Plugin:
     ) -> cmd2.plugin.CommandFinalizationData:
         """A command finalization hook which raises a SystemExit"""
         self.called_cmdfinalization += 1
-        raise SystemExit
+        raise SystemExit(5)
 
     def cmdfinalization_hook_keyboard_interrupt(
         self, data: cmd2.plugin.CommandFinalizationData
@@ -930,6 +930,7 @@ def test_cmdfinalization_hook_system_exit():
     stop = app.onecmd_plus_hooks('say hello')
     assert stop
     assert app.called_cmdfinalization == 1
+    assert app.exit_code == 5
 
 
 def test_cmdfinalization_hook_keyboard_interrupt():
