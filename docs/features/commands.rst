@@ -142,7 +142,7 @@ The ``cmd2.Cmd`` object sets an ``exit_code`` attribute to zero when it is
 instantiated. The value of this attribute is returned from the ``cmdloop()``
 call. Therefore, if you don't do anything with this attribute in your code,
 ``cmdloop()`` will (almost) always return zero. There are a few built-in
-``cmd2`` commands which set ``exit_code`` to ``-1`` if an error occurs.
+``cmd2`` commands which set ``exit_code`` to ``1`` if an error occurs.
 
 You can use this capability to easily return your own values to the operating
 system shell::

@@ -28,7 +28,7 @@ class ReplWithExitCode(cmd2.Cmd):
                 self.exit_code = int(arg_list[0])
             except ValueError:
                 self.perror("{} isn't a valid integer exit code".format(arg_list[0]))
-                self.exit_code = -1
+                self.exit_code = 1
 
         return True
 

@@ -4750,7 +4750,7 @@ class Cmd(cmd.Cmd):
         transcripts_expanded = utils.files_from_glob_patterns(transcript_paths, access=os.R_OK)
         if not transcripts_expanded:
             self.perror('No test files found - nothing to test')
-            self.exit_code = -1
+            self.exit_code = 1
             return
 
         verinfo = ".".join(map(str, sys.version_info[:3]))
@@ -4787,7 +4787,7 @@ class Cmd(cmd.Cmd):
             self.perror(error_str[start:])
 
             # Return a failure error code to support automated transcript-based testing
-            self.exit_code = -1
+            self.exit_code = 1
 
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
