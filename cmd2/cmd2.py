@@ -877,7 +877,7 @@ class Cmd(cmd.Cmd):
         if not (cmdset is self or cmdset in self._installed_command_sets):
             raise CommandSetRegistrationError('Cannot unregister subcommands with an unregistered CommandSet')
 
-        # find all methods that start with the subcommand prefix
+        # find methods that have the required attributes necessary to be recognized as a sub-command
         methods = inspect.getmembers(
             cmdset,
             predicate=lambda meth: isinstance(meth, Callable)
