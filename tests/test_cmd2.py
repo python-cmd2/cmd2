@@ -537,13 +537,16 @@ def test_system_exit_in_command(base_app, capsys):
     """Test raising SystemExit in a command"""
     import types
 
+    exit_code = 5
+
     def do_system_exit(self, _):
-        raise SystemExit
+        raise SystemExit(exit_code)
 
     setattr(base_app, 'do_system_exit', types.MethodType(do_system_exit, base_app))
 
     stop = base_app.onecmd_plus_hooks('system_exit')
     assert stop
+    assert base_app.exit_code == exit_code
 
 
 def test_passthrough_exception_in_command(base_app):
@@ -2323,7 +2326,7 @@ class ReplWithExitCode(cmd2.Cmd):
                 self.exit_code = int(arg_list[0])
             except ValueError:
                 self.perror("{} isn't a valid integer exit code".format(arg_list[0]))
-                self.exit_code = -1
+                self.exit_code = 1
 
         # Return True to stop the command loop
         return True

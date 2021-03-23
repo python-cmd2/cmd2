@@ -46,7 +46,7 @@ class Pirate(cmd2.Cmd):
             self.poutput('Now we gots {0} doubloons'.format(self.gold))
         if self.gold < 0:
             self.poutput("Off to debtorrr's prison.")
-            self.exit_code = -1
+            self.exit_code = 1
             stop = True
         return stop
 

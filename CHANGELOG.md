@@ -21,6 +21,7 @@
     * Settables now have new initialization parameters. It is now a required parameter to supply the reference to the
       object that holds the settable attribute. `cmd2.Cmd.settables` is no longer a public dict attribute - it is now a
       property that aggregates all Settables across all registered CommandSets.
+    * Failed transcript testing now sets self.exit_code to 1 instead of -1.
 * Enhancements
     * Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
       See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
@@ -34,6 +35,9 @@
           may have a prepended prefix.
         * Settables now allow changes to be applied to any arbitrary object attribute. It no longer needs to match an
           attribute added to the cmd2 instance itself.
+    * Raising ``SystemExit`` or calling ``sys.exit()`` in a command or hook function will set ``self.exit_code``
+      to the exit code used in those calls. It will also result in the command loop stopping.
+
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes
     * Fixed bug where setting `always_show_hint=True` did not show a hint when completing `Settables`
