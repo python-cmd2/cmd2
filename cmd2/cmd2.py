@@ -168,7 +168,7 @@ ipython_available = True
 try:
     # noinspection PyUnresolvedReferences,PyPackageRequirements
     from IPython import (  # type: ignore[import]
-        embed,
+        start_ipython,
     )
 except ImportError:  # pragma: no cover
     ipython_available = False
@@ -4197,33 +4197,20 @@ class Cmd(cmd.Cmd):
 
             :return: True if running of commands should stop
             """
+            # noinspection PyPackageRequirements
+            from IPython.terminal.interactiveshell import (
+                TerminalInteractiveShell,
+            )
+            from IPython.terminal.ipapp import (
+                TerminalIPythonApp,
+            )
+            from traitlets.config.loader import (
+                Config as TraitletsConfig,
+            )
+
             from .py_bridge import (
                 PyBridge,
             )
-
-            def load_ipy(ipy_locals: Dict[str, Any]) -> None:
-                """
-                Embed an IPython shell in an environment that is restricted to only the variables in this function
-
-                :param ipy_locals: locals dictionary for the IPython environment
-                """
-                # Copy ipy_locals into this function's locals
-                for key, val in ipy_locals.items():
-                    locals()[key] = val
-
-                # Delete these names from the environment so IPython won't see them
-                del key
-                del val
-                del ipy_locals
-
-                # Start ipy shell
-                embed(
-                    banner1=(
-                        'Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
-                        'Run Python code from external files with: run filename.py\n'
-                    ),
-                    exit_msg='Leaving IPython, back to {}'.format(sys.argv[0]),
-                )
 
             if self.in_pyscript():
                 self.perror("Recursively entering interactive Python shells is not allowed")
@@ -4241,7 +4228,23 @@ class Cmd(cmd.Cmd):
                 if self.self_in_py:
                     local_vars['self'] = self
 
-                load_ipy(local_vars)
+                # Configure IPython
+                config = TraitletsConfig()
+                config.InteractiveShell.banner2 = (
+                    'Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
+                    'Run Python code from external files with: run filename.py\n'
+                )
+
+                # Start IPython
+                start_ipython(config=config, argv=[], user_ns=local_vars)
+
+                # The IPython application is a singleton and won't be recreated next time
+                # this function runs. That's a problem since the contents of local_vars
+                # may need to be changed. Therefore we must destroy all instances of the
+                # relevant classes.
+                TerminalIPythonApp.clear_instance()
+                TerminalInteractiveShell.clear_instance()
+
                 return py_bridge.stop
             finally:
                 self._in_py = False
