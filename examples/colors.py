@@ -83,8 +83,8 @@ class CmdLineApp(cmd2.Cmd):
             self.poutput(output_str)
         self.perror('error message at the end')
 
-    @staticmethod
-    def perror(msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+    # noinspection PyMethodMayBeStatic
+    def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Override perror() method from `cmd2.Cmd`
 
         Use colorama native approach for styling the text instead of `cmd2.ansi` methods
@@ -98,9 +98,9 @@ class CmdLineApp(cmd2.Cmd):
             final_msg = "{}{}{}{}".format(Fore.RED, Back.YELLOW, msg, Style.RESET_ALL)
         else:
             final_msg = "{}".format(msg)
-        ansi.ansi_aware_write(sys.stderr, final_msg + end)
+        ansi.style_aware_write(sys.stderr, final_msg + end)
 
-    def do_timetravel(self, args):
+    def do_timetravel(self, _):
         """A command which always generates an error message, to demonstrate custom error colors"""
         self.perror('Mr. Fusion failed to start. Could not energize flux capacitor.')
 
