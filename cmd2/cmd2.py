@@ -4059,13 +4059,13 @@ class Cmd(cmd.Cmd):
             # This is to prevent pyscripts from editing it. (e.g. locals().clear()). It also ensures a pyscript's
             # environment won't be filled with data from a previously run pyscript. Only make a shallow copy since
             # it's OK for py_locals to contain objects which are editable in a pyscript.
-            localvars = dict(self.py_locals)
-            localvars[self.py_bridge_name] = py_bridge
-            localvars['quit'] = py_quit
-            localvars['exit'] = py_quit
+            local_vars = self.py_locals.copy()
+            local_vars[self.py_bridge_name] = py_bridge
+            local_vars['quit'] = py_quit
+            local_vars['exit'] = py_quit
 
             if self.self_in_py:
-                localvars['self'] = self
+                local_vars['self'] = self
 
             # Handle case where we were called by run_pyscript
             if pyscript is not None:
@@ -4079,8 +4079,8 @@ class Cmd(cmd.Cmd):
                     self.pexcept("Error reading script file '{}': {}".format(expanded_filename, ex))
                     return
 
-                localvars['__name__'] = '__main__'
-                localvars['__file__'] = expanded_filename
+                local_vars['__name__'] = '__main__'
+                local_vars['__file__'] = expanded_filename
 
                 # Place the script's directory at sys.path[0] just as Python does when executing a script
                 saved_sys_path = list(sys.path)
@@ -4088,7 +4088,7 @@ class Cmd(cmd.Cmd):
 
             else:
                 # This is the default name chosen by InteractiveConsole when no locals are passed in
-                localvars['__name__'] = '__console__'
+                local_vars['__name__'] = '__console__'
 
                 if args.command:
                     py_code_to_run = args.command
@@ -4100,7 +4100,7 @@ class Cmd(cmd.Cmd):
                     py_bridge.cmd_echo = True
 
             # Create the Python interpreter
-            interp = InteractiveConsole(locals=localvars)
+            interp = InteractiveConsole(locals=local_vars)
 
             # Check if we are running Python code
             if py_code_to_run:
@@ -4201,24 +4201,20 @@ class Cmd(cmd.Cmd):
                 PyBridge,
             )
 
-            # noinspection PyUnusedLocal
-            def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
+            def load_ipy(ipy_locals: Dict[str, Any]) -> None:
                 """
                 Embed an IPython shell in an environment that is restricted to only the variables in this function
 
-                :param cmd2_app: instance of the cmd2 app
-                :param py_bridge: a PyBridge
+                :param ipy_locals: locals dictionary for the IPython environment
                 """
-                # Create a variable pointing to py_bridge and name it using the value of py_bridge_name
-                exec("{} = py_bridge".format(cmd2_app.py_bridge_name))
+                # Copy ipy_locals into this function's locals
+                for key, val in ipy_locals.items():
+                    locals()[key] = val
 
-                # Add self variable pointing to cmd2_app, if allowed
-                if cmd2_app.self_in_py:
-                    exec("self = cmd2_app")
-
-                # Delete these names from the environment so IPython can't use them
-                del cmd2_app
-                del py_bridge
+                # Delete these names from the environment so IPython won't see them
+                del key
+                del val
+                del ipy_locals
 
                 # Start ipy shell
                 embed(
@@ -4235,9 +4231,18 @@ class Cmd(cmd.Cmd):
 
             try:
                 self._in_py = True
-                new_py_bridge = PyBridge(self)
-                load_ipy(self, new_py_bridge)
-                return new_py_bridge.stop
+                py_bridge = PyBridge(self)
+
+                # Make a copy of self.py_locals for the locals dictionary in the IPython environment we are creating.
+                # This is to prevent ipy from editing it. (e.g. locals().clear()). Only make a shallow copy since
+                # it's OK for py_locals to contain objects which are editable in ipy.
+                local_vars = self.py_locals.copy()
+                local_vars[self.py_bridge_name] = py_bridge
+                if self.self_in_py:
+                    local_vars['self'] = self
+
+                load_ipy(local_vars)
+                return py_bridge.stop
             finally:
                 self._in_py = False
 
