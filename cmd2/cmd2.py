@@ -48,9 +48,6 @@ from collections import (
 from contextlib import (
     redirect_stdout,
 )
-from pathlib import (
-    Path,
-)
 from types import (
     ModuleType,
 )
@@ -223,9 +220,9 @@ class Cmd(cmd.Cmd):
         stdin: Optional[TextIO] = None,
         stdout: Optional[TextIO] = None,
         *,
-        persistent_history_file: Path = '',
+        persistent_history_file: str = '',
         persistent_history_length: int = 1000,
-        startup_script: Path = '',
+        startup_script: str = '',
         silent_startup_script: bool = False,
         use_ipython: bool = False,
         allow_cli_args: bool = True,
