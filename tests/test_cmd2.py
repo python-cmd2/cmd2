@@ -265,39 +265,6 @@ def test_shell_manual_call(base_app):
     base_app.do_shell(cmd)
 
 
-def test_base_py(base_app):
-    # Make sure py can't edit Cmd.py_locals. It used to be that cmd2 was passing its py_locals
-    # dictionary to the py environment instead of a shallow copy.
-    base_app.py_locals['test_var'] = 5
-    out, err = run_cmd(base_app, 'py del[locals()["test_var"]]')
-    assert not out and not err
-    assert base_app.py_locals['test_var'] == 5
-
-    out, err = run_cmd(base_app, 'py print(test_var)')
-    assert out[0].rstrip() == '5'
-
-    # Place an editable object in py_locals. Since we make a shallow copy of py_locals,
-    # this object should be editable from the py environment.
-    base_app.py_locals['my_list'] = []
-    out, err = run_cmd(base_app, 'py my_list.append(2)')
-    assert not out and not err
-    assert base_app.py_locals['my_list'][0] == 2
-
-    # Try a print statement
-    out, err = run_cmd(base_app, 'py print("spaces" + " in this " + "command")')
-    assert out[0].rstrip() == 'spaces in this command'
-
-    # Set self_in_py to True and make sure we see self
-    base_app.self_in_py = True
-    out, err = run_cmd(base_app, 'py print(self)')
-    assert 'cmd2.cmd2.Cmd object' in out[0]
-
-    # Set self_in_py to False and make sure we can't see self
-    base_app.self_in_py = False
-    out, err = run_cmd(base_app, 'py print(self)')
-    assert "NameError: name 'self' is not defined" in err
-
-
 def test_base_error(base_app):
     out, err = run_cmd(base_app, 'meow')
     assert "is not a recognized command" in err[0]
@@ -336,15 +303,15 @@ def test_run_script_with_empty_args(base_app):
     assert "the following arguments are required" in err[1]
 
 
-def test_run_script_with_nonexistent_file(base_app, capsys):
+def test_run_script_with_invalid_file(base_app, request):
+    # Path does not exist
     out, err = run_cmd(base_app, 'run_script does_not_exist.txt')
-    assert "does not exist" in err[0]
+    assert "Problem accessing script from " in err[0]
 
-
-def test_run_script_with_directory(base_app, request):
+    # Path is a directory
     test_dir = os.path.dirname(request.module.__file__)
     out, err = run_cmd(base_app, 'run_script {}'.format(test_dir))
-    assert "is not a file" in err[0]
+    assert "Problem accessing script from " in err[0]
 
 
 def test_run_script_with_empty_file(base_app, request):
@@ -1562,12 +1529,12 @@ def test_commandresult_falsy(commandresult_app):
 
 def test_is_text_file_bad_input(base_app):
     # Test with a non-existent file
-    file_is_valid = utils.is_text_file('does_not_exist.txt')
-    assert not file_is_valid
+    with pytest.raises(OSError):
+        utils.is_text_file('does_not_exist.txt')
 
     # Test with a directory
-    dir_is_valid = utils.is_text_file('.')
-    assert not dir_is_valid
+    with pytest.raises(OSError):
+        utils.is_text_file('.')
 
 
 def test_eof(base_app):
@@ -2270,6 +2237,7 @@ def test_get_all_commands(base_app):
         'eof',
         'help',
         'history',
+        'ipy',
         'macro',
         'py',
         'quit',

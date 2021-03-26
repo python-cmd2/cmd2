@@ -26,7 +26,7 @@ capabilities which you may wish to utilize while initializing the app::
 
         def __init__(self):
             super().__init__(multiline_commands=['echo'], persistent_history_file='cmd2_history.dat',
-                             startup_script='scripts/startup.txt', use_ipython=True)
+                             startup_script='scripts/startup.txt', include_ipy=True)
 
             # Prints an intro banner once upon application startup
             self.intro = style('Welcome to cmd2!', fg=fg.red, bg=bg.white, bold=True)

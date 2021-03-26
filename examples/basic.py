@@ -24,7 +24,7 @@ class BasicApp(cmd2.Cmd):
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
             startup_script='scripts/startup.txt',
-            use_ipython=True,
+            include_ipy=True,
         )
 
         self.intro = style('Welcome to PyOhio 2019 and cmd2!', fg=fg.red, bg=bg.white, bold=True) + ' 😀'

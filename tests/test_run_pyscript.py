@@ -141,6 +141,42 @@ def test_run_pyscript_environment(base_app, request):
     assert out[0] == "PASSED"
 
 
+def test_run_pyscript_self_in_py(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', 'self_in_py.py')
+
+    # Set self_in_py to True and make sure we see self
+    base_app.self_in_py = True
+    out, err = run_cmd(base_app, 'run_pyscript {}'.format(python_script))
+    assert 'I see self' in out[0]
+
+    # Set self_in_py to False and make sure we can't see self
+    base_app.self_in_py = False
+    out, err = run_cmd(base_app, 'run_pyscript {}'.format(python_script))
+    assert 'I do not see self' in out[0]
+
+
+def test_run_pyscript_py_locals(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', 'py_locals.py')
+
+    # Make sure pyscripts can't edit Cmd.py_locals. It used to be that cmd2 was passing its py_locals
+    # dictionary to the py environment instead of a shallow copy.
+    base_app.py_locals['test_var'] = 5
+
+    # Place an editable object in py_locals. Since we make a shallow copy of py_locals,
+    # this object should be editable from the py environment.
+    base_app.py_locals['my_list'] = []
+
+    run_cmd(base_app, 'run_pyscript {}'.format(python_script))
+
+    # test_var should still exist
+    assert base_app.py_locals['test_var'] == 5
+
+    # my_list should be edited
+    assert base_app.py_locals['my_list'][0] == 2
+
+
 def test_run_pyscript_app_echo(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'echo.py')

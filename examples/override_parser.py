@@ -23,7 +23,7 @@ argparse.cmd2_parser_module = 'examples.custom_parser'
 if __name__ == '__main__':
     import sys
 
-    app = cmd2.Cmd(use_ipython=True, persistent_history_file='cmd2_history.dat')
+    app = cmd2.Cmd(include_ipy=True, persistent_history_file='cmd2_history.dat')
     app.self_in_py = True  # Enable access to "self" within the py command
     app.debug = True  # Show traceback if/when an exception occurs
     sys.exit(app.cmdloop())

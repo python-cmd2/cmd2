@@ -167,7 +167,7 @@ def run_cmd(app, cmd):
 
 @fixture
 def base_app():
-    return cmd2.Cmd()
+    return cmd2.Cmd(include_py=True, include_ipy=True)
 
 
 # These are odd file names for testing quoting of them

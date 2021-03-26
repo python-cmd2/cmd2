@@ -1,11 +1,21 @@
 Embedded Python Shells
 ======================
 
-The ``py`` command will run its arguments as a Python command.  Entered without
-arguments, it enters an interactive Python session.  The session can call
-"back" to your application through the name defined in ``self.pyscript_name``
-(defaults to ``app``).  This wrapper provides access to execute commands in
-your ``cmd2`` application while maintaining isolation.
+Python (optional)
+------------------
+If the ``cmd2.Cmd`` class is instantiated with ``include_py=True``, then the
+optional ``py`` command will be present and run an interactive Python shell::
+
+    from cmd2 import Cmd
+    class App(Cmd):
+        def __init__(self):
+            Cmd.__init__(self, include_py=True)
+
+The Python shell can run CLI commands from you application using the object
+named in ``self.pyscript_name`` (defaults to ``app``).  This wrapper provides
+access to execute commands in your ``cmd2`` application while maintaining
+isolation from the full `Cmd` instance. For example, any application command
+can be run with ``app("command ...")``.
 
 You may optionally enable full access to to your application by setting
 ``self.self_in_py`` to ``True``.  Enabling this flag adds ``self`` to the
@@ -17,76 +27,28 @@ in the CLI's environment.
 
 Anything in ``self.py_locals`` is always available in the Python environment.
 
-The ``app`` object (or your custom name) provides access to application
-commands through raw commands.  For example, any application command call be
-called with ``app("<command>")``.
+All of these parameters are also available to Python scripts which run in your
+application via the ``run_pyscript`` command:
 
-More Python examples:
+- supports tab completion of file system paths
+- has the ability to pass command-line arguments to the scripts invoked
 
-::
-
-    (Cmd) py print("-".join("spelling"))
-    s-p-e-l-l-i-n-g
-    (Cmd) py
-    Python 3.9.0 (default, Nov 11 2020, 21:21:51)
-    [Clang 12.0.0 (clang-1200.0.32.21)] on darwin
-    Type "help", "copyright", "credits" or "license" for more information.
-
-    End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.
-    Non-Python commands can be issued with: app("your command")
-    (CmdLineApp)
-
-    End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.
-    Non-python commands can be issued with: app("your command")
-    Run python code from external script files with: run("script.py")
-
-    >>> import os
-    >>> os.uname()
-    ('Linux', 'eee', '2.6.31-19-generic', '#56-Ubuntu SMP Thu Jan 28 01:26:53 UTC 2010', 'i686')
-    >>> app("say --piglatin {os}".format(os=os.uname()[0]))
-    inuxLay
-    >>> self.prompt
-    '(Cmd) '
-    >>> self.prompt = 'Python was here > '
-    >>> quit()
-    Python was here >
-
-The ``py`` command also allows you to run Python scripts via ``py
-run('myscript.py')``. This provides a more complicated and more powerful
-scripting capability than that provided by the simple text file scripts
-discussed in :ref:`features/scripting:Scripting`.  Python scripts can include
+This command provides a more complicated and more powerful scripting capability
+than that provided by the simple text file scripts. Python scripts can include
 conditional control flow logic.  See the **python_scripting.py** ``cmd2``
 application and the **script_conditional.py** script in the ``examples`` source
 code directory for an example of how to achieve this in your own applications.
+See :ref:`features/scripting:Scripting` for an explanation of both scripting
+methods in **cmd2** applications.
 
-Using ``py`` to run scripts directly is considered deprecated.  The newer
-``run_pyscript`` command is superior for doing this in two primary ways:
-
-- it supports tab completion of file system paths
-- it has the ability to pass command-line arguments to the scripts invoked
-
-There are no disadvantages to using ``run_pyscript`` as opposed to ``py
-run()``.  A simple example of using ``run_pyscript`` is shown below  along with
-the arg_printer_ script::
+A simple example of using ``run_pyscript`` is shown below  along with the
+arg_printer_ script::
 
     (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar baz
     Running Python script 'arg_printer.py' which was called with 3 arguments
     arg 1: 'foo'
     arg 2: 'bar'
     arg 3: 'baz'
-
-.. note::
-
-    If you want to be able to pass arguments with spaces to commands, then we
-    strongly recommend using one of the decorators, such as
-    ``with_argument_list``.  ``cmd2`` will pass your **do_*** methods a list of
-    arguments in this case.
-
-    When using this decorator, you can then put arguments in quotes like so::
-
-        $ examples/arg_print.py
-        (Cmd) lprint foo "bar baz"
-        lprint was called with the following list of arguments: ['foo', 'bar baz']
 
 .. _arg_printer:
    https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/arg_printer.py
@@ -96,13 +58,13 @@ IPython (optional)
 ------------------
 
 **If** IPython_ is installed on the system **and** the ``cmd2.Cmd`` class is
-instantiated with ``use_ipython=True``, then the optional ``ipy`` command will
-be present::
+instantiated with ``include_ipy=True``, then the optional ``ipy`` command will
+run an interactive IPython shell::
 
     from cmd2 import Cmd
     class App(Cmd):
         def __init__(self):
-            Cmd.__init__(self, use_ipython=True)
+            Cmd.__init__(self, include_ipy=True)
 
 The ``ipy`` command enters an interactive IPython_ session.  Similar to an
 interactive Python session, this shell can access your application instance via

@@ -33,8 +33,8 @@ class CmdLineApp(cmd2.Cmd):
     """ Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 apps."""
 
     def __init__(self):
-        # Enable the optional ipy command if IPython is installed by setting use_ipython=True
-        super().__init__(use_ipython=True)
+        # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell
+        super().__init__(include_ipy=True)
         self._set_prompt()
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇 💩'
 
