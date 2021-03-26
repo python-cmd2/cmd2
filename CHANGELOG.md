@@ -37,6 +37,7 @@
           attribute added to the cmd2 instance itself.
     * Raising ``SystemExit`` or calling ``sys.exit()`` in a command or hook function will set ``self.exit_code``
       to the exit code used in those calls. It will also result in the command loop stopping.
+    * ipy command now includes all of `self.py_locals` in the IPython environment 
 
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes

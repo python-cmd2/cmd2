@@ -8,18 +8,18 @@ arguments, it enters an interactive Python session.  The session can call
 your ``cmd2`` application while maintaining isolation.
 
 You may optionally enable full access to to your application by setting
-``self_in_py`` to ``True``.  Enabling this flag adds ``self`` to the python
-session, which is a reference to your ``cmd2`` application. This can be useful
-for debugging your application.
+``self.self_in_py`` to ``True``.  Enabling this flag adds ``self`` to the
+python session, which is a reference to your ``cmd2`` application. This can be
+useful for debugging your application.
+
+Any local or global variable created within the Python session will not persist
+in the CLI's environment.
+
+Anything in ``self.py_locals`` is always available in the Python environment.
 
 The ``app`` object (or your custom name) provides access to application
 commands through raw commands.  For example, any application command call be
 called with ``app("<command>")``.
-
-::
-
-    >>> app('say --piglatin Blah')
-    lahBay
 
 More Python examples:
 
@@ -50,14 +50,6 @@ More Python examples:
     >>> self.prompt = 'Python was here > '
     >>> quit()
     Python was here >
-
-Using the ``py`` command is tightly integrated with your main ``cmd2``
-application and any variables created or changed will persist for the life of
-the application::
-
-    (Cmd) py x = 5
-    (Cmd) py print(x)
-    5
 
 The ``py`` command also allows you to run Python scripts via ``py
 run('myscript.py')``. This provides a more complicated and more powerful
@@ -114,12 +106,13 @@ be present::
 
 The ``ipy`` command enters an interactive IPython_ session.  Similar to an
 interactive Python session, this shell can access your application instance via
-``self`` and any changes to your application made via ``self`` will persist.
-However, any local or global variable created within the ``ipy`` shell will not
-persist. Within the ``ipy`` shell, you cannot call "back" to your application
-with ``cmd("")``, however you can run commands directly like so::
+``self`` if ``self.self_in_py`` is ``True`` and any changes to your application
+made via ``self`` will persist. However, any local or global variable created
+within the ``ipy`` shell will not persist in the CLI's environment
 
-    self.onecmd_plus_hooks('help')
+Also, as in the interactive Python session, the ``ipy`` shell has access to the
+contents of ``self.py_locals`` and can call back into the application using the
+``app`` object (or your custom name).
 
 IPython_ provides many advantages, including:
 

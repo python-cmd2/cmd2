@@ -48,9 +48,6 @@ from collections import (
 from contextlib import (
     redirect_stdout,
 )
-from pathlib import (
-    Path,
-)
 from types import (
     ModuleType,
 )
@@ -168,7 +165,7 @@ ipython_available = True
 try:
     # noinspection PyUnresolvedReferences,PyPackageRequirements
     from IPython import (  # type: ignore[import]
-        embed,
+        start_ipython,
     )
 except ImportError:  # pragma: no cover
     ipython_available = False
@@ -223,9 +220,9 @@ class Cmd(cmd.Cmd):
         stdin: Optional[TextIO] = None,
         stdout: Optional[TextIO] = None,
         *,
-        persistent_history_file: Path = '',
+        persistent_history_file: str = '',
         persistent_history_length: int = 1000,
-        startup_script: Path = '',
+        startup_script: str = '',
         silent_startup_script: bool = False,
         use_ipython: bool = False,
         allow_cli_args: bool = True,
@@ -4059,13 +4056,13 @@ class Cmd(cmd.Cmd):
             # This is to prevent pyscripts from editing it. (e.g. locals().clear()). It also ensures a pyscript's
             # environment won't be filled with data from a previously run pyscript. Only make a shallow copy since
             # it's OK for py_locals to contain objects which are editable in a pyscript.
-            localvars = dict(self.py_locals)
-            localvars[self.py_bridge_name] = py_bridge
-            localvars['quit'] = py_quit
-            localvars['exit'] = py_quit
+            local_vars = self.py_locals.copy()
+            local_vars[self.py_bridge_name] = py_bridge
+            local_vars['quit'] = py_quit
+            local_vars['exit'] = py_quit
 
             if self.self_in_py:
-                localvars['self'] = self
+                local_vars['self'] = self
 
             # Handle case where we were called by run_pyscript
             if pyscript is not None:
@@ -4079,8 +4076,8 @@ class Cmd(cmd.Cmd):
                     self.pexcept("Error reading script file '{}': {}".format(expanded_filename, ex))
                     return
 
-                localvars['__name__'] = '__main__'
-                localvars['__file__'] = expanded_filename
+                local_vars['__name__'] = '__main__'
+                local_vars['__file__'] = expanded_filename
 
                 # Place the script's directory at sys.path[0] just as Python does when executing a script
                 saved_sys_path = list(sys.path)
@@ -4088,7 +4085,7 @@ class Cmd(cmd.Cmd):
 
             else:
                 # This is the default name chosen by InteractiveConsole when no locals are passed in
-                localvars['__name__'] = '__console__'
+                local_vars['__name__'] = '__console__'
 
                 if args.command:
                     py_code_to_run = args.command
@@ -4100,7 +4097,7 @@ class Cmd(cmd.Cmd):
                     py_bridge.cmd_echo = True
 
             # Create the Python interpreter
-            interp = InteractiveConsole(locals=localvars)
+            interp = InteractiveConsole(locals=local_vars)
 
             # Check if we are running Python code
             if py_code_to_run:
@@ -4197,37 +4194,20 @@ class Cmd(cmd.Cmd):
 
             :return: True if running of commands should stop
             """
+            # noinspection PyPackageRequirements
+            from IPython.terminal.interactiveshell import (
+                TerminalInteractiveShell,
+            )
+            from IPython.terminal.ipapp import (
+                TerminalIPythonApp,
+            )
+            from traitlets.config.loader import (
+                Config as TraitletsConfig,
+            )
+
             from .py_bridge import (
                 PyBridge,
             )
-
-            # noinspection PyUnusedLocal
-            def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
-                """
-                Embed an IPython shell in an environment that is restricted to only the variables in this function
-
-                :param cmd2_app: instance of the cmd2 app
-                :param py_bridge: a PyBridge
-                """
-                # Create a variable pointing to py_bridge and name it using the value of py_bridge_name
-                exec("{} = py_bridge".format(cmd2_app.py_bridge_name))
-
-                # Add self variable pointing to cmd2_app, if allowed
-                if cmd2_app.self_in_py:
-                    exec("self = cmd2_app")
-
-                # Delete these names from the environment so IPython can't use them
-                del cmd2_app
-                del py_bridge
-
-                # Start ipy shell
-                embed(
-                    banner1=(
-                        'Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
-                        'Run Python code from external files with: run filename.py\n'
-                    ),
-                    exit_msg='Leaving IPython, back to {}'.format(sys.argv[0]),
-                )
 
             if self.in_pyscript():
                 self.perror("Recursively entering interactive Python shells is not allowed")
@@ -4235,9 +4215,34 @@ class Cmd(cmd.Cmd):
 
             try:
                 self._in_py = True
-                new_py_bridge = PyBridge(self)
-                load_ipy(self, new_py_bridge)
-                return new_py_bridge.stop
+                py_bridge = PyBridge(self)
+
+                # Make a copy of self.py_locals for the locals dictionary in the IPython environment we are creating.
+                # This is to prevent ipy from editing it. (e.g. locals().clear()). Only make a shallow copy since
+                # it's OK for py_locals to contain objects which are editable in ipy.
+                local_vars = self.py_locals.copy()
+                local_vars[self.py_bridge_name] = py_bridge
+                if self.self_in_py:
+                    local_vars['self'] = self
+
+                # Configure IPython
+                config = TraitletsConfig()
+                config.InteractiveShell.banner2 = (
+                    'Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
+                    'Run Python code from external files with: run filename.py\n'
+                )
+
+                # Start IPython
+                start_ipython(config=config, argv=[], user_ns=local_vars)
+
+                # The IPython application is a singleton and won't be recreated next time
+                # this function runs. That's a problem since the contents of local_vars
+                # may need to be changed. Therefore we must destroy all instances of the
+                # relevant classes.
+                TerminalIPythonApp.clear_instance()
+                TerminalInteractiveShell.clear_instance()
+
+                return py_bridge.stop
             finally:
                 self._in_py = False
 
