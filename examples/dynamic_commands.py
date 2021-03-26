@@ -33,7 +33,7 @@ class CommandsInLoop(cmd2.Cmd):
             help_func_name = HELP_FUNC_PREFIX + command
             setattr(self, help_func_name, help_func)
 
-        super().__init__(use_ipython=True)
+        super().__init__(include_ipy=True)
 
     def send_text(self, args: cmd2.Statement, *, text: str):
         """Simulate sending text to a server and printing the response."""

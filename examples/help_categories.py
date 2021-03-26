@@ -33,8 +33,7 @@ class HelpCategories(cmd2.Cmd):
     CMD_CAT_SERVER_INFO = 'Server Information'
 
     def __init__(self):
-        # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        super().__init__(use_ipython=False)
+        super().__init__()
 
     def do_connect(self, _):
         """Connect command"""

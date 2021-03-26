@@ -9,7 +9,7 @@ import cmd2
 
 class ArgparsingApp(cmd2.Cmd):
     def __init__(self):
-        super().__init__(use_ipython=True)
+        super().__init__(include_ipy=True)
         self.intro = 'cmd2 has awesome decorators to make it easy to use Argparse to parse command arguments'
 
     # do_fsize parser

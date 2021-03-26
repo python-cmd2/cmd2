@@ -28,7 +28,7 @@ class BasicApp(cmd2.Cmd):
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
             startup_script='scripts/startup.txt',
-            use_ipython=True,
+            include_ipy=True,
         )
 
         # Prints an intro banner once upon application startup

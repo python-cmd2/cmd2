@@ -22,6 +22,11 @@
       object that holds the settable attribute. `cmd2.Cmd.settables` is no longer a public dict attribute - it is now a
       property that aggregates all Settables across all registered CommandSets.
     * Failed transcript testing now sets self.exit_code to 1 instead of -1.
+    * Renamed `use_ipython` keyword parameter of `cmd2.Cmd.__init__()` to `include_ipy`.
+    * `py` command is only enabled if `include_py` parameter is `True`. See Enhancements for a description
+      of this parameter.
+    * Removed ability to run Python commands from the command line with `py`. Now `py` takes no arguments
+      and just opens an interactive Python shell.
 * Enhancements
     * Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
       See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
@@ -37,7 +42,9 @@
           attribute added to the cmd2 instance itself.
     * Raising ``SystemExit`` or calling ``sys.exit()`` in a command or hook function will set ``self.exit_code``
       to the exit code used in those calls. It will also result in the command loop stopping.
-    * ipy command now includes all of `self.py_locals` in the IPython environment 
+    * ipy command now includes all of `self.py_locals` in the IPython environment
+    * Added `include_py` keyword parameter to `cmd2.Cmd.__init__()`. If `False`, then the `py` command will
+      not be available. Defaults to `False`. `run_pyscript` is not affected by this parameter.
 
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes

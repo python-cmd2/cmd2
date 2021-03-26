@@ -160,16 +160,6 @@ else:
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
         orig_rl_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
 
-# Detect whether IPython is installed to determine if the built-in "ipy" command should be included
-ipython_available = True
-try:
-    # noinspection PyUnresolvedReferences,PyPackageRequirements
-    from IPython import (  # type: ignore[import]
-        start_ipython,
-    )
-except ImportError:  # pragma: no cover
-    ipython_available = False
-
 
 class _SavedReadlineSettings:
     """readline settings that are backed up when switching between readline environments"""
@@ -224,7 +214,8 @@ class Cmd(cmd.Cmd):
         persistent_history_length: int = 1000,
         startup_script: str = '',
         silent_startup_script: bool = False,
-        use_ipython: bool = False,
+        include_py: bool = False,
+        include_ipy: bool = False,
         allow_cli_args: bool = True,
         transcript_files: Optional[List[str]] = None,
         allow_redirection: bool = True,
@@ -246,7 +237,8 @@ class Cmd(cmd.Cmd):
         :param startup_script: file path to a script to execute at startup
         :param silent_startup_script: if ``True``, then the startup script's output will be
                                       suppressed. Anything written to stderr will still display.
-        :param use_ipython: should the "ipy" command be included for an embedded IPython shell
+        :param include_py: should the "py" command be included for an embedded Python shell
+        :param include_ipy: should the "ipy" command be included for an embedded IPython shell
         :param allow_cli_args: if ``True``, then :meth:`cmd2.Cmd.__init__` will process command
                                line arguments as either commands to be run or, if ``-t`` or
                                ``--test`` are given, transcript files to run. This should be
@@ -280,12 +272,11 @@ class Cmd(cmd.Cmd):
                                    instantiate and register all commands. If False, CommandSets
                                    must be manually installed with `register_command_set`.
         """
-        # If use_ipython is False, make sure the ipy command isn't available in this instance
-        if not use_ipython:
-            try:
-                self.do_ipy = None
-            except AttributeError:
-                pass
+        # Check if py or ipy need to be disabled in this instance
+        if not include_py:
+            self.do_py: Optional[Callable] = None
+        if not include_ipy:
+            self.do_ipy: Optional[Callable] = None
 
         # initialize plugin system
         # needs to be done before we call __init__(0)
@@ -3669,11 +3660,11 @@ class Cmd(cmd.Cmd):
         result = "\n".join('{}: {}'.format(sc[0], sc[1]) for sc in sorted_shortcuts)
         self.poutput("Shortcuts for other commands:\n{}".format(result))
 
-    eof_parser = DEFAULT_ARGUMENT_PARSER(description="Called when <Ctrl>-D is pressed", epilog=INTERNAL_COMMAND_EPILOG)
+    eof_parser = DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed", epilog=INTERNAL_COMMAND_EPILOG)
 
     @with_argparser(eof_parser)
     def do_eof(self, _: argparse.Namespace) -> bool:
-        """Called when <Ctrl>-D is pressed"""
+        """Called when Ctrl-D is pressed"""
         # Return True to stop the command loop
         return True
 
@@ -4005,31 +3996,15 @@ class Cmd(cmd.Cmd):
                         else:
                             sys.modules['readline'] = cmd2_env.readline_module
 
-    py_description = (
-        "Invoke Python command or shell\n"
-        "\n"
-        "Note that, when invoking a command directly from the command line, this shell\n"
-        "has limited ability to parse Python statements into tokens. In particular,\n"
-        "there may be problems with whitespace and quotes depending on their placement.\n"
-        "\n"
-        "If you see strange parsing behavior, it's best to just open the Python shell\n"
-        "by providing no arguments to py and run more complex statements there."
-    )
-
-    py_parser = DEFAULT_ARGUMENT_PARSER(description=py_description)
-    py_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to run")
-    py_parser.add_argument('remainder', nargs=argparse.REMAINDER, help="remainder of command")
-
-    # Preserve quotes since we are passing these strings to Python
-    @with_argparser(py_parser, preserve_quotes=True)
-    def do_py(self, args: argparse.Namespace, *, pyscript: Optional[str] = None) -> Optional[bool]:
+    def _run_python(self, *, pyscript: Optional[str] = None) -> Optional[bool]:
         """
-        Enter an interactive Python shell
+        Called by do_py() and do_run_pyscript().
+        If pyscript is None, then this function runs an interactive Python shell.
+        Otherwise, it runs the pyscript file.
 
         :param args: Namespace of args on the command line
-        :param pyscript: optional path to a pyscript file to run. This is intended only to be used by run_pyscript
-                         after it sets up sys.argv for the script. If populated, this takes precedence over all
-                         other arguments. (Defaults to None)
+        :param pyscript: optional path to a pyscript file to run. This is intended only to be used by do_run_pyscript()
+                         after it sets up sys.argv for the script. (Defaults to None)
         :return: True if running of commands should stop
         """
 
@@ -4064,7 +4039,7 @@ class Cmd(cmd.Cmd):
             if self.self_in_py:
                 local_vars['self'] = self
 
-            # Handle case where we were called by run_pyscript
+            # Handle case where we were called by do_run_pyscript()
             if pyscript is not None:
                 # Read the script file
                 expanded_filename = os.path.expanduser(pyscript)
@@ -4073,7 +4048,7 @@ class Cmd(cmd.Cmd):
                     with open(expanded_filename) as f:
                         py_code_to_run = f.read()
                 except OSError as ex:
-                    self.pexcept("Error reading script file '{}': {}".format(expanded_filename, ex))
+                    self.perror(f"Error reading script file '{expanded_filename}': {ex}")
                     return
 
                 local_vars['__name__'] = '__main__'
@@ -4086,15 +4061,6 @@ class Cmd(cmd.Cmd):
             else:
                 # This is the default name chosen by InteractiveConsole when no locals are passed in
                 local_vars['__name__'] = '__console__'
-
-                if args.command:
-                    py_code_to_run = args.command
-                    if args.remainder:
-                        py_code_to_run += ' ' + ' '.join(args.remainder)
-
-                    # Set cmd_echo to True so PyBridge statements like: py app('help')
-                    # run at the command line will print their output.
-                    py_bridge.cmd_echo = True
 
             # Create the Python interpreter
             interp = InteractiveConsole(locals=local_vars)
@@ -4112,9 +4078,10 @@ class Cmd(cmd.Cmd):
             else:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                 instructions = (
-                    'End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
-                    'Non-Python commands can be issued with: {}("your command")'.format(self.py_bridge_name)
+                    'Use `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()` to exit.\n'
+                    f'Run CLI commands with: {self.py_bridge_name}("command ...")'
                 )
+                banner = f"Python {sys.version} on {sys.platform}\n{cprt}\n\n{instructions}\n"
 
                 saved_cmd2_env = None
 
@@ -4124,16 +4091,18 @@ class Cmd(cmd.Cmd):
                     with self.sigint_protection:
                         saved_cmd2_env = self._set_up_py_shell_env(interp)
 
-                    interp.interact(banner="Python {} on {}\n{}\n\n{}\n".format(sys.version, sys.platform, cprt, instructions))
+                    # Since quit() or exit() raise an EmbeddedConsoleExit, interact() exits before printing
+                    # the exitmsg. Therefore we will not provide it one and print it manually later.
+                    interp.interact(banner=banner, exitmsg='')
                 except BaseException:
                     # We don't care about any exception that happened in the interactive console
                     pass
-
                 finally:
                     # Get sigint protection while we restore cmd2 environment settings
                     with self.sigint_protection:
                         if saved_cmd2_env is not None:
                             self._restore_cmd2_env(saved_cmd2_env)
+                    self.poutput("Now exiting Python shell...")
 
         finally:
             with self.sigint_protection:
@@ -4142,6 +4111,16 @@ class Cmd(cmd.Cmd):
                 self._in_py = False
 
         return py_bridge.stop
+
+    py_parser = DEFAULT_ARGUMENT_PARSER(description="Run an interactive Python shell")
+
+    @with_argparser(py_parser)
+    def do_py(self, _: argparse.Namespace) -> Optional[bool]:
+        """
+        Run an interactive Python shell
+        :return: True if running of commands should stop
+        """
+        return self._run_python()
 
     run_pyscript_parser = DEFAULT_ARGUMENT_PARSER(description="Run a Python script file inside the console")
     run_pyscript_parser.add_argument('script_path', help='path to the script file', completer=path_complete)
@@ -4162,7 +4141,7 @@ class Cmd(cmd.Cmd):
         # Add some protection against accidentally running a non-Python file. The happens when users
         # mix up run_script and run_pyscript.
         if not args.script_path.endswith('.py'):
-            self.pwarning("'{}' does not have a .py extension".format(args.script_path))
+            self.pwarning(f"'{args.script_path}' does not have a .py extension")
             selection = self.select('Yes No', 'Continue to try to run it as a Python script? ')
             if selection != 'Yes':
                 return
@@ -4173,28 +4152,28 @@ class Cmd(cmd.Cmd):
         try:
             # Overwrite sys.argv to allow the script to take command line arguments
             sys.argv = [args.script_path] + args.script_arguments
-
-            # noinspection PyTypeChecker
-            py_return = self.do_py('', pyscript=args.script_path)
-
+            py_return = self._run_python(pyscript=args.script_path)
         finally:
             # Restore command line arguments to original state
             sys.argv = orig_args
 
         return py_return
 
-    # Only include the do_ipy() method if IPython is available on the system
-    if ipython_available:  # pragma: no cover
-        ipython_parser = DEFAULT_ARGUMENT_PARSER(description="Enter an interactive IPython shell")
+    ipython_parser = DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell")
 
-        @with_argparser(ipython_parser)
-        def do_ipy(self, _: argparse.Namespace) -> Optional[bool]:
-            """
-            Enter an interactive IPython shell
+    # noinspection PyPackageRequirements
+    @with_argparser(ipython_parser)
+    def do_ipy(self, _: argparse.Namespace) -> Optional[bool]:  # pragma: no cover
+        """
+        Enter an interactive IPython shell
 
-            :return: True if running of commands should stop
-            """
-            # noinspection PyPackageRequirements
+        :return: True if running of commands should stop
+        """
+        # Detect whether IPython is installed
+        try:
+            from IPython import (
+                start_ipython,
+            )
             from IPython.terminal.interactiveshell import (
                 TerminalInteractiveShell,
             )
@@ -4204,47 +4183,51 @@ class Cmd(cmd.Cmd):
             from traitlets.config.loader import (
                 Config as TraitletsConfig,
             )
+        except ImportError:
+            self.perror("IPython package is not installed")
+            return
 
-            from .py_bridge import (
-                PyBridge,
+        from .py_bridge import (
+            PyBridge,
+        )
+
+        if self.in_pyscript():
+            self.perror("Recursively entering interactive Python shells is not allowed")
+            return
+
+        try:
+            self._in_py = True
+            py_bridge = PyBridge(self)
+
+            # Make a copy of self.py_locals for the locals dictionary in the IPython environment we are creating.
+            # This is to prevent ipy from editing it. (e.g. locals().clear()). Only make a shallow copy since
+            # it's OK for py_locals to contain objects which are editable in ipy.
+            local_vars = self.py_locals.copy()
+            local_vars[self.py_bridge_name] = py_bridge
+            if self.self_in_py:
+                local_vars['self'] = self
+
+            # Configure IPython
+            config = TraitletsConfig()
+            config.InteractiveShell.banner2 = (
+                'Entering an IPython shell. Type exit, quit, or Ctrl-D to exit.\n'
+                f'Run CLI commands with: {self.py_bridge_name}("command ...")\n'
             )
 
-            if self.in_pyscript():
-                self.perror("Recursively entering interactive Python shells is not allowed")
-                return
+            # Start IPython
+            start_ipython(config=config, argv=[], user_ns=local_vars)
+            self.poutput("Now exiting IPython shell...")
 
-            try:
-                self._in_py = True
-                py_bridge = PyBridge(self)
+            # The IPython application is a singleton and won't be recreated next time
+            # this function runs. That's a problem since the contents of local_vars
+            # may need to be changed. Therefore we must destroy all instances of the
+            # relevant classes.
+            TerminalIPythonApp.clear_instance()
+            TerminalInteractiveShell.clear_instance()
 
-                # Make a copy of self.py_locals for the locals dictionary in the IPython environment we are creating.
-                # This is to prevent ipy from editing it. (e.g. locals().clear()). Only make a shallow copy since
-                # it's OK for py_locals to contain objects which are editable in ipy.
-                local_vars = self.py_locals.copy()
-                local_vars[self.py_bridge_name] = py_bridge
-                if self.self_in_py:
-                    local_vars['self'] = self
-
-                # Configure IPython
-                config = TraitletsConfig()
-                config.InteractiveShell.banner2 = (
-                    'Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
-                    'Run Python code from external files with: run filename.py\n'
-                )
-
-                # Start IPython
-                start_ipython(config=config, argv=[], user_ns=local_vars)
-
-                # The IPython application is a singleton and won't be recreated next time
-                # this function runs. That's a problem since the contents of local_vars
-                # may need to be changed. Therefore we must destroy all instances of the
-                # relevant classes.
-                TerminalIPythonApp.clear_instance()
-                TerminalInteractiveShell.clear_instance()
-
-                return py_bridge.stop
-            finally:
-                self._in_py = False
+            return py_bridge.stop
+        finally:
+            self._in_py = False
 
     history_description = "View, run, edit, save, or clear previously entered commands"
 
@@ -4652,39 +4635,29 @@ class Cmd(cmd.Cmd):
         """
         expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
 
-        # Make sure the path exists and we can access it
-        if not os.path.exists(expanded_path):
-            self.perror("'{}' does not exist or cannot be accessed".format(expanded_path))
-            return
-
-        # Make sure expanded_path points to a file
-        if not os.path.isfile(expanded_path):
-            self.perror("'{}' is not a file".format(expanded_path))
-            return
-
-        # An empty file is not an error, so just return
-        if os.path.getsize(expanded_path) == 0:
-            return
-
-        # Make sure the file is ASCII or UTF-8 encoded text
-        if not utils.is_text_file(expanded_path):
-            self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path))
-            return
-
         # Add some protection against accidentally running a Python file. The happens when users
         # mix up run_script and run_pyscript.
         if expanded_path.endswith('.py'):
-            self.pwarning("'{}' appears to be a Python file".format(expanded_path))
+            self.pwarning(f"'{expanded_path}' appears to be a Python file")
             selection = self.select('Yes No', 'Continue to try to run it as a text script? ')
             if selection != 'Yes':
                 return
 
         try:
+            # An empty file is not an error, so just return
+            if os.path.getsize(expanded_path) == 0:
+                return
+
+            # Make sure the file is ASCII or UTF-8 encoded text
+            if not utils.is_text_file(expanded_path):
+                self.perror(f"'{expanded_path}' is not an ASCII or UTF-8 encoded text file")
+                return
+
             # Read all lines of the script
             with open(expanded_path, encoding='utf-8') as target:
                 script_commands = target.read().splitlines()
-        except OSError as ex:  # pragma: no cover
-            self.pexcept("Problem accessing script from '{}': {}".format(expanded_path, ex))
+        except OSError as ex:
+            self.perror(f"Problem accessing script from '{expanded_path}': {ex}")
             return
 
         orig_script_dir_count = len(self._script_dir)

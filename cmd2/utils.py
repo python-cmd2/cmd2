@@ -186,38 +186,28 @@ class Settable:
 
 
 def is_text_file(file_path: str) -> bool:
-    """Returns if a file contains only ASCII or UTF-8 encoded text.
+    """Returns if a file contains only ASCII or UTF-8 encoded text and isn't empty.
 
     :param file_path: path to the file being checked
-    :return: True if the file is a text file, False if it is binary.
+    :return: True if the file is a non-empty text file, otherwise False
+    :raises OSError if file can't be read
     """
     import codecs
 
     expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
     valid_text_file = False
 
-    # Check if the file is ASCII
+    # Only need to check for utf-8 compliance since that covers ASCII, too
     try:
-        with codecs.open(expanded_path, encoding='ascii', errors='strict') as f:
-            # Make sure the file has at least one line of text
-            # noinspection PyUnusedLocal
-            if sum(1 for line in f) > 0:
+        with codecs.open(expanded_path, encoding='utf-8', errors='strict') as f:
+            # Make sure the file has only utf-8 text and is not empty
+            if sum(1 for _ in f) > 0:
                 valid_text_file = True
-    except OSError:  # pragma: no cover
-        pass
+    except OSError:
+        raise
     except UnicodeDecodeError:
-        # The file is not ASCII. Check if it is UTF-8.
-        try:
-            with codecs.open(expanded_path, encoding='utf-8', errors='strict') as f:
-                # Make sure the file has at least one line of text
-                # noinspection PyUnusedLocal
-                if sum(1 for line in f) > 0:
-                    valid_text_file = True
-        except OSError:  # pragma: no cover
-            pass
-        except UnicodeDecodeError:
-            # Not UTF-8
-            pass
+        # Not UTF-8
+        pass
 
     return valid_text_file
 
