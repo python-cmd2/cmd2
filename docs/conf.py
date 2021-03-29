@@ -183,4 +183,5 @@ nitpick_ignore = [
     ('py:class', 'argparse._SubParsersAction'),
     ('py:class', '_T'),
     ('py:class', 'StdSim'),
+    ('py:class', 'frame'),
 ]

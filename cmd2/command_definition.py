@@ -3,6 +3,7 @@
 Supports the definition of commands in separate classes to be composed into cmd2.Cmd
 """
 from typing import (
+    Callable,
     Dict,
     Mapping,
     Optional,
@@ -33,7 +34,12 @@ except ImportError:  # pragma: no cover
     pass
 
 
-def with_default_category(category: str, *, heritable: bool = True):
+#: Callable signature for a basic command  function
+#: Further refinements are needed to define the input parameters
+CommandFunc = Callable[..., Optional[bool]]
+
+
+def with_default_category(category: str, *, heritable: bool = True) -> Callable[[Type['CommandSet']], Type['CommandSet']]:
     """
     Decorator that applies a category to all ``do_*`` command methods in a class that do not already
     have a category specified.
@@ -52,7 +58,7 @@ def with_default_category(category: str, *, heritable: bool = True):
     :return: decorator function
     """
 
-    def decorate_class(cls: Type[CommandSet]):
+    def decorate_class(cls: Type[CommandSet]) -> Type[CommandSet]:
         if heritable:
             setattr(cls, CLASS_ATTR_DEFAULT_HELP_CATEGORY, category)
 
@@ -93,19 +99,18 @@ class CommandSet(object):
     ``do_``, ``help_``, and ``complete_`` functions differ only in that self is the CommandSet instead of the cmd2 app
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._cmd: Optional[cmd2.Cmd] = None
         self._settables: Dict[str, Settable] = {}
         self._settable_prefix = self.__class__.__name__
 
-    def on_register(self, cmd) -> None:
+    def on_register(self, cmd: 'cmd2.Cmd') -> None:
         """
         Called by cmd2.Cmd as the first step to registering a CommandSet. The commands defined in this class have
         not be added to the CLI object at this point. Subclasses can override this to perform any initialization
         requiring access to the Cmd object (e.g. configure commands and their parsers based on CLI state data).
 
         :param cmd: The cmd2 main application
-        :type cmd: cmd2.Cmd
         """
         if self._cmd is None:
             self._cmd = cmd

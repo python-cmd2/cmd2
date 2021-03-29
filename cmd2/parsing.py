@@ -35,7 +35,7 @@ def shlex_split(str_to_split: str) -> List[str]:
     return shlex.split(str_to_split, comments=False, posix=False)
 
 
-@attr.s(frozen=True)
+@attr.s(auto_attribs=True, frozen=True)
 class MacroArg:
     """
     Information used to replace or unescape arguments in a macro value when the macro is resolved
@@ -44,15 +44,15 @@ class MacroArg:
     """
 
     # The starting index of this argument in the macro value
-    start_index = attr.ib(validator=attr.validators.instance_of(int))
+    start_index: int = attr.ib(validator=attr.validators.instance_of(int))
 
     # The number string that appears between the braces
     # This is a string instead of an int because we support unicode digits and must be able
     # to reproduce this string later
-    number_str = attr.ib(validator=attr.validators.instance_of(str))
+    number_str: str = attr.ib(validator=attr.validators.instance_of(str))
 
     # Tells if this argument is escaped and therefore needs to be unescaped
-    is_escaped = attr.ib(validator=attr.validators.instance_of(bool))
+    is_escaped: bool = attr.ib(validator=attr.validators.instance_of(bool))
 
     # Pattern used to find normal argument
     # Digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
@@ -68,24 +68,24 @@ class MacroArg:
     digit_pattern = re.compile(r'\d+')
 
 
-@attr.s(frozen=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Macro:
     """Defines a cmd2 macro"""
 
     # Name of the macro
-    name = attr.ib(validator=attr.validators.instance_of(str))
+    name: str = attr.ib(validator=attr.validators.instance_of(str))
 
     # The string the macro resolves to
-    value = attr.ib(validator=attr.validators.instance_of(str))
+    value: str = attr.ib(validator=attr.validators.instance_of(str))
 
     # The minimum number of args the user has to pass to this macro
-    minimum_arg_count = attr.ib(validator=attr.validators.instance_of(int))
+    minimum_arg_count: int = attr.ib(validator=attr.validators.instance_of(int))
 
     # Used to fill in argument placeholders in the macro
-    arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
+    arg_list: List[MacroArg] = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
 
 
-@attr.s(frozen=True)
+@attr.s(auto_attribs=True, frozen=True)
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
 
@@ -117,34 +117,34 @@ class Statement(str):
     """
 
     # the arguments, but not the command, nor the output redirection clauses.
-    args = attr.ib(default='', validator=attr.validators.instance_of(str))
+    args: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # string containing exactly what we input by the user
-    raw = attr.ib(default='', validator=attr.validators.instance_of(str))
+    raw: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # the command, i.e. the first whitespace delimited word
-    command = attr.ib(default='', validator=attr.validators.instance_of(str))
+    command: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # list of arguments to the command, not including any output redirection or terminators; quoted args remain quoted
-    arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
+    arg_list: List[str] = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
 
     # if the command is a multiline command, the name of the command, otherwise empty
-    multiline_command = attr.ib(default='', validator=attr.validators.instance_of(str))
+    multiline_command: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # the character which terminated the multiline command, if there was one
-    terminator = attr.ib(default='', validator=attr.validators.instance_of(str))
+    terminator: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # characters appearing after the terminator but before output redirection, if any
-    suffix = attr.ib(default='', validator=attr.validators.instance_of(str))
+    suffix: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # if output was piped to a shell command, the shell command as a string
-    pipe_to = attr.ib(default='', validator=attr.validators.instance_of(str))
+    pipe_to: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # if output was redirected, the redirection token, i.e. '>>'
-    output = attr.ib(default='', validator=attr.validators.instance_of(str))
+    output: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # if output was redirected, the destination file token (quotes preserved)
-    output_to = attr.ib(default='', validator=attr.validators.instance_of(str))
+    output_to: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     def __new__(cls, value: object, *pos_args, **kw_args):
         """Create a new instance of Statement.

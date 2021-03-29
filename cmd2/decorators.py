@@ -6,7 +6,6 @@ from typing import (
     Any,
     Callable,
     Dict,
-    Iterable,
     List,
     Optional,
     Tuple,
@@ -19,6 +18,10 @@ from . import (
 from .argparse_custom import (
     Cmd2AttributeWrapper,
 )
+from .command_definition import (
+    CommandFunc,
+    CommandSet,
+)
 from .exceptions import (
     Cmd2ArgparseError,
 )
@@ -30,7 +33,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import cmd2
 
 
-def with_category(category: str) -> Callable:
+def with_category(category: str) -> Callable[[CommandFunc], CommandFunc]:
     """A decorator to apply a category to a ``do_*`` command method.
 
     :param category: the name of the category in which this command should
@@ -47,7 +50,7 @@ def with_category(category: str) -> Callable:
     :func:`~cmd2.utils.categorize`
     """
 
-    def cat_decorator(func):
+    def cat_decorator(func: CommandFunc) -> CommandFunc:
         from .utils import (
             categorize,
         )
@@ -65,7 +68,7 @@ def with_category(category: str) -> Callable:
 ##########################
 
 
-def _parse_positionals(args: Tuple) -> Tuple[Union['cmd2.Cmd', 'cmd2.CommandSet'], Union[Statement, str]]:
+def _parse_positionals(args: Tuple[Any, ...]) -> Tuple['cmd2.Cmd', Union[Statement, str]]:
     """
     Helper function for cmd2 decorators to inspect the positional arguments until the cmd2.Cmd argument is found
     Assumes that we will find cmd2.Cmd followed by the command statement object or string.
@@ -75,7 +78,6 @@ def _parse_positionals(args: Tuple) -> Tuple[Union['cmd2.Cmd', 'cmd2.CommandSet'
     for pos, arg in enumerate(args):
         from cmd2 import (
             Cmd,
-            CommandSet,
         )
 
         if (isinstance(arg, Cmd) or isinstance(arg, CommandSet)) and len(args) > pos:
@@ -104,13 +106,15 @@ def _arg_swap(args: Union[Tuple[Any], List[Any]], search_arg: Any, *replace_arg:
     return args_list
 
 
-def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
+def with_argument_list(
+    func_arg: Optional[Callable[[List[str]], Optional[bool]]] = None, *, preserve_quotes: bool = False
+) -> Union[Callable[[List[str]], Optional[bool]],]:
     """
     A decorator to alter the arguments passed to a ``do_*`` method. Default
     passes a string of whatever the user typed. With this decorator, the
     decorated method will receive a list of arguments parsed from user input.
 
-    :param args: Single-element positional argument list containing ``do_*`` method
+    :param func_arg: Single-element positional argument list containing ``do_*`` method
                  this decorator is wrapping
     :param preserve_quotes: if ``True``, then argument quotes will not be stripped
     :return: function that gets passed a list of argument strings
@@ -124,9 +128,9 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
     """
     import functools
 
-    def arg_decorator(func: Callable):
+    def arg_decorator(func: Callable[[List[str]], Optional[bool]]) -> Callable[..., Optional[bool]]:
         @functools.wraps(func)
-        def cmd_wrapper(*args, **kwargs: Dict[str, Any]) -> Optional[bool]:
+        def cmd_wrapper(*args: Any, **kwargs: Any) -> Optional[bool]:
             """
             Command function wrapper which translates command line into an argument list and calls actual command function
 
@@ -145,9 +149,9 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
         cmd_wrapper.__doc__ = func.__doc__
         return cmd_wrapper
 
-    if len(args) == 1 and callable(args[0]):
+    if callable(func_arg):
         # noinspection PyTypeChecker
-        return arg_decorator(args[0])
+        return arg_decorator(func_arg)
     else:
         # noinspection PyTypeChecker
         return arg_decorator
@@ -196,13 +200,30 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str):
             break
 
 
+ArgparseCommandFunc = Union[
+    Callable[['cmd2.Cmd', argparse.Namespace], Optional[bool]],
+    Callable[[CommandSet, argparse.Namespace], Optional[bool]],
+]
+ArgparseCommandFuncBoolReturn = Union[
+    Callable[['cmd2.Cmd', argparse.Namespace], bool],
+    Callable[[CommandSet, argparse.Namespace], bool],
+]
+ArgparseCommandFuncNoneReturn = Union[
+    Callable[['cmd2.Cmd', argparse.Namespace], None],
+    Callable[[CommandSet, argparse.Namespace], None],
+]
+
+
 def with_argparser(
     parser: argparse.ArgumentParser,
     *,
     ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
     preserve_quotes: bool = False,
-    with_unknown_args: bool = False
-) -> Callable[[argparse.Namespace], Optional[bool]]:
+    with_unknown_args: bool = False,
+) -> Callable[
+    [Union[ArgparseCommandFunc, ArgparseCommandFuncNoneReturn, ArgparseCommandFuncBoolReturn]],
+    Callable[[Union['cmd2.Cmd', CommandSet], str], Optional[bool]],
+]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
@@ -248,7 +269,9 @@ def with_argparser(
     """
     import functools
 
-    def arg_decorator(func: Callable):
+    def arg_decorator(
+        func: Union[ArgparseCommandFunc, ArgparseCommandFuncBoolReturn, ArgparseCommandFuncNoneReturn],
+    ) -> ArgparseCommandFunc:
         @functools.wraps(func)
         def cmd_wrapper(*args: Any, **kwargs: Dict[str, Any]) -> Optional[bool]:
             """
@@ -327,8 +350,11 @@ def as_subcommand_to(
     parser: argparse.ArgumentParser,
     *,
     help: Optional[str] = None,
-    aliases: Iterable[str] = None
-) -> Callable[[argparse.Namespace], Optional[bool]]:
+    aliases: Optional[List[str]] = None,
+) -> Callable[
+    [Union[ArgparseCommandFunc, ArgparseCommandFuncNoneReturn, ArgparseCommandFuncBoolReturn]],
+    Union[ArgparseCommandFunc, ArgparseCommandFuncBoolReturn, ArgparseCommandFuncNoneReturn],
+]:
     """
     Tag this method as a subcommand to an existing argparse decorated command.
 
@@ -342,7 +368,9 @@ def as_subcommand_to(
     :return: Wrapper function that can receive an argparse.Namespace
     """
 
-    def arg_decorator(func: Callable):
+    def arg_decorator(
+        func: Union[ArgparseCommandFunc, ArgparseCommandFuncBoolReturn, ArgparseCommandFuncNoneReturn]
+    ) -> Union[ArgparseCommandFunc, ArgparseCommandFuncBoolReturn, ArgparseCommandFuncNoneReturn]:
         _set_parser_prog(parser, command + ' ' + subcommand)
 
         # If the description has not been set, then use the method docstring if one exists
@@ -355,10 +383,10 @@ def as_subcommand_to(
         setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
 
         # Keyword arguments for ArgumentParser.add_subparser()
-        add_parser_kwargs = dict()
+        add_parser_kwargs: Dict[str, Any] = dict()
         if help is not None:
             add_parser_kwargs['help'] = help
-        if aliases is not None:
+        if aliases:
             add_parser_kwargs['aliases'] = aliases[:]
 
         setattr(func, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, add_parser_kwargs)
