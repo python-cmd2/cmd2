@@ -1,6 +1,10 @@
 #
 # coding=utf-8
 """Classes for the cmd2 plugin system"""
+from typing import (
+    Optional,
+)
+
 import attr
 
 from .parsing import (
@@ -36,4 +40,4 @@ class CommandFinalizationData:
     """Data class containing information passed to command finalization hook methods"""
 
     stop: bool
-    statement: Statement
+    statement: Optional[Statement]

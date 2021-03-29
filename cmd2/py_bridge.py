@@ -10,14 +10,22 @@ from contextlib import (
     redirect_stdout,
 )
 from typing import (
+    IO,
+    TYPE_CHECKING,
     Any,
+    List,
     NamedTuple,
     Optional,
+    TextIO,
+    cast,
 )
 
 from .utils import (  # namedtuple_with_defaults,
     StdSim,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    import cmd2
 
 
 class CommandResult(NamedTuple):
@@ -58,7 +66,7 @@ class CommandResult(NamedTuple):
     """
 
     stdout: str = ''
-    stderr: str = ''
+    stderr: Optional[str] = None
     stop: bool = False
     data: Any = None
 
@@ -77,16 +85,16 @@ class CommandResult(NamedTuple):
 class PyBridge:
     """Provides a Python API wrapper for application commands."""
 
-    def __init__(self, cmd2_app):
+    def __init__(self, cmd2_app: 'cmd2.Cmd') -> None:
         self._cmd2_app = cmd2_app
         self.cmd_echo = False
 
         # Tells if any of the commands run via __call__ returned True for stop
         self.stop = False
 
-    def __dir__(self):
+    def __dir__(self) -> List[str]:
         """Return a custom set of attribute names"""
-        attributes = []
+        attributes: List[str] = []
         attributes.insert(0, 'cmd_echo')
         return attributes
 
@@ -115,13 +123,13 @@ class PyBridge:
 
         stop = False
         try:
-            self._cmd2_app.stdout = copy_cmd_stdout
-            with redirect_stdout(copy_cmd_stdout):
-                with redirect_stderr(copy_stderr):
+            self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
+            with redirect_stdout(cast(IO[str], copy_cmd_stdout)):
+                with redirect_stderr(cast(IO[str], copy_stderr)):
                     stop = self._cmd2_app.onecmd_plus_hooks(command, py_bridge_call=True)
         finally:
             with self._cmd2_app.sigint_protection:
-                self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
+                self._cmd2_app.stdout = cast(IO[str], copy_cmd_stdout.inner_stream)
                 self.stop = stop or self.stop
 
         # Save the output. If stderr is empty, set it to None.

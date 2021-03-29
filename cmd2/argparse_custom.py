@@ -872,7 +872,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         usage: Optional[str] = None,
         description: Optional[str] = None,
         epilog: Optional[str] = None,
-        parents: Sequence[argparse.ArgumentParser] = [],
+        parents: Sequence[argparse.ArgumentParser] = (),
         formatter_class: Type[argparse.HelpFormatter] = Cmd2HelpFormatter,
         prefix_chars: str = '-',
         fromfile_prefix_chars: Optional[str] = None,
@@ -989,7 +989,7 @@ class Cmd2AttributeWrapper:
     arguments from a parser and which were added by cmd2.
     """
 
-    def __init__(self, attribute: Any):
+    def __init__(self, attribute: Any) -> None:
         self.__attribute = attribute
 
     def get(self) -> Any:

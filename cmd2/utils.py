@@ -120,7 +120,7 @@ class Settable:
         choices: Optional[Iterable[Any]] = None,
         choices_provider: Optional[Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens]] = None,
         completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None,
-    ):
+    ) -> None:
         """
         Settable Initializer
 
@@ -445,7 +445,7 @@ class StdSim:
 
     def __init__(
         self,
-        inner_stream: Union[TextIO, 'StdSim'],
+        inner_stream: Union[TextIO, 'StdSim', IO[str]],
         *,
         echo: bool = False,
         encoding: str = 'utf-8',
@@ -574,7 +574,7 @@ class ProcReader:
     If neither are pipes, then the process will run normally and no output will be captured.
     """
 
-    def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, TextIO], stderr: Union[StdSim, TextIO]) -> None:
+    def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, IO[str]], stderr: Union[StdSim, IO[str]]) -> None:
         """
         ProcReader initializer
         :param proc: the Popen process being read from
@@ -1127,7 +1127,7 @@ class CompletionMode(Enum):
 class CustomCompletionSettings:
     """Used by cmd2.Cmd.complete() to tab complete strings other than command arguments"""
 
-    def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False):
+    def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False) -> None:
         """
         Initializer
 

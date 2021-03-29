@@ -50,9 +50,11 @@ from contextlib import (
     redirect_stdout,
 )
 from types import (
+    FrameType,
     ModuleType,
 )
 from typing import (
+    IO,
     Any,
     Callable,
     Dict,
@@ -76,6 +78,10 @@ from . import (
 )
 from .argparse_custom import (
     DEFAULT_ARGUMENT_PARSER,
+    ChoicesProviderFunc,
+    ChoicesProviderFuncWithTokens,
+    CompleterFunc,
+    CompleterFuncWithTokens,
     CompletionItem,
 )
 from .clipboard import (
@@ -84,6 +90,7 @@ from .clipboard import (
     write_to_paste_buffer,
 )
 from .command_definition import (
+    CommandFunc,
     CommandSet,
 )
 from .constants import (
@@ -159,7 +166,7 @@ else:
         )
 
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-        orig_rl_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+        orig_rl_basic_quotes = cast(bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
 
 
 class _SavedReadlineSettings:
@@ -168,7 +175,7 @@ class _SavedReadlineSettings:
     def __init__(self) -> None:
         self.completer = None
         self.delims = ''
-        self.basic_quotes = None
+        self.basic_quotes: Optional[bytes] = None
 
 
 class _SavedCmd2Env:
@@ -275,9 +282,9 @@ class Cmd(cmd.Cmd):
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
-            self.do_py: Optional[Callable] = None
+            setattr(self, 'do_py', None)
         if not include_ipy:
-            self.do_ipy: Optional[Callable] = None
+            setattr(self, 'do_ipy', None)
 
         # initialize plugin system
         # needs to be done before we call __init__(0)
@@ -352,7 +359,7 @@ class Cmd(cmd.Cmd):
 
         # Stores results from the last command run to enable usage of results in a Python script or interactive console
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
-        self.last_result = None
+        self.last_result: Any = None
 
         # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
         self._script_dir: List[str] = []
@@ -641,7 +648,7 @@ class Cmd(cmd.Cmd):
             cmdset.on_unregistered()
             raise
 
-    def _install_command_function(self, command: str, command_wrapper: Callable, context: str = '') -> None:
+    def _install_command_function(self, command: str, command_wrapper: Callable[..., Any], context: str = '') -> None:
         cmd_func_name = COMMAND_FUNC_PREFIX + command
 
         # Make sure command function doesn't share name with existing attribute
@@ -665,14 +672,14 @@ class Cmd(cmd.Cmd):
 
         setattr(self, cmd_func_name, command_wrapper)
 
-    def _install_completer_function(self, cmd_name: str, cmd_completer: Callable) -> None:
+    def _install_completer_function(self, cmd_name: str, cmd_completer: Union[CompleterFunc, CompleterFuncWithTokens]) -> None:
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
 
         if hasattr(self, completer_func_name):
             raise CommandSetRegistrationError('Attribute already exists: {}'.format(completer_func_name))
         setattr(self, completer_func_name, cmd_completer)
 
-    def _install_help_function(self, cmd_name: str, cmd_help: Callable) -> None:
+    def _install_help_function(self, cmd_name: str, cmd_help: Callable[..., None]) -> None:
         help_func_name = HELP_FUNC_PREFIX + cmd_name
 
         if hasattr(self, help_func_name):
@@ -692,7 +699,7 @@ class Cmd(cmd.Cmd):
 
             methods = inspect.getmembers(
                 cmdset,
-                predicate=lambda meth: isinstance(meth, Callable)
+                predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
                 and hasattr(meth, '__name__')
                 and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
             )
@@ -721,7 +728,7 @@ class Cmd(cmd.Cmd):
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)
+            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
             and hasattr(meth, '__name__')
             and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
         )
@@ -764,7 +771,7 @@ class Cmd(cmd.Cmd):
         # find methods that have the required attributes necessary to be recognized as a sub-command
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)
+            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
             and hasattr(meth, constants.SUBCMD_ATTR_NAME)
             and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
             and hasattr(meth, constants.CMD_ATTR_ARGPARSER),
@@ -822,7 +829,7 @@ class Cmd(cmd.Cmd):
                     # exercised when more than one cmd2.Cmd-based object is created and the same subcommands
                     # get added each time. Argparse overwrites the previous subcommand but keeps growing the help
                     # text which is shown by running something like 'alias -h'.
-                    action.remove_parser(subcommand_name)
+                    action.remove_parser(subcommand_name)  # type: ignore[arg-type,attr-defined]
 
                     # Get the kwargs for add_parser()
                     add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
@@ -869,7 +876,7 @@ class Cmd(cmd.Cmd):
         # find methods that have the required attributes necessary to be recognized as a sub-command
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)
+            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
             and hasattr(meth, constants.SUBCMD_ATTR_NAME)
             and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
             and hasattr(meth, constants.CMD_ATTR_ARGPARSER),
@@ -902,7 +909,7 @@ class Cmd(cmd.Cmd):
 
             for action in command_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    action.remove_parser(subcommand_name)
+                    action.remove_parser(subcommand_name)  # type: ignore[arg-type,attr-defined]
                     break
 
     @property
@@ -1364,9 +1371,9 @@ class Cmd(cmd.Cmd):
         line: str,
         begidx: int,
         endidx: int,
-        flag_dict: Dict[str, Union[Iterable, Callable]],
+        flag_dict: Dict[str, Union[Iterable[str], CompleterFunc]],
         *,
-        all_else: Union[None, Iterable, Callable] = None,
+        all_else: Union[None, Iterable[str], CompleterFunc] = None,
     ) -> List[str]:
         """Tab completes based on a particular flag preceding the token being completed.
 
@@ -1413,9 +1420,9 @@ class Cmd(cmd.Cmd):
         line: str,
         begidx: int,
         endidx: int,
-        index_dict: Mapping[int, Union[Iterable, Callable]],
+        index_dict: Mapping[int, Union[Iterable[str], CompleterFunc]],
         *,
-        all_else: Union[None, Iterable, Callable] = None,
+        all_else: Optional[Union[Iterable[str], CompleterFunc]] = None,
     ) -> List[str]:
         """Tab completes based on a fixed position in the input string.
 
@@ -1443,6 +1450,7 @@ class Cmd(cmd.Cmd):
         index = len(tokens) - 1
 
         # Check if token is at an index in the dictionary
+        match_against: Optional[Union[Iterable[str], CompleterFunc]]
         if index in index_dict:
             match_against = index_dict[index]
         else:
@@ -1629,7 +1637,7 @@ class Cmd(cmd.Cmd):
                 text, line, begidx, endidx, path_filter=lambda path: os.path.isdir(path) or os.access(path, os.X_OK)
             )
 
-    def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: Callable) -> List[str]:
+    def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: CompleterFunc) -> List[str]:
         """Called by complete() as the first tab completion function for all commands
         It determines if it should tab complete for redirection (|, >, >>) or use the
         completer function for the current command
@@ -1783,7 +1791,7 @@ class Cmd(cmd.Cmd):
                 # rl_display_match_list() expects matches to be in argv format where
                 # substitution is the first element, followed by the matches, and then a NULL.
                 # noinspection PyCallingNonCallable,PyTypeChecker
-                strings_array = (ctypes.c_char_p * (1 + len(encoded_matches) + 1))()
+                strings_array = cast(List[Optional[bytes]], (ctypes.c_char_p * (1 + len(encoded_matches) + 1))())
 
                 # Copy in the encoded strings and add a NULL to the end
                 strings_array[0] = encoded_substitution
@@ -1849,7 +1857,7 @@ class Cmd(cmd.Cmd):
         )
 
         unclosed_quote = ''
-        command = None
+        command: Optional[str] = None
 
         # If custom_settings is None, then we are completing a command's arguments
         if custom_settings is None:
@@ -1884,7 +1892,10 @@ class Cmd(cmd.Cmd):
             return
 
         # Determine the completer function to use
-        if command is not None:
+        if custom_settings is None:
+            if command is None:
+                return
+
             # Check if a macro was entered
             if command in self.macros:
                 completer_func = self.path_complete
@@ -1892,9 +1903,11 @@ class Cmd(cmd.Cmd):
             # Check if a command was entered
             elif command in self.get_all_commands():
                 # Get the completer function for this command
-                completer_func = getattr(self, constants.COMPLETER_FUNC_PREFIX + command, None)
+                func_attr = getattr(self, constants.COMPLETER_FUNC_PREFIX + command, None)
 
-                if completer_func is None:
+                if func_attr is not None:
+                    completer_func = func_attr
+                else:
                     # There's no completer function, next see if the command uses argparse
                     func = self.cmd_func(command)
                     argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
@@ -1908,7 +1921,7 @@ class Cmd(cmd.Cmd):
                             completer.complete, tokens=raw_tokens[1:] if preserve_quotes else tokens[1:], cmd_set=cmd_set
                         )
                     else:
-                        completer_func = self.completedefault
+                        completer_func = self.completedefault  # type: ignore[assignment]
 
             # Not a recognized macro or command
             else:
@@ -1916,7 +1929,7 @@ class Cmd(cmd.Cmd):
                 if self.default_to_shell and command in utils.get_exes_in_path(command):
                     completer_func = self.path_complete
                 else:
-                    completer_func = self.completedefault
+                    completer_func = self.completedefault  # type: ignore[assignment]
 
         # Otherwise we are completing the command token or performing custom completion
         else:
@@ -2008,7 +2021,7 @@ class Cmd(cmd.Cmd):
             if len(self.completion_matches) == 1 and self.allow_closing_quote and unclosed_quote:
                 self.completion_matches[0] += unclosed_quote
 
-    def complete(
+    def complete(  # type: ignore[override]
         self, text: str, state: int, custom_settings: Optional[utils.CustomCompletionSettings] = None
     ) -> Optional[str]:
         """Override of cmd2's complete method which returns the next possible completion for 'text'
@@ -2126,7 +2139,7 @@ class Cmd(cmd.Cmd):
         """Read-only property to access the aliases stored in the StatementParser"""
         return self.statement_parser.aliases
 
-    def get_names(self):
+    def get_names(self) -> List[str]:
         """Return an alphabetized list of names comprising the attributes of the cmd2 class instance."""
         return dir(self)
 
@@ -2177,13 +2190,13 @@ class Cmd(cmd.Cmd):
         return [topic for topic in all_topics if topic not in self.hidden_commands and topic not in self.disabled_commands]
 
     # noinspection PyUnusedLocal
-    def sigint_handler(self, signum: int, frame) -> None:
+    def sigint_handler(self, signum: int, _: FrameType) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
 
         If you need custom SIGINT behavior, then override this function.
 
         :param signum: signal number
-        :param frame: required param for signal handlers
+        :param _: required param for signal handlers
         """
         if self._cur_pipe_proc_reader is not None:
             # Pass the SIGINT to the current pipe process
@@ -2193,7 +2206,7 @@ class Cmd(cmd.Cmd):
         if not self.sigint_protection:
             raise KeyboardInterrupt("Got a keyboard interrupt")
 
-    def precmd(self, statement: Statement) -> Statement:
+    def precmd(self, statement: Union[Statement, str]) -> Statement:
         """Hook method executed just before the command is executed by
         :meth:`~cmd2.Cmd.onecmd` and after adding it to history.
 
@@ -2206,9 +2219,9 @@ class Cmd(cmd.Cmd):
         :ref:`features/hooks:Postparsing Hooks` and
         :ref:`features/hooks:Precommand Hooks` for more information.
         """
-        return statement
+        return Statement(statement) if not isinstance(statement, Statement) else statement
 
-    def postcmd(self, stop: bool, statement: Statement) -> bool:
+    def postcmd(self, stop: bool, statement: Union[Statement, str]) -> bool:
         """Hook method executed just after a command is executed by
         :meth:`~cmd2.Cmd.onecmd`.
 
@@ -2222,7 +2235,7 @@ class Cmd(cmd.Cmd):
         """
         return stop
 
-    def preloop(self):
+    def preloop(self) -> None:
         """Hook method executed once when the :meth:`~.cmd2.Cmd.cmdloop()`
         method is called.
 
@@ -2232,7 +2245,7 @@ class Cmd(cmd.Cmd):
         """
         pass
 
-    def postloop(self):
+    def postloop(self) -> None:
         """Hook method executed once when the :meth:`~.cmd2.Cmd.cmdloop()`
         method is about to return.
 
@@ -2280,15 +2293,15 @@ class Cmd(cmd.Cmd):
             statement = self._input_line_to_statement(line)
 
             # call the postparsing hooks
-            data = plugin.PostparsingData(False, statement)
+            postparsing_data = plugin.PostparsingData(False, statement)
             for func in self._postparsing_hooks:
-                data = func(data)
-                if data.stop:
+                postparsing_data = func(postparsing_data)
+                if postparsing_data.stop:
                     break
 
-            # unpack the data object
-            statement = data.statement
-            stop = data.stop
+            # unpack the postparsing_data object
+            statement = postparsing_data.statement
+            stop = postparsing_data.stop
             if stop:
                 # we should not run the command, but
                 # we need to run the finalization hooks
@@ -2301,17 +2314,17 @@ class Cmd(cmd.Cmd):
                 with self.sigint_protection:
                     if py_bridge_call:
                         # Start saving command's stdout at this point
-                        self.stdout.pause_storage = False
+                        self.stdout.pause_storage = False  # type: ignore[attr-defined]
 
                     redir_saved_state = self._redirect_output(statement)
 
                 timestart = datetime.datetime.now()
 
                 # precommand hooks
-                data = plugin.PrecommandData(statement)
+                precmd_dataa = plugin.PrecommandData(statement)
                 for func in self._precmd_hooks:
-                    data = func(data)
-                statement = data.statement
+                    precmd_dataa = func(precmd_dataa)
+                statement = precmd_dataa.statement
 
                 # call precmd() for compatibility with cmd.Cmd
                 statement = self.precmd(statement)
@@ -2320,12 +2333,12 @@ class Cmd(cmd.Cmd):
                 stop = self.onecmd(statement, add_to_history=add_to_history)
 
                 # postcommand hooks
-                data = plugin.PostcommandData(stop, statement)
+                postcmd_data = plugin.PostcommandData(stop, statement)
                 for func in self._postcmd_hooks:
-                    data = func(data)
+                    postcmd_data = func(postcmd_data)
 
                 # retrieve the final value of stop, ignoring any statement modification from the hooks
-                stop = data.stop
+                stop = postcmd_data.stop
 
                 # call postcmd() for compatibility with cmd.Cmd
                 stop = self.postcmd(stop, statement)
@@ -2340,7 +2353,7 @@ class Cmd(cmd.Cmd):
 
                     if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
-                        self.stdout.pause_storage = True
+                        self.stdout.pause_storage = True  # type: ignore[attr-defined]
         except (SkipPostcommandHooks, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
@@ -2393,7 +2406,11 @@ class Cmd(cmd.Cmd):
         return data.stop
 
     def runcmds_plus_hooks(
-        self, cmds: List[Union[HistoryItem, str]], *, add_to_history: bool = True, stop_on_keyboard_interrupt: bool = True
+        self,
+        cmds: Union[List[HistoryItem], List[str]],
+        *,
+        add_to_history: bool = True,
+        stop_on_keyboard_interrupt: bool = True,
     ) -> bool:
         """
         Used when commands are being run in an automated fashion like text scripts or history replays.
@@ -2511,9 +2528,10 @@ class Cmd(cmd.Cmd):
             # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
             if statement.command in self.macros.keys() and statement.command not in used_macros:
                 used_macros.append(statement.command)
-                line = self._resolve_macro(statement)
-                if line is None:
+                resolve_result = self._resolve_macro(statement)
+                if resolve_result is None:
                     raise EmptyStatement
+                line = resolve_result
             else:
                 break
 
@@ -2557,20 +2575,20 @@ class Cmd(cmd.Cmd):
         resolved = macro.value
         reverse_arg_list = sorted(macro.arg_list, key=lambda ma: ma.start_index, reverse=True)
 
-        for arg in reverse_arg_list:
-            if arg.is_escaped:
-                to_replace = '{{' + arg.number_str + '}}'
-                replacement = '{' + arg.number_str + '}'
+        for macro_arg in reverse_arg_list:
+            if macro_arg.is_escaped:
+                to_replace = '{{' + macro_arg.number_str + '}}'
+                replacement = '{' + macro_arg.number_str + '}'
             else:
-                to_replace = '{' + arg.number_str + '}'
-                replacement = statement.argv[int(arg.number_str)]
+                to_replace = '{' + macro_arg.number_str + '}'
+                replacement = statement.argv[int(macro_arg.number_str)]
 
             parts = resolved.rsplit(to_replace, maxsplit=1)
             resolved = parts[0] + replacement + parts[1]
 
         # Append extra arguments and use statement.arg_list since these arguments need their quotes preserved
-        for arg in statement.arg_list[macro.minimum_arg_count :]:
-            resolved += ' ' + arg
+        for stmt_arg in statement.arg_list[macro.minimum_arg_count :]:
+            resolved += ' ' + stmt_arg
 
         # Restore any terminator, suffix, redirection, etc.
         return resolved + statement.post_command
@@ -2601,7 +2619,7 @@ class Cmd(cmd.Cmd):
 
             # Open each side of the pipe
             subproc_stdin = io.open(read_fd, 'r')
-            new_stdout = io.open(write_fd, 'w')
+            new_stdout: TextIO = cast(TextIO, io.open(write_fd, 'w'))
 
             # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
             # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
@@ -2613,11 +2631,11 @@ class Cmd(cmd.Cmd):
                 kwargs['start_new_session'] = True
 
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(
+            proc = subprocess.Popen(  # type: ignore[call-overload]
                 statement.pipe_to,
                 stdin=subproc_stdin,
-                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
+                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
                 shell=True,
                 **kwargs,
             )
@@ -2653,7 +2671,7 @@ class Cmd(cmd.Cmd):
                 mode = 'a' if statement.output == constants.REDIRECTION_APPEND else 'w'
                 try:
                     # Use line buffering
-                    new_stdout = open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1)
+                    new_stdout = cast(TextIO, open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))
                 except OSError as ex:
                     raise RedirectionError('Failed to redirect because - {}'.format(ex))
 
@@ -2662,7 +2680,7 @@ class Cmd(cmd.Cmd):
 
             # Redirecting to a paste buffer
             else:
-                new_stdout = tempfile.TemporaryFile(mode="w+")
+                new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))
                 redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
 
@@ -2695,8 +2713,8 @@ class Cmd(cmd.Cmd):
                 pass
 
             # Restore the stdout values
-            self.stdout = saved_redir_state.saved_self_stdout
-            sys.stdout = saved_redir_state.saved_sys_stdout
+            self.stdout = cast(IO[str], saved_redir_state.saved_self_stdout)
+            sys.stdout = cast(TextIO, saved_redir_state.saved_sys_stdout)
 
             # Check if we need to wait for the process being piped to
             if self._cur_pipe_proc_reader is not None:
@@ -2706,7 +2724,7 @@ class Cmd(cmd.Cmd):
         self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
         self._redirecting = saved_redir_state.saved_redirecting
 
-    def cmd_func(self, command: str) -> Optional[Callable]:
+    def cmd_func(self, command: str) -> Optional[CommandFunc]:
         """
         Get the function for a command
 
@@ -2720,7 +2738,8 @@ class Cmd(cmd.Cmd):
         """
         func_name = self._cmd_func_name(command)
         if func_name:
-            return getattr(self, func_name)
+            return cast(Optional[CommandFunc], getattr(self, func_name))
+        return None
 
     def _cmd_func_name(self, command: str) -> str:
         """Get the method name associated with a given command.
@@ -2761,12 +2780,9 @@ class Cmd(cmd.Cmd):
         else:
             stop = self.default(statement)
 
-        if stop is None:
-            stop = False
+        return stop if stop is not None else False
 
-        return stop
-
-    def default(self, statement: Statement) -> Optional[bool]:
+    def default(self, statement: Statement) -> Optional[bool]:  # type: ignore[override]
         """Executed when the command given isn't a recognized command implemented by a do_* method.
 
         :param statement: Statement object with parsed input
@@ -2782,6 +2798,7 @@ class Cmd(cmd.Cmd):
 
             # Set apply_style to False so default_error's style is not overridden
             self.perror(err_msg, apply_style=False)
+            return None
 
     def read_input(
         self,
@@ -2790,9 +2807,9 @@ class Cmd(cmd.Cmd):
         history: Optional[List[str]] = None,
         completion_mode: utils.CompletionMode = utils.CompletionMode.NONE,
         preserve_quotes: bool = False,
-        choices: Iterable = None,
-        choices_provider: Optional[Callable] = None,
-        completer: Optional[Callable] = None,
+        choices: Optional[Iterable[Any]] = None,
+        choices_provider: Optional[Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens]] = None,
+        completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None,
         parser: Optional[argparse.ArgumentParser] = None,
     ) -> str:
         """
@@ -2827,10 +2844,10 @@ class Cmd(cmd.Cmd):
         :raises: any exceptions raised by input() and stdin.readline()
         """
         readline_configured = False
-        saved_completer: Optional[Callable] = None
+        saved_completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None
         saved_history: Optional[List[str]] = None
 
-        def configure_readline():
+        def configure_readline() -> None:
             """Configure readline tab completion and history"""
             nonlocal readline_configured
             nonlocal saved_completer
@@ -2847,7 +2864,7 @@ class Cmd(cmd.Cmd):
                 # Disable completion
                 if completion_mode == utils.CompletionMode.NONE:
                     # noinspection PyUnusedLocal
-                    def complete_none(text: str, state: int):  # pragma: no cover
+                    def complete_none(text: str, state: int) -> Optional[str]:  # pragma: no cover
                         return None
 
                     complete_func = complete_none
@@ -2863,7 +2880,7 @@ class Cmd(cmd.Cmd):
                         parser.add_argument(
                             'arg',
                             suppress_tab_hint=True,
-                            choices=choices,
+                            choices=choices,  # type: ignore[arg-type]
                             choices_provider=choices_provider,
                             completer=completer,
                         )
@@ -2887,7 +2904,7 @@ class Cmd(cmd.Cmd):
 
             readline_configured = True
 
-        def restore_readline():
+        def restore_readline() -> None:
             """Restore readline tab completion and history"""
             nonlocal readline_configured
             if not readline_configured:  # pragma: no cover
@@ -2981,7 +2998,7 @@ class Cmd(cmd.Cmd):
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
                 # We don't need to worry about setting rl_completion_suppress_quote since we never declared
                 # rl_completer_quote_characters.
-                readline_settings.basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                readline_settings.basic_quotes = cast(bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
                 rl_basic_quote_characters.value = None
 
             readline_settings.completer = readline.get_completer()
@@ -3001,7 +3018,7 @@ class Cmd(cmd.Cmd):
 
         return readline_settings
 
-    def _restore_readline(self, readline_settings: _SavedReadlineSettings):
+    def _restore_readline(self, readline_settings: _SavedReadlineSettings) -> None:
         """
         Called at end of command loop to restore saved readline settings
 
@@ -3203,12 +3220,12 @@ class Cmd(cmd.Cmd):
             # Quote redirection and terminator tokens for the 'alias create' command
             tokens = shlex_split(self.aliases[name])
             command = tokens[0]
-            args = tokens[1:]
-            utils.quote_specific_tokens(args, tokens_to_quote)
+            command_args = tokens[1:]
+            utils.quote_specific_tokens(command_args, tokens_to_quote)
 
             val = command
             if args:
-                val += ' ' + ' '.join(args)
+                val += ' ' + ' '.join(command_args)
 
             self.poutput("alias create {} {}".format(name, val))
 
@@ -3429,12 +3446,12 @@ class Cmd(cmd.Cmd):
             # Quote redirection and terminator tokens for the 'macro create' command
             tokens = shlex_split(self.macros[name].value)
             command = tokens[0]
-            args = tokens[1:]
-            utils.quote_specific_tokens(args, tokens_to_quote)
+            command_args = tokens[1:]
+            utils.quote_specific_tokens(command_args, tokens_to_quote)
 
             val = command
-            if args:
-                val += ' ' + ' '.join(args)
+            if command_args:
+                val += ' ' + ' '.join(command_args)
 
             self.poutput("macro create {} {}".format(name, val))
 
@@ -3547,14 +3564,14 @@ class Cmd(cmd.Cmd):
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
-    def _build_command_info(self):
+    def _build_command_info(self) -> Tuple[Dict[str, List[str]], List[str], List[str], List[str]]:
         # Get a sorted list of help topics
         help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
         # Get a sorted list of visible command names
         visible_commands = sorted(self.get_visible_commands(), key=self.default_sort_key)
-        cmds_doc = []
-        cmds_undoc = []
-        cmds_cats = {}
+        cmds_doc: List[str] = []
+        cmds_undoc: List[str] = []
+        cmds_cats: Dict[str, List[str]] = {}
         for command in visible_commands:
             func = self.cmd_func(command)
             has_help_func = False
@@ -3568,7 +3585,7 @@ class Cmd(cmd.Cmd):
                     has_help_func = True
 
             if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
-                category = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
+                category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
                 cmds_cats.setdefault(category, [])
                 cmds_cats[category].append(command)
             elif func.__doc__ or has_help_func:
@@ -3605,6 +3622,7 @@ class Cmd(cmd.Cmd):
 
                 for command in cmds:
                     cmd_func = self.cmd_func(command)
+                    doc: Optional[str]
 
                     # Non-argparse commands can have help_functions for their documentation
                     if not hasattr(cmd_func, constants.CMD_ATTR_ARGPARSER) and command in topics:
@@ -3745,7 +3763,7 @@ class Cmd(cmd.Cmd):
             arg_name,
             metavar=arg_name,
             help=settable.description,
-            choices=settable.choices,
+            choices=settable.choices,  # type: ignore[arg-type]
             choices_provider=settable.choices_provider,
             completer=settable.completer,
         )
@@ -3860,8 +3878,8 @@ class Cmd(cmd.Cmd):
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
             proc = subprocess.Popen(
                 expanded_command,
-                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
+                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
                 shell=True,
             )
 
@@ -3919,7 +3937,9 @@ class Cmd(cmd.Cmd):
                 # Set up tab completion for the Python console
                 # rlcompleter relies on the default settings of the Python readline module
                 if rl_type == RlType.GNU:
-                    cmd2_env.readline_settings.basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                    cmd2_env.readline_settings.basic_quotes = cast(
+                        bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                    )
                     rl_basic_quote_characters.value = orig_rl_basic_quotes
 
                     if 'gnureadline' in sys.modules:
@@ -3944,18 +3964,18 @@ class Cmd(cmd.Cmd):
                 # Save off the current completer and set a new one in the Python console
                 # Make sure it tab completes from its locals() dictionary
                 cmd2_env.readline_settings.completer = readline.get_completer()
-                interp.runcode("from rlcompleter import Completer")
-                interp.runcode("import readline")
-                interp.runcode("readline.set_completer(Completer(locals()).complete)")
+                interp.runcode("from rlcompleter import Completer")  # type: ignore[arg-type]
+                interp.runcode("import readline")  # type: ignore[arg-type]
+                interp.runcode("readline.set_completer(Completer(locals()).complete)")  # type: ignore[arg-type]
 
         # Set up sys module for the Python console
         self._reset_py_display()
 
         cmd2_env.sys_stdout = sys.stdout
-        sys.stdout = self.stdout
+        sys.stdout = self.stdout  # type: ignore[assignment]
 
         cmd2_env.sys_stdin = sys.stdin
-        sys.stdin = self.stdin
+        sys.stdin = self.stdin  # type: ignore[assignment]
 
         return cmd2_env
 
@@ -3965,8 +3985,8 @@ class Cmd(cmd.Cmd):
 
         :param cmd2_env: the environment settings to restore
         """
-        sys.stdout = cmd2_env.sys_stdout
-        sys.stdin = cmd2_env.sys_stdin
+        sys.stdout = cmd2_env.sys_stdout  # type: ignore[assignment]
+        sys.stdin = cmd2_env.sys_stdin  # type: ignore[assignment]
 
         # Set up readline for cmd2
         if rl_type != RlType.NONE:
@@ -4009,7 +4029,7 @@ class Cmd(cmd.Cmd):
         :return: True if running of commands should stop
         """
 
-        def py_quit():
+        def py_quit() -> None:
             """Function callable from the interactive Python console to exit that environment"""
             raise EmbeddedConsoleExit
 
@@ -4022,7 +4042,7 @@ class Cmd(cmd.Cmd):
 
         if self.in_pyscript():
             self.perror("Recursively entering interactive Python shells is not allowed")
-            return
+            return None
 
         try:
             self._in_py = True
@@ -4050,7 +4070,7 @@ class Cmd(cmd.Cmd):
                         py_code_to_run = f.read()
                 except OSError as ex:
                     self.perror(f"Error reading script file '{expanded_filename}': {ex}")
-                    return
+                    return None
 
                 local_vars['__name__'] = '__main__'
                 local_vars['__file__'] = expanded_filename
@@ -4070,7 +4090,7 @@ class Cmd(cmd.Cmd):
             if py_code_to_run:
                 # noinspection PyBroadException
                 try:
-                    interp.runcode(py_code_to_run)
+                    interp.runcode(py_code_to_run)  # type: ignore[arg-type]
                 except BaseException:
                     # We don't care about any exception that happened in the Python code
                     pass
@@ -4145,7 +4165,7 @@ class Cmd(cmd.Cmd):
             self.pwarning(f"'{args.script_path}' does not have a .py extension")
             selection = self.select('Yes No', 'Continue to try to run it as a Python script? ')
             if selection != 'Yes':
-                return
+                return None
 
         # Save current command line arguments
         orig_args = sys.argv
@@ -4642,7 +4662,7 @@ class Cmd(cmd.Cmd):
             self.pwarning(f"'{expanded_path}' appears to be a Python file")
             selection = self.select('Yes No', 'Continue to try to run it as a text script? ')
             if selection != 'Yes':
-                return
+                return None
 
         try:
             # An empty file is not an error, so just return
@@ -4659,7 +4679,7 @@ class Cmd(cmd.Cmd):
                 script_commands = target.read().splitlines()
         except OSError as ex:
             self.perror(f"Problem accessing script from '{expanded_path}': {ex}")
-            return
+            return None
 
         orig_script_dir_count = len(self._script_dir)
 
