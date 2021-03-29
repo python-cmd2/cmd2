@@ -43,6 +43,7 @@ from code import (
     InteractiveConsole,
 )
 from collections import (
+    OrderedDict,
     namedtuple,
 )
 from contextlib import (
@@ -4359,7 +4360,7 @@ class Cmd(cmd.Cmd):
             for idx, hi in history.items():
                 self.poutput(hi.pr(idx, script=args.script, expanded=args.expanded, verbose=args.verbose))
 
-    def _get_history(self, args: argparse.Namespace) -> Dict[int, HistoryItem]:
+    def _get_history(self, args: argparse.Namespace) -> 'OrderedDict[int, HistoryItem]':
         """If an argument was supplied, then retrieve partial contents of the history; otherwise retrieve entire history.
 
         This function returns a dictionary with history items keyed by their 1-based index in ascending order.
