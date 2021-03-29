@@ -4,9 +4,11 @@ History management classes
 """
 
 import re
+from collections import (
+    OrderedDict,
+)
 from typing import (
     Callable,
-    Dict,
     Optional,
     Union,
 )
@@ -173,7 +175,7 @@ class History(list):
     #
     spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$')
 
-    def span(self, span: str, include_persisted: bool = False) -> Dict[int, HistoryItem]:
+    def span(self, span: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
         """Return a slice of the History list
 
         :param span: string containing an index or a slice
@@ -222,7 +224,7 @@ class History(list):
 
         return self._build_result_dictionary(start, end)
 
-    def str_search(self, search: str, include_persisted: bool = False) -> Dict[int, HistoryItem]:
+    def str_search(self, search: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
         """Find history items which contain a given string
 
         :param search: the string to search for
@@ -241,7 +243,7 @@ class History(list):
         start = 0 if include_persisted else self.session_start_index
         return self._build_result_dictionary(start, len(self), isin)
 
-    def regex_search(self, regex: str, include_persisted: bool = False) -> Dict[int, HistoryItem]:
+    def regex_search(self, regex: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
         """Find history items which match a given regular expression
 
         :param regex: the regular expression to search for.
@@ -277,13 +279,13 @@ class History(list):
 
     def _build_result_dictionary(
         self, start: int, end: int, filter_func: Optional[Callable[[HistoryItem], bool]] = None
-    ) -> Dict[int, HistoryItem]:
+    ) -> 'OrderedDict[int, HistoryItem]':
         """
         Build history search results
         :param start: start index to search from
         :param end: end index to stop searching (exclusive)
         """
-        results: Dict[int, HistoryItem] = dict()
+        results: OrderedDict[int, HistoryItem] = OrderedDict()
         for index in range(start, end):
             if filter_func is None or filter_func(self[index]):
                 results[index + 1] = self[index]
