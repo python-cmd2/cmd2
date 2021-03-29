@@ -15,6 +15,8 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
     # package is not installed
     pass
 
+from typing import List
+
 from .ansi import style, fg, bg
 from .argparse_custom import Cmd2ArgumentParser, Cmd2AttributeWrapper, CompletionItem, set_default_argument_parser
 
@@ -38,3 +40,42 @@ from . import plugin
 from .parsing import Statement
 from .py_bridge import CommandResult
 from .utils import categorize, CompletionMode, CustomCompletionSettings, Settable
+
+
+__all__: List[str] = [
+    'COMMAND_NAME',
+    'DEFAULT_ARGUMENT_PARSER',
+    'DEFAULT_SHORTCUTS',
+    # ANSI Style exports
+    'bg',
+    'fg',
+    'style',
+    # Argparse Exports
+    'Cmd2ArgumentParser',
+    'Cmd2AttributeWrapper',
+    'CompletionItem',
+    'set_default_argument_parser',
+    # Cmd2
+    'Cmd',
+    'CommandResult',
+    'CommandSet',
+    'Statement',
+    # Decorators
+    'with_argument_list',
+    'with_argparser',
+    'with_category',
+    'with_default_category',
+    'as_subcommand_to',
+    # Exceptions
+    'Cmd2ArgparseError',
+    'CommandSetRegistrationError',
+    'CompletionError',
+    'SkipPostcommandHooks',
+    # modules
+    'plugin',
+    # Utilities
+    'categorize',
+    'CompletionMode',
+    'CustomCompletionSettings',
+    'Settable',
+]
