@@ -296,7 +296,7 @@ class StatementParser:
     def is_valid_command(self, word: str, *, is_subcommand: bool = False) -> Tuple[bool, str]:
         """Determine whether a word is a valid name for a command.
 
-        Commands can not include redirection characters, whitespace,
+        Commands cannot include redirection characters, whitespace,
         or termination characters. They also cannot start with a
         shortcut.
 

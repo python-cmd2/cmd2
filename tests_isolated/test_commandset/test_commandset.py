@@ -157,7 +157,7 @@ def test_custom_construct_commandsets():
     cmds_cats, cmds_doc, cmds_undoc, help_topics = app._build_command_info()
     assert 'Command Set B' in cmds_cats
 
-    # Verifies that the same CommandSet can not be loaded twice
+    # Verifies that the same CommandSet cannot be loaded twice
     command_set_2 = CommandSetB('bar')
     with pytest.raises(CommandSetRegistrationError):
         assert app.register_command_set(command_set_2)

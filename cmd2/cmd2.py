@@ -2674,7 +2674,7 @@ class Cmd(cmd.Cmd):
                     # Use line buffering
                     new_stdout = cast(TextIO, open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))
                 except OSError as ex:
-                    raise RedirectionError('Failed to redirect because - {}'.format(ex))
+                    raise RedirectionError(f'Failed to redirect because: {ex}')
 
                 redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
@@ -4309,13 +4309,13 @@ class Cmd(cmd.Cmd):
         # -v must be used alone with no other options
         if args.verbose:
             if args.clear or args.edit or args.output_file or args.run or args.transcript or args.expanded or args.script:
-                self.poutput("-v can not be used with any other options")
+                self.poutput("-v cannot be used with any other options")
                 self.poutput(self.history_parser.format_usage())
                 return None
 
         # -s and -x can only be used if none of these options are present: [-c -r -e -o -t]
         if (args.script or args.expanded) and (args.clear or args.edit or args.output_file or args.run or args.transcript):
-            self.poutput("-s and -x can not be used with -c, -r, -e, -o, or -t")
+            self.poutput("-s and -x cannot be used with -c, -r, -e, -o, or -t")
             self.poutput(self.history_parser.format_usage())
             return None
 
@@ -4329,7 +4329,7 @@ class Cmd(cmd.Cmd):
                 except FileNotFoundError:
                     pass
                 except OSError as ex:
-                    self.pexcept("Error removing history file '{}': {}".format(self.persistent_history_file, ex))
+                    self.perror(f"Error removing history file '{self.persistent_history_file}': {ex}")
                     return None
 
             if rl_type != RlType.NONE:
@@ -4352,9 +4352,9 @@ class Cmd(cmd.Cmd):
             with os.fdopen(fd, 'w') as fobj:
                 for command in history.values():
                     if command.statement.multiline_command:
-                        fobj.write('{}\n'.format(command.expanded))
+                        fobj.write(f'{command.expanded}\n')
                     else:
-                        fobj.write('{}\n'.format(command.raw))
+                        fobj.write(f'{command.raw}\n')
             try:
                 self._run_editor(fname)
                 # noinspection PyTypeChecker
@@ -4362,18 +4362,19 @@ class Cmd(cmd.Cmd):
             finally:
                 os.remove(fname)
         elif args.output_file:
+            full_path = os.path.abspath(os.path.expanduser(args.output_file))
             try:
-                with open(os.path.expanduser(args.output_file), 'w') as fobj:
+                with open(full_path, 'w') as fobj:
                     for item in history.values():
                         if item.statement.multiline_command:
-                            fobj.write('{}\n'.format(item.expanded))
+                            fobj.write(f"{item.expanded}\n")
                         else:
-                            fobj.write('{}\n'.format(item.raw))
+                            fobj.write(f"{item.raw}\n")
                 plural = 's' if len(history) > 1 else ''
-            except OSError as e:
-                self.pexcept('Error saving {!r} - {}'.format(args.output_file, e))
+            except OSError as ex:
+                self.perror(f"Error saving history file '{full_path}': {ex}")
             else:
-                self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
+                self.pfeedback(f"{len(history)} command{plural} saved to {full_path}")
         elif args.transcript:
             self._generate_transcript(list(history.values()), args.transcript)
         else:
@@ -4426,11 +4427,10 @@ class Cmd(cmd.Cmd):
 
         hist_file = os.path.abspath(os.path.expanduser(hist_file))
 
-        # on Windows, trying to open a directory throws a permission
+        # On Windows, trying to open a directory throws a permission
         # error, not a `IsADirectoryError`. So we'll check it ourselves.
         if os.path.isdir(hist_file):
-            msg = "Persistent history file '{}' is a directory"
-            self.perror(msg.format(hist_file))
+            self.perror(f"Persistent history file '{hist_file}' is a directory")
             return
 
         # Create the directory for the history file if it doesn't already exist
@@ -4438,8 +4438,7 @@ class Cmd(cmd.Cmd):
         try:
             os.makedirs(hist_file_dir, exist_ok=True)
         except OSError as ex:
-            msg = "Error creating persistent history file directory '{}': {}".format(hist_file_dir, ex)
-            self.pexcept(msg)
+            self.perror(f"Error creating persistent history file directory '{hist_file_dir}': {ex}")
             return
 
         # first we try and unpickle the history file
@@ -4461,8 +4460,7 @@ class Cmd(cmd.Cmd):
             # If any of these errors occur when attempting to unpickle, just use an empty history
             pass
         except OSError as ex:
-            msg = "Can not read persistent history file '{}': {}"
-            self.pexcept(msg.format(hist_file, ex))
+            self.perror(f"Cannot read persistent history file '{hist_file}': {ex}")
             return
 
         self.history = history
@@ -4498,8 +4496,7 @@ class Cmd(cmd.Cmd):
             with open(self.persistent_history_file, 'wb') as fobj:
                 pickle.dump(self.history, fobj)
         except OSError as ex:
-            msg = "Can not write persistent history file '{}': {}"
-            self.pexcept(msg.format(self.persistent_history_file, ex))
+            self.perror(f"Cannot write persistent history file '{self.persistent_history_file}': {ex}")
 
     def _generate_transcript(self, history: Union[List[HistoryItem], List[str]], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands"""
@@ -4507,7 +4504,7 @@ class Cmd(cmd.Cmd):
         transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
         transcript_dir = os.path.dirname(transcript_path)
         if not os.path.isdir(transcript_dir) or not os.access(transcript_dir, os.W_OK):
-            self.perror("{!r} is not a directory or you don't have write access".format(transcript_dir))
+            self.perror(f"'{transcript_dir}' is not a directory or you don't have write access")
             return
 
         commands_run = 0
@@ -4537,10 +4534,10 @@ class Cmd(cmd.Cmd):
                     history_item = history_item.raw
                 for line in history_item.splitlines():
                     if first:
-                        command += '{}{}\n'.format(self.prompt, line)
+                        command += f"{self.prompt}{line}\n"
                         first = False
                     else:
-                        command += '{}{}\n'.format(self.continuation_prompt, line)
+                        command += f"{self.continuation_prompt}{line}\n"
                 transcript += command
 
                 # Use a StdSim object to capture output
@@ -4570,23 +4567,21 @@ class Cmd(cmd.Cmd):
 
         # Check if all commands ran
         if commands_run < len(history):
-            warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.pwarning(warning)
+            self.pwarning(f"Command {commands_run} triggered a stop and ended transcript generation early")
 
         # finally, we can write the transcript out to the file
         try:
-            with open(transcript_file, 'w') as fout:
+            with open(transcript_path, 'w') as fout:
                 fout.write(transcript)
         except OSError as ex:
-            self.pexcept('Failed to save transcript: {}'.format(ex))
+            self.perror(f"Error saving transcript file '{transcript_path}': {ex}")
         else:
             # and let the user know what we did
             if commands_run > 1:
                 plural = 'commands and their outputs'
             else:
                 plural = 'command and its output'
-            msg = '{} {} saved to transcript file {!r}'
-            self.pfeedback(msg.format(commands_run, plural, transcript_file))
+            self.pfeedback(f"{commands_run} {plural} saved to transcript file '{transcript_path}'")
 
     edit_description = (
         "Run a text editor and optionally open a file with it\n"

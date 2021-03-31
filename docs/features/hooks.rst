@@ -207,7 +207,7 @@ with the :data:`~cmd2.plugin.PostparsingData.stop` attribute set to ``True``:
 Precommand Hooks
 ----------------
 
-Precommand hooks can modify the user input, but can not request the application
+Precommand hooks can modify the user input, but cannot request the application
 terminate. If your hook needs to be able to exit the application, you should
 implement it as a postparsing hook.
 
