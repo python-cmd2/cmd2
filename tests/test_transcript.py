@@ -184,31 +184,24 @@ this is a \/multiline\/ command
     assert xscript == expected
 
 
-def test_history_transcript_bad_filename():
+def test_history_transcript_bad_path(mocker):
     app = CmdLineApp()
     app.stdout = StdSim(app.stdout)
     run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')
     run_cmd(app, 'speak /tmp/file.txt is not a regex')
 
-    expected = r"""(Cmd) orate this is
-> a /multiline/
-> command;
-this is a \/multiline\/ command
-(Cmd) speak /tmp/file.txt is not a regex
-\/tmp\/file.txt is not a regex
-"""
-
-    # make a tmp file
+    # Bad directory
     history_fname = '~/fakedir/this_does_not_exist.txt'
+    out, err = run_cmd(app, 'history -t "{}"'.format(history_fname))
+    assert "is not a directory" in err[0]
 
-    # tell the history command to create a transcript
-    run_cmd(app, 'history -t "{}"'.format(history_fname))
+    # Cause os.open to fail and make sure error gets printed
+    mock_remove = mocker.patch('builtins.open')
+    mock_remove.side_effect = OSError
 
-    # read in the transcript created by the history command
-    with pytest.raises(FileNotFoundError):
-        with open(history_fname) as f:
-            transcript = f.read()
-        assert transcript == expected
+    history_fname = 'outfile.txt'
+    out, err = run_cmd(app, 'history -t "{}"'.format(history_fname))
+    assert "Error saving transcript file" in err[0]
 
 
 def test_run_script_record_transcript(base_app, request):

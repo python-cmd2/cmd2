@@ -170,7 +170,7 @@ To add additional text to the end of the generated help message, use the ``epilo
    from cmd2 import with_argparser
 
    argparser = argparse.ArgumentParser(description='create an html tag',
-                                       epilog='This command can not generate tags with no content, like <br/>.')
+                                       epilog='This command cannot generate tags with no content, like <br/>.')
    argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argparser(argparser)
@@ -193,7 +193,7 @@ Which yields:
    optional arguments:
      -h, --help  show this help message and exit
 
-   This command can not generate tags with no content, like <br/>
+   This command cannot generate tags with no content, like <br/>
 
 .. warning::
 

@@ -616,7 +616,7 @@ def test_history_verbose_with_other_options(base_app):
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -v ' + opt)
         assert len(out) == 4
-        assert out[0] == '-v can not be used with any other options'
+        assert out[0] == '-v cannot be used with any other options'
         assert out[1].startswith('Usage:')
 
 
@@ -635,7 +635,7 @@ def test_history_script_with_invalid_options(base_app):
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -s ' + opt)
         assert len(out) == 4
-        assert out[0] == '-s and -x can not be used with -c, -r, -e, -o, or -t'
+        assert out[0] == '-s and -x cannot be used with -c, -r, -e, -o, or -t'
         assert out[1].startswith('Usage:')
 
 
@@ -653,7 +653,7 @@ def test_history_expanded_with_invalid_options(base_app):
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -x ' + opt)
         assert len(out) == 4
-        assert out[0] == '-s and -x can not be used with -c, -r, -e, -o, or -t'
+        assert out[0] == '-s and -x cannot be used with -c, -r, -e, -o, or -t'
         assert out[1].startswith('Usage:')
 
 
@@ -761,7 +761,7 @@ def test_history_file_permission_error(mocker, capsys):
     cmd2.Cmd(persistent_history_file='/tmp/doesntmatter')
     out, err = capsys.readouterr()
     assert not out
-    assert 'Can not read' in err
+    assert 'Cannot read' in err
 
 
 def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
@@ -843,4 +843,4 @@ def test_persist_history_permission_error(hist_file, mocker, capsys):
     app._persist_history()
     out, err = capsys.readouterr()
     assert not out
-    assert 'Can not write' in err
+    assert 'Cannot write' in err
