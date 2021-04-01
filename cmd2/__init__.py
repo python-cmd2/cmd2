@@ -3,10 +3,12 @@
 # flake8: noqa F401
 """This simply imports certain things for backwards compatibility."""
 
-try:
-    # For python 3.8 and later
+import sys
+
+# For python 3.8 and late
+if sys.version_info >= (3, 8):
     import importlib.metadata as importlib_metadata
-except ImportError:
+else:
     # For everyone else
     import importlib_metadata
 try:

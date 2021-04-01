@@ -108,7 +108,7 @@ def _arg_swap(args: Union[Tuple[Any], List[Any]], search_arg: Any, *replace_arg:
 
 def with_argument_list(
     func_arg: Optional[Callable[[List[str]], Optional[bool]]] = None, *, preserve_quotes: bool = False
-) -> Union[Callable[[List[str]], Optional[bool]],]:
+) -> Union[Callable[[List[str]], Optional[bool]]]:
     """
     A decorator to alter the arguments passed to a ``do_*`` method. Default
     passes a string of whatever the user typed. With this decorator, the
