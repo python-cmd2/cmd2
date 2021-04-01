@@ -10,13 +10,13 @@ from enum import (
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
     # noinspection PyPackageRequirements
-    import gnureadline as readline
+    import gnureadline as readline  # type: ignore[import]
 except ImportError:
     # Try to import readline, but allow failure for convenience in Windows unit testing
     # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
     try:
         # noinspection PyUnresolvedReferences
-        import readline
+        import readline  # type: ignore[no-redef]
     except ImportError:  # pragma: no cover
         pass
 
@@ -182,7 +182,7 @@ def rl_get_point() -> int:  # pragma: no cover
         return ctypes.c_int.in_dll(readline_lib, "rl_point").value
 
     elif rl_type == RlType.PYREADLINE:
-        return readline.rl.mode.l_buffer.point
+        return int(readline.rl.mode.l_buffer.point)
 
     else:
         return 0

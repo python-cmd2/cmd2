@@ -12,13 +12,22 @@ class is used in cmd2.py::run_transcript_tests()
 import re
 import unittest
 from typing import (
+    TYPE_CHECKING,
+    List,
+    Optional,
     Tuple,
+    cast,
 )
 
 from . import (
     ansi,
     utils,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    from cmd2 import (
+        Cmd,
+    )
 
 
 class Cmd2TestCase(unittest.TestCase):
@@ -31,7 +40,7 @@ class Cmd2TestCase(unittest.TestCase):
     See example.py
     """
 
-    cmdapp = None
+    cmdapp: Optional['Cmd'] = None
 
     def setUp(self):
         if self.cmdapp:
@@ -54,7 +63,8 @@ class Cmd2TestCase(unittest.TestCase):
 
     def _fetchTranscripts(self):
         self.transcripts = {}
-        for fname in self.cmdapp.testfiles:
+        testfiles = cast(List[str], getattr(self.cmdapp, 'testfiles', []))
+        for fname in testfiles:
             tfile = open(fname)
             self.transcripts[fname] = iter(tfile.readlines())
             tfile.close()

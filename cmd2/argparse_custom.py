@@ -215,7 +215,6 @@ from typing import (
     Tuple,
     Type,
     Union,
-    cast,
 )
 
 from . import (
@@ -279,7 +278,7 @@ class CompletionItem(str):
     """
 
     def __new__(cls, value: object, *args: Any, **kwargs: Any) -> 'CompletionItem':
-        return cast(CompletionItem, super(CompletionItem, cls).__new__(cls, value))  # type: ignore [call-arg]
+        return super(CompletionItem, cls).__new__(cls, value)
 
     # noinspection PyUnusedLocal
     def __init__(self, value: object, desc: str = '', *args: Any) -> None:
@@ -887,7 +886,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             description=description,
             epilog=epilog,
             parents=parents if parents else [],
-            formatter_class=formatter_class,
+            formatter_class=formatter_class,  # type: ignore[arg-type]
             prefix_chars=prefix_chars,
             fromfile_prefix_chars=fromfile_prefix_chars,
             argument_default=argument_default,
@@ -930,7 +929,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         formatter = self._get_formatter()
 
         # usage
-        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)
+        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)  # type: ignore[arg-type]
 
         # description
         formatter.add_text(self.description)

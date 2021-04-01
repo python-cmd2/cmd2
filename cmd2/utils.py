@@ -1,6 +1,5 @@
 # coding=utf-8
 """Shared utility functions"""
-
 import argparse
 import collections
 import functools
@@ -17,7 +16,6 @@ from enum import (
     Enum,
 )
 from typing import (
-    IO,
     TYPE_CHECKING,
     Any,
     Callable,
@@ -44,6 +42,11 @@ from .argparse_custom import (
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2  # noqa: F401
+
+    PopenTextIO = subprocess.Popen[bytes]
+
+else:
+    PopenTextIO = subprocess.Popen
 
 
 _T = TypeVar('_T')
@@ -445,7 +448,7 @@ class StdSim:
 
     def __init__(
         self,
-        inner_stream: Union[TextIO, 'StdSim', IO[str]],
+        inner_stream: Union[TextIO, 'StdSim'],
         *,
         echo: bool = False,
         encoding: str = 'utf-8',
@@ -574,7 +577,7 @@ class ProcReader:
     If neither are pipes, then the process will run normally and no output will be captured.
     """
 
-    def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, IO[str]], stderr: Union[StdSim, IO[str]]) -> None:
+    def __init__(self, proc: PopenTextIO, stdout: Union[StdSim, TextIO], stderr: Union[StdSim, TextIO]) -> None:
         """
         ProcReader initializer
         :param proc: the Popen process being read from
@@ -650,7 +653,7 @@ class ProcReader:
         # Run until process completes
         while self._proc.poll() is None:
             # noinspection PyUnresolvedReferences
-            available = read_stream.peek()
+            available = read_stream.peek()  # type: ignore[attr-defined]
             if available:
                 read_stream.read(len(available))
                 self._write_bytes(write_stream, available)
@@ -699,8 +702,8 @@ class RedirectionSavedState:
 
     def __init__(
         self,
-        self_stdout: Union[StdSim, IO[str]],
-        sys_stdout: Union[StdSim, IO[str]],
+        self_stdout: Union[StdSim, TextIO],
+        sys_stdout: Union[StdSim, TextIO],
         pipe_proc_reader: Optional[ProcReader],
         saved_redirecting: bool,
     ) -> None:
