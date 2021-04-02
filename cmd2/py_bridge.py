@@ -33,7 +33,6 @@ class CommandResult(NamedTuple):
 
     :stdout: str - output captured from stdout while this command is executing
     :stderr: str - output captured from stderr while this command is executing
-             None if no error captured.
     :stop: bool - return value of onecmd_plus_hooks after it runs the given
            command line.
     :data: possible data populated by the command.
@@ -66,7 +65,7 @@ class CommandResult(NamedTuple):
     """
 
     stdout: str = ''
-    stderr: Optional[str] = None
+    stderr: str = ''
     stop: bool = False
     data: Any = None
 
@@ -132,10 +131,10 @@ class PyBridge:
                 self._cmd2_app.stdout = cast(IO[str], copy_cmd_stdout.inner_stream)
                 self.stop = stop or self.stop
 
-        # Save the output. If stderr is empty, set it to None.
+        # Save the result
         result = CommandResult(
             stdout=copy_cmd_stdout.getvalue(),
-            stderr=copy_stderr.getvalue() if copy_stderr.getvalue() else None,
+            stderr=copy_stderr.getvalue(),
             stop=stop,
             data=self._cmd2_app.last_result,
         )
