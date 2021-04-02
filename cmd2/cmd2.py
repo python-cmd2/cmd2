@@ -1856,12 +1856,10 @@ class Cmd(cmd.Cmd):
             ArgparseCompleter,
         )
 
-        unclosed_quote = ''
-        command: Optional[str] = None
-
-        # If custom_settings is None, then we are completing a command's arguments
+        # If custom_settings is None, then we are completing a command's argument.
+        # Parse the command line to get the command token.
+        command = ''
         if custom_settings is None:
-            # Parse the command line
             statement = self.statement_parser.parse_command_only(line)
             command = statement.command
 
@@ -1891,7 +1889,7 @@ class Cmd(cmd.Cmd):
         if not tokens:  # pragma: no cover
             return
 
-        # Determine the completer function to use
+        # Determine the completer function to use for the command's argument
         if custom_settings is None:
             # Check if a macro was entered
             if command in self.macros:
@@ -1923,7 +1921,7 @@ class Cmd(cmd.Cmd):
             # Not a recognized macro or command
             else:
                 # Check if this command should be run as a shell command
-                if self.default_to_shell and command in utils.get_exes_in_path(cast(str, command)):
+                if self.default_to_shell and command in utils.get_exes_in_path(command):
                     completer_func = self.path_complete
                 else:
                     completer_func = self.completedefault  # type: ignore[assignment]
@@ -1941,11 +1939,15 @@ class Cmd(cmd.Cmd):
         # Get the token being completed with any opening quote preserved
         raw_completion_token = raw_tokens[-1]
 
+        # Used for adding quotes to the completion token
+        completion_token_quote = ''
+
         # Check if the token being completed has an opening quote
         if raw_completion_token and raw_completion_token[0] in constants.QUOTES:
 
-            # Since the token is still being completed, we know the opening quote is unclosed
-            unclosed_quote = raw_completion_token[0]
+            # Since the token is still being completed, we know the opening quote is unclosed.
+            # Save the quote so we can add a matching closing quote later.
+            completion_token_quote = raw_completion_token[0]
 
             # readline still performs word breaks after a quote. Therefore something like quoted search
             # text with a space would have resulted in begidx pointing to the middle of the token we
@@ -1981,7 +1983,7 @@ class Cmd(cmd.Cmd):
                 self.display_matches = copy.copy(self.completion_matches)
 
             # Check if we need to add an opening quote
-            if not unclosed_quote:
+            if not completion_token_quote:
 
                 add_quote = False
 
@@ -2004,19 +2006,19 @@ class Cmd(cmd.Cmd):
                 if add_quote:
                     # Figure out what kind of quote to add and save it as the unclosed_quote
                     if any('"' in match for match in self.completion_matches):
-                        unclosed_quote = "'"
+                        completion_token_quote = "'"
                     else:
-                        unclosed_quote = '"'
+                        completion_token_quote = '"'
 
-                    self.completion_matches = [unclosed_quote + match for match in self.completion_matches]
+                    self.completion_matches = [completion_token_quote + match for match in self.completion_matches]
 
             # Check if we need to remove text from the beginning of tab completions
             elif text_to_remove:
                 self.completion_matches = [match.replace(text_to_remove, '', 1) for match in self.completion_matches]
 
             # If we have one result, then add a closing quote if needed and allowed
-            if len(self.completion_matches) == 1 and self.allow_closing_quote and unclosed_quote:
-                self.completion_matches[0] += unclosed_quote
+            if len(self.completion_matches) == 1 and self.allow_closing_quote and completion_token_quote:
+                self.completion_matches[0] += completion_token_quote
 
     def complete(  # type: ignore[override]
         self, text: str, state: int, custom_settings: Optional[utils.CustomCompletionSettings] = None

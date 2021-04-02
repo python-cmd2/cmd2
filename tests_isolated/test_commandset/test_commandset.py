@@ -257,28 +257,24 @@ def test_commandset_decorators(command_sets_app):
     assert 'extra1' in result.data['unknown']
     assert 'extra2' in result.data['unknown']
     assert result.data['arg1'] == 'juice'
-    assert result.stderr is None
+    assert not result.stderr
 
     result = command_sets_app.app_cmd('durian juice extra1 extra2')
     assert len(result.data['args']) == 3
     assert 'juice' in result.data['args']
     assert 'extra1' in result.data['args']
     assert 'extra2' in result.data['args']
-    assert result.stderr is None
+    assert not result.stderr
 
     result = command_sets_app.app_cmd('durian')
     assert len(result.data['args']) == 0
-    assert result.stderr is None
+    assert not result.stderr
 
     result = command_sets_app.app_cmd('elderberry')
-    assert result.stderr is not None
-    assert len(result.stderr) > 0
     assert 'arguments are required' in result.stderr
     assert result.data is None
 
     result = command_sets_app.app_cmd('elderberry a b')
-    assert result.stderr is not None
-    assert len(result.stderr) > 0
     assert 'unrecognized arguments' in result.stderr
     assert result.data is None
 
