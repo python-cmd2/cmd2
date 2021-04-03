@@ -9,8 +9,11 @@ from collections import (
 )
 from typing import (
     Callable,
+    Iterable,
+    List,
     Optional,
-    Union, List, Iterable, overload,
+    Union,
+    overload,
 )
 
 import attr
@@ -124,11 +127,11 @@ class History(List[HistoryItem]):
 
     @overload
     def append(self, new: HistoryItem) -> None:
-        ...
+        ...  # pragma: no cover
 
     @overload
     def append(self, new: Statement) -> None:
-        ...
+        ...  # pragma: no cover
 
     def append(self, new: Union[Statement, HistoryItem]) -> None:
         """Append a new statement to the end of the History list.
@@ -136,10 +139,7 @@ class History(List[HistoryItem]):
         :param new: Statement object which will be composed into a HistoryItem
                     and added to the end of the list
         """
-        if isinstance(new, Statement):
-            history_item = HistoryItem(new)
-        else:
-            history_item = new
+        history_item = HistoryItem(new) if isinstance(new, Statement) else new
         super(History, self).append(history_item)
 
     def clear(self) -> None:

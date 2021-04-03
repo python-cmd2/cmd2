@@ -36,7 +36,6 @@ from . import (
 from .argparse_custom import (
     ChoicesProviderFunc,
     CompleterFunc,
-    CompleterFuncWithTokens,
 )
 
 if TYPE_CHECKING:  # pragma: no cover

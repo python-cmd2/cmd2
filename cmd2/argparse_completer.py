@@ -14,11 +14,11 @@ from collections import (
 )
 from typing import (
     Any,
-    cast,
     Dict,
     List,
     Optional,
     Union,
+    cast,
 )
 
 from . import (
@@ -32,6 +32,8 @@ from .argparse_custom import (
     ATTR_NARGS_RANGE,
     ATTR_SUPPRESS_TAB_HINT,
     ChoicesCallable,
+    ChoicesProviderFuncBase,
+    ChoicesProviderFuncWithTokens,
     CompletionItem,
     generate_range_error,
 )
@@ -317,9 +319,11 @@ class ArgparseCompleter:
             # Handle '--' which tells argparse all remaining arguments are non-flags
             elif token == '--' and not skip_remaining_flags:
                 # Check if there is an unfinished flag
-                if flag_arg_state is not None \
-                        and isinstance(flag_arg_state.min, int) \
-                        and flag_arg_state.count < flag_arg_state.min:
+                if (
+                    flag_arg_state is not None
+                    and isinstance(flag_arg_state.min, int)
+                    and flag_arg_state.count < flag_arg_state.min
+                ):
                     raise _UnfinishedFlagError(flag_arg_state)
 
                 # Otherwise end the current flag
@@ -332,9 +336,11 @@ class ArgparseCompleter:
             if _looks_like_flag(token, self._parser) and not skip_remaining_flags:
 
                 # Check if there is an unfinished flag
-                if flag_arg_state is not None \
-                        and isinstance(flag_arg_state.min, int) \
-                        and flag_arg_state.count < flag_arg_state.min:
+                if (
+                    flag_arg_state is not None
+                    and isinstance(flag_arg_state.min, int)
+                    and flag_arg_state.count < flag_arg_state.min
+                ):
                     raise _UnfinishedFlagError(flag_arg_state)
 
                 # Reset flag arg state but not positional tracking because flags can be
@@ -438,9 +444,11 @@ class ArgparseCompleter:
         # the current argument. We will handle the completion of flags that start with only one prefix
         # character (-f) at the end.
         if _looks_like_flag(text, self._parser) and not skip_remaining_flags:
-            if flag_arg_state is not None \
-                    and isinstance(flag_arg_state.min, int) \
-                    and flag_arg_state.count < flag_arg_state.min:
+            if (
+                flag_arg_state is not None
+                and isinstance(flag_arg_state.min, int)
+                and flag_arg_state.count < flag_arg_state.min
+            ):
                 raise _UnfinishedFlagError(flag_arg_state)
             return self._complete_flags(text, line, begidx, endidx, matched_flags)
 
@@ -692,17 +700,23 @@ class ArgparseCompleter:
         # Check if the argument uses a specific tab completion function to provide its choices
         if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
             args.extend([text, line, begidx, endidx])
-            results = arg_choices.to_call(*args, **kwargs)  # type: ignore[arg-type]
+            results = arg_choices.completer(*args, **kwargs)  # type: ignore[arg-type]
 
         # Otherwise use basic_complete on the choices
         else:
             # Check if the choices come from a function
-            completion_items: List[str]
+            completion_items: List[str] = []
             if isinstance(arg_choices, ChoicesCallable):
                 if not arg_choices.is_completer:
-                    completion_items = arg_choices.to_call(*args, **kwargs)  # type: ignore[arg-type]
-                else:
-                    completion_items = []
+                    choices_func = arg_choices.choices_provider
+                    if isinstance(choices_func, ChoicesProviderFuncWithTokens):
+                        completion_items = choices_func(*args, **kwargs)  # type: ignore[arg-type]
+                    else:  # pragma: no cover
+                        # This won't hit because runtime checking doesn't check function argument types and will always
+                        # resolve true above. Mypy, however, does see the difference and gives an error that can't be
+                        # ignored. Mypy issue #5485 discusses this problem
+                        completion_items = choices_func(*args)  # type: ignore[arg-type]
+                # else case is already covered above
             else:
                 completion_items = arg_choices
 
