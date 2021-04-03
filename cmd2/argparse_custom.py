@@ -214,7 +214,7 @@ from typing import (
     Sequence,
     Tuple,
     Type,
-    Union,
+    Union, runtime_checkable,
 )
 
 from . import (
@@ -299,7 +299,8 @@ class CompletionItem(str):
 ############################################################################################################
 
 
-class ChoicesProviderFunc(Protocol):
+@runtime_checkable
+class ChoicesProviderFuncBase(Protocol):
     """
     Function that returns a list of choices in support of tab completion
     """
@@ -308,16 +309,21 @@ class ChoicesProviderFunc(Protocol):
         ...  # pragma: no cover
 
 
+@runtime_checkable
 class ChoicesProviderFuncWithTokens(Protocol):
     """
     Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments.
     """
 
-    def __call__(self, *, arg_tokens: Dict[str, List[str]]) -> List[str]:
+    def __call__(self, *, arg_tokens: Dict[str, List[str]] = {}) -> List[str]:
         ...  # pragma: no cover
 
 
-class CompleterFunc(Protocol):
+ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens]
+
+
+@runtime_checkable
+class CompleterFuncBase(Protocol):
     """
     Function to support tab completion with the provided state of the user prompt
     """
@@ -332,6 +338,7 @@ class CompleterFunc(Protocol):
         ...  # pragma: no cover
 
 
+@runtime_checkable
 class CompleterFuncWithTokens(Protocol):
     """
     Function to support tab completion with the provided state of the user prompt and accepts a dictionary of prior
@@ -345,10 +352,12 @@ class CompleterFuncWithTokens(Protocol):
         begidx: int,
         endidx: int,
         *,
-        arg_tokens: Dict[str, List[str]],
+        arg_tokens: Dict[str, List[str]] = {},
     ) -> List[str]:
         ...  # pragma: no cover
 
+
+CompleterFunc = Union[CompleterFuncBase, CompleterFuncWithTokens]
 
 class ChoicesCallable:
     """
@@ -359,7 +368,7 @@ class ChoicesCallable:
     def __init__(
         self,
         is_completer: bool,
-        to_call: Union[CompleterFunc, CompleterFuncWithTokens, ChoicesProviderFunc, ChoicesProviderFuncWithTokens],
+        to_call: Union[CompleterFunc, ChoicesProviderFunc],
     ) -> None:
         """
         Initializer
@@ -368,6 +377,8 @@ class ChoicesCallable:
         :param to_call: the callable object that will be called to provide choices for the argument
         """
         self.is_completer = is_completer
+        if not isinstance(to_call, (CompleterFuncBase, CompleterFuncWithTokens)):
+            raise ValueError('With is_completer set to true, to_call must be either CompleterFunc, CompleterFuncWithTokens')
         self.to_call = to_call
 
 
@@ -394,7 +405,7 @@ def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCall
 
 def set_choices_provider(
     action: argparse.Action,
-    choices_provider: Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens],
+    choices_provider: ChoicesProviderFunc,
 ) -> None:
     """Set choices_provider on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_completer=False, to_call=choices_provider))
@@ -402,7 +413,7 @@ def set_choices_provider(
 
 def set_completer(
     action: argparse.Action,
-    completer: Union[CompleterFunc, CompleterFuncWithTokens],
+    completer: CompleterFunc,
 ) -> None:
     """Set completer on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_completer=True, to_call=completer))
@@ -421,8 +432,8 @@ def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
     nargs: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None] = None,
-    choices_provider: Optional[Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens]] = None,
-    completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None,
+    choices_provider: Optional[ChoicesProviderFunc] = None,
+    completer: Optional[CompleterFunc] = None,
     suppress_tab_hint: bool = False,
     descriptive_header: Optional[str] = None,
     **kwargs: Any,
