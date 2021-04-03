@@ -8,8 +8,9 @@ from typing import (
     Dict,
     List,
     Optional,
+    Sequence,
     Tuple,
-    Union, Sequence, runtime_checkable, Protocol,
+    Union,
 )
 
 from . import (
@@ -106,7 +107,7 @@ def _arg_swap(args: Union[Sequence[Any]], search_arg: Any, *replace_arg: Any) ->
     """
     index = args.index(search_arg)
     args_list = list(args)
-    args_list[index: index + 1] = replace_arg
+    args_list[index : index + 1] = replace_arg
     return args_list
 
 
@@ -134,11 +135,10 @@ ArgListCommandFunc = Union[ArgListCommandFuncOptionalBoolReturn, ArgListCommandF
 
 
 def with_argument_list(
-    func_arg: Optional[ArgListCommandFunc] = None, *, preserve_quotes: bool = False,
-) -> Union[
-    RawCommandFuncOptionalBoolReturn,
-    Callable[[ArgListCommandFunc], RawCommandFuncOptionalBoolReturn]
-]:
+    func_arg: Optional[ArgListCommandFunc] = None,
+    *,
+    preserve_quotes: bool = False,
+) -> Union[RawCommandFuncOptionalBoolReturn, Callable[[ArgListCommandFunc], RawCommandFuncOptionalBoolReturn]]:
     """
     A decorator to alter the arguments passed to a ``do_*`` method. Default
     passes a string of whatever the user typed. With this decorator, the
@@ -166,6 +166,7 @@ def with_argument_list(
         :param func: The defined argument list command function
         :return: Function that takes raw input and converts to an argument list to pass to the wrapped function.
         """
+
         @functools.wraps(func)
         def cmd_wrapper(*args: Any, **kwargs: Any) -> Optional[bool]:
             """
@@ -182,7 +183,7 @@ def with_argument_list(
             args_list = _arg_swap(args, statement, parsed_arglist)
             return func(*args_list, **kwargs)  # type: ignore[call-arg]
 
-        command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
+        command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
         cmd_wrapper.__doc__ = func.__doc__
         return cmd_wrapper
 

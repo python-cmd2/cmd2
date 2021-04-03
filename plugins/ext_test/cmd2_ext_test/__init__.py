@@ -10,7 +10,9 @@ try:
     import importlib.metadata as importlib_metadata
 except ImportError:  # pragma: no cover
     # For everyone else
-    import importlib_metadata
+    # MyPy Issue # 1153 causes a spurious error that must be ignored
+    import importlib_metadata  # type: ignore
+
 try:
     __version__ = importlib_metadata.version(__name__)
 except importlib_metadata.PackageNotFoundError:  # pragma: no cover

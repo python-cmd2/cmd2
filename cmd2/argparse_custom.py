@@ -214,7 +214,7 @@ from typing import (
     Sequence,
     Tuple,
     Type,
-    Union, runtime_checkable,
+    Union,
 )
 
 from . import (
@@ -225,10 +225,12 @@ from . import (
 try:
     from typing import (
         Protocol,
+        runtime_checkable,
     )
 except ImportError:
     from typing_extensions import (  # type: ignore[misc]
         Protocol,
+        runtime_checkable,
     )
 
 ############################################################################################################
@@ -359,6 +361,7 @@ class CompleterFuncWithTokens(Protocol):
 
 CompleterFunc = Union[CompleterFuncBase, CompleterFuncWithTokens]
 
+
 class ChoicesCallable:
     """
     Enables using a callable as the choices provider for an argparse argument.
@@ -377,9 +380,34 @@ class ChoicesCallable:
         :param to_call: the callable object that will be called to provide choices for the argument
         """
         self.is_completer = is_completer
-        if not isinstance(to_call, (CompleterFuncBase, CompleterFuncWithTokens)):
-            raise ValueError('With is_completer set to true, to_call must be either CompleterFunc, CompleterFuncWithTokens')
+        if is_completer:
+            if not isinstance(to_call, (CompleterFuncBase, CompleterFuncWithTokens)):  # pragma: no cover
+                # runtime checking of Protocols do not currently check the parameters of a function.
+                raise ValueError(
+                    'With is_completer set to true, to_call must be either CompleterFunc, CompleterFuncWithTokens'
+                )
+        else:
+            if not isinstance(to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
+                # runtime checking of Protocols do not currently check the parameters of a function.
+                raise ValueError(
+                    'With is_completer set to false, to_call must be either: '
+                    'ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens'
+                )
         self.to_call = to_call
+
+    @property
+    def completer(self) -> CompleterFunc:
+        if not isinstance(self.to_call, (CompleterFuncBase, CompleterFuncWithTokens)):  # pragma: no cover
+            # this should've been caught in the constructor, just a backup check
+            raise ValueError('Function is not a CompleterFunc')
+        return self.to_call
+
+    @property
+    def choices_provider(self) -> ChoicesProviderFunc:
+        if not isinstance(self.to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
+            # this should've been caught in the constructor, just a backup check
+            raise ValueError('Function is not a ChoicesProviderFunc')
+        return self.to_call
 
 
 def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCallable) -> None:

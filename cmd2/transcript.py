@@ -13,10 +13,12 @@ import re
 import unittest
 from typing import (
     TYPE_CHECKING,
+    Iterator,
     List,
     Optional,
+    TextIO,
     Tuple,
-    cast, Iterator, IO, TextIO,
+    cast,
 )
 
 from . import (

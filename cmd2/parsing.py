@@ -5,6 +5,7 @@
 import re
 import shlex
 from typing import (
+    Any,
     Dict,
     Iterable,
     List,
@@ -86,7 +87,7 @@ class Macro:
 
 
 @attr.s(auto_attribs=True, frozen=True)
-class Statement(str):
+class Statement(str):  # type: ignore[override]
     """String subclass with additional attributes to store the results of parsing.
 
     The ``cmd`` module in the standard library passes commands around as a
@@ -146,7 +147,7 @@ class Statement(str):
     # if output was redirected, the destination file token (quotes preserved)
     output_to: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
-    def __new__(cls, value: object, *pos_args, **kw_args):
+    def __new__(cls, value: object, *pos_args: Any, **kw_args: Any) -> 'Statement':
         """Create a new instance of Statement.
 
         We must override __new__ because we are subclassing `str` which is
@@ -241,18 +242,13 @@ class StatementParser:
         :param aliases: dictionary containing aliases
         :param shortcuts: dictionary containing shortcuts
         """
+        self.terminators: Tuple[str, ...]
         if terminators is None:
             self.terminators = (constants.MULTILINE_TERMINATOR,)
         else:
             self.terminators = tuple(terminators)
-        if multiline_commands is None:
-            self.multiline_commands = tuple()
-        else:
-            self.multiline_commands = tuple(multiline_commands)
-        if aliases is None:
-            self.aliases = dict()
-        else:
-            self.aliases = aliases
+        self.multiline_commands: Tuple[str, ...] = tuple(multiline_commands) if multiline_commands is not None else ()
+        self.aliases: Dict[str, str] = aliases if aliases is not None else {}
 
         if shortcuts is None:
             shortcuts = constants.DEFAULT_SHORTCUTS
@@ -315,7 +311,7 @@ class StatementParser:
         valid = False
 
         if not isinstance(word, str):
-            return False, 'must be a string. Received {} instead'.format(str(type(word)))
+            return False, 'must be a string. Received {} instead'.format(str(type(word)))  # type: ignore[unreachable]
 
         if not word:
             return False, 'cannot be an empty string'
@@ -670,7 +666,7 @@ class StatementParser:
         :param tokens: the tokens as parsed by shlex
         :return: a new list of tokens, further split using punctuation
         """
-        punctuation = []
+        punctuation: List[str] = []
         punctuation.extend(self.terminators)
         punctuation.extend(constants.REDIRECTION_CHARS)
 

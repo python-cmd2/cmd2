@@ -17,7 +17,8 @@ from typing import (
     NamedTuple,
     Optional,
     TextIO,
-    cast, Union,
+    Union,
+    cast,
 )
 
 from .utils import (  # namedtuple_with_defaults,

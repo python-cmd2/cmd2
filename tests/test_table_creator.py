@@ -40,31 +40,31 @@ def test_column_creation():
 
     # No width specified, blank label
     c = Column("")
-    assert c.width is None
+    assert c.width < 0
     tc = TableCreator([c])
     assert tc.cols[0].width == 1
 
     # No width specified, label isn't blank but has no width
     c = Column(ansi.style('', fg=ansi.fg.green))
-    assert c.width is None
+    assert c.width < 0
     tc = TableCreator([c])
     assert tc.cols[0].width == 1
 
     # No width specified, label has width
     c = Column("a line")
-    assert c.width is None
+    assert c.width < 0
     tc = TableCreator([c])
     assert tc.cols[0].width == ansi.style_aware_wcswidth("a line")
 
     # No width specified, label has width and multiple lines
     c = Column("short\nreally long")
-    assert c.width is None
+    assert c.width < 0
     tc = TableCreator([c])
     assert tc.cols[0].width == ansi.style_aware_wcswidth("really long")
 
     # No width specified, label has tabs
     c = Column("line\twith\ttabs")
-    assert c.width is None
+    assert c.width < 0
     tc = TableCreator([c])
     assert tc.cols[0].width == ansi.style_aware_wcswidth("line    with    tabs")
 

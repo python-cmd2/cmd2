@@ -80,7 +80,6 @@ from .argparse_custom import (
     DEFAULT_ARGUMENT_PARSER,
     ChoicesProviderFunc,
     CompleterFunc,
-    CompleterFuncWithTokens,
     CompletionItem,
 )
 from .clipboard import (
@@ -3706,11 +3705,12 @@ class Cmd(cmd.Cmd):
           | a list of tuples -> interpreted as (value, text), so
                                 that the return value can differ from
                                 the text advertised to the user"""
-
-        local_opts = opts
+        local_opts: Union[List[str], List[Tuple[Any, Optional[str]]]]
         if isinstance(opts, str):
-            local_opts = list(zip(opts.split(), opts.split()))
-        fulloptions = []
+            local_opts = cast(List[Tuple[Any, Optional[str]]], list(zip(opts.split(), opts.split())))
+        else:
+            local_opts = opts
+        fulloptions: List[Tuple[Any, Optional[str]]] = []
         for opt in local_opts:
             if isinstance(opt, str):
                 fulloptions.append((opt, opt))
@@ -3739,7 +3739,7 @@ class Cmd(cmd.Cmd):
                 choice = int(response)
                 if choice < 1:
                     raise IndexError
-                return fulloptions[choice - 1][0]
+                return str(fulloptions[choice - 1][0])
             except (ValueError, IndexError):
                 self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:".format(response, len(fulloptions)))
 
@@ -4192,17 +4192,15 @@ class Cmd(cmd.Cmd):
         """
         # Detect whether IPython is installed
         try:
-            from IPython import (
+            import traitlets.config.loader as TraitletsLoader  # type: ignore[import]
+            from IPython import (  # type: ignore[import]
                 start_ipython,
             )
-            from IPython.terminal.interactiveshell import (
+            from IPython.terminal.interactiveshell import (  # type: ignore[import]
                 TerminalInteractiveShell,
             )
-            from IPython.terminal.ipapp import (
+            from IPython.terminal.ipapp import (  # type: ignore[import]
                 TerminalIPythonApp,
-            )
-            from traitlets.config.loader import (
-                Config as TraitletsConfig,
             )
         except ImportError:
             self.perror("IPython package is not installed")
@@ -4229,7 +4227,7 @@ class Cmd(cmd.Cmd):
                 local_vars['self'] = self
 
             # Configure IPython
-            config = TraitletsConfig()
+            config = TraitletsLoader.Config()
             config.InteractiveShell.banner2 = (
                 'Entering an IPython shell. Type exit, quit, or Ctrl-D to exit.\n'
                 f'Run CLI commands with: {self.py_bridge_name}("command ...")\n'
@@ -5210,10 +5208,11 @@ class Cmd(cmd.Cmd):
         self._validate_cmdfinalization_callable(func)
         self._cmdfinalization_hooks.append(func)
 
-    def _resolve_func_self(self,
-                           cmd_support_func: Callable[..., Any],
-                           cmd_self: Union[CommandSet, 'Cmd', None],
-                           ) -> Optional[object]:
+    def _resolve_func_self(
+        self,
+        cmd_support_func: Callable[..., Any],
+        cmd_self: Union[CommandSet, 'Cmd', None],
+    ) -> Optional[object]:
         """
         Attempt to resolve a candidate instance to pass as 'self' for an unbound class method that was
         used when defining command's argparse object. Since we restrict registration to only a single CommandSet

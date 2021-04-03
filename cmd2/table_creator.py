@@ -23,7 +23,7 @@ from typing import (
     Union,
 )
 
-from wcwidth import (
+from wcwidth import (  # type: ignore[import]
     wcwidth,
 )
 
@@ -89,7 +89,7 @@ class Column:
         if width is not None and width < 1:
             raise ValueError("Column width cannot be less than 1")
         else:
-            self.width = width
+            self.width: int = width if width is not None else -1
 
         self.header_horiz_align = header_horiz_align
         self.header_vert_align = header_vert_align
@@ -138,7 +138,7 @@ class TableCreator:
 
             # For headers with the width not yet set, use the width of the
             # widest line in the header or 1 if the header has no width
-            if col.width is None:
+            if col.width < 0:
                 col.width = max(1, ansi.widest_line(col.header))
 
     @staticmethod
@@ -218,7 +218,11 @@ class TableCreator:
         :return: wrapped text
         """
 
-        def add_word(word_to_add: str, is_last_word: bool):
+        # MyPy Issue #7057 documents regression requiring nonlocals to be defined earlier
+        cur_line_width = 0
+        total_lines = 0
+
+        def add_word(word_to_add: str, is_last_word: bool) -> None:
             """
             Called from loop to add a word to the wrapped text
 
@@ -431,7 +435,7 @@ class TableCreator:
 
             def __init__(self) -> None:
                 # Data in this cell split into individual lines
-                self.lines = []
+                self.lines: Deque[str] = deque()
 
                 # Display width of this cell
                 self.width = 0
@@ -705,7 +709,7 @@ class BorderedTable(TableCreator):
         data_width = sum(col.width for col in self.cols)
         return base_width + data_width
 
-    def generate_table_top_border(self):
+    def generate_table_top_border(self) -> str:
         """Generate a border which appears at the top of the header and data section"""
         pre_line = '╔' + self.padding * '═'
 
@@ -720,7 +724,7 @@ class BorderedTable(TableCreator):
             row_data=self.empty_data, fill_char='═', pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
         )
 
-    def generate_header_bottom_border(self):
+    def generate_header_bottom_border(self) -> str:
         """Generate a border which appears at the bottom of the header"""
         pre_line = '╠' + self.padding * '═'
 
@@ -735,7 +739,7 @@ class BorderedTable(TableCreator):
             row_data=self.empty_data, fill_char='═', pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
         )
 
-    def generate_row_bottom_border(self):
+    def generate_row_bottom_border(self) -> str:
         """Generate a border which appears at the bottom of rows"""
         pre_line = '╟' + self.padding * '─'
 
@@ -750,7 +754,7 @@ class BorderedTable(TableCreator):
             row_data=self.empty_data, fill_char='─', pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
         )
 
-    def generate_table_bottom_border(self):
+    def generate_table_bottom_border(self) -> str:
         """Generate a border which appears at the bottom of the table"""
         pre_line = '╚' + self.padding * '═'
 
