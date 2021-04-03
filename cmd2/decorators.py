@@ -9,7 +9,7 @@ from typing import (
     List,
     Optional,
     Tuple,
-    Union,
+    Union, Sequence, runtime_checkable, Protocol,
 )
 
 from . import (
@@ -92,9 +92,10 @@ def _parse_positionals(args: Tuple[Any, ...]) -> Tuple['cmd2.Cmd', Union[Stateme
     raise TypeError('Expected arguments: cmd: cmd2.Cmd, statement: Union[Statement, str] Not found')  # pragma: no cover
 
 
-def _arg_swap(args: Union[Tuple[Any], List[Any]], search_arg: Any, *replace_arg: Any) -> List[Any]:
+def _arg_swap(args: Union[Sequence[Any]], search_arg: Any, *replace_arg: Any) -> List[Any]:
     """
     Helper function for cmd2 decorators to swap the Statement parameter with one or more decorator-specific parameters
+
     :param args: The original positional arguments
     :param search_arg: The argument to search for (usually the Statement)
     :param replace_arg: The arguments to substitute in
@@ -102,7 +103,7 @@ def _arg_swap(args: Union[Tuple[Any], List[Any]], search_arg: Any, *replace_arg:
     """
     index = args.index(search_arg)
     args_list = list(args)
-    args_list[index : index + 1] = replace_arg
+    args_list[index: index + 1] = replace_arg
     return args_list
 
 

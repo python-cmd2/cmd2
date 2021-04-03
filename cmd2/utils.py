@@ -35,7 +35,6 @@ from . import (
 )
 from .argparse_custom import (
     ChoicesProviderFunc,
-    ChoicesProviderFuncWithTokens,
     CompleterFunc,
     CompleterFuncWithTokens,
 )
@@ -121,8 +120,8 @@ class Settable:
         settable_attrib_name: Optional[str] = None,
         onchange_cb: Optional[Callable[[str, _T, _T], Any]] = None,
         choices: Optional[Iterable[Any]] = None,
-        choices_provider: Optional[Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens]] = None,
-        completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None,
+        choices_provider: Optional[ChoicesProviderFunc] = None,
+        completer: Optional[CompleterFunc] = None,
     ) -> None:
         """
         Settable Initializer

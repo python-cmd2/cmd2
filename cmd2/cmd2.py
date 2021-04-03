@@ -79,7 +79,6 @@ from . import (
 from .argparse_custom import (
     DEFAULT_ARGUMENT_PARSER,
     ChoicesProviderFunc,
-    ChoicesProviderFuncWithTokens,
     CompleterFunc,
     CompleterFuncWithTokens,
     CompletionItem,
@@ -672,7 +671,7 @@ class Cmd(cmd.Cmd):
 
         setattr(self, cmd_func_name, command_wrapper)
 
-    def _install_completer_function(self, cmd_name: str, cmd_completer: Union[CompleterFunc, CompleterFuncWithTokens]) -> None:
+    def _install_completer_function(self, cmd_name: str, cmd_completer: CompleterFunc) -> None:
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
 
         if hasattr(self, completer_func_name):
@@ -2809,8 +2808,8 @@ class Cmd(cmd.Cmd):
         completion_mode: utils.CompletionMode = utils.CompletionMode.NONE,
         preserve_quotes: bool = False,
         choices: Optional[Iterable[Any]] = None,
-        choices_provider: Optional[Union[ChoicesProviderFunc, ChoicesProviderFuncWithTokens]] = None,
-        completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None,
+        choices_provider: Optional[ChoicesProviderFunc] = None,
+        completer: Optional[CompleterFunc] = None,
         parser: Optional[argparse.ArgumentParser] = None,
     ) -> str:
         """
@@ -2845,7 +2844,7 @@ class Cmd(cmd.Cmd):
         :raises: any exceptions raised by input() and stdin.readline()
         """
         readline_configured = False
-        saved_completer: Optional[Union[CompleterFunc, CompleterFuncWithTokens]] = None
+        saved_completer: Optional[CompleterFunc] = None
         saved_history: Optional[List[str]] = None
 
         def configure_readline() -> None:
@@ -5210,7 +5209,10 @@ class Cmd(cmd.Cmd):
         self._validate_cmdfinalization_callable(func)
         self._cmdfinalization_hooks.append(func)
 
-    def _resolve_func_self(self, cmd_support_func: Callable[..., Any], cmd_self: Union[CommandSet, 'Cmd']) -> Optional[object]:
+    def _resolve_func_self(self,
+                           cmd_support_func: Callable[..., Any],
+                           cmd_self: Union[CommandSet, 'Cmd', None],
+                           ) -> Optional[object]:
         """
         Attempt to resolve a candidate instance to pass as 'self' for an unbound class method that was
         used when defining command's argparse object. Since we restrict registration to only a single CommandSet
