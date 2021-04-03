@@ -3635,7 +3635,7 @@ class Cmd(cmd.Cmd):
                             stdout_orig = self.stdout
                             try:
                                 # redirect our internal stdout
-                                self.stdout = result
+                                self.stdout = cast(TextIO, result)
                                 help_func()
                             finally:
                                 # restore internal stdout
@@ -3883,7 +3883,7 @@ class Cmd(cmd.Cmd):
                 shell=True,
             )
 
-            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
@@ -4563,7 +4563,7 @@ class Cmd(cmd.Cmd):
             with self.sigint_protection:
                 # Restore altered attributes to their original state
                 self.echo = saved_echo
-                self.stdout = saved_stdout
+                self.stdout = cast(TextIO, saved_stdout)
 
         # Check if all commands ran
         if commands_run < len(history):

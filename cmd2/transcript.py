@@ -16,7 +16,7 @@ from typing import (
     List,
     Optional,
     Tuple,
-    cast,
+    cast, Iterator, IO, TextIO,
 )
 
 from . import (
@@ -42,26 +42,26 @@ class Cmd2TestCase(unittest.TestCase):
 
     cmdapp: Optional['Cmd'] = None
 
-    def setUp(self):
+    def setUp(self) -> None:
         if self.cmdapp:
             self._fetchTranscripts()
 
             # Trap stdout
             self._orig_stdout = self.cmdapp.stdout
-            self.cmdapp.stdout = utils.StdSim(self.cmdapp.stdout)
+            self.cmdapp.stdout = cast(TextIO, utils.StdSim(cast(TextIO, self.cmdapp.stdout)))
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         if self.cmdapp:
             # Restore stdout
             self.cmdapp.stdout = self._orig_stdout
 
-    def runTest(self):  # was testall
+    def runTest(self) -> None:  # was testall
         if self.cmdapp:
             its = sorted(self.transcripts.items())
             for (fname, transcript) in its:
                 self._test_transcript(fname, transcript)
 
-    def _fetchTranscripts(self):
+    def _fetchTranscripts(self) -> None:
         self.transcripts = {}
         testfiles = cast(List[str], getattr(self.cmdapp, 'testfiles', []))
         for fname in testfiles:
@@ -69,7 +69,7 @@ class Cmd2TestCase(unittest.TestCase):
             self.transcripts[fname] = iter(tfile.readlines())
             tfile.close()
 
-    def _test_transcript(self, fname: str, transcript):
+    def _test_transcript(self, fname: str, transcript: Iterator[str]) -> None:
         if self.cmdapp is None:
             return
 
@@ -86,7 +86,7 @@ class Cmd2TestCase(unittest.TestCase):
                     finished = True
                     break
                 line_num += 1
-            command = [line[len(self.cmdapp.visible_prompt) :]]
+            command_parts = [line[len(self.cmdapp.visible_prompt) :]]
             try:
                 line = next(transcript)
             except StopIteration:
@@ -94,16 +94,16 @@ class Cmd2TestCase(unittest.TestCase):
             line_num += 1
             # Read the entirety of a multi-line command
             while line.startswith(self.cmdapp.continuation_prompt):
-                command.append(line[len(self.cmdapp.continuation_prompt) :])
+                command_parts.append(line[len(self.cmdapp.continuation_prompt) :])
                 try:
                     line = next(transcript)
                 except StopIteration as exc:
                     msg = 'Transcript broke off while reading command beginning at line {} with\n{}'.format(
-                        line_num, command[0]
+                        line_num, command_parts[0]
                     )
                     raise StopIteration(msg) from exc
                 line_num += 1
-            command = ''.join(command)
+            command = ''.join(command_parts)
             # Send the command into the application and capture the resulting output
             stop = self.cmdapp.onecmd_plus_hooks(command)
             result = self.cmdapp.stdout.read()
@@ -117,9 +117,9 @@ class Cmd2TestCase(unittest.TestCase):
                 # If the command signaled the application to quit there should be no more commands
                 self.assertFalse(stop, stop_msg)
                 continue
-            expected = []
+            expected_parts = []
             while not ansi.strip_style(line).startswith(self.cmdapp.visible_prompt):
-                expected.append(line)
+                expected_parts.append(line)
                 try:
                     line = next(transcript)
                 except StopIteration:
@@ -132,7 +132,7 @@ class Cmd2TestCase(unittest.TestCase):
                 self.assertTrue(finished, stop_msg)
 
             # transform the expected text into a valid regular expression
-            expected = ''.join(expected)
+            expected = ''.join(expected_parts)
             expected = self._transform_transcript_expected(expected)
             message = '\nFile {}, line {}\nCommand was:\n{}\nExpected:\n{}\nGot:\n{}\n'.format(
                 fname, line_num, command, expected, result

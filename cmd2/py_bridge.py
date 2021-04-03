@@ -17,7 +17,7 @@ from typing import (
     NamedTuple,
     Optional,
     TextIO,
-    cast,
+    cast, Union,
 )
 
 from .utils import (  # namedtuple_with_defaults,
@@ -110,7 +110,7 @@ class PyBridge:
             echo = self.cmd_echo
 
         # This will be used to capture _cmd2_app.stdout and sys.stdout
-        copy_cmd_stdout = StdSim(self._cmd2_app.stdout, echo=echo)
+        copy_cmd_stdout = StdSim(cast(Union[TextIO, StdSim], self._cmd2_app.stdout), echo=echo)
 
         # Pause the storing of stdout until onecmd_plus_hooks enables it
         copy_cmd_stdout.pause_storage = True
