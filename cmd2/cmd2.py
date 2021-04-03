@@ -4348,6 +4348,7 @@ class Cmd(cmd.Cmd):
             import tempfile
 
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
+            fobj: TextIO
             with os.fdopen(fd, 'w') as fobj:
                 for command in history.values():
                     if command.statement.multiline_command:
