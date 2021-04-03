@@ -10,7 +10,7 @@ from collections import (
 from typing import (
     Callable,
     Optional,
-    Union,
+    Union, List, Iterable, overload,
 )
 
 import attr
@@ -23,16 +23,16 @@ from .parsing import (
 )
 
 
-@attr.s(frozen=True)
+@attr.s(auto_attribs=True, frozen=True)
 class HistoryItem:
     """Class used to represent one command in the history list"""
 
     _listformat = ' {:>4}  {}'
     _ex_listformat = ' {:>4}x {}'
 
-    statement = attr.ib(default=None, validator=attr.validators.instance_of(Statement))
+    statement: Statement = attr.ib(default=None, validator=attr.validators.instance_of(Statement))
 
-    def __str__(self):
+    def __str__(self) -> str:
         """A convenient human readable representation of the history item"""
         return self.statement.raw
 
@@ -66,11 +66,11 @@ class HistoryItem:
         """
         if verbose:
             raw = self.raw.rstrip()
-            expanded = self.expanded
+            expanded_command = self.expanded
 
             ret_str = self._listformat.format(idx, raw)
-            if raw != expanded:
-                ret_str += '\n' + self._ex_listformat.format(idx, expanded)
+            if raw != expanded_command:
+                ret_str += '\n' + self._ex_listformat.format(idx, expanded_command)
         else:
             if expanded:
                 ret_str = self.expanded
@@ -92,7 +92,7 @@ class HistoryItem:
         return ret_str
 
 
-class History(list):
+class History(List[HistoryItem]):
     """A list of :class:`~cmd2.history.HistoryItem` objects with additional methods
     for searching and managing the list.
 
@@ -106,8 +106,8 @@ class History(list):
     class to gain access to the historical record.
     """
 
-    def __init__(self, seq=()) -> None:
-        super().__init__(seq)
+    def __init__(self, seq: Iterable[HistoryItem] = ()) -> None:
+        super(History, self).__init__(seq)
         self.session_start_index = 0
 
     def start_session(self) -> None:
@@ -122,14 +122,25 @@ class History(list):
             result -= 1
         return result
 
+    @overload
+    def append(self, new: HistoryItem) -> None:
+        ...
+
+    @overload
     def append(self, new: Statement) -> None:
+        ...
+
+    def append(self, new: Union[Statement, HistoryItem]) -> None:
         """Append a new statement to the end of the History list.
 
         :param new: Statement object which will be composed into a HistoryItem
                     and added to the end of the list
         """
-        history_item = HistoryItem(new)
-        super().append(history_item)
+        if isinstance(new, Statement):
+            history_item = HistoryItem(new)
+        else:
+            history_item = new
+        super(History, self).append(history_item)
 
     def clear(self) -> None:
         """Remove all items from the History list."""
@@ -206,17 +217,17 @@ class History(list):
             # our regex doesn't match the input, bail out
             raise ValueError('History indices must be positive or negative integers, and may not be zero.')
 
-        start = results.group('start')
-        if start:
-            start = min(self._zero_based_index(start), len(self) - 1)
+        start_token = results.group('start')
+        if start_token:
+            start = min(self._zero_based_index(start_token), len(self) - 1)
             if start < 0:
                 start = max(0, len(self) + start)
         else:
             start = 0 if include_persisted else self.session_start_index
 
-        end = results.group('end')
-        if end:
-            end = min(int(end), len(self))
+        end_token = results.group('end')
+        if end_token:
+            end = min(int(end_token), len(self))
             if end < 0:
                 end = max(0, len(self) + end + 1)
         else:
