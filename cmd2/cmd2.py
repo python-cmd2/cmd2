@@ -399,7 +399,7 @@ class Cmd(cmd.Cmd):
             if os.path.exists(startup_script):
                 script_cmd = "run_script {}".format(utils.quote_string(startup_script))
                 if silent_startup_script:
-                    script_cmd += "> {}".format(os.devnull)
+                    script_cmd += " > {}".format(os.devnull)
                 self._startup_commands.append(script_cmd)
 
         # Transcript files to run instead of interactive command loop
