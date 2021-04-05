@@ -138,7 +138,7 @@ class TableCreator:
 
             # For headers with the width not yet set, use the width of the
             # widest line in the header or 1 if the header has no width
-            if col.width < 0:
+            if col.width <= 0:
                 col.width = max(1, ansi.widest_line(col.header))
 
     @staticmethod
