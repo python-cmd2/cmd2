@@ -474,7 +474,7 @@ class StdSim:
         :param s: String to write to the stream
         """
         if not isinstance(s, str):
-            raise TypeError('write() argument must be str, not {}'.format(type(s)))
+            raise TypeError(f'write() argument must be str, not {type(s)}')
 
         if not self.pause_storage:
             self.buffer.byte_buf += s.encode(encoding=self.encoding, errors=self.errors)
@@ -554,7 +554,7 @@ class ByteBuf:
     def write(self, b: bytes) -> None:
         """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
         if not isinstance(b, bytes):
-            raise TypeError('a bytes-like object is required, not {}'.format(type(b)))
+            raise TypeError(f'a bytes-like object is required, not {type(b)}')
         if not self.std_sim_instance.pause_storage:
             self.byte_buf += b
         if self.std_sim_instance.echo:

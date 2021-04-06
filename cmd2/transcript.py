@@ -100,9 +100,7 @@ class Cmd2TestCase(unittest.TestCase):
                 try:
                     line = next(transcript)
                 except StopIteration as exc:
-                    msg = 'Transcript broke off while reading command beginning at line {} with\n{}'.format(
-                        line_num, command_parts[0]
-                    )
+                    msg = f'Transcript broke off while reading command beginning at line {line_num} with\n{command_parts[0]}'
                     raise StopIteration(msg) from exc
                 line_num += 1
             command = ''.join(command_parts)
@@ -112,9 +110,7 @@ class Cmd2TestCase(unittest.TestCase):
             stop_msg = 'Command indicated application should quit, but more commands in transcript'
             # Read the expected result from transcript
             if ansi.strip_style(line).startswith(self.cmdapp.visible_prompt):
-                message = '\nFile {}, line {}\nCommand was:\n{}\nExpected: (nothing)\nGot:\n{}\n'.format(
-                    fname, line_num, command, result
-                )
+                message = f'\nFile {fname}, line {line_num}\nCommand was:\n{command}\nExpected: (nothing)\nGot:\n{result}\n'
                 self.assertTrue(not (result.strip()), message)
                 # If the command signaled the application to quit there should be no more commands
                 self.assertFalse(stop, stop_msg)
@@ -136,9 +132,7 @@ class Cmd2TestCase(unittest.TestCase):
             # transform the expected text into a valid regular expression
             expected = ''.join(expected_parts)
             expected = self._transform_transcript_expected(expected)
-            message = '\nFile {}, line {}\nCommand was:\n{}\nExpected:\n{}\nGot:\n{}\n'.format(
-                fname, line_num, command, expected, result
-            )
+            message = f'\nFile {fname}, line {line_num}\nCommand was:\n{command}\nExpected:\n{expected}\nGot:\n{result}\n'
             self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
     def _transform_transcript_expected(self, s: str) -> str:

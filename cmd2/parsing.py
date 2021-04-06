@@ -167,7 +167,7 @@ class Statement(str):  # type: ignore[override]
         excluded, as are any command terminators.
         """
         if self.command and self.args:
-            rtn = '{} {}'.format(self.command, self.args)
+            rtn = f'{self.command} {self.args}'
         elif self.command:
             # there were no arguments to the command
             rtn = self.command
@@ -286,7 +286,7 @@ class StatementParser:
         # join them up with a pipe
         second_group = '|'.join(second_group_items)
         # build the regular expression
-        expr = r'\A\s*(\S*?)({})'.format(second_group)
+        expr = rf'\A\s*(\S*?)({second_group})'
         self._command_pattern = re.compile(expr)
 
     def is_valid_command(self, word: str, *, is_subcommand: bool = False) -> Tuple[bool, str]:
@@ -306,12 +306,12 @@ class StatementParser:
             checkit = '>'
             valid, errmsg = statement_parser.is_valid_command(checkit)
             if not valid:
-                errmsg = "alias: {}".format(errmsg)
+                errmsg = f"alias: {errmsg}"
         """
         valid = False
 
         if not isinstance(word, str):
-            return False, 'must be a string. Received {} instead'.format(str(type(word)))  # type: ignore[unreachable]
+            return False, f'must be a string. Received {str(type(word))} instead'  # type: ignore[unreachable]
 
         if not word:
             return False, 'cannot be an empty string'

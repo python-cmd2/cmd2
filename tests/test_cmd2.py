@@ -704,7 +704,7 @@ def _expected_no_editor_error():
 
     expected_text = normalize(
         """
-EXCEPTION of type '{}' occurred with message: 'Please use 'set editor' to specify your text editing program of choice.'
+EXCEPTION of type '{}' occurred with message: Please use 'set editor' to specify your text editing program of choice.
 To enable full traceback, run the following command: 'set debug true'
 """.format(
             expected_exception
@@ -1986,7 +1986,7 @@ def test_macro_usage_with_missing_args(base_app):
 
     # Run the macro
     out, err = run_cmd(base_app, 'fake arg1')
-    assert "expects at least 2 argument(s)" in err[0]
+    assert "expects at least 2 arguments" in err[0]
 
 
 def test_macro_usage_with_exta_args(base_app):
@@ -2018,7 +2018,7 @@ def test_macro_create_with_unicode_numbered_arg(base_app):
 
     # Run the macro
     out, err = run_cmd(base_app, 'fake')
-    assert "expects at least 1 argument(s)" in err[0]
+    assert "expects at least 1 argument" in err[0]
 
 
 def test_macro_create_with_missing_unicode_arg_nums(base_app):
