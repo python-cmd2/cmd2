@@ -66,7 +66,7 @@ class Column:
         header_vert_align: VerticalAlignment = VerticalAlignment.BOTTOM,
         data_horiz_align: HorizontalAlignment = HorizontalAlignment.LEFT,
         data_vert_align: VerticalAlignment = VerticalAlignment.TOP,
-        max_data_lines: Union[int, float] = constants.INFINITY
+        max_data_lines: Union[int, float] = constants.INFINITY,
     ) -> None:
         """
         Column initializer
@@ -408,7 +408,7 @@ class TableCreator:
         fill_char: str = SPACE,
         pre_line: str = EMPTY,
         inter_cell: str = (2 * SPACE),
-        post_line: str = EMPTY
+        post_line: str = EMPTY,
     ) -> str:
         """
         Generate a header or data table row
@@ -462,7 +462,7 @@ class TableCreator:
         validation_dict = {'fill_char': fill_char, 'pre_line': pre_line, 'inter_cell': inter_cell, 'post_line': post_line}
         for key, val in validation_dict.items():
             if ansi.style_aware_wcswidth(val) == -1:
-                raise (ValueError("{} contains an unprintable character".format(key)))
+                raise ValueError(f"{key} contains an unprintable character")
 
         # Number of lines this row uses
         total_lines = 0
@@ -556,7 +556,7 @@ class SimpleTable(TableCreator):
 
             divider_char_width = ansi.style_aware_wcswidth(divider_char)
             if divider_char_width == -1:
-                raise (ValueError("Divider character is an unprintable character"))
+                raise ValueError("Divider character is an unprintable character")
 
         super().__init__(cols, tab_width=tab_width)
         self.divider_char = divider_char
@@ -855,7 +855,7 @@ class AlternatingTable(BorderedTable):
         column_borders: bool = True,
         padding: int = 1,
         bg_odd: Optional[ansi.bg] = None,
-        bg_even: Optional[ansi.bg] = ansi.bg.bright_black
+        bg_even: Optional[ansi.bg] = ansi.bg.bright_black,
     ) -> None:
         """
         AlternatingTable initializer

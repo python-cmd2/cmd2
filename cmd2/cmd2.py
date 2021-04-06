@@ -397,9 +397,9 @@ class Cmd(cmd.Cmd):
         if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script):
-                script_cmd = "run_script {}".format(utils.quote_string(startup_script))
+                script_cmd = f"run_script {utils.quote_string(startup_script)}"
                 if silent_startup_script:
-                    script_cmd += " > {}".format(os.devnull)
+                    script_cmd += f" {constants.REDIRECTION_OUTPUT} {os.devnull}"
                 self._startup_commands.append(script_cmd)
 
         # Transcript files to run instead of interactive command loop
@@ -520,7 +520,7 @@ class Cmd(cmd.Cmd):
         for cur_cmd in self.get_all_commands():
             valid, errmsg = self.statement_parser.is_valid_command(cur_cmd)
             if not valid:
-                raise ValueError("Invalid command name {!r}: {}".format(cur_cmd, errmsg))
+                raise ValueError(f"Invalid command name '{cur_cmd}': {errmsg}")
 
         # Add functions decorated to be subcommands
         self._register_subcommands(self)
@@ -651,21 +651,21 @@ class Cmd(cmd.Cmd):
 
         # Make sure command function doesn't share name with existing attribute
         if hasattr(self, cmd_func_name):
-            raise CommandSetRegistrationError('Attribute already exists: {} ({})'.format(cmd_func_name, context))
+            raise CommandSetRegistrationError(f'Attribute already exists: {cmd_func_name} ({context})')
 
         # Check if command has an invalid name
         valid, errmsg = self.statement_parser.is_valid_command(command)
         if not valid:
-            raise CommandSetRegistrationError("Invalid command name {!r}: {}".format(command, errmsg))
+            raise CommandSetRegistrationError(f"Invalid command name '{command}': {errmsg}")
 
         # Check if command shares a name with an alias
         if command in self.aliases:
-            self.pwarning("Deleting alias '{}' because it shares its name with a new command".format(command))
+            self.pwarning(f"Deleting alias '{command}' because it shares its name with a new command")
             del self.aliases[command]
 
         # Check if command shares a name with a macro
         if command in self.macros:
-            self.pwarning("Deleting macro '{}' because it shares its name with a new command".format(command))
+            self.pwarning(f"Deleting macro '{command}' because it shares its name with a new command")
             del self.macros[command]
 
         setattr(self, cmd_func_name, command_wrapper)
@@ -674,14 +674,14 @@ class Cmd(cmd.Cmd):
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
 
         if hasattr(self, completer_func_name):
-            raise CommandSetRegistrationError('Attribute already exists: {}'.format(completer_func_name))
+            raise CommandSetRegistrationError(f'Attribute already exists: {completer_func_name}')
         setattr(self, completer_func_name, cmd_completer)
 
     def _install_help_function(self, cmd_name: str, cmd_help: Callable[..., None]) -> None:
         help_func_name = HELP_FUNC_PREFIX + cmd_name
 
         if hasattr(self, help_func_name):
-            raise CommandSetRegistrationError('Attribute already exists: {}'.format(help_func_name))
+            raise CommandSetRegistrationError(f'Attribute already exists: {help_func_name}')
         setattr(self, help_func_name, cmd_help)
 
     def unregister_command_set(self, cmdset: CommandSet) -> None:
@@ -783,7 +783,7 @@ class Cmd(cmd.Cmd):
 
             subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
             if not subcommand_valid:
-                raise CommandSetRegistrationError('Subcommand {} is not valid: {}'.format(str(subcommand_name), errmsg))
+                raise CommandSetRegistrationError(f'Subcommand {str(subcommand_name)} is not valid: {errmsg}')
 
             command_tokens = full_command_name.split()
             command_name = command_tokens[0]
@@ -797,12 +797,12 @@ class Cmd(cmd.Cmd):
 
             if command_func is None:
                 raise CommandSetRegistrationError(
-                    'Could not find command "{}" needed by subcommand: {}'.format(command_name, str(method))
+                    f"Could not find command '{command_name}' needed by subcommand: {str(method)}"
                 )
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
             if command_parser is None:
                 raise CommandSetRegistrationError(
-                    'Could not find argparser for command "{}" needed by subcommand: {}'.format(command_name, str(method))
+                    f"Could not find argparser for command '{command_name}' needed by subcommand: {str(method)}"
                 )
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
@@ -815,7 +815,7 @@ class Cmd(cmd.Cmd):
                             if choice_name == cur_subcmd:
                                 return find_subcommand(choice, subcmd_names)
                         break
-                raise CommandSetRegistrationError('Could not find subcommand "{}"'.format(full_command_name))
+                raise CommandSetRegistrationError(f"Could not find subcommand '{full_command_name}'")
 
             target_parser = find_subcommand(command_parser, subcommand_names)
 
@@ -895,14 +895,14 @@ class Cmd(cmd.Cmd):
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
                 raise CommandSetRegistrationError(
-                    'Could not find command "{}" needed by subcommand: {}'.format(command_name, str(method))
+                    f"Could not find command '{command_name}' needed by subcommand: {str(method)}"
                 )
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
             if command_parser is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
                 raise CommandSetRegistrationError(
-                    'Could not find argparser for command "{}" needed by subcommand: {}'.format(command_name, str(method))
+                    f"Could not find argparser for command '{command_name}' needed by subcommand: {str(method)}"
                 )
 
             for action in command_parser._actions:
@@ -983,7 +983,7 @@ class Cmd(cmd.Cmd):
                 'allow_style',
                 str,
                 'Allow ANSI text style sequences in output (valid values: '
-                '{}, {}, {})'.format(ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER),
+                f'{ansi.STYLE_TERMINAL}, {ansi.STYLE_ALWAYS}, {ansi.STYLE_NEVER})',
                 self,
                 choices=[ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER],
             )
@@ -1021,9 +1021,7 @@ class Cmd(cmd.Cmd):
         if new_val in [ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER]:
             ansi.allow_style = new_val
         else:
-            raise ValueError(
-                "must be {}, {}, or {} (case-insensitive)".format(ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER)
-            )
+            raise ValueError(f"must be {ansi.STYLE_TERMINAL}, {ansi.STYLE_ALWAYS}, or {ansi.STYLE_NEVER} (case-insensitive)")
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported"""
@@ -1047,11 +1045,11 @@ class Cmd(cmd.Cmd):
         been piped to another process and that process terminates before the
         cmd2 command is finished executing.
 
-        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
+        :param msg: message to print (anything convertible to a str)
         :param end: string appended after the end of the message, default a newline
         """
         try:
-            ansi.style_aware_write(self.stdout, "{}{}".format(msg, end))
+            ansi.style_aware_write(self.stdout, f"{msg}{end}")
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another
             # process and that process closes before the command is
@@ -1065,7 +1063,7 @@ class Cmd(cmd.Cmd):
     def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Print message to sys.stderr
 
-        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
+        :param msg: message to print (anything convertible to a str)
         :param end: string appended after the end of the message, default a newline
         :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
@@ -1073,13 +1071,13 @@ class Cmd(cmd.Cmd):
         if apply_style:
             final_msg = ansi.style_error(msg)
         else:
-            final_msg = "{}".format(msg)
+            final_msg = str(msg)
         ansi.style_aware_write(sys.stderr, final_msg + end)
 
     def pwarning(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Wraps perror, but applies ansi.style_warning by default
 
-        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
+        :param msg: message to print (anything convertible to a str)
         :param end: string appended after the end of the message, default a newline
         :param apply_style: If True, then ansi.style_warning will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
@@ -1102,9 +1100,9 @@ class Cmd(cmd.Cmd):
             traceback.print_exc()
 
         if isinstance(msg, Exception):
-            final_msg = "EXCEPTION of type '{}' occurred with message: '{}'".format(type(msg).__name__, msg)
+            final_msg = f"EXCEPTION of type '{type(msg).__name__}' occurred with message: {msg}"
         else:
-            final_msg = "{}".format(msg)
+            final_msg = str(msg)
 
         if apply_style:
             final_msg = ansi.style_error(final_msg)
@@ -1119,7 +1117,7 @@ class Cmd(cmd.Cmd):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
         Inclusion in redirected output is controlled by `feedback_to_output`.
 
-        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
+        :param msg: message to print (anything convertible to a str)
         :param end: string appended after the end of the message, default a newline
         """
         if not self.quiet:
@@ -1134,7 +1132,7 @@ class Cmd(cmd.Cmd):
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
-        :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
+        :param msg: message to print to current stdout (anything convertible to a str)
         :param end: string appended after the end of the message, default a newline
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
@@ -2341,7 +2339,7 @@ class Cmd(cmd.Cmd):
                 stop = self.postcmd(stop, statement)
 
                 if self.timing:
-                    self.pfeedback('Elapsed: {}'.format(datetime.datetime.now() - timestart))
+                    self.pfeedback(f'Elapsed: {datetime.datetime.now() - timestart}')
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
@@ -2355,7 +2353,7 @@ class Cmd(cmd.Cmd):
             # Don't do anything, but do allow command finalization hooks to run
             pass
         except Cmd2ShlexError as ex:
-            self.perror("Invalid syntax: {}".format(ex))
+            self.perror(f"Invalid syntax: {ex}")
         except RedirectionError as ex:
             self.perror(ex)
         except KeyboardInterrupt as ex:
@@ -2424,7 +2422,7 @@ class Cmd(cmd.Cmd):
                 line = line.raw
 
             if self.echo:
-                self.poutput('{}{}'.format(self.prompt, line))
+                self.poutput(f'{self.prompt}{line}')
 
             try:
                 if self.onecmd_plus_hooks(
@@ -2486,7 +2484,7 @@ class Cmd(cmd.Cmd):
                     # terminator
                     nextline = '\n'
                     self.poutput(nextline)
-                line = '{}{}'.format(self._multiline_in_progress, nextline)
+                line = f'{self._multiline_in_progress}{nextline}'
             except KeyboardInterrupt as ex:
                 if self.quit_on_sigint:
                     raise ex
@@ -2558,13 +2556,14 @@ class Cmd(cmd.Cmd):
         :return: the resolved macro or None on error
         """
         if statement.command not in self.macros.keys():
-            raise KeyError('{} is not a macro'.format(statement.command))
+            raise KeyError(f"{statement.command} is not a macro")
 
         macro = self.macros[statement.command]
 
         # Make sure enough arguments were passed in
         if len(statement.arg_list) < macro.minimum_arg_count:
-            self.perror("The macro '{}' expects at least {} argument(s)".format(statement.command, macro.minimum_arg_count))
+            plural = '' if macro.minimum_arg_count == 1 else 's'
+            self.perror(f"The macro '{statement.command}' expects at least {macro.minimum_arg_count} argument{plural}")
             return None
 
         # Resolve the arguments in reverse and read their values from statement.argv since those
@@ -2652,7 +2651,7 @@ class Cmd(cmd.Cmd):
             if proc.returncode is not None:
                 subproc_stdin.close()
                 new_stdout.close()
-                raise RedirectionError('Pipe process exited with code {} before command could run'.format(proc.returncode))
+                raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
             else:
                 redir_saved_state.redirecting = True
                 cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
@@ -2935,7 +2934,7 @@ class Cmd(cmd.Cmd):
             else:
                 line = input()
                 if self.echo:
-                    sys.stdout.write('{}{}\n'.format(prompt, line))
+                    sys.stdout.write(f'{prompt}{line}\n')
 
         # Otherwise read from self.stdin
         else:
@@ -2954,7 +2953,7 @@ class Cmd(cmd.Cmd):
                 if len(line):
                     # we read something, output the prompt and the something
                     if self.echo:
-                        self.poutput('{}{}'.format(prompt, line))
+                        self.poutput(f'{prompt}{line}')
                 else:
                     line = 'eof'
 
@@ -3124,7 +3123,7 @@ class Cmd(cmd.Cmd):
         # Validate the alias name
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
-            self.perror("Invalid alias name: {}".format(errmsg))
+            self.perror(f"Invalid alias name: {errmsg}")
             return
 
         if args.name in self.get_all_commands():
@@ -3147,7 +3146,7 @@ class Cmd(cmd.Cmd):
 
         # Set the alias
         result = "overwritten" if args.name in self.aliases else "created"
-        self.poutput("Alias '{}' {}".format(args.name, result))
+        self.poutput(f"Alias '{args.name}' {result}")
 
         self.aliases[args.name] = value
 
@@ -3177,9 +3176,9 @@ class Cmd(cmd.Cmd):
             for cur_name in utils.remove_duplicates(args.names):
                 if cur_name in self.aliases:
                     del self.aliases[cur_name]
-                    self.poutput("Alias '{}' deleted".format(cur_name))
+                    self.poutput(f"Alias '{cur_name}' deleted")
                 else:
-                    self.perror("Alias '{}' does not exist".format(cur_name))
+                    self.perror(f"Alias '{cur_name}' does not exist")
 
     # alias -> list
     alias_list_help = "list aliases"
@@ -3226,10 +3225,10 @@ class Cmd(cmd.Cmd):
             if args:
                 val += ' ' + ' '.join(command_args)
 
-            self.poutput("alias create {} {}".format(name, val))
+            self.poutput(f"alias create {name} {val}")
 
         for name in not_found:
-            self.perror("Alias '{}' not found".format(name))
+            self.perror(f"Alias '{name}' not found")
 
     #############################################################
     # Parsers and functions for macro command and subcommands
@@ -3306,7 +3305,7 @@ class Cmd(cmd.Cmd):
         # Validate the macro name
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
-            self.perror("Invalid macro name: {}".format(errmsg))
+            self.perror(f"Invalid macro name: {errmsg}")
             return
 
         if args.name in self.get_all_commands():
@@ -3355,7 +3354,7 @@ class Cmd(cmd.Cmd):
 
         # Make sure the argument numbers are continuous
         if len(arg_nums) != max_arg_num:
-            self.perror("Not all numbers between 1 and {} are present " "in the argument placeholders".format(max_arg_num))
+            self.perror(f"Not all numbers between 1 and {max_arg_num} are present in the argument placeholders")
             return
 
         # Find all escaped arguments
@@ -3374,7 +3373,7 @@ class Cmd(cmd.Cmd):
 
         # Set the macro
         result = "overwritten" if args.name in self.macros else "created"
-        self.poutput("Macro '{}' {}".format(args.name, result))
+        self.poutput(f"Macro '{args.name}' {result}")
 
         self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
 
@@ -3403,9 +3402,9 @@ class Cmd(cmd.Cmd):
             for cur_name in utils.remove_duplicates(args.names):
                 if cur_name in self.macros:
                     del self.macros[cur_name]
-                    self.poutput("Macro '{}' deleted".format(cur_name))
+                    self.poutput(f"Macro '{cur_name}' deleted")
                 else:
-                    self.perror("Macro '{}' does not exist".format(cur_name))
+                    self.perror(f"Macro '{cur_name}' does not exist")
 
     # macro -> list
     macro_list_help = "list macros"
@@ -3452,10 +3451,10 @@ class Cmd(cmd.Cmd):
             if command_args:
                 val += ' ' + ' '.join(command_args)
 
-            self.poutput("macro create {} {}".format(name, val))
+            self.poutput(f"macro create {name} {val}")
 
         for name in not_found:
-            self.perror("Macro '{}' not found".format(name))
+            self.perror(f"Macro '{name}' not found")
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
@@ -3548,14 +3547,14 @@ class Cmd(cmd.Cmd):
         """Show a list of commands which help can be displayed for"""
         cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
 
-        if len(cmds_cats) == 0:
+        if not cmds_cats:
             # No categories found, fall back to standard behavior
-            self.poutput("{}".format(str(self.doc_leader)))
+            self.poutput(self.doc_leader)
             self._print_topics(self.doc_header, cmds_doc, verbose)
         else:
             # Categories found, Organize all commands by category
-            self.poutput('{}'.format(str(self.doc_leader)))
-            self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
+            self.poutput(self.doc_leader)
+            self.poutput(self.doc_header, end="\n\n")
             for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
                 self._print_topics(category, cmds_cats[category], verbose)
             self._print_topics(self.default_category, cmds_doc, verbose)
@@ -3601,7 +3600,7 @@ class Cmd(cmd.Cmd):
             if not verbose:
                 self.print_topics(header, cmds, 15, 80)
             else:
-                self.stdout.write('{}\n'.format(str(header)))
+                self.poutput(f'{header}')
                 widest = 0
                 # measure the commands
                 for command in cmds:
@@ -3614,7 +3613,8 @@ class Cmd(cmd.Cmd):
                     widest = 20
 
                 if self.ruler:
-                    self.stdout.write('{:{ruler}<{width}}\n'.format('', ruler=self.ruler, width=80))
+                    ruler_line = utils.align_left('', width=80, fill_char=self.ruler)
+                    self.poutput(f'{ruler_line}')
 
                 # Try to get the documentation string for each command
                 topics = self.get_help_topics()
@@ -3664,9 +3664,9 @@ class Cmd(cmd.Cmd):
                                 break
 
                     for doc_line in doc_block:
-                        self.stdout.write('{: <{col_width}}{doc}\n'.format(command, col_width=widest, doc=doc_line))
+                        self.poutput(f'{command: <{widest}}{doc_line}')
                         command = ''
-                self.stdout.write("\n")
+                self.poutput()
 
     shortcuts_parser = DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
 
@@ -3676,7 +3676,7 @@ class Cmd(cmd.Cmd):
         # Sort the shortcut tuples by name
         sorted_shortcuts = sorted(self.statement_parser.shortcuts, key=lambda x: self.default_sort_key(x[0]))
         result = "\n".join('{}: {}'.format(sc[0], sc[1]) for sc in sorted_shortcuts)
-        self.poutput("Shortcuts for other commands:\n{}".format(result))
+        self.poutput(f"Shortcuts for other commands:\n{result}")
 
     eof_parser = DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed", epilog=INTERNAL_COMMAND_EPILOG)
 
@@ -3741,7 +3741,7 @@ class Cmd(cmd.Cmd):
                     raise IndexError
                 return str(fulloptions[choice - 1][0])
             except (ValueError, IndexError):
-                self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:".format(response, len(fulloptions)))
+                self.poutput(f"'{response}' isn't a valid choice. Pick a number between 1 and {len(fulloptions)}:")
 
     def complete_set_value(
         self, text: str, line: str, begidx: int, endidx: int, arg_tokens: Dict[str, List[str]]
@@ -3815,7 +3815,7 @@ class Cmd(cmd.Cmd):
             try:
                 settable = self.settables[args.param]
             except KeyError:
-                self.perror("Parameter '{}' not supported (type 'set' for list of parameters).".format(args.param))
+                self.perror(f"Parameter '{args.param}' not supported (type 'set' for list of parameters).")
                 return
 
             if args.value:
@@ -3825,10 +3825,9 @@ class Cmd(cmd.Cmd):
                     new_value = settable.set_value(utils.strip_quotes(args.value))
                 # noinspection PyBroadException
                 except Exception as e:
-                    err_msg = "Error setting {}: {}".format(args.param, e)
-                    self.perror(err_msg)
+                    self.perror(f"Error setting {args.param}: {e}")
                 else:
-                    self.poutput('{} - was: {!r}\nnow: {!r}'.format(args.param, orig_value, new_value))
+                    self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {new_value!r}")
                 return
 
             # Show one settable
@@ -3842,14 +3841,14 @@ class Cmd(cmd.Cmd):
         results = dict()
         for param in to_show:
             settable = self.settables[param]
-            results[param] = '{}: {!r}'.format(param, settable.get_value())
+            results[param] = f"{param}: {settable.get_value()!r}"
             max_len = max(max_len, ansi.style_aware_wcswidth(results[param]))
 
         # Display the results
         for param in sorted(results, key=self.default_sort_key):
             result_str = results[param]
             if args.verbose:
-                self.poutput('{} # {}'.format(utils.align_left(result_str, width=max_len), self.settables[param].description))
+                self.poutput(f'{utils.align_left(result_str, width=max_len)} # {self.settables[param].description}')
             else:
                 self.poutput(result_str)
 
@@ -4368,7 +4367,7 @@ class Cmd(cmd.Cmd):
                             fobj.write(f"{item.expanded}\n")
                         else:
                             fobj.write(f"{item.raw}\n")
-                plural = 's' if len(history) > 1 else ''
+                plural = '' if len(history) == 1 else 's'
             except OSError as ex:
                 self.perror(f"Error saving history file '{full_path}': {ex}")
             else:
@@ -4575,10 +4574,10 @@ class Cmd(cmd.Cmd):
             self.perror(f"Error saving transcript file '{transcript_path}': {ex}")
         else:
             # and let the user know what we did
-            if commands_run > 1:
-                plural = 'commands and their outputs'
-            else:
+            if commands_run == 1:
                 plural = 'command and its output'
+            else:
+                plural = 'commands and their outputs'
             self.pfeedback(f"{commands_run} {plural} saved to transcript file '{transcript_path}'")
 
     edit_description = (
@@ -4753,10 +4752,10 @@ class Cmd(cmd.Cmd):
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
         self.poutput(ansi.style(utils.align_center(' cmd2 transcript test ', fill_char='='), bold=True))
-        self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__, rl_type))
-        self.poutput('cwd: {}'.format(os.getcwd()))
-        self.poutput('cmd2 app: {}'.format(sys.argv[0]))
-        self.poutput(ansi.style('collected {} transcript{}'.format(num_transcripts, plural), bold=True))
+        self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}, readline-{rl_type}')
+        self.poutput(f'cwd: {os.getcwd()}')
+        self.poutput(f'cmd2 app: {sys.argv[0]}')
+        self.poutput(ansi.style(f'collected {num_transcripts} transcript{plural}', bold=True))
 
         setattr(self.__class__, 'testfiles', transcripts_expanded)
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -4769,7 +4768,7 @@ class Cmd(cmd.Cmd):
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
             ansi.style_aware_write(sys.stderr, stream.read())
-            finish_msg = ' {0} transcript{1} passed in {2:.3f} seconds '.format(num_transcripts, plural, execution_time)
+            finish_msg = f' {num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds '
             finish_msg = ansi.style_success(utils.align_center(finish_msg, fill_char='='))
             self.poutput(finish_msg)
         else:
@@ -4949,9 +4948,9 @@ class Cmd(cmd.Cmd):
         :param command: the command being disabled
         :param message_to_print: what to print when this command is run or help is called on it while disabled
 
-                                 The variable COMMAND_NAME can be used as a placeholder for the name of the
+                                 The variable cmd2.COMMAND_NAME can be used as a placeholder for the name of the
                                  command being disabled.
-                                 ex: message_to_print = "{} is currently disabled".format(COMMAND_NAME)
+                                 ex: message_to_print = f"{cmd2.COMMAND_NAME} is currently disabled"
         """
         # If the commands is already disabled, then return
         if command in self.disabled_commands:
@@ -4960,7 +4959,7 @@ class Cmd(cmd.Cmd):
         # Make sure this is an actual command
         command_function = self.cmd_func(command)
         if command_function is None:
-            raise AttributeError("{} does not refer to a command".format(command))
+            raise AttributeError(f"'{command}' does not refer to a command")
 
         help_func_name = constants.HELP_FUNC_PREFIX + command
         completer_func_name = constants.COMPLETER_FUNC_PREFIX + command
@@ -4987,9 +4986,9 @@ class Cmd(cmd.Cmd):
 
         :param category: the category to disable
         :param message_to_print: what to print when anything in this category is run or help is called on it
-                                 while disabled. The variable COMMAND_NAME can be used as a placeholder for the name
+                                 while disabled. The variable cmd2.COMMAND_NAME can be used as a placeholder for the name
                                  of the command being disabled.
-                                 ex: message_to_print = "{} is currently disabled".format(COMMAND_NAME)
+                                 ex: message_to_print = f"{cmd2.COMMAND_NAME} is currently disabled"
         """
         all_commands = self.get_all_commands()
 
@@ -5089,13 +5088,8 @@ class Cmd(cmd.Cmd):
         # validate that the callable has the right number of parameters
         nparam = len(signature.parameters)
         if nparam != count:
-            raise TypeError(
-                '{} has {} positional arguments, expected {}'.format(
-                    func.__name__,
-                    nparam,
-                    count,
-                )
-            )
+            plural = '' if nparam == 1 else 's'
+            raise TypeError(f'{func.__name__} has {nparam} positional argument{plural}, expected {count}')
 
     @classmethod
     def _validate_prepostloop_callable(cls, func: Callable[[], None]) -> None:
@@ -5104,11 +5098,7 @@ class Cmd(cmd.Cmd):
         # make sure there is no return notation
         signature = inspect.signature(func)
         if signature.return_annotation is not None:
-            raise TypeError(
-                "{} must declare return a return type of 'None'".format(
-                    func.__name__,
-                )
-            )
+            raise TypeError(f"{func.__name__} must declare return a return type of 'None'")
 
     def register_preloop_hook(self, func: Callable[[], None]) -> None:
         """Register a function to be called at the beginning of the command loop."""
@@ -5127,11 +5117,9 @@ class Cmd(cmd.Cmd):
         signature = inspect.signature(func)
         _, param = list(signature.parameters.items())[0]
         if param.annotation != plugin.PostparsingData:
-            raise TypeError(
-                "{} must have one parameter declared with type 'cmd2.plugin.PostparsingData'".format(func.__name__)
-            )
+            raise TypeError(f"{func.__name__} must have one parameter declared with type 'cmd2.plugin.PostparsingData'")
         if signature.return_annotation != plugin.PostparsingData:
-            raise TypeError("{} must declare return a return type of 'cmd2.plugin.PostparsingData'".format(func.__name__))
+            raise TypeError(f"{func.__name__} must declare return a return type of 'cmd2.plugin.PostparsingData'")
 
     def register_postparsing_hook(self, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Register a function to be called after parsing user input but before running the command"""
@@ -5152,28 +5140,13 @@ class Cmd(cmd.Cmd):
         paramname = list(signature.parameters.keys())[0]
         param = signature.parameters[paramname]
         if param.annotation != data_type:
-            raise TypeError(
-                'argument 1 of {} has incompatible type {}, expected {}'.format(
-                    func.__name__,
-                    param.annotation,
-                    data_type,
-                )
-            )
+            raise TypeError(f'argument 1 of {func.__name__} has incompatible type {param.annotation}, expected {data_type}')
         # validate the return value has the right annotation
         if signature.return_annotation == signature.empty:
-            raise TypeError(
-                '{} does not have a declared return type, expected {}'.format(
-                    func.__name__,
-                    data_type,
-                )
-            )
+            raise TypeError(f'{func.__name__} does not have a declared return type, expected {data_type}')
         if signature.return_annotation != data_type:
             raise TypeError(
-                '{} has incompatible return type {}, expected {}'.format(
-                    func.__name__,
-                    signature.return_annotation,
-                    data_type,
-                )
+                f'{func.__name__} has incompatible return type {signature.return_annotation}, expected ' f'{data_type}'
             )
 
     def register_precmd_hook(self, func: Callable[[plugin.PrecommandData], plugin.PrecommandData]) -> None:
@@ -5195,11 +5168,9 @@ class Cmd(cmd.Cmd):
         signature = inspect.signature(func)
         _, param = list(signature.parameters.items())[0]
         if param.annotation != plugin.CommandFinalizationData:
-            raise TypeError(
-                "{} must have one parameter declared with type {}".format(func.__name__, plugin.CommandFinalizationData)
-            )
+            raise TypeError(f"{func.__name__} must have one parameter declared with type {plugin.CommandFinalizationData}")
         if signature.return_annotation != plugin.CommandFinalizationData:
-            raise TypeError("{} must declare return a return type of {}".format(func.__name__, plugin.CommandFinalizationData))
+            raise TypeError("{func.__name__} must declare return a return type of {plugin.CommandFinalizationData}")
 
     def register_cmdfinalization_hook(
         self, func: Callable[[plugin.CommandFinalizationData], plugin.CommandFinalizationData]

@@ -78,7 +78,7 @@ class ColorBase(Enum):
         """
         Return ANSI color sequence instead of enum name
         This is helpful when using a ColorBase in an f-string or format() call
-        e.g. my_str = "{}hello{}".format(fg.blue, fg.reset)
+        e.g. my_str = f"{fg.blue}hello{fg.reset}"
         """
         return str(self.value)
 
@@ -244,7 +244,7 @@ def fg_lookup(fg_name: Union[str, fg]) -> str:
     try:
         ansi_escape = fg[fg_name.lower()].value
     except KeyError:
-        raise ValueError('Foreground color {!r} does not exist; must be one of: {}'.format(fg_name, fg.colors()))
+        raise ValueError(f"Foreground color '{fg_name}' does not exist; must be one of: {fg.colors()}")
     return str(ansi_escape)
 
 
@@ -262,7 +262,7 @@ def bg_lookup(bg_name: Union[str, bg]) -> str:
     try:
         ansi_escape = bg[bg_name.lower()].value
     except KeyError:
-        raise ValueError('Background color {!r} does not exist; must be one of: {}'.format(bg_name, bg.colors()))
+        raise ValueError(f"Background color '{bg_name}' does not exist; must be one of: {bg.colors()}")
     return str(ansi_escape)
 
 
@@ -274,14 +274,14 @@ def style(
     bg: Union[str, bg] = '',
     bold: bool = False,
     dim: bool = False,
-    underline: bool = False
+    underline: bool = False,
 ) -> str:
     """
     Apply ANSI colors and/or styles to a string and return it.
     The styling is self contained which means that at the end of the string reset code(s) are issued
     to undo whatever styling was done at the beginning.
 
-    :param text: Any object compatible with str.format()
+    :param text: text to format (anything convertible to a str)
     :param fg: foreground color. Relies on `fg_lookup()` to retrieve ANSI escape based on name or enum.
                Defaults to no color.
     :param bg: background color. Relies on `bg_lookup()` to retrieve ANSI escape based on name or enum.
@@ -298,7 +298,7 @@ def style(
     removals: List[str] = []
 
     # Convert the text object into a string if it isn't already one
-    text_formatted = "{}".format(text)
+    text_formatted = str(text)
 
     # Process the style settings
     if fg:

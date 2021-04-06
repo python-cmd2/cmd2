@@ -298,7 +298,7 @@ def with_argparser(
     >>>     @cmd2.with_argparser(parser, preserve_quotes=True)
     >>>     def do_argprint(self, args):
     >>>         "Print the options and argument list this options command was called with."
-    >>>         self.poutput('args: {!r}'.format(args))
+    >>>         self.poutput(f'args: {args!r}')
 
     :Example with unknown args:
 
@@ -311,8 +311,8 @@ def with_argparser(
     >>>     @cmd2.with_argparser(parser, with_unknown_args=True)
     >>>     def do_argprint(self, args, unknown):
     >>>         "Print the options and argument list this options command was called with."
-    >>>         self.poutput('args: {!r}'.format(args))
-    >>>         self.poutput('unknowns: {}'.format(unknown))
+    >>>         self.poutput(f'args: {args!r}')
+    >>>         self.poutput(f'unknowns: {unknown}')
 
     """
     import functools

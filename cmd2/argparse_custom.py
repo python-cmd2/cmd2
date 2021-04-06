@@ -256,18 +256,16 @@ def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
     err_str = "expected "
 
     if range_max == constants.INFINITY:
-        err_str += "at least {} argument".format(range_min)
-
-        if range_min != 1:
-            err_str += "s"
+        plural = '' if range_min == 1 else 's'
+        err_str += f"at least {range_min}"
     else:
+        plural = '' if range_max == 1 else 's'
         if range_min == range_max:
-            err_str += "{} argument".format(range_min)
+            err_str += f"{range_min}"
         else:
-            err_str += "{} to {} argument".format(range_min, range_max)
+            err_str += f"{range_min} to {range_max}"
 
-        if range_max != 1:
-            err_str += "s"
+    err_str += f" argument{plural}"
 
     return err_str
 
@@ -600,7 +598,7 @@ def _get_nargs_pattern_wrapper(self: argparse.ArgumentParser, action: argparse.A
         else:
             range_max = nargs_range[1]
 
-        nargs_pattern = '(-*A{{{},{}}}-*)'.format(nargs_range[0], range_max)
+        nargs_pattern = f'(-*A{{{nargs_range[0]},{range_max}}}-*)'
 
         # if this is an optional action, -- is not allowed
         if action.option_strings:
@@ -881,9 +879,9 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
         if nargs_range is not None:
             if nargs_range[1] == constants.INFINITY:
-                range_str = '{}+'.format(nargs_range[0])
+                range_str = f'{nargs_range[0]}+'
             else:
-                range_str = '{}..{}'.format(nargs_range[0], nargs_range[1])
+                range_str = f'{nargs_range[0]}..{nargs_range[1]}'
 
             return '{}{{{}}}'.format('%s' % metavar_formatter(1), range_str)
 
@@ -960,7 +958,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.print_usage(sys.stderr)
         formatted_message = ansi.style_error(formatted_message)
-        self.exit(2, '{}\n\n'.format(formatted_message))
+        self.exit(2, f'{formatted_message}\n\n')
 
     # noinspection PyProtectedMember
     def format_help(self) -> str:
