@@ -2131,6 +2131,34 @@ def test_pwarning_no_style(base_app, capsys):
     assert err == msg + end
 
 
+def test_pexcept_style(base_app, capsys):
+    msg = Exception('testing...')
+    ansi.allow_style = ansi.STYLE_ALWAYS
+
+    base_app.pexcept(msg)
+    out, err = capsys.readouterr()
+    assert err.startswith(ansi.style_error("EXCEPTION of type 'Exception' occurred with message: testing..."))
+
+
+def test_pexcept_no_style(base_app, capsys):
+    msg = Exception('testing...')
+    ansi.allow_style = ansi.STYLE_ALWAYS
+
+    base_app.pexcept(msg, apply_style=False)
+    out, err = capsys.readouterr()
+    assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
+
+
+def test_pexcept_not_exception(base_app, capsys):
+    # Pass in a msg that is not an Exception object
+    msg = False
+    ansi.allow_style = ansi.STYLE_ALWAYS
+
+    base_app.pexcept(msg)
+    out, err = capsys.readouterr()
+    assert err.startswith(ansi.style_error(msg))
+
+
 def test_ppaged(outsim_app):
     msg = 'testing...'
     end = '\n'
