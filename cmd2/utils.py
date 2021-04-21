@@ -952,7 +952,7 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     If there are ANSI style sequences in the string after where truncation occurs, this function will append them
     to the returned string.
 
-    This is done to prevent issues caused in cases like: truncate_string(fg.blue + hello + fg.reset, 3)
+    This is done to prevent issues caused in cases like: truncate_line(fg.blue + hello + fg.reset, 3)
     In this case, "hello" would be truncated before fg.reset resets the color from blue. Appending the remaining style
     sequences makes sure the style is in the same state had the entire string been printed. align_text() relies on this
     behavior when preserving style over multiple lines.
