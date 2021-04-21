@@ -45,6 +45,7 @@
     * ipy command now includes all of `self.py_locals` in the IPython environment
     * Added `include_py` keyword parameter to `cmd2.Cmd.__init__()`. If `False`, then the `py` command will
       not be available. Defaults to `False`. `run_pyscript` is not affected by this parameter.
+    * Made the amount of space between columns in a SimpleTable configurable
 
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes
