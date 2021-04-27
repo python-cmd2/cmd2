@@ -8,7 +8,7 @@ import random
 
 
 class CmdLineApp(cmd.Cmd):
-    """ Example cmd application. """
+    """Example cmd application."""
 
     MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
     MUMBLE_FIRST = ['so', 'like', 'well']

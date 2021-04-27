@@ -19,7 +19,7 @@ import cmd2
 
 
 class CmdLineApp(cmd2.Cmd):
-    """ Example cmd2 application. """
+    """Example cmd2 application."""
 
     def __init__(self, ip_addr=None, port=None, transcript_files=None):
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)

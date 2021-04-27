@@ -19,7 +19,7 @@ import cmd2
 
 
 class CmdLineApp(cmd2.Cmd):
-    """ Example cmd2 application. """
+    """Example cmd2 application."""
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
     # default_to_shell = True

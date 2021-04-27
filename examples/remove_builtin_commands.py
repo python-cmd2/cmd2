@@ -13,7 +13,7 @@ import cmd2
 
 
 class RemoveBuiltinCommands(cmd2.Cmd):
-    """ Example cmd2 application where we remove some unused built-in commands."""
+    """Example cmd2 application where we remove some unused built-in commands."""
 
     def __init__(self):
         super().__init__()

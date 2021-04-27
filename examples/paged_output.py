@@ -11,7 +11,7 @@ import cmd2
 
 
 class PagedOutput(cmd2.Cmd):
-    """ Example cmd2 application which shows how to display output using a pager."""
+    """Example cmd2 application which shows how to display output using a pager."""
 
     def __init__(self):
         super().__init__()

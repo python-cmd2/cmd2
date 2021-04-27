@@ -30,7 +30,7 @@ from cmd2 import (
 
 
 class CmdLineApp(cmd2.Cmd):
-    """ Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 apps."""
+    """Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 apps."""
 
     def __init__(self):
         # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell

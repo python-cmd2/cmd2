@@ -15,7 +15,7 @@ import cmd2
 
 
 class ArgumentAndOptionPrinter(cmd2.Cmd):
-    """ Example cmd2 application where we create commands that just print the arguments they are called with."""
+    """Example cmd2 application where we create commands that just print the arguments they are called with."""
 
     def __init__(self):
         # Create command shortcuts which are typically 1 character abbreviations which can be used in place of a command

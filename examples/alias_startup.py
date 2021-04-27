@@ -10,7 +10,7 @@ import cmd2
 
 
 class AliasAndStartup(cmd2.Cmd):
-    """ Example cmd2 application where we create commands that just print the arguments they are called with."""
+    """Example cmd2 application where we create commands that just print the arguments they are called with."""
 
     def __init__(self):
         alias_script = os.path.join(os.path.dirname(__file__), '.cmd2rc')
