@@ -535,21 +535,27 @@ class SimpleTable(TableCreator):
     This class can be used to create the whole table at once or one row at a time.
     """
 
-    # Spaces between cells
-    INTER_CELL = 2 * SPACE
-
-    def __init__(self, cols: Sequence[Column], *, tab_width: int = 4, divider_char: Optional[str] = '-') -> None:
+    def __init__(
+        self, cols: Sequence[Column], *, column_spacing: int = 2, tab_width: int = 4, divider_char: Optional[str] = '-'
+    ) -> None:
         """
         SimpleTable initializer
 
         :param cols: column definitions for this table
+        :param column_spacing: how many spaces to place between columns. Defaults to 2.
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
                           then it will be converted to one space.
         :param divider_char: optional character used to build the header divider row. Set this to None if you don't
                              want a divider row. Defaults to dash. (Cannot be a line breaking character)
-        :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-        :raises: ValueError if text or fill_char contains an unprintable character
+        :raises: ValueError if column_spacing is less than 0
+        :raises: ValueError if tab_width is less than 1
+        :raises: TypeError if divider_char is longer than one character
+        :raises: ValueError if divider_char is an unprintable character
         """
+        if column_spacing < 0:
+            raise ValueError("Column spacing cannot be less than 0")
+        self.inter_cell = column_spacing * SPACE
+
         if divider_char is not None:
             if len(ansi.strip_style(divider_char)) != 1:
                 raise TypeError("Divider character must be exactly one character long")
@@ -562,13 +568,15 @@ class SimpleTable(TableCreator):
         self.divider_char = divider_char
 
     @classmethod
-    def base_width(cls, num_cols: int) -> int:
+    def base_width(cls, num_cols: int, *, column_spacing: int = 2) -> int:
         """
         Utility method to calculate the display width required for a table before data is added to it.
         This is useful when determining how wide to make your columns to have a table be a specific width.
 
         :param num_cols: how many columns the table will have
+        :param column_spacing: how many spaces to place between columns. Defaults to 2.
         :return: base width
+        :raises: ValueError if column_spacing is less than 0
         :raises: ValueError if num_cols is less than 1
         """
         if num_cols < 1:
@@ -577,14 +585,14 @@ class SimpleTable(TableCreator):
         data_str = SPACE
         data_width = ansi.style_aware_wcswidth(data_str) * num_cols
 
-        tbl = cls([Column(data_str)] * num_cols)
+        tbl = cls([Column(data_str)] * num_cols, column_spacing=column_spacing)
         data_row = tbl.generate_data_row([data_str] * num_cols)
 
         return ansi.style_aware_wcswidth(data_row) - data_width
 
     def total_width(self) -> int:
         """Calculate the total display width of this table"""
-        base_width = self.base_width(len(self.cols))
+        base_width = self.base_width(len(self.cols), column_spacing=ansi.style_aware_wcswidth(self.inter_cell))
         data_width = sum(col.width for col in self.cols)
         return base_width + data_width
 
@@ -593,7 +601,7 @@ class SimpleTable(TableCreator):
         header_buf = io.StringIO()
 
         # Create the header labels
-        header = self.generate_row(inter_cell=self.INTER_CELL)
+        header = self.generate_row(inter_cell=self.inter_cell)
         header_buf.write(header)
 
         # Create the divider if necessary
@@ -617,7 +625,7 @@ class SimpleTable(TableCreator):
         :param row_data: data with an entry for each column in the row
         :return: data row string
         """
-        return self.generate_row(row_data=row_data, inter_cell=self.INTER_CELL)
+        return self.generate_row(row_data=row_data, inter_cell=self.inter_cell)
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True, row_spacing: int = 1) -> str:
         """

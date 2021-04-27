@@ -338,6 +338,18 @@ def test_simple_table_creation():
         'Col 1 Row 2       Col 2 Row 2     '
     )
 
+    # Custom column spacing
+    st = SimpleTable([column_1, column_2], column_spacing=5)
+    table = st.generate_table(row_data)
+
+    assert table == (
+        'Col 1                Col 2           \n'
+        '-------------------------------------\n'
+        'Col 1 Row 1          Col 2 Row 1     \n'
+        '\n'
+        'Col 1 Row 2          Col 2 Row 2     '
+    )
+
     # Custom divider
     st = SimpleTable([column_1, column_2], divider_char='─')
     table = st.generate_table(row_data)
@@ -403,6 +415,11 @@ def test_simple_table_creation():
         '\n'
         'Col 1 Row 2       Col 2 Row 2      '
     )
+
+    # Invalid column spacing
+    with pytest.raises(ValueError) as excinfo:
+        SimpleTable([column_1, column_2], column_spacing=-1)
+    assert "Column spacing cannot be less than 0" in str(excinfo.value)
 
     # Invalid divider character
     with pytest.raises(TypeError) as excinfo:
