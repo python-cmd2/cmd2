@@ -2667,17 +2667,17 @@ def test_disabled_message_command_name(disable_commands_app):
     assert err[0].startswith('has_helper_funcs is currently disabled')
 
 
-@pytest.mark.parametrize('silent_startup_script', [True, False])
-def test_startup_script(request, capsys, silent_startup_script):
+@pytest.mark.parametrize('silence_startup_script', [True, False])
+def test_startup_script(request, capsys, silence_startup_script):
     test_dir = os.path.dirname(request.module.__file__)
     startup_script = os.path.join(test_dir, '.cmd2rc')
-    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script, silent_startup_script=silent_startup_script)
+    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script, silence_startup_script=silence_startup_script)
     assert len(app._startup_commands) == 1
     app._startup_commands.append('quit')
     app.cmdloop()
 
     out, err = capsys.readouterr()
-    if silent_startup_script:
+    if silence_startup_script:
         assert not out
     else:
         assert out
