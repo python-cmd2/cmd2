@@ -244,7 +244,7 @@ def test_preservelist(argparse_app):
 
 
 class SubcommandApp(cmd2.Cmd):
-    """ Example cmd2 application where we a base command which has a couple subcommands."""
+    """Example cmd2 application where we a base command which has a couple subcommands."""
 
     def __init__(self):
         cmd2.Cmd.__init__(self)

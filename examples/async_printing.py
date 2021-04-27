@@ -32,10 +32,10 @@ ALERTS = [
 
 
 class AlerterApp(cmd2.Cmd):
-    """ An app that shows off async_alert() and async_update_prompt() """
+    """An app that shows off async_alert() and async_update_prompt()"""
 
     def __init__(self, *args, **kwargs) -> None:
-        """ Initializer """
+        """Initializer"""
         super().__init__(*args, **kwargs)
 
         self.prompt = "(APR)> "
@@ -51,7 +51,7 @@ class AlerterApp(cmd2.Cmd):
         self.register_postloop_hook(self._postloop_hook)
 
     def _preloop_hook(self) -> None:
-        """ Start the alerter thread """
+        """Start the alerter thread"""
         # This runs after cmdloop() acquires self.terminal_lock, which will be locked until the prompt appears.
         # Therefore this is the best place to start the alerter thread since there is no risk of it alerting
         # before the prompt is displayed. You can also start it via a command if its not something that should
@@ -62,7 +62,7 @@ class AlerterApp(cmd2.Cmd):
         self._alerter_thread.start()
 
     def _postloop_hook(self) -> None:
-        """ Stops the alerter thread """
+        """Stops the alerter thread"""
 
         # After this function returns, cmdloop() releases self.terminal_lock which could make the alerter
         # thread think the prompt is on screen. Therefore this is the best place to stop the alerter thread.
@@ -72,7 +72,7 @@ class AlerterApp(cmd2.Cmd):
             self._alerter_thread.join()
 
     def do_start_alerts(self, _):
-        """ Starts the alerter thread """
+        """Starts the alerter thread"""
         if self._alerter_thread.is_alive():
             print("The alert thread is already started")
         else:
@@ -81,7 +81,7 @@ class AlerterApp(cmd2.Cmd):
             self._alerter_thread.start()
 
     def do_stop_alerts(self, _):
-        """ Stops the alerter thread """
+        """Stops the alerter thread"""
         self._stop_event.set()
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
@@ -167,7 +167,7 @@ class AlerterApp(cmd2.Cmd):
         return style(self.visible_prompt, fg=status_color)
 
     def _alerter_thread_func(self) -> None:
-        """ Prints alerts and updates the prompt any time the prompt is showing """
+        """Prints alerts and updates the prompt any time the prompt is showing"""
 
         self._alert_count = 0
         self._next_alert_time = 0

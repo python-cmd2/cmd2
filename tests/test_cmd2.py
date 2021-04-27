@@ -2304,7 +2304,7 @@ def test_get_help_topics_hidden():
 
 
 class ReplWithExitCode(cmd2.Cmd):
-    """ Example cmd2 application where we can specify an exit code when existing."""
+    """Example cmd2 application where we can specify an exit code when existing."""
 
     def __init__(self):
         super().__init__(allow_cli_args=False)

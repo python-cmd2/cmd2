@@ -7,7 +7,7 @@ import cmd2
 
 
 class EnvironmentApp(cmd2.Cmd):
-    """ Example cmd2 application. """
+    """Example cmd2 application."""
 
     def __init__(self):
         super().__init__()

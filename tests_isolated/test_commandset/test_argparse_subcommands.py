@@ -17,7 +17,7 @@ from .conftest import (
 
 
 class SubcommandSet(cmd2.CommandSet):
-    """ Example cmd2 application where we a base command which has a couple subcommands."""
+    """Example cmd2 application where we a base command which has a couple subcommands."""
 
     def __init__(self, dummy):
         super(SubcommandSet, self).__init__()

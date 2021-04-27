@@ -23,7 +23,7 @@ def my_decorator(f):
 
 
 class HelpCategories(cmd2.Cmd):
-    """ Example cmd2 application. """
+    """Example cmd2 application."""
 
     START_TIMES = ['now', 'later', 'sometime', 'whenever']
 

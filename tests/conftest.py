@@ -141,7 +141,7 @@ def normalize(block):
 
 
 def run_cmd(app, cmd):
-    """ Clear out and err StdSim buffers, run the command, and return out and err """
+    """Clear out and err StdSim buffers, run the command, and return out and err"""
     saved_sysout = sys.stdout
     sys.stdout = app.stdout
 
