@@ -65,10 +65,10 @@ This text file should contain a :ref:`Command Script
 <features/scripting:Command Scripts>`. See the AliasStartup_ example for a
 demonstration.
 
-You can silence a startup script's output by setting ``silent_startup_script``
+You can silence a startup script's output by setting ``silence_startup_script``
 to True::
 
-    cmd2.Cmd.__init__(self, startup_script='.cmd2rc', silent_startup_script=True)
+    cmd2.Cmd.__init__(self, startup_script='.cmd2rc', silence_startup_script=True)
 
 Anything written to stderr will still print. Additionally, a startup script
 cannot be silenced if ``allow_redirection`` is False since silencing works

@@ -219,7 +219,7 @@ class Cmd(cmd.Cmd):
         persistent_history_file: str = '',
         persistent_history_length: int = 1000,
         startup_script: str = '',
-        silent_startup_script: bool = False,
+        silence_startup_script: bool = False,
         include_py: bool = False,
         include_ipy: bool = False,
         allow_cli_args: bool = True,
@@ -241,8 +241,8 @@ class Cmd(cmd.Cmd):
         :param persistent_history_length: max number of history items to write
                                           to the persistent history file
         :param startup_script: file path to a script to execute at startup
-        :param silent_startup_script: if ``True``, then the startup script's output will be
-                                      suppressed. Anything written to stderr will still display.
+        :param silence_startup_script: if ``True``, then the startup script's output will be
+                                       suppressed. Anything written to stderr will still display.
         :param include_py: should the "py" command be included for an embedded Python shell
         :param include_ipy: should the "ipy" command be included for an embedded IPython shell
         :param allow_cli_args: if ``True``, then :meth:`cmd2.Cmd.__init__` will process command
@@ -398,7 +398,7 @@ class Cmd(cmd.Cmd):
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script):
                 script_cmd = f"run_script {utils.quote_string(startup_script)}"
-                if silent_startup_script:
+                if silence_startup_script:
                     script_cmd += f" {constants.REDIRECTION_OUTPUT} {os.devnull}"
                 self._startup_commands.append(script_cmd)
 

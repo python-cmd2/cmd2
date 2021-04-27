@@ -16,6 +16,7 @@
     * Removed `--silent` flag from `alias/macro create` since startup scripts can be run silently.
     * Removed `--with_silent` flag from `alias/macro list` since startup scripts can be run silently.
     * Removed `with_argparser_and_unknown_args` since it was deprecated in 1.3.0.
+    * Renamed `silent_startup_script` to `silence_startup_script` for clarity.
     * Replaced `cmd2.Cmd.completion_header` with `cmd2.Cmd.formatted_completions`. See Enhancements
       for description of this new class member.
     * Settables now have new initialization parameters. It is now a required parameter to supply the reference to the
