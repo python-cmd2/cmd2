@@ -7,6 +7,7 @@ import argparse
 import builtins
 import io
 import os
+import signal
 import sys
 import tempfile
 from code import (
@@ -900,6 +901,22 @@ def test_stty_sane(base_app, monkeypatch):
 
         base_app.onecmd_plus_hooks('help')
         m.assert_called_once_with(['stty', 'sane'])
+
+
+def test_sigint_handler(base_app):
+    # No KeyboardInterrupt should be raised when using sigint_protection
+    with base_app.sigint_protection:
+        base_app.sigint_handler(signal.SIGINT, 1)
+
+    # Without sigint_protection, a KeyboardInterrupt is raised
+    with pytest.raises(KeyboardInterrupt):
+        base_app.sigint_handler(signal.SIGINT, 1)
+
+
+def test_raise_keyboard_interrupt(base_app):
+    with pytest.raises(KeyboardInterrupt) as excinfo:
+        base_app._raise_keyboard_interrupt()
+    assert 'Got a keyboard interrupt' in str(excinfo.value)
 
 
 class HookFailureApp(cmd2.Cmd):
