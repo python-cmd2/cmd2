@@ -422,19 +422,19 @@ def test_runcmds_plus_hooks_ctrl_c(base_app, capsys):
 
     setattr(base_app, 'do_keyboard_interrupt', types.MethodType(do_keyboard_interrupt, base_app))
 
-    # Default behavior is to stop command loop on Ctrl-C
+    # Default behavior is to not stop runcmds_plus_hooks() on Ctrl-C
     base_app.history.clear()
     base_app.runcmds_plus_hooks(['help', 'keyboard_interrupt', 'shortcuts'])
     out, err = capsys.readouterr()
-    assert err.startswith("Interrupting this command")
-    assert len(base_app.history) == 2
-
-    # Ctrl-C should not stop command loop in this case
-    base_app.history.clear()
-    base_app.runcmds_plus_hooks(['help', 'keyboard_interrupt', 'shortcuts'], stop_on_keyboard_interrupt=False)
-    out, err = capsys.readouterr()
     assert not err
     assert len(base_app.history) == 3
+
+    # Ctrl-C should stop runcmds_plus_hooks() in this case
+    base_app.history.clear()
+    base_app.runcmds_plus_hooks(['help', 'keyboard_interrupt', 'shortcuts'], stop_on_keyboard_interrupt=True)
+    out, err = capsys.readouterr()
+    assert err.startswith("Interrupting this command")
+    assert len(base_app.history) == 2
 
 
 def test_relative_run_script(base_app, request):

@@ -28,6 +28,8 @@
       of this parameter.
     * Removed ability to run Python commands from the command line with `py`. Now `py` takes no arguments
       and just opens an interactive Python shell.
+    * Changed default behavior of `runcmds_plus_hooks()` to not stop when Ctrl-C is pressed and instead
+      run the next command in its list.
 * Enhancements
     * Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
       See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
