@@ -2114,10 +2114,10 @@ class Cmd(cmd.Cmd):
                 ansi.style_aware_write(sys.stdout, '\n' + err_str + '\n')
                 rl_force_redisplay()
             return None
-        except Exception as e:
+        except Exception as ex:
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
             self.perror()
-            self.pexcept(e)
+            self.pexcept(ex)
             rl_force_redisplay()
             return None
 
@@ -2199,7 +2199,11 @@ class Cmd(cmd.Cmd):
 
         # Check if we are allowed to re-raise the KeyboardInterrupt
         if not self.sigint_protection:
-            raise KeyboardInterrupt("Got a keyboard interrupt")
+            self._raise_keyboard_interrupt()
+
+    def _raise_keyboard_interrupt(self) -> None:
+        """Helper function to raise a KeyboardInterrupt"""
+        raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def precmd(self, statement: Union[Statement, str]) -> Statement:
         """Hook method executed just before the command is executed by
@@ -2430,9 +2434,9 @@ class Cmd(cmd.Cmd):
                     line, add_to_history=add_to_history, raise_keyboard_interrupt=stop_on_keyboard_interrupt
                 ):
                     return True
-            except KeyboardInterrupt as e:
+            except KeyboardInterrupt as ex:
                 if stop_on_keyboard_interrupt:
-                    self.perror(e)
+                    self.perror(ex)
                     break
 
         return False
@@ -2623,11 +2627,16 @@ class Cmd(cmd.Cmd):
             # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
             # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
             # processes close in the right order (most recent first).
-            kwargs = dict()
+            kwargs: Dict[str, Any] = dict()
             if sys.platform == 'win32':
                 kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
             else:
                 kwargs['start_new_session'] = True
+
+                # Attempt to run the pipe process in the user's preferred shell instead of the default behavior of using sh.
+                shell = os.environ.get("SHELL")
+                if shell:
+                    kwargs['executable'] = shell
 
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
             proc = subprocess.Popen(  # type: ignore[call-overload]
@@ -2654,7 +2663,7 @@ class Cmd(cmd.Cmd):
                 new_stdout.close()
                 raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
             else:
-                redir_saved_state.redirecting = True
+                redir_saved_state.redirecting = True  # type: ignore[unreachable]
                 cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
                 sys.stdout = self.stdout = new_stdout
 
@@ -3825,8 +3834,8 @@ class Cmd(cmd.Cmd):
                     orig_value = settable.get_value()
                     new_value = settable.set_value(utils.strip_quotes(args.value))
                 # noinspection PyBroadException
-                except Exception as e:
-                    self.perror(f"Error setting {args.param}: {e}")
+                except Exception as ex:
+                    self.perror(f"Error setting {args.param}: {ex}")
                 else:
                     self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {new_value!r}")
                 return
@@ -3863,7 +3872,29 @@ class Cmd(cmd.Cmd):
     @with_argparser(shell_parser, preserve_quotes=True)
     def do_shell(self, args: argparse.Namespace) -> None:
         """Execute a command as if at the OS prompt"""
+        import signal
         import subprocess
+
+        kwargs: Dict[str, Any] = dict()
+
+        # Set OS-specific parameters
+        if sys.platform.startswith('win'):
+            # Windows returns STATUS_CONTROL_C_EXIT when application stopped by Ctrl-C
+            ctrl_c_ret_code = 0xC000013A
+        else:
+            # On POSIX, Popen() returns -SIGINT when application stopped by Ctrl-C
+            ctrl_c_ret_code = signal.SIGINT.value * -1
+
+            # On POSIX with shell=True, Popen() defaults to /bin/sh as the shell.
+            # sh reports an incorrect return code for some applications when Ctrl-C is pressed within that
+            # application (e.g. less). Since sh received the SIGINT, it sets the return code to reflect being
+            # closed by SIGINT even though less did not exit upon a Ctrl-C press. In the same situation, other
+            # shells like bash and zsh report the actual return code of less. Therefore we will try to run the
+            # user's preferred shell which most likely will be something other than sh. This also allows the user
+            # to run builtin commands of their preferred shell.
+            shell = os.environ.get("SHELL")
+            if shell:
+                kwargs['executable'] = shell
 
         # Create a list of arguments to shell
         tokens = [args.command] + args.command_args
@@ -3876,18 +3907,24 @@ class Cmd(cmd.Cmd):
         # still receive the SIGINT since it is in the same process group as us.
         with self.sigint_protection:
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(
+            proc = subprocess.Popen(  # type: ignore[call-overload]
                 expanded_command,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
                 stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
                 shell=True,
+                **kwargs,
             )
 
-            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
+            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)  # type: ignore[arg-type]
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
             self.last_result = proc.returncode
+
+            # If the process was stopped by Ctrl-C, then inform the caller by raising a KeyboardInterrupt.
+            # This is to support things like stop_on_keyboard_interrupt in run_cmds_plus_hooks().
+            if proc.returncode == ctrl_c_ret_code:
+                self._raise_keyboard_interrupt()
 
     @staticmethod
     def _reset_py_display() -> None:
@@ -4545,8 +4582,8 @@ class Cmd(cmd.Cmd):
                 # then run the command and let the output go into our buffer
                 try:
                     stop = self.onecmd_plus_hooks(history_item, raise_keyboard_interrupt=True)
-                except KeyboardInterrupt as e:
-                    self.perror(e)
+                except KeyboardInterrupt as ex:
+                    self.perror(ex)
                     stop = True
 
                 commands_run += 1

@@ -49,6 +49,9 @@
     * Added `include_py` keyword parameter to `cmd2.Cmd.__init__()`. If `False`, then the `py` command will
       not be available. Defaults to `False`. `run_pyscript` is not affected by this parameter.
     * Made the amount of space between columns in a SimpleTable configurable
+    * On POSIX systems, shell commands and processes being piped to are now run in the user's preferred shell
+      instead of /bin/sh. The preferred shell is obtained by reading the SHELL environment variable. If that
+      doesn't exist or is empty, then /bin/sh is used.
 
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes

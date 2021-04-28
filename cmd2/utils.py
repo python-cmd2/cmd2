@@ -601,8 +601,8 @@ class ProcReader:
         import signal
 
         if sys.platform.startswith('win'):
-            # cmd2 started the Windows process in a new process group. Therefore
-            # a CTRL_C_EVENT can't be sent to it. Send a CTRL_BREAK_EVENT instead.
+            # cmd2 started the Windows process in a new process group. Therefore we must send
+            # a CTRL_BREAK_EVENT since CTRL_C_EVENT signals cannot be generated for process groups.
             self._proc.send_signal(signal.CTRL_BREAK_EVENT)
         else:
             # Since cmd2 uses shell=True in its Popen calls, we need to send the SIGINT to
