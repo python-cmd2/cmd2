@@ -99,21 +99,3 @@ method be called.
   (Cmd) my dog has fleas
   sh: my: not found
   *** Unknown syntax: my dog has fleas
-
-
-Quit on SIGINT
---------------
-
-On many shells, SIGINT (most often triggered by the user pressing Ctrl+C)
-while at the prompt only cancels the current line, not the entire command
-loop. By default, a ``cmd2`` application matches this behavior. However, if
-``quit_on_sigint`` is set to ``True``, the command loop will quit instead.
-
-::
-
-  (Cmd) typing a comma^C
-  (Cmd)
-
-.. warning::
-    The default SIGINT behavior will only function properly if **cmdloop** is running
-    in the main thread.
