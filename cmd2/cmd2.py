@@ -293,7 +293,6 @@ class Cmd(cmd.Cmd):
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
-        self.quit_on_sigint = False  # Ctrl-C at the prompt will quit the program instead of just resetting prompt
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
 
         # Attributes which ARE dynamically settable via the set command at runtime
@@ -2490,13 +2489,10 @@ class Cmd(cmd.Cmd):
                     nextline = '\n'
                     self.poutput(nextline)
                 line = f'{self._multiline_in_progress}{nextline}'
-            except KeyboardInterrupt as ex:
-                if self.quit_on_sigint:
-                    raise ex
-                else:
-                    self.poutput('^C')
-                    statement = self.statement_parser.parse('')
-                    break
+            except KeyboardInterrupt:
+                self.poutput('^C')
+                statement = self.statement_parser.parse('')
+                break
             finally:
                 self._at_continuation_prompt = False
 
@@ -3067,12 +3063,9 @@ class Cmd(cmd.Cmd):
                 # Get commands from user
                 try:
                     line = self._read_command_line(self.prompt)
-                except KeyboardInterrupt as ex:
-                    if self.quit_on_sigint:
-                        raise ex
-                    else:
-                        self.poutput('^C')
-                        line = ''
+                except KeyboardInterrupt:
+                    self.poutput('^C')
+                    line = ''
 
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)

@@ -146,8 +146,6 @@ override:
   everything available with **self_in_py**)
 - **quiet**: if ``True`` then completely suppress nonessential output (Default:
   ``False``)
-- **quit_on_sigint**: if ``True`` Ctrl-C at the prompt will quit the program
-  instead of just resetting prompt
 - **settable**: dictionary that controls which of these instance attributes
   are settable at runtime using the *set* command
 - **timing**: if ``True`` display execution time for each command (Default:
