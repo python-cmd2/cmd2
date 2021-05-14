@@ -544,9 +544,9 @@ def test_history_edit(monkeypatch):
     # going to call it due to the mock
     app.editor = 'fooedit'
 
-    # Mock out the _run_editor call so we don't actually open an editor
-    edit_mock = mock.MagicMock(name='_run_editor')
-    monkeypatch.setattr("cmd2.Cmd._run_editor", edit_mock)
+    # Mock out the run_editor call so we don't actually open an editor
+    edit_mock = mock.MagicMock(name='run_editor')
+    monkeypatch.setattr("cmd2.Cmd.run_editor", edit_mock)
 
     # Mock out the run_script call since the mocked edit won't produce a file
     run_script_mock = mock.MagicMock(name='do_run_script')
