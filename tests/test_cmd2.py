@@ -972,7 +972,7 @@ def test_ctrl_c_at_prompt(say_app):
 
     # And verify the expected output to stdout
     out = say_app.stdout.getvalue()
-    assert out == 'hello\n^C\ngoodbye\n'
+    assert out == 'hello\n^C\ngoodbye\n\n'
 
 
 class ShellApp(cmd2.Cmd):

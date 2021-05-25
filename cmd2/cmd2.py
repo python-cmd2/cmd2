@@ -3684,15 +3684,20 @@ class Cmd(cmd.Cmd):
     eof_parser = DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed", epilog=INTERNAL_COMMAND_EPILOG)
 
     @with_argparser(eof_parser)
-    def do_eof(self, _: argparse.Namespace) -> bool:
-        """Called when Ctrl-D is pressed"""
-        # Return True to stop the command loop
-        return True
+    def do_eof(self, _: argparse.Namespace) -> Optional[bool]:
+        """
+        Called when Ctrl-D is pressed and calls quit with no arguments.
+        This can be overridden if quit should be called differently.
+        """
+        self.poutput()
+
+        # noinspection PyTypeChecker
+        return self.do_quit('')
 
     quit_parser = DEFAULT_ARGUMENT_PARSER(description="Exit this application")
 
     @with_argparser(quit_parser)
-    def do_quit(self, _: argparse.Namespace) -> bool:
+    def do_quit(self, _: argparse.Namespace) -> Optional[bool]:
         """Exit this application"""
         # Return True to stop the command loop
         return True
