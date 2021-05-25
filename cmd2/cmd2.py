@@ -4634,11 +4634,11 @@ class Cmd(cmd.Cmd):
         """Run a text editor and optionally open a file with it"""
         self.run_editor(args.file_path)
 
-    def run_editor(self, file_path: Optional[str]) -> None:
+    def run_editor(self, file_path: Optional[str] = None) -> None:
         """
         Run a text editor and optionally open a file with it
 
-        :param file_path: optional path of the file to edit
+        :param file_path: optional path of the file to edit. Defaults to None.
         :raises: EnvironmentError if self.editor is not set
         """
         if not self.editor:

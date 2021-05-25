@@ -64,8 +64,7 @@ Disabling Redirection
        from cmd2 import Cmd
        class App(Cmd):
            def __init__(self):
-               super().__init__()
-               self.allow_redirection = False
+               super().__init__(allow_redirection=False)
 
    cmd2's parser will still treat the ``>``, ``>>``, and `|` symbols as output
    redirection and pipe symbols and will strip arguments after them from the

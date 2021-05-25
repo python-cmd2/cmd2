@@ -53,6 +53,7 @@
     * On POSIX systems, shell commands and processes being piped to are now run in the user's preferred shell
       instead of /bin/sh. The preferred shell is obtained by reading the SHELL environment variable. If that
       doesn't exist or is empty, then /bin/sh is used.
+    * Changed `cmd2.Cmd._run_editor()` to the public method `cmd2.Cmd.run_editor()`
 
 ## 1.5.0 (January 31, 2021)
 * Bug Fixes
