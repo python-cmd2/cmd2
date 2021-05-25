@@ -4389,7 +4389,7 @@ class Cmd(cmd.Cmd):
                     else:
                         fobj.write(f'{command.raw}\n')
             try:
-                self._run_editor(fname)
+                self.run_editor(fname)
                 # noinspection PyTypeChecker
                 self.do_run_script(utils.quote_string(fname))
             finally:
@@ -4632,9 +4632,9 @@ class Cmd(cmd.Cmd):
     @with_argparser(edit_parser)
     def do_edit(self, args: argparse.Namespace) -> None:
         """Run a text editor and optionally open a file with it"""
-        self._run_editor(args.file_path)
+        self.run_editor(args.file_path)
 
-    def _run_editor(self, file_path: Optional[str]) -> None:
+    def run_editor(self, file_path: Optional[str]) -> None:
         """
         Run a text editor and optionally open a file with it
 
