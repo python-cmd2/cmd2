@@ -25,7 +25,7 @@ setuptools.setup(
     license='MIT',
     packages=['cmd2_myplugin'],
     python_requires='>=3.6',
-    install_requires=['cmd2 >= 0.9.4, <=2'],
+    install_requires=['cmd2 >= 0.9.4, <3'],
     setup_requires=['setuptools_scm'],
     classifiers=[
         'Development Status :: 4 - Beta',
