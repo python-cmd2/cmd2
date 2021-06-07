@@ -11,10 +11,10 @@ here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
-scm_version = {
-    'root': '../..',
-    'git_describe_command': 'git describe --dirty --tags --long --match "plugin-ext-test*"',
-}
+# scm_version = {
+#     'root': '../..',
+#     'git_describe_command': "git describe --dirty --tags --long --match plugin-ext-test*",
+# }
 
 PACKAGE_DATA = {
     'cmd2_ext_test': ['py.typed'],
@@ -22,7 +22,7 @@ PACKAGE_DATA = {
 
 setuptools.setup(
     name='cmd2-ext-test',
-    version=scm_version,
+    version='2.0.0',
     description='External test plugin for cmd2. Allows for external invocation of commands as if from a cmd2 pyscript',
     long_description=long_description,
     long_description_content_type='text/markdown',
