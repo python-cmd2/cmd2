@@ -1,3 +1,7 @@
+## 2.0.1 (June 7, 2021)
+* Bug Fixes
+  * Exclude `plugins` and `tests_isolated` directories from tarball published to PyPI for `cmd2` release
+
 ## 2.0.0 (June 6, 2021)
 * Bug Fixes
   * Fixed issue where history indexes could get repeated
