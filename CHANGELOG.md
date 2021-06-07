@@ -1,4 +1,4 @@
-## 2.0.0 (TBD, 2021)
+## 2.0.0 (June 6, 2021)
 * Bug Fixes
   * Fixed issue where history indexes could get repeated
   * Fixed issue where TableCreator was tossing blank last line
