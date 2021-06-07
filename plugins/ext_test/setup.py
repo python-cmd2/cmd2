@@ -34,7 +34,7 @@ setuptools.setup(
     package_data=PACKAGE_DATA,
     packages=['cmd2_ext_test'],
     python_requires='>=3.6',
-    install_requires=['cmd2 >= 0.9.4, <=2'],
+    install_requires=['cmd2 >= 0.9.4, <3'],
     setup_requires=['setuptools >= 42', 'setuptools_scm >= 3.4'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
