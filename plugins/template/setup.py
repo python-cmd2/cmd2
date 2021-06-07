@@ -14,7 +14,7 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 setuptools.setup(
     name='cmd2-myplugin',
     # use_scm_version=True,  # use_scm_version doesn't work if setup.py isn't in the repository root
-    version='1.0.1',
+    version='2.0.0',
     description='A template used to build plugins for cmd2',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -25,7 +25,7 @@ setuptools.setup(
     license='MIT',
     packages=['cmd2_myplugin'],
     python_requires='>=3.6',
-    install_requires=['cmd2 >= 0.9.4, <3'],
+    install_requires=['cmd2 >= 2, <3'],
     setup_requires=['setuptools_scm'],
     classifiers=[
         'Development Status :: 4 - Beta',
