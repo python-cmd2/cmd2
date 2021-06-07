@@ -31,7 +31,7 @@
     * Changed default behavior of `runcmds_plus_hooks()` to not stop when Ctrl-C is pressed and instead
       run the next command in its list.
     * Removed `cmd2.Cmd.quit_on_sigint` flag, which when `True`, quit the application when Ctrl-C was pressed at the prompt.
-    * The history bug fix resulted in a change to the `cmd2.HistoryItem` class. Therefore, persistent history
+    * The history bug fix resulted in structure changes to the classes in `cmd2.history`. Therefore, persistent history
       files created with versions older than 2.0.0 are not compatible.
 * Enhancements
     * Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
