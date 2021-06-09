@@ -147,6 +147,9 @@ class Statement(str):  # type: ignore[override]
     # if output was redirected, the destination file token (quotes preserved)
     output_to: str = attr.ib(default='', validator=attr.validators.instance_of(str))
 
+    # Used in JSON dictionaries
+    _args_field = 'args'
+
     def __new__(cls, value: object, *pos_args: Any, **kw_args: Any) -> 'Statement':
         """Create a new instance of Statement.
 
@@ -220,6 +223,31 @@ class Statement(str):  # type: ignore[override]
             rtn = []
 
         return rtn
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Utility method to convert this Statement into a dictionary for use in persistent JSON history files"""
+        return self.__dict__.copy()
+
+    @staticmethod
+    def from_dict(source_dict: Dict[str, Any]) -> 'Statement':
+        """
+        Utility method to restore a Statement from a dictionary
+
+        :param source_dict: source data dictionary (generated using to_dict())
+        :return: Statement object
+        :raises KeyError: if source_dict is missing required elements
+        """
+        # value needs to be passed as a positional argument. It corresponds to the args field.
+        try:
+            value = source_dict[Statement._args_field]
+        except KeyError as ex:
+            raise KeyError(f"Statement dictionary is missing {ex} field")
+
+        # Pass the rest at kwargs (minus args)
+        kwargs = source_dict.copy()
+        del kwargs[Statement._args_field]
+
+        return Statement(value, **kwargs)
 
 
 class StatementParser:

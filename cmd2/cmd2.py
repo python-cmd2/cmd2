@@ -34,7 +34,6 @@ import functools
 import glob
 import inspect
 import os
-import pickle
 import pydoc
 import re
 import sys
@@ -4443,15 +4442,14 @@ class Cmd(cmd.Cmd):
     def _initialize_history(self, hist_file: str) -> None:
         """Initialize history using history related attributes
 
-        This function can determine whether history is saved in the prior text-based
-        format (one line of input is stored as one line in the file), or the new-as-
-        of-version 0.9.13 pickle based format.
-
-        History created by versions <= 0.9.12 is in readline format, i.e. plain text files.
-
-        Initializing history does not effect history files on disk, versions >= 0.9.13 always
-        write history in the pickle format.
+        :param hist_file: optional path to persistent history file. If specified, then history from
+                          previous sessions will be included. Additionally, all history will be written
+                          to this file when the application exits.
         """
+        from json import (
+            JSONDecodeError,
+        )
+
         self.history = History()
         # with no persistent history, nothing else in this method is relevant
         if not hist_file:
@@ -4474,36 +4472,27 @@ class Cmd(cmd.Cmd):
             self.perror(f"Error creating persistent history file directory '{hist_file_dir}': {ex}")
             return
 
-        # first we try and unpickle the history file
-        history = History()
-
+        # Read and process history file
         try:
-            with open(hist_file, 'rb') as fobj:
-                history = pickle.load(fobj)
-        except (
-            AttributeError,
-            EOFError,
-            FileNotFoundError,
-            ImportError,
-            IndexError,
-            KeyError,
-            ValueError,
-            pickle.UnpicklingError,
-        ):
-            # If any of these errors occur when attempting to unpickle, just use an empty history
+            with open(hist_file, 'r') as fobj:
+                history_json = fobj.read()
+            self.history = History.from_json(history_json)
+        except FileNotFoundError:
+            # Just use an empty history
             pass
         except OSError as ex:
             self.perror(f"Cannot read persistent history file '{hist_file}': {ex}")
             return
+        except (JSONDecodeError, KeyError, ValueError) as ex:
+            self.perror(f"Error processing persistent history file '{hist_file}': {ex}")
 
-        self.history = history
         self.history.start_session()
         self.persistent_history_file = hist_file
 
         # populate readline history
         if rl_type != RlType.NONE:
             last = None
-            for item in history:
+            for item in self.history:
                 # Break the command into its individual lines
                 for line in item.raw.splitlines():
                     # readline only adds a single entry for multiple sequential identical lines
@@ -4520,14 +4509,14 @@ class Cmd(cmd.Cmd):
         atexit.register(self._persist_history)
 
     def _persist_history(self) -> None:
-        """Write history out to the history file"""
+        """Write history out to the persistent history file as JSON"""
         if not self.persistent_history_file:
             return
 
         self.history.truncate(self._persistent_history_length)
         try:
-            with open(self.persistent_history_file, 'wb') as fobj:
-                pickle.dump(self.history, fobj)
+            with open(self.persistent_history_file, 'w') as fobj:
+                fobj.write(self.history.to_json())
         except OSError as ex:
             self.perror(f"Cannot write persistent history file '{self.persistent_history_file}': {ex}")
 
