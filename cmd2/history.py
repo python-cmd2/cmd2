@@ -3,12 +3,15 @@
 History management classes
 """
 
+import json
 import re
 from collections import (
     OrderedDict,
 )
 from typing import (
+    Any,
     Callable,
+    Dict,
     Iterable,
     List,
     Optional,
@@ -32,6 +35,9 @@ class HistoryItem:
 
     _listformat = ' {:>4}  {}'
     _ex_listformat = ' {:>4}x {}'
+
+    # Used in JSON dictionaries
+    _statement_field = 'statement'
 
     statement: Statement = attr.ib(default=None, validator=attr.validators.instance_of(Statement))
 
@@ -94,6 +100,22 @@ class HistoryItem:
 
         return ret_str
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Utility method to convert this HistoryItem into a dictionary for use in persistent JSON history files"""
+        return {HistoryItem._statement_field: self.statement.to_dict()}
+
+    @staticmethod
+    def from_dict(source_dict: Dict[str, Any]) -> 'HistoryItem':
+        """
+        Utility method to restore a HistoryItem from a dictionary
+
+        :param source_dict: source data dictionary (generated using to_dict())
+        :return: HistoryItem object
+        :raises KeyError: if source_dict is missing required elements
+        """
+        statement_dict = source_dict[HistoryItem._statement_field]
+        return HistoryItem(Statement.from_dict(statement_dict))
+
 
 class History(List[HistoryItem]):
     """A list of :class:`~cmd2.history.HistoryItem` objects with additional methods
@@ -108,6 +130,11 @@ class History(List[HistoryItem]):
     Developers interested in accessing previously entered commands can use this
     class to gain access to the historical record.
     """
+
+    # Used in JSON dictionaries
+    _history_version = '1.0.0'
+    _history_version_field = 'history_version'
+    _history_items_field = 'history_items'
 
     def __init__(self, seq: Iterable[HistoryItem] = ()) -> None:
         super(History, self).__init__(seq)
@@ -301,3 +328,36 @@ class History(List[HistoryItem]):
             if filter_func is None or filter_func(self[index]):
                 results[index + 1] = self[index]
         return results
+
+    def to_json(self) -> str:
+        """Utility method to convert this History into a JSON string for use in persistent history files"""
+        json_dict = {
+            History._history_version_field: History._history_version,
+            History._history_items_field: [hi.to_dict() for hi in self],
+        }
+        return json.dumps(json_dict, ensure_ascii=False, indent=2)
+
+    @staticmethod
+    def from_json(history_json: str) -> 'History':
+        """
+        Utility method to restore History from a JSON string
+
+        :param history_json: history data as JSON string (generated using to_json())
+        :return: History object
+        :raises json.JSONDecodeError: if passed invalid JSON string
+        :raises KeyError: if JSON is missing required elements
+        :raises ValueError: if history version in JSON isn't supported
+        """
+        json_dict = json.loads(history_json)
+        version = json_dict[History._history_version_field]
+        if version != History._history_version:
+            raise ValueError(
+                f"Unsupported history file version: {version}. This application uses version {History._history_version}."
+            )
+
+        items = json_dict[History._history_items_field]
+        history = History()
+        for hi_dict in items:
+            history.append(HistoryItem.from_dict(hi_dict))
+
+        return history
