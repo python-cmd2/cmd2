@@ -13,6 +13,7 @@ from cmd2 import (
     utils,
 )
 from cmd2.parsing import (
+    Statement,
     StatementParser,
     shlex_split,
 )
@@ -942,6 +943,26 @@ def test_statement_is_immutable():
         statement.args = 'bar'
     with pytest.raises(attr.exceptions.FrozenInstanceError):
         statement.raw = 'baz'
+
+
+def test_statement_as_dict(parser):
+    # Make sure to_dict() results can be restored to identical Statement
+    statement = parser.parse("!ls > out.txt")
+    assert statement == Statement.from_dict(statement.to_dict())
+
+    statement = parser.parse("!ls | grep text")
+    assert statement == Statement.from_dict(statement.to_dict())
+
+    statement = parser.parse("multiline arg; suffix")
+    assert statement == Statement.from_dict(statement.to_dict())
+
+    # from_dict() should raise KeyError if required field is missing
+    statement = parser.parse("command")
+    statement_dict = statement.to_dict()
+    del statement_dict[Statement._args_field]
+
+    with pytest.raises(KeyError):
+        Statement.from_dict(statement_dict)
 
 
 def test_is_valid_command_invalid(mocker, parser):

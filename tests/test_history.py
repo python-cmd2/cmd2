@@ -60,6 +60,72 @@ def hist():
     return h
 
 
+# Represents the hist fixture's JSON
+hist_json = (
+    '{\n'
+    '  "history_version": "1.0.0",\n'
+    '  "history_items": [\n'
+    '    {\n'
+    '      "statement": {\n'
+    '        "args": "",\n'
+    '        "raw": "first",\n'
+    '        "command": "",\n'
+    '        "arg_list": [],\n'
+    '        "multiline_command": "",\n'
+    '        "terminator": "",\n'
+    '        "suffix": "",\n'
+    '        "pipe_to": "",\n'
+    '        "output": "",\n'
+    '        "output_to": ""\n'
+    '      }\n'
+    '    },\n'
+    '    {\n'
+    '      "statement": {\n'
+    '        "args": "",\n'
+    '        "raw": "second",\n'
+    '        "command": "",\n'
+    '        "arg_list": [],\n'
+    '        "multiline_command": "",\n'
+    '        "terminator": "",\n'
+    '        "suffix": "",\n'
+    '        "pipe_to": "",\n'
+    '        "output": "",\n'
+    '        "output_to": ""\n'
+    '      }\n'
+    '    },\n'
+    '    {\n'
+    '      "statement": {\n'
+    '        "args": "",\n'
+    '        "raw": "third",\n'
+    '        "command": "",\n'
+    '        "arg_list": [],\n'
+    '        "multiline_command": "",\n'
+    '        "terminator": "",\n'
+    '        "suffix": "",\n'
+    '        "pipe_to": "",\n'
+    '        "output": "",\n'
+    '        "output_to": ""\n'
+    '      }\n'
+    '    },\n'
+    '    {\n'
+    '      "statement": {\n'
+    '        "args": "",\n'
+    '        "raw": "fourth",\n'
+    '        "command": "",\n'
+    '        "arg_list": [],\n'
+    '        "multiline_command": "",\n'
+    '        "terminator": "",\n'
+    '        "suffix": "",\n'
+    '        "pipe_to": "",\n'
+    '        "output": "",\n'
+    '        "output_to": ""\n'
+    '      }\n'
+    '    }\n'
+    '  ]\n'
+    '}'
+)
+
+
 @pytest.fixture
 def persisted_hist():
     from cmd2.cmd2 import (
@@ -254,6 +320,37 @@ def test_history_max_length(hist):
     assert len(hist) == 2
     assert hist.get(1).statement.raw == 'third'
     assert hist.get(2).statement.raw == 'fourth'
+
+
+def test_history_to_json(hist):
+    assert hist_json == hist.to_json()
+
+
+def test_history_from_json(hist):
+    import json
+
+    from cmd2.history import (
+        History,
+    )
+
+    assert hist.from_json(hist_json) == hist
+
+    # Test invalid JSON
+    with pytest.raises(json.JSONDecodeError):
+        hist.from_json("")
+
+    # Send JSON with missing required element
+    with pytest.raises(KeyError):
+        hist.from_json("{}")
+
+    # Create JSON with invalid history version
+    backed_up_ver = History._history_version
+    History._history_version = "BAD_VERSION"
+    invalid_ver_json = hist.to_json()
+    History._history_version = backed_up_ver
+
+    with pytest.raises(ValueError):
+        hist.from_json(invalid_ver_json)
 
 
 #
