@@ -801,7 +801,7 @@ def test_exclude_from_history(base_app, monkeypatch):
 #
 @pytest.fixture(scope="session")
 def hist_file():
-    fd, filename = tempfile.mkstemp(prefix='hist_file', suffix='.txt')
+    fd, filename = tempfile.mkstemp(prefix='hist_file', suffix='.dat')
     os.close(fd)
     yield filename
     # teardown code
@@ -861,31 +861,6 @@ def test_history_file_permission_error(mocker, capsys):
     assert 'Cannot read' in err
 
 
-def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
-    # make sure we don't truncate the plain text history file on init
-    # it shouldn't get converted to pickle format until we save history
-
-    # first we need some plain text commands in the history file
-    with open(hist_file, 'w') as hfobj:
-        hfobj.write('help\n')
-        hfobj.write('alias\n')
-        hfobj.write('alias create s shortcuts\n')
-
-    # Create a new cmd2 app
-    cmd2.Cmd(persistent_history_file=hist_file)
-
-    # history should be initialized, but the file on disk should
-    # still be plain text
-    with open(hist_file, 'r') as hfobj:
-        histlist = hfobj.readlines()
-
-    assert len(histlist) == 3
-    # history.get() is overridden to be one based, not zero based
-    assert histlist[0] == 'help\n'
-    assert histlist[1] == 'alias\n'
-    assert histlist[2] == 'alias create s shortcuts\n'
-
-
 def test_history_populates_readline(hist_file):
     # - create a cmd2 with persistent history
     app = cmd2.Cmd(persistent_history_file=hist_file)
@@ -919,7 +894,7 @@ def test_history_populates_readline(hist_file):
 
 #
 # test cmd2's ability to write out history on exit
-# we are testing the _persist_history_on_exit() method, and
+# we are testing the _persist_history() method, and
 # we assume that the atexit module will call this method
 # properly
 #
