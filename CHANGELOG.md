@@ -1,6 +1,6 @@
 ## 2.1.0 (TBD, 2021)
 * Enhancements
-   * Converted persistent history files from pickle to JSON format
+   * Converted persistent history files from pickle to compressed JSON
     
 ## 2.0.1 (June 7, 2021)
 * Bug Fixes

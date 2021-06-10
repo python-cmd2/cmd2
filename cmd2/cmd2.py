@@ -4446,9 +4446,8 @@ class Cmd(cmd.Cmd):
                           previous sessions will be included. Additionally, all history will be written
                           to this file when the application exits.
         """
-        from json import (
-            JSONDecodeError,
-        )
+        import json
+        import lzma
 
         self.history = History()
         # with no persistent history, nothing else in this method is relevant
@@ -4474,8 +4473,9 @@ class Cmd(cmd.Cmd):
 
         # Read and process history file
         try:
-            with open(hist_file, 'r') as fobj:
-                history_json = fobj.read()
+            with open(hist_file, 'rb') as fobj:
+                compressed_bytes = fobj.read()
+            history_json = lzma.decompress(compressed_bytes).decode(encoding='utf-8')
             self.history = History.from_json(history_json)
         except FileNotFoundError:
             # Just use an empty history
@@ -4483,7 +4483,7 @@ class Cmd(cmd.Cmd):
         except OSError as ex:
             self.perror(f"Cannot read persistent history file '{hist_file}': {ex}")
             return
-        except (JSONDecodeError, KeyError, ValueError) as ex:
+        except (lzma.LZMAError, json.JSONDecodeError, KeyError, UnicodeDecodeError, ValueError) as ex:
             self.perror(f"Error processing persistent history file '{hist_file}': {ex}")
 
         self.history.start_session()
@@ -4509,14 +4509,19 @@ class Cmd(cmd.Cmd):
         atexit.register(self._persist_history)
 
     def _persist_history(self) -> None:
-        """Write history out to the persistent history file as JSON"""
+        """Write history out to the persistent history file as compressed JSON"""
+        import lzma
+
         if not self.persistent_history_file:
             return
 
         self.history.truncate(self._persistent_history_length)
         try:
-            with open(self.persistent_history_file, 'w') as fobj:
-                fobj.write(self.history.to_json())
+            history_json = self.history.to_json()
+            compressed_bytes = lzma.compress(history_json.encode(encoding='utf-8'))
+
+            with open(self.persistent_history_file, 'wb') as fobj:
+                fobj.write(compressed_bytes)
         except OSError as ex:
             self.perror(f"Cannot write persistent history file '{self.persistent_history_file}': {ex}")
 
