@@ -181,7 +181,7 @@ nitpick_ignore = [
     ('py:class', 'TextIO'),
     ('py:class', 'Union[None, Iterable, Callable]'),
     ('py:class', 'argparse._SubParsersAction'),
-    ('py:class', '_T'),
+    ('py:class', 'cmd2.utils._T'),
     ('py:class', 'StdSim'),
     ('py:class', 'frame'),
 ]
