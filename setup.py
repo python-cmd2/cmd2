@@ -66,18 +66,23 @@ EXTRAS_REQUIRE = {
     ],
     # development only dependencies:  install with 'pip install -e .[dev]'
     'dev': [
-        "pytest>=4.6",
         'codecov',
+        'doc8',
+        'flake8',
+        'invoke',
+        'mypy==0.902',
+        'nox',
+        "pytest>=4.6",
         'pytest-cov',
         'pytest-mock',
-        'nox',
-        'flake8',
         'sphinx',
         'sphinx-rtd-theme',
         'sphinx-autobuild',
-        'doc8',
-        'invoke',
         'twine>=1.11',
+    ],
+    'validate': [
+        'flake8',
+        'mypy==0.902',
     ],
 }
 
