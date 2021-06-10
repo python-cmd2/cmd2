@@ -8,7 +8,7 @@ The ``cmd`` module from the Python standard library includes ``readline``
 history.
 
 :class:`cmd2.Cmd` offers the same ``readline`` capabilities, but also maintains
-it's own data structures for the history of all commands entered by the user.
+its own data structures for the history of all commands entered by the user.
 When the class is initialized, it creates an instance of the
 :class:`cmd2.history.History` class (which is a subclass of ``list``) as
 :data:`cmd2.Cmd.history`.
