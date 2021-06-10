@@ -20,8 +20,9 @@ the parsed :class:`cmd2.Statement` is appended to :data:`cmd2.Cmd.history`.
 ``cmd2`` adds the option of making this history persistent via optional
 arguments to :meth:`cmd2.Cmd.__init__`. If you pass a filename in the
 ``persistent_history_file`` argument, the contents of :data:`cmd2.Cmd.history`
-will be pickled into that history file. We chose to use pickle instead of plain
-text so that we can save the results of parsing all the commands.
+will be written as compressed JSON to that history file. We chose this format
+instead of plain text to preserve the complete :class:`cmd2.Statement` object
+for each command.
 
 .. note::
 
@@ -41,9 +42,7 @@ The :data:`cmd2.Cmd.history` attribute, the :class:`cmd2.history.History`
 class, and the :class:`cmd2.history.HistoryItem` class are all part of the
 public API for :class:`cmd2.Cmd`. You could use these classes to implement
 write your own ``history`` command (see below for documentation on how the
-included ``history`` command works). If you don't like pickled history, you
-could implement your own mechanism for saving and loading history from a plain
-text file.
+included ``history`` command works).
 
 
 For Users
