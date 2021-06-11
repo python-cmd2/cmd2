@@ -4483,7 +4483,7 @@ class Cmd(cmd.Cmd):
         except OSError as ex:
             self.perror(f"Cannot read persistent history file '{hist_file}': {ex}")
             return
-        except (lzma.LZMAError, json.JSONDecodeError, KeyError, UnicodeDecodeError, ValueError) as ex:
+        except (json.JSONDecodeError, lzma.LZMAError, KeyError, UnicodeDecodeError, ValueError) as ex:
             self.perror(f"Error processing persistent history file '{hist_file}': {ex}")
 
         self.history.start_session()
