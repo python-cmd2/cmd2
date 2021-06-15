@@ -975,7 +975,12 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         # positionals, optionals and user-defined groups
         for action_group in self._action_groups:
-            if action_group.title == 'optional arguments':
+            if sys.version_info >= (3, 10):
+                default_options_group = action_group.title == 'options'
+            else:
+                default_options_group = action_group.title == 'optional arguments'
+
+            if default_options_group:
                 # check if the arguments are required, group accordingly
                 req_args = []
                 opt_args = []
@@ -992,7 +997,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 formatter.end_section()
 
                 # now display truly optional arguments
-                formatter.start_section(action_group.title)
+                formatter.start_section('optional arguments')
                 formatter.add_text(action_group.description)
                 formatter.add_arguments(opt_args)
                 formatter.end_section()
