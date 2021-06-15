@@ -4,5 +4,4 @@ recursive-include tests *
 recursive-include docs *
 recursive-exclude docs/_build *
 recursive-exclude plugins *
-recursive-exclude tests_isolated *
 exclude .github .gitignore azure-pipelines.yml tasks.py
