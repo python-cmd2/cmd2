@@ -131,8 +131,9 @@ class Settable:
                          validation using str_to_bool(). The val_type function should raise an exception if it fails.
                          This exception will be caught and printed by Cmd.do_set().
         :param description: string describing this setting
-        :param settable_object: Object to configure with the set command
-        :param settable_attrib_name: Attribute name to be modified. Defaults to `name` if not specified.
+        :param settable_object: object to which the instance attribute belongs (e.g. self)
+        :param settable_attrib_name: name which displays to the user in the output of the set command.
+                                     Defaults to `name` if not specified.
         :param onchange_cb: optional function or method to call when the value of this settable is altered
                             by the set command. (e.g. onchange_cb=self.debug_changed)
 
