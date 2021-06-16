@@ -4,8 +4,6 @@
 reproduces test_argparse.py except with SubCommands
 """
 
-import argparse
-
 import pytest
 
 import cmd2
@@ -36,7 +34,7 @@ class SubcommandSet(cmd2.CommandSet):
         self._cmd.poutput('((%s))' % args.z)
 
     # create the top-level parser for the base command
-    base_parser = argparse.ArgumentParser()
+    base_parser = cmd2.Cmd2ArgumentParser()
     base_subparsers = base_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
     base_subparsers.required = True
 
@@ -85,13 +83,13 @@ def test_subcommand_bar(subcommand_app):
 
 def test_subcommand_invalid(subcommand_app):
     out, err = run_cmd(subcommand_app, 'base baz')
-    assert err[0].startswith('usage: base')
-    assert err[1].startswith("base: error: argument SUBCOMMAND: invalid choice: 'baz'")
+    assert err[0].startswith('Usage: base')
+    assert err[1].startswith("Error: argument SUBCOMMAND: invalid choice: 'baz'")
 
 
 def test_subcommand_base_help(subcommand_app):
     out, err = run_cmd(subcommand_app, 'help base')
-    assert out[0].startswith('usage: base')
+    assert out[0].startswith('Usage: base')
     assert out[1] == ''
     assert out[2] == 'Base command help'
 
@@ -99,43 +97,43 @@ def test_subcommand_base_help(subcommand_app):
 def test_subcommand_help(subcommand_app):
     # foo has no aliases
     out, err = run_cmd(subcommand_app, 'help base foo')
-    assert out[0].startswith('usage: base foo')
+    assert out[0].startswith('Usage: base foo')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     # bar has aliases (usage should never show alias name)
     out, err = run_cmd(subcommand_app, 'help base bar')
-    assert out[0].startswith('usage: base bar')
+    assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base bar_1')
-    assert out[0].startswith('usage: base bar')
+    assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base bar_2')
-    assert out[0].startswith('usage: base bar')
+    assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     # helpless has aliases and no help text (usage should never show alias name)
     out, err = run_cmd(subcommand_app, 'help base helpless')
-    assert out[0].startswith('usage: base helpless')
+    assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base helpless_1')
-    assert out[0].startswith('usage: base helpless')
+    assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base helpless_2')
-    assert out[0].startswith('usage: base helpless')
+    assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
 
 def test_subcommand_invalid_help(subcommand_app):
     out, err = run_cmd(subcommand_app, 'help base baz')
-    assert out[0].startswith('usage: base')
+    assert out[0].startswith('Usage: base')

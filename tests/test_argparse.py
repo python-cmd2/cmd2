@@ -39,7 +39,7 @@ class ArgparseApp(cmd2.Cmd):
         ns.custom_stuff = "custom"
         return ns
 
-    say_parser = argparse.ArgumentParser()
+    say_parser = cmd2.Cmd2ArgumentParser()
     say_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     say_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     say_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -65,7 +65,7 @@ class ArgparseApp(cmd2.Cmd):
         if keyword_arg is not None:
             print(keyword_arg)
 
-    tag_parser = argparse.ArgumentParser(description='create a html tag')
+    tag_parser = cmd2.Cmd2ArgumentParser(description='create a html tag')
     tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
@@ -74,7 +74,7 @@ class ArgparseApp(cmd2.Cmd):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
         self.stdout.write('\n')
 
-    @cmd2.with_argparser(argparse.ArgumentParser(), ns_provider=namespace_provider)
+    @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(), ns_provider=namespace_provider)
     def do_test_argparse_ns(self, args):
         self.stdout.write('{}'.format(args.custom_stuff))
 
@@ -92,7 +92,7 @@ class ArgparseApp(cmd2.Cmd):
     def do_preservelist(self, arglist):
         self.stdout.write('{}'.format(arglist))
 
-    known_parser = argparse.ArgumentParser()
+    known_parser = cmd2.Cmd2ArgumentParser()
     known_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     known_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -117,11 +117,11 @@ class ArgparseApp(cmd2.Cmd):
         if keyword_arg is not None:
             print(keyword_arg)
 
-    @cmd2.with_argparser(argparse.ArgumentParser(), preserve_quotes=True, with_unknown_args=True)
+    @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(), preserve_quotes=True, with_unknown_args=True)
     def do_test_argparse_with_list_quotes(self, args, extra):
         self.stdout.write('{}'.format(' '.join(extra)))
 
-    @cmd2.with_argparser(argparse.ArgumentParser(), ns_provider=namespace_provider, with_unknown_args=True)
+    @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(), ns_provider=namespace_provider, with_unknown_args=True)
     def do_test_argparse_with_list_ns(self, args, extra):
         self.stdout.write('{}'.format(args.custom_stuff))
 
@@ -208,14 +208,14 @@ def test_argparse_quoted_arguments_multiple(argparse_app):
 
 def test_argparse_help_docstring(argparse_app):
     out, err = run_cmd(argparse_app, 'help say')
-    assert out[0].startswith('usage: say')
+    assert out[0].startswith('Usage: say')
     assert out[1] == ''
     assert out[2] == 'Repeat what you tell me to.'
 
 
 def test_argparse_help_description(argparse_app):
     out, err = run_cmd(argparse_app, 'help tag')
-    assert out[0].startswith('usage: tag')
+    assert out[0].startswith('Usage: tag')
     assert out[1] == ''
     assert out[2] == 'create a html tag'
 
@@ -263,7 +263,7 @@ class SubcommandApp(cmd2.Cmd):
         self.poutput('((%s))' % args.z)
 
     # create the top-level parser for the base command
-    base_parser = argparse.ArgumentParser()
+    base_parser = cmd2.Cmd2ArgumentParser()
     base_subparsers = base_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
     base_subparsers.required = True
 
@@ -338,13 +338,13 @@ def test_subcommand_bar(subcommand_app):
 
 def test_subcommand_invalid(subcommand_app):
     out, err = run_cmd(subcommand_app, 'base baz')
-    assert err[0].startswith('usage: base')
-    assert err[1].startswith("base: error: argument SUBCOMMAND: invalid choice: 'baz'")
+    assert err[0].startswith('Usage: base')
+    assert err[1].startswith("Error: argument SUBCOMMAND: invalid choice: 'baz'")
 
 
 def test_subcommand_base_help(subcommand_app):
     out, err = run_cmd(subcommand_app, 'help base')
-    assert out[0].startswith('usage: base')
+    assert out[0].startswith('Usage: base')
     assert out[1] == ''
     assert out[2] == 'Base command help'
 
@@ -352,46 +352,46 @@ def test_subcommand_base_help(subcommand_app):
 def test_subcommand_help(subcommand_app):
     # foo has no aliases
     out, err = run_cmd(subcommand_app, 'help base foo')
-    assert out[0].startswith('usage: base foo')
+    assert out[0].startswith('Usage: base foo')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     # bar has aliases (usage should never show alias name)
     out, err = run_cmd(subcommand_app, 'help base bar')
-    assert out[0].startswith('usage: base bar')
+    assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base bar_1')
-    assert out[0].startswith('usage: base bar')
+    assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base bar_2')
-    assert out[0].startswith('usage: base bar')
+    assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     # helpless has aliases and no help text (usage should never show alias name)
     out, err = run_cmd(subcommand_app, 'help base helpless')
-    assert out[0].startswith('usage: base helpless')
+    assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base helpless_1')
-    assert out[0].startswith('usage: base helpless')
+    assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base helpless_2')
-    assert out[0].startswith('usage: base helpless')
+    assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
 
 def test_subcommand_invalid_help(subcommand_app):
     out, err = run_cmd(subcommand_app, 'help base baz')
-    assert out[0].startswith('usage: base')
+    assert out[0].startswith('Usage: base')
 
 
 def test_add_another_subcommand(subcommand_app):
