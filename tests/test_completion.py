@@ -6,7 +6,6 @@ Unit/functional testing for readline tab completion functions in the cmd2.py mod
 These are primarily tests related to readline completer functions which handle tab completion of cmd2/cmd commands,
 file system paths, and shell commands.
 """
-import argparse
 import enum
 import os
 import sys
@@ -1184,7 +1183,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
         self.poutput('Sport is {}'.format(args.sport))
 
     # create the top-level parser for the base command
-    base_parser = argparse.ArgumentParser()
+    base_parser = cmd2.Cmd2ArgumentParser()
     base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
 
     # create the parser for the "foo" subcommand

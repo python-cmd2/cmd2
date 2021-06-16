@@ -405,7 +405,7 @@ class Cmd(cmd.Cmd):
 
         # Check for command line args
         if allow_cli_args:
-            parser = argparse.ArgumentParser()
+            parser = DEFAULT_ARGUMENT_PARSER()
             parser.add_argument('-t', '--test', action="store_true", help='Test against transcript(s) in FILE (wildcards OK)')
             callopts, callargs = parser.parse_known_args()
 

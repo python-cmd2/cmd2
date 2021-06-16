@@ -3,7 +3,6 @@
 """
 Cmd2 functional testing based on transcript
 """
-import argparse
 import os
 import random
 import re
@@ -46,7 +45,7 @@ class CmdLineApp(cmd2.Cmd):
 
         self.intro = 'This is an intro banner ...'
 
-    speak_parser = argparse.ArgumentParser()
+    speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action="store_true", help="atinLay")
     speak_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
     speak_parser.add_argument('-r', '--repeat', type=int, help="output [n] times")
@@ -69,7 +68,7 @@ class CmdLineApp(cmd2.Cmd):
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
-    mumble_parser = argparse.ArgumentParser()
+    mumble_parser = cmd2.Cmd2ArgumentParser()
     mumble_parser.add_argument('-r', '--repeat', type=int, help="output [n] times")
 
     @cmd2.with_argparser(mumble_parser, with_unknown_args=True)

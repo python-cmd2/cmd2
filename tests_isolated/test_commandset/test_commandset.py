@@ -861,7 +861,7 @@ class CommandSetWithPathComplete(cmd2.CommandSet):
         """dummy variable prevents this from being autoloaded in other tests"""
         super(CommandSetWithPathComplete, self).__init__()
 
-    parser = argparse.ArgumentParser()
+    parser = cmd2.Cmd2ArgumentParser()
     parser.add_argument('path', nargs='+', help='paths', completer=cmd2.Cmd.path_complete)
 
     @cmd2.with_argparser(parser)

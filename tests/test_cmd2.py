@@ -3,7 +3,6 @@
 """
 Cmd2 unit/functional testing
 """
-import argparse
 import builtins
 import io
 import os
@@ -1365,7 +1364,7 @@ def test_select_ctrl_c(outsim_app, monkeypatch, capsys):
 
 
 class HelpNoDocstringApp(cmd2.Cmd):
-    greet_parser = argparse.ArgumentParser()
+    greet_parser = cmd2.Cmd2ArgumentParser()
     greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
 
     @cmd2.with_argparser(greet_parser, with_unknown_args=True)
@@ -1383,11 +1382,12 @@ def test_help_with_no_docstring(capsys):
     assert err == ''
     assert (
         out
-        == """usage: greet [-h] [-s]
+        == """Usage: greet [-h] [-s]
 
 optional arguments:
   -h, --help   show this help message and exit
   -s, --shout  N00B EMULATION MODE
+
 """
     )
 
@@ -1396,7 +1396,7 @@ class MultilineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, multiline_commands=['orate'], **kwargs)
 
-    orate_parser = argparse.ArgumentParser()
+    orate_parser = cmd2.Cmd2ArgumentParser()
     orate_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
 
     @cmd2.with_argparser(orate_parser, with_unknown_args=True)
