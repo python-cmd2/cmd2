@@ -25,7 +25,6 @@ Always
 
 WARNING: This example requires the plumbum package, which isn't normally required by cmd2.
 """
-import argparse
 
 from plumbum.colors import (
     bg,
@@ -88,7 +87,7 @@ class CmdLineApp(cmd2.Cmd):
         # Should ANSI color output be allowed
         self.allow_style = ansi.STYLE_TERMINAL
 
-    speak_parser = argparse.ArgumentParser()
+    speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')

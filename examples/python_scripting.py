@@ -20,7 +20,6 @@ scripts inside a cmd2 application via the run_pyscript command and the
 This application and the "examples/scripts/conditional.py" script serve as an
 example for one way in which this can be done.
 """
-import argparse
 import os
 
 import cmd2
@@ -95,7 +94,7 @@ class CmdLineApp(cmd2.Cmd):
         # Tab complete only directories
         return self.path_complete(text, line, begidx, endidx, path_filter=os.path.isdir)
 
-    dir_parser = argparse.ArgumentParser()
+    dir_parser = cmd2.Cmd2ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
     @cmd2.with_argparser(dir_parser, with_unknown_args=True)

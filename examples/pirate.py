@@ -6,7 +6,6 @@ presented as part of her PyCon 2010 talk.
 
 It demonstrates many features of cmd2.
 """
-import argparse
 
 import cmd2
 import cmd2.ansi
@@ -75,7 +74,7 @@ class Pirate(cmd2.Cmd):
         """Sing a colorful song."""
         self.poutput(cmd2.ansi.style(arg, fg=self.songcolor))
 
-    yo_parser = argparse.ArgumentParser()
+    yo_parser = cmd2.Cmd2ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")
     yo_parser.add_argument('-c', '--commas', action='store_true', help='Intersperse commas')
     yo_parser.add_argument('beverage', help='beverage to drink with the chant')

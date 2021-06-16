@@ -42,7 +42,7 @@ class ArgparsingApp(cmd2.Cmd):
         self.poutput('{} {}'.format(size, args.unit))
 
     # do_pow parser
-    pow_parser = argparse.ArgumentParser()
+    pow_parser = cmd2.Cmd2ArgumentParser()
     pow_parser.add_argument('base', type=int)
     pow_parser.add_argument('exponent', type=int, choices=range(-5, 6))
 

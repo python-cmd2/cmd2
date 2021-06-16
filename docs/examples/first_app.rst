@@ -96,7 +96,7 @@ can shout and talk piglatin. We will also use some built in methods for
 this code to ``first_app.py``, so that the ``speak_parser`` attribute and the
 ``do_speak()`` method are part of the ``CmdLineApp()`` class::
 
-    speak_parser = argparse.ArgumentParser()
+    speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
