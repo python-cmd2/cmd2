@@ -55,10 +55,9 @@ method, which will contain the results of ``ArgumentParser.parse_args()``.
 
 Here's what it looks like::
 
-      import argparse
-      from cmd2 import with_argparser
+      from cmd2 import Cmd2ArgumentParser, with_argparser
 
-      argparser = argparse.ArgumentParser()
+      argparser = Cmd2ArgumentParser()
       argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
       argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
       argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -106,10 +105,9 @@ docstring for the ``do_*`` method is used to set the description for the
 
 With this code::
 
-   import argparse
-   from cmd2 import with_argparser
+   from cmd2 import Cmd2ArgumentParser, with_argparser
 
-   argparser = argparse.ArgumentParser()
+   argparser = Cmd2ArgumentParser()
    argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argparser(argparser)
@@ -137,10 +135,9 @@ the ``help tag`` command displays:
 If you would prefer you can set the ``description`` while instantiating the
 ``argparse.ArgumentParser`` and leave the docstring on your method empty::
 
-   import argparse
-   from cmd2 import with_argparser
+   from cmd2 import Cmd2ArgumentParser, with_argparser
 
-   argparser = argparse.ArgumentParser(description='create an html tag')
+   argparser = Cmd2ArgumentParser(description='create an html tag')
    argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argparser(argparser)
@@ -166,11 +163,10 @@ Now when the user enters ``help tag`` they see:
 
 To add additional text to the end of the generated help message, use the ``epilog`` variable::
 
-   import argparse
-   from cmd2 import with_argparser
+   from cmd2 import Cmd2ArgumentParser, with_argparser
 
-   argparser = argparse.ArgumentParser(description='create an html tag',
-                                       epilog='This command cannot generate tags with no content, like <br/>.')
+   argparser = Cmd2ArgumentParser(description='create an html tag',
+                                  epilog='This command cannot generate tags with no content, like <br/>.')
    argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argparser(argparser)
@@ -265,10 +261,9 @@ strings, then decorate the command method with the
 
 Here's what it looks like::
 
-    import argparse
-    from cmd2 import with_argparser
+    from cmd2 import Cmd2ArgumentParser, with_argparser
 
-    dir_parser = argparse.ArgumentParser()
+    dir_parser = Cmd2ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
     @with_argparser(dir_parser, with_unknown_args=True)

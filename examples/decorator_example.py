@@ -37,7 +37,7 @@ class CmdLineApp(cmd2.Cmd):
         # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
         # self.default_to_shell = True
 
-    speak_parser = argparse.ArgumentParser()
+    speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -60,7 +60,7 @@ class CmdLineApp(cmd2.Cmd):
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
-    tag_parser = argparse.ArgumentParser()
+    tag_parser = cmd2.Cmd2ArgumentParser()
     tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     import sys
 
     # You can do your custom Argparse parsing here to meet your application's needs
-    parser = argparse.ArgumentParser(description='Process the arguments however you like.')
+    parser = cmd2.Cmd2ArgumentParser(description='Process the arguments however you like.')
 
     # Add a few arguments which aren't really used, but just to get the gist
     parser.add_argument('-p', '--port', type=int, help='TCP port')

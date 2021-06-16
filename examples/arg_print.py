@@ -9,7 +9,6 @@ experiment with and understand how command and argument parsing work.
 
 It also serves as an example of how to create shortcuts.
 """
-import argparse
 
 import cmd2
 
@@ -40,7 +39,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         """Print the argument list this basic command is called with (with quotes preserved)."""
         self.poutput('rprint was called with the following list of arguments: {!r}'.format(arglist))
 
-    oprint_parser = argparse.ArgumentParser()
+    oprint_parser = cmd2.Cmd2ArgumentParser()
     oprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     oprint_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     oprint_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -51,7 +50,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         """Print the options and argument list this options command was called with."""
         self.poutput('oprint was called with the following\n\toptions: {!r}'.format(args))
 
-    pprint_parser = argparse.ArgumentParser()
+    pprint_parser = cmd2.Cmd2ArgumentParser()
     pprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     pprint_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     pprint_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')

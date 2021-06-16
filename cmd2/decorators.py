@@ -288,7 +288,7 @@ def with_argparser(
 
     :Example:
 
-    >>> parser = argparse.ArgumentParser()
+    >>> parser = cmd2.Cmd2ArgumentParser()
     >>> parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     >>> parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -302,7 +302,7 @@ def with_argparser(
 
     :Example with unknown args:
 
-    >>> parser = argparse.ArgumentParser()
+    >>> parser = cmd2.Cmd2ArgumentParser()
     >>> parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     >>> parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')

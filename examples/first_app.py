@@ -12,7 +12,6 @@ A simple application using cmd2 which demonstrates 8 key features:
     * Multiline Commands
     * History
 """
-import argparse
 
 import cmd2
 
@@ -29,7 +28,7 @@ class FirstApp(cmd2.Cmd):
         self.maxrepeats = 3
         self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
 
-    speak_parser = argparse.ArgumentParser()
+    speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')

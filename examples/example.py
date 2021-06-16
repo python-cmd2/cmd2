@@ -10,7 +10,6 @@ Running `python example.py -t transcript_regex.txt` will run all the commands in
 the transcript against example.py, verifying that the output produced matches
 the transcript.
 """
-import argparse
 import random
 
 import cmd2
@@ -34,7 +33,7 @@ class CmdLineApp(cmd2.Cmd):
         self.maxrepeats = 3
         self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
 
-    speak_parser = argparse.ArgumentParser()
+    speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -58,7 +57,7 @@ class CmdLineApp(cmd2.Cmd):
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
-    mumble_parser = argparse.ArgumentParser()
+    mumble_parser = cmd2.Cmd2ArgumentParser()
     mumble_parser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
     mumble_parser.add_argument('words', nargs='+', help='words to say')
 

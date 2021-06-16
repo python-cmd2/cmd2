@@ -130,10 +130,9 @@ Instructions for implementing each feature follow.
       - Optionally, `cmd2.with_argparser(.., with_unknown_args=True)` can be used to pass all unknown arguments as a list
 
     ```Python
-    import argparse
-    from cmd2 import with_argparser
+    from cmd2 import Cmd2ArgumentParser, with_argparser
 
-    argparser = argparse.ArgumentParser()
+    argparser = Cmd2ArgumentParser()
     argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     argparser.add_argument('words', nargs='+', help='words to say')
@@ -232,7 +231,6 @@ Example cmd2 application (**examples/example.py**):
 """
 A sample application for cmd2.
 """
-import argparse
 import random
 import sys
 import cmd2
@@ -256,7 +254,7 @@ class CmdLineApp(cmd2.Cmd):
         # Make maxrepeats settable at runtime
         self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
 
-    speak_parser = argparse.ArgumentParser()
+    speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -280,7 +278,7 @@ class CmdLineApp(cmd2.Cmd):
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
-    mumble_parser = argparse.ArgumentParser()
+    mumble_parser = cmd2.Cmd2ArgumentParser()
     mumble_parser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
     mumble_parser.add_argument('words', nargs='+', help='words to say')
 
