@@ -152,7 +152,7 @@ namespace.add_task(docs)
 def doc8(context):
     """Check documentation with doc8"""
     with context.cd(TASK_ROOT_STR):
-        context.run('doc8 docs --ignore-path docs/_build')
+        context.run('doc8 docs --ignore-path docs/_build --ignore-path docs/.nox')
 
 
 namespace.add_task(doc8)
