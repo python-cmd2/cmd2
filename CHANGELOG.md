@@ -1,6 +1,8 @@
-## 2.1.1 (TBD, 2021)
+## 2.1.1 (June 17, 2021)
 * Bug Fixes
    * Fixed handling of argparse's default options group name which was changed in Python 3.10
+* Enhancements
+    * Restored `plugins` and `tests_isolated` directories to tarball published to PyPI for `cmd2` release
 
 ## 2.1.0 (June 14, 2021)
 * Enhancements
