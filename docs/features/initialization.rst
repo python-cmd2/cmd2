@@ -50,6 +50,7 @@ capabilities which you may wish to utilize while initializing the app::
             self.add_settable(cmd2.Settable('foreground_color',
                                             str,
                                             'Foreground color to use with echo command',
+                                            self,
                                             choices=fg.colors()))
 
         @cmd2.with_category(CUSTOM_CATEGORY)

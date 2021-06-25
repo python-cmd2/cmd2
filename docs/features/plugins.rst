@@ -81,7 +81,7 @@ example::
             super().__init__(*args, **kwargs)
             # code placed here runs after cmd2.Cmd initializes
             self.mysetting = 'somevalue'
-            self.add_settable(cmd2.Settable('mysetting', str, 'short help message for mysetting'))
+            self.add_settable(cmd2.Settable('mysetting', str, 'short help message for mysetting', self))
 
 You can hide settings from the user by calling
 :meth:`~cmd2.Cmd.remove_settable`. See :ref:`features/settings:Settings` for
