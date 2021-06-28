@@ -86,7 +86,7 @@ class ReadInputApp(cmd2.Cmd):
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_custom_completer(self, _) -> None:
-        """all read_input to use custom history and completer function"""
+        """Call read_input to use custom history and completer function"""
         self.poutput("Tab completing paths and using custom history")
         try:
             input_str = self.read_input(
