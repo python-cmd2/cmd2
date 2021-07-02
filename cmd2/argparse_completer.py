@@ -13,7 +13,6 @@ from collections import (
     deque,
 )
 from typing import (
-    Any,
     Dict,
     List,
     Optional,
@@ -27,12 +26,7 @@ from . import (
     constants,
 )
 from .argparse_custom import (
-    ATTR_CHOICES_CALLABLE,
-    ATTR_DESCRIPTIVE_COMPLETION_HEADER,
-    ATTR_NARGS_RANGE,
-    ATTR_SUPPRESS_TAB_HINT,
     ChoicesCallable,
-    ChoicesProviderFuncBase,
     ChoicesProviderFuncWithTokens,
     CompletionItem,
     generate_range_error,
@@ -60,7 +54,7 @@ ARG_TOKENS = 'arg_tokens'
 def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) -> str:
     """Build tab completion hint for a given argument"""
     # Check if hinting is disabled for this argument
-    suppress_hint = getattr(arg_action, ATTR_SUPPRESS_TAB_HINT, False)
+    suppress_hint = arg_action.get_suppress_tab_hint()  # type: ignore[attr-defined]
     if suppress_hint or arg_action.help == argparse.SUPPRESS:
         return ''
     else:
@@ -116,7 +110,7 @@ class _ArgumentState:
         self.is_remainder = self.action.nargs == argparse.REMAINDER
 
         # Check if nargs is a range
-        nargs_range = getattr(self.action, ATTR_NARGS_RANGE, None)
+        nargs_range = self.action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
             self.min = nargs_range[0]
             self.max = nargs_range[1]
@@ -562,7 +556,7 @@ class ArgparseCompleter:
                 tuple_index = min(len(destination) - 1, arg_state.count)
                 destination = destination[tuple_index]
 
-            desc_header = getattr(arg_state.action, ATTR_DESCRIPTIVE_COMPLETION_HEADER, None)
+            desc_header = arg_state.action.get_descriptive_header()  # type: ignore[attr-defined]
             if desc_header is None:
                 desc_header = DEFAULT_DESCRIPTIVE_HEADER
 
@@ -665,7 +659,7 @@ class ArgparseCompleter:
                 if not isinstance(choice, str):
                     arg_choices[index] = str(choice)  # type: ignore[unreachable]
         else:
-            choices_attr = getattr(arg_state.action, ATTR_CHOICES_CALLABLE, None)
+            choices_attr = arg_state.action.get_choices_callable()  # type: ignore[attr-defined]
             if choices_attr is None:
                 return []
             arg_choices = choices_attr

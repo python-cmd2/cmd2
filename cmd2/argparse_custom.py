@@ -100,13 +100,6 @@ other 2 parameters are meant to tab complete data sets that are viewed as
 dynamic. Therefore it is up to the developer to validate if the user has typed
 an acceptable value for these arguments.
 
-The following functions exist in cases where you may want to manually add a
-choice-providing function/method to an existing argparse action. For instance,
-in __init__() of a custom action class.
-
-    - set_choices_provider(action, func)
-    - set_completer(action, func)
-
 There are times when what's being tab completed is determined by a previous
 argument on the command line. In theses cases, ArgparseCompleter can pass a
 dictionary that maps the command line tokens up through the one being completed
@@ -187,6 +180,39 @@ See _match_argument_wrapper for more details.
 ``argparse._SubParsersAction.remove_parser`` - new function which removes a
 sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser for
 more details.
+
+**Added accessor methods**
+
+cmd2 has patched ``argparse.Action`` to include the following accessor methods
+for cases in which you need to manually access the cmd2-specific attributes.
+
+- ``argparse.Action.get_choices_callable()`` - See
+  :func:`_action_get_choices_callable` for more details.
+- ``argparse.Action.set_choices_provider()`` - See
+  :func:`_action_set_choices_provider` for more details.
+- ``argparse.Action.set_completer()`` - See
+  :func:`_action_set_completer` for more details.
+- ``argparse.Action.get_descriptive_header()`` - See
+  :func:`_action_get_descriptive_header` for more details.
+- ``argparse.Action.set_descriptive_header()`` - See
+  :func:`_action_set_descriptive_header` for more details.
+- ``argparse.Action.get_nargs_range()`` - See
+  :func:`_action_get_nargs_range` for more details.
+- ``argparse.Action.set_nargs_range()`` - See
+  :func:`_action_set_nargs_range` for more details.
+- ``argparse.Action.get_suppress_tab_hint()`` - See
+  :func:`_action_get_suppress_tab_hint` for more details.
+- ``argparse.Action.set_suppress_tab_hint()`` - See
+  :func:`_action_set_suppress_tab_hint` for more details.
+
+**Subcommand removal**
+
+cmd2 has patched ``argparse._SubParsersAction`` to include a ``remove_parser()``
+method which can be used to remove a subcommand.
+
+``argparse._SubParsersAction.remove_parser`` - new function which removes a
+sub-parser from a sub-parsers group. See
+:func:`_SubParsersAction_remove_parser` for more details.
 """
 
 import argparse
@@ -215,6 +241,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    cast,
 )
 
 from . import (
@@ -232,23 +259,6 @@ except ImportError:
         Protocol,
         runtime_checkable,
     )
-
-############################################################################################################
-# The following are names of custom argparse argument attributes added by cmd2
-############################################################################################################
-
-# A tuple specifying nargs as a range (min, max)
-ATTR_NARGS_RANGE = 'nargs_range'
-
-# ChoicesCallable object that specifies the function to be called which provides choices to the argument
-ATTR_CHOICES_CALLABLE = 'choices_callable'
-
-# Pressing tab normally displays the help text for the argument if no choices are available
-# Setting this attribute to True will suppress these hints
-ATTR_SUPPRESS_TAB_HINT = 'suppress_tab_hint'
-
-# Descriptive header that prints when using CompletionItems
-ATTR_DESCRIPTIVE_COMPLETION_HEADER = 'desc_completion_header'
 
 
 def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
@@ -408,41 +418,249 @@ class ChoicesCallable:
         return self.to_call
 
 
-def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCallable) -> None:
+############################################################################################################
+# The following are names of custom argparse Action attributes added by cmd2
+############################################################################################################
+
+# ChoicesCallable object that specifies the function to be called which provides choices to the argument
+ATTR_CHOICES_CALLABLE = 'choices_callable'
+
+# Descriptive header that prints when using CompletionItems
+ATTR_DESCRIPTIVE_HEADER = 'descriptive_header'
+
+# A tuple specifying nargs as a range (min, max)
+ATTR_NARGS_RANGE = 'nargs_range'
+
+# Pressing tab normally displays the help text for the argument if no choices are available
+# Setting this attribute to True will suppress these hints
+ATTR_SUPPRESS_TAB_HINT = 'suppress_tab_hint'
+
+
+############################################################################################################
+# Patch argparse.Action with accessors for choice_callable attribute
+############################################################################################################
+def _action_get_choices_callable(self: argparse.Action) -> Optional[ChoicesCallable]:
     """
-    Set the choices_callable attribute of an argparse Action
-    :param action: action being edited
+    Get the choices_callable attribute of an argparse Action.
+
+    This function is added by cmd2 as a method called ``get_choices_callable()`` to ``argparse.Action`` class.
+
+    To call: ``action.get_choices_callable()``
+
+    :param self: argparse Action being queried
+    :return: A ChoicesCallable instance or None if attribute does not exist
+    """
+    return cast(Optional[ChoicesCallable], getattr(self, ATTR_CHOICES_CALLABLE, None))
+
+
+setattr(argparse.Action, 'get_choices_callable', _action_get_choices_callable)
+
+
+def _action_set_choices_callable(self: argparse.Action, choices_callable: ChoicesCallable) -> None:
+    """
+    Set the choices_callable attribute of an argparse Action.
+
+    This function is added by cmd2 as a method called ``_set_choices_callable()`` to ``argparse.Action`` class.
+
+    Call this using the convenience wrappers ``set_choices_provider()`` and ``set_completer()`` instead.
+
+    :param self: action being edited
     :param choices_callable: the ChoicesCallable instance to use
     :raises: TypeError if used on incompatible action type
     """
     # Verify consistent use of parameters
-    if action.choices is not None:
+    if self.choices is not None:
         err_msg = "None of the following parameters can be used alongside a choices parameter:\n" "choices_provider, completer"
         raise (TypeError(err_msg))
-    elif action.nargs == 0:
+    elif self.nargs == 0:
         err_msg = (
             "None of the following parameters can be used on an action that takes no arguments:\n"
             "choices_provider, completer"
         )
         raise (TypeError(err_msg))
 
-    setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
+    setattr(self, ATTR_CHOICES_CALLABLE, choices_callable)
 
 
-def set_choices_provider(
-    action: argparse.Action,
+setattr(argparse.Action, '_set_choices_callable', _action_set_choices_callable)
+
+
+def _action_set_choices_provider(
+    self: argparse.Action,
     choices_provider: ChoicesProviderFunc,
 ) -> None:
-    """Set choices_provider on an argparse action"""
-    _set_choices_callable(action, ChoicesCallable(is_completer=False, to_call=choices_provider))
+    """
+    Set choices_provider of an argparse Action.
+
+    This function is added by cmd2 as a method called ``set_choices_callable()`` to ``argparse.Action`` class.
+
+    To call: ``action.set_choices_provider(choices_provider)``
+
+    :param self: action being edited
+    :param choices_provider: the choices_provider instance to use
+    :raises: TypeError if used on incompatible action type
+    """
+    self._set_choices_callable(ChoicesCallable(is_completer=False, to_call=choices_provider))  # type: ignore[attr-defined]
 
 
-def set_completer(
-    action: argparse.Action,
+setattr(argparse.Action, 'set_choices_provider', _action_set_choices_provider)
+
+
+def _action_set_completer(
+    self: argparse.Action,
     completer: CompleterFunc,
 ) -> None:
-    """Set completer on an argparse action"""
-    _set_choices_callable(action, ChoicesCallable(is_completer=True, to_call=completer))
+    """
+    Set completer of an argparse Action.
+
+    This function is added by cmd2 as a method called ``set_completer()`` to ``argparse.Action`` class.
+
+    To call: ``action.set_completer(completer)``
+
+    :param self: action being edited
+    :param completer: the completer instance to use
+    :raises: TypeError if used on incompatible action type
+    """
+    self._set_choices_callable(ChoicesCallable(is_completer=True, to_call=completer))  # type: ignore[attr-defined]
+
+
+setattr(argparse.Action, 'set_completer', _action_set_completer)
+
+
+############################################################################################################
+# Deprecated wrappers
+############################################################################################################
+def set_choices_provider(action: argparse.Action, choices_provider: ChoicesProviderFunc) -> None:  # pragma: no cover
+    import warnings
+
+    warnings.warn(
+        'This function will be deprecated in version 2.2.0. Use `action.set_choices_provider(choices_provider)` instead.',
+        PendingDeprecationWarning,
+        stacklevel=2,
+    )
+    action.set_choices_provider(choices_provider)  # type: ignore[attr-defined]
+
+
+def set_completer(action: argparse.Action, completer: CompleterFunc) -> None:  # pragma: no cover
+    import warnings
+
+    warnings.warn(
+        'This function will be deprecated in version 2.2.0. Use `action.set_completer(completer)` instead.',
+        PendingDeprecationWarning,
+        stacklevel=2,
+    )
+    action.set_completer(completer)  # type: ignore[attr-defined]
+
+
+############################################################################################################
+# Patch argparse.Action with accessors for descriptive_header attribute
+############################################################################################################
+def _action_get_descriptive_header(self: argparse.Action) -> Optional[str]:
+    """
+    Get the descriptive_header attribute of an argparse Action.
+
+    This function is added by cmd2 as a method called ``get_descriptive_header()`` to ``argparse.Action`` class.
+
+    To call: ``action.get_descriptive_header()``
+
+    :param self: argparse Action being queried
+    :return: The value of descriptive_header or None if attribute does not exist
+    """
+    return cast(Optional[str], getattr(self, ATTR_DESCRIPTIVE_HEADER, None))
+
+
+setattr(argparse.Action, 'get_descriptive_header', _action_get_descriptive_header)
+
+
+def _action_set_descriptive_header(self: argparse.Action, descriptive_header: Optional[str]) -> None:
+    """
+    Set the descriptive_header attribute of an argparse Action.
+
+    This function is added by cmd2 as a method called ``set_descriptive_header()`` to ``argparse.Action`` class.
+
+    To call: ``action.set_descriptive_header(descriptive_header)``
+
+    :param self: argparse Action being updated
+    :param descriptive_header: value being assigned
+    """
+    setattr(self, ATTR_DESCRIPTIVE_HEADER, descriptive_header)
+
+
+setattr(argparse.Action, 'set_descriptive_header', _action_set_descriptive_header)
+
+
+############################################################################################################
+# Patch argparse.Action with accessors for nargs_range attribute
+############################################################################################################
+def _action_get_nargs_range(self: argparse.Action) -> Optional[Tuple[int, Union[int, float]]]:
+    """
+    Get the nargs_range attribute of an argparse Action.
+
+    This function is added by cmd2 as a method called ``get_nargs_range()`` to ``argparse.Action`` class.
+
+    To call: ``action.get_nargs_range()``
+
+    :param self: argparse Action being queried
+    :return: The value of nargs_range or None if attribute does not exist
+    """
+    return cast(Optional[Tuple[int, Union[int, float]]], getattr(self, ATTR_NARGS_RANGE, None))
+
+
+setattr(argparse.Action, 'get_nargs_range', _action_get_nargs_range)
+
+
+def _action_set_nargs_range(self: argparse.Action, nargs_range: Optional[Tuple[int, Union[int, float]]]) -> None:
+    """
+    Set the nargs_range attribute of an argparse Action.
+
+    This function is added by cmd2 as a method called ``set_nargs_range()`` to ``argparse.Action`` class.
+
+    To call: ``action.set_nargs_range(nargs_range)``
+
+    :param self: argparse Action being updated
+    :param nargs_range: value being assigned
+    """
+    setattr(self, ATTR_NARGS_RANGE, nargs_range)
+
+
+setattr(argparse.Action, 'set_nargs_range', _action_set_nargs_range)
+
+
+############################################################################################################
+# Patch argparse.Action with accessors for suppress_tab_hint attribute
+############################################################################################################
+def _action_get_suppress_tab_hint(self: argparse.Action) -> bool:
+    """
+    Get the suppress_tab_hint attribute of an argparse Action.
+
+    This function is added by cmd2 as a method called ``get_suppress_tab_hint()`` to ``argparse.Action`` class.
+
+    To call: ``action.get_suppress_tab_hint()``
+
+    :param self: argparse Action being queried
+    :return: The value of suppress_tab_hint or False if attribute does not exist
+    """
+    return cast(bool, getattr(self, ATTR_SUPPRESS_TAB_HINT, False))
+
+
+setattr(argparse.Action, 'get_suppress_tab_hint', _action_get_suppress_tab_hint)
+
+
+def _action_set_suppress_tab_hint(self: argparse.Action, suppress_tab_hint: bool) -> None:
+    """
+    Set the suppress_tab_hint attribute of an argparse Action.
+
+    This function is added by cmd2 as a method called ``set_suppress_tab_hint()`` to ``argparse.Action`` class.
+
+    To call: ``action.set_suppress_tab_hint(suppress_tab_hint)``
+
+    :param self: argparse Action being updated
+    :param suppress_tab_hint: value being assigned
+    """
+    setattr(self, ATTR_SUPPRESS_TAB_HINT, suppress_tab_hint)
+
+
+setattr(argparse.Action, 'set_suppress_tab_hint', _action_set_suppress_tab_hint)
 
 
 ############################################################################################################
@@ -562,15 +780,15 @@ def _add_argument_wrapper(
     new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
     # Set the custom attributes
-    setattr(new_arg, ATTR_NARGS_RANGE, nargs_range)
+    new_arg.set_nargs_range(nargs_range)  # type: ignore[arg-type, attr-defined]
 
     if choices_provider:
-        set_choices_provider(new_arg, choices_provider)
+        new_arg.set_choices_provider(choices_provider)  # type: ignore[attr-defined]
     elif completer:
-        set_completer(new_arg, completer)
+        new_arg.set_completer(completer)  # type: ignore[attr-defined]
 
-    setattr(new_arg, ATTR_SUPPRESS_TAB_HINT, suppress_tab_hint)
-    setattr(new_arg, ATTR_DESCRIPTIVE_COMPLETION_HEADER, descriptive_header)
+    new_arg.set_suppress_tab_hint(suppress_tab_hint)  # type: ignore[attr-defined]
+    new_arg.set_descriptive_header(descriptive_header)  # type: ignore[attr-defined]
 
     return new_arg
 
@@ -591,12 +809,12 @@ orig_argument_parser_get_nargs_pattern = argparse.ArgumentParser._get_nargs_patt
 # noinspection PyProtectedMember
 def _get_nargs_pattern_wrapper(self: argparse.ArgumentParser, action: argparse.Action) -> str:
     # Wrapper around ArgumentParser._get_nargs_pattern behavior to support nargs ranges
-    nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+    nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
     if nargs_range is not None:
         if nargs_range[1] == constants.INFINITY:
             range_max = ''
         else:
-            range_max = nargs_range[1]
+            range_max = nargs_range[1]  # type: ignore[assignment]
 
         nargs_pattern = f'(-*A{{{nargs_range[0]},{range_max}}}-*)'
 
@@ -629,7 +847,7 @@ def _match_argument_wrapper(self: argparse.ArgumentParser, action: argparse.Acti
 
     # raise an exception if we weren't able to find a match
     if match is None:
-        nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
             raise ArgumentError(action, generate_range_error(nargs_range[0], nargs_range[1]))
 
@@ -648,10 +866,11 @@ setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 # noinspection PyPep8Naming
 def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:
     """
-    Removes a sub-parser from a sub-parsers group
+    Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
 
-    This is a custom method being added to the argparse._SubParsersAction
-    class so cmd2 can remove subcommands from a parser.
+    This function is added by cmd2 as a method called ``remove_parser()`` to ``argparse._SubParsersAction`` class.
+
+    To call: ``action.remove_parser(name)``
 
     :param self: instance of the _SubParsersAction being edited
     :param name: name of the subcommand for the sub-parser to remove
@@ -876,7 +1095,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         metavar_formatter = self._metavar_formatter(action, default_metavar)
 
         # Handle nargs specified as a range
-        nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
             if nargs_range[1] == constants.INFINITY:
                 range_str = f'{nargs_range[0]}+'
