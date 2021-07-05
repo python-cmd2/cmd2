@@ -1,4 +1,4 @@
-## 2.1.2 (TBD, 2021)
+## 2.1.2 (July 5, 2021)
 * Enhancements
     * Added the following accessor methods for cmd2-specific attributes to the `argparse.Action` class
         * `get_choices_callable()`
@@ -10,7 +10,6 @@
         * `set_nargs_range()`
         * `get_suppress_tab_hint()`
         * `set_suppress_tab_hint()`
-    
 * Deprecations
     * Now that `set_choices_provider()` and `set_completer()` have been added as methods to the
       `argparse.Action` class, the standalone functions of the same name will be removed in version

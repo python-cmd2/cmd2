@@ -579,6 +579,7 @@ mostly automated. The manual steps are all git operations. Here's the checklist:
 
 1. Make sure you're on the proper branch (almost always **master**)
 1. Make sure all the unit tests pass with `invoke pytest` or `py.test`
+1. Make sure latest year in `LICENSE` matches current year
 1. Make sure `CHANGELOG.md` describes the version and has the correct release date
 1. Add a git tag representing the version number using ``invoke tag x.y.z`` 
     * Where x, y, and z are all small non-negative integers
