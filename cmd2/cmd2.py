@@ -2017,7 +2017,7 @@ class Cmd(cmd.Cmd):
     def complete(  # type: ignore[override]
         self, text: str, state: int, custom_settings: Optional[utils.CustomCompletionSettings] = None
     ) -> Optional[str]:
-        """Override of cmd2's complete method which returns the next possible completion for 'text'
+        """Override of cmd's complete method which returns the next possible completion for 'text'
 
         This completer function is called by readline as complete(text, state), for state in 0, 1, 2, …,
         until it returns a non-string value. It should return the next possible completion starting with text.
@@ -3544,6 +3544,80 @@ class Cmd(cmd.Cmd):
 
                 # Set apply_style to False so help_error's style is not overridden
                 self.perror(err_msg, apply_style=False)
+
+    def print_topics(self, header: str, cmds: Optional[List[str]], cmdlen: int, maxcol: int) -> None:
+        """
+        Print groups of commands and topics in columns and an optional header
+        Override of cmd's print_topics() to handle headers with newlines, ANSI style sequences, and wide characters
+
+        :param header: string to print above commands being printed
+        :param cmds: list of topics to print
+        :param cmdlen: unused, even by cmd's version
+        :param maxcol: max number of display columns to fit into
+        """
+        if cmds:
+            self.poutput(header)
+            if self.ruler:
+                header_width = ansi.widest_line(header)
+                self.poutput(self.ruler * header_width)
+            self.columnize(cmds, maxcol - 1)
+            self.poutput()
+
+    def columnize(self, str_list: Optional[List[str]], display_width: int = 80) -> None:
+        """Display a list of single-line strings as a compact set of columns.
+        Override of cmd's print_topics() to handle strings with ANSI style sequences and wide characters
+
+        Each column is only as wide as necessary.
+        Columns are separated by two spaces (one was not legible enough).
+        """
+        if not str_list:
+            self.poutput("<empty>")
+            return
+
+        nonstrings = [i for i in range(len(str_list)) if not isinstance(str_list[i], str)]
+        if nonstrings:
+            raise TypeError(f"str_list[i] not a string for i in {nonstrings}")
+        size = len(str_list)
+        if size == 1:
+            self.poutput(str_list[0])
+            return
+        # Try every row count from 1 upwards
+        for nrows in range(1, len(str_list)):
+            ncols = (size + nrows - 1) // nrows
+            colwidths = []
+            totwidth = -2
+            for col in range(ncols):
+                colwidth = 0
+                for row in range(nrows):
+                    i = row + nrows * col
+                    if i >= size:
+                        break
+                    x = str_list[i]
+                    colwidth = max(colwidth, ansi.style_aware_wcswidth(x))
+                colwidths.append(colwidth)
+                totwidth += colwidth + 2
+                if totwidth > display_width:
+                    break
+            if totwidth <= display_width:
+                break
+        else:
+            nrows = len(str_list)
+            ncols = 1
+            colwidths = [0]
+        for row in range(nrows):
+            texts = []
+            for col in range(ncols):
+                i = row + nrows * col
+                if i >= size:
+                    x = ""
+                else:
+                    x = str_list[i]
+                texts.append(x)
+            while texts and not texts[-1]:
+                del texts[-1]
+            for col in range(len(texts)):
+                texts[col] = utils.align_left(texts[col], width=colwidths[col])
+            self.poutput("  ".join(texts))
 
     def _help_menu(self, verbose: bool = False) -> None:
         """Show a list of commands which help can be displayed for"""
