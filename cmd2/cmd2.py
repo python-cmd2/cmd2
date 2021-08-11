@@ -130,6 +130,10 @@ from .rl_utils import (
     rl_warning,
     vt100_support,
 )
+from .table_creator import (
+    Column,
+    SimpleTable,
+)
 from .utils import (
     Settable,
     get_defining_class,
@@ -3558,8 +3562,8 @@ class Cmd(cmd.Cmd):
         if cmds:
             self.poutput(header)
             if self.ruler:
-                header_width = ansi.widest_line(header)
-                self.poutput(self.ruler * header_width)
+                divider = utils.align_left('', fill_char=self.ruler, width=ansi.widest_line(header))
+                self.poutput(divider)
             self.columnize(cmds, maxcol - 1)
             self.poutput()
 
@@ -3676,25 +3680,27 @@ class Cmd(cmd.Cmd):
             if not verbose:
                 self.print_topics(header, cmds, 15, 80)
             else:
-                self.poutput(f'{header}')
-                widest = 0
-                # measure the commands
-                for command in cmds:
-                    width = ansi.style_aware_wcswidth(command)
-                    if width > widest:
-                        widest = width
-                # add a 4-space pad
-                widest += 4
-                if widest < 20:
-                    widest = 20
+                # Find the widest command
+                widest = max([ansi.style_aware_wcswidth(command) for command in cmds])
 
-                if self.ruler:
-                    ruler_line = utils.align_left('', width=80, fill_char=self.ruler)
-                    self.poutput(f'{ruler_line}')
+                # Define the topic table
+                name_column = Column('', width=max(widest, 20))
+                desc_column = Column('', width=80)
+
+                divider_char = self.ruler if self.ruler else None
+                topic_table = SimpleTable([name_column, desc_column], divider_char=divider_char)
+
+                # Build the topic table
+                table_str_buf = io.StringIO()
+                if header:
+                    table_str_buf.write(header + "\n")
+
+                divider = topic_table.generate_divider()
+                if divider:
+                    table_str_buf.write(divider + "\n")
 
                 # Try to get the documentation string for each command
                 topics = self.get_help_topics()
-
                 for command in cmds:
                     cmd_func = self.cmd_func(command)
                     doc: Optional[str]
@@ -3721,10 +3727,8 @@ class Cmd(cmd.Cmd):
                         doc = cmd_func.__doc__
 
                     # Attempt to locate the first documentation block
-                    if not doc:
-                        doc_block = ['']
-                    else:
-                        doc_block = []
+                    cmd_desc = ''
+                    if doc:
                         found_first = False
                         for doc_line in doc.splitlines():
                             stripped_line = doc_line.strip()
@@ -3734,15 +3738,18 @@ class Cmd(cmd.Cmd):
                                 if found_first:
                                     break
                             elif stripped_line:
-                                doc_block.append(stripped_line)
+                                if found_first:
+                                    cmd_desc += "\n"
+                                cmd_desc += stripped_line
                                 found_first = True
                             elif found_first:
                                 break
 
-                    for doc_line in doc_block:
-                        self.poutput(f'{command: <{widest}}{doc_line}')
-                        command = ''
-                self.poutput()
+                    # Add this command to the table
+                    table_row = topic_table.generate_data_row([command, cmd_desc])
+                    table_str_buf.write(table_row + '\n')
+
+                self.poutput(table_str_buf.getvalue())
 
     shortcuts_parser = DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
 
@@ -4131,7 +4138,6 @@ class Cmd(cmd.Cmd):
         If pyscript is None, then this function runs an interactive Python shell.
         Otherwise, it runs the pyscript file.
 
-        :param args: Namespace of args on the command line
         :param pyscript: optional path to a pyscript file to run. This is intended only to be used by do_run_pyscript()
                          after it sets up sys.argv for the script. (Defaults to None)
         :return: True if running of commands should stop

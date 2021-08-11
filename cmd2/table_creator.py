@@ -604,19 +604,19 @@ class SimpleTable(TableCreator):
         header = self.generate_row(inter_cell=self.inter_cell)
         header_buf.write(header)
 
-        # Create the divider if necessary
-        if self.divider_char is not None:
-            total_width = self.total_width()
-            divider_char_width = ansi.style_aware_wcswidth(self.divider_char)
+        # Add the divider if necessary
+        divider = self.generate_divider()
+        if divider:
+            header_buf.write('\n' + divider)
 
-            # Make divider as wide as table and use padding if width of
-            # divider_char does not divide evenly into table width.
-            divider = self.divider_char * (total_width // divider_char_width)
-            divider += SPACE * (total_width % divider_char_width)
-
-            header_buf.write('\n')
-            header_buf.write(divider)
         return header_buf.getvalue()
+
+    def generate_divider(self) -> str:
+        """Generate divider row"""
+        if self.divider_char is None:
+            return ''
+
+        return utils.align_left('', fill_char=self.divider_char, width=self.total_width())
 
     def generate_data_row(self, row_data: Sequence[Any]) -> str:
         """
