@@ -1149,7 +1149,6 @@ def test_complete_standalone(ac_app, flag, completions):
 
 
 class CustomCompleter(argparse_completer.ArgparseCompleter):
-
     def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, matched_flags: List[str]) -> List[str]:
         """Override so arguments with 'always_complete' set to True will always be completed"""
         for flag in matched_flags:
@@ -1171,6 +1170,7 @@ class CustomCompleterApp(cmd2.Cmd):
         """Test command that will be manually wrapped to use argparse"""
         print(args)
 
+
 @pytest.fixture
 def custom_completer_app():
 
@@ -1179,6 +1179,7 @@ def custom_completer_app():
     app.stdout = StdSim(app.stdout)
     yield app
     argparse_completer.set_default_command_completer_type(argparse_completer.ArgparseCompleter)
+
 
 @pytest.mark.parametrize(
     'command_and_args, text, output_contains, first_match',

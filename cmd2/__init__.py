@@ -5,7 +5,7 @@
 
 import sys
 
-# For python 3.8 and late
+# For python 3.8 and later
 if sys.version_info >= (3, 8):
     import importlib.metadata as importlib_metadata
 else:
@@ -38,6 +38,7 @@ if cmd2_parser_module is not None:
     importlib.import_module(cmd2_parser_module)
 
 from .argparse_completer import DEFAULT_COMMAND_COMPLETER, set_default_command_completer_type
+
 # Get the current value for argparse_custom.DEFAULT_ARGUMENT_PARSER
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER
 from .cmd2 import Cmd

@@ -702,6 +702,7 @@ def register_argparse_argument_parameter(param_name: str, param_type: Optional[T
 
     CUSTOM_ACTION_ATTRIBS.add(param_name)
 
+
 ############################################################################################################
 # Patch _ActionsContainer.add_argument with our wrapper to support more arguments
 ############################################################################################################

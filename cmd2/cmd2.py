@@ -3117,8 +3117,9 @@ class Cmd(cmd.Cmd):
         "  alias create save_results print_results \">\" out.txt\n"
     )
 
-    alias_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_create_description,
-                                                                  epilog=alias_create_epilog)
+    alias_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
+        description=alias_create_description, epilog=alias_create_epilog
+    )
     alias_create_parser.add_argument('name', help='name of this alias')
     alias_create_parser.add_argument(
         'command', help='what the alias resolves to', choices_provider=_get_commands_aliases_and_macros_for_completion
@@ -3300,8 +3301,9 @@ class Cmd(cmd.Cmd):
         "  will only complete paths while typing a macro."
     )
 
-    macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description,
-                                                                  epilog=macro_create_epilog)
+    macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
+        description=macro_create_description, epilog=macro_create_epilog
+    )
     macro_create_parser.add_argument('name', help='name of this macro')
     macro_create_parser.add_argument(
         'command', help='what the macro resolves to', choices_provider=_get_commands_aliases_and_macros_for_completion
@@ -3689,8 +3691,9 @@ class Cmd(cmd.Cmd):
         result = "\n".join('{}: {}'.format(sc[0], sc[1]) for sc in sorted_shortcuts)
         self.poutput(f"Shortcuts for other commands:\n{result}")
 
-    eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed",
-                                                         epilog=INTERNAL_COMMAND_EPILOG)
+    eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
+        description="Called when Ctrl-D is pressed", epilog=INTERNAL_COMMAND_EPILOG
+    )
 
     @with_argparser(eof_parser)
     def do_eof(self, _: argparse.Namespace) -> Optional[bool]:
