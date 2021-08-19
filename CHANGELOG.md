@@ -1,3 +1,7 @@
+## 2.2.0 (TBD, 2021)
+* Deletions (potentially breaking changes)
+    * Deleted ``set_choices_provider()`` and ``set_completer()`` which were deprecated in 2.1.2
+    
 ## 2.1.2 (July 5, 2021)
 * Enhancements
     * Added the following accessor methods for cmd2-specific attributes to the `argparse.Action` class
