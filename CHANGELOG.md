@@ -7,6 +7,8 @@
         * macro tab completion
     * Tab completion of `CompletionItems` now includes divider row comprised of `Cmd.ruler` character.
     * Removed `--verbose` flag from set command since descriptions always show now.
+* Deletions (potentially breaking changes)
+    * Deleted ``set_choices_provider()`` and ``set_completer()`` which were deprecated in 2.1.2
 
 ## 2.1.2 (July 5, 2021)
 * Enhancements
