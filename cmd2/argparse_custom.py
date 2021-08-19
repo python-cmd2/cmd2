@@ -528,31 +528,6 @@ setattr(argparse.Action, 'set_completer', _action_set_completer)
 
 
 ############################################################################################################
-# Deprecated wrappers
-############################################################################################################
-def set_choices_provider(action: argparse.Action, choices_provider: ChoicesProviderFunc) -> None:  # pragma: no cover
-    import warnings
-
-    warnings.warn(
-        'This function will be deprecated in version 2.2.0. Use `action.set_choices_provider(choices_provider)` instead.',
-        PendingDeprecationWarning,
-        stacklevel=2,
-    )
-    action.set_choices_provider(choices_provider)  # type: ignore[attr-defined]
-
-
-def set_completer(action: argparse.Action, completer: CompleterFunc) -> None:  # pragma: no cover
-    import warnings
-
-    warnings.warn(
-        'This function will be deprecated in version 2.2.0. Use `action.set_completer(completer)` instead.',
-        PendingDeprecationWarning,
-        stacklevel=2,
-    )
-    action.set_completer(completer)  # type: ignore[attr-defined]
-
-
-############################################################################################################
 # Patch argparse.Action with accessors for descriptive_header attribute
 ############################################################################################################
 def _action_get_descriptive_header(self: argparse.Action) -> Optional[str]:
