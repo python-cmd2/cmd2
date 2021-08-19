@@ -2156,17 +2156,44 @@ class Cmd(cmd.Cmd):
             if command not in self.hidden_commands and command not in self.disabled_commands
         ]
 
+    # Table displayed when tab completing aliases
+    _alias_completion_table = SimpleTable([Column('Value', width=80)], divider_char=None)
+
     def _get_alias_completion_items(self) -> List[CompletionItem]:
-        """Return list of current alias names and values as CompletionItems"""
-        return [CompletionItem(cur_key, self.aliases[cur_key]) for cur_key in self.aliases]
+        """Return list of alias names and values as CompletionItems"""
+        results: List[CompletionItem] = []
+
+        for cur_key in self.aliases:
+            row_data = [self.aliases[cur_key]]
+            results.append(CompletionItem(cur_key, self._alias_completion_table.generate_data_row(row_data)))
+
+        return results
+
+    # Table displayed when tab completing macros
+    _macro_completion_table = SimpleTable([Column('Value', width=80)], divider_char=None)
 
     def _get_macro_completion_items(self) -> List[CompletionItem]:
-        """Return list of current macro names and values as CompletionItems"""
-        return [CompletionItem(cur_key, self.macros[cur_key].value) for cur_key in self.macros]
+        """Return list of macro names and values as CompletionItems"""
+        results: List[CompletionItem] = []
+
+        for cur_key in self.macros:
+            row_data = [self.macros[cur_key].value]
+            results.append(CompletionItem(cur_key, self._macro_completion_table.generate_data_row(row_data)))
+
+        return results
+
+    # Table displayed when tab completing Settables
+    _settable_completion_table = SimpleTable([Column('Value', width=30), Column('Description', width=60)], divider_char=None)
 
     def _get_settable_completion_items(self) -> List[CompletionItem]:
-        """Return list of current settable names and descriptions as CompletionItems"""
-        return [CompletionItem(cur_key, self.settables[cur_key].description) for cur_key in self.settables]
+        """Return list of Settable names, values, and descriptions as CompletionItems"""
+        results: List[CompletionItem] = []
+
+        for cur_key in self.settables:
+            row_data = [self.settables[cur_key].get_value(), self.settables[cur_key].description]
+            results.append(CompletionItem(cur_key, self._settable_completion_table.generate_data_row(row_data)))
+
+        return results
 
     def _get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
@@ -3167,7 +3194,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='alias(es) to delete',
         choices_provider=_get_alias_completion_items,
-        descriptive_header='Value',
+        descriptive_header=_alias_completion_table.generate_header(),
     )
 
     @as_subcommand_to('alias', 'delete', alias_delete_parser, help=alias_delete_help)
@@ -3201,7 +3228,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='alias(es) to list',
         choices_provider=_get_alias_completion_items,
-        descriptive_header='Value',
+        descriptive_header=_alias_completion_table.generate_header(),
     )
 
     @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_list_help)
@@ -3393,7 +3420,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='macro(s) to delete',
         choices_provider=_get_macro_completion_items,
-        descriptive_header='Value',
+        descriptive_header=_macro_completion_table.generate_header(),
     )
 
     @as_subcommand_to('macro', 'delete', macro_delete_parser, help=macro_delete_help)
@@ -3427,7 +3454,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='macro(s) to list',
         choices_provider=_get_macro_completion_items,
-        descriptive_header='Value',
+        descriptive_header=_macro_completion_table.generate_header(),
     )
 
     @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
@@ -3683,12 +3710,11 @@ class Cmd(cmd.Cmd):
                 # Find the widest command
                 widest = max([ansi.style_aware_wcswidth(command) for command in cmds])
 
-                # Define the topic table
+                # Define the table structure
                 name_column = Column('', width=max(widest, 20))
                 desc_column = Column('', width=80)
 
-                divider_char = self.ruler if self.ruler else None
-                topic_table = SimpleTable([name_column, desc_column], divider_char=divider_char)
+                topic_table = SimpleTable([name_column, desc_column], divider_char=self.ruler)
 
                 # Build the topic table
                 table_str_buf = io.StringIO()
@@ -3875,14 +3901,11 @@ class Cmd(cmd.Cmd):
     )
     set_parser_parent = DEFAULT_ARGUMENT_PARSER(description=set_description, add_help=False)
     set_parser_parent.add_argument(
-        '-v', '--verbose', action='store_true', help='include description of parameters when viewing'
-    )
-    set_parser_parent.add_argument(
         'param',
         nargs=argparse.OPTIONAL,
         help='parameter to set or view',
         choices_provider=_get_settable_completion_items,
-        descriptive_header='Description',
+        descriptive_header=_settable_completion_table.generate_header(),
     )
 
     # Create the parser for the set command
@@ -3924,21 +3947,25 @@ class Cmd(cmd.Cmd):
             # Show all settables
             to_show = list(self.settables.keys())
 
-        # Build the result strings
-        max_len = 0
-        results = dict()
-        for param in to_show:
-            settable = self.settables[param]
-            results[param] = f"{param}: {settable.get_value()!r}"
-            max_len = max(max_len, ansi.style_aware_wcswidth(results[param]))
+        # Define the table structure
+        name_label = 'Name'
+        max_name_width = max([ansi.style_aware_wcswidth(param) for param in to_show])
+        max_name_width = max(max_name_width, ansi.style_aware_wcswidth(name_label))
 
-        # Display the results
-        for param in sorted(results, key=self.default_sort_key):
-            result_str = results[param]
-            if args.verbose:
-                self.poutput(f'{utils.align_left(result_str, width=max_len)} # {self.settables[param].description}')
-            else:
-                self.poutput(result_str)
+        cols: List[Column] = [
+            Column(name_label, width=max_name_width),
+            Column('Value', width=30),
+            Column('Description', width=60),
+        ]
+
+        table = SimpleTable(cols, divider_char=self.ruler)
+        self.poutput(table.generate_header())
+
+        # Build the table
+        for param in sorted(to_show, key=self.default_sort_key):
+            settable = self.settables[param]
+            row_data = [param, settable.get_value(), settable.description]
+            self.poutput(table.generate_data_row(row_data))
 
     shell_parser = DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt")
     shell_parser.add_argument('command', help='the command to run', completer=shell_cmd_complete)

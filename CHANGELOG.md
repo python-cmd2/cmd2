@@ -1,3 +1,13 @@
+## 2.2.0 (TBD, 2021)
+* Enhancements
+    * Using `SimpleTable` in the output for the following commands to improve appearance.
+        * help
+        * set (command and tab completion of Settables)
+        * alias tab completion
+        * macro tab completion
+    * Tab completion of `CompletionItems` now includes divider row comprised of `Cmd.ruler` character.
+    * Removed `--verbose` flag from set command since descriptions always show now.
+
 ## 2.1.2 (July 5, 2021)
 * Enhancements
     * Added the following accessor methods for cmd2-specific attributes to the `argparse.Action` class

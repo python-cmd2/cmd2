@@ -130,6 +130,7 @@ tokens with descriptions instead of just a table of tokens::
 
     The user sees this:
         ITEM_ID     Item Name
+        ============================
         1           My item
         2           Another item
         3           Yet another item

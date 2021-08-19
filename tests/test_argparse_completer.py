@@ -725,10 +725,14 @@ def test_completion_items(ac_app, num_aliases, show_description):
 
     assert bool(ac_app.formatted_completions) == show_description
     if show_description:
-        # If show_description is True, the table will show both the alias name and result
-        first_result_line = normalize(ac_app.formatted_completions)[1]
-        assert 'fake_alias0' in first_result_line
-        assert 'help' in first_result_line
+        # If show_description is True, the table will show both the alias name and value
+        description_displayed = False
+        for line in ac_app.formatted_completions.splitlines():
+            if 'fake_alias0' in line and 'help' in line:
+                description_displayed = True
+                break
+
+        assert description_displayed
 
 
 def test_completion_item_choices(ac_app):
@@ -742,10 +746,14 @@ def test_completion_item_choices(ac_app):
     assert len(ac_app.completion_matches) == len(ac_app.completion_item_choices)
     assert len(ac_app.display_matches) == len(ac_app.completion_item_choices)
 
-    # Make sure a completion table was created
-    first_result_line = normalize(ac_app.formatted_completions)[1]
-    assert 'choice_1' in first_result_line
-    assert 'A description' in first_result_line
+    # The table will show both the choice and description
+    description_displayed = False
+    for line in ac_app.formatted_completions.splitlines():
+        if 'choice_1' in line and 'A description' in line:
+            description_displayed = True
+            break
+
+    assert description_displayed
 
 
 @pytest.mark.parametrize(

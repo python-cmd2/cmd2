@@ -545,7 +545,7 @@ class SimpleTable(TableCreator):
         :param column_spacing: how many spaces to place between columns. Defaults to 2.
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
                           then it will be converted to one space.
-        :param divider_char: optional character used to build the header divider row. Set this to None if you don't
+        :param divider_char: optional character used to build the header divider row. Set this to blank or None if you don't
                              want a divider row. Defaults to dash. (Cannot be a line breaking character)
         :raises: ValueError if column_spacing is less than 0
         :raises: ValueError if tab_width is less than 1
@@ -555,6 +555,9 @@ class SimpleTable(TableCreator):
         if column_spacing < 0:
             raise ValueError("Column spacing cannot be less than 0")
         self.inter_cell = column_spacing * SPACE
+
+        if divider_char == '':
+            divider_char = None
 
         if divider_char is not None:
             if len(ansi.strip_style(divider_char)) != 1:
