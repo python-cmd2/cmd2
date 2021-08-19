@@ -1,4 +1,10 @@
 ## 2.2.0 (TBD, 2021)
+* Enhancements
+  * New function `set_default_command_completer_type()` allows developer to extend and modify the
+    behavior of `ArgparseCompleter`. 
+  * New function `register_argparse_argument_parameter()` allows developers to specify custom 
+    parameters to be passed to the argparse parser's `add_argument()` method. These parameters will
+    become accessible in the resulting argparse Action object when modifying `ArgparseCompleter` behavior.
 * Deletions (potentially breaking changes)
     * Deleted ``set_choices_provider()`` and ``set_completer()`` which were deprecated in 2.1.2
     

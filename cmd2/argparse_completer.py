@@ -13,18 +13,28 @@ from collections import (
     deque,
 )
 from typing import (
+    TYPE_CHECKING,
     Dict,
     List,
     Optional,
+    Type,
     Union,
     cast,
 )
 
-from . import (
-    ansi,
-    cmd2,
-    constants,
+from .ansi import (
+    style_aware_wcswidth,
+    widest_line,
 )
+from .constants import (
+    INFINITY,
+)
+
+if TYPE_CHECKING:
+    from .cmd2 import (
+        Cmd,
+    )
+
 from .argparse_custom import (
     ChoicesCallable,
     ChoicesProviderFuncWithTokens,
@@ -124,10 +134,10 @@ class _ArgumentState:
             self.max = 1
         elif self.action.nargs == argparse.ZERO_OR_MORE or self.action.nargs == argparse.REMAINDER:
             self.min = 0
-            self.max = constants.INFINITY
+            self.max = INFINITY
         elif self.action.nargs == argparse.ONE_OR_MORE:
             self.min = 1
-            self.max = constants.INFINITY
+            self.max = INFINITY
         else:
             self.min = self.action.nargs
             self.max = self.action.nargs
@@ -165,7 +175,7 @@ class ArgparseCompleter:
     """Automatic command line tab completion based on argparse parameters"""
 
     def __init__(
-        self, parser: argparse.ArgumentParser, cmd2_app: cmd2.Cmd, *, parent_tokens: Optional[Dict[str, List[str]]] = None
+        self, parser: argparse.ArgumentParser, cmd2_app: 'Cmd', *, parent_tokens: Optional[Dict[str, List[str]]] = None
     ) -> None:
         """
         Create an ArgparseCompleter
@@ -564,15 +574,15 @@ class ArgparseCompleter:
             desc_header = desc_header.replace('\t', four_spaces)
 
             # Calculate needed widths for the token and description columns of the table
-            token_width = ansi.style_aware_wcswidth(destination)
-            desc_width = ansi.widest_line(desc_header)
+            token_width = style_aware_wcswidth(destination)
+            desc_width = widest_line(desc_header)
 
             for item in completion_items:
-                token_width = max(ansi.style_aware_wcswidth(item), token_width)
+                token_width = max(style_aware_wcswidth(item), token_width)
 
                 # Replace tabs with 4 spaces so we can calculate width
                 item.description = item.description.replace('\t', four_spaces)
-                desc_width = max(ansi.widest_line(item.description), desc_width)
+                desc_width = max(widest_line(item.description), desc_width)
 
             cols = list()
             cols.append(Column(destination.upper(), width=token_width))
@@ -728,3 +738,16 @@ class ArgparseCompleter:
             return []
 
         return self._format_completions(arg_state, results)
+
+
+DEFAULT_COMMAND_COMPLETER: Type[ArgparseCompleter] = ArgparseCompleter
+
+
+def set_default_command_completer_type(completer_type: Type[ArgparseCompleter]) -> None:
+    """
+    Set the default command completer type. It must be a sub-class of the ArgparseCompleter.
+
+    :param completer_type: Type that is a subclass of ArgparseCompleter.
+    """
+    global DEFAULT_COMMAND_COMPLETER
+    DEFAULT_COMMAND_COMPLETER = completer_type
