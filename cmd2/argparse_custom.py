@@ -151,6 +151,7 @@ Since descriptive_header and CompletionItem.description are just strings, you
 can format them in such a way to have multiple columns::
 
     ITEM_ID     Item Name            Checked Out    Due Date
+    ==========================================================
     1           My item              True           02/02/2022
     2           Another item         False
     3           Yet another item     False
