@@ -71,12 +71,13 @@ from typing import (
 
 from . import (
     ansi,
+    argparse_completer,
+    argparse_custom,
     constants,
     plugin,
     utils,
 )
 from .argparse_custom import (
-    DEFAULT_ARGUMENT_PARSER,
     ChoicesProviderFunc,
     CompleterFunc,
     CompletionItem,
@@ -405,7 +406,7 @@ class Cmd(cmd.Cmd):
 
         # Check for command line args
         if allow_cli_args:
-            parser = DEFAULT_ARGUMENT_PARSER()
+            parser = argparse_custom.DEFAULT_ARGUMENT_PARSER()
             parser.add_argument('-t', '--test', action="store_true", help='Test against transcript(s) in FILE (wildcards OK)')
             callopts, callargs = parser.parse_known_args()
 
@@ -1900,10 +1901,16 @@ class Cmd(cmd.Cmd):
                     # There's no completer function, next see if the command uses argparse
                     func = self.cmd_func(command)
                     argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
+                    completer_type = getattr(func, constants.CMD_ATTR_COMPLETER, argparse_completer.DEFAULT_COMMAND_COMPLETER)
+                    if completer_type is None:
+                        completer_type = argparse_completer.DEFAULT_COMMAND_COMPLETER
 
                     if func is not None and argparser is not None:
                         cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
-                        completer = ArgparseCompleter(argparser, self)
+                        if completer_type is not None:
+                            completer = completer_type(argparser, self)
+                        else:
+                            completer = ArgparseCompleter(argparser, self)
                         preserve_quotes = getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES)
 
                         completer_func = functools.partial(
@@ -2072,7 +2079,7 @@ class Cmd(cmd.Cmd):
                             break
                     else:
                         # No shortcut was found. Complete the command token.
-                        parser = DEFAULT_ARGUMENT_PARSER(add_help=False)
+                        parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
                         parser.add_argument(
                             'command',
                             metavar="COMMAND",
@@ -2879,7 +2886,7 @@ class Cmd(cmd.Cmd):
                 # Set custom completion settings
                 else:
                     if parser is None:
-                        parser = DEFAULT_ARGUMENT_PARSER(add_help=False)
+                        parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
                         parser.add_argument(
                             'arg',
                             suppress_tab_hint=True,
@@ -3081,7 +3088,7 @@ class Cmd(cmd.Cmd):
     # Top-level parser for alias
     alias_description = "Manage aliases\n" "\n" "An alias is a command that enables replacement of a word by another string."
     alias_epilog = "See also:\n" "  macro"
-    alias_parser = DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
+    alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
     alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
     alias_subparsers.required = True
 
@@ -3110,7 +3117,8 @@ class Cmd(cmd.Cmd):
         "  alias create save_results print_results \">\" out.txt\n"
     )
 
-    alias_create_parser = DEFAULT_ARGUMENT_PARSER(description=alias_create_description, epilog=alias_create_epilog)
+    alias_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_create_description,
+                                                                  epilog=alias_create_epilog)
     alias_create_parser.add_argument('name', help='name of this alias')
     alias_create_parser.add_argument(
         'command', help='what the alias resolves to', choices_provider=_get_commands_aliases_and_macros_for_completion
@@ -3156,7 +3164,7 @@ class Cmd(cmd.Cmd):
     alias_delete_help = "delete aliases"
     alias_delete_description = "Delete specified aliases or all aliases if --all is used"
 
-    alias_delete_parser = DEFAULT_ARGUMENT_PARSER(description=alias_delete_description)
+    alias_delete_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_delete_description)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
     alias_delete_parser.add_argument(
         'names',
@@ -3191,7 +3199,7 @@ class Cmd(cmd.Cmd):
         "Without arguments, all aliases will be listed."
     )
 
-    alias_list_parser = DEFAULT_ARGUMENT_PARSER(description=alias_list_description)
+    alias_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_list_description)
     alias_list_parser.add_argument(
         'names',
         nargs=argparse.ZERO_OR_MORE,
@@ -3239,7 +3247,7 @@ class Cmd(cmd.Cmd):
     # Top-level parser for macro
     macro_description = "Manage macros\n" "\n" "A macro is similar to an alias, but it can contain argument placeholders."
     macro_epilog = "See also:\n" "  alias"
-    macro_parser = DEFAULT_ARGUMENT_PARSER(description=macro_description, epilog=macro_epilog)
+    macro_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_description, epilog=macro_epilog)
     macro_subparsers = macro_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
     macro_subparsers.required = True
 
@@ -3292,7 +3300,8 @@ class Cmd(cmd.Cmd):
         "  will only complete paths while typing a macro."
     )
 
-    macro_create_parser = DEFAULT_ARGUMENT_PARSER(description=macro_create_description, epilog=macro_create_epilog)
+    macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description,
+                                                                  epilog=macro_create_epilog)
     macro_create_parser.add_argument('name', help='name of this macro')
     macro_create_parser.add_argument(
         'command', help='what the macro resolves to', choices_provider=_get_commands_aliases_and_macros_for_completion
@@ -3382,7 +3391,7 @@ class Cmd(cmd.Cmd):
     # macro -> delete
     macro_delete_help = "delete macros"
     macro_delete_description = "Delete specified macros or all macros if --all is used"
-    macro_delete_parser = DEFAULT_ARGUMENT_PARSER(description=macro_delete_description)
+    macro_delete_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_delete_description)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
     macro_delete_parser.add_argument(
         'names',
@@ -3417,7 +3426,7 @@ class Cmd(cmd.Cmd):
         "Without arguments, all macros will be listed."
     )
 
-    macro_list_parser = DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
+    macro_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
     macro_list_parser.add_argument(
         'names',
         nargs=argparse.ZERO_OR_MORE,
@@ -3490,7 +3499,7 @@ class Cmd(cmd.Cmd):
         completer = ArgparseCompleter(argparser, self)
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
 
-    help_parser = DEFAULT_ARGUMENT_PARSER(
+    help_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
         description="List available commands or provide " "detailed help for a specific command"
     )
     help_parser.add_argument(
@@ -3670,7 +3679,7 @@ class Cmd(cmd.Cmd):
                         command = ''
                 self.poutput()
 
-    shortcuts_parser = DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
+    shortcuts_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
 
     @with_argparser(shortcuts_parser)
     def do_shortcuts(self, _: argparse.Namespace) -> None:
@@ -3680,7 +3689,8 @@ class Cmd(cmd.Cmd):
         result = "\n".join('{}: {}'.format(sc[0], sc[1]) for sc in sorted_shortcuts)
         self.poutput(f"Shortcuts for other commands:\n{result}")
 
-    eof_parser = DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed", epilog=INTERNAL_COMMAND_EPILOG)
+    eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed",
+                                                         epilog=INTERNAL_COMMAND_EPILOG)
 
     @with_argparser(eof_parser)
     def do_eof(self, _: argparse.Namespace) -> Optional[bool]:
@@ -3693,7 +3703,7 @@ class Cmd(cmd.Cmd):
         # noinspection PyTypeChecker
         return self.do_quit('')
 
-    quit_parser = DEFAULT_ARGUMENT_PARSER(description="Exit this application")
+    quit_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Exit this application")
 
     @with_argparser(quit_parser)
     def do_quit(self, _: argparse.Namespace) -> Optional[bool]:
@@ -3761,7 +3771,7 @@ class Cmd(cmd.Cmd):
             raise CompletionError(param + " is not a settable parameter")
 
         # Create a parser with a value field based on this settable
-        settable_parser = DEFAULT_ARGUMENT_PARSER(parents=[Cmd.set_parser_parent])
+        settable_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(parents=[Cmd.set_parser_parent])
 
         # Settables with choices list the values of those choices instead of the arg name
         # in help text and this shows in tab completion hints. Set metavar to avoid this.
@@ -3792,7 +3802,7 @@ class Cmd(cmd.Cmd):
         "Call without arguments for a list of all settable parameters with their values.\n"
         "Call with just param to view that parameter's value."
     )
-    set_parser_parent = DEFAULT_ARGUMENT_PARSER(description=set_description, add_help=False)
+    set_parser_parent = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=set_description, add_help=False)
     set_parser_parent.add_argument(
         '-v', '--verbose', action='store_true', help='include description of parameters when viewing'
     )
@@ -3805,7 +3815,7 @@ class Cmd(cmd.Cmd):
     )
 
     # Create the parser for the set command
-    set_parser = DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
+    set_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
     set_parser.add_argument(
         'value', nargs=argparse.OPTIONAL, help='new value for settable', completer=complete_set_value, suppress_tab_hint=True
     )
@@ -3859,7 +3869,7 @@ class Cmd(cmd.Cmd):
             else:
                 self.poutput(result_str)
 
-    shell_parser = DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt")
+    shell_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt")
     shell_parser.add_argument('command', help='the command to run', completer=shell_cmd_complete)
     shell_parser.add_argument(
         'command_args', nargs=argparse.REMAINDER, help='arguments to pass to command', completer=path_complete
@@ -4167,7 +4177,7 @@ class Cmd(cmd.Cmd):
 
         return py_bridge.stop
 
-    py_parser = DEFAULT_ARGUMENT_PARSER(description="Run an interactive Python shell")
+    py_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive Python shell")
 
     @with_argparser(py_parser)
     def do_py(self, _: argparse.Namespace) -> Optional[bool]:
@@ -4177,7 +4187,7 @@ class Cmd(cmd.Cmd):
         """
         return self._run_python()
 
-    run_pyscript_parser = DEFAULT_ARGUMENT_PARSER(description="Run a Python script file inside the console")
+    run_pyscript_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run a Python script file inside the console")
     run_pyscript_parser.add_argument('script_path', help='path to the script file', completer=path_complete)
     run_pyscript_parser.add_argument(
         'script_arguments', nargs=argparse.REMAINDER, help='arguments to pass to script', completer=path_complete
@@ -4214,7 +4224,7 @@ class Cmd(cmd.Cmd):
 
         return py_return
 
-    ipython_parser = DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell")
+    ipython_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell")
 
     # noinspection PyPackageRequirements
     @with_argparser(ipython_parser)
@@ -4284,7 +4294,7 @@ class Cmd(cmd.Cmd):
 
     history_description = "View, run, edit, save, or clear previously entered commands"
 
-    history_parser = DEFAULT_ARGUMENT_PARSER(description=history_description)
+    history_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=history_description)
     history_action_group = history_parser.add_mutually_exclusive_group()
     history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_action_group.add_argument('-e', '--edit', action='store_true', help='edit and then run selected history items')
@@ -4621,7 +4631,7 @@ class Cmd(cmd.Cmd):
         "  set editor (program-name)"
     )
 
-    edit_parser = DEFAULT_ARGUMENT_PARSER(description=edit_description)
+    edit_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=edit_description)
     edit_parser.add_argument(
         'file_path', nargs=argparse.OPTIONAL, help="optional path to a file to open in editor", completer=path_complete
     )
@@ -4666,7 +4676,7 @@ class Cmd(cmd.Cmd):
         "the output of the script commands to a transcript for testing purposes.\n"
     )
 
-    run_script_parser = DEFAULT_ARGUMENT_PARSER(description=run_script_description)
+    run_script_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=run_script_description)
     run_script_parser.add_argument(
         '-t',
         '--transcript',
@@ -4735,7 +4745,7 @@ class Cmd(cmd.Cmd):
 
     relative_run_script_epilog = "Notes:\n" "  This command is intended to only be used within text file scripts."
 
-    relative_run_script_parser = DEFAULT_ARGUMENT_PARSER(
+    relative_run_script_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
         description=relative_run_script_description, epilog=relative_run_script_epilog
     )
     relative_run_script_parser.add_argument('file_path', help='a file path pointing to a script')

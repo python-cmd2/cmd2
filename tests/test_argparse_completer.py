@@ -16,6 +16,8 @@ from cmd2 import (
     Cmd2ArgumentParser,
     CompletionError,
     CompletionItem,
+    argparse_completer,
+    argparse_custom,
     with_argparser,
 )
 from cmd2.utils import (
@@ -1144,3 +1146,53 @@ def test_complete_standalone(ac_app, flag, completions):
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
     assert first_match is not None
     assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
+
+
+class CustomCompleter(argparse_completer.ArgparseCompleter):
+
+    def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, matched_flags: List[str]) -> List[str]:
+        """Override so arguments with 'always_complete' set to True will always be completed"""
+        for flag in matched_flags:
+            action = self._flag_to_action[flag]
+            if action.get_always_complete() is True:
+                matched_flags.remove(flag)
+        return super(CustomCompleter, self)._complete_flags(text, line, begidx, endidx, matched_flags)
+
+
+argparse_custom.register_argparse_argument_parameter('always_complete', bool)
+
+
+class CustomCompleterApp(cmd2.Cmd):
+    _parser = Cmd2ArgumentParser(description="Testing manually wrapping")
+    _parser.add_argument('--myflag', always_complete=True, nargs=1)
+
+    @with_argparser(_parser)
+    def do_mycommand(self, cmd: 'CustomCompleterApp', args: argparse.Namespace) -> None:
+        """Test command that will be manually wrapped to use argparse"""
+        print(args)
+
+@pytest.fixture
+def custom_completer_app():
+
+    argparse_completer.set_default_command_completer_type(CustomCompleter)
+    app = CustomCompleterApp()
+    app.stdout = StdSim(app.stdout)
+    yield app
+    argparse_completer.set_default_command_completer_type(argparse_completer.ArgparseCompleter)
+
+@pytest.mark.parametrize(
+    'command_and_args, text, output_contains, first_match',
+    [
+        ('mycommand', '--my', '', '--myflag '),
+        ('mycommand --myflag 5', '--my', '', '--myflag '),
+    ],
+)
+def test_custom_completer_type(custom_completer_app, command_and_args, text, output_contains, first_match, capsys):
+    line = '{} {}'.format(command_and_args, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert first_match == complete_tester(text, line, begidx, endidx, custom_completer_app)
+
+    out, err = capsys.readouterr()
+    assert output_contains in out

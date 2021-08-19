@@ -20,7 +20,13 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
 from typing import List
 
 from .ansi import style, fg, bg
-from .argparse_custom import Cmd2ArgumentParser, Cmd2AttributeWrapper, CompletionItem, set_default_argument_parser
+from .argparse_custom import (
+    Cmd2ArgumentParser,
+    Cmd2AttributeWrapper,
+    CompletionItem,
+    register_argparse_argument_parameter,
+    set_default_argument_parser,
+)
 
 # Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER
 import argparse
@@ -31,6 +37,7 @@ if cmd2_parser_module is not None:
 
     importlib.import_module(cmd2_parser_module)
 
+from .argparse_completer import DEFAULT_COMMAND_COMPLETER, set_default_command_completer_type
 # Get the current value for argparse_custom.DEFAULT_ARGUMENT_PARSER
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER
 from .cmd2 import Cmd
@@ -47,6 +54,7 @@ from .utils import categorize, CompletionMode, CustomCompletionSettings, Settabl
 __all__: List[str] = [
     'COMMAND_NAME',
     'DEFAULT_ARGUMENT_PARSER',
+    'DEFAULT_COMMAND_COMPLETER',
     'DEFAULT_SHORTCUTS',
     # ANSI Style exports
     'bg',
@@ -56,7 +64,9 @@ __all__: List[str] = [
     'Cmd2ArgumentParser',
     'Cmd2AttributeWrapper',
     'CompletionItem',
+    'register_argparse_argument_parameter',
     'set_default_argument_parser',
+    'set_default_command_completer_type',
     # Cmd2
     'Cmd',
     'CommandResult',

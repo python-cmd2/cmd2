@@ -10,11 +10,15 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
 )
 
 from . import (
     constants,
+)
+from .argparse_completer import (
+    ArgparseCompleter,
 )
 from .argparse_custom import (
     Cmd2AttributeWrapper,
@@ -271,6 +275,7 @@ def with_argparser(
     ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
     preserve_quotes: bool = False,
     with_unknown_args: bool = False,
+    completer: Optional[Type[ArgparseCompleter]] = None,
 ) -> Callable[[ArgparseCommandFunc], RawCommandFuncOptionalBoolReturn]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
@@ -281,6 +286,7 @@ def with_argparser(
                         state data that affects parsing.
     :param preserve_quotes: if ``True``, then arguments passed to argparse maintain their quotes
     :param with_unknown_args: if true, then capture unknown args
+    :param completer: CommandCompleter type. Defaults to ArgparseCompleter if unspecified.
     :return: function that gets passed argparse-parsed args in a ``Namespace``
              A :class:`cmd2.argparse_custom.Cmd2AttributeWrapper` called ``cmd2_statement`` is included
              in the ``Namespace`` to provide access to the :class:`cmd2.Statement` object that was created when
@@ -391,6 +397,7 @@ def with_argparser(
 
         # Set some custom attributes for this command
         setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, parser)
+        setattr(cmd_wrapper, constants.CMD_ATTR_COMPLETER, completer)
         setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
 
         return cmd_wrapper

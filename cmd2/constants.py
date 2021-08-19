@@ -43,6 +43,7 @@ CLASS_ATTR_DEFAULT_HELP_CATEGORY = 'cmd2_default_help_category'
 
 # The argparse parser for the command
 CMD_ATTR_ARGPARSER = 'argparser'
+CMD_ATTR_COMPLETER = 'command_completer'
 
 # Whether or not tokens are unquoted before sending to argparse
 CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
