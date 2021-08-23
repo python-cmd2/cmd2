@@ -31,9 +31,8 @@ from cmd2 import (
 
 from .conftest import (
     HELP_HISTORY,
+    SET_TXT,
     SHORTCUTS_TXT,
-    SHOW_LONG,
-    SHOW_TXT,
     complete_tester,
     normalize,
     odd_file_names,
@@ -107,7 +106,7 @@ def test_base_argparse_help(base_app):
 
 def test_base_invalid_option(base_app):
     out, err = run_cmd(base_app, 'set -z')
-    assert err[0] == 'Usage: set [-h] [-v] [param] [value]'
+    assert err[0] == 'Usage: set [-h] [param] [value]'
     assert 'Error: unrecognized arguments: -z' in err[1]
 
 
@@ -123,19 +122,11 @@ def test_command_starts_with_shortcut():
     assert "Invalid command name 'help'" in str(excinfo.value)
 
 
-def test_base_show(base_app):
+def test_base_set(base_app):
     # force editor to be 'vim' so test is repeatable across platforms
     base_app.editor = 'vim'
     out, err = run_cmd(base_app, 'set')
-    expected = normalize(SHOW_TXT)
-    assert out == expected
-
-
-def test_base_show_long(base_app):
-    # force editor to be 'vim' so test is repeatable across platforms
-    base_app.editor = 'vim'
-    out, err = run_cmd(base_app, 'set -v')
-    expected = normalize(SHOW_LONG)
+    expected = normalize(SET_TXT)
     assert out == expected
 
 
@@ -150,7 +141,14 @@ now: True
     assert out == expected
 
     out, err = run_cmd(base_app, 'set quiet')
-    assert out == ['quiet: True']
+    expected = normalize(
+        """
+Name   Value                           Description                                                 
+===================================================================================================
+quiet  True                            Don't print nonessential feedback                           
+"""
+    )
+    assert out == expected
 
 
 def test_set_val_empty(base_app):
@@ -1752,7 +1750,8 @@ def test_get_alias_completion_items(base_app):
 
     for cur_res in results:
         assert cur_res in base_app.aliases
-        assert cur_res.description == base_app.aliases[cur_res]
+        # Strip trailing spaces from table output
+        assert cur_res.description.rstrip() == base_app.aliases[cur_res]
 
 
 def test_get_macro_completion_items(base_app):
@@ -1764,14 +1763,26 @@ def test_get_macro_completion_items(base_app):
 
     for cur_res in results:
         assert cur_res in base_app.macros
-        assert cur_res.description == base_app.macros[cur_res].value
+        # Strip trailing spaces from table output
+        assert cur_res.description.rstrip() == base_app.macros[cur_res].value
 
 
 def test_get_settable_completion_items(base_app):
     results = base_app._get_settable_completion_items()
+    assert len(results) == len(base_app.settables)
+
     for cur_res in results:
-        assert cur_res in base_app.settables
-        assert cur_res.description == base_app.settables[cur_res].description
+        cur_settable = base_app.settables.get(cur_res)
+        assert cur_settable is not None
+
+        # These CompletionItem descriptions are a two column table (Settable Value and Settable Description)
+        # First check if the description text starts with the value
+        str_value = str(cur_settable.get_value())
+        assert cur_res.description.startswith(str_value)
+
+        # The second column is likely to have wrapped long text. So we will just examine the
+        # first couple characters to look for the Settable's description.
+        assert cur_settable.description[0:10] in cur_res.description
 
 
 def test_alias_no_subcommand(base_app):

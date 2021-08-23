@@ -5,9 +5,16 @@
   * New function `register_argparse_argument_parameter()` allows developers to specify custom 
     parameters to be passed to the argparse parser's `add_argument()` method. These parameters will
     become accessible in the resulting argparse Action object when modifying `ArgparseCompleter` behavior.
+  * Using `SimpleTable` in the output for the following commands to improve appearance.
+    * help
+    * set (command and tab completion of Settables)
+    * alias tab completion
+    * macro tab completion
+  * Tab completion of `CompletionItems` now includes divider row comprised of `Cmd.ruler` character.
+  * Removed `--verbose` flag from set command since descriptions always show now.
 * Deletions (potentially breaking changes)
-    * Deleted ``set_choices_provider()`` and ``set_completer()`` which were deprecated in 2.1.2
-    
+  * Deleted ``set_choices_provider()`` and ``set_completer()`` which were deprecated in 2.1.2
+
 ## 2.1.2 (July 5, 2021)
 * Enhancements
     * Added the following accessor methods for cmd2-specific attributes to the `argparse.Action` class

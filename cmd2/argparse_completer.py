@@ -588,7 +588,7 @@ class ArgparseCompleter:
             cols.append(Column(destination.upper(), width=token_width))
             cols.append(Column(desc_header, width=desc_width))
 
-            hint_table = SimpleTable(cols, divider_char=None)
+            hint_table = SimpleTable(cols, divider_char=self._cmd2_app.ruler)
             table_data = [[item, item.description] for item in completion_items]
             self._cmd2_app.formatted_completions = hint_table.generate_table(table_data, row_spacing=0)
 

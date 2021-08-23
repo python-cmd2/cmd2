@@ -104,29 +104,23 @@ SHORTCUTS_TXT = """Shortcuts for other commands:
 @@: _relative_run_script
 """
 
-# Output from the show command with default settings
-SHOW_TXT = """allow_style: 'Terminal'
-always_show_hint: False
-debug: False
-echo: False
-editor: 'vim'
-feedback_to_output: False
-max_completion_items: 50
-quiet: False
-timing: False
-"""
-
-SHOW_LONG = """
-allow_style: 'Terminal'   # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
-always_show_hint: False   # Display tab completion hint even when completion suggestions print
-debug: False              # Show full traceback on exception
-echo: False               # Echo command issued into output
-editor: 'vim'             # Program used by 'edit'
-feedback_to_output: False # Include nonessentials in '|', '>' results
-max_completion_items: 50  # Maximum number of CompletionItems to display during tab completion
-quiet: False              # Don't print nonessential feedback
-timing: False             # Report execution times
-"""
+# Output from the set command
+SET_TXT = (
+    "Name                  Value                           Description                                                 \n"
+    "==================================================================================================================\n"
+    "allow_style           Terminal                        Allow ANSI text style sequences in output (valid values:    \n"
+    "                                                      Terminal, Always, Never)                                    \n"
+    "always_show_hint      False                           Display tab completion hint even when completion suggestions\n"
+    "                                                      print                                                       \n"
+    "debug                 False                           Show full traceback on exception                            \n"
+    "echo                  False                           Echo command issued into output                             \n"
+    "editor                vim                             Program used by 'edit'                                      \n"
+    "feedback_to_output    False                           Include nonessentials in '|', '>' results                   \n"
+    "max_completion_items  50                              Maximum number of CompletionItems to display during tab     \n"
+    "                                                      completion                                                  \n"
+    "quiet                 False                           Don't print nonessential feedback                           \n"
+    "timing                False                           Report execution times                                      \n"
+)
 
 
 def normalize(block):

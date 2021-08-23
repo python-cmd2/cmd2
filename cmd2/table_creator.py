@@ -545,7 +545,7 @@ class SimpleTable(TableCreator):
         :param column_spacing: how many spaces to place between columns. Defaults to 2.
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
                           then it will be converted to one space.
-        :param divider_char: optional character used to build the header divider row. Set this to None if you don't
+        :param divider_char: optional character used to build the header divider row. Set this to blank or None if you don't
                              want a divider row. Defaults to dash. (Cannot be a line breaking character)
         :raises: ValueError if column_spacing is less than 0
         :raises: ValueError if tab_width is less than 1
@@ -555,6 +555,9 @@ class SimpleTable(TableCreator):
         if column_spacing < 0:
             raise ValueError("Column spacing cannot be less than 0")
         self.inter_cell = column_spacing * SPACE
+
+        if divider_char == '':
+            divider_char = None
 
         if divider_char is not None:
             if len(ansi.strip_style(divider_char)) != 1:
@@ -604,19 +607,19 @@ class SimpleTable(TableCreator):
         header = self.generate_row(inter_cell=self.inter_cell)
         header_buf.write(header)
 
-        # Create the divider if necessary
-        if self.divider_char is not None:
-            total_width = self.total_width()
-            divider_char_width = ansi.style_aware_wcswidth(self.divider_char)
+        # Add the divider if necessary
+        divider = self.generate_divider()
+        if divider:
+            header_buf.write('\n' + divider)
 
-            # Make divider as wide as table and use padding if width of
-            # divider_char does not divide evenly into table width.
-            divider = self.divider_char * (total_width // divider_char_width)
-            divider += SPACE * (total_width % divider_char_width)
-
-            header_buf.write('\n')
-            header_buf.write(divider)
         return header_buf.getvalue()
+
+    def generate_divider(self) -> str:
+        """Generate divider row"""
+        if self.divider_char is None:
+            return ''
+
+        return utils.align_left('', fill_char=self.divider_char, width=self.total_width())
 
     def generate_data_row(self, row_data: Sequence[Any]) -> str:
         """

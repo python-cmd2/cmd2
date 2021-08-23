@@ -364,9 +364,12 @@ def test_simple_table_creation():
 
     # No divider
     st = SimpleTable([column_1, column_2], divider_char=None)
-    table = st.generate_table(row_data)
+    no_divider_1 = st.generate_table(row_data)
 
-    assert table == (
+    st = SimpleTable([column_1, column_2], divider_char='')
+    no_divider_2 = st.generate_table(row_data)
+
+    assert no_divider_1 == no_divider_2 == (
         'Col 1             Col 2           \n'
         'Col 1 Row 1       Col 2 Row 1     \n'
         '\n'

@@ -131,6 +131,10 @@ from .rl_utils import (
     rl_warning,
     vt100_support,
 )
+from .table_creator import (
+    Column,
+    SimpleTable,
+)
 from .utils import (
     Settable,
     get_defining_class,
@@ -2024,7 +2028,7 @@ class Cmd(cmd.Cmd):
     def complete(  # type: ignore[override]
         self, text: str, state: int, custom_settings: Optional[utils.CustomCompletionSettings] = None
     ) -> Optional[str]:
-        """Override of cmd2's complete method which returns the next possible completion for 'text'
+        """Override of cmd's complete method which returns the next possible completion for 'text'
 
         This completer function is called by readline as complete(text, state), for state in 0, 1, 2, …,
         until it returns a non-string value. It should return the next possible completion starting with text.
@@ -2159,17 +2163,44 @@ class Cmd(cmd.Cmd):
             if command not in self.hidden_commands and command not in self.disabled_commands
         ]
 
+    # Table displayed when tab completing aliases
+    _alias_completion_table = SimpleTable([Column('Value', width=80)], divider_char=None)
+
     def _get_alias_completion_items(self) -> List[CompletionItem]:
-        """Return list of current alias names and values as CompletionItems"""
-        return [CompletionItem(cur_key, self.aliases[cur_key]) for cur_key in self.aliases]
+        """Return list of alias names and values as CompletionItems"""
+        results: List[CompletionItem] = []
+
+        for cur_key in self.aliases:
+            row_data = [self.aliases[cur_key]]
+            results.append(CompletionItem(cur_key, self._alias_completion_table.generate_data_row(row_data)))
+
+        return results
+
+    # Table displayed when tab completing macros
+    _macro_completion_table = SimpleTable([Column('Value', width=80)], divider_char=None)
 
     def _get_macro_completion_items(self) -> List[CompletionItem]:
-        """Return list of current macro names and values as CompletionItems"""
-        return [CompletionItem(cur_key, self.macros[cur_key].value) for cur_key in self.macros]
+        """Return list of macro names and values as CompletionItems"""
+        results: List[CompletionItem] = []
+
+        for cur_key in self.macros:
+            row_data = [self.macros[cur_key].value]
+            results.append(CompletionItem(cur_key, self._macro_completion_table.generate_data_row(row_data)))
+
+        return results
+
+    # Table displayed when tab completing Settables
+    _settable_completion_table = SimpleTable([Column('Value', width=30), Column('Description', width=60)], divider_char=None)
 
     def _get_settable_completion_items(self) -> List[CompletionItem]:
-        """Return list of current settable names and descriptions as CompletionItems"""
-        return [CompletionItem(cur_key, self.settables[cur_key].description) for cur_key in self.settables]
+        """Return list of Settable names, values, and descriptions as CompletionItems"""
+        results: List[CompletionItem] = []
+
+        for cur_key in self.settables:
+            row_data = [self.settables[cur_key].get_value(), self.settables[cur_key].description]
+            results.append(CompletionItem(cur_key, self._settable_completion_table.generate_data_row(row_data)))
+
+        return results
 
     def _get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
@@ -3172,7 +3203,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='alias(es) to delete',
         choices_provider=_get_alias_completion_items,
-        descriptive_header='Value',
+        descriptive_header=_alias_completion_table.generate_header(),
     )
 
     @as_subcommand_to('alias', 'delete', alias_delete_parser, help=alias_delete_help)
@@ -3206,7 +3237,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='alias(es) to list',
         choices_provider=_get_alias_completion_items,
-        descriptive_header='Value',
+        descriptive_header=_alias_completion_table.generate_header(),
     )
 
     @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_list_help)
@@ -3400,7 +3431,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='macro(s) to delete',
         choices_provider=_get_macro_completion_items,
-        descriptive_header='Value',
+        descriptive_header=_macro_completion_table.generate_header(),
     )
 
     @as_subcommand_to('macro', 'delete', macro_delete_parser, help=macro_delete_help)
@@ -3434,7 +3465,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='macro(s) to list',
         choices_provider=_get_macro_completion_items,
-        descriptive_header='Value',
+        descriptive_header=_macro_completion_table.generate_header(),
     )
 
     @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
@@ -3556,6 +3587,80 @@ class Cmd(cmd.Cmd):
                 # Set apply_style to False so help_error's style is not overridden
                 self.perror(err_msg, apply_style=False)
 
+    def print_topics(self, header: str, cmds: Optional[List[str]], cmdlen: int, maxcol: int) -> None:
+        """
+        Print groups of commands and topics in columns and an optional header
+        Override of cmd's print_topics() to handle headers with newlines, ANSI style sequences, and wide characters
+
+        :param header: string to print above commands being printed
+        :param cmds: list of topics to print
+        :param cmdlen: unused, even by cmd's version
+        :param maxcol: max number of display columns to fit into
+        """
+        if cmds:
+            self.poutput(header)
+            if self.ruler:
+                divider = utils.align_left('', fill_char=self.ruler, width=ansi.widest_line(header))
+                self.poutput(divider)
+            self.columnize(cmds, maxcol - 1)
+            self.poutput()
+
+    def columnize(self, str_list: Optional[List[str]], display_width: int = 80) -> None:
+        """Display a list of single-line strings as a compact set of columns.
+        Override of cmd's print_topics() to handle strings with ANSI style sequences and wide characters
+
+        Each column is only as wide as necessary.
+        Columns are separated by two spaces (one was not legible enough).
+        """
+        if not str_list:
+            self.poutput("<empty>")
+            return
+
+        nonstrings = [i for i in range(len(str_list)) if not isinstance(str_list[i], str)]
+        if nonstrings:
+            raise TypeError(f"str_list[i] not a string for i in {nonstrings}")
+        size = len(str_list)
+        if size == 1:
+            self.poutput(str_list[0])
+            return
+        # Try every row count from 1 upwards
+        for nrows in range(1, len(str_list)):
+            ncols = (size + nrows - 1) // nrows
+            colwidths = []
+            totwidth = -2
+            for col in range(ncols):
+                colwidth = 0
+                for row in range(nrows):
+                    i = row + nrows * col
+                    if i >= size:
+                        break
+                    x = str_list[i]
+                    colwidth = max(colwidth, ansi.style_aware_wcswidth(x))
+                colwidths.append(colwidth)
+                totwidth += colwidth + 2
+                if totwidth > display_width:
+                    break
+            if totwidth <= display_width:
+                break
+        else:
+            nrows = len(str_list)
+            ncols = 1
+            colwidths = [0]
+        for row in range(nrows):
+            texts = []
+            for col in range(ncols):
+                i = row + nrows * col
+                if i >= size:
+                    x = ""
+                else:
+                    x = str_list[i]
+                texts.append(x)
+            while texts and not texts[-1]:
+                del texts[-1]
+            for col in range(len(texts)):
+                texts[col] = utils.align_left(texts[col], width=colwidths[col])
+            self.poutput("  ".join(texts))
+
     def _help_menu(self, verbose: bool = False) -> None:
         """Show a list of commands which help can be displayed for"""
         cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
@@ -3613,25 +3718,26 @@ class Cmd(cmd.Cmd):
             if not verbose:
                 self.print_topics(header, cmds, 15, 80)
             else:
-                self.poutput(f'{header}')
-                widest = 0
-                # measure the commands
-                for command in cmds:
-                    width = ansi.style_aware_wcswidth(command)
-                    if width > widest:
-                        widest = width
-                # add a 4-space pad
-                widest += 4
-                if widest < 20:
-                    widest = 20
+                # Find the widest command
+                widest = max([ansi.style_aware_wcswidth(command) for command in cmds])
 
-                if self.ruler:
-                    ruler_line = utils.align_left('', width=80, fill_char=self.ruler)
-                    self.poutput(f'{ruler_line}')
+                # Define the table structure
+                name_column = Column('', width=max(widest, 20))
+                desc_column = Column('', width=80)
+
+                topic_table = SimpleTable([name_column, desc_column], divider_char=self.ruler)
+
+                # Build the topic table
+                table_str_buf = io.StringIO()
+                if header:
+                    table_str_buf.write(header + "\n")
+
+                divider = topic_table.generate_divider()
+                if divider:
+                    table_str_buf.write(divider + "\n")
 
                 # Try to get the documentation string for each command
                 topics = self.get_help_topics()
-
                 for command in cmds:
                     cmd_func = self.cmd_func(command)
                     doc: Optional[str]
@@ -3658,10 +3764,8 @@ class Cmd(cmd.Cmd):
                         doc = cmd_func.__doc__
 
                     # Attempt to locate the first documentation block
-                    if not doc:
-                        doc_block = ['']
-                    else:
-                        doc_block = []
+                    cmd_desc = ''
+                    if doc:
                         found_first = False
                         for doc_line in doc.splitlines():
                             stripped_line = doc_line.strip()
@@ -3671,15 +3775,18 @@ class Cmd(cmd.Cmd):
                                 if found_first:
                                     break
                             elif stripped_line:
-                                doc_block.append(stripped_line)
+                                if found_first:
+                                    cmd_desc += "\n"
+                                cmd_desc += stripped_line
                                 found_first = True
                             elif found_first:
                                 break
 
-                    for doc_line in doc_block:
-                        self.poutput(f'{command: <{widest}}{doc_line}')
-                        command = ''
-                self.poutput()
+                    # Add this command to the table
+                    table_row = topic_table.generate_data_row([command, cmd_desc])
+                    table_str_buf.write(table_row + '\n')
+
+                self.poutput(table_str_buf.getvalue())
 
     shortcuts_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
 
@@ -3807,14 +3914,11 @@ class Cmd(cmd.Cmd):
     )
     set_parser_parent = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=set_description, add_help=False)
     set_parser_parent.add_argument(
-        '-v', '--verbose', action='store_true', help='include description of parameters when viewing'
-    )
-    set_parser_parent.add_argument(
         'param',
         nargs=argparse.OPTIONAL,
         help='parameter to set or view',
         choices_provider=_get_settable_completion_items,
-        descriptive_header='Description',
+        descriptive_header=_settable_completion_table.generate_header(),
     )
 
     # Create the parser for the set command
@@ -3856,21 +3960,25 @@ class Cmd(cmd.Cmd):
             # Show all settables
             to_show = list(self.settables.keys())
 
-        # Build the result strings
-        max_len = 0
-        results = dict()
-        for param in to_show:
-            settable = self.settables[param]
-            results[param] = f"{param}: {settable.get_value()!r}"
-            max_len = max(max_len, ansi.style_aware_wcswidth(results[param]))
+        # Define the table structure
+        name_label = 'Name'
+        max_name_width = max([ansi.style_aware_wcswidth(param) for param in to_show])
+        max_name_width = max(max_name_width, ansi.style_aware_wcswidth(name_label))
 
-        # Display the results
-        for param in sorted(results, key=self.default_sort_key):
-            result_str = results[param]
-            if args.verbose:
-                self.poutput(f'{utils.align_left(result_str, width=max_len)} # {self.settables[param].description}')
-            else:
-                self.poutput(result_str)
+        cols: List[Column] = [
+            Column(name_label, width=max_name_width),
+            Column('Value', width=30),
+            Column('Description', width=60),
+        ]
+
+        table = SimpleTable(cols, divider_char=self.ruler)
+        self.poutput(table.generate_header())
+
+        # Build the table
+        for param in sorted(to_show, key=self.default_sort_key):
+            settable = self.settables[param]
+            row_data = [param, settable.get_value(), settable.description]
+            self.poutput(table.generate_data_row(row_data))
 
     shell_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt")
     shell_parser.add_argument('command', help='the command to run', completer=shell_cmd_complete)
@@ -4070,7 +4178,6 @@ class Cmd(cmd.Cmd):
         If pyscript is None, then this function runs an interactive Python shell.
         Otherwise, it runs the pyscript file.
 
-        :param args: Namespace of args on the command line
         :param pyscript: optional path to a pyscript file to run. This is intended only to be used by do_run_pyscript()
                          after it sets up sys.argv for the script. (Defaults to None)
         :return: True if running of commands should stop
