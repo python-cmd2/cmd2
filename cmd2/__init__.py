@@ -5,7 +5,7 @@
 
 import sys
 
-# For python 3.8 and late
+# For python 3.8 and later
 if sys.version_info >= (3, 8):
     import importlib.metadata as importlib_metadata
 else:
@@ -20,9 +20,16 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
 from typing import List
 
 from .ansi import style, fg, bg
-from .argparse_custom import Cmd2ArgumentParser, Cmd2AttributeWrapper, CompletionItem, set_default_argument_parser
+from .argparse_custom import (
+    Cmd2ArgumentParser,
+    Cmd2AttributeWrapper,
+    CompletionItem,
+    register_argparse_argument_parameter,
+    set_default_argument_parser,
+)
 
-# Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER
+# Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER.
+# Do this before loading cmd2.Cmd class so its commands use the custom parser.
 import argparse
 
 cmd2_parser_module = getattr(argparse, 'cmd2_parser_module', None)
@@ -31,8 +38,8 @@ if cmd2_parser_module is not None:
 
     importlib.import_module(cmd2_parser_module)
 
-# Get the current value for argparse_custom.DEFAULT_ARGUMENT_PARSER
-from .argparse_custom import DEFAULT_ARGUMENT_PARSER
+from .argparse_completer import set_default_command_completer_type
+
 from .cmd2 import Cmd
 from .command_definition import CommandSet, with_default_category
 from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
@@ -46,7 +53,6 @@ from .utils import categorize, CompletionMode, CustomCompletionSettings, Settabl
 
 __all__: List[str] = [
     'COMMAND_NAME',
-    'DEFAULT_ARGUMENT_PARSER',
     'DEFAULT_SHORTCUTS',
     # ANSI Style exports
     'bg',
@@ -56,7 +62,9 @@ __all__: List[str] = [
     'Cmd2ArgumentParser',
     'Cmd2AttributeWrapper',
     'CompletionItem',
+    'register_argparse_argument_parameter',
     'set_default_argument_parser',
+    'set_default_command_completer_type',
     # Cmd2
     'Cmd',
     'CommandResult',

@@ -83,6 +83,7 @@ EXTRAS_REQUIRE = {
     'validate': [
         'flake8',
         'mypy==0.902',
+        'types-pkg-resources',
     ],
 }
 

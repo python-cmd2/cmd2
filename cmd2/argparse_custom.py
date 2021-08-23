@@ -240,6 +240,7 @@ from typing import (
     NoReturn,
     Optional,
     Sequence,
+    Set,
     Tuple,
     Type,
     Union,
@@ -641,8 +642,73 @@ setattr(argparse.Action, 'set_suppress_tab_hint', _action_set_suppress_tab_hint)
 
 
 ############################################################################################################
+# Allow developers to add custom action attributes
+############################################################################################################
+
+CUSTOM_ACTION_ATTRIBS: Set[str] = set()
+_CUSTOM_ATTRIB_PFX = '_attr_'
+
+
+def register_argparse_argument_parameter(param_name: str, param_type: Optional[Type[Any]]) -> None:
+    """
+    Registers a custom argparse argument parameter.
+
+    The registered name will then be a recognized keyword parameter to the parser's `add_argument()` function.
+
+    An accessor functions will be added to the parameter's Action object in the form of: ``get_{param_name}()``
+    and ``set_{param_name}(value)``.
+
+    :param param_name: Name of the parameter to add.
+    """
+    attr_name = f'{_CUSTOM_ATTRIB_PFX}{param_name}'
+    if param_name in CUSTOM_ACTION_ATTRIBS or hasattr(argparse.Action, attr_name):
+        raise KeyError(f'Custom parameter {param_name} already exists')
+    if not re.search('^[A-Za-z_][A-Za-z0-9_]*$', param_name):
+        raise KeyError(f'Invalid parameter name {param_name} - cannot be used as a python identifier')
+
+    getter_name = f'get_{param_name}'
+
+    def _action_get_custom_parameter(self: argparse.Action) -> Any:
+        f"""
+        Get the custom {param_name} attribute of an argparse Action.
+
+        This function is added by cmd2 as a method called ``{getter_name}()`` to ``argparse.Action`` class.
+
+        To call: ``action.{getter_name}()``
+
+        :param self: argparse Action being queried
+        :return: The value of {param_name} or None if attribute does not exist
+        """
+        return getattr(self, attr_name, None)
+
+    setattr(argparse.Action, getter_name, _action_get_custom_parameter)
+
+    setter_name = f'set_{param_name}'
+
+    def _action_set_custom_parameter(self: argparse.Action, value: Any) -> None:
+        f"""
+        Set the custom {param_name} attribute of an argparse Action.
+
+        This function is added by cmd2 as a method called ``{setter_name}()`` to ``argparse.Action`` class.
+
+        To call: ``action.{setter_name}({param_name})``
+
+        :param self: argparse Action being updated
+        :param value: value being assigned
+        """
+        if param_type and not isinstance(value, param_type):
+            raise TypeError(f'{param_name} must be of type {param_type}, got: {value} ({type(value)})')
+        setattr(self, attr_name, value)
+
+    setattr(argparse.Action, setter_name, _action_set_custom_parameter)
+
+    CUSTOM_ACTION_ATTRIBS.add(param_name)
+
+
+############################################################################################################
 # Patch _ActionsContainer.add_argument with our wrapper to support more arguments
 ############################################################################################################
+
 
 # Save original _ActionsContainer.add_argument so we can call it in our wrapper
 # noinspection PyProtectedMember
@@ -753,6 +819,14 @@ def _add_argument_wrapper(
         # Add the argparse-recognized version of nargs to kwargs
         kwargs['nargs'] = nargs_adjusted
 
+    # Extract registered custom keyword arguments
+    custom_attribs: Dict[str, Any] = {}
+    for keyword, value in kwargs.items():
+        if keyword in CUSTOM_ACTION_ATTRIBS:
+            custom_attribs[keyword] = value
+    for keyword in custom_attribs:
+        del kwargs[keyword]
+
     # Create the argument using the original add_argument function
     new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
@@ -766,6 +840,11 @@ def _add_argument_wrapper(
 
     new_arg.set_suppress_tab_hint(suppress_tab_hint)  # type: ignore[attr-defined]
     new_arg.set_descriptive_header(descriptive_header)  # type: ignore[attr-defined]
+
+    for keyword, value in custom_attribs.items():
+        attr_setter = getattr(new_arg, f'set_{keyword}', None)
+        if attr_setter is not None:
+            attr_setter(value)
 
     return new_arg
 
@@ -1243,6 +1322,9 @@ DEFAULT_ARGUMENT_PARSER: Type[argparse.ArgumentParser] = Cmd2ArgumentParser
 
 
 def set_default_argument_parser(parser: Type[argparse.ArgumentParser]) -> None:
-    """Set the default ArgumentParser class for a cmd2 app"""
+    """
+    Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
+    you want to override the parser for cmd2's built-in commands. See examples/override_parser.py.
+    """
     global DEFAULT_ARGUMENT_PARSER
     DEFAULT_ARGUMENT_PARSER = parser
