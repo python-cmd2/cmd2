@@ -31,6 +31,8 @@ class CustomParser(Cmd2ArgumentParser):
             linum += 1
 
         self.print_usage(sys.stderr)
+
+        # Format errors with style_warning()
         formatted_message = ansi.style_warning(formatted_message)
         self.exit(2, '{}\n\n'.format(formatted_message))
 
