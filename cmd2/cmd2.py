@@ -358,8 +358,7 @@ class Cmd(cmd.Cmd):
             terminators=terminators, multiline_commands=multiline_commands, shortcuts=shortcuts
         )
 
-        # Stores results from the last command run to enable usage of results in a Python script or interactive console
-        # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
+        # Stores results from the last command run to enable usage of results in a Python script or Python console
         self.last_result: Any = None
 
         # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
@@ -3162,6 +3161,8 @@ class Cmd(cmd.Cmd):
     @as_subcommand_to('alias', 'create', alias_create_parser, help=alias_create_description.lower())
     def _alias_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite an alias"""
+        self.last_result = False
+
         # Validate the alias name
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
@@ -3191,6 +3192,7 @@ class Cmd(cmd.Cmd):
         self.poutput(f"Alias '{args.name}' {result}")
 
         self.aliases[args.name] = value
+        self.last_result = True
 
     # alias -> delete
     alias_delete_help = "delete aliases"
@@ -3209,11 +3211,14 @@ class Cmd(cmd.Cmd):
     @as_subcommand_to('alias', 'delete', alias_delete_parser, help=alias_delete_help)
     def _alias_delete(self, args: argparse.Namespace) -> None:
         """Delete aliases"""
+        self.last_result = True
+
         if args.all:
             self.aliases.clear()
             self.poutput("All aliases deleted")
         elif not args.names:
             self.perror("Either --all or alias name(s) must be specified")
+            self.last_result = False
         else:
             for cur_name in utils.remove_duplicates(args.names):
                 if cur_name in self.aliases:
@@ -3243,6 +3248,8 @@ class Cmd(cmd.Cmd):
     @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_list_help)
     def _alias_list(self, args: argparse.Namespace) -> None:
         """List some or all aliases as 'alias create' commands"""
+        self.last_result = {}  # Dict[alias_name, alias_value]
+
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
 
@@ -3268,6 +3275,7 @@ class Cmd(cmd.Cmd):
                 val += ' ' + ' '.join(command_args)
 
             self.poutput(f"alias create {name} {val}")
+            self.last_result[name] = val
 
         for name in not_found:
             self.perror(f"Alias '{name}' not found")
@@ -3346,6 +3354,8 @@ class Cmd(cmd.Cmd):
     @as_subcommand_to('macro', 'create', macro_create_parser, help=macro_create_help)
     def _macro_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite a macro"""
+        self.last_result = False
+
         # Validate the macro name
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
@@ -3420,6 +3430,7 @@ class Cmd(cmd.Cmd):
         self.poutput(f"Macro '{args.name}' {result}")
 
         self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
+        self.last_result = True
 
     # macro -> delete
     macro_delete_help = "delete macros"
@@ -3437,11 +3448,14 @@ class Cmd(cmd.Cmd):
     @as_subcommand_to('macro', 'delete', macro_delete_parser, help=macro_delete_help)
     def _macro_delete(self, args: argparse.Namespace) -> None:
         """Delete macros"""
+        self.last_result = True
+
         if args.all:
             self.macros.clear()
             self.poutput("All macros deleted")
         elif not args.names:
             self.perror("Either --all or macro name(s) must be specified")
+            self.last_result = False
         else:
             for cur_name in utils.remove_duplicates(args.names):
                 if cur_name in self.macros:
@@ -3471,6 +3485,8 @@ class Cmd(cmd.Cmd):
     @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
     def _macro_list(self, args: argparse.Namespace) -> None:
         """List some or all macros as 'macro create' commands"""
+        self.last_result = {}  # Dict[macro_name, macro_value]
+
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
 
@@ -3496,6 +3512,7 @@ class Cmd(cmd.Cmd):
                 val += ' ' + ' '.join(command_args)
 
             self.poutput(f"macro create {name} {val}")
+            self.last_result[name] = val
 
         for name in not_found:
             self.perror(f"Macro '{name}' not found")
@@ -3552,6 +3569,8 @@ class Cmd(cmd.Cmd):
     @with_argparser(help_parser)
     def do_help(self, args: argparse.Namespace) -> None:
         """List available commands or provide detailed help for a specific command"""
+        self.last_result = True
+
         if not args.command or args.verbose:
             self._help_menu(args.verbose)
 
@@ -3586,6 +3605,7 @@ class Cmd(cmd.Cmd):
 
                 # Set apply_style to False so help_error's style is not overridden
                 self.perror(err_msg, apply_style=False)
+                self.last_result = False
 
     def print_topics(self, header: str, cmds: Optional[List[str]], cmdlen: int, maxcol: int) -> None:
         """
@@ -3797,6 +3817,7 @@ class Cmd(cmd.Cmd):
         sorted_shortcuts = sorted(self.statement_parser.shortcuts, key=lambda x: self.default_sort_key(x[0]))
         result = "\n".join('{}: {}'.format(sc[0], sc[1]) for sc in sorted_shortcuts)
         self.poutput(f"Shortcuts for other commands:\n{result}")
+        self.last_result = True
 
     eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
         description="Called when Ctrl-D is pressed", epilog=INTERNAL_COMMAND_EPILOG
@@ -3810,6 +3831,7 @@ class Cmd(cmd.Cmd):
         """
         self.poutput()
 
+        # self.last_result will be set by do_quit()
         # noinspection PyTypeChecker
         return self.do_quit('')
 
@@ -3819,6 +3841,7 @@ class Cmd(cmd.Cmd):
     def do_quit(self, _: argparse.Namespace) -> Optional[bool]:
         """Exit this application"""
         # Return True to stop the command loop
+        self.last_result = True
         return True
 
     def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str = 'Your choice? ') -> str:
@@ -3931,6 +3954,8 @@ class Cmd(cmd.Cmd):
     @with_argparser(set_parser, preserve_quotes=True)
     def do_set(self, args: argparse.Namespace) -> None:
         """Set a settable parameter or show current settings of parameters"""
+        self.last_result = False
+
         if not self.settables:
             self.pwarning("There are no settable parameters")
             return
@@ -3952,6 +3977,7 @@ class Cmd(cmd.Cmd):
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
                     self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {new_value!r}")
+                    self.last_result = True
                 return
 
             # Show one settable
@@ -3974,11 +4000,14 @@ class Cmd(cmd.Cmd):
         table = SimpleTable(cols, divider_char=self.ruler)
         self.poutput(table.generate_header())
 
-        # Build the table
+        # Build the table and populate self.last_result
+        self.last_result = {}  # Dict[settable_name, settable_value]
+
         for param in sorted(to_show, key=self.default_sort_key):
             settable = self.settables[param]
             row_data = [param, settable.get_value(), settable.description]
             self.poutput(table.generate_data_row(row_data))
+            self.last_result[param] = settable.get_value()
 
     shell_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt")
     shell_parser.add_argument('command', help='the command to run', completer=shell_cmd_complete)
@@ -4182,6 +4211,7 @@ class Cmd(cmd.Cmd):
                          after it sets up sys.argv for the script. (Defaults to None)
         :return: True if running of commands should stop
         """
+        self.last_result = False
 
         def py_quit() -> None:
             """Function callable from the interactive Python console to exit that environment"""
@@ -4197,6 +4227,8 @@ class Cmd(cmd.Cmd):
         if self.in_pyscript():
             self.perror("Recursively entering interactive Python shells is not allowed")
             return None
+
+        self.last_result = True
 
         try:
             self._in_py = True
@@ -4310,6 +4342,8 @@ class Cmd(cmd.Cmd):
 
         :return: True if running of commands should stop
         """
+        self.last_result = False
+
         # Expand ~ before placing this path in sys.argv just as a shell would
         args.script_path = os.path.expanduser(args.script_path)
 
@@ -4344,6 +4378,8 @@ class Cmd(cmd.Cmd):
 
         :return: True if running of commands should stop
         """
+        self.last_result = False
+
         # Detect whether IPython is installed
         try:
             import traitlets.config.loader as TraitletsLoader  # type: ignore[import]
@@ -4367,6 +4403,8 @@ class Cmd(cmd.Cmd):
         if self.in_pyscript():
             self.perror("Recursively entering interactive Python shells is not allowed")
             return None
+
+        self.last_result = True
 
         try:
             self._in_py = True
@@ -4456,6 +4494,7 @@ class Cmd(cmd.Cmd):
 
         :return: True if running of commands should stop
         """
+        self.last_result = False
 
         # -v must be used alone with no other options
         if args.verbose:
@@ -4471,6 +4510,8 @@ class Cmd(cmd.Cmd):
             return None
 
         if args.clear:
+            self.last_result = True
+
             # Clear command and readline history
             self.history.clear()
 
@@ -4481,6 +4522,7 @@ class Cmd(cmd.Cmd):
                     pass
                 except OSError as ex:
                     self.perror(f"Error removing history file '{self.persistent_history_file}': {ex}")
+                    self.last_result = False
                     return None
 
             if rl_type != RlType.NONE:
@@ -4495,7 +4537,9 @@ class Cmd(cmd.Cmd):
                 self.perror("Cowardly refusing to run all previously entered commands.")
                 self.perror("If this is what you want to do, specify '1:' as the range of history.")
             else:
-                return self.runcmds_plus_hooks(list(history.values()))
+                stop = self.runcmds_plus_hooks(list(history.values()))
+                self.last_result = True
+                return stop
         elif args.edit:
             import tempfile
 
@@ -4509,8 +4553,10 @@ class Cmd(cmd.Cmd):
                         fobj.write(f'{command.raw}\n')
             try:
                 self.run_editor(fname)
+
+                # self.last_resort will be set by do_run_script()
                 # noinspection PyTypeChecker
-                self.do_run_script(utils.quote_string(fname))
+                return self.do_run_script(utils.quote_string(fname))
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -4527,12 +4573,15 @@ class Cmd(cmd.Cmd):
                 self.perror(f"Error saving history file '{full_path}': {ex}")
             else:
                 self.pfeedback(f"{len(history)} command{plural} saved to {full_path}")
+                self.last_result = True
         elif args.transcript:
+            # self.last_resort will be set by _generate_transcript()
             self._generate_transcript(list(history.values()), args.transcript)
         else:
             # Display the history items retrieved
             for idx, hi in history.items():
                 self.poutput(hi.pr(idx, script=args.script, expanded=args.expanded, verbose=args.verbose))
+            self.last_result = history
         return None
 
     def _get_history(self, args: argparse.Namespace) -> 'OrderedDict[int, HistoryItem]':
@@ -4650,6 +4699,8 @@ class Cmd(cmd.Cmd):
 
     def _generate_transcript(self, history: Union[List[HistoryItem], List[str]], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands"""
+        self.last_result = False
+
         # Validate the transcript file path to make sure directory exists and write access is available
         transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
         transcript_dir = os.path.dirname(transcript_path)
@@ -4732,6 +4783,7 @@ class Cmd(cmd.Cmd):
             else:
                 plural = 'commands and their outputs'
             self.pfeedback(f"{commands_run} {plural} saved to transcript file '{transcript_path}'")
+            self.last_result = True
 
     edit_description = (
         "Run a text editor and optionally open a file with it\n"
@@ -4749,6 +4801,8 @@ class Cmd(cmd.Cmd):
     @with_argparser(edit_parser)
     def do_edit(self, args: argparse.Namespace) -> None:
         """Run a text editor and optionally open a file with it"""
+
+        # self.last_result will be set by do_shell() which is called by run_editor()
         self.run_editor(args.file_path)
 
     def run_editor(self, file_path: Optional[str] = None) -> None:
@@ -4802,6 +4856,7 @@ class Cmd(cmd.Cmd):
 
         :return: True if running of commands should stop
         """
+        self.last_result = False
         expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
 
         # Add some protection against accidentally running a Python file. The happens when users
@@ -4835,9 +4890,12 @@ class Cmd(cmd.Cmd):
             self._script_dir.append(os.path.dirname(expanded_path))
 
             if args.transcript:
+                # self.last_resort will be set by _generate_transcript()
                 self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
             else:
-                return self.runcmds_plus_hooks(script_commands, stop_on_keyboard_interrupt=True)
+                stop = self.runcmds_plus_hooks(script_commands, stop_on_keyboard_interrupt=True)
+                self.last_result = True
+                return stop
 
         finally:
             with self.sigint_protection:
@@ -4871,6 +4929,7 @@ class Cmd(cmd.Cmd):
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
 
+        # self.last_result will be set by do_run_script()
         # noinspection PyTypeChecker
         return self.do_run_script(utils.quote_string(relative_path))
 

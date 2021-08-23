@@ -73,8 +73,8 @@ class CommandResult(NamedTuple):
     def __bool__(self) -> bool:
         """Returns True if the command succeeded, otherwise False"""
 
-        # If data has a __bool__ method, then call it to determine success of command
-        if self.data is not None and callable(getattr(self.data, '__bool__', None)):
+        # If data was set, then use it to determine success
+        if self.data is not None:
             return bool(self.data)
 
         # Otherwise check if stderr was filled out
