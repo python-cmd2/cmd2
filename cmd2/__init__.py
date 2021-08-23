@@ -28,7 +28,8 @@ from .argparse_custom import (
     set_default_argument_parser,
 )
 
-# Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER
+# Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER.
+# Do this before loading cmd2.Cmd class so its commands use the custom parser.
 import argparse
 
 cmd2_parser_module = getattr(argparse, 'cmd2_parser_module', None)
@@ -37,10 +38,8 @@ if cmd2_parser_module is not None:
 
     importlib.import_module(cmd2_parser_module)
 
-from .argparse_completer import DEFAULT_COMMAND_COMPLETER, set_default_command_completer_type
+from .argparse_completer import set_default_command_completer_type
 
-# Get the current value for argparse_custom.DEFAULT_ARGUMENT_PARSER
-from .argparse_custom import DEFAULT_ARGUMENT_PARSER
 from .cmd2 import Cmd
 from .command_definition import CommandSet, with_default_category
 from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
@@ -54,8 +53,6 @@ from .utils import categorize, CompletionMode, CustomCompletionSettings, Settabl
 
 __all__: List[str] = [
     'COMMAND_NAME',
-    'DEFAULT_ARGUMENT_PARSER',
-    'DEFAULT_COMMAND_COMPLETER',
     'DEFAULT_SHORTCUTS',
     # ANSI Style exports
     'bg',
