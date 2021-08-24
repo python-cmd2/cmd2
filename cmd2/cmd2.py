@@ -351,14 +351,14 @@ class Cmd(cmd.Cmd):
         # Defines app-specific variables/functions available in Python shells and pyscripts
         self.py_locals: Dict[str, Any] = dict()
 
-        # True if running inside a Python script or interactive console, False otherwise
+        # True if running inside a Python shell or pyscript, False otherwise
         self._in_py = False
 
         self.statement_parser = StatementParser(
             terminators=terminators, multiline_commands=multiline_commands, shortcuts=shortcuts
         )
 
-        # Stores results from the last command run to enable usage of results in a Python script or Python console
+        # Stores results from the last command run to enable usage of results in Python shells and pyscripts
         self.last_result: Any = None
 
         # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
@@ -2134,7 +2134,7 @@ class Cmd(cmd.Cmd):
         return self._current_script_dir is not None
 
     def in_pyscript(self) -> bool:
-        """Return whether a pyscript is running"""
+        """Return whether running inside a Python shell or pyscript"""
         return self._in_py
 
     @property
@@ -3271,7 +3271,7 @@ class Cmd(cmd.Cmd):
             utils.quote_specific_tokens(command_args, tokens_to_quote)
 
             val = command
-            if args:
+            if command_args:
                 val += ' ' + ' '.join(command_args)
 
             self.poutput(f"alias create {name} {val}")
@@ -4228,8 +4228,6 @@ class Cmd(cmd.Cmd):
             self.perror("Recursively entering interactive Python shells is not allowed")
             return None
 
-        self.last_result = True
-
         try:
             self._in_py = True
             py_code_to_run = ''
@@ -4270,6 +4268,7 @@ class Cmd(cmd.Cmd):
                 local_vars['__name__'] = '__console__'
 
             # Create the Python interpreter
+            self.last_result = True
             interp = InteractiveConsole(locals=local_vars)
 
             # Check if we are running Python code
@@ -4327,6 +4326,7 @@ class Cmd(cmd.Cmd):
         Run an interactive Python shell
         :return: True if running of commands should stop
         """
+        # self.last_resort will be set by _run_python()
         return self._run_python()
 
     run_pyscript_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run a Python script file inside the console")
@@ -4361,6 +4361,8 @@ class Cmd(cmd.Cmd):
         try:
             # Overwrite sys.argv to allow the script to take command line arguments
             sys.argv = [args.script_path] + args.script_arguments
+
+            # self.last_resort will be set by _run_python()
             py_return = self._run_python(pyscript=args.script_path)
         finally:
             # Restore command line arguments to original state
