@@ -37,6 +37,7 @@ def test_run_pyscript(base_app, request):
 
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert expected in out
+    assert base_app.last_result is True
 
 
 def test_run_pyscript_recursive_not_allowed(base_app, request):
@@ -46,12 +47,14 @@ def test_run_pyscript_recursive_not_allowed(base_app, request):
 
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert err[0] == expected
+    assert base_app.last_result is False
 
 
 def test_run_pyscript_with_nonexist_file(base_app):
     python_script = 'does_not_exist.py'
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert "Error reading script file" in err[0]
+    assert base_app.last_result is False
 
 
 def test_run_pyscript_with_non_python_file(base_app, request):
@@ -62,6 +65,7 @@ def test_run_pyscript_with_non_python_file(base_app, request):
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
     out, err = run_cmd(base_app, 'run_pyscript {}'.format(filename))
     assert "does not have a .py extension" in err[0]
+    assert base_app.last_result is False
 
 
 @pytest.mark.parametrize('python_script', odd_file_names)
@@ -77,6 +81,7 @@ def test_run_pyscript_with_odd_file_names(base_app, python_script):
     out, err = run_cmd(base_app, "run_pyscript {}".format(utils.quote_string(python_script)))
     err = ''.join(err)
     assert "Error reading script file '{}'".format(python_script) in err
+    assert base_app.last_result is False
 
 
 def test_run_pyscript_with_exception(base_app, request):
@@ -85,11 +90,13 @@ def test_run_pyscript_with_exception(base_app, request):
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert err[0].startswith('Traceback')
     assert "TypeError: unsupported operand type(s) for +: 'int' and 'str'" in err[-1]
+    assert base_app.last_result is True
 
 
 def test_run_pyscript_requires_an_argument(base_app):
     out, err = run_cmd(base_app, "run_pyscript")
     assert "the following arguments are required: script_path" in err[1]
+    assert base_app.last_result is None
 
 
 def test_run_pyscript_help(base_app, request):

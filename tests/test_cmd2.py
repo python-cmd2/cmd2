@@ -76,11 +76,13 @@ def test_empty_statement(base_app):
 
 def test_base_help(base_app):
     out, err = run_cmd(base_app, 'help')
+    assert base_app.last_result is True
     verify_help_text(base_app, out)
 
 
 def test_base_help_verbose(base_app):
     out, err = run_cmd(base_app, 'help -v')
+    assert base_app.last_result is True
     verify_help_text(base_app, out)
 
     # Make sure :param type lines are filtered out of help summary
@@ -89,6 +91,7 @@ def test_base_help_verbose(base_app):
     base_app.do_help.__func__.__doc__ = help_doc
 
     out, err = run_cmd(base_app, 'help --verbose')
+    assert base_app.last_result is True
     verify_help_text(base_app, out)
     assert ':param' not in ''.join(out)
 
@@ -114,6 +117,7 @@ def test_base_shortcuts(base_app):
     out, err = run_cmd(base_app, 'shortcuts')
     expected = normalize(SHORTCUTS_TXT)
     assert out == expected
+    assert base_app.last_result is True
 
 
 def test_command_starts_with_shortcut():
@@ -1066,6 +1070,7 @@ def test_custom_command_help(help_app):
     out, err = run_cmd(help_app, 'help squat')
     expected = normalize('This command does diddly squat...')
     assert out == expected
+    assert help_app.last_result is True
 
 
 def test_custom_help_menu(help_app):
@@ -1076,18 +1081,21 @@ def test_custom_help_menu(help_app):
 def test_help_undocumented(help_app):
     out, err = run_cmd(help_app, 'help undoc')
     assert err[0].startswith("No help on undoc")
+    assert help_app.last_result is False
 
 
 def test_help_overridden_method(help_app):
     out, err = run_cmd(help_app, 'help edit')
     expected = normalize('This overrides the edit command and does nothing.')
     assert out == expected
+    assert help_app.last_result is True
 
 
 def test_help_multiline_docstring(help_app):
     out, err = run_cmd(help_app, 'help multiline_docstr')
     expected = normalize('This documentation\nis multiple lines\nand there are no\ntabs')
     assert out == expected
+    assert help_app.last_result is True
 
 
 class HelpCategoriesApp(cmd2.Cmd):
@@ -1132,11 +1140,13 @@ def helpcat_app():
 
 def test_help_cat_base(helpcat_app):
     out, err = run_cmd(helpcat_app, 'help')
+    assert helpcat_app.last_result is True
     verify_help_text(helpcat_app, out)
 
 
 def test_help_cat_verbose(helpcat_app):
     out, err = run_cmd(helpcat_app, 'help --verbose')
+    assert helpcat_app.last_result is True
     verify_help_text(helpcat_app, out)
 
 
@@ -1532,6 +1542,13 @@ def test_is_text_file_bad_input(base_app):
 def test_eof(base_app):
     # Only thing to verify is that it returns True
     assert base_app.do_eof('')
+    assert base_app.last_result is True
+
+
+def test_quit(base_app):
+    # Only thing to verify is that it returns True
+    assert base_app.do_quit('')
+    assert base_app.last_result is True
 
 
 def test_echo(capsys):
@@ -1795,6 +1812,7 @@ def test_alias_create(base_app):
     # Create the alias
     out, err = run_cmd(base_app, 'alias create fake run_pyscript')
     assert out == normalize("Alias 'fake' created")
+    assert base_app.last_result is True
 
     # Use the alias
     out, err = run_cmd(base_app, 'fake')
@@ -1803,23 +1821,29 @@ def test_alias_create(base_app):
     # See a list of aliases
     out, err = run_cmd(base_app, 'alias list')
     assert out == normalize('alias create fake run_pyscript')
+    assert len(base_app.last_result) == len(base_app.aliases)
 
     # Look up the new alias
     out, err = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake run_pyscript')
+    assert base_app.last_result['fake'] == "run_pyscript"
 
     # Overwrite alias
     out, err = run_cmd(base_app, 'alias create fake help')
     assert out == normalize("Alias 'fake' overwritten")
+    assert base_app.last_result is True
 
     # Look up the updated alias
     out, err = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake help')
+    assert base_app.last_result['fake'] == "help"
 
 
 def test_alias_create_with_quoted_tokens(base_app):
     """Demonstrate that quotes in alias value will be preserved"""
-    create_command = 'alias create fake help ">" "out file.txt" ";"'
+    alias_name = "fake"
+    alias_command = 'help ">" "out file.txt" ";"'
+    create_command = f"alias create {alias_name} {alias_command}"
 
     # Create the alias
     out, err = run_cmd(base_app, create_command)
@@ -1828,17 +1852,20 @@ def test_alias_create_with_quoted_tokens(base_app):
     # Look up the new alias and verify all quotes are preserved
     out, err = run_cmd(base_app, 'alias list fake')
     assert out == normalize(create_command)
+    assert base_app.last_result[alias_name] == alias_command
 
 
 @pytest.mark.parametrize('alias_name', invalid_command_name)
 def test_alias_create_invalid_name(base_app, alias_name, capsys):
     out, err = run_cmd(base_app, 'alias create {} help'.format(alias_name))
     assert "Invalid alias name" in err[0]
+    assert base_app.last_result is False
 
 
 def test_alias_create_with_command_name(base_app):
     out, err = run_cmd(base_app, 'alias create help stuff')
     assert "Alias cannot have the same name as a command" in err[0]
+    assert base_app.last_result is False
 
 
 def test_alias_create_with_macro_name(base_app):
@@ -1846,6 +1873,7 @@ def test_alias_create_with_macro_name(base_app):
     run_cmd(base_app, 'macro create {} help'.format(macro))
     out, err = run_cmd(base_app, 'alias create {} help'.format(macro))
     assert "Alias cannot have the same name as a macro" in err[0]
+    assert base_app.last_result is False
 
 
 def test_alias_that_resolves_into_comment(base_app):
@@ -1863,6 +1891,7 @@ def test_alias_list_invalid_alias(base_app):
     # Look up invalid alias
     out, err = run_cmd(base_app, 'alias list invalid')
     assert "Alias 'invalid' not found" in err[0]
+    assert base_app.last_result == {}
 
 
 def test_alias_delete(base_app):
@@ -1872,21 +1901,25 @@ def test_alias_delete(base_app):
     # Delete the alias
     out, err = run_cmd(base_app, 'alias delete fake')
     assert out == normalize("Alias 'fake' deleted")
+    assert base_app.last_result is True
 
 
 def test_alias_delete_all(base_app):
     out, err = run_cmd(base_app, 'alias delete --all')
     assert out == normalize("All aliases deleted")
+    assert base_app.last_result is True
 
 
 def test_alias_delete_non_existing(base_app):
     out, err = run_cmd(base_app, 'alias delete fake')
     assert "Alias 'fake' does not exist" in err[0]
+    assert base_app.last_result is True
 
 
 def test_alias_delete_no_name(base_app):
     out, err = run_cmd(base_app, 'alias delete')
     assert "Either --all or alias name(s)" in err[0]
+    assert base_app.last_result is False
 
 
 def test_multiple_aliases(base_app):
@@ -1911,6 +1944,7 @@ def test_macro_create(base_app):
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake run_pyscript')
     assert out == normalize("Macro 'fake' created")
+    assert base_app.last_result is True
 
     # Use the macro
     out, err = run_cmd(base_app, 'fake')
@@ -1919,23 +1953,29 @@ def test_macro_create(base_app):
     # See a list of macros
     out, err = run_cmd(base_app, 'macro list')
     assert out == normalize('macro create fake run_pyscript')
+    assert len(base_app.last_result) == len(base_app.macros)
 
     # Look up the new macro
     out, err = run_cmd(base_app, 'macro list fake')
     assert out == normalize('macro create fake run_pyscript')
+    assert base_app.last_result['fake'] == "run_pyscript"
 
     # Overwrite macro
     out, err = run_cmd(base_app, 'macro create fake help')
     assert out == normalize("Macro 'fake' overwritten")
+    assert base_app.last_result is True
 
     # Look up the updated macro
     out, err = run_cmd(base_app, 'macro list fake')
     assert out == normalize('macro create fake help')
+    assert base_app.last_result['fake'] == "help"
 
 
 def test_macro_create_with_quoted_tokens(base_app):
     """Demonstrate that quotes in macro value will be preserved"""
-    create_command = 'macro create fake help ">" "out file.txt" ";"'
+    macro_name = "fake"
+    macro_command = 'help ">" "out file.txt" ";"'
+    create_command = f"macro create {macro_name} {macro_command}"
 
     # Create the macro
     out, err = run_cmd(base_app, create_command)
@@ -1944,17 +1984,20 @@ def test_macro_create_with_quoted_tokens(base_app):
     # Look up the new macro and verify all quotes are preserved
     out, err = run_cmd(base_app, 'macro list fake')
     assert out == normalize(create_command)
+    assert base_app.last_result[macro_name] == macro_command
 
 
 @pytest.mark.parametrize('macro_name', invalid_command_name)
 def test_macro_create_invalid_name(base_app, macro_name):
     out, err = run_cmd(base_app, 'macro create {} help'.format(macro_name))
     assert "Invalid macro name" in err[0]
+    assert base_app.last_result is False
 
 
 def test_macro_create_with_command_name(base_app):
     out, err = run_cmd(base_app, 'macro create help stuff')
     assert "Macro cannot have the same name as a command" in err[0]
+    assert base_app.last_result is False
 
 
 def test_macro_create_with_alias_name(base_app):
@@ -1962,6 +2005,7 @@ def test_macro_create_with_alias_name(base_app):
     run_cmd(base_app, 'alias create {} help'.format(macro))
     out, err = run_cmd(base_app, 'macro create {} help'.format(macro))
     assert "Macro cannot have the same name as an alias" in err[0]
+    assert base_app.last_result is False
 
 
 def test_macro_create_with_args(base_app):
@@ -2008,12 +2052,14 @@ def test_macro_create_with_missing_arg_nums(base_app):
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake help {1} {3}')
     assert "Not all numbers between 1 and 3" in err[0]
+    assert base_app.last_result is False
 
 
 def test_macro_create_with_invalid_arg_num(base_app):
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake help {1} {-1} {0}')
     assert "Argument numbers must be greater than 0" in err[0]
+    assert base_app.last_result is False
 
 
 def test_macro_create_with_unicode_numbered_arg(base_app):
@@ -2029,6 +2075,7 @@ def test_macro_create_with_unicode_numbered_arg(base_app):
 def test_macro_create_with_missing_unicode_arg_nums(base_app):
     out, err = run_cmd(base_app, 'macro create fake help {1} {\N{ARABIC-INDIC DIGIT THREE}}')
     assert "Not all numbers between 1 and 3" in err[0]
+    assert base_app.last_result is False
 
 
 def test_macro_that_resolves_into_comment(base_app):
@@ -2046,6 +2093,7 @@ def test_macro_list_invalid_macro(base_app):
     # Look up invalid macro
     out, err = run_cmd(base_app, 'macro list invalid')
     assert "Macro 'invalid' not found" in err[0]
+    assert base_app.last_result == {}
 
 
 def test_macro_delete(base_app):
@@ -2055,21 +2103,25 @@ def test_macro_delete(base_app):
     # Delete the macro
     out, err = run_cmd(base_app, 'macro delete fake')
     assert out == normalize("Macro 'fake' deleted")
+    assert base_app.last_result is True
 
 
 def test_macro_delete_all(base_app):
     out, err = run_cmd(base_app, 'macro delete --all')
     assert out == normalize("All macros deleted")
+    assert base_app.last_result is True
 
 
 def test_macro_delete_non_existing(base_app):
     out, err = run_cmd(base_app, 'macro delete fake')
     assert "Macro 'fake' does not exist" in err[0]
+    assert base_app.last_result is True
 
 
 def test_macro_delete_no_name(base_app):
     out, err = run_cmd(base_app, 'macro delete')
     assert "Either --all or macro name(s)" in err[0]
+    assert base_app.last_result is False
 
 
 def test_multiple_macros(base_app):

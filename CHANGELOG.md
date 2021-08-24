@@ -1,4 +1,6 @@
 ## 2.2.0 (TBD, 2021)
+* Bug Fixes
+  * Fixed extra space appended to each alias by "alias list" command
 * Enhancements
   * New function `set_default_command_completer_type()` allows developer to extend and modify the
     behavior of `ArgparseCompleter`. 
