@@ -133,6 +133,10 @@ def test_base_set(base_app):
     expected = normalize(SET_TXT)
     assert out == expected
 
+    assert len(base_app.last_result) == len(base_app.settables)
+    for param in base_app.last_result:
+        assert base_app.last_result[param] == base_app.settables[param].get_value()
+
 
 def test_set(base_app):
     out, err = run_cmd(base_app, 'set quiet True')
@@ -143,6 +147,7 @@ now: True
 """
     )
     assert out == expected
+    assert base_app.last_result is True
 
     out, err = run_cmd(base_app, 'set quiet')
     expected = normalize(
@@ -153,18 +158,22 @@ quiet  True                            Don't print nonessential feedback
 """
     )
     assert out == expected
+    assert len(base_app.last_result) == 1
+    assert base_app.last_result['quiet'] is True
 
 
 def test_set_val_empty(base_app):
     base_app.editor = "fake"
     out, err = run_cmd(base_app, 'set editor ""')
     assert base_app.editor == ''
+    assert base_app.last_result is True
 
 
 def test_set_val_is_flag(base_app):
     base_app.editor = "fake"
     out, err = run_cmd(base_app, 'set editor "-h"')
     assert base_app.editor == '-h'
+    assert base_app.last_result is True
 
 
 def test_set_not_supported(base_app):
@@ -175,6 +184,7 @@ Parameter 'qqq' not supported (type 'set' for list of parameters).
 """
     )
     assert err == expected
+    assert base_app.last_result is False
 
 
 def test_set_no_settables(base_app):
@@ -182,6 +192,7 @@ def test_set_no_settables(base_app):
     out, err = run_cmd(base_app, 'set quiet True')
     expected = normalize("There are no settable parameters")
     assert err == expected
+    assert base_app.last_result is False
 
 
 @pytest.mark.parametrize(
@@ -202,6 +213,7 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
 
     # Use the set command to alter it
     out, err = run_cmd(base_app, 'set allow_style {}'.format(new_val))
+    assert base_app.last_result is is_valid
 
     # Verify the results
     assert ansi.allow_style == expected
@@ -239,6 +251,7 @@ now: True
 """
     )
     assert out == expected
+    assert onchange_app.last_result is True
 
 
 def test_base_shell(base_app, monkeypatch):
@@ -281,6 +294,7 @@ def test_run_script(base_app, request):
 
     # Get output out the script
     script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
+    assert base_app.last_result is True
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -303,17 +317,20 @@ def test_run_script(base_app, request):
 def test_run_script_with_empty_args(base_app):
     out, err = run_cmd(base_app, 'run_script')
     assert "the following arguments are required" in err[1]
+    assert base_app.last_result is None
 
 
 def test_run_script_with_invalid_file(base_app, request):
     # Path does not exist
     out, err = run_cmd(base_app, 'run_script does_not_exist.txt')
     assert "Problem accessing script from " in err[0]
+    assert base_app.last_result is False
 
     # Path is a directory
     test_dir = os.path.dirname(request.module.__file__)
     out, err = run_cmd(base_app, 'run_script {}'.format(test_dir))
     assert "Problem accessing script from " in err[0]
+    assert base_app.last_result is False
 
 
 def test_run_script_with_empty_file(base_app, request):
@@ -321,6 +338,7 @@ def test_run_script_with_empty_file(base_app, request):
     filename = os.path.join(test_dir, 'scripts', 'empty.txt')
     out, err = run_cmd(base_app, 'run_script {}'.format(filename))
     assert not out and not err
+    assert base_app.last_result is True
 
 
 def test_run_script_with_binary_file(base_app, request):
@@ -328,6 +346,7 @@ def test_run_script_with_binary_file(base_app, request):
     filename = os.path.join(test_dir, 'scripts', 'binary.bin')
     out, err = run_cmd(base_app, 'run_script {}'.format(filename))
     assert "is not an ASCII or UTF-8 encoded text file" in err[0]
+    assert base_app.last_result is False
 
 
 def test_run_script_with_python_file(base_app, request):
@@ -338,6 +357,7 @@ def test_run_script_with_python_file(base_app, request):
     filename = os.path.join(test_dir, 'pyscript', 'stop.py')
     out, err = run_cmd(base_app, 'run_script {}'.format(filename))
     assert "appears to be a Python file" in err[0]
+    assert base_app.last_result is False
 
 
 def test_run_script_with_utf8_file(base_app, request):
@@ -349,6 +369,7 @@ def test_run_script_with_utf8_file(base_app, request):
 
     # Get output out the script
     script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
+    assert base_app.last_result is True
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -377,6 +398,7 @@ def test_run_script_nested_run_scripts(base_app, request):
     # Run the top level script
     initial_run = 'run_script ' + filename
     run_cmd(base_app, initial_run)
+    assert base_app.last_result is True
 
     # Check that the right commands were executed.
     expected = (
@@ -447,7 +469,8 @@ def test_relative_run_script(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, '_relative_run_script {}'.format(filename))
+    assert base_app.last_result is True
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -481,6 +504,7 @@ def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatc
 def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
     assert 'Error: the following arguments' in err[1]
+    assert base_app.last_result is None
 
 
 def test_in_script(request):
@@ -1822,10 +1846,12 @@ def test_alias_create(base_app):
     out, err = run_cmd(base_app, 'alias list')
     assert out == normalize('alias create fake run_pyscript')
     assert len(base_app.last_result) == len(base_app.aliases)
+    assert base_app.last_result['fake'] == "run_pyscript"
 
     # Look up the new alias
     out, err = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake run_pyscript')
+    assert len(base_app.last_result) == 1
     assert base_app.last_result['fake'] == "run_pyscript"
 
     # Overwrite alias
@@ -1836,6 +1862,7 @@ def test_alias_create(base_app):
     # Look up the updated alias
     out, err = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake help')
+    assert len(base_app.last_result) == 1
     assert base_app.last_result['fake'] == "help"
 
 
@@ -1852,6 +1879,7 @@ def test_alias_create_with_quoted_tokens(base_app):
     # Look up the new alias and verify all quotes are preserved
     out, err = run_cmd(base_app, 'alias list fake')
     assert out == normalize(create_command)
+    assert len(base_app.last_result) == 1
     assert base_app.last_result[alias_name] == alias_command
 
 
@@ -1954,10 +1982,12 @@ def test_macro_create(base_app):
     out, err = run_cmd(base_app, 'macro list')
     assert out == normalize('macro create fake run_pyscript')
     assert len(base_app.last_result) == len(base_app.macros)
+    assert base_app.last_result['fake'] == "run_pyscript"
 
     # Look up the new macro
     out, err = run_cmd(base_app, 'macro list fake')
     assert out == normalize('macro create fake run_pyscript')
+    assert len(base_app.last_result) == 1
     assert base_app.last_result['fake'] == "run_pyscript"
 
     # Overwrite macro
@@ -1968,6 +1998,7 @@ def test_macro_create(base_app):
     # Look up the updated macro
     out, err = run_cmd(base_app, 'macro list fake')
     assert out == normalize('macro create fake help')
+    assert len(base_app.last_result) == 1
     assert base_app.last_result['fake'] == "help"
 
 
@@ -1984,6 +2015,7 @@ def test_macro_create_with_quoted_tokens(base_app):
     # Look up the new macro and verify all quotes are preserved
     out, err = run_cmd(base_app, 'macro list fake')
     assert out == normalize(create_command)
+    assert len(base_app.last_result) == 1
     assert base_app.last_result[macro_name] == macro_command
 
 

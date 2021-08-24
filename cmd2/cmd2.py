@@ -4872,6 +4872,7 @@ class Cmd(cmd.Cmd):
         try:
             # An empty file is not an error, so just return
             if os.path.getsize(expanded_path) == 0:
+                self.last_result = True
                 return None
 
             # Make sure the file is ASCII or UTF-8 encoded text
