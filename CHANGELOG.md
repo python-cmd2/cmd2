@@ -2,8 +2,11 @@
 * Bug Fixes
   * Fixed extra space appended to each alias by "alias list" command
 * Enhancements
-  * New function `set_default_command_completer_type()` allows developer to extend and modify the
-    behavior of `ArgparseCompleter`. 
+  * New function `set_default_ap_completer_type()` allows developer to extend and modify the
+    behavior of `ArgparseCompleter`.
+  * Added `ArgumentParser.get_ap_completer_type()` and `ArgumentParser.set_ap_completer_type()`. These
+    methods allow developers to enable custom tab completion behavior for a given parser by using a custom
+    `ArgparseCompleter`-based class.
   * New function `register_argparse_argument_parameter()` allows developers to specify custom 
     parameters to be passed to the argparse parser's `add_argument()` method. These parameters will
     become accessible in the resulting argparse Action object when modifying `ArgparseCompleter` behavior.

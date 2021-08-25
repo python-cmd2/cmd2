@@ -860,6 +860,9 @@ class Cmd(cmd.Cmd):
                     defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
                     attached_parser.set_defaults(**defaults)
 
+                    # Copy value for custom ArgparseCompleter type, which will be None if not present on subcmd_parser
+                    attached_parser.set_ap_completer_type(subcmd_parser.get_ap_completer_type())  # type: ignore[attr-defined]
+
                     # Set what instance the handler is bound to
                     setattr(attached_parser, constants.PARSER_ATTR_COMMANDSET, cmdset)
                     break
@@ -1850,10 +1853,6 @@ class Cmd(cmd.Cmd):
         :param endidx: the ending index of the prefix text
         :param custom_settings: optional prepopulated completion settings
         """
-        from .argparse_completer import (
-            ArgparseCompleter,
-        )
-
         # If custom_settings is None, then we are completing a command's argument.
         # Parse the command line to get the command token.
         command = ''
@@ -1903,18 +1902,18 @@ class Cmd(cmd.Cmd):
                 else:
                     # There's no completer function, next see if the command uses argparse
                     func = self.cmd_func(command)
-                    argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
-                    completer_type = getattr(func, constants.CMD_ATTR_COMPLETER, argparse_completer.DEFAULT_COMMAND_COMPLETER)
-                    if completer_type is None:
-                        completer_type = argparse_completer.DEFAULT_COMMAND_COMPLETER
+                    argparser: Optional[argparse.ArgumentParser] = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
 
                     if func is not None and argparser is not None:
-                        cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
-                        if completer_type is not None:
-                            completer = completer_type(argparser, self)
-                        else:
-                            completer = ArgparseCompleter(argparser, self)
+                        # Get arguments for complete()
                         preserve_quotes = getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES)
+                        cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
+
+                        # Create the argparse completer
+                        completer_type = argparser.get_ap_completer_type()  # type: ignore[attr-defined]
+                        if completer_type is None:
+                            completer_type = argparse_completer.DEFAULT_AP_COMPLETER
+                        completer = completer_type(argparser, self)
 
                         completer_func = functools.partial(
                             completer.complete, tokens=raw_tokens[1:] if preserve_quotes else tokens[1:], cmd_set=cmd_set
@@ -1932,7 +1931,12 @@ class Cmd(cmd.Cmd):
 
         # Otherwise we are completing the command token or performing custom completion
         else:
-            completer = ArgparseCompleter(custom_settings.parser, self)
+            # Create the argparse completer
+            completer_type = custom_settings.parser.get_ap_completer_type()  # type: ignore[attr-defined]
+            if completer_type is None:
+                completer_type = argparse_completer.DEFAULT_AP_COMPLETER
+            completer = completer_type(custom_settings.parser, self)
+
             completer_func = functools.partial(
                 completer.complete, tokens=raw_tokens if custom_settings.preserve_quotes else tokens, cmd_set=None
             )
@@ -3542,11 +3546,7 @@ class Cmd(cmd.Cmd):
         if func is None or argparser is None:
             return []
 
-        from .argparse_completer import (
-            ArgparseCompleter,
-        )
-
-        completer = ArgparseCompleter(argparser, self)
+        completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
 
     help_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
@@ -3582,11 +3582,7 @@ class Cmd(cmd.Cmd):
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
-                from .argparse_completer import (
-                    ArgparseCompleter,
-                )
-
-                completer = ArgparseCompleter(argparser, self)
+                completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
                 self.poutput(completer.format_help(args.subcommands), end='')
@@ -3918,11 +3914,7 @@ class Cmd(cmd.Cmd):
             completer=settable.completer,
         )
 
-        from .argparse_completer import (
-            ArgparseCompleter,
-        )
-
-        completer = ArgparseCompleter(settable_parser, self)
+        completer = argparse_completer.DEFAULT_AP_COMPLETER(settable_parser, self)
 
         # Use raw_tokens since quotes have been preserved
         _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)

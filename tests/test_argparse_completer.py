@@ -1182,11 +1182,11 @@ class CustomCompleterApp(cmd2.Cmd):
 @pytest.fixture
 def custom_completer_app():
 
-    argparse_completer.set_default_command_completer_type(CustomCompleter)
+    argparse_completer.set_default_ap_completer_type(CustomCompleter)
     app = CustomCompleterApp()
     app.stdout = StdSim(app.stdout)
     yield app
-    argparse_completer.set_default_command_completer_type(argparse_completer.ArgparseCompleter)
+    argparse_completer.set_default_ap_completer_type(argparse_completer.ArgparseCompleter)
 
 
 @pytest.mark.parametrize(

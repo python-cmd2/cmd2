@@ -407,9 +407,15 @@ class ArgparseCompleter:
                                 if action.dest != argparse.SUPPRESS:
                                     parent_tokens[action.dest] = [token]
 
-                                completer = ArgparseCompleter(
-                                    self._subcommand_action.choices[token], self._cmd2_app, parent_tokens=parent_tokens
-                                )
+                                parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
+                                completer_type: Optional[
+                                    Type[ArgparseCompleter]
+                                ] = parser.get_ap_completer_type()  # type: ignore[attr-defined]
+                                if completer_type is None:
+                                    completer_type = DEFAULT_AP_COMPLETER
+
+                                completer = completer_type(parser, self._cmd2_app, parent_tokens=parent_tokens)
+
                                 return completer.complete(
                                     text, line, begidx, endidx, tokens[token_index + 1 :], cmd_set=cmd_set
                                 )
@@ -609,7 +615,14 @@ class ArgparseCompleter:
         if self._subcommand_action is not None:
             for token_index, token in enumerate(tokens):
                 if token in self._subcommand_action.choices:
-                    completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                    parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
+                    completer_type: Optional[
+                        Type[ArgparseCompleter]
+                    ] = parser.get_ap_completer_type()  # type: ignore[attr-defined]
+                    if completer_type is None:
+                        completer_type = DEFAULT_AP_COMPLETER
+
+                    completer = completer_type(parser, self._cmd2_app)
                     return completer.complete_subcommand_help(text, line, begidx, endidx, tokens[token_index + 1 :])
                 elif token_index == len(tokens) - 1:
                     # Since this is the last token, we will attempt to complete it
@@ -629,7 +642,14 @@ class ArgparseCompleter:
         if self._subcommand_action is not None:
             for token_index, token in enumerate(tokens):
                 if token in self._subcommand_action.choices:
-                    completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                    parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
+                    completer_type: Optional[
+                        Type[ArgparseCompleter]
+                    ] = parser.get_ap_completer_type()  # type: ignore[attr-defined]
+                    if completer_type is None:
+                        completer_type = DEFAULT_AP_COMPLETER
+
+                    completer = completer_type(parser, self._cmd2_app)
                     return completer.format_help(tokens[token_index + 1 :])
                 else:
                     break
@@ -740,14 +760,15 @@ class ArgparseCompleter:
         return self._format_completions(arg_state, results)
 
 
-DEFAULT_COMMAND_COMPLETER: Type[ArgparseCompleter] = ArgparseCompleter
+# The default ArgparseCompleter class for a cmd2 app
+DEFAULT_AP_COMPLETER: Type[ArgparseCompleter] = ArgparseCompleter
 
 
-def set_default_command_completer_type(completer_type: Type[ArgparseCompleter]) -> None:
+def set_default_ap_completer_type(completer_type: Type[ArgparseCompleter]) -> None:
     """
-    Set the default command completer type. It must be a sub-class of the ArgparseCompleter.
+    Set the default ArgparseCompleter class for a cmd2 app.
 
     :param completer_type: Type that is a subclass of ArgparseCompleter.
     """
-    global DEFAULT_COMMAND_COMPLETER
-    DEFAULT_COMMAND_COMPLETER = completer_type
+    global DEFAULT_AP_COMPLETER
+    DEFAULT_AP_COMPLETER = completer_type

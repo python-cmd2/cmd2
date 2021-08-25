@@ -7,7 +7,7 @@ import sys
 from cmd2 import (
     Cmd2ArgumentParser,
     ansi,
-    set_default_argument_parser,
+    set_default_argument_parser_type,
 )
 
 
@@ -38,4 +38,4 @@ class CustomParser(Cmd2ArgumentParser):
 
 
 # Now set the default parser for a cmd2 app
-set_default_argument_parser(CustomParser)
+set_default_argument_parser_type(CustomParser)
