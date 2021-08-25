@@ -207,6 +207,13 @@ for cases in which you need to manually access the cmd2-specific attributes.
 - ``argparse.Action.set_suppress_tab_hint()`` - See
   :func:`_action_set_suppress_tab_hint` for more details.
 
+cmd2 has patched ``argparse.ArgumentParser`` to include the following accessor methods
+
+- ``argparse.ArgumentParser.get_ap_completer_type()`` - See
+  :func:`_ArgumentParser_get_ap_completer_type` for more details.
+- ``argparse.Action.set_ap_completer_type()`` - See
+  :func:`_ArgumentParser_set_ap_completer_type` for more details.
+
 **Subcommand removal**
 
 cmd2 has patched ``argparse._SubParsersAction`` to include a ``remove_parser()``
@@ -232,6 +239,7 @@ from gettext import (
 )
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -261,6 +269,12 @@ except ImportError:
     from typing_extensions import (  # type: ignore[misc]
         Protocol,
         runtime_checkable,
+    )
+
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .argparse_completer import (
+        ArgparseCompleter,
     )
 
 
@@ -659,6 +673,7 @@ def register_argparse_argument_parameter(param_name: str, param_type: Optional[T
     and ``set_{param_name}(value)``.
 
     :param param_name: Name of the parameter to add.
+    :param param_type: Type of the parameter to add.
     """
     attr_name = f'{_CUSTOM_ATTRIB_PFX}{param_name}'
     if param_name in CUSTOM_ACTION_ATTRIBS or hasattr(argparse.Action, attr_name):
@@ -715,6 +730,7 @@ def register_argparse_argument_parameter(param_name: str, param_type: Optional[T
 orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
+# noinspection PyProtectedMember
 def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
@@ -916,10 +932,54 @@ setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 
 
 ############################################################################################################
+# Patch argparse.ArgumentParser with accessors for ap_completer_type attribute
+############################################################################################################
+
+# An ArgumentParser attribute which specifies a subclass of ArgparseCompleter for custom tab completion behavior on a
+# given parser. If this is None or not present, then cmd2 will use argparse_completer.DEFAULT_AP_COMPLETER when tab
+# completing a parser's arguments
+ATTR_AP_COMPLETER_TYPE = 'ap_completer_type'
+
+
+# noinspection PyPep8Naming
+def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Optional[Type['ArgparseCompleter']]:
+    """
+    Get the ap_completer_type attribute of an argparse ArgumentParser.
+
+    This function is added by cmd2 as a method called ``get_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
+
+    To call: ``parser.get_ap_completer_type()``
+
+    :param self: ArgumentParser being queried
+    :return: An ArgparseCompleter-based class or None if attribute does not exist
+    """
+    return cast(Optional[Type['ArgparseCompleter']], getattr(self, ATTR_AP_COMPLETER_TYPE, None))
+
+
+setattr(argparse.ArgumentParser, 'get_ap_completer_type', _ArgumentParser_get_ap_completer_type)
+
+
+# noinspection PyPep8Naming
+def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: Type['ArgparseCompleter']) -> None:
+    """
+    Set the ap_completer_type attribute of an argparse ArgumentParser.
+
+    This function is added by cmd2 as a method called ``set_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
+
+    :param self: ArgumentParser being edited
+    :param ap_completer_type: the custom ArgparseCompleter-based class to use when tab completing arguments for this parser
+    """
+    setattr(self, ATTR_AP_COMPLETER_TYPE, ap_completer_type)
+
+
+setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap_completer_type)
+
+
+############################################################################################################
 # Patch argparse._SubParsersAction to add remove_parser function
 ############################################################################################################
 
-# noinspection PyPep8Naming
+# noinspection PyPep8Naming,PyProtectedMember
 def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:
     """
     Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
@@ -964,6 +1024,7 @@ setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_pa
 class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
+    # noinspection PyProtectedMember
     def _format_usage(
         self,
         usage: Optional[str],
@@ -1207,6 +1268,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             allow_abbrev=allow_abbrev,
         )
 
+    # noinspection PyProtectedMember
     def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:
         """
         Custom override. Sets a default title if one was not given.
@@ -1321,10 +1383,10 @@ class Cmd2AttributeWrapper:
 DEFAULT_ARGUMENT_PARSER: Type[argparse.ArgumentParser] = Cmd2ArgumentParser
 
 
-def set_default_argument_parser(parser: Type[argparse.ArgumentParser]) -> None:
+def set_default_argument_parser_type(parser_type: Type[argparse.ArgumentParser]) -> None:
     """
     Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
     you want to override the parser for cmd2's built-in commands. See examples/override_parser.py.
     """
     global DEFAULT_ARGUMENT_PARSER
-    DEFAULT_ARGUMENT_PARSER = parser
+    DEFAULT_ARGUMENT_PARSER = parser_type

@@ -25,7 +25,7 @@ from .argparse_custom import (
     Cmd2AttributeWrapper,
     CompletionItem,
     register_argparse_argument_parameter,
-    set_default_argument_parser,
+    set_default_argument_parser_type,
 )
 
 # Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER.
@@ -38,7 +38,7 @@ if cmd2_parser_module is not None:
 
     importlib.import_module(cmd2_parser_module)
 
-from .argparse_completer import set_default_command_completer_type
+from .argparse_completer import set_default_ap_completer_type
 
 from .cmd2 import Cmd
 from .command_definition import CommandSet, with_default_category
@@ -63,8 +63,8 @@ __all__: List[str] = [
     'Cmd2AttributeWrapper',
     'CompletionItem',
     'register_argparse_argument_parameter',
-    'set_default_argument_parser',
-    'set_default_command_completer_type',
+    'set_default_argument_parser_type',
+    'set_default_ap_completer_type',
     # Cmd2
     'Cmd',
     'CommandResult',
