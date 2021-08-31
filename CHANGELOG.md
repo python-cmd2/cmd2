@@ -7,6 +7,8 @@
   * Added `ArgumentParser.get_ap_completer_type()` and `ArgumentParser.set_ap_completer_type()`. These
     methods allow developers to enable custom tab completion behavior for a given parser by using a custom
     `ArgparseCompleter`-based class.
+  * Added `ap_completer_type` keyword arg to `Cmd2ArgumentParser.__init__()` which saves a call
+    to `set_ap_completer_type()`. This keyword will also work in `add_parser()` when creating subcommands.
   * New function `register_argparse_argument_parameter()` allows developers to specify custom 
     parameters to be passed to the argparse parser's `add_argument()` method. These parameters will
     become accessible in the resulting argparse Action object when modifying `ArgparseCompleter` behavior.

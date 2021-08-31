@@ -30,7 +30,7 @@ from .constants import (
     INFINITY,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import (
         Cmd,
     )
