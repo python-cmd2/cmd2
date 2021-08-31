@@ -1252,7 +1252,16 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         conflict_handler: str = 'error',
         add_help: bool = True,
         allow_abbrev: bool = True,
+        *,
+        ap_completer_type: Optional[Type['ArgparseCompleter']] = None,
     ) -> None:
+        """
+        # Custom parameter added by cmd2
+
+        :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom tab completion
+                                  behavior on this parser. If this is None or not present, then cmd2 will use
+                                  argparse_completer.DEFAULT_AP_COMPLETER when tab completing this parser's arguments
+        """
         super(Cmd2ArgumentParser, self).__init__(
             prog=prog,
             usage=usage,
@@ -1267,6 +1276,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             add_help=add_help,
             allow_abbrev=allow_abbrev,
         )
+
+        self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
     # noinspection PyProtectedMember
     def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:

@@ -7,6 +7,7 @@ import argparse
 import numbers
 from typing import (
     List,
+    cast,
 )
 
 import pytest
@@ -329,6 +330,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
 @pytest.fixture
 def ac_app():
     app = ArgparseCompleterTester()
+    # noinspection PyTypeChecker
     app.stdout = StdSim(app.stdout)
     return app
 
@@ -1156,52 +1158,171 @@ def test_complete_standalone(ac_app, flag, completions):
     assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
+# Custom ArgparseCompleter-based class
 class CustomCompleter(argparse_completer.ArgparseCompleter):
     def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, matched_flags: List[str]) -> List[str]:
-        """Override so arguments with 'always_complete' set to True will always be completed"""
-        for flag in matched_flags:
+        """Override so flags with 'complete_when_ready' set to True will complete only when app is ready"""
+
+        # Find flags which should not be completed and place them in matched_flags
+        for flag in self._flags:
             action = self._flag_to_action[flag]
-            if action.get_always_complete() is True:
-                matched_flags.remove(flag)
+            app: CustomCompleterApp = cast(CustomCompleterApp, self._cmd2_app)
+            if action.get_complete_when_ready() is True and not app.is_ready:
+                matched_flags.append(flag)
+
         return super(CustomCompleter, self)._complete_flags(text, line, begidx, endidx, matched_flags)
 
 
-argparse_custom.register_argparse_argument_parameter('always_complete', bool)
+# Add a custom argparse action attribute
+argparse_custom.register_argparse_argument_parameter('complete_when_ready', bool)
 
 
+# App used to test custom ArgparseCompleter types and custom argparse attributes
 class CustomCompleterApp(cmd2.Cmd):
-    _parser = Cmd2ArgumentParser(description="Testing manually wrapping")
-    _parser.add_argument('--myflag', always_complete=True, nargs=1)
+    def __init__(self):
+        super().__init__()
+        self.is_ready = True
 
-    @with_argparser(_parser)
-    def do_mycommand(self, cmd: 'CustomCompleterApp', args: argparse.Namespace) -> None:
-        """Test command that will be manually wrapped to use argparse"""
-        print(args)
+    # Parser that's used to test setting the app-wide default ArgparseCompleter type
+    default_completer_parser = Cmd2ArgumentParser(description="Testing app-wide argparse completer")
+    default_completer_parser.add_argument('--myflag', complete_when_ready=True)
+
+    @with_argparser(default_completer_parser)
+    def do_default_completer(self, args: argparse.Namespace) -> None:
+        """Test command"""
+        pass
+
+    # Parser that's used to test setting a custom completer at the parser level
+    custom_completer_parser = Cmd2ArgumentParser(
+        description="Testing parser-specific argparse completer", ap_completer_type=CustomCompleter
+    )
+    custom_completer_parser.add_argument('--myflag', complete_when_ready=True)
+
+    @with_argparser(custom_completer_parser)
+    def do_custom_completer(self, args: argparse.Namespace) -> None:
+        """Test command"""
+        pass
+
+    # Test as_subcommand_to decorator with custom completer
+    top_parser = Cmd2ArgumentParser(description="Top Command")
+    top_subparsers = top_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+    top_subparsers.required = True
+
+    @with_argparser(top_parser)
+    def do_top(self, args: argparse.Namespace) -> None:
+        """Top level command"""
+        # Call handler for whatever subcommand was selected
+        handler = args.cmd2_handler.get()
+        handler(args)
+
+    # Parser for a subcommand with no custom completer type
+    no_custom_completer_parser = Cmd2ArgumentParser(description="No custom completer")
+    no_custom_completer_parser.add_argument('--myflag', complete_when_ready=True)
+
+    @cmd2.as_subcommand_to('top', 'no_custom', no_custom_completer_parser, help="no custom completer")
+    def _subcmd_no_custom(self, args: argparse.Namespace) -> None:
+        pass
+
+    # Parser for a subcommand with a custom completer type
+    custom_completer_parser = Cmd2ArgumentParser(description="Custom completer", ap_completer_type=CustomCompleter)
+    custom_completer_parser.add_argument('--myflag', complete_when_ready=True)
+
+    @cmd2.as_subcommand_to('top', 'custom', custom_completer_parser, help="custom completer")
+    def _subcmd_custom(self, args: argparse.Namespace) -> None:
+        pass
 
 
 @pytest.fixture
 def custom_completer_app():
-
-    argparse_completer.set_default_ap_completer_type(CustomCompleter)
     app = CustomCompleterApp()
-    app.stdout = StdSim(app.stdout)
-    yield app
-    argparse_completer.set_default_ap_completer_type(argparse_completer.ArgparseCompleter)
+    return app
 
 
-@pytest.mark.parametrize(
-    'command_and_args, text, output_contains, first_match',
-    [
-        ('mycommand', '--my', '', '--myflag '),
-        ('mycommand --myflag 5', '--my', '', '--myflag '),
-    ],
-)
-def test_custom_completer_type(custom_completer_app, command_and_args, text, output_contains, first_match, capsys):
-    line = '{} {}'.format(command_and_args, text)
+def test_default_custom_completer_type(custom_completer_app: CustomCompleterApp):
+    """Test altering the app-wide default ArgparseCompleter type"""
+    try:
+        argparse_completer.set_default_ap_completer_type(CustomCompleter)
+
+        text = '--m'
+        line = f'default_completer {text}'
+        endidx = len(line)
+        begidx = endidx - len(text)
+
+        # The flag should complete because app is ready
+        custom_completer_app.is_ready = True
+        assert complete_tester(text, line, begidx, endidx, custom_completer_app) is not None
+        assert custom_completer_app.completion_matches == ['--myflag ']
+
+        # The flag should not complete because app is not ready
+        custom_completer_app.is_ready = False
+        assert complete_tester(text, line, begidx, endidx, custom_completer_app) is None
+        assert not custom_completer_app.completion_matches
+
+    finally:
+        # Restore the default completer
+        argparse_completer.set_default_ap_completer_type(argparse_completer.ArgparseCompleter)
+
+
+def test_custom_completer_type(custom_completer_app: CustomCompleterApp):
+    """Test parser with a specific custom ArgparseCompleter type"""
+    text = '--m'
+    line = f'custom_completer {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert first_match == complete_tester(text, line, begidx, endidx, custom_completer_app)
+    # The flag should complete because app is ready
+    custom_completer_app.is_ready = True
+    assert complete_tester(text, line, begidx, endidx, custom_completer_app) is not None
+    assert custom_completer_app.completion_matches == ['--myflag ']
 
-    out, err = capsys.readouterr()
-    assert output_contains in out
+    # The flag should not complete because app is not ready
+    custom_completer_app.is_ready = False
+    assert complete_tester(text, line, begidx, endidx, custom_completer_app) is None
+    assert not custom_completer_app.completion_matches
+
+
+def test_decorated_subcmd_custom_completer(custom_completer_app: CustomCompleterApp):
+    """Tests custom completer type on a subcommand created with @cmd2.as_subcommand_to"""
+
+    # First test the subcommand without the custom completer
+    text = '--m'
+    line = f'top no_custom {text}'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The flag should complete regardless of ready state since this subcommand isn't using the custom completer
+    custom_completer_app.is_ready = True
+    assert complete_tester(text, line, begidx, endidx, custom_completer_app) is not None
+    assert custom_completer_app.completion_matches == ['--myflag ']
+
+    custom_completer_app.is_ready = False
+    assert complete_tester(text, line, begidx, endidx, custom_completer_app) is not None
+    assert custom_completer_app.completion_matches == ['--myflag ']
+
+    # Now test the subcommand with the custom completer
+    text = '--m'
+    line = f'top custom {text}'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The flag should complete because app is ready
+    custom_completer_app.is_ready = True
+    assert complete_tester(text, line, begidx, endidx, custom_completer_app) is not None
+    assert custom_completer_app.completion_matches == ['--myflag ']
+
+    # The flag should not complete because app is not ready
+    custom_completer_app.is_ready = False
+    assert complete_tester(text, line, begidx, endidx, custom_completer_app) is None
+    assert not custom_completer_app.completion_matches
+
+
+def test_add_parser_custom_completer():
+    """Tests setting a custom completer type on a subcommand using add_parser()"""
+    parser = Cmd2ArgumentParser()
+    subparsers = parser.add_subparsers()
+
+    no_custom_completer_parser = subparsers.add_parser(name="no_custom_completer")
+    assert no_custom_completer_parser.get_ap_completer_type() is None  # type: ignore[attr-defined]
+
+    custom_completer_parser = subparsers.add_parser(name="no_custom_completer", ap_completer_type=CustomCompleter)
+    assert custom_completer_parser.get_ap_completer_type() is CustomCompleter  # type: ignore[attr-defined]
