@@ -966,6 +966,8 @@ def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_comp
 
     This function is added by cmd2 as a method called ``set_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
 
+    To call: ``parser.set_ap_completer_type(ap_completer_type)``
+
     :param self: ArgumentParser being edited
     :param ap_completer_type: the custom ArgparseCompleter-based class to use when tab completing arguments for this parser
     """
