@@ -25,6 +25,10 @@ Added Accessor Methods
 
 .. autofunction:: _action_set_suppress_tab_hint
 
+.. autofunction:: _ArgumentParser_get_ap_completer_type
+
+.. autofunction:: _ArgumentParser_set_ap_completer_type
+
 
 Subcommand Removal
 ------------------
