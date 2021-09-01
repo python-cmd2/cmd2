@@ -1841,6 +1841,23 @@ class Cmd(cmd.Cmd):
                 # Display matches using actual display function. This also redraws the prompt and input lines.
                 orig_pyreadline_display(matches_to_display)
 
+    @staticmethod
+    def _determine_ap_completer_type(parser: argparse.ArgumentParser) -> Type[argparse_completer.ArgparseCompleter]:
+        """
+        Determine what type of ArgparseCompleter to use on a given parser. If the parser does not have one
+        set, then use argparse_completer.DEFAULT_AP_COMPLETER.
+
+        :param parser: the parser to examine
+        :return: type of ArgparseCompleter
+        """
+        completer_type: Optional[
+            Type[argparse_completer.ArgparseCompleter]
+        ] = parser.get_ap_completer_type()  # type: ignore[attr-defined]
+
+        if completer_type is None:
+            completer_type = argparse_completer.DEFAULT_AP_COMPLETER
+        return completer_type
+
     def _perform_completion(
         self, text: str, line: str, begidx: int, endidx: int, custom_settings: Optional[utils.CustomCompletionSettings] = None
     ) -> None:
@@ -1910,9 +1927,7 @@ class Cmd(cmd.Cmd):
                         cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
 
                         # Create the argparse completer
-                        completer_type = argparser.get_ap_completer_type()  # type: ignore[attr-defined]
-                        if completer_type is None:
-                            completer_type = argparse_completer.DEFAULT_AP_COMPLETER
+                        completer_type = self._determine_ap_completer_type(argparser)
                         completer = completer_type(argparser, self)
 
                         completer_func = functools.partial(
@@ -1932,9 +1947,7 @@ class Cmd(cmd.Cmd):
         # Otherwise we are completing the command token or performing custom completion
         else:
             # Create the argparse completer
-            completer_type = custom_settings.parser.get_ap_completer_type()  # type: ignore[attr-defined]
-            if completer_type is None:
-                completer_type = argparse_completer.DEFAULT_AP_COMPLETER
+            completer_type = self._determine_ap_completer_type(custom_settings.parser)
             completer = completer_type(custom_settings.parser, self)
 
             completer_func = functools.partial(
