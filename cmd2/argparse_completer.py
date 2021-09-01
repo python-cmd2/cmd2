@@ -408,11 +408,7 @@ class ArgparseCompleter:
                                     parent_tokens[action.dest] = [token]
 
                                 parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
-                                completer_type: Optional[
-                                    Type[ArgparseCompleter]
-                                ] = parser.get_ap_completer_type()  # type: ignore[attr-defined]
-                                if completer_type is None:
-                                    completer_type = DEFAULT_AP_COMPLETER
+                                completer_type = self._cmd2_app._determine_ap_completer_type(parser)
 
                                 completer = completer_type(parser, self._cmd2_app, parent_tokens=parent_tokens)
 
@@ -616,11 +612,7 @@ class ArgparseCompleter:
             for token_index, token in enumerate(tokens):
                 if token in self._subcommand_action.choices:
                     parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
-                    completer_type: Optional[
-                        Type[ArgparseCompleter]
-                    ] = parser.get_ap_completer_type()  # type: ignore[attr-defined]
-                    if completer_type is None:
-                        completer_type = DEFAULT_AP_COMPLETER
+                    completer_type = self._cmd2_app._determine_ap_completer_type(parser)
 
                     completer = completer_type(parser, self._cmd2_app)
                     return completer.complete_subcommand_help(text, line, begidx, endidx, tokens[token_index + 1 :])
@@ -643,11 +635,7 @@ class ArgparseCompleter:
             for token_index, token in enumerate(tokens):
                 if token in self._subcommand_action.choices:
                     parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
-                    completer_type: Optional[
-                        Type[ArgparseCompleter]
-                    ] = parser.get_ap_completer_type()  # type: ignore[attr-defined]
-                    if completer_type is None:
-                        completer_type = DEFAULT_AP_COMPLETER
+                    completer_type = self._cmd2_app._determine_ap_completer_type(parser)
 
                     completer = completer_type(parser, self._cmd2_app)
                     return completer.format_help(tokens[token_index + 1 :])
