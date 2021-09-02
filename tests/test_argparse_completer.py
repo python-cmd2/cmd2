@@ -98,6 +98,15 @@ class ArgparseCompleterTester(cmd2.Cmd):
     def do_plus_flag(self, args: argparse.Namespace) -> None:
         pass
 
+    # A parser with a positional and flags. Used to test that remaining flag names are completed when all positionals are done.
+    pos_and_flag_parser = Cmd2ArgumentParser()
+    pos_and_flag_parser.add_argument("positional", choices=["a", "choice"])
+    pos_and_flag_parser.add_argument("-f", "--flag", action='store_true')
+
+    @with_argparser(pos_and_flag_parser)
+    def do_pos_and_flag(self, args: argparse.Namespace) -> None:
+        pass
+
     ############################################################################################################
     # Begin code related to testing choices and choices_provider parameters
     ############################################################################################################
@@ -519,6 +528,11 @@ def test_subcommand_completions(ac_app, subcommand, text, completions):
         ('flag --help --', '--', [], []),
         ('plus_flag --', '++', [], []),
         ('plus_flag ++help --', '++', [], []),
+        # Test remaining flag names complete after all positionals are complete
+        ('pos_and_flag', '', ['a', 'choice'], ['a', 'choice']),
+        ('pos_and_flag choice ', '', ['--flag', '--help', '-f', '-h'], ['[-f, --flag]', '[-h, --help]']),
+        ('pos_and_flag choice -f ', '', ['--help', '-h'], ['[-h, --help]']),
+        ('pos_and_flag choice -f -h ', '', [], []),
     ],
 )
 def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matches, display_matches):

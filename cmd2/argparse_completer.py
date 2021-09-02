@@ -504,9 +504,10 @@ class ArgparseCompleter:
             elif not _single_prefix_char(text, self._parser) or skip_remaining_flags:
                 raise _NoResultsError(self._parser, pos_arg_state.action)
 
-        # Handle case in which text is a single flag prefix character that
-        # didn't complete against any argument values.
-        if _single_prefix_char(text, self._parser) and not skip_remaining_flags:
+        # If we aren't skipping remaining flags, then complete flag names if either is True:
+        #   1. text is a single flag prefix character that didn't complete against any argument values
+        #   2. there are no more positionals to complete
+        if not skip_remaining_flags and (_single_prefix_char(text, self._parser) or not remaining_positionals):
             return self._complete_flags(text, line, begidx, endidx, matched_flags)
 
         return completion_results

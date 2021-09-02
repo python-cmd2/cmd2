@@ -20,6 +20,7 @@
   * Tab completion of `CompletionItems` now includes divider row comprised of `Cmd.ruler` character.
   * Removed `--verbose` flag from set command since descriptions always show now.
   * All cmd2 built-in commands now populate `self.last_result`.
+  * Argparse tab completer will complete remaining flag names if there are no more positionals to complete.
 * Deletions (potentially breaking changes)
   * Deleted ``set_choices_provider()`` and ``set_completer()`` which were deprecated in 2.1.2
 
