@@ -10,6 +10,7 @@ import functools
 import cmd2
 from cmd2 import (
     COMMAND_NAME,
+    argparse_custom,
 )
 
 
@@ -55,7 +56,9 @@ class HelpCategories(cmd2.Cmd):
         """Deploy command"""
         self.poutput('Deploy')
 
-    start_parser = cmd2.DEFAULT_ARGUMENT_PARSER(description='Start', epilog='my_decorator runs even with argparse errors')
+    start_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
+        description='Start', epilog='my_decorator runs even with argparse errors'
+    )
     start_parser.add_argument('when', choices=START_TIMES, help='Specify when to start')
 
     @my_decorator
@@ -72,7 +75,7 @@ class HelpCategories(cmd2.Cmd):
         """Redeploy command"""
         self.poutput('Redeploy')
 
-    restart_parser = cmd2.DEFAULT_ARGUMENT_PARSER(
+    restart_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
         description='Restart', epilog='my_decorator does not run when argparse errors'
     )
     restart_parser.add_argument('when', choices=START_TIMES, help='Specify when to restart')
