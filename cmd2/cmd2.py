@@ -124,8 +124,9 @@ from .parsing import (
 )
 from .rl_utils import (
     RlType,
+    rl_escape_prompt,
     rl_get_point,
-    rl_make_safe_prompt,
+    rl_get_prompt,
     rl_set_prompt,
     rl_type,
     rl_warning,
@@ -2982,11 +2983,11 @@ class Cmd(cmd.Cmd):
             if sys.stdin.isatty():
                 try:
                     # Deal with the vagaries of readline and ANSI escape codes
-                    safe_prompt = rl_make_safe_prompt(prompt)
+                    escaped_prompt = rl_escape_prompt(prompt)
 
                     with self.sigint_protection:
                         configure_readline()
-                    line = input(safe_prompt)
+                    line = input(escaped_prompt)
                 finally:
                     with self.sigint_protection:
                         restore_readline()
@@ -5013,12 +5014,12 @@ class Cmd(cmd.Cmd):
         Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
 
         IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
-                   a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
+                   a prompt is onscreen. Therefore it is best to acquire the lock before calling this function
                    to guarantee the alert prints and to avoid raising a RuntimeError.
 
         :param alert_msg: the message to display to the user
-        :param new_prompt: if you also want to change the prompt that is displayed, then include it here
-                           see async_update_prompt() docstring for guidance on updating a prompt
+        :param new_prompt: If you also want to change the prompt that is displayed, then include it here.
+                           See async_update_prompt() docstring for guidance on updating a prompt.
         """
         if not (vt100_support and self.use_rawinput):
             return
@@ -5026,29 +5027,31 @@ class Cmd(cmd.Cmd):
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
 
-            # Only update terminal if there are changes
+            # Windows terminals tend to flicker when we redraw the prompt and input lines.
+            # To reduce how often this occurs, only update terminal if there are changes.
             update_terminal = False
 
             if alert_msg:
                 alert_msg += '\n'
                 update_terminal = True
 
-            # Set the prompt if it's changed
-            if new_prompt is not None and new_prompt != self.prompt:
+            if new_prompt is not None:
                 self.prompt = new_prompt
 
-                # If we aren't at a continuation prompt, then it's OK to update it
-                if not self._at_continuation_prompt:
-                    rl_set_prompt(self.prompt)
-                    update_terminal = True
+            # Check if the prompt to display has changed from what's currently displayed
+            cur_onscreen_prompt = rl_get_prompt()
+            new_onscreen_prompt = self.continuation_prompt if self._at_continuation_prompt else self.prompt
+
+            if new_onscreen_prompt != cur_onscreen_prompt:
+                update_terminal = True
 
             if update_terminal:
                 import shutil
 
-                current_prompt = self.continuation_prompt if self._at_continuation_prompt else self.prompt
+                # Generate the string which will replace the current prompt and input lines with the alert
                 terminal_str = ansi.async_alert_str(
                     terminal_columns=shutil.get_terminal_size().columns,
-                    prompt=current_prompt,
+                    prompt=cur_onscreen_prompt,
                     line=readline.get_line_buffer(),
                     cursor_offset=rl_get_point(),
                     alert_msg=alert_msg,
@@ -5060,7 +5063,10 @@ class Cmd(cmd.Cmd):
                     # noinspection PyUnresolvedReferences
                     readline.rl.mode.console.write(terminal_str)
 
-                # Redraw the prompt and input lines
+                # Update Readline's prompt before we redraw it
+                rl_set_prompt(new_onscreen_prompt)
+
+                # Redraw the prompt and input lines below the alert
                 rl_force_redisplay()
 
             self.terminal_lock.release()
@@ -5079,7 +5085,7 @@ class Cmd(cmd.Cmd):
         Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
 
         IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
-                   a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
+                   a prompt is onscreen. Therefore it is best to acquire the lock before calling this function
                    to guarantee the prompt changes and to avoid raising a RuntimeError.
 
                    If user is at a continuation prompt while entering a multiline command, the onscreen prompt will

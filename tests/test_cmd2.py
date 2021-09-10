@@ -1020,37 +1020,32 @@ def test_default_to_shell(base_app, monkeypatch):
     assert m.called
 
 
-def test_ansi_prompt_not_esacped(base_app):
+def test_escaping_prompt():
     from cmd2.rl_utils import (
-        rl_make_safe_prompt,
+        rl_escape_prompt,
+        rl_unescape_prompt,
     )
 
+    # This prompt has nothing which needs to be escaped
     prompt = '(Cmd) '
-    assert rl_make_safe_prompt(prompt) == prompt
+    assert rl_escape_prompt(prompt) == prompt
 
-
-def test_ansi_prompt_escaped():
-    from cmd2.rl_utils import (
-        rl_make_safe_prompt,
-    )
-
-    app = cmd2.Cmd()
+    # This prompt has color which needs to be escaped
     color = 'cyan'
-    prompt = 'InColor'
-    color_prompt = ansi.style(prompt, fg=color)
+    prompt = ansi.style('InColor', fg=color)
 
-    readline_hack_start = "\x01"
-    readline_hack_end = "\x02"
+    escape_start = "\x01"
+    escape_end = "\x02"
 
-    readline_safe_prompt = rl_make_safe_prompt(color_prompt)
-    assert prompt != color_prompt
+    escaped_prompt = rl_escape_prompt(prompt)
     if sys.platform.startswith('win'):
-        # PyReadline on Windows doesn't suffer from the GNU readline bug which requires the hack
-        assert readline_safe_prompt.startswith(ansi.fg_lookup(color))
-        assert readline_safe_prompt.endswith(ansi.FG_RESET)
+        # PyReadline on Windows doesn't need to escape invisible characters
+        assert escaped_prompt == prompt
     else:
-        assert readline_safe_prompt.startswith(readline_hack_start + ansi.fg_lookup(color) + readline_hack_end)
-        assert readline_safe_prompt.endswith(readline_hack_start + ansi.FG_RESET + readline_hack_end)
+        assert escaped_prompt.startswith(escape_start + ansi.fg_lookup(color) + escape_end)
+        assert escaped_prompt.endswith(escape_start + ansi.FG_RESET + escape_end)
+
+    assert rl_unescape_prompt(escaped_prompt) == prompt
 
 
 class HelpApp(cmd2.Cmd):

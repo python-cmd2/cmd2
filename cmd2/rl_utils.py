@@ -1,10 +1,14 @@
 # coding=utf-8
 """
-Imports the proper readline for the platform and provides utility functions for it
+Imports the proper Readline for the platform and provides utility functions for it
 """
 import sys
 from enum import (
     Enum,
+)
+from typing import (
+    Union,
+    cast,
 )
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
@@ -29,13 +33,13 @@ class RlType(Enum):
     NONE = 3
 
 
-# Check what implementation of readline we are using
+# Check what implementation of Readline we are using
 rl_type = RlType.NONE
 
 # Tells if the terminal we are running in supports vt100 control characters
 vt100_support = False
 
-# Explanation for why readline wasn't loaded
+# Explanation for why Readline wasn't loaded
 _rl_warn_reason = ''
 
 # The order of this check matters since importing pyreadline/pyreadline3 will also show readline in the modules list
@@ -188,23 +192,43 @@ def rl_get_point() -> int:  # pragma: no cover
         return 0
 
 
-# noinspection PyProtectedMember, PyUnresolvedReferences
+# noinspection PyUnresolvedReferences
+def rl_get_prompt() -> str:  # pragma: no cover
+    """Gets Readline's current prompt"""
+    if rl_type == RlType.GNU:
+        encoded_prompt = ctypes.c_char_p.in_dll(readline_lib, "rl_prompt").value
+        prompt = cast(bytes, encoded_prompt).decode(encoding='utf-8')
+
+    elif rl_type == RlType.PYREADLINE:
+        prompt_data: Union[str, bytes] = readline.rl.prompt
+        if isinstance(prompt_data, bytes):
+            prompt = prompt_data.decode(encoding='utf-8')
+        else:
+            prompt = prompt_data
+
+    else:
+        prompt = ''
+
+    return rl_unescape_prompt(prompt)
+
+
+# noinspection PyUnresolvedReferences
 def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
     """
-    Sets readline's prompt
+    Sets Readline's prompt
     :param prompt: the new prompt value
     """
-    safe_prompt = rl_make_safe_prompt(prompt)
+    escaped_prompt = rl_escape_prompt(prompt)
 
     if rl_type == RlType.GNU:
-        encoded_prompt = bytes(safe_prompt, encoding='utf-8')
+        encoded_prompt = bytes(escaped_prompt, encoding='utf-8')
         readline_lib.rl_set_prompt(encoded_prompt)
 
     elif rl_type == RlType.PYREADLINE:
-        readline.rl._set_prompt(safe_prompt)
+        readline.rl.prompt = escaped_prompt
 
 
-def rl_make_safe_prompt(prompt: str) -> str:  # pragma: no cover
+def rl_escape_prompt(prompt: str) -> str:
     """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes
 
     :param prompt: original prompt
@@ -212,20 +236,20 @@ def rl_make_safe_prompt(prompt: str) -> str:  # pragma: no cover
     """
     if rl_type == RlType.GNU:
         # start code to tell GNU Readline about beginning of invisible characters
-        start = "\x01"
+        escape_start = "\x01"
 
         # end code to tell GNU Readline about end of invisible characters
-        end = "\x02"
+        escape_end = "\x02"
 
         escaped = False
         result = ""
 
         for c in prompt:
             if c == "\x1b" and not escaped:
-                result += start + c
+                result += escape_start + c
                 escaped = True
             elif c.isalpha() and escaped:
-                result += c + end
+                result += c + escape_end
                 escaped = False
             else:
                 result += c
@@ -234,3 +258,13 @@ def rl_make_safe_prompt(prompt: str) -> str:  # pragma: no cover
 
     else:
         return prompt
+
+
+def rl_unescape_prompt(prompt: str) -> str:
+    """Remove escape characters from a Readline prompt"""
+    if rl_type == RlType.GNU:
+        escape_start = "\x01"
+        escape_end = "\x02"
+        prompt = prompt.replace(escape_start, "").replace(escape_end, "")
+
+    return prompt
