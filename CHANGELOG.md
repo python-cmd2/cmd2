@@ -1,4 +1,4 @@
-## 2.2.0 (TBD, 2021)
+## 2.2.0 (September 14, 2021)
 * Bug Fixes
   * Fixed extra space appended to each alias by "alias list" command
 * Enhancements
