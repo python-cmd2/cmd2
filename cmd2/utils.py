@@ -589,7 +589,7 @@ class ProcReader:
 
         self._out_thread = threading.Thread(name='out_thread', target=self._reader_thread_func, kwargs={'read_stdout': True})
 
-        self._err_thread = threading.Thread(name='out_thread', target=self._reader_thread_func, kwargs={'read_stdout': False})
+        self._err_thread = threading.Thread(name='err_thread', target=self._reader_thread_func, kwargs={'read_stdout': False})
 
         # Start the reader threads for pipes only
         if self._proc.stdout is not None:
