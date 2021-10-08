@@ -1,3 +1,7 @@
+## 2.3.0 (TBD, 2021)
+* Bug Fixes
+  * Fixed `AttributeError` in `rl_get_prompt()` when prompt is `None`.
+
 ## 2.2.0 (September 14, 2021)
 * Bug Fixes
   * Fixed extra space appended to each alias by "alias list" command
