@@ -5011,8 +5011,6 @@ class Cmd(cmd.Cmd):
         To the user it appears as if an alert message is printed above the prompt and their current input
         text and cursor location is left alone.
 
-        Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
-
         IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen. Therefore it is best to acquire the lock before calling this function
                    to guarantee the alert prints and to avoid raising a RuntimeError.
@@ -5020,6 +5018,7 @@ class Cmd(cmd.Cmd):
         :param alert_msg: the message to display to the user
         :param new_prompt: If you also want to change the prompt that is displayed, then include it here.
                            See async_update_prompt() docstring for guidance on updating a prompt.
+        :raises RuntimeError: if called while another thread holds `terminal_lock`
         """
         if not (vt100_support and self.use_rawinput):
             return
@@ -5082,8 +5081,6 @@ class Cmd(cmd.Cmd):
         prompt, it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
         be shifted and the update will not be seamless.
 
-        Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
-
         IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen. Therefore it is best to acquire the lock before calling this function
                    to guarantee the prompt changes and to avoid raising a RuntimeError.
@@ -5093,36 +5090,29 @@ class Cmd(cmd.Cmd):
                    line command completes.
 
         :param new_prompt: what to change the prompt to
+        :raises RuntimeError: if called while another thread holds `terminal_lock`
         """
         self.async_alert('', new_prompt)
 
-    def set_window_title(self, title: str) -> None:  # pragma: no cover
-        """Set the terminal window title.
+    @staticmethod
+    def set_window_title(title: str) -> None:  # pragma: no cover
+        """
+        Set the terminal window title.
 
-        Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
-
-        IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid writing
-                   to stderr while a command is running. Therefore it is best to acquire the lock before calling
-                   this function to guarantee the title changes and to avoid raising a RuntimeError.
+        NOTE: This function writes to stderr. Therefore if you call this during a command run by a pyscript,
+              the string which updates the title will appear in that command's CommandResult.stderr data.
 
         :param title: the new window title
         """
         if not vt100_support:
             return
 
-        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
-        if self.terminal_lock.acquire(blocking=False):
-            try:
-                sys.stderr.write(ansi.set_title_str(title))
-                sys.stderr.flush()
-            except AttributeError:
-                # Debugging in Pycharm has issues with setting terminal title
-                pass
-            finally:
-                self.terminal_lock.release()
-
-        else:
-            raise RuntimeError("another thread holds terminal_lock")
+        try:
+            sys.stderr.write(ansi.set_title_str(title))
+            sys.stderr.flush()
+        except AttributeError:
+            # Debugging in Pycharm has issues with setting terminal title
+            pass
 
     def enable_command(self, command: str) -> None:
         """

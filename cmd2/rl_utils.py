@@ -8,7 +8,6 @@ from enum import (
 )
 from typing import (
     Union,
-    cast,
 )
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
@@ -197,7 +196,10 @@ def rl_get_prompt() -> str:  # pragma: no cover
     """Gets Readline's current prompt"""
     if rl_type == RlType.GNU:
         encoded_prompt = ctypes.c_char_p.in_dll(readline_lib, "rl_prompt").value
-        prompt = cast(bytes, encoded_prompt).decode(encoding='utf-8')
+        if encoded_prompt is None:
+            prompt = ''
+        else:
+            prompt = encoded_prompt.decode(encoding='utf-8')
 
     elif rl_type == RlType.PYREADLINE:
         prompt_data: Union[str, bytes] = readline.rl.prompt
