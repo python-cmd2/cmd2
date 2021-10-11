@@ -106,7 +106,7 @@ within a running application:
     Name                  Value                           Description
     ==================================================================================================================
     allow_style           Terminal                        Allow ANSI text style sequences in output (valid values:
-                                                          Terminal, Always, Never)
+                                                          Always, Never, Terminal)
     always_show_hint      False                           Display tab completion hint even when completion suggestions
                                                           print
     debug                 True                            Show full traceback on exception

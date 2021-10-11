@@ -14,8 +14,8 @@
 """
 import cmd2
 from cmd2 import (
-    bg,
-    fg,
+    Bg,
+    Fg,
     style,
 )
 
@@ -32,7 +32,7 @@ class BasicApp(cmd2.Cmd):
         )
 
         # Prints an intro banner once upon application startup
-        self.intro = style('Welcome to cmd2!', fg=fg.red, bg=bg.white, bold=True)
+        self.intro = style('Welcome to cmd2!', fg=Fg.RED, bg=Bg.WHITE, bold=True)
 
         # Show this as the prompt when asking for input
         self.prompt = 'myapp> '
@@ -47,11 +47,12 @@ class BasicApp(cmd2.Cmd):
         self.default_category = 'cmd2 Built-in Commands'
 
         # Color to output text in with echo command
-        self.foreground_color = 'cyan'
+        self.foreground_color = Fg.CYAN.name.lower()
 
         # Make echo_fg settable at runtime
+        fg_colors = [c.name.lower() for c in Fg]
         self.add_settable(
-            cmd2.Settable('foreground_color', str, 'Foreground color to use with echo command', self, choices=fg.colors())
+            cmd2.Settable('foreground_color', str, 'Foreground color to use with echo command', self, choices=fg_colors)
         )
 
     @cmd2.with_category(CUSTOM_CATEGORY)
@@ -62,7 +63,8 @@ class BasicApp(cmd2.Cmd):
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_echo(self, arg):
         """Example of a multiline command"""
-        self.poutput(style(arg, fg=self.foreground_color))
+        fg_color = Fg[self.foreground_color.upper()]
+        self.poutput(style(arg, fg=fg_color))
 
 
 if __name__ == '__main__':

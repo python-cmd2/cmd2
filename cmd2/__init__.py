@@ -19,7 +19,19 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
 
 from typing import List
 
-from .ansi import style, fg, bg
+from .ansi import (
+    Cursor,
+    Bg,
+    Fg,
+    EightBitBg,
+    EightBitFg,
+    RgbBg,
+    RgbFg,
+    TextStyle,
+    bg,  # DEPRECATED: Use Bg
+    fg,  # DEPRECATED: Use Fg
+    style,
+)
 from .argparse_custom import (
     Cmd2ArgumentParser,
     Cmd2AttributeWrapper,
@@ -54,9 +66,17 @@ from .utils import categorize, CompletionMode, CustomCompletionSettings, Settabl
 __all__: List[str] = [
     'COMMAND_NAME',
     'DEFAULT_SHORTCUTS',
-    # ANSI Style exports
-    'bg',
-    'fg',
+    # ANSI Exports
+    'Cursor',
+    'Bg',
+    'Fg',
+    'EightBitBg',
+    'EightBitFg',
+    'RgbBg',
+    'RgbFg',
+    'TextStyle',
+    'bg',  # DEPRECATED: Use Bg
+    'fg',  # DEPRECATED: Use Fg
     'style',
     # Argparse Exports
     'Cmd2ArgumentParser',

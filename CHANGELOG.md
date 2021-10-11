@@ -1,12 +1,20 @@
 ## 2.3.0 (TBD, 2021)
 * Bug Fixes
   * Fixed `AttributeError` in `rl_get_prompt()` when prompt is `None`.
+  * Fixed bug where using choices on a Settable didn't verify that a valid choice had been entered.
 * Enhancements
   * Added settings to Column class which prevent a table from overriding existing styles in header
     and/or data text. These were added to support nesting an AlternatingTable within an AlternatingTable,
     but other custom table classes can also use these settings.
   * AlternatingTable no longer applies background color to outer borders. This was done to improve appearance
     since the background color extended beyond the borders of the table.
+  * Added support for 8-bit/256-colors with the `cmd2.EightBitFg` and `cmd2.EightBitBg` classes.
+  * Added support for 24-bit/RGB colors with the `cmd2.RgbFg` and `cmd2.RgbBg` classes.
+  * Removed dependency on colorama.
+  * Changed type of `ansi.allow_style` from a string to an `ansi.AllowStyle` Enum class.
+* Deprecations
+  * Deprecated `cmd2.fg`. Use `cmd2.Fg` instead.
+  * Deprecated `cmd2.bg`. Use `cmd2.Bg` instead.
 
 ## 2.2.0 (September 14, 2021)
 * Bug Fixes

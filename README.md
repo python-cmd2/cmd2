@@ -83,7 +83,7 @@ Feature Overview
 ----------------
 Instructions for implementing each feature follow.
 
-- Extension of the `cmd` module.  So capabilities provided by `cmd` still exist
+- Extension of the `cmd` module. So capabilities provided by `cmd` still exist
     - Your applicaiton inherits from `cmd2.Cmd`, let's say you call this class `MyApp`
     ```Python
     import cmd2
@@ -95,7 +95,7 @@ Instructions for implementing each feature follow.
     class MyApp(cmd2.Cmd):
         def do_foo(self, args):
             """This docstring is the built-in help for the foo command."""
-            self.poutput(cmd2.style('foo bar baz', fg=cmd2.fg.red))
+            self.poutput(cmd2.style('foo bar baz', fg=cmd2.Fg.RED))
     ```
     - By default the docstring for your **do_foo** method is the help for the **foo** command
         - NOTE: This doesn't apply if you use one of the `argparse` decorators mentioned below

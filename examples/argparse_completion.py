@@ -47,7 +47,7 @@ class ArgparseCompletion(Cmd):
     def choices_completion_item(self) -> List[CompletionItem]:
         """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
         fancy_item = "These things can\ncontain newlines and\n"
-        fancy_item += ansi.style("styled text!!", fg=ansi.fg.bright_yellow, underline=True)
+        fancy_item += ansi.style("styled text!!", fg=ansi.Fg.LIGHT_YELLOW, underline=True)
         items = {1: "My item", 2: "Another item", 3: "Yet another item", 4: fancy_item}
         return [CompletionItem(item_id, description) for item_id, description in items.items()]
 

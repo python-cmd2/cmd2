@@ -109,7 +109,7 @@ SET_TXT = (
     "Name                  Value                           Description                                                 \n"
     "==================================================================================================================\n"
     "allow_style           Terminal                        Allow ANSI text style sequences in output (valid values:    \n"
-    "                                                      Terminal, Always, Never)                                    \n"
+    "                                                      Always, Never, Terminal)                                    \n"
     "always_show_hint      False                           Display tab completion hint even when completion suggestions\n"
     "                                                      print                                                       \n"
     "debug                 False                           Show full traceback on exception                            \n"

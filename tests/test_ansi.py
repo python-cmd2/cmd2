@@ -5,21 +5,23 @@ Unit testing for cmd2/ansi.py module
 """
 import pytest
 
-import cmd2.ansi as ansi
+from cmd2 import (
+    ansi,
+)
 
 HELLO_WORLD = 'Hello, world!'
 
 
 def test_strip_style():
     base_str = HELLO_WORLD
-    ansi_str = ansi.style(base_str, fg='green')
+    ansi_str = ansi.style(base_str, fg=ansi.Fg.GREEN)
     assert base_str != ansi_str
     assert base_str == ansi.strip_style(ansi_str)
 
 
 def test_style_aware_wcswidth():
     base_str = HELLO_WORLD
-    ansi_str = ansi.style(base_str, fg='green')
+    ansi_str = ansi.style(base_str, fg=ansi.Fg.GREEN)
     assert ansi.style_aware_wcswidth(HELLO_WORLD) == ansi.style_aware_wcswidth(ansi_str)
 
     assert ansi.style_aware_wcswidth('i have a tab\t') == -1
@@ -27,7 +29,7 @@ def test_style_aware_wcswidth():
 
 
 def test_widest_line():
-    text = ansi.style('i have\n3 lines\nThis is the longest one', fg='green')
+    text = ansi.style('i have\n3 lines\nThis is the longest one', fg=ansi.Fg.GREEN)
     assert ansi.widest_line(text) == ansi.style_aware_wcswidth("This is the longest one")
 
     text = "I'm just one line"
@@ -42,99 +44,111 @@ def test_style_none():
     assert ansi.style(base_str) == ansi_str
 
 
-def test_style_fg():
+@pytest.mark.parametrize('fg_color', [ansi.Fg.BLUE, ansi.EightBitFg.AQUAMARINE_1A, ansi.RgbFg(0, 2, 4)])
+def test_style_fg(fg_color):
     base_str = HELLO_WORLD
-    fg_color = 'blue'
-    ansi_str = ansi.fg[fg_color].value + base_str + ansi.FG_RESET
+    ansi_str = fg_color + base_str + ansi.Fg.RESET
     assert ansi.style(base_str, fg=fg_color) == ansi_str
 
 
-def test_style_bg():
+@pytest.mark.parametrize('bg_color', [ansi.Bg.BLUE, ansi.EightBitBg.AQUAMARINE_1A, ansi.RgbBg(0, 2, 4)])
+def test_style_bg(bg_color):
     base_str = HELLO_WORLD
-    bg_color = 'green'
-    ansi_str = ansi.bg[bg_color].value + base_str + ansi.BG_RESET
+    ansi_str = bg_color + base_str + ansi.Bg.RESET
     assert ansi.style(base_str, bg=bg_color) == ansi_str
 
 
 def test_style_bold():
     base_str = HELLO_WORLD
-    ansi_str = ansi.INTENSITY_BRIGHT + base_str + ansi.INTENSITY_NORMAL
+    ansi_str = ansi.TextStyle.INTENSITY_BOLD + base_str + ansi.TextStyle.INTENSITY_NORMAL
     assert ansi.style(base_str, bold=True) == ansi_str
 
 
 def test_style_dim():
     base_str = HELLO_WORLD
-    ansi_str = ansi.INTENSITY_DIM + base_str + ansi.INTENSITY_NORMAL
+    ansi_str = ansi.TextStyle.INTENSITY_DIM + base_str + ansi.TextStyle.INTENSITY_NORMAL
     assert ansi.style(base_str, dim=True) == ansi_str
+
+
+def test_style_italic():
+    base_str = HELLO_WORLD
+    ansi_str = ansi.TextStyle.ITALIC_ENABLE + base_str + ansi.TextStyle.ITALIC_DISABLE
+    assert ansi.style(base_str, italic=True) == ansi_str
+
+
+def test_style_overline():
+    base_str = HELLO_WORLD
+    ansi_str = ansi.TextStyle.OVERLINE_ENABLE + base_str + ansi.TextStyle.OVERLINE_DISABLE
+    assert ansi.style(base_str, overline=True) == ansi_str
+
+
+def test_style_strikethrough():
+    base_str = HELLO_WORLD
+    ansi_str = ansi.TextStyle.STRIKETHROUGH_ENABLE + base_str + ansi.TextStyle.STRIKETHROUGH_DISABLE
+    assert ansi.style(base_str, strikethrough=True) == ansi_str
 
 
 def test_style_underline():
     base_str = HELLO_WORLD
-    ansi_str = ansi.UNDERLINE_ENABLE + base_str + ansi.UNDERLINE_DISABLE
+    ansi_str = ansi.TextStyle.UNDERLINE_ENABLE + base_str + ansi.TextStyle.UNDERLINE_DISABLE
     assert ansi.style(base_str, underline=True) == ansi_str
 
 
 def test_style_multi():
     base_str = HELLO_WORLD
-    fg_color = 'blue'
-    bg_color = 'green'
+    fg_color = ansi.Fg.LIGHT_BLUE
+    bg_color = ansi.Bg.LIGHT_GRAY
     ansi_str = (
-        ansi.fg[fg_color].value
-        + ansi.bg[bg_color].value
-        + ansi.INTENSITY_BRIGHT
-        + ansi.INTENSITY_DIM
-        + ansi.UNDERLINE_ENABLE
+        fg_color
+        + bg_color
+        + ansi.TextStyle.INTENSITY_BOLD
+        + ansi.TextStyle.INTENSITY_DIM
+        + ansi.TextStyle.ITALIC_ENABLE
+        + ansi.TextStyle.OVERLINE_ENABLE
+        + ansi.TextStyle.STRIKETHROUGH_ENABLE
+        + ansi.TextStyle.UNDERLINE_ENABLE
         + base_str
-        + ansi.FG_RESET
-        + ansi.BG_RESET
-        + ansi.INTENSITY_NORMAL
-        + ansi.INTENSITY_NORMAL
-        + ansi.UNDERLINE_DISABLE
+        + ansi.Fg.RESET
+        + ansi.Bg.RESET
+        + ansi.TextStyle.INTENSITY_NORMAL
+        + ansi.TextStyle.INTENSITY_NORMAL
+        + ansi.TextStyle.ITALIC_DISABLE
+        + ansi.TextStyle.OVERLINE_DISABLE
+        + ansi.TextStyle.STRIKETHROUGH_DISABLE
+        + ansi.TextStyle.UNDERLINE_DISABLE
     )
-    assert ansi.style(base_str, fg=fg_color, bg=bg_color, bold=True, dim=True, underline=True) == ansi_str
+    assert (
+        ansi.style(
+            base_str,
+            fg=fg_color,
+            bg=bg_color,
+            bold=True,
+            dim=True,
+            italic=True,
+            overline=True,
+            strikethrough=True,
+            underline=True,
+        )
+        == ansi_str
+    )
 
 
-def test_style_color_not_exist():
-    base_str = HELLO_WORLD
-
-    with pytest.raises(ValueError):
-        ansi.style(base_str, fg='fake', bg='green')
-
-    with pytest.raises(ValueError):
-        ansi.style(base_str, fg='blue', bg='fake')
-
-
-def test_fg_lookup_exist():
-    fg_color = 'green'
-    assert ansi.fg_lookup(fg_color) == ansi.fg_lookup(ansi.fg.green)
-
-
-def test_fg_lookup_nonexist():
-    with pytest.raises(ValueError):
-        ansi.fg_lookup('foo')
-
-
-def test_bg_lookup_exist():
-    bg_color = 'red'
-    assert ansi.bg_lookup(bg_color) == ansi.bg_lookup(ansi.bg.red)
-
-
-def test_bg_lookup_nonexist():
-    with pytest.raises(ValueError):
-        ansi.bg_lookup('bar')
-
-
-def test_set_title_str():
-    OSC = '\033]'
-    BEL = '\007'
+def test_set_title():
     title = HELLO_WORLD
-    assert ansi.set_title_str(title) == OSC + '2;' + title + BEL
+    assert ansi.set_title(title) == ansi.OSC + '2;' + title + ansi.BEL
 
 
 @pytest.mark.parametrize(
     'cols, prompt, line, cursor, msg, expected',
     [
-        (127, '(Cmd) ', 'help his', 12, ansi.style('Hello World!', fg='magenta'), '\x1b[2K\r\x1b[35mHello World!\x1b[39m'),
+        (
+            127,
+            '(Cmd) ',
+            'help his',
+            12,
+            ansi.style('Hello World!', fg=ansi.Fg.MAGENTA),
+            '\x1b[2K\r\x1b[35mHello World!\x1b[39m',
+        ),
         (127, '\n(Cmd) ', 'help ', 5, 'foo', '\x1b[2K\x1b[1A\x1b[2K\rfoo'),
         (
             10,
@@ -151,40 +165,83 @@ def test_async_alert_str(cols, prompt, line, cursor, msg, expected):
     assert alert_str == expected
 
 
-def test_cast_color_as_str():
-    assert str(ansi.fg.blue) == ansi.fg.blue.value
-    assert str(ansi.bg.blue) == ansi.bg.blue.value
+def test_clear_screen():
+    clear_type = 2
+    assert ansi.clear_screen(clear_type) == f"{ansi.CSI}{clear_type}J"
+
+    clear_type = -1
+    with pytest.raises(ValueError):
+        ansi.clear_screen(clear_type)
+
+    clear_type = 4
+    with pytest.raises(ValueError):
+        ansi.clear_screen(clear_type)
 
 
-def test_color_str_building():
-    from cmd2.ansi import (
-        bg,
-        fg,
-    )
+def test_clear_line():
+    clear_type = 2
+    assert ansi.clear_line(clear_type) == f"{ansi.CSI}{clear_type}K"
 
-    assert fg.blue + "hello" == fg.blue.value + "hello"
-    assert bg.blue + "hello" == bg.blue.value + "hello"
-    assert fg.blue + "hello" + fg.reset == fg.blue.value + "hello" + fg.reset.value
-    assert bg.blue + "hello" + bg.reset == bg.blue.value + "hello" + bg.reset.value
-    assert (
-        fg.blue + bg.white + "hello" + fg.reset + bg.reset
-        == fg.blue.value + bg.white.value + "hello" + fg.reset.value + bg.reset.value
-    )
+    clear_type = -1
+    with pytest.raises(ValueError):
+        ansi.clear_line(clear_type)
+
+    clear_type = 3
+    with pytest.raises(ValueError):
+        ansi.clear_line(clear_type)
 
 
-def test_color_nonunique_values():
-    class Matching(ansi.ColorBase):
-        magenta = ansi.fg_lookup('magenta')
-        purple = ansi.fg_lookup('magenta')
+def test_cursor():
+    count = 1
+    assert ansi.Cursor.UP(count) == f"{ansi.CSI}{count}A"
+    assert ansi.Cursor.DOWN(count) == f"{ansi.CSI}{count}B"
+    assert ansi.Cursor.FORWARD(count) == f"{ansi.CSI}{count}C"
+    assert ansi.Cursor.BACK(count) == f"{ansi.CSI}{count}D"
 
-    assert sorted(Matching.colors()) == ['magenta', 'purple']
+    x = 4
+    y = 5
+    assert ansi.Cursor.SET_POS(x, y) == f"{ansi.CSI}{y};{x}H"
 
 
-def test_color_enum():
-    assert ansi.fg_lookup('bright_red') == ansi.fg_lookup(ansi.fg.bright_red)
-    assert ansi.bg_lookup('green') == ansi.bg_lookup(ansi.bg.green)
+@pytest.mark.parametrize(
+    'ansi_sequence',
+    [
+        ansi.fg.green,
+        ansi.bg.blue,
+        ansi.Fg.MAGENTA,
+        ansi.Bg.LIGHT_GRAY,
+        ansi.EightBitBg.CHARTREUSE_2A,
+        ansi.EightBitBg.MEDIUM_PURPLE,
+        ansi.RgbFg(0, 5, 22),
+        ansi.RgbBg(100, 150, 222),
+        ansi.TextStyle.OVERLINE_ENABLE,
+    ],
+)
+def test_sequence_str_building(ansi_sequence):
+    """This tests __add__(), __radd__(), and __str__() methods for AnsiSequences"""
+    assert ansi_sequence + ansi_sequence == str(ansi_sequence) + str(ansi_sequence)
 
 
-def test_colors_list():
-    assert list(ansi.fg.__members__.keys()) == ansi.fg.colors()
-    assert list(ansi.bg.__members__.keys()) == ansi.bg.colors()
+@pytest.mark.parametrize(
+    'r, g, b, valid',
+    [
+        (0, 0, 0, True),
+        (255, 255, 255, True),
+        (-1, 0, 0, False),
+        (256, 255, 255, False),
+        (0, -1, 0, False),
+        (255, 256, 255, False),
+        (0, 0, -1, False),
+        (255, 255, 256, False),
+    ],
+)
+def test_rgb_bounds(r, g, b, valid):
+
+    if valid:
+        ansi.RgbFg(r, g, b)
+        ansi.RgbBg(r, g, b)
+    else:
+        with pytest.raises(ValueError):
+            ansi.RgbFg(r, g, b)
+        with pytest.raises(ValueError):
+            ansi.RgbBg(r, g, b)

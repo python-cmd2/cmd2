@@ -16,27 +16,22 @@ Terminal
     (the default value) poutput(), pfeedback(), and ppaged() do not strip any
     ANSI style sequences when the output is a terminal, but if the output is
     a pipe or a file the style sequences are stripped. If you want colorized
-    output you must add ANSI style sequences using either cmd2's internal ansi
-    module or another color library such as `plumbum.colors` or `colorama`.
+    output, add ANSI style sequences using cmd2's internal ansi module.
 
 Always
     poutput(), pfeedback(), and ppaged() never strip ANSI style sequences,
     regardless of the output destination
 """
-from typing import (
-    Any,
-)
-
-from colorama import (
-    Back,
-    Fore,
-    Style,
-)
 
 import cmd2
 from cmd2 import (
+    Bg,
+    Fg,
     ansi,
 )
+
+fg_choices = [c.name.lower() for c in Fg]
+bg_choices = [c.name.lower() for c in Bg]
 
 
 class CmdLineApp(cmd2.Cmd):
@@ -51,14 +46,14 @@ class CmdLineApp(cmd2.Cmd):
         self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
 
         # Should ANSI color output be allowed
-        self.allow_style = ansi.STYLE_TERMINAL
+        self.allow_style = ansi.AllowStyle.TERMINAL
 
     speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    speak_parser.add_argument('-f', '--fg', choices=ansi.fg.colors(), help='foreground color to apply to output')
-    speak_parser.add_argument('-b', '--bg', choices=ansi.bg.colors(), help='background color to apply to output')
+    speak_parser.add_argument('-f', '--fg', choices=fg_choices, help='foreground color to apply to output')
+    speak_parser.add_argument('-b', '--bg', choices=bg_choices, help='background color to apply to output')
     speak_parser.add_argument('-l', '--bold', action='store_true', help='bold the output')
     speak_parser.add_argument('-u', '--underline', action='store_true', help='underline the output')
     speak_parser.add_argument('words', nargs='+', help='words to say')
@@ -75,29 +70,14 @@ class CmdLineApp(cmd2.Cmd):
             words.append(word)
 
         repetitions = args.repeat or 1
-        output_str = ansi.style(' '.join(words), fg=args.fg, bg=args.bg, bold=args.bold, underline=args.underline)
+
+        fg_color = Fg[args.fg.upper()] if args.fg else None
+        bg_color = Bg[args.bg.upper()] if args.bg else None
+        output_str = ansi.style(' '.join(words), fg=fg_color, bg=bg_color, bold=args.bold, underline=args.underline)
 
         for _ in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
             self.poutput(output_str)
-        self.perror('error message at the end')
-
-    # noinspection PyMethodMayBeStatic
-    def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
-        """Override perror() method from `cmd2.Cmd`
-
-        Use colorama native approach for styling the text instead of `cmd2.ansi` methods
-
-        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
-        :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
-                            where the message text already has the desired style. Defaults to True.
-        """
-        if apply_style:
-            final_msg = "{}{}{}{}".format(Fore.RED, Back.YELLOW, msg, Style.RESET_ALL)
-        else:
-            final_msg = "{}".format(msg)
-        ansi.style_aware_write(sys.stderr, final_msg + end)
 
     def do_timetravel(self, _):
         """A command which always generates an error message, to demonstrate custom error colors"""

@@ -150,8 +150,13 @@ class Settable:
         :param completer: tab completion function that provides choices for this argument
         """
         if val_type == bool:
+
+            def get_bool_choices(_) -> List[str]:  # type: ignore[no-untyped-def]
+                """Used to tab complete lowercase boolean values"""
+                return ['true', 'false']
+
             val_type = str_to_bool
-            choices = ['true', 'false']
+            choices_provider = cast(ChoicesProviderFunc, get_bool_choices)
 
         self.name = name
         self.val_type = val_type
@@ -176,10 +181,17 @@ class Settable:
         :param value: New value to set
         :return: New value that the attribute was set to
         """
+        # Run the value through its type function to handle any conversion or validation
+        new_value = self.val_type(value)
+
+        # Make sure new_value is a valid choice
+        if self.choices is not None and new_value not in self.choices:
+            choices_str = ', '.join(map(repr, self.choices))
+            raise ValueError(f"invalid choice: {new_value!r} (choose from {choices_str})")
+
         # Try to update the settable's value
         orig_value = self.get_value()
-        setattr(self.settable_obj, self.settable_attrib_name, self.val_type(value))
-        new_value = getattr(self.settable_obj, self.settable_attrib_name)
+        setattr(self.settable_obj, self.settable_attrib_name, new_value)
 
         # Check if we need to call an onchange callback
         if orig_value != new_value and self.onchange_cb:
@@ -859,12 +871,12 @@ def align_text(
         # Don't allow styles in fill_char and text to affect one another
         if fill_char_styles or aggregate_styles or line_styles:
             if left_fill:
-                left_fill = ansi.RESET_ALL + left_fill
-            left_fill += ansi.RESET_ALL
+                left_fill = ansi.TextStyle.RESET_ALL + left_fill
+            left_fill += ansi.TextStyle.RESET_ALL
 
             if right_fill:
-                right_fill = ansi.RESET_ALL + right_fill
-            right_fill += ansi.RESET_ALL
+                right_fill = ansi.TextStyle.RESET_ALL + right_fill
+            right_fill += ansi.TextStyle.RESET_ALL
 
         # Write the line and restore any styles from previous lines
         text_buf.write(left_fill + aggregate_styles + line + right_fill)
@@ -953,8 +965,8 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     If there are ANSI style sequences in the string after where truncation occurs, this function will append them
     to the returned string.
 
-    This is done to prevent issues caused in cases like: truncate_line(fg.blue + hello + fg.reset, 3)
-    In this case, "hello" would be truncated before fg.reset resets the color from blue. Appending the remaining style
+    This is done to prevent issues caused in cases like: truncate_line(Fg.BLUE + hello + Fg.RESET, 3)
+    In this case, "hello" would be truncated before Fg.RESET resets the color from blue. Appending the remaining style
     sequences makes sure the style is in the same state had the entire string been printed. align_text() relies on this
     behavior when preserving style over multiple lines.
 
