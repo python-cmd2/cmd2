@@ -271,6 +271,34 @@ def test_cmd2_help_completion_nomatch(cmd2_app):
     assert first_match is None
 
 
+def test_set_allow_style_completion(cmd2_app):
+    """Confirm that completing allow_style presents AllowStyle strings"""
+    text = ''
+    line = 'set allow_style'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = [val.name.lower() for val in cmd2.ansi.AllowStyle]
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match
+    assert cmd2_app.completion_matches == sorted(expected, key=cmd2_app.default_sort_key)
+
+
+def test_set_bool_completion(cmd2_app):
+    """Confirm that completing a boolean Settable presents true and false strings"""
+    text = ''
+    line = 'set debug'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = ['false', 'true']
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match
+    assert cmd2_app.completion_matches == sorted(expected, key=cmd2_app.default_sort_key)
+
+
 def test_shell_command_completion_shortcut(cmd2_app):
     # Made sure ! runs a shell command and all matches start with ! since there
     # isn't a space between ! and the shell command. Display matches won't

@@ -984,14 +984,29 @@ class Cmd(cmd.Cmd):
 
     def build_settables(self) -> None:
         """Create the dictionary of user-settable parameters"""
+
+        def get_allow_style_choices(cli_self: Cmd) -> List[str]:
+            """Used to tab complete allow_style values"""
+            return [val.name.lower() for val in ansi.AllowStyle]
+
+        def allow_style_type(value: str) -> ansi.AllowStyle:
+            """Converts a string value into an ansi.AllowStyle"""
+            try:
+                return ansi.AllowStyle[value.upper()]
+            except KeyError:
+                raise ValueError(
+                    f"must be {ansi.AllowStyle.ALWAYS}, {ansi.AllowStyle.NEVER}, or "
+                    f"{ansi.AllowStyle.TERMINAL} (case-insensitive)"
+                )
+
         self.add_settable(
             Settable(
                 'allow_style',
-                str,
+                allow_style_type,
                 'Allow ANSI text style sequences in output (valid values: '
-                f'{ansi.STYLE_TERMINAL}, {ansi.STYLE_ALWAYS}, {ansi.STYLE_NEVER})',
+                f'{ansi.AllowStyle.ALWAYS}, {ansi.AllowStyle.NEVER}, {ansi.AllowStyle.TERMINAL})',
                 self,
-                choices=[ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER],
+                choices_provider=cast(ChoicesProviderFunc, get_allow_style_choices),
             )
         )
 
@@ -1016,18 +1031,14 @@ class Cmd(cmd.Cmd):
     # -----  Methods related to presenting output to the user -----
 
     @property
-    def allow_style(self) -> str:
+    def allow_style(self) -> ansi.AllowStyle:
         """Read-only property needed to support do_set when it reads allow_style"""
         return ansi.allow_style
 
     @allow_style.setter
-    def allow_style(self, new_val: str) -> None:
+    def allow_style(self, new_val: ansi.AllowStyle) -> None:
         """Setter property needed to support do_set when it updates allow_style"""
-        new_val = new_val.capitalize()
-        if new_val in [ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER]:
-            ansi.allow_style = new_val
-        else:
-            raise ValueError(f"must be {ansi.STYLE_TERMINAL}, {ansi.STYLE_ALWAYS}, or {ansi.STYLE_NEVER} (case-insensitive)")
+        ansi.allow_style = new_val
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported"""
@@ -1169,7 +1180,7 @@ class Cmd(cmd.Cmd):
             # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
             # Also only attempt to use a pager if actually running in a real fully functional terminal
             if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
-                if ansi.allow_style.lower() == ansi.STYLE_NEVER.lower():
+                if ansi.allow_style == ansi.AllowStyle.NEVER:
                     msg_str = ansi.strip_style(msg_str)
                 msg_str += end
 
@@ -5108,7 +5119,7 @@ class Cmd(cmd.Cmd):
             return
 
         try:
-            sys.stderr.write(ansi.set_title_str(title))
+            sys.stderr.write(ansi.set_title(title))
             sys.stderr.flush()
         except AttributeError:
             # Debugging in Pycharm has issues with setting terminal title

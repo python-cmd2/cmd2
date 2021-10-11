@@ -198,18 +198,18 @@ def test_set_no_settables(base_app):
 @pytest.mark.parametrize(
     'new_val, is_valid, expected',
     [
-        (ansi.STYLE_NEVER, True, ansi.STYLE_NEVER),
-        ('neVeR', True, ansi.STYLE_NEVER),
-        (ansi.STYLE_TERMINAL, True, ansi.STYLE_TERMINAL),
-        ('TeRMInal', True, ansi.STYLE_TERMINAL),
-        (ansi.STYLE_ALWAYS, True, ansi.STYLE_ALWAYS),
-        ('AlWaYs', True, ansi.STYLE_ALWAYS),
-        ('invalid', False, ansi.STYLE_TERMINAL),
+        (ansi.AllowStyle.NEVER, True, ansi.AllowStyle.NEVER),
+        ('neVeR', True, ansi.AllowStyle.NEVER),
+        (ansi.AllowStyle.TERMINAL, True, ansi.AllowStyle.TERMINAL),
+        ('TeRMInal', True, ansi.AllowStyle.TERMINAL),
+        (ansi.AllowStyle.ALWAYS, True, ansi.AllowStyle.ALWAYS),
+        ('AlWaYs', True, ansi.AllowStyle.ALWAYS),
+        ('invalid', False, ansi.AllowStyle.TERMINAL),
     ],
 )
 def test_set_allow_style(base_app, new_val, is_valid, expected):
     # Initialize allow_style for this test
-    ansi.allow_style = ansi.STYLE_TERMINAL
+    ansi.allow_style = ansi.AllowStyle.TERMINAL
 
     # Use the set command to alter it
     out, err = run_cmd(base_app, 'set allow_style {}'.format(new_val))
@@ -219,10 +219,29 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
     assert ansi.allow_style == expected
     if is_valid:
         assert not err
-        assert "now: {!r}".format(new_val.capitalize()) in out[1]
+        assert out
 
     # Reset allow_style to its default since it's an application-wide setting that can affect other unit tests
-    ansi.allow_style = ansi.STYLE_TERMINAL
+    ansi.allow_style = ansi.AllowStyle.TERMINAL
+
+
+def test_set_with_choices(base_app):
+    """Test choices validation of Settables"""
+    fake_choices = ['valid', 'choices']
+    base_app.fake = fake_choices[0]
+
+    fake_settable = cmd2.Settable('fake', type(base_app.fake), "fake description", base_app, choices=fake_choices)
+    base_app.add_settable(fake_settable)
+
+    # Try a valid choice
+    out, err = run_cmd(base_app, f'set fake {fake_choices[1]}')
+    assert base_app.last_result is True
+    assert not err
+
+    # Try an invalid choice
+    out, err = run_cmd(base_app, 'set fake bad_value')
+    assert base_app.last_result is False
+    assert err[0].startswith("Error setting fake: invalid choice")
 
 
 class OnChangeHookApp(cmd2.Cmd):
@@ -1031,7 +1050,7 @@ def test_escaping_prompt():
     assert rl_escape_prompt(prompt) == prompt
 
     # This prompt has color which needs to be escaped
-    color = 'cyan'
+    color = ansi.Fg.CYAN
     prompt = ansi.style('InColor', fg=color)
 
     escape_start = "\x01"
@@ -1042,8 +1061,8 @@ def test_escaping_prompt():
         # PyReadline on Windows doesn't need to escape invisible characters
         assert escaped_prompt == prompt
     else:
-        assert escaped_prompt.startswith(escape_start + ansi.fg_lookup(color) + escape_end)
-        assert escaped_prompt.endswith(escape_start + ansi.FG_RESET + escape_end)
+        assert escaped_prompt.startswith(escape_start + color + escape_end)
+        assert escaped_prompt.endswith(escape_start + ansi.Fg.RESET + escape_end)
 
     assert rl_unescape_prompt(escaped_prompt) == prompt
 
@@ -1743,8 +1762,8 @@ def test_poutput_none(outsim_app):
 
 def test_poutput_ansi_always(outsim_app):
     msg = 'Hello World'
-    ansi.allow_style = ansi.STYLE_ALWAYS
-    colored_msg = ansi.style(msg, fg='cyan')
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
+    colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
     expected = colored_msg + '\n'
@@ -1754,8 +1773,8 @@ def test_poutput_ansi_always(outsim_app):
 
 def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
-    ansi.allow_style = ansi.STYLE_NEVER
-    colored_msg = ansi.style(msg, fg='cyan')
+    ansi.allow_style = ansi.AllowStyle.NEVER
+    colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
@@ -2182,7 +2201,7 @@ def test_nonexistent_macro(base_app):
 def test_perror_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
     base_app.perror(msg)
     out, err = capsys.readouterr()
     assert err == ansi.style_error(msg) + end
@@ -2191,7 +2210,7 @@ def test_perror_style(base_app, capsys):
 def test_perror_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
     base_app.perror(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
@@ -2200,7 +2219,7 @@ def test_perror_no_style(base_app, capsys):
 def test_pwarning_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
     base_app.pwarning(msg)
     out, err = capsys.readouterr()
     assert err == ansi.style_warning(msg) + end
@@ -2209,7 +2228,7 @@ def test_pwarning_style(base_app, capsys):
 def test_pwarning_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
     base_app.pwarning(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
@@ -2217,7 +2236,7 @@ def test_pwarning_no_style(base_app, capsys):
 
 def test_pexcept_style(base_app, capsys):
     msg = Exception('testing...')
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
@@ -2226,7 +2245,7 @@ def test_pexcept_style(base_app, capsys):
 
 def test_pexcept_no_style(base_app, capsys):
     msg = Exception('testing...')
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
 
     base_app.pexcept(msg, apply_style=False)
     out, err = capsys.readouterr()
@@ -2236,7 +2255,7 @@ def test_pexcept_no_style(base_app, capsys):
 def test_pexcept_not_exception(base_app, capsys):
     # Pass in a msg that is not an Exception object
     msg = False
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
@@ -2268,9 +2287,9 @@ def test_ppaged_none(outsim_app):
 def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.STYLE_TERMINAL
+    ansi.allow_style = ansi.AllowStyle.TERMINAL
     outsim_app._redirecting = True
-    outsim_app.ppaged(ansi.style(msg, fg='red'))
+    outsim_app.ppaged(ansi.style(msg, fg=ansi.Fg.RED))
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
 
@@ -2278,9 +2297,9 @@ def test_ppaged_strips_ansi_when_redirecting(outsim_app):
 def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
     outsim_app._redirecting = True
-    colored_msg = ansi.style(msg, fg='red')
+    colored_msg = ansi.style(msg, fg=ansi.Fg.RED)
     outsim_app.ppaged(colored_msg)
     out = outsim_app.stdout.getvalue()
     assert out == colored_msg + end
@@ -2464,14 +2483,14 @@ class AnsiApp(cmd2.Cmd):
         self.perror(args)
 
     def do_echo_error(self, args):
-        self.poutput(ansi.style(args, fg='red'))
+        self.poutput(ansi.style(args, fg=ansi.Fg.RED))
         # perror uses colors by default
         self.perror(args)
 
 
 def test_ansi_pouterr_always_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2494,7 +2513,7 @@ def test_ansi_pouterr_always_tty(mocker, capsys):
 
 def test_ansi_pouterr_always_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.STYLE_ALWAYS
+    ansi.allow_style = ansi.AllowStyle.ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -2517,7 +2536,7 @@ def test_ansi_pouterr_always_notty(mocker, capsys):
 
 def test_ansi_terminal_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.STYLE_TERMINAL
+    ansi.allow_style = ansi.AllowStyle.TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2539,7 +2558,7 @@ def test_ansi_terminal_tty(mocker, capsys):
 
 def test_ansi_terminal_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.STYLE_TERMINAL
+    ansi.allow_style = ansi.AllowStyle.TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -2554,7 +2573,7 @@ def test_ansi_terminal_notty(mocker, capsys):
 
 def test_ansi_never_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.STYLE_NEVER
+    ansi.allow_style = ansi.AllowStyle.NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2569,7 +2588,7 @@ def test_ansi_never_tty(mocker, capsys):
 
 def test_ansi_never_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.STYLE_NEVER
+    ansi.allow_style = ansi.AllowStyle.NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 

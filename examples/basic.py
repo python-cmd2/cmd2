@@ -10,8 +10,8 @@
 """
 import cmd2
 from cmd2 import (
-    bg,
-    fg,
+    Bg,
+    Fg,
     style,
 )
 
@@ -27,7 +27,7 @@ class BasicApp(cmd2.Cmd):
             include_ipy=True,
         )
 
-        self.intro = style('Welcome to PyOhio 2019 and cmd2!', fg=fg.red, bg=bg.white, bold=True) + ' 😀'
+        self.intro = style('Welcome to PyOhio 2019 and cmd2!', fg=Fg.RED, bg=Bg.WHITE, bold=True) + ' 😀'
 
         # Allow access to your application in py and ipy via self
         self.self_in_py = True

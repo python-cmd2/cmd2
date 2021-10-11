@@ -393,11 +393,12 @@ def test_truncate_line_tabs():
 
 def test_truncate_with_style():
     from cmd2 import (
-        ansi,
+        Fg,
+        TextStyle,
     )
 
-    before_style = ansi.fg.blue + ansi.UNDERLINE_ENABLE
-    after_style = ansi.fg.reset + ansi.UNDERLINE_DISABLE
+    before_style = Fg.BLUE + TextStyle.UNDERLINE_ENABLE
+    after_style = Fg.RESET + TextStyle.UNDERLINE_DISABLE
 
     # Style only before truncated text
     line = before_style + 'long'
@@ -428,46 +429,48 @@ def test_align_text_fill_char_is_tab():
 
 def test_align_text_with_style():
     from cmd2 import (
-        ansi,
+        Fg,
+        TextStyle,
+        style,
     )
 
     # Single line with only left fill
-    text = ansi.style('line1', fg=ansi.fg.bright_blue)
-    fill_char = ansi.style('-', fg=ansi.fg.bright_yellow)
+    text = style('line1', fg=Fg.LIGHT_BLUE)
+    fill_char = style('-', fg=Fg.LIGHT_YELLOW)
     width = 6
 
     aligned = cu.align_text(text, cu.TextAlignment.RIGHT, fill_char=fill_char, width=width)
 
-    left_fill = ansi.RESET_ALL + fill_char + ansi.RESET_ALL
-    right_fill = ansi.RESET_ALL
-    line_1_text = ansi.fg.bright_blue + 'line1' + ansi.FG_RESET
+    left_fill = TextStyle.RESET_ALL + fill_char + TextStyle.RESET_ALL
+    right_fill = TextStyle.RESET_ALL
+    line_1_text = Fg.LIGHT_BLUE + 'line1' + Fg.RESET
 
     assert aligned == (left_fill + line_1_text + right_fill)
 
     # Single line with only right fill
-    text = ansi.style('line1', fg=ansi.fg.bright_blue)
-    fill_char = ansi.style('-', fg=ansi.fg.bright_yellow)
+    text = style('line1', fg=Fg.LIGHT_BLUE)
+    fill_char = style('-', fg=Fg.LIGHT_YELLOW)
     width = 6
 
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
-    left_fill = ansi.RESET_ALL
-    right_fill = ansi.RESET_ALL + fill_char + ansi.RESET_ALL
-    line_1_text = ansi.fg.bright_blue + 'line1' + ansi.FG_RESET
+    left_fill = TextStyle.RESET_ALL
+    right_fill = TextStyle.RESET_ALL + fill_char + TextStyle.RESET_ALL
+    line_1_text = Fg.LIGHT_BLUE + 'line1' + Fg.RESET
 
     assert aligned == (left_fill + line_1_text + right_fill)
 
     # Multiple lines to show that style is preserved across all lines. Also has left and right fill.
-    text = ansi.style('line1\nline2', fg=ansi.fg.bright_blue)
-    fill_char = ansi.style('-', fg=ansi.fg.bright_yellow)
+    text = style('line1\nline2', fg=Fg.LIGHT_BLUE)
+    fill_char = style('-', fg=Fg.LIGHT_YELLOW)
     width = 7
 
     aligned = cu.align_text(text, cu.TextAlignment.CENTER, fill_char=fill_char, width=width)
 
-    left_fill = ansi.RESET_ALL + fill_char + ansi.RESET_ALL
-    right_fill = ansi.RESET_ALL + fill_char + ansi.RESET_ALL
-    line_1_text = ansi.fg.bright_blue + 'line1'
-    line_2_text = ansi.fg.bright_blue + 'line2' + ansi.FG_RESET
+    left_fill = TextStyle.RESET_ALL + fill_char + TextStyle.RESET_ALL
+    right_fill = TextStyle.RESET_ALL + fill_char + TextStyle.RESET_ALL
+    line_1_text = Fg.LIGHT_BLUE + 'line1'
+    line_2_text = Fg.LIGHT_BLUE + 'line2' + Fg.RESET
 
     assert aligned == (left_fill + line_1_text + right_fill + '\n' + left_fill + line_2_text + right_fill)
 

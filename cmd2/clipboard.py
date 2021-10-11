@@ -6,7 +6,7 @@ from typing import (
     cast,
 )
 
-import pyperclip  # type: ignore [import]
+import pyperclip  # type: ignore[import]
 
 # noinspection PyProtectedMember
 from pyperclip import (

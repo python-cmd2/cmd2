@@ -13,7 +13,7 @@ from typing import (
 
 import cmd2
 from cmd2 import (
-    fg,
+    Fg,
     style,
 )
 
@@ -151,18 +151,18 @@ class AlerterApp(cmd2.Cmd):
         """
         rand_num = random.randint(1, 20)
 
-        status_color = fg.reset
+        status_color = Fg.RESET
 
         if rand_num == 1:
-            status_color = fg.bright_red
+            status_color = Fg.LIGHT_RED
         elif rand_num == 2:
-            status_color = fg.bright_yellow
+            status_color = Fg.LIGHT_YELLOW
         elif rand_num == 3:
-            status_color = fg.cyan
+            status_color = Fg.CYAN
         elif rand_num == 4:
-            status_color = fg.bright_green
+            status_color = Fg.LIGHT_GREEN
         elif rand_num == 5:
-            status_color = fg.bright_blue
+            status_color = Fg.LIGHT_BLUE
 
         return style(self.visible_prompt, fg=status_color)
 

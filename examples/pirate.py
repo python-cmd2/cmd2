@@ -8,10 +8,14 @@ It demonstrates many features of cmd2.
 """
 
 import cmd2
-import cmd2.ansi
+from cmd2 import (
+    Fg,
+)
 from cmd2.constants import (
     MULTILINE_TERMINATOR,
 )
+
+color_choices = [c.name.lower() for c in Fg]
 
 
 class Pirate(cmd2.Cmd):
@@ -27,7 +31,7 @@ class Pirate(cmd2.Cmd):
         self.songcolor = 'blue'
 
         # Make songcolor settable at runtime
-        self.add_settable(cmd2.Settable('songcolor', str, 'Color to ``sing``', self, choices=cmd2.ansi.fg.colors()))
+        self.add_settable(cmd2.Settable('songcolor', str, 'Color to ``sing``', self, choices=color_choices))
 
         # prompts and defaults
         self.gold = 0
@@ -72,7 +76,7 @@ class Pirate(cmd2.Cmd):
 
     def do_sing(self, arg):
         """Sing a colorful song."""
-        self.poutput(cmd2.ansi.style(arg, fg=self.songcolor))
+        self.poutput(cmd2.ansi.style(arg, fg=Fg[self.songcolor.upper()]))
 
     yo_parser = cmd2.Cmd2ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")

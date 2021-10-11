@@ -9,6 +9,7 @@ from typing import (
 )
 
 from cmd2 import (
+    Fg,
     ansi,
 )
 from cmd2.table_creator import (
@@ -32,9 +33,9 @@ class DollarFormatter:
 
 
 # Text styles used in the data
-bold_yellow = functools.partial(ansi.style, fg=ansi.fg.bright_yellow, bold=True)
-blue = functools.partial(ansi.style, fg=ansi.fg.bright_blue)
-green = functools.partial(ansi.style, fg=ansi.fg.green)
+bold_yellow = functools.partial(ansi.style, fg=Fg.LIGHT_YELLOW, bold=True)
+blue = functools.partial(ansi.style, fg=Fg.LIGHT_BLUE)
+green = functools.partial(ansi.style, fg=Fg.GREEN)
 
 # Table Columns (width does not account for any borders or padding which may be added)
 columns: List[Column] = list()
@@ -71,7 +72,7 @@ def ansi_print(text):
 
 def main():
     # Default to terminal mode so redirecting to a file won't include the ANSI style sequences
-    ansi.allow_style = ansi.STYLE_TERMINAL
+    ansi.allow_style = ansi.AllowStyle.TERMINAL
 
     st = SimpleTable(columns)
     table = st.generate_table(data_list)

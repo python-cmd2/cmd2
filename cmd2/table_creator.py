@@ -885,11 +885,13 @@ class AlternatingTable(BorderedTable):
         tab_width: int = 4,
         column_borders: bool = True,
         padding: int = 1,
-        bg_odd: Optional[ansi.bg] = None,
-        bg_even: Optional[ansi.bg] = ansi.bg.bright_black,
+        bg_odd: Optional[ansi.BgColor] = None,
+        bg_even: Optional[ansi.BgColor] = ansi.Bg.DARK_GRAY,
     ) -> None:
         """
         AlternatingTable initializer
+
+        Note: Specify background colors using subclasses of BgColor (e.g. Bg, EightBitBg, RgbBg)
 
         :param cols: column definitions for this table
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
@@ -899,7 +901,7 @@ class AlternatingTable(BorderedTable):
                                a row's cells. (Defaults to True)
         :param padding: number of spaces between text and left/right borders of cell
         :param bg_odd: optional background color for odd numbered rows (defaults to None)
-        :param bg_even: optional background color for even numbered rows (defaults to gray)
+        :param bg_even: optional background color for even numbered rows (defaults to Bg.DARK_GRAY)
         :raises: ValueError if padding is less than 0
         """
         super().__init__(cols, tab_width=tab_width, column_borders=column_borders, padding=padding)

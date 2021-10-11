@@ -6,6 +6,9 @@ Unit testing for cmd2/table_creator.py module
 import pytest
 
 from cmd2 import (
+    Bg,
+    Fg,
+    TextStyle,
     ansi,
 )
 from cmd2.table_creator import (
@@ -45,7 +48,7 @@ def test_column_creation():
     assert tc.cols[0].width == 1
 
     # No width specified, label isn't blank but has no width
-    c = Column(ansi.style('', fg=ansi.fg.green))
+    c = Column(ansi.style('', fg=Fg.GREEN))
     assert c.width < 0
     tc = TableCreator([c])
     assert tc.cols[0].width == 1
@@ -229,26 +232,26 @@ def test_wrap_long_word():
     row_data = list()
 
     # Long word should start on the first line (style should not affect width)
-    row_data.append(ansi.style("LongerThan10", fg=ansi.fg.green))
+    row_data.append(ansi.style("LongerThan10", fg=Fg.GREEN))
 
     # Long word should start on the second line
     row_data.append("Word LongerThan10")
 
     row = tc.generate_row(row_data=row_data)
     expected = (
-        ansi.RESET_ALL
-        + ansi.fg.green
-        + "LongerThan"
-        + ansi.RESET_ALL
-        + "  Word      \n"
-        + ansi.RESET_ALL
-        + ansi.fg.green
-        + "10"
-        + ansi.fg.reset
-        + ansi.RESET_ALL
-        + '        '
-        + ansi.RESET_ALL
-        + '  LongerThan\n'
+            TextStyle.RESET_ALL
+            + Fg.GREEN
+            + "LongerThan"
+            + TextStyle.RESET_ALL
+            + "  Word      \n"
+            + TextStyle.RESET_ALL
+            + Fg.GREEN
+            + "10"
+            + Fg.RESET
+            + TextStyle.RESET_ALL
+            + '        '
+            + TextStyle.RESET_ALL
+            + '  LongerThan\n'
         '            10        '
     )
     assert row == expected
@@ -598,7 +601,7 @@ def test_alternating_table_creation():
     )
 
     # Other bg colors
-    at = AlternatingTable([column_1, column_2], bg_odd=ansi.bg.bright_blue, bg_even=ansi.bg.green)
+    at = AlternatingTable([column_1, column_2], bg_odd=Bg.LIGHT_BLUE, bg_even=Bg.GREEN)
     table = at.generate_table(row_data)
     assert table == (
         '╔═════════════════╤═════════════════╗\n'

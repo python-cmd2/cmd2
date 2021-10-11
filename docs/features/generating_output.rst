@@ -106,21 +106,10 @@ Colored Output
 
 You can add your own `ANSI escape sequences
 <https://en.wikipedia.org/wiki/ANSI_escape_code#Colors>`_ to your output which
-tell the terminal to change the foreground and background colors. If you want
-to give yourself a headache, you can generate these by hand. You could also use
-a Python color library like `plumbum.colors
-<https://plumbum.readthedocs.io/en/latest/colors.html>`_, `colored
-<https://gitlab.com/dslackw/colored>`_, or `colorama
-<https://github.com/tartley/colorama>`_. Colorama is unique because when it's
-running on Windows, it wraps ``stdout``, looks for ANSI escape sequences, and
-converts them into the appropriate ``win32`` calls to modify the state of the
-terminal.
+tell the terminal to change the foreground and background colors.
 
-``cmd2`` imports and uses Colorama and provides a number of convenience methods
-for generating colorized output, measuring the screen width of colorized
-output, setting the window title in the terminal, and removing ANSI text style
-escape codes from a string. These functions are all documentated in
-:mod:`cmd2.ansi`.
+``cmd2`` provides a number of convenience functions and classes for adding
+color and other styles to text. These are all documented in :mod:`cmd2.ansi`.
 
 After adding the desired escape sequences to your output, you should use one of
 these methods to present the output to the user:

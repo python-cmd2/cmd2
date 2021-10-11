@@ -5,7 +5,6 @@ verify_ssl = true
 
 [packages]
 attrs = ">=16.3.0"
-colorama = ">=0.3.7"
 pyperclip = ">=1.6"
 setuptools = ">=34.4"
 wcwidth = ">=0.1.7"
@@ -23,7 +22,6 @@ ipython = "*"
 isort = "*"
 mock = {version = "*",markers = "python_version < '3.6'"}
 mypy = "*"
-plumbum = "*"
 pyreadline = {version = "*",sys_platform = "== 'win32'",markers = "python_version < '3.8'"}
 pyreadline3 = {version = "*",sys_platform = "== 'win32'",markers = "python_version >= '3.8'"}
 pytest = "*"
