@@ -1,6 +1,12 @@
 ## 2.3.0 (TBD, 2021)
 * Bug Fixes
   * Fixed `AttributeError` in `rl_get_prompt()` when prompt is `None`.
+* Enhancements
+  * Added settings to Column class which prevent a table from overriding existing styles in header
+    and/or data text. These were added to support nesting an AlternatingTable within an AlternatingTable,
+    but other custom table classes can also use these settings.
+  * AlternatingTable no longer applies background color to outer borders. This was done to improve appearance
+    since the background color extended beyond the borders of the table.
 
 ## 2.2.0 (September 14, 2021)
 * Bug Fixes
