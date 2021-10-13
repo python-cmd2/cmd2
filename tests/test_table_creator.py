@@ -68,6 +68,19 @@ def test_column_creation():
     tc = TableCreator([c])
     assert tc.cols[0].width == ansi.style_aware_wcswidth("line    with    tabs")
 
+    # Add basic tests for override_header_style and override_data_style to make sure these members don't get removed.
+    c = Column("Column 1")
+    assert c.override_header_style is True
+    assert c.override_data_style is True
+
+    c = Column("Column 1", override_header_style=False)
+    assert c.override_header_style is False
+    assert c.override_data_style is True
+
+    c = Column("Column 1", override_data_style=False)
+    assert c.override_header_style is True
+    assert c.override_data_style is False
+
 
 def test_column_alignment():
     column_1 = Column(
@@ -580,7 +593,7 @@ def test_alternating_table_creation():
         '║ Col 1           │ Col 2           ║\n'
         '╠═════════════════╪═════════════════╣\n'
         '║ Col 1 Row 1     │ Col 2 Row 1     ║\n'
-        '\x1b[100m║ \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m ║\x1b[49m\n'
+        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
         '╚═════════════════╧═════════════════╝'
     )
 
@@ -591,8 +604,8 @@ def test_alternating_table_creation():
         '╔═════════════════╤═════════════════╗\n'
         '║ Col 1           │ Col 2           ║\n'
         '╠═════════════════╪═════════════════╣\n'
-        '\x1b[104m║ \x1b[49m\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[0m\x1b[104m │ \x1b[49m\x1b[0m\x1b[104mCol 2 Row 1\x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[0m\x1b[104m ║\x1b[49m\n'
-        '\x1b[42m║ \x1b[49m\x1b[0m\x1b[42mCol 1 Row 2\x1b[49m\x1b[0m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[0m\x1b[42m │ \x1b[49m\x1b[0m\x1b[42mCol 2 Row 2\x1b[49m\x1b[0m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[0m\x1b[42m ║\x1b[49m\n'
+        '║\x1b[104m \x1b[49m\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[0m\x1b[104m │ \x1b[49m\x1b[0m\x1b[104mCol 2 Row 1\x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[0m\x1b[104m \x1b[49m║\n'
+        '║\x1b[42m \x1b[49m\x1b[0m\x1b[42mCol 1 Row 2\x1b[49m\x1b[0m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[0m\x1b[42m │ \x1b[49m\x1b[0m\x1b[42mCol 2 Row 2\x1b[49m\x1b[0m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[0m\x1b[42m \x1b[49m║\n'
         '╚═════════════════╧═════════════════╝'
     )
 
@@ -604,7 +617,7 @@ def test_alternating_table_creation():
         '║ Col 1            Col 2           ║\n'
         '╠══════════════════════════════════╣\n'
         '║ Col 1 Row 1      Col 2 Row 1     ║\n'
-        '\x1b[100m║ \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m ║\x1b[49m\n'
+        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
         '╚══════════════════════════════════╝'
     )
 
@@ -614,7 +627,7 @@ def test_alternating_table_creation():
     assert table == (
         '╔═════════════════╤═════════════════╗\n'
         '║ Col 1 Row 1     │ Col 2 Row 1     ║\n'
-        '\x1b[100m║ \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m ║\x1b[49m\n'
+        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
         '╚═════════════════╧═════════════════╝'
     )
 
@@ -626,8 +639,22 @@ def test_alternating_table_creation():
         '║  Col 1            │  Col 2            ║\n'
         '╠═══════════════════╪═══════════════════╣\n'
         '║  Col 1 Row 1      │  Col 2 Row 1      ║\n'
-        '\x1b[100m║  \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  │  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  ║\x1b[49m\n'
+        '║\x1b[100m  \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  │  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  \x1b[49m║\n'
         '╚═══════════════════╧═══════════════════╝'
+    )
+
+    # Make sure AlternatingTable respects override_data_style flag.
+    # Don't allow background color on data's text in second column.
+    column_2 = Column("Col 2", width=15, override_data_style=False)
+    at = AlternatingTable([column_1, column_2])
+    table = at.generate_table(row_data)
+    assert table == (
+        '╔═════════════════╤═════════════════╗\n'
+        '║ Col 1           │ Col 2           ║\n'
+        '╠═════════════════╪═════════════════╣\n'
+        '║ Col 1 Row 1     │ Col 2 Row 1     ║\n'
+        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0mCol 2 Row 2\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
+        '╚═════════════════╧═════════════════╝'
     )
 
     # Invalid padding
