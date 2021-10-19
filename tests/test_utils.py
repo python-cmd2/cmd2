@@ -434,14 +434,16 @@ def test_align_text_with_style():
         style,
     )
 
+    fill_char = '-'
+    styled_fill_char = style(fill_char, fg=Fg.LIGHT_YELLOW)
+
     # Single line with only left fill
     text = style('line1', fg=Fg.LIGHT_BLUE)
-    fill_char = style('-', fg=Fg.LIGHT_YELLOW)
-    width = 6
+    width = 8
 
-    aligned = cu.align_text(text, cu.TextAlignment.RIGHT, fill_char=fill_char, width=width)
+    aligned = cu.align_text(text, cu.TextAlignment.RIGHT, fill_char=styled_fill_char, width=width)
 
-    left_fill = TextStyle.RESET_ALL + fill_char + TextStyle.RESET_ALL
+    left_fill = TextStyle.RESET_ALL + Fg.LIGHT_YELLOW + (fill_char * 3) + Fg.RESET + TextStyle.RESET_ALL
     right_fill = TextStyle.RESET_ALL
     line_1_text = Fg.LIGHT_BLUE + 'line1' + Fg.RESET
 
@@ -449,26 +451,24 @@ def test_align_text_with_style():
 
     # Single line with only right fill
     text = style('line1', fg=Fg.LIGHT_BLUE)
-    fill_char = style('-', fg=Fg.LIGHT_YELLOW)
-    width = 6
+    width = 8
 
-    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=styled_fill_char, width=width)
 
     left_fill = TextStyle.RESET_ALL
-    right_fill = TextStyle.RESET_ALL + fill_char + TextStyle.RESET_ALL
+    right_fill = TextStyle.RESET_ALL + Fg.LIGHT_YELLOW + (fill_char * 3) + Fg.RESET + TextStyle.RESET_ALL
     line_1_text = Fg.LIGHT_BLUE + 'line1' + Fg.RESET
 
     assert aligned == (left_fill + line_1_text + right_fill)
 
     # Multiple lines to show that style is preserved across all lines. Also has left and right fill.
     text = style('line1\nline2', fg=Fg.LIGHT_BLUE)
-    fill_char = style('-', fg=Fg.LIGHT_YELLOW)
-    width = 7
+    width = 9
 
-    aligned = cu.align_text(text, cu.TextAlignment.CENTER, fill_char=fill_char, width=width)
+    aligned = cu.align_text(text, cu.TextAlignment.CENTER, fill_char=styled_fill_char, width=width)
 
-    left_fill = TextStyle.RESET_ALL + fill_char + TextStyle.RESET_ALL
-    right_fill = TextStyle.RESET_ALL + fill_char + TextStyle.RESET_ALL
+    left_fill = TextStyle.RESET_ALL + Fg.LIGHT_YELLOW + (fill_char * 2) + Fg.RESET + TextStyle.RESET_ALL
+    right_fill = TextStyle.RESET_ALL + Fg.LIGHT_YELLOW + (fill_char * 2) + Fg.RESET + TextStyle.RESET_ALL
     line_1_text = Fg.LIGHT_BLUE + 'line1'
     line_2_text = Fg.LIGHT_BLUE + 'line2' + Fg.RESET
 

@@ -1062,7 +1062,7 @@ class Cmd(cmd.Cmd):
         been piped to another process and that process terminates before the
         cmd2 command is finished executing.
 
-        :param msg: message to print (anything convertible to a str)
+        :param msg: object to print
         :param end: string appended after the end of the message, default a newline
         """
         try:
@@ -1080,7 +1080,7 @@ class Cmd(cmd.Cmd):
     def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Print message to sys.stderr
 
-        :param msg: message to print (anything convertible to a str)
+        :param msg: object to print
         :param end: string appended after the end of the message, default a newline
         :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
@@ -1094,7 +1094,7 @@ class Cmd(cmd.Cmd):
     def pwarning(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Wraps perror, but applies ansi.style_warning by default
 
-        :param msg: message to print (anything convertible to a str)
+        :param msg: object to print
         :param end: string appended after the end of the message, default a newline
         :param apply_style: If True, then ansi.style_warning will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
@@ -1134,7 +1134,7 @@ class Cmd(cmd.Cmd):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
         Inclusion in redirected output is controlled by `feedback_to_output`.
 
-        :param msg: message to print (anything convertible to a str)
+        :param msg: object to print
         :param end: string appended after the end of the message, default a newline
         """
         if not self.quiet:
@@ -1149,7 +1149,7 @@ class Cmd(cmd.Cmd):
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
-        :param msg: message to print to current stdout (anything convertible to a str)
+        :param msg: object to print
         :param end: string appended after the end of the message, default a newline
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys

@@ -787,16 +787,22 @@ def align_text(
     if width < 1:
         raise ValueError("width must be at least 1")
 
-    # Handle tabs
+    # Convert tabs to spaces
     text = text.replace('\t', ' ' * tab_width)
     fill_char = fill_char.replace('\t', ' ')
 
-    if len(ansi.strip_style(fill_char)) != 1:
+    # Save fill_char with no styles for use later
+    stripped_fill_char = ansi.strip_style(fill_char)
+    if len(stripped_fill_char) != 1:
         raise TypeError("Fill character must be exactly one character long")
 
     fill_char_width = ansi.style_aware_wcswidth(fill_char)
     if fill_char_width == -1:
         raise (ValueError("Fill character is an unprintable character"))
+
+    # Isolate the style chars before and after the fill character. We will use them when building sequences of
+    # of fill characters. Instead of repeating the style characters for each fill character, we'll wrap each sequence.
+    fill_char_style_begin, fill_char_style_end = fill_char.split(stripped_fill_char)
 
     if text:
         lines = text.splitlines()
@@ -809,23 +815,6 @@ def align_text(
     # To avoid this, we save the state of a line's style so we can restore it when beginning the next line.
     # This also allows the lines to be used independently and still have their style. TableCreator does this.
     aggregate_styles = ''
-
-    # Save the ANSI style sequences in fill_char
-    fill_char_styles = get_styles_in_text(fill_char)
-
-    # Create a space with the same style as fill_char for cases in which
-    # fill_char does not divide evenly into the gap.
-    styled_space = ''
-    char_index = 0
-    while char_index < len(fill_char):
-        if char_index in fill_char_styles:
-            # Preserve this style in styled_space
-            styled_space += fill_char_styles[char_index]
-            char_index += len(fill_char_styles[char_index])
-        else:
-            # We've reached the visible fill_char. Replace it with a space.
-            styled_space += ' '
-            char_index += 1
 
     for index, line in enumerate(lines):
         if index > 0:
@@ -860,22 +849,22 @@ def align_text(
             right_fill_width = 0
 
         # Determine how many fill characters are needed to cover the width
-        left_fill = (left_fill_width // fill_char_width) * fill_char
-        right_fill = (right_fill_width // fill_char_width) * fill_char
+        left_fill = (left_fill_width // fill_char_width) * stripped_fill_char
+        right_fill = (right_fill_width // fill_char_width) * stripped_fill_char
 
         # In cases where the fill character display width didn't divide evenly into
-        # the gap being filled, pad the remainder with styled_space.
-        left_fill += styled_space * (left_fill_width - ansi.style_aware_wcswidth(left_fill))
-        right_fill += styled_space * (right_fill_width - ansi.style_aware_wcswidth(right_fill))
+        # the gap being filled, pad the remainder with space.
+        left_fill += ' ' * (left_fill_width - ansi.style_aware_wcswidth(left_fill))
+        right_fill += ' ' * (right_fill_width - ansi.style_aware_wcswidth(right_fill))
 
-        # Don't allow styles in fill_char and text to affect one another
-        if fill_char_styles or aggregate_styles or line_styles:
+        # Don't allow styles in fill characters and text to affect one another
+        if fill_char_style_begin or fill_char_style_end or aggregate_styles or line_styles:
             if left_fill:
-                left_fill = ansi.TextStyle.RESET_ALL + left_fill
+                left_fill = ansi.TextStyle.RESET_ALL + fill_char_style_begin + left_fill + fill_char_style_end
             left_fill += ansi.TextStyle.RESET_ALL
 
             if right_fill:
-                right_fill = ansi.TextStyle.RESET_ALL + right_fill
+                right_fill = ansi.TextStyle.RESET_ALL + fill_char_style_begin + right_fill + fill_char_style_end
             right_fill += ansi.TextStyle.RESET_ALL
 
         # Write the line and restore any styles from previous lines

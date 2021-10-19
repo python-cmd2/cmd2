@@ -943,7 +943,7 @@ class RgbBg(BgColor):
 # TODO: Remove this PyShadowingNames usage when deprecated fg and bg classes are removed.
 # noinspection PyShadowingNames
 def style(
-    text: Any,
+    value: Any,
     *,
     fg: Optional[FgColor] = None,
     bg: Optional[BgColor] = None,
@@ -959,7 +959,7 @@ def style(
     The styling is self contained which means that at the end of the string reset code(s) are issued
     to undo whatever styling was done at the beginning.
 
-    :param text: text to format (anything convertible to a str)
+    :param value: object whose text is to be styled
     :param fg: foreground color provided as any subclass of FgColor (e.g. Fg, EightBitFg, RgbFg)
                Defaults to no color.
     :param bg: foreground color provided as any subclass of BgColor (e.g. Bg, EightBitBg, RgbBg)
@@ -977,9 +977,6 @@ def style(
 
     # List of strings that remove style
     removals: List[AnsiSequence] = []
-
-    # Convert the text object into a string if it isn't already one
-    text_formatted = str(text)
 
     # Process the style settings
     if fg is not None:
@@ -1014,8 +1011,8 @@ def style(
         additions.append(TextStyle.UNDERLINE_ENABLE)
         removals.append(TextStyle.UNDERLINE_DISABLE)
 
-    # Combine the ANSI style sequences with the text
-    return "".join(map(str, additions)) + text_formatted + "".join(map(str, removals))
+    # Combine the ANSI style sequences with the value's text
+    return "".join(map(str, additions)) + str(value) + "".join(map(str, removals))
 
 
 # Default styles for printing strings of various types.

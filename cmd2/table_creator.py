@@ -6,7 +6,6 @@ The general use case is to inherit from TableCreator to create a table class wit
 There are already implemented and ready-to-use examples of this below TableCreator's code.
 """
 import copy
-import functools
 import io
 from collections import (
     deque,
@@ -82,12 +81,13 @@ class Column:
         :param header_vert_align: vertical alignment of header cells (defaults to bottom)
         :param override_header_style: if True, then the table is allowed to apply text styles to the header, which may
                                       interfere with any styles the header already has. If False, the header is printed as is.
-                                      Table classes which apply style to headers must respect this flag. (defaults to True)
+                                      Table classes which apply style to headers must respect this flag. See the BorderedTable
+                                      class for an example of this. (defaults to True)
         :param data_horiz_align: horizontal alignment of data cells (defaults to left)
         :param data_vert_align: vertical alignment of data cells (defaults to top)
         :param override_data_style: if True, then the table is allowed to apply text styles to the data, which may
                                     interfere with any styles the data already has. If False, the data is printed as is.
-                                    Table classes which apply style to data must respect this flag. See the AlternatingTable
+                                    Table classes which apply style to data must respect this flag. See the BorderedTable
                                     class for an example of this. (defaults to True)
         :param max_data_lines: maximum lines allowed in a data cell. If line count exceeds this, then the final
                                line displayed will be truncated with an ellipsis. (defaults to INFINITY)
@@ -683,7 +683,17 @@ class BorderedTable(TableCreator):
     between columns can also be toggled. This class can be used to create the whole table at once or one row at a time.
     """
 
-    def __init__(self, cols: Sequence[Column], *, tab_width: int = 4, column_borders: bool = True, padding: int = 1) -> None:
+    def __init__(
+        self,
+        cols: Sequence[Column],
+        *,
+        tab_width: int = 4,
+        column_borders: bool = True,
+        padding: int = 1,
+        border_fg: Optional[ansi.FgColor] = None,
+        header_bg: Optional[ansi.BgColor] = None,
+        data_bg: Optional[ansi.BgColor] = None,
+    ) -> None:
         """
         BorderedTable initializer
 
@@ -694,15 +704,52 @@ class BorderedTable(TableCreator):
                                appearance. Turning off column borders results in a unified appearance between
                                a row's cells. (Defaults to True)
         :param padding: number of spaces between text and left/right borders of cell
+        :param border_fg: optional foreground color for borders (defaults to None)
+        :param header_bg: optional background color for header cells (defaults to None)
+        :param data_bg: optional background color for data cells (defaults to None)
         :raises: ValueError if padding is less than 0
         """
         super().__init__(cols, tab_width=tab_width)
-        self.empty_data = [EMPTY for _ in self.cols]
+        self.empty_data = [EMPTY] * len(self.cols)
         self.column_borders = column_borders
 
         if padding < 0:
             raise ValueError("Padding cannot be less than 0")
         self.padding = padding
+
+        self.border_fg = border_fg
+        self.header_bg = header_bg
+        self.data_bg = data_bg
+
+    def apply_border_fg(self, value: Any) -> str:
+        """
+        If defined, apply the border foreground color to border text
+        :param value: object whose text is to be colored
+        :return: formatted text
+        """
+        if self.border_fg is None:
+            return str(value)
+        return ansi.style(value, fg=self.border_fg)
+
+    def apply_header_bg(self, value: Any) -> str:
+        """
+        If defined, apply the header background color to header text
+        :param value: object whose text is to be colored
+        :return: formatted text
+        """
+        if self.header_bg is None:
+            return str(value)
+        return ansi.style(value, bg=self.header_bg)
+
+    def apply_data_bg(self, value: Any) -> str:
+        """
+        If defined, apply the data background color to data text
+        :param value: object whose text is to be colored
+        :return: formatted data string
+        """
+        if self.data_bg is None:
+            return str(value)
+        return ansi.style(value, bg=self.data_bg)
 
     @classmethod
     def base_width(cls, num_cols: int, *, column_borders: bool = True, padding: int = 1) -> int:
@@ -735,6 +782,8 @@ class BorderedTable(TableCreator):
 
     def generate_table_top_border(self) -> str:
         """Generate a border which appears at the top of the header and data section"""
+        fill_char = '═'
+
         pre_line = '╔' + self.padding * '═'
 
         inter_cell = self.padding * '═'
@@ -745,11 +794,17 @@ class BorderedTable(TableCreator):
         post_line = self.padding * '═' + '╗'
 
         return self.generate_row(
-            row_data=self.empty_data, fill_char='═', pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
+            row_data=self.empty_data,
+            fill_char=self.apply_border_fg(fill_char),
+            pre_line=self.apply_border_fg(pre_line),
+            inter_cell=self.apply_border_fg(inter_cell),
+            post_line=self.apply_border_fg(post_line),
         )
 
     def generate_header_bottom_border(self) -> str:
         """Generate a border which appears at the bottom of the header"""
+        fill_char = '═'
+
         pre_line = '╠' + self.padding * '═'
 
         inter_cell = self.padding * '═'
@@ -760,26 +815,39 @@ class BorderedTable(TableCreator):
         post_line = self.padding * '═' + '╣'
 
         return self.generate_row(
-            row_data=self.empty_data, fill_char='═', pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
+            row_data=self.empty_data,
+            fill_char=self.apply_border_fg(fill_char),
+            pre_line=self.apply_border_fg(pre_line),
+            inter_cell=self.apply_border_fg(inter_cell),
+            post_line=self.apply_border_fg(post_line),
         )
 
     def generate_row_bottom_border(self) -> str:
         """Generate a border which appears at the bottom of rows"""
-        pre_line = '╟' + self.padding * '─'
+        fill_char = self.apply_data_bg('─')
+
+        pre_line = '╟' + self.apply_data_bg(self.padding * '─')
 
         inter_cell = self.padding * '─'
         if self.column_borders:
             inter_cell += '┼'
         inter_cell += self.padding * '─'
+        inter_cell = self.apply_data_bg(inter_cell)
 
-        post_line = self.padding * '─' + '╢'
+        post_line = self.apply_data_bg(self.padding * '─') + '╢'
 
         return self.generate_row(
-            row_data=self.empty_data, fill_char='─', pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
+            row_data=self.empty_data,
+            fill_char=self.apply_border_fg(fill_char),
+            pre_line=self.apply_border_fg(pre_line),
+            inter_cell=self.apply_border_fg(inter_cell),
+            post_line=self.apply_border_fg(post_line),
         )
 
     def generate_table_bottom_border(self) -> str:
         """Generate a border which appears at the bottom of the table"""
+        fill_char = '═'
+
         pre_line = '╚' + self.padding * '═'
 
         inter_cell = self.padding * '═'
@@ -790,25 +858,44 @@ class BorderedTable(TableCreator):
         post_line = self.padding * '═' + '╝'
 
         return self.generate_row(
-            row_data=self.empty_data, fill_char='═', pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
+            row_data=self.empty_data,
+            fill_char=self.apply_border_fg(fill_char),
+            pre_line=self.apply_border_fg(pre_line),
+            inter_cell=self.apply_border_fg(inter_cell),
+            post_line=self.apply_border_fg(post_line),
         )
 
     def generate_header(self) -> str:
         """Generate table header"""
-        pre_line = '║' + self.padding * SPACE
+        fill_char = self.apply_header_bg(SPACE)
+
+        pre_line = self.apply_border_fg('║') + self.apply_header_bg(self.padding * SPACE)
 
         inter_cell = self.padding * SPACE
         if self.column_borders:
-            inter_cell += '│'
+            inter_cell += self.apply_border_fg('│')
         inter_cell += self.padding * SPACE
+        inter_cell = self.apply_header_bg(inter_cell)
 
-        post_line = self.padding * SPACE + '║'
+        post_line = self.apply_header_bg(self.padding * SPACE) + self.apply_border_fg('║')
+
+        # Apply background color to header text in Columns which allow it
+        to_display: List[Any] = []
+        for index, col in enumerate(self.cols):
+            if col.override_header_style:
+                to_display.append(self.apply_header_bg(col.header))
+            else:
+                to_display.append(col.header)
 
         # Create the bordered header
         header_buf = io.StringIO()
         header_buf.write(self.generate_table_top_border())
         header_buf.write('\n')
-        header_buf.write(self.generate_row(pre_line=pre_line, inter_cell=inter_cell, post_line=post_line))
+        header_buf.write(
+            self.generate_row(
+                row_data=to_display, fill_char=fill_char, pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
+            )
+        )
         header_buf.write('\n')
         header_buf.write(self.generate_header_bottom_border())
 
@@ -821,16 +908,29 @@ class BorderedTable(TableCreator):
         :param row_data: data with an entry for each column in the row
         :return: data row string
         """
-        pre_line = '║' + self.padding * SPACE
+        fill_char = self.apply_data_bg(SPACE)
+
+        pre_line = self.apply_border_fg('║') + self.apply_data_bg(self.padding * SPACE)
 
         inter_cell = self.padding * SPACE
         if self.column_borders:
-            inter_cell += '│'
+            inter_cell += self.apply_border_fg('│')
         inter_cell += self.padding * SPACE
+        inter_cell = self.apply_data_bg(inter_cell)
 
-        post_line = self.padding * SPACE + '║'
+        post_line = self.apply_data_bg(self.padding * SPACE) + self.apply_border_fg('║')
 
-        return self.generate_row(row_data=row_data, pre_line=pre_line, inter_cell=inter_cell, post_line=post_line)
+        # Apply background color to data text in Columns which allow it
+        to_display: List[Any] = []
+        for index, col in enumerate(self.cols):
+            if col.override_data_style:
+                to_display.append(self.apply_data_bg(row_data[index]))
+            else:
+                to_display.append(row_data[index])
+
+        return self.generate_row(
+            row_data=to_display, fill_char=fill_char, pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
+        )
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True) -> str:
         """
@@ -870,9 +970,6 @@ class AlternatingTable(BorderedTable):
     Implementation of BorderedTable which uses background colors to distinguish between rows instead of row border
     lines. This class can be used to create the whole table at once or one row at a time.
 
-    AlternatingTable will not apply background color to data whose Columns set override_data_style to False.
-    Background color will still be applied to those Columns's padding and fill characters.
-
     To nest an AlternatingTable within another AlternatingTable, set override_data_style to False on the Column
     which contains the nested table. That will prevent the current row's background color from affecting the colors
     of the nested table.
@@ -885,8 +982,10 @@ class AlternatingTable(BorderedTable):
         tab_width: int = 4,
         column_borders: bool = True,
         padding: int = 1,
-        bg_odd: Optional[ansi.BgColor] = None,
-        bg_even: Optional[ansi.BgColor] = ansi.Bg.DARK_GRAY,
+        border_fg: Optional[ansi.FgColor] = None,
+        header_bg: Optional[ansi.BgColor] = None,
+        odd_bg: Optional[ansi.BgColor] = None,
+        even_bg: Optional[ansi.BgColor] = ansi.Bg.DARK_GRAY,
     ) -> None:
         """
         AlternatingTable initializer
@@ -900,28 +999,31 @@ class AlternatingTable(BorderedTable):
                                appearance. Turning off column borders results in a unified appearance between
                                a row's cells. (Defaults to True)
         :param padding: number of spaces between text and left/right borders of cell
-        :param bg_odd: optional background color for odd numbered rows (defaults to None)
-        :param bg_even: optional background color for even numbered rows (defaults to Bg.DARK_GRAY)
+        :param border_fg: optional foreground color for borders (defaults to None)
+        :param header_bg: optional background color for header cells (defaults to None)
+        :param odd_bg: optional background color for odd numbered data rows (defaults to None)
+        :param even_bg: optional background color for even numbered data rows (defaults to StdBg.DARK_GRAY)
         :raises: ValueError if padding is less than 0
         """
-        super().__init__(cols, tab_width=tab_width, column_borders=column_borders, padding=padding)
+        super().__init__(
+            cols, tab_width=tab_width, column_borders=column_borders, padding=padding, border_fg=border_fg, header_bg=header_bg
+        )
         self.row_num = 1
-        self.bg_odd = None if bg_odd is None else functools.partial(ansi.style, bg=bg_odd)
-        self.bg_even = None if bg_even is None else functools.partial(ansi.style, bg=bg_even)
+        self.odd_bg = odd_bg
+        self.even_bg = even_bg
 
-    def _apply_bg_color(self, data: Any) -> str:
+    def apply_data_bg(self, value: Any) -> str:
         """
-        Convert data to text and apply background color to it based on what row is being generated
-
-        :param data: data being colored
-        :return: converted data
+        Apply background color to data text based on what row is being generated and whether a color has been defined
+        :param value: object whose text is to be colored
+        :return: formatted data string
         """
-        if self.row_num % 2 == 0 and self.bg_even is not None:
-            return self.bg_even(data)
-        elif self.row_num % 2 != 0 and self.bg_odd is not None:
-            return self.bg_odd(data)
+        if self.row_num % 2 == 0 and self.even_bg is not None:
+            return ansi.style(value, bg=self.even_bg)
+        elif self.row_num % 2 != 0 and self.odd_bg is not None:
+            return ansi.style(value, bg=self.odd_bg)
         else:
-            return str(data)
+            return str(value)
 
     def generate_data_row(self, row_data: Sequence[Any]) -> str:
         """
@@ -930,31 +1032,7 @@ class AlternatingTable(BorderedTable):
         :param row_data: data with an entry for each column in the row
         :return: data row string
         """
-        # Only color the padding and not the outer border characters
-        pre_line = '║' + self._apply_bg_color(self.padding * SPACE)
-
-        inter_cell = self.padding * SPACE
-        if self.column_borders:
-            inter_cell += '│'
-        inter_cell += self.padding * SPACE
-        inter_cell = self._apply_bg_color(inter_cell)
-
-        # Only color the padding and not the outer border characters
-        post_line = self._apply_bg_color(self.padding * SPACE) + '║'
-
-        fill_char = self._apply_bg_color(SPACE)
-
-        # Apply background colors to data whose Columns allow it
-        to_display: List[Any] = []
-        for index, col in enumerate(self.cols):
-            if col.override_data_style:
-                to_display.append(self._apply_bg_color(row_data[index]))
-            else:
-                to_display.append(row_data[index])
-
-        row = self.generate_row(
-            row_data=to_display, fill_char=fill_char, pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
-        )
+        row = super().generate_data_row(row_data)
         self.row_num += 1
         return row
 
