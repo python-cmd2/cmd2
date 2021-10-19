@@ -541,6 +541,34 @@ def test_bordered_table_creation():
         BorderedTable([column_1, column_2], padding=-1)
     assert "Padding cannot be less than 0" in str(excinfo.value)
 
+    # Test border, header, and data colors
+    bt = BorderedTable([column_1, column_2], border_fg=Fg.LIGHT_YELLOW, header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
+    table = bt.generate_table(row_data)
+    assert table == (
+        '\x1b[93m╔═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╤═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╗\x1b[39m\n'
+        '\x1b[93m║\x1b[39m\x1b[42m \x1b[49m\x1b[0m\x1b[42mCol 1\x1b[49m\x1b[0m\x1b[42m          \x1b[49m\x1b[0m\x1b[42m \x1b[93m│\x1b[39m \x1b[49m\x1b[0m\x1b[42mCol 2\x1b[49m\x1b[0m\x1b[42m          \x1b[49m\x1b[0m\x1b[42m \x1b[49m\x1b[93m║\x1b[39m\n'
+        '\x1b[93m╠═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╪═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╣\x1b[39m\n'
+        '\x1b[93m║\x1b[39m\x1b[104m \x1b[49m\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[93m│\x1b[39m \x1b[49m\x1b[0m\x1b[104mCol 2 Row 1\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[93m║\x1b[39m\n'
+        '\x1b[93m╟\x1b[104m─\x1b[49m\x1b[39m\x1b[0m\x1b[0m\x1b[93m\x1b[104m───────────────\x1b[49m\x1b[39m\x1b[0m\x1b[93m\x1b[104m─┼─\x1b[49m\x1b[39m\x1b[0m\x1b[0m\x1b[93m\x1b[104m───────────────\x1b[49m\x1b[39m\x1b[0m\x1b[93m\x1b[104m─\x1b[49m╢\x1b[39m\n'
+        '\x1b[93m║\x1b[39m\x1b[104m \x1b[49m\x1b[0m\x1b[104mCol 1 Row 2\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[93m│\x1b[39m \x1b[49m\x1b[0m\x1b[104mCol 2 Row 2\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[93m║\x1b[39m\n'
+        '\x1b[93m╚═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╧═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╝\x1b[39m'
+    )
+
+    # Make sure BorderedTable respects override_header_style override_data_style flags.
+    # Don't apply parent table's background colors to header or data text in second column.
+    column_2 = Column("Col 2", width=15, override_header_style=False, override_data_style=False)
+    bt = BorderedTable([column_1, column_2], header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
+    table = bt.generate_table(row_data)
+    assert table == (
+        '╔═════════════════╤═════════════════╗\n'
+        '║\x1b[42m \x1b[49m\x1b[0m\x1b[42mCol 1\x1b[49m\x1b[0m\x1b[42m          \x1b[49m\x1b[0m\x1b[42m │ \x1b[49m\x1b[0mCol 2\x1b[0m\x1b[42m          \x1b[49m\x1b[0m\x1b[42m \x1b[49m║\n'
+        '╠═════════════════╪═════════════════╣\n'
+        '║\x1b[104m \x1b[49m\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m │ \x1b[49m\x1b[0mCol 2 Row 1\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[49m║\n'
+        '╟\x1b[104m─\x1b[49m\x1b[0m\x1b[0m\x1b[104m───────────────\x1b[49m\x1b[0m\x1b[104m─┼─\x1b[49m\x1b[0m\x1b[0m\x1b[104m───────────────\x1b[49m\x1b[0m\x1b[104m─\x1b[49m╢\n'
+        '║\x1b[104m \x1b[49m\x1b[0m\x1b[104mCol 1 Row 2\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m │ \x1b[49m\x1b[0mCol 2 Row 2\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[49m║\n'
+        '╚═════════════════╧═════════════════╝'
+    )
+
 
 def test_bordered_table_width():
     # Default behavior (column_borders=True, padding=1)
@@ -596,19 +624,7 @@ def test_alternating_table_creation():
         '║ Col 1           │ Col 2           ║\n'
         '╠═════════════════╪═════════════════╣\n'
         '║ Col 1 Row 1     │ Col 2 Row 1     ║\n'
-        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
-        '╚═════════════════╧═════════════════╝'
-    )
-
-    # Other bg colors
-    at = AlternatingTable([column_1, column_2], bg_odd=Bg.LIGHT_BLUE, bg_even=Bg.GREEN)
-    table = at.generate_table(row_data)
-    assert table == (
-        '╔═════════════════╤═════════════════╗\n'
-        '║ Col 1           │ Col 2           ║\n'
-        '╠═════════════════╪═════════════════╣\n'
-        '║\x1b[104m \x1b[49m\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[0m\x1b[104m │ \x1b[49m\x1b[0m\x1b[104mCol 2 Row 1\x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[104m \x1b[49m\x1b[0m\x1b[104m \x1b[49m║\n'
-        '║\x1b[42m \x1b[49m\x1b[0m\x1b[42mCol 1 Row 2\x1b[49m\x1b[0m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[0m\x1b[42m │ \x1b[49m\x1b[0m\x1b[42mCol 2 Row 2\x1b[49m\x1b[0m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[42m \x1b[49m\x1b[0m\x1b[42m \x1b[49m║\n'
+        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m    \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m    \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
         '╚═════════════════╧═════════════════╝'
     )
 
@@ -620,7 +636,7 @@ def test_alternating_table_creation():
         '║ Col 1            Col 2           ║\n'
         '╠══════════════════════════════════╣\n'
         '║ Col 1 Row 1      Col 2 Row 1     ║\n'
-        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
+        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m    \x1b[49m\x1b[0m\x1b[100m  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m    \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
         '╚══════════════════════════════════╝'
     )
 
@@ -630,7 +646,7 @@ def test_alternating_table_creation():
     assert table == (
         '╔═════════════════╤═════════════════╗\n'
         '║ Col 1 Row 1     │ Col 2 Row 1     ║\n'
-        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
+        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m    \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m    \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
         '╚═════════════════╧═════════════════╝'
     )
 
@@ -642,25 +658,37 @@ def test_alternating_table_creation():
         '║  Col 1            │  Col 2            ║\n'
         '╠═══════════════════╪═══════════════════╣\n'
         '║  Col 1 Row 1      │  Col 2 Row 1      ║\n'
-        '║\x1b[100m  \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  │  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  \x1b[49m║\n'
+        '║\x1b[100m  \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m    \x1b[49m\x1b[0m\x1b[100m  │  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m    \x1b[49m\x1b[0m\x1b[100m  \x1b[49m║\n'
         '╚═══════════════════╧═══════════════════╝'
-    )
-
-    # Make sure AlternatingTable respects override_data_style flag.
-    # Don't allow background color on data's text in second column.
-    column_2 = Column("Col 2", width=15, override_data_style=False)
-    at = AlternatingTable([column_1, column_2])
-    table = at.generate_table(row_data)
-    assert table == (
-        '╔═════════════════╤═════════════════╗\n'
-        '║ Col 1           │ Col 2           ║\n'
-        '╠═════════════════╪═════════════════╣\n'
-        '║ Col 1 Row 1     │ Col 2 Row 1     ║\n'
-        '║\x1b[100m \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0mCol 2 Row 2\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m \x1b[49m║\n'
-        '╚═════════════════╧═════════════════╝'
     )
 
     # Invalid padding
     with pytest.raises(ValueError) as excinfo:
         AlternatingTable([column_1, column_2], padding=-1)
     assert "Padding cannot be less than 0" in str(excinfo.value)
+
+    # Test border, header, and data colors
+    at = AlternatingTable([column_1, column_2], border_fg=Fg.LIGHT_YELLOW, header_bg=Bg.GREEN, odd_bg=Bg.LIGHT_BLUE, even_bg=Bg.LIGHT_RED)
+    table = at.generate_table(row_data)
+    assert table == (
+        '\x1b[93m╔═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╤═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╗\x1b[39m\n'
+        '\x1b[93m║\x1b[39m\x1b[42m \x1b[49m\x1b[0m\x1b[42mCol 1\x1b[49m\x1b[0m\x1b[42m          \x1b[49m\x1b[0m\x1b[42m \x1b[93m│\x1b[39m \x1b[49m\x1b[0m\x1b[42mCol 2\x1b[49m\x1b[0m\x1b[42m          \x1b[49m\x1b[0m\x1b[42m \x1b[49m\x1b[93m║\x1b[39m\n'
+        '\x1b[93m╠═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╪═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╣\x1b[39m\n'
+        '\x1b[93m║\x1b[39m\x1b[104m \x1b[49m\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[93m│\x1b[39m \x1b[49m\x1b[0m\x1b[104mCol 2 Row 1\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[49m\x1b[93m║\x1b[39m\n'
+        '\x1b[93m║\x1b[39m\x1b[101m \x1b[49m\x1b[0m\x1b[101mCol 1 Row 2\x1b[49m\x1b[0m\x1b[101m    \x1b[49m\x1b[0m\x1b[101m \x1b[93m│\x1b[39m \x1b[49m\x1b[0m\x1b[101mCol 2 Row 2\x1b[49m\x1b[0m\x1b[101m    \x1b[49m\x1b[0m\x1b[101m \x1b[49m\x1b[93m║\x1b[39m\n'
+        '\x1b[93m╚═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╧═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╝\x1b[39m'
+    )
+
+    # Make sure AlternatingTable respects override_header_style override_data_style flags.
+    # Don't apply parent table's background colors to header or data text in second column.
+    column_2 = Column("Col 2", width=15, override_header_style=False, override_data_style=False)
+    at = AlternatingTable([column_1, column_2], header_bg=Bg.GREEN, odd_bg=Bg.LIGHT_BLUE, even_bg=Bg.LIGHT_RED)
+    table = at.generate_table(row_data)
+    assert table == (
+        '╔═════════════════╤═════════════════╗\n'
+        '║\x1b[42m \x1b[49m\x1b[0m\x1b[42mCol 1\x1b[49m\x1b[0m\x1b[42m          \x1b[49m\x1b[0m\x1b[42m │ \x1b[49m\x1b[0mCol 2\x1b[0m\x1b[42m          \x1b[49m\x1b[0m\x1b[42m \x1b[49m║\n'
+        '╠═════════════════╪═════════════════╣\n'
+        '║\x1b[104m \x1b[49m\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m │ \x1b[49m\x1b[0mCol 2 Row 1\x1b[0m\x1b[104m    \x1b[49m\x1b[0m\x1b[104m \x1b[49m║\n'
+        '║\x1b[101m \x1b[49m\x1b[0m\x1b[101mCol 1 Row 2\x1b[49m\x1b[0m\x1b[101m    \x1b[49m\x1b[0m\x1b[101m │ \x1b[49m\x1b[0mCol 2 Row 2\x1b[0m\x1b[101m    \x1b[49m\x1b[0m\x1b[101m \x1b[49m║\n'
+        '╚═════════════════╧═════════════════╝'
+    )
