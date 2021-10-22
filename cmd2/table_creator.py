@@ -80,15 +80,15 @@ class Column:
         :param header_horiz_align: horizontal alignment of header cells (defaults to left)
         :param header_vert_align: vertical alignment of header cells (defaults to bottom)
         :param override_header_style: if True, then the table is allowed to apply text styles to the header, which may
-                                      interfere with any styles the header already has. If False, the header is printed as is.
-                                      Table classes which apply style to headers must respect this flag. See the BorderedTable
-                                      class for an example of this. (defaults to True)
+                                      conflict with any styles the header already has. If False, the header is printed as is.
+                                      Table classes which apply style to headers must account for the value of this flag.
+                                      (defaults to True)
         :param data_horiz_align: horizontal alignment of data cells (defaults to left)
         :param data_vert_align: vertical alignment of data cells (defaults to top)
         :param override_data_style: if True, then the table is allowed to apply text styles to the data, which may
-                                    interfere with any styles the data already has. If False, the data is printed as is.
-                                    Table classes which apply style to data must respect this flag. See the BorderedTable
-                                    class for an example of this. (defaults to True)
+                                    conflict with any styles the data already has. If False, the data is printed as is.
+                                    Table classes which apply style to data must account for the value of this flag.
+                                    (defaults to True)
         :param max_data_lines: maximum lines allowed in a data cell. If line count exceeds this, then the final
                                line displayed will be truncated with an ellipsis. (defaults to INFINITY)
         :raises: ValueError if width is less than 1
@@ -549,7 +549,14 @@ class SimpleTable(TableCreator):
     """
 
     def __init__(
-        self, cols: Sequence[Column], *, column_spacing: int = 2, tab_width: int = 4, divider_char: Optional[str] = '-'
+        self,
+        cols: Sequence[Column],
+        *,
+        column_spacing: int = 2,
+        tab_width: int = 4,
+        divider_char: Optional[str] = '-',
+        header_bg: Optional[ansi.BgColor] = None,
+        data_bg: Optional[ansi.BgColor] = None,
     ) -> None:
         """
         SimpleTable initializer
@@ -560,14 +567,19 @@ class SimpleTable(TableCreator):
                           then it will be converted to one space.
         :param divider_char: optional character used to build the header divider row. Set this to blank or None if you don't
                              want a divider row. Defaults to dash. (Cannot be a line breaking character)
-        :raises: ValueError if column_spacing is less than 0
+        :param header_bg: optional background color for header cells (defaults to None)
+        :param data_bg: optional background color for data cells (defaults to None)
         :raises: ValueError if tab_width is less than 1
+        :raises: ValueError if column_spacing is less than 0
         :raises: TypeError if divider_char is longer than one character
         :raises: ValueError if divider_char is an unprintable character
         """
+        super().__init__(cols, tab_width=tab_width)
+
         if column_spacing < 0:
             raise ValueError("Column spacing cannot be less than 0")
-        self.inter_cell = column_spacing * SPACE
+
+        self.column_spacing = column_spacing
 
         if divider_char == '':
             divider_char = None
@@ -580,8 +592,29 @@ class SimpleTable(TableCreator):
             if divider_char_width == -1:
                 raise ValueError("Divider character is an unprintable character")
 
-        super().__init__(cols, tab_width=tab_width)
         self.divider_char = divider_char
+        self.header_bg = header_bg
+        self.data_bg = data_bg
+
+    def apply_header_bg(self, value: Any) -> str:
+        """
+        If defined, apply the header background color to header text
+        :param value: object whose text is to be colored
+        :return: formatted text
+        """
+        if self.header_bg is None:
+            return str(value)
+        return ansi.style(value, bg=self.header_bg)
+
+    def apply_data_bg(self, value: Any) -> str:
+        """
+        If defined, apply the data background color to data text
+        :param value: object whose text is to be colored
+        :return: formatted data string
+        """
+        if self.data_bg is None:
+            return str(value)
+        return ansi.style(value, bg=self.data_bg)
 
     @classmethod
     def base_width(cls, num_cols: int, *, column_spacing: int = 2) -> int:
@@ -608,7 +641,7 @@ class SimpleTable(TableCreator):
 
     def total_width(self) -> int:
         """Calculate the total display width of this table"""
-        base_width = self.base_width(len(self.cols), column_spacing=ansi.style_aware_wcswidth(self.inter_cell))
+        base_width = self.base_width(len(self.cols), column_spacing=self.column_spacing)
         data_width = sum(col.width for col in self.cols)
         return base_width + data_width
 
@@ -616,9 +649,20 @@ class SimpleTable(TableCreator):
         """Generate table header with an optional divider row"""
         header_buf = io.StringIO()
 
+        fill_char = self.apply_header_bg(SPACE)
+        inter_cell = self.apply_header_bg(self.column_spacing * SPACE)
+
+        # Apply background color to header text in Columns which allow it
+        to_display: List[Any] = []
+        for index, col in enumerate(self.cols):
+            if col.override_header_style:
+                to_display.append(self.apply_header_bg(col.header))
+            else:
+                to_display.append(col.header)
+
         # Create the header labels
-        header = self.generate_row(inter_cell=self.inter_cell)
-        header_buf.write(header)
+        header_labels = self.generate_row(row_data=to_display, fill_char=fill_char, inter_cell=inter_cell)
+        header_buf.write(header_labels)
 
         # Add the divider if necessary
         divider = self.generate_divider()
@@ -641,7 +685,18 @@ class SimpleTable(TableCreator):
         :param row_data: data with an entry for each column in the row
         :return: data row string
         """
-        return self.generate_row(row_data=row_data, inter_cell=self.inter_cell)
+        fill_char = self.apply_data_bg(SPACE)
+        inter_cell = self.apply_data_bg(self.column_spacing * SPACE)
+
+        # Apply background color to data text in Columns which allow it
+        to_display: List[Any] = []
+        for index, col in enumerate(self.cols):
+            if col.override_data_style:
+                to_display.append(self.apply_data_bg(row_data[index]))
+            else:
+                to_display.append(row_data[index])
+
+        return self.generate_row(row_data=to_display, fill_char=fill_char, inter_cell=inter_cell)
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True, row_spacing: int = 1) -> str:
         """
@@ -665,9 +720,11 @@ class SimpleTable(TableCreator):
             if len(table_data) > 0:
                 table_buf.write('\n')
 
+        row_divider = utils.align_left('', fill_char=self.apply_data_bg(SPACE), width=self.total_width()) + '\n'
+
         for index, row_data in enumerate(table_data):
             if index > 0 and row_spacing > 0:
-                table_buf.write(row_spacing * '\n')
+                table_buf.write(row_spacing * row_divider)
 
             row = self.generate_data_row(row_data)
             table_buf.write(row)
@@ -707,6 +764,7 @@ class BorderedTable(TableCreator):
         :param border_fg: optional foreground color for borders (defaults to None)
         :param header_bg: optional background color for header cells (defaults to None)
         :param data_bg: optional background color for data cells (defaults to None)
+        :raises: ValueError if tab_width is less than 1
         :raises: ValueError if padding is less than 0
         """
         super().__init__(cols, tab_width=tab_width)
@@ -1003,6 +1061,7 @@ class AlternatingTable(BorderedTable):
         :param header_bg: optional background color for header cells (defaults to None)
         :param odd_bg: optional background color for odd numbered data rows (defaults to None)
         :param even_bg: optional background color for even numbered data rows (defaults to StdBg.DARK_GRAY)
+        :raises: ValueError if tab_width is less than 1
         :raises: ValueError if padding is less than 0
         """
         super().__init__(

@@ -252,7 +252,7 @@ def test_wrap_long_word():
             + '        '
             + TextStyle.RESET_ALL
             + '  LongerThan\n'
-        '            10        '
+              '            10        '
     )
     assert row == expected
 
@@ -350,7 +350,7 @@ def test_simple_table_creation():
         'Col 1             Col 2           \n'
         '----------------------------------\n'
         'Col 1 Row 1       Col 2 Row 1     \n'
-        '\n'
+        '                                  \n'
         'Col 1 Row 2       Col 2 Row 2     '
     )
 
@@ -362,7 +362,7 @@ def test_simple_table_creation():
         'Col 1                Col 2           \n'
         '-------------------------------------\n'
         'Col 1 Row 1          Col 2 Row 1     \n'
-        '\n'
+        '                                     \n'
         'Col 1 Row 2          Col 2 Row 2     '
     )
 
@@ -374,7 +374,7 @@ def test_simple_table_creation():
         'Col 1             Col 2           \n'
         '──────────────────────────────────\n'
         'Col 1 Row 1       Col 2 Row 1     \n'
-        '\n'
+        '                                  \n'
         'Col 1 Row 2       Col 2 Row 2     '
     )
 
@@ -388,7 +388,7 @@ def test_simple_table_creation():
     assert no_divider_1 == no_divider_2 == (
         'Col 1             Col 2           \n'
         'Col 1 Row 1       Col 2 Row 1     \n'
-        '\n'
+        '                                  \n'
         'Col 1 Row 2       Col 2 Row 2     '
     )
 
@@ -407,7 +407,7 @@ def test_simple_table_creation():
     table = st.generate_table(row_data, include_header=False)
 
     assert table == ('Col 1 Row 1       Col 2 Row 1     \n'
-                     '\n'
+                     '                                  \n'
                      'Col 1 Row 2       Col 2 Row 2     ')
 
     # Wide custom divider (divider needs no padding)
@@ -418,20 +418,20 @@ def test_simple_table_creation():
         'Col 1             Col 2           \n'
         '深深深深深深深深深深深深深深深深深\n'
         'Col 1 Row 1       Col 2 Row 1     \n'
-        '\n'
+        '                                  \n'
         'Col 1 Row 2       Col 2 Row 2     '
     )
 
     # Wide custom divider (divider needs padding)
-    column_2 = Column("Col 2", width=17)
-    st = SimpleTable([column_1, column_2], divider_char='深')
+    st = SimpleTable([column_1, Column("Col 2", width=17)],
+                     divider_char='深')
     table = st.generate_table(row_data)
 
     assert table == (
         'Col 1             Col 2            \n'
         '深深深深深深深深深深深深深深深深深 \n'
         'Col 1 Row 1       Col 2 Row 1      \n'
-        '\n'
+        '                                   \n'
         'Col 1 Row 2       Col 2 Row 2      '
     )
 
@@ -454,6 +454,28 @@ def test_simple_table_creation():
     with pytest.raises(ValueError) as excinfo:
         st.generate_table(row_data, row_spacing=-1)
     assert "Row spacing cannot be less than 0" in str(excinfo.value)
+
+    # Test header and data colors
+    st = SimpleTable([column_1, column_2], divider_char=None, header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
+    table = st.generate_table(row_data)
+    assert table == (
+        '\x1b[0m\x1b[42mCol 1\x1b[49m\x1b[0m\x1b[42m           \x1b[49m\x1b[0m\x1b[42m  \x1b[49m\x1b[0m\x1b[42mCol 2\x1b[49m\x1b[0m\x1b[42m           \x1b[49m\x1b[0m\n'
+        '\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m     \x1b[49m\x1b[0m\x1b[104m  \x1b[49m\x1b[0m\x1b[104mCol 2 Row 1\x1b[49m\x1b[0m\x1b[104m     \x1b[49m\x1b[0m\n'
+        '\x1b[0m\x1b[0m\x1b[104m                                  \x1b[49m\x1b[0m\n'
+        '\x1b[0m\x1b[104mCol 1 Row 2\x1b[49m\x1b[0m\x1b[104m     \x1b[49m\x1b[0m\x1b[104m  \x1b[49m\x1b[0m\x1b[104mCol 2 Row 2\x1b[49m\x1b[0m\x1b[104m     \x1b[49m\x1b[0m'
+    )
+
+    # Make sure SimpleTable respects override_header_style override_data_style flags.
+    # Don't apply parent table's background colors to header or data text in second column.
+    st = SimpleTable([column_1, Column("Col 2", width=16, override_header_style=False, override_data_style=False)],
+                     divider_char=None, header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
+    table = st.generate_table(row_data)
+    assert table == (
+        '\x1b[0m\x1b[42mCol 1\x1b[49m\x1b[0m\x1b[42m           \x1b[49m\x1b[0m\x1b[42m  \x1b[49m\x1b[0mCol 2\x1b[0m\x1b[42m           \x1b[49m\x1b[0m\n'
+        '\x1b[0m\x1b[104mCol 1 Row 1\x1b[49m\x1b[0m\x1b[104m     \x1b[49m\x1b[0m\x1b[104m  \x1b[49m\x1b[0mCol 2 Row 1\x1b[0m\x1b[104m     \x1b[49m\x1b[0m\n'
+        '\x1b[0m\x1b[0m\x1b[104m                                  \x1b[49m\x1b[0m\n'
+        '\x1b[0m\x1b[104mCol 1 Row 2\x1b[49m\x1b[0m\x1b[104m     \x1b[49m\x1b[0m\x1b[104m  \x1b[49m\x1b[0mCol 2 Row 2\x1b[0m\x1b[104m     \x1b[49m\x1b[0m'
+    )
 
 
 def test_simple_table_width():
@@ -556,8 +578,8 @@ def test_bordered_table_creation():
 
     # Make sure BorderedTable respects override_header_style override_data_style flags.
     # Don't apply parent table's background colors to header or data text in second column.
-    column_2 = Column("Col 2", width=15, override_header_style=False, override_data_style=False)
-    bt = BorderedTable([column_1, column_2], header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
+    bt = BorderedTable([column_1, Column("Col 2", width=15, override_header_style=False, override_data_style=False)],
+                       header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
     table = bt.generate_table(row_data)
     assert table == (
         '╔═════════════════╤═════════════════╗\n'
@@ -668,7 +690,8 @@ def test_alternating_table_creation():
     assert "Padding cannot be less than 0" in str(excinfo.value)
 
     # Test border, header, and data colors
-    at = AlternatingTable([column_1, column_2], border_fg=Fg.LIGHT_YELLOW, header_bg=Bg.GREEN, odd_bg=Bg.LIGHT_BLUE, even_bg=Bg.LIGHT_RED)
+    at = AlternatingTable([column_1, column_2], border_fg=Fg.LIGHT_YELLOW, header_bg=Bg.GREEN,
+                          odd_bg=Bg.LIGHT_BLUE, even_bg=Bg.LIGHT_RED)
     table = at.generate_table(row_data)
     assert table == (
         '\x1b[93m╔═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╤═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╗\x1b[39m\n'
@@ -681,8 +704,8 @@ def test_alternating_table_creation():
 
     # Make sure AlternatingTable respects override_header_style override_data_style flags.
     # Don't apply parent table's background colors to header or data text in second column.
-    column_2 = Column("Col 2", width=15, override_header_style=False, override_data_style=False)
-    at = AlternatingTable([column_1, column_2], header_bg=Bg.GREEN, odd_bg=Bg.LIGHT_BLUE, even_bg=Bg.LIGHT_RED)
+    at = AlternatingTable([column_1, Column("Col 2", width=15, override_header_style=False, override_data_style=False)],
+                          header_bg=Bg.GREEN, odd_bg=Bg.LIGHT_BLUE, even_bg=Bg.LIGHT_RED)
     table = at.generate_table(row_data)
     assert table == (
         '╔═════════════════╤═════════════════╗\n'

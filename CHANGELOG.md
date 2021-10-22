@@ -9,7 +9,7 @@
     and/or data text. This allows for things like nesting an AlternatingTable in another AlternatingTable.
   * AlternatingTable no longer applies background color to outer borders. This was done to improve appearance
     since the background color extended beyond the borders of the table.
-  * Added ability to colorize all aspects of `BorderedTables` and `AlternatingTables`.
+  * Added ability to colorize all aspects of `AlternatingTables`, `BorderedTables`, and `SimpleTables`.
   * Added support for 8-bit/256-colors with the `cmd2.EightBitFg` and `cmd2.EightBitBg` classes.
   * Added support for 24-bit/RGB colors with the `cmd2.RgbFg` and `cmd2.RgbBg` classes.
   * Removed dependency on colorama.
