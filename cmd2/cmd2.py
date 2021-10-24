@@ -3865,7 +3865,7 @@ class Cmd(cmd.Cmd):
         self.last_result = True
         return True
 
-    def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str = 'Your choice? ') -> str:
+    def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str = 'Your choice? ') -> Any:
         """Presents a numbered menu to the user.  Modeled after
         the bash shell's SELECT.  Returns the item chosen.
 
@@ -3910,7 +3910,7 @@ class Cmd(cmd.Cmd):
                 choice = int(response)
                 if choice < 1:
                     raise IndexError
-                return str(fulloptions[choice - 1][0])
+                return fulloptions[choice - 1][0]
             except (ValueError, IndexError):
                 self.poutput(f"'{response}' isn't a valid choice. Pick a number between 1 and {len(fulloptions)}:")
 
