@@ -1220,6 +1220,12 @@ class SelectApp(cmd2.Cmd):
         result = 'Charm us with the {}...\n'.format(instrument)
         self.stdout.write(result)
 
+    def do_return_type(self, arg):
+        """Test that return values can be non-strings"""
+        choice = self.select([(1, 'Integer'), ("test_str", 'String'), (self.do_play, 'Method')], 'Choice? ')
+        result = f'The return type is {type(choice)}\n'
+        self.stdout.write(result)
+
 
 @pytest.fixture
 def select_app():
@@ -1377,6 +1383,38 @@ Charm us with the {}...
 
     # Make sure our mock was called with the expected arguments
     read_input_mock.assert_called_once_with('Instrument? ')
+
+    # And verify the expected output to stdout
+    assert out == expected
+
+
+@pytest.mark.parametrize(
+    'selection, type_str',
+    [
+        ('1', "<class 'int'>"),
+        ('2', "<class 'str'>"),
+        ('3', "<class 'method'>"),
+    ],
+)
+def test_select_return_type(select_app, monkeypatch, selection, type_str):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value=selection)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    out, err = run_cmd(select_app, "return_type")
+    expected = normalize(
+        """
+   1. Integer
+   2. String
+   3. Method
+The return type is {}
+""".format(
+            type_str
+        )
+    )
+
+    # Make sure our mock was called with the expected arguments
+    read_input_mock.assert_called_once_with('Choice? ')
 
     # And verify the expected output to stdout
     assert out == expected

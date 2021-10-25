@@ -2,6 +2,8 @@
 * Bug Fixes
   * Fixed `AttributeError` in `rl_get_prompt()` when prompt is `None`.
   * Fixed bug where using choices on a Settable didn't verify that a valid choice had been entered.
+  * Fixed bug introduced in cmd2 2.0.0 in which `select()` converts return values to strings. It should never
+    have converted return values.
 * Enhancements
   * Added settings to Column class which prevent a table from overriding existing styles in header
     and/or data text. This allows for things like nesting an AlternatingTable in another AlternatingTable.
