@@ -42,18 +42,18 @@ class DollarFormatter:
 class Book:
     """Class used for example data"""
 
-    def __init__(self, title: str, due_date: str) -> None:
+    def __init__(self, title: str, year_published: str) -> None:
         self.title = title
-        self.due_date = due_date
+        self.year_published = year_published
 
 
-class Person:
+class Author:
     """Class used for example data"""
 
-    def __init__(self, name: str, birthday: str, department: str) -> None:
+    def __init__(self, name: str, birthday: str, place_of_birth: str) -> None:
         self.name = name
         self.birthday = birthday
-        self.department = department
+        self.place_of_birth = place_of_birth
         self.books: List[Book] = []
 
 
@@ -108,48 +108,61 @@ def basic_tables():
 
 def nested_tables():
     """
-    Demonstrates how to nest tables using the override_data_style keyword to handle tables with conflicting styles.
+    Demonstrates how to nest tables using the style_data_text keyword to handle tables with conflicting styles.
     In these cases, the inner tables reset the background color applied by the outer AlternatingTable.
 
     It also demonstrates coloring various aspects of tables.
     """
 
     # Create data for this example
-    person_data: List[Person] = []
-    person_1 = Person("Bill Anderson", "01/22/1955", "Accounting")
-    person_1.books.append(Book("Great Expectations", "11/01/2025"))
-    person_1.books.append(Book("Strange Case of Dr Jekyll and Mr Hyde", "07/16/2026"))
-    person_1.books.append(Book("Dune", "01/24/2027"))
+    author_data: List[Author] = []
+    author_1 = Author("Frank Herbert", "10/08/1920", "Tacoma, Washington")
+    author_1.books.append(Book("Dune", "1965"))
+    author_1.books.append(Book("Dune Messiah", "1969"))
+    author_1.books.append(Book("Children of Dune", "1976"))
+    author_1.books.append(Book("God Emperor of Dune", "1981"))
+    author_1.books.append(Book("Heretics of Dune", "1984"))
+    author_1.books.append(Book("Chapterhouse: Dune", "1985"))
 
-    person_2 = Person("Arthur Smith", "06/11/1974", "Automotive")
-    person_2.books.append(Book("Nineteen Eighty-Four", "08/07/2025"))
-    person_2.books.append(Book("Pride and Prejudice", "04/13/2026"))
-    person_2.books.append(Book("Fahrenheit 451", "07/29/2026"))
-    person_2.books.append(Book("The Count of Monte Cristo", "10/15/2027"))
+    author_2 = Author("Jane Austen", "12/16/1775", "Steventon, Hampshire, England")
+    author_2.books.append(Book("Sense and Sensibility", "1811"))
+    author_2.books.append(Book("Pride and Prejudice", "1813"))
+    author_2.books.append(Book("Mansfield Park ", "1814"))
+    author_2.books.append(Book("Emma", "1815"))
+    author_2.books.append(Book("Northanger Abbey", "1818"))
+    author_2.books.append(Book("Persuasion", "1818"))
+    author_2.books.append(Book("Lady Susan", "1871"))
 
-    person_data.append(person_1)
-    person_data.append(person_2)
+    author_data.append(author_1)
+    author_data.append(author_2)
 
-    # Define table which presents Person data fields vertically with no header.
+    # Define table which presents Author data fields vertically with no header.
     # This will be nested in the parent table.
-    person_columns: List[Column] = list()
-    person_columns.append(Column("", width=10))
-    person_columns.append(Column("", width=20))
+    author_columns: List[Column] = list()
+    author_columns.append(Column("", width=14))
+    author_columns.append(Column("", width=20))
 
     # The text labels in this table will be bold text. They will also be aligned by the table code.
     # When styled text is aligned, a TextStyle.RESET_ALL sequence is inserted between the aligned text
-    # and the fill characters. Therefore, the Person table will contain TextStyle.RESET_ALL sequences,
+    # and the fill characters. Therefore, the Author table will contain TextStyle.RESET_ALL sequences,
     # which would interfere with the background color applied by the parent table. To account for this,
-    # we will color the Person tables to match the background colors of the parent AlternatingTable's rows
-    # and set override_data_style to False in the Person column. See below for that.
-    odd_person_tbl = SimpleTable(person_columns, data_bg=EightBitBg.GRAY_0)
-    even_person_tbl = SimpleTable(person_columns, data_bg=EightBitBg.GRAY_15)
+    # we will color the Author tables to match the background colors of the parent AlternatingTable's rows
+    # and set style_data_text to False in the Author column. See below for that.
+    odd_author_tbl = SimpleTable(author_columns, data_bg=EightBitBg.GRAY_0)
+    even_author_tbl = SimpleTable(author_columns, data_bg=EightBitBg.GRAY_15)
 
     # Define AlternatingTable table for books checked out by people in the first table.
     # This will also be nested in the parent table.
     books_columns: List[Column] = list()
-    books_columns.append(Column("Title", width=28))
-    books_columns.append(Column("Due Date", width=10))
+    books_columns.append(Column("Title", width=25))
+    books_columns.append(
+        Column(
+            "Published",
+            width=9,
+            header_horiz_align=HorizontalAlignment.RIGHT,
+            data_horiz_align=HorizontalAlignment.RIGHT,
+        )
+    )
 
     books_tbl = AlternatingTable(
         books_columns,
@@ -160,13 +173,13 @@ def nested_tables():
         even_bg=EightBitBg.GRAY_15,
     )
 
-    # Define parent AlternatingTable which contains Person and Book tables
+    # Define parent AlternatingTable which contains Author and Book tables
     parent_tbl_columns: List[Column] = list()
 
-    # Both the Person and Books tables already have background colors. Set override_data_style
+    # Both the Author and Books tables already have background colors. Set style_data_text
     # to False so the parent AlternatingTable does not apply background color to them.
-    parent_tbl_columns.append(Column("Person", width=odd_person_tbl.total_width(), override_data_style=False))
-    parent_tbl_columns.append(Column("Books", width=books_tbl.total_width(), override_data_style=False))
+    parent_tbl_columns.append(Column("Author", width=odd_author_tbl.total_width(), style_data_text=False))
+    parent_tbl_columns.append(Column("Books", width=books_tbl.total_width(), style_data_text=False))
 
     parent_tbl = AlternatingTable(
         parent_tbl_columns,
@@ -178,26 +191,26 @@ def nested_tables():
 
     # Construct the tables
     parent_table_data: List[List[Any]] = []
-    for row, person in enumerate(person_data, start=1):
-        # First build the person table and color it based on row number
-        person_tbl = even_person_tbl if row % 2 == 0 else odd_person_tbl
+    for row, author in enumerate(author_data, start=1):
+        # First build the author table and color it based on row number
+        author_tbl = even_author_tbl if row % 2 == 0 else odd_author_tbl
 
         # This table has three rows and two columns
         table_data = [
-            [ansi.style("Name", bold=True), person.name],
-            [ansi.style("Birthday", bold=True), person.birthday],
-            [ansi.style("Department", bold=True), person.department],
+            [ansi.style("Name", bold=True), author.name],
+            [ansi.style("Birthday", bold=True), author.birthday],
+            [ansi.style("Place of Birth", bold=True), author.place_of_birth],
         ]
 
-        # Build the person table string
-        person_tbl_str = person_tbl.generate_table(table_data, include_header=False, row_spacing=0)
+        # Build the author table string
+        author_tbl_str = author_tbl.generate_table(table_data, include_header=False, row_spacing=0)
 
-        # Now build this person's book table
-        table_data = [[book.title, book.due_date] for book in person.books]
+        # Now build this author's book table
+        table_data = [[book.title, book.year_published] for book in author.books]
         book_tbl_str = books_tbl.generate_table(table_data)
 
         # Add these tables to the parent table's data
-        parent_table_data.append(['\n' + person_tbl_str, '\n' + book_tbl_str + '\n\n'])
+        parent_table_data.append(['\n' + author_tbl_str, '\n' + book_tbl_str + '\n\n'])
 
     # Build the parent table
     top_table_str = parent_tbl.generate_table(parent_table_data)

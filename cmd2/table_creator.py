@@ -64,10 +64,10 @@ class Column:
         width: Optional[int] = None,
         header_horiz_align: HorizontalAlignment = HorizontalAlignment.LEFT,
         header_vert_align: VerticalAlignment = VerticalAlignment.BOTTOM,
-        override_header_style: bool = True,
+        style_header_text: bool = True,
         data_horiz_align: HorizontalAlignment = HorizontalAlignment.LEFT,
         data_vert_align: VerticalAlignment = VerticalAlignment.TOP,
-        override_data_style: bool = True,
+        style_data_text: bool = True,
         max_data_lines: Union[int, float] = constants.INFINITY,
     ) -> None:
         """
@@ -79,16 +79,16 @@ class Column:
                       this width using word-based wrapping (defaults to actual width of header or 1 if header is blank)
         :param header_horiz_align: horizontal alignment of header cells (defaults to left)
         :param header_vert_align: vertical alignment of header cells (defaults to bottom)
-        :param override_header_style: if True, then the table is allowed to apply text styles to the header, which may
-                                      conflict with any styles the header already has. If False, the header is printed as is.
-                                      Table classes which apply style to headers must account for the value of this flag.
-                                      (defaults to True)
+        :param style_header_text: if True, then the table is allowed to apply styles to the header text, which may
+                                  conflict with any styles the header already has. If False, the header is printed as is.
+                                  Table classes which apply style to headers must account for the value of this flag.
+                                  (defaults to True)
         :param data_horiz_align: horizontal alignment of data cells (defaults to left)
         :param data_vert_align: vertical alignment of data cells (defaults to top)
-        :param override_data_style: if True, then the table is allowed to apply text styles to the data, which may
-                                    conflict with any styles the data already has. If False, the data is printed as is.
-                                    Table classes which apply style to data must account for the value of this flag.
-                                    (defaults to True)
+        :param style_data_text: if True, then the table is allowed to apply styles to the data text, which may
+                                conflict with any styles the data already has. If False, the data is printed as is.
+                                Table classes which apply style to data must account for the value of this flag.
+                                (defaults to True)
         :param max_data_lines: maximum lines allowed in a data cell. If line count exceeds this, then the final
                                line displayed will be truncated with an ellipsis. (defaults to INFINITY)
         :raises: ValueError if width is less than 1
@@ -103,11 +103,11 @@ class Column:
 
         self.header_horiz_align = header_horiz_align
         self.header_vert_align = header_vert_align
-        self.override_header_style = override_header_style
+        self.style_header_text = style_header_text
 
         self.data_horiz_align = data_horiz_align
         self.data_vert_align = data_vert_align
-        self.override_data_style = override_data_style
+        self.style_data_text = style_data_text
 
         if max_data_lines < 1:
             raise ValueError("Max data lines cannot be less than 1")
@@ -655,7 +655,7 @@ class SimpleTable(TableCreator):
         # Apply background color to header text in Columns which allow it
         to_display: List[Any] = []
         for index, col in enumerate(self.cols):
-            if col.override_header_style:
+            if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
             else:
                 to_display.append(col.header)
@@ -691,7 +691,7 @@ class SimpleTable(TableCreator):
         # Apply background color to data text in Columns which allow it
         to_display: List[Any] = []
         for index, col in enumerate(self.cols):
-            if col.override_data_style:
+            if col.style_data_text:
                 to_display.append(self.apply_data_bg(row_data[index]))
             else:
                 to_display.append(row_data[index])
@@ -940,7 +940,7 @@ class BorderedTable(TableCreator):
         # Apply background color to header text in Columns which allow it
         to_display: List[Any] = []
         for index, col in enumerate(self.cols):
-            if col.override_header_style:
+            if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
             else:
                 to_display.append(col.header)
@@ -981,7 +981,7 @@ class BorderedTable(TableCreator):
         # Apply background color to data text in Columns which allow it
         to_display: List[Any] = []
         for index, col in enumerate(self.cols):
-            if col.override_data_style:
+            if col.style_data_text:
                 to_display.append(self.apply_data_bg(row_data[index]))
             else:
                 to_display.append(row_data[index])
@@ -1028,7 +1028,7 @@ class AlternatingTable(BorderedTable):
     Implementation of BorderedTable which uses background colors to distinguish between rows instead of row border
     lines. This class can be used to create the whole table at once or one row at a time.
 
-    To nest an AlternatingTable within another AlternatingTable, set override_data_style to False on the Column
+    To nest an AlternatingTable within another AlternatingTable, set style_data_text to False on the Column
     which contains the nested table. That will prevent the current row's background color from affecting the colors
     of the nested table.
     """

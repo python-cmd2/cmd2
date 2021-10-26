@@ -71,18 +71,18 @@ def test_column_creation():
     tc = TableCreator([c])
     assert tc.cols[0].width == ansi.style_aware_wcswidth("line    with    tabs")
 
-    # Add basic tests for override_header_style and override_data_style to make sure these members don't get removed.
+    # Add basic tests for style_header_text and style_data_text to make sure these members don't get removed.
     c = Column("Column 1")
-    assert c.override_header_style is True
-    assert c.override_data_style is True
+    assert c.style_header_text is True
+    assert c.style_data_text is True
 
-    c = Column("Column 1", override_header_style=False)
-    assert c.override_header_style is False
-    assert c.override_data_style is True
+    c = Column("Column 1", style_header_text=False)
+    assert c.style_header_text is False
+    assert c.style_data_text is True
 
-    c = Column("Column 1", override_data_style=False)
-    assert c.override_header_style is True
-    assert c.override_data_style is False
+    c = Column("Column 1", style_data_text=False)
+    assert c.style_header_text is True
+    assert c.style_data_text is False
 
 
 def test_column_alignment():
@@ -465,9 +465,9 @@ def test_simple_table_creation():
         '\x1b[0m\x1b[104mCol 1 Row 2\x1b[49m\x1b[0m\x1b[104m     \x1b[49m\x1b[0m\x1b[104m  \x1b[49m\x1b[0m\x1b[104mCol 2 Row 2\x1b[49m\x1b[0m\x1b[104m     \x1b[49m\x1b[0m'
     )
 
-    # Make sure SimpleTable respects override_header_style override_data_style flags.
+    # Make sure SimpleTable respects style_header_text and style_data_text flags.
     # Don't apply parent table's background colors to header or data text in second column.
-    st = SimpleTable([column_1, Column("Col 2", width=16, override_header_style=False, override_data_style=False)],
+    st = SimpleTable([column_1, Column("Col 2", width=16, style_header_text=False, style_data_text=False)],
                      divider_char=None, header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
     table = st.generate_table(row_data)
     assert table == (
@@ -576,9 +576,9 @@ def test_bordered_table_creation():
         '\x1b[93m╚═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╧═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╝\x1b[39m'
     )
 
-    # Make sure BorderedTable respects override_header_style override_data_style flags.
+    # Make sure BorderedTable respects style_header_text and style_data_text flags.
     # Don't apply parent table's background colors to header or data text in second column.
-    bt = BorderedTable([column_1, Column("Col 2", width=15, override_header_style=False, override_data_style=False)],
+    bt = BorderedTable([column_1, Column("Col 2", width=15, style_header_text=False, style_data_text=False)],
                        header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
     table = bt.generate_table(row_data)
     assert table == (
@@ -702,9 +702,9 @@ def test_alternating_table_creation():
         '\x1b[93m╚═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╧═\x1b[39m\x1b[0m\x1b[0m\x1b[93m═══════════════\x1b[39m\x1b[0m\x1b[93m═╝\x1b[39m'
     )
 
-    # Make sure AlternatingTable respects override_header_style override_data_style flags.
+    # Make sure AlternatingTable respects style_header_text and style_data_text flags.
     # Don't apply parent table's background colors to header or data text in second column.
-    at = AlternatingTable([column_1, Column("Col 2", width=15, override_header_style=False, override_data_style=False)],
+    at = AlternatingTable([column_1, Column("Col 2", width=15, style_header_text=False, style_data_text=False)],
                           header_bg=Bg.GREEN, odd_bg=Bg.LIGHT_BLUE, even_bg=Bg.LIGHT_RED)
     table = at.generate_table(row_data)
     assert table == (
