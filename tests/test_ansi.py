@@ -58,6 +58,17 @@ def test_style_bg(bg_color):
     assert ansi.style(base_str, bg=bg_color) == ansi_str
 
 
+# noinspection PyTypeChecker
+def test_style_invalid_types():
+    # Use a BgColor with fg
+    with pytest.raises(TypeError):
+        ansi.style('test', fg=ansi.Bg.BLUE)
+
+    # Use a FgColor with bg
+    with pytest.raises(TypeError):
+        ansi.style('test', bg=ansi.Fg.BLUE)
+
+
 def test_style_bold():
     base_str = HELLO_WORLD
     ansi_str = ansi.TextStyle.INTENSITY_BOLD + base_str + ansi.TextStyle.INTENSITY_NORMAL
@@ -236,7 +247,6 @@ def test_sequence_str_building(ansi_sequence):
     ],
 )
 def test_rgb_bounds(r, g, b, valid):
-
     if valid:
         ansi.RgbFg(r, g, b)
         ansi.RgbBg(r, g, b)

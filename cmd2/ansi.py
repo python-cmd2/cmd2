@@ -970,6 +970,8 @@ def style(
     :param overline: apply the overline style if True. Defaults to False.
     :param strikethrough: apply the strikethrough style if True. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
+    :raises: TypeError if fg isn't None or a subclass of FgColor
+    :raises: TypeError if bg isn't None or a subclass of BgColor
     :return: the stylized string
     """
     # List of strings that add style
@@ -980,10 +982,14 @@ def style(
 
     # Process the style settings
     if fg is not None:
+        if not isinstance(fg, FgColor):
+            raise TypeError("fg must be a subclass of FgColor")
         additions.append(fg)
         removals.append(Fg.RESET)
 
     if bg is not None:
+        if not isinstance(bg, BgColor):
+            raise TypeError("bg must a subclass of BgColor")
         additions.append(bg)
         removals.append(Bg.RESET)
 
