@@ -39,6 +39,14 @@ class DollarFormatter:
         return "${:,.2f}".format(self.val)
 
 
+class Relative:
+    """Class used for example data"""
+
+    def __init__(self, name: str, relationship: str) -> None:
+        self.name = name
+        self.relationship = relationship
+
+
 class Book:
     """Class used for example data"""
 
@@ -55,6 +63,7 @@ class Author:
         self.birthday = birthday
         self.place_of_birth = place_of_birth
         self.books: List[Book] = []
+        self.relatives: List[Relative] = []
 
 
 def ansi_print(text):
@@ -108,9 +117,7 @@ def basic_tables():
 
 def nested_tables():
     """
-    Demonstrates how to nest tables using the style_data_text keyword to handle tables with conflicting styles.
-    In these cases, the inner tables reset the background color applied by the outer AlternatingTable.
-
+    Demonstrates how to nest tables with styles which conflict with the parent table by setting style_data_text to False.
     It also demonstrates coloring various aspects of tables.
     """
 
@@ -123,6 +130,12 @@ def nested_tables():
     author_1.books.append(Book("God Emperor of Dune", "1981"))
     author_1.books.append(Book("Heretics of Dune", "1984"))
     author_1.books.append(Book("Chapterhouse: Dune", "1985"))
+    author_1.relatives.append(Relative("Flora Lillian Parkinson", "First Wife"))
+    author_1.relatives.append(Relative("Beverly Ann Stuart", "Second Wife"))
+    author_1.relatives.append(Relative("Theresa Diane Shackelford", "Third Wife"))
+    author_1.relatives.append(Relative("Penelope Herbert", "Daughter"))
+    author_1.relatives.append(Relative("Brian Patrick Herbert", "Son"))
+    author_1.relatives.append(Relative("Bruce Calvin Herbert", "Son"))
 
     author_2 = Author("Jane Austen", "12/16/1775", "Steventon, Hampshire, England")
     author_2.books.append(Book("Sense and Sensibility", "1811"))
@@ -132,12 +145,19 @@ def nested_tables():
     author_2.books.append(Book("Northanger Abbey", "1818"))
     author_2.books.append(Book("Persuasion", "1818"))
     author_2.books.append(Book("Lady Susan", "1871"))
+    author_2.relatives.append(Relative("James Austen", "Brother"))
+    author_2.relatives.append(Relative("George Austen", "Brother"))
+    author_2.relatives.append(Relative("Edward Austen", "Brother"))
+    author_2.relatives.append(Relative("Henry Thomas Austen", "Brother"))
+    author_2.relatives.append(Relative("Cassandra Elizabeth Austen", "Sister"))
+    author_2.relatives.append(Relative("Francis William Austen", "Brother"))
+    author_2.relatives.append(Relative("Charles John Austen", "Brother"))
 
     author_data.append(author_1)
     author_data.append(author_2)
 
     # Define table which presents Author data fields vertically with no header.
-    # This will be nested in the parent table.
+    # This will be nested in the parent table's first column.
     author_columns: List[Column] = list()
     author_columns.append(Column("", width=14))
     author_columns.append(Column("", width=20))
@@ -146,18 +166,18 @@ def nested_tables():
     # When styled text is aligned, a TextStyle.RESET_ALL sequence is inserted between the aligned text
     # and the fill characters. Therefore, the Author table will contain TextStyle.RESET_ALL sequences,
     # which would interfere with the background color applied by the parent table. To account for this,
-    # we will color the Author tables to match the background colors of the parent AlternatingTable's rows
-    # and set style_data_text to False in the Author column. See below for that.
+    # we will manually color the Author tables to match the background colors of the parent AlternatingTable's
+    # rows and set style_data_text to False in the Author column.
     odd_author_tbl = SimpleTable(author_columns, data_bg=EightBitBg.GRAY_0)
     even_author_tbl = SimpleTable(author_columns, data_bg=EightBitBg.GRAY_15)
 
-    # Define AlternatingTable table for books checked out by people in the first table.
-    # This will also be nested in the parent table.
+    # Define AlternatingTable for books checked out by people in the first table.
+    # This will be nested in the parent table's second column.
     books_columns: List[Column] = list()
-    books_columns.append(Column("Title", width=25))
+    books_columns.append(Column(ansi.style("Title", bold=True), width=25))
     books_columns.append(
         Column(
-            "Published",
+            ansi.style("Published", bold=True),
             width=9,
             header_horiz_align=HorizontalAlignment.RIGHT,
             data_horiz_align=HorizontalAlignment.RIGHT,
@@ -173,17 +193,48 @@ def nested_tables():
         even_bg=EightBitBg.GRAY_15,
     )
 
+    # Define BorderedTable for relatives of the author
+    # This will be nested in the parent table's third column.
+    relative_columns: List[Column] = list()
+    relative_columns.append(Column(ansi.style("Name", bold=True), width=25))
+    relative_columns.append(Column(ansi.style("Relationship", bold=True), width=12))
+
+    # Since the header labels are bold, we have the same issue as the Author table. Therefore, we will manually
+    # color Relatives tables to match the background colors of the parent AlternatingTable's rows and set style_data_text
+    # to False in the Relatives column.
+    odd_relatives_tbl = BorderedTable(
+        relative_columns,
+        border_fg=EightBitFg.GRAY_15,
+        border_bg=EightBitBg.GRAY_0,
+        header_bg=EightBitBg.GRAY_0,
+        data_bg=EightBitBg.GRAY_0,
+    )
+
+    even_relatives_tbl = BorderedTable(
+        relative_columns,
+        border_fg=EightBitFg.GRAY_0,
+        border_bg=EightBitBg.GRAY_15,
+        header_bg=EightBitBg.GRAY_15,
+        data_bg=EightBitBg.GRAY_15,
+    )
+
     # Define parent AlternatingTable which contains Author and Book tables
     parent_tbl_columns: List[Column] = list()
 
-    # Both the Author and Books tables already have background colors. Set style_data_text
+    # All of the nested tables already have background colors. Set style_data_text
     # to False so the parent AlternatingTable does not apply background color to them.
-    parent_tbl_columns.append(Column("Author", width=odd_author_tbl.total_width(), style_data_text=False))
-    parent_tbl_columns.append(Column("Books", width=books_tbl.total_width(), style_data_text=False))
+    parent_tbl_columns.append(
+        Column(ansi.style("Author", bold=True), width=odd_author_tbl.total_width(), style_data_text=False)
+    )
+    parent_tbl_columns.append(Column(ansi.style("Books", bold=True), width=books_tbl.total_width(), style_data_text=False))
+    parent_tbl_columns.append(
+        Column(ansi.style("Relatives", bold=True), width=odd_relatives_tbl.total_width(), style_data_text=False)
+    )
 
     parent_tbl = AlternatingTable(
         parent_tbl_columns,
         column_borders=False,
+        border_fg=EightBitFg.GRAY_93,
         header_bg=EightBitBg.GRAY_0,
         odd_bg=EightBitBg.GRAY_0,
         even_bg=EightBitBg.GRAY_15,
@@ -209,8 +260,13 @@ def nested_tables():
         table_data = [[book.title, book.year_published] for book in author.books]
         book_tbl_str = books_tbl.generate_table(table_data)
 
+        # Lastly build the relatives table and color it based on row number
+        relatives_tbl = even_relatives_tbl if row % 2 == 0 else odd_relatives_tbl
+        table_data = [[relative.name, relative.relationship] for relative in author.relatives]
+        relatives_tbl_str = relatives_tbl.generate_table(table_data)
+
         # Add these tables to the parent table's data
-        parent_table_data.append(['\n' + author_tbl_str, '\n' + book_tbl_str + '\n\n'])
+        parent_table_data.append(['\n' + author_tbl_str, '\n' + book_tbl_str + '\n\n', '\n' + relatives_tbl_str + '\n\n'])
 
     # Build the parent table
     top_table_str = parent_tbl.generate_table(parent_table_data)
