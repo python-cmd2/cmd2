@@ -695,124 +695,141 @@ complete_states_expected_self = None
 
 
 @cmd2.with_default_category('With Completer')
-class WithCompleterCommandSet(cmd2.CommandSet):
+class SupportFuncProvider(cmd2.CommandSet):
+    """CommandSet which provides a support function (complete_states) to other CommandSets"""
+
     states = ['alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware']
 
     def __init__(self, dummy):
         """dummy variable prevents this from being autoloaded in other tests"""
-        super(WithCompleterCommandSet, self).__init__()
+        super(SupportFuncProvider, self).__init__()
 
     def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         assert self is complete_states_expected_self
         return self._cmd.basic_complete(text, line, begidx, endidx, self.states)
 
 
-class SubclassCommandSetCase1(WithCompleterCommandSet):
+class SupportFuncUserSubclass1(SupportFuncProvider):
+    """A sub-class of SupportFuncProvider which uses its support function"""
+
     parser = cmd2.Cmd2ArgumentParser()
-    parser.add_argument('state', type=str, completer=WithCompleterCommandSet.complete_states)
+    parser.add_argument('state', type=str, completer=SupportFuncProvider.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_case1(self, ns: argparse.Namespace):
+    def do_user_sub1(self, ns: argparse.Namespace):
         self._cmd.poutput('something {}'.format(ns.state))
 
 
-class SubclassCommandSetErrorCase2(WithCompleterCommandSet):
+class SupportFuncUserSubclass2(SupportFuncProvider):
+    """A second sub-class of SupportFuncProvider which uses its support function"""
+
     parser = cmd2.Cmd2ArgumentParser()
-    parser.add_argument('state', type=str, completer=WithCompleterCommandSet.complete_states)
+    parser.add_argument('state', type=str, completer=SupportFuncProvider.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_error2(self, ns: argparse.Namespace):
+    def do_user_sub2(self, ns: argparse.Namespace):
         self._cmd.poutput('something {}'.format(ns.state))
 
 
-class SubclassCommandSetCase2(cmd2.CommandSet):
+class SupportFuncUserUnrelated(cmd2.CommandSet):
+    """A CommandSet that isn't related to SupportFuncProvider which uses its support function"""
+
     def __init__(self, dummy):
         """dummy variable prevents this from being autoloaded in other tests"""
-        super(SubclassCommandSetCase2, self).__init__()
+        super(SupportFuncUserUnrelated, self).__init__()
 
     parser = cmd2.Cmd2ArgumentParser()
-    parser.add_argument('state', type=str, completer=WithCompleterCommandSet.complete_states)
+    parser.add_argument('state', type=str, completer=SupportFuncProvider.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_case2(self, ns: argparse.Namespace):
+    def do_user_unrelated(self, ns: argparse.Namespace):
         self._cmd.poutput('something {}'.format(ns.state))
 
 
 def test_cross_commandset_completer(command_sets_manual):
     global complete_states_expected_self
     # This tests the different ways to locate the matching CommandSet when completing an argparse argument.
-    # Exercises the `_complete_arg` function of `ArgparseCompleter` in `argparse_completer.py`
+    # Exercises the 3 cases in cmd2.Cmd._resolve_func_self().
+
+    # Create all the CommandSets for these tests
+    func_provider = SupportFuncProvider(1)
+    user_sub1 = SupportFuncUserSubclass1(2)
+    user_sub2 = SupportFuncUserSubclass2(3)
+    user_unrelated = SupportFuncUserUnrelated(4)
 
     ####################################################################################################################
     # This exercises Case 1
     # If the CommandSet holding a command is a sub-class of the class that defines the completer function, then use that
     # CommandSet instance as self when calling the completer
-    case1_set = SubclassCommandSetCase1(1)
 
-    command_sets_manual.register_command_set(case1_set)
+    # Create instances of two different sub-class types to ensure no one removes the case 1 check in Cmd._resolve_func_self().
+    # If that check is removed, testing with only 1 sub-class type will still pass. Testing it with two sub-class types
+    # will fail and show that the case 1 check cannot be removed.
+    command_sets_manual.register_command_set(user_sub1)
+    command_sets_manual.register_command_set(user_sub2)
 
     text = ''
-    line = 'case1 {}'.format(text)
+    line = 'user_sub1 {}'.format(text)
     endidx = len(line)
     begidx = endidx
-    complete_states_expected_self = case1_set
+    complete_states_expected_self = user_sub1
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
     complete_states_expected_self = None
 
     assert first_match == 'alabama'
-    assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
+    assert command_sets_manual.completion_matches == SupportFuncProvider.states
 
-    assert getattr(command_sets_manual.cmd_func('case1').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY) == 'With Completer'
+    assert (
+        getattr(command_sets_manual.cmd_func('user_sub1').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY) == 'With Completer'
+    )
 
-    command_sets_manual.unregister_command_set(case1_set)
+    command_sets_manual.unregister_command_set(user_sub2)
+    command_sets_manual.unregister_command_set(user_sub1)
 
     ####################################################################################################################
     # This exercises Case 2
     # If the CommandSet holding a command is unrelated to the CommandSet holding the completer function, then search
     # all installed CommandSet instances for one that is an exact type match
 
-    # First verify that, without the correct command set
-    base_set = WithCompleterCommandSet(1)
-    case2_set = SubclassCommandSetCase2(2)
-    command_sets_manual.register_command_set(base_set)
-    command_sets_manual.register_command_set(case2_set)
+    command_sets_manual.register_command_set(func_provider)
+    command_sets_manual.register_command_set(user_unrelated)
 
     text = ''
-    line = 'case2 {}'.format(text)
+    line = 'user_unrelated {}'.format(text)
     endidx = len(line)
     begidx = endidx
-    complete_states_expected_self = base_set
+    complete_states_expected_self = func_provider
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
     complete_states_expected_self = None
 
     assert first_match == 'alabama'
-    assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
+    assert command_sets_manual.completion_matches == SupportFuncProvider.states
 
-    command_sets_manual.unregister_command_set(case2_set)
-    command_sets_manual.unregister_command_set(base_set)
+    command_sets_manual.unregister_command_set(user_unrelated)
+    command_sets_manual.unregister_command_set(func_provider)
 
     ####################################################################################################################
     # This exercises Case 3
     # If the CommandSet holding a command is unrelated to the CommandSet holding the completer function,
     # and no exact type match can be found, but sub-class matches can be found and there is only a single
-    # subclass match, then use the lone subclass match as the parent CommandSet.
+    # sub-class match, then use the lone sub-class match as the parent CommandSet.
 
-    command_sets_manual.register_command_set(case1_set)
-    command_sets_manual.register_command_set(case2_set)
+    command_sets_manual.register_command_set(user_sub1)
+    command_sets_manual.register_command_set(user_unrelated)
 
     text = ''
-    line = 'case2 {}'.format(text)
+    line = 'user_unrelated {}'.format(text)
     endidx = len(line)
     begidx = endidx
-    complete_states_expected_self = case1_set
+    complete_states_expected_self = user_sub1
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
     complete_states_expected_self = None
 
     assert first_match == 'alabama'
-    assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
+    assert command_sets_manual.completion_matches == SupportFuncProvider.states
 
-    command_sets_manual.unregister_command_set(case2_set)
-    command_sets_manual.unregister_command_set(case1_set)
+    command_sets_manual.unregister_command_set(user_unrelated)
+    command_sets_manual.unregister_command_set(user_sub1)
 
     ####################################################################################################################
     # Error Case 1
@@ -820,10 +837,10 @@ def test_cross_commandset_completer(command_sets_manual):
     # all installed CommandSet instances for one that is an exact type match, none are found
     # search for sub-class matches, also none are found.
 
-    command_sets_manual.register_command_set(case2_set)
+    command_sets_manual.register_command_set(user_unrelated)
 
     text = ''
-    line = 'case2 {}'.format(text)
+    line = 'user_unrelated {}'.format(text)
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
@@ -831,21 +848,20 @@ def test_cross_commandset_completer(command_sets_manual):
     assert first_match is None
     assert command_sets_manual.completion_matches == []
 
-    command_sets_manual.unregister_command_set(case2_set)
+    command_sets_manual.unregister_command_set(user_unrelated)
 
     ####################################################################################################################
     # Error Case 2
     # If the CommandSet holding a command is unrelated to the CommandSet holding the completer function, then search
     # all installed CommandSet instances for one that is an exact type match, none are found
-    # search for sub-class matches, more than 1 is found
+    # search for sub-class matches, more than 1 is found.
 
-    error_case2_set = SubclassCommandSetErrorCase2(4)
-    command_sets_manual.register_command_set(case1_set)
-    command_sets_manual.register_command_set(case2_set)
-    command_sets_manual.register_command_set(error_case2_set)
+    command_sets_manual.register_command_set(user_sub1)
+    command_sets_manual.register_command_set(user_sub2)
+    command_sets_manual.register_command_set(user_unrelated)
 
     text = ''
-    line = 'case2 {}'.format(text)
+    line = 'user_unrelated {}'.format(text)
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
@@ -853,7 +869,9 @@ def test_cross_commandset_completer(command_sets_manual):
     assert first_match is None
     assert command_sets_manual.completion_matches == []
 
-    command_sets_manual.unregister_command_set(case2_set)
+    command_sets_manual.unregister_command_set(user_unrelated)
+    command_sets_manual.unregister_command_set(user_sub2)
+    command_sets_manual.unregister_command_set(user_sub1)
 
 
 class CommandSetWithPathComplete(cmd2.CommandSet):
