@@ -1,4 +1,4 @@
-## 2.3.0 (TBD, 2021)
+## 2.3.0 (November 11, 2021)
 * Bug Fixes
   * Fixed `AttributeError` in `rl_get_prompt()` when prompt is `None`.
   * Fixed bug where using choices on a Settable didn't verify that a valid choice had been entered.
