@@ -746,7 +746,7 @@ class SupportFuncUserUnrelated(cmd2.CommandSet):
         self._cmd.poutput('something {}'.format(ns.state))
 
 
-def test_cross_commandset_completer(command_sets_manual):
+def test_cross_commandset_completer(command_sets_manual, capsys):
     global complete_states_expected_self
     # This tests the different ways to locate the matching CommandSet when completing an argparse argument.
     # Exercises the 3 cases in cmd2.Cmd._resolve_func_self().
@@ -844,9 +844,11 @@ def test_cross_commandset_completer(command_sets_manual):
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+    out, err = capsys.readouterr()
 
     assert first_match is None
     assert command_sets_manual.completion_matches == []
+    assert "Could not find CommandSet instance" in out
 
     command_sets_manual.unregister_command_set(user_unrelated)
 
@@ -865,9 +867,11 @@ def test_cross_commandset_completer(command_sets_manual):
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+    out, err = capsys.readouterr()
 
     assert first_match is None
     assert command_sets_manual.completion_matches == []
+    assert "Could not find CommandSet instance" in out
 
     command_sets_manual.unregister_command_set(user_unrelated)
     command_sets_manual.unregister_command_set(user_sub2)
