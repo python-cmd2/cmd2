@@ -17,6 +17,9 @@
 * Deprecations
   * Deprecated `cmd2.fg`. Use `cmd2.Fg` instead.
   * Deprecated `cmd2.bg`. Use `cmd2.Bg` instead.
+* Breaking Changes
+  * To support the color upgrade, all cmd2 colors now inherit from either `ansi.FgColor` or `ansi.BgColor`.
+    Therefore, `ansi.style()` no longer accepts colors as strings.
 
 ## 2.2.0 (September 14, 2021)
 * Bug Fixes
@@ -45,6 +48,7 @@
   * Updated `async_alert()` to account for `self.prompt` not matching Readline's current prompt.
 * Deletions (potentially breaking changes)
   * Deleted `set_choices_provider()` and `set_completer()` which were deprecated in 2.1.2
+* Breaking Changes
   * Renamed `set_default_argument_parser()` to `set_default_argument_parser_type()`
 
 ## 2.1.2 (July 5, 2021)
