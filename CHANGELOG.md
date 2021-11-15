@@ -1,3 +1,7 @@
+## 2.3.1 (TBD, 2021)
+* Enhancements
+  * Added ability to use `CompletionItems` as argparse choices
+
 ## 2.3.0 (November 11, 2021)
 * Bug Fixes
   * Fixed `AttributeError` in `rl_get_prompt()` when prompt is `None`.

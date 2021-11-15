@@ -284,3 +284,58 @@ def test_cmd2_attribute_wrapper():
     new_val = 22
     wrapper.set(new_val)
     assert wrapper.get() == new_val
+
+
+def test_completion_items_as_choices(capsys):
+    """
+    Test cmd2's patch to Argparse._check_value() which supports CompletionItems as choices.
+    Choices are compared to CompletionItems.orig_value instead of the CompletionItem instance.
+    """
+    from cmd2.argparse_custom import (
+        CompletionItem,
+    )
+
+    ##############################################################
+    # Test CompletionItems with str values
+    ##############################################################
+    choices = [CompletionItem("1", "Description One"), CompletionItem("2", "Two")]
+    parser = Cmd2ArgumentParser()
+    parser.add_argument("choices_arg", type=str, choices=choices)
+
+    # First test valid choices. Confirm the parsed data matches the correct type of str.
+    args = parser.parse_args(['1'])
+    assert args.choices_arg == '1'
+
+    args = parser.parse_args(['2'])
+    assert args.choices_arg == '2'
+
+    # Next test invalid choice
+    with pytest.raises(SystemExit):
+        args = parser.parse_args(['3'])
+
+    # Confirm error text contains correct value type of str
+    out, err = capsys.readouterr()
+    assert "invalid choice: '3' (choose from '1', '2')" in err
+
+    ##############################################################
+    # Test CompletionItems with int values
+    ##############################################################
+    choices = [CompletionItem(1, "Description One"), CompletionItem(2, "Two")]
+    parser = Cmd2ArgumentParser()
+    # noinspection PyTypeChecker
+    parser.add_argument("choices_arg", type=int, choices=choices)
+
+    # First test valid choices. Confirm the parsed data matches the correct type of int.
+    args = parser.parse_args(['1'])
+    assert args.choices_arg == 1
+
+    args = parser.parse_args(['2'])
+    assert args.choices_arg == 2
+
+    # Next test invalid choice
+    with pytest.raises(SystemExit):
+        args = parser.parse_args(['3'])
+
+    # Confirm error text contains correct value type of int
+    out, err = capsys.readouterr()
+    assert 'invalid choice: 3 (choose from 1, 2)' in err

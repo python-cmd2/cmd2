@@ -130,7 +130,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         items = []
         for i in range(0, 10):
             main_str = 'main_str{}'.format(i)
-            items.append(CompletionItem(main_str, desc='blah blah'))
+            items.append(CompletionItem(main_str, description='blah blah'))
         return items
 
     choices_parser = Cmd2ArgumentParser()
