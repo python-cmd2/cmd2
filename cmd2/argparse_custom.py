@@ -156,8 +156,12 @@ can format them in such a way to have multiple columns::
     2           Another item         False
     3           Yet another item     False
 
-To use CompletionItems, just return them from your choices or completer
-functions.
+To use CompletionItems, just return them from your choices_provider or
+completer functions. They can also be used as argparse choices. When a
+CompletionItem is created, it stores the original value (e.g. ID number) and
+makes it accessible through a property called orig_value. cmd2 has patched
+argparse so that when evaluating choices, input is compared to
+CompletionItem.orig_value instead of the CompletionItem instance.
 
 To avoid printing a ton of information to the screen at once when a user
 presses tab, there is a maximum threshold for the number of CompletionItems
@@ -172,6 +176,12 @@ and will not include the description value of the CompletionItems.
 ``argparse._ActionsContainer.add_argument`` - adds arguments related to tab
 completion and enables nargs range parsing. See _add_argument_wrapper for
 more details on these arguments.
+
+``argparse.ArgumentParser._check_value`` - adds support for using
+``CompletionItems`` as argparse choices. When evaluating choices, input is
+compared to ``CompletionItem.orig_value`` instead of the ``CompletionItem``
+instance.
+See _ArgumentParser_check_value for more details.
 
 ``argparse.ArgumentParser._get_nargs_pattern`` - adds support for nargs ranges.
 See _get_nargs_pattern_wrapper for more details.
@@ -308,17 +318,26 @@ class CompletionItem(str):
         return super(CompletionItem, cls).__new__(cls, value)
 
     # noinspection PyUnusedLocal
-    def __init__(self, value: object, desc: str = '', *args: Any) -> None:
+    def __init__(self, value: object, description: str = '', *args: Any) -> None:
         """
         CompletionItem Initializer
 
         :param value: the value being tab completed
-        :param desc: description text to display
+        :param description: description text to display
         :param args: args for str __init__
         :param kwargs: kwargs for str __init__
         """
         super().__init__(*args)
-        self.description = desc
+        self.description = description
+
+        # Save the original value to support CompletionItems as argparse choices.
+        # cmd2 has patched argparse so input is compared to this value instead of the CompletionItem instance.
+        self.__orig_value = value
+
+    @property
+    def orig_value(self) -> Any:
+        """Read-only property for __orig_value"""
+        return self.__orig_value
 
 
 ############################################################################################################
@@ -870,7 +889,7 @@ def _add_argument_wrapper(
 setattr(argparse._ActionsContainer, 'add_argument', _add_argument_wrapper)
 
 ############################################################################################################
-# Patch ArgumentParser._get_nargs_pattern with our wrapper to nargs ranges
+# Patch ArgumentParser._get_nargs_pattern with our wrapper to support nargs ranges
 ############################################################################################################
 
 # Save original ArgumentParser._get_nargs_pattern so we can call it in our wrapper
@@ -905,7 +924,7 @@ setattr(argparse.ArgumentParser, '_get_nargs_pattern', _get_nargs_pattern_wrappe
 
 
 ############################################################################################################
-# Patch ArgumentParser._match_argument with our wrapper to nargs ranges
+# Patch ArgumentParser._match_argument with our wrapper to support nargs ranges
 ############################################################################################################
 # noinspection PyProtectedMember
 orig_argument_parser_match_argument = argparse.ArgumentParser._match_argument
@@ -975,6 +994,38 @@ def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_comp
 
 
 setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap_completer_type)
+
+
+############################################################################################################
+# Patch ArgumentParser._check_value to support CompletionItems as choices
+############################################################################################################
+# noinspection PyPep8Naming
+def _ArgumentParser_check_value(self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:
+    """
+    Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
+    When evaluating choices, input is compared to CompletionItem.orig_value instead of the
+    CompletionItem instance.
+
+    :param self: ArgumentParser instance
+    :param action: the action being populated
+    :param value: value from command line already run through conversion function by argparse
+    """
+    # Import gettext like argparse does
+    from gettext import (
+        gettext as _,
+    )
+
+    # converted value must be one of the choices (if specified)
+    if action.choices is not None:
+        # If any choice is a CompletionItem, then use its orig_value property.
+        choices = [c.orig_value if isinstance(c, CompletionItem) else c for c in action.choices]
+        if value not in choices:
+            args = {'value': value, 'choices': ', '.join(map(repr, choices))}
+            msg = _('invalid choice: %(value)r (choose from %(choices)s)')
+            raise ArgumentError(action, msg % args)
+
+
+setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 
 
 ############################################################################################################
