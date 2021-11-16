@@ -332,12 +332,12 @@ class CompletionItem(str):
 
         # Save the original value to support CompletionItems as argparse choices.
         # cmd2 has patched argparse so input is compared to this value instead of the CompletionItem instance.
-        self.__orig_value = value
+        self._orig_value = value
 
     @property
     def orig_value(self) -> Any:
-        """Read-only property for __orig_value"""
-        return self.__orig_value
+        """Read-only property for _orig_value"""
+        return self._orig_value
 
 
 ############################################################################################################

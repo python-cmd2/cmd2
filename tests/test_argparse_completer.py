@@ -115,11 +115,14 @@ class ArgparseCompleterTester(cmd2.Cmd):
     CUSTOM_DESC_HEADER = "Custom Header"
 
     # Lists used in our tests (there is a mix of sorted and unsorted on purpose)
-    non_negative_int_choices = [1, 2, 3, 0, 22]
-    int_choices = [-1, 1, -2, 2, 0, -12]
+    non_negative_num_choices = [1, 2, 3, 0.5, 22]
+    num_choices = [-1, 1, -2, 2.5, 0, -12]
     static_choices_list = ['static', 'choices', 'stop', 'here']
     choices_from_provider = ['choices', 'provider', 'probably', 'improved']
     completion_item_choices = [CompletionItem('choice_1', 'A description'), CompletionItem('choice_2', 'Another description')]
+
+    # This tests that CompletionItems created with numerical values are sorted as numbers.
+    num_completion_items = [CompletionItem(5, "Five"), CompletionItem(1.5, "One.Five"), CompletionItem(2, "Five")]
 
     def choices_provider(self) -> List[str]:
         """Method that provides choices"""
@@ -141,14 +144,12 @@ class ArgparseCompleterTester(cmd2.Cmd):
         "-p", "--provider", help="a flag populated with a choices provider", choices_provider=choices_provider
     )
     choices_parser.add_argument(
-        '-d',
         "--desc_header",
         help='this arg has a descriptive header',
         choices_provider=completion_item_method,
         descriptive_header=CUSTOM_DESC_HEADER,
     )
     choices_parser.add_argument(
-        '-n',
         "--no_header",
         help='this arg has no descriptive header',
         choices_provider=completion_item_method,
@@ -162,8 +163,11 @@ class ArgparseCompleterTester(cmd2.Cmd):
         metavar=TUPLE_METAVAR,
         nargs=argparse.ONE_OR_MORE,
     )
-    choices_parser.add_argument('-i', '--int', type=int, help='a flag with an int type', choices=int_choices)
+    choices_parser.add_argument('-n', '--num', type=int, help='a flag with an int type', choices=num_choices)
     choices_parser.add_argument('--completion_items', help='choices are CompletionItems', choices=completion_item_choices)
+    choices_parser.add_argument(
+        '--num_completion_items', help='choices are numerical CompletionItems', choices=num_completion_items
+    )
 
     # Positional args for choices command
     choices_parser.add_argument("list_pos", help="a positional populated with a choices list", choices=static_choices_list)
@@ -171,7 +175,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         "method_pos", help="a positional populated with a choices provider", choices_provider=choices_provider
     )
     choices_parser.add_argument(
-        'non_negative_int', type=int, help='a positional with non-negative int choices', choices=non_negative_int_choices
+        'non_negative_num', type=int, help='a positional with non-negative numerical choices', choices=non_negative_num_choices
     )
     choices_parser.add_argument('empty_choices', help='a positional with empty choices', choices=[])
 
@@ -558,10 +562,11 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matc
         ('--list', 's', ['static', 'stop']),
         ('-p', '', ArgparseCompleterTester.choices_from_provider),
         ('--provider', 'pr', ['provider', 'probably']),
-        ('-i', '', ArgparseCompleterTester.int_choices),
-        ('--int', '1', ['1 ']),
-        ('--int', '-', [-1, -2, -12]),
-        ('--int', '-1', [-1, -12]),
+        ('-n', '', ArgparseCompleterTester.num_choices),
+        ('--num', '1', ['1 ']),
+        ('--num', '-', [-1, -2, -12]),
+        ('--num', '-1', [-1, -12]),
+        ('--num_completion_items', '', ArgparseCompleterTester.num_completion_items),
     ],
 )
 def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
@@ -592,7 +597,7 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
         (1, 's', ['static', 'stop']),
         (2, '', ArgparseCompleterTester.choices_from_provider),
         (2, 'pr', ['provider', 'probably']),
-        (3, '', ArgparseCompleterTester.non_negative_int_choices),
+        (3, '', ArgparseCompleterTester.non_negative_num_choices),
         (3, '2', [2, 22]),
         (4, '', []),
     ],
