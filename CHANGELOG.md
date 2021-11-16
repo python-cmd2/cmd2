@@ -1,6 +1,14 @@
 ## 2.3.1 (TBD, 2021)
+* Bug Fixes
+  * Fixed issue introduced in 2.3.0 with `AlternatingTable`, `BorderedTable`, and `SimpleTable` that caused
+    header alignment settings to be overridden by data alignment settings.
 * Enhancements
-  * Added ability to use `CompletionItems` as argparse choices
+  * `CompletionItems` now saves the original object from which it creates a string.
+  * Using `CompletionItems` as argparse choices is fully supported. `cmd2` patched `argparse` to compare input to
+    the original value instead of the `CompletionItems` instance.
+  * `ArgparseCompleter` now does the following if a list of `CompletionItems` was created with numerical types
+    * Sorts completion hints numerically
+    * Right-aligns the left-most column in completion hint table
 
 ## 2.3.0 (November 11, 2021)
 * Bug Fixes
@@ -13,7 +21,7 @@
     and/or data text. This allows for things like nesting an AlternatingTable in another AlternatingTable.
   * AlternatingTable no longer automatically applies background color to borders. This was done to improve
     appearance since the background color extended beyond the borders of the table.
-  * Added ability to colorize all aspects of `AlternatingTables`, `BorderedTables`, and `SimpleTables`.
+  * Added ability to colorize all aspects of `AlternatingTable`, `BorderedTable`, and `SimpleTable`.
   * Added support for 8-bit/256-colors with the `cmd2.EightBitFg` and `cmd2.EightBitBg` classes.
   * Added support for 24-bit/RGB colors with the `cmd2.RgbFg` and `cmd2.RgbBg` classes.
   * Removed dependency on colorama.

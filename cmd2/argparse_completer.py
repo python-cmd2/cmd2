@@ -49,6 +49,7 @@ from .exceptions import (
 )
 from .table_creator import (
     Column,
+    HorizontalAlignment,
     SimpleTable,
 )
 
@@ -547,15 +548,32 @@ class ArgparseCompleter:
         return matches
 
     def _format_completions(self, arg_state: _ArgumentState, completions: Union[List[str], List[CompletionItem]]) -> List[str]:
-        # Check if the results are CompletionItems and that there aren't too many to display
-        if 1 < len(completions) <= self._cmd2_app.max_completion_items and isinstance(completions[0], CompletionItem):
-            completion_items = cast(List[CompletionItem], completions)
-            four_spaces = 4 * ' '
+        """Format CompletionItems into hint table"""
 
-            # If the user has not already sorted the CompletionItems, then sort them before appending the descriptions
-            if not self._cmd2_app.matches_sorted:
+        # Nothing to do if we don't have at least 2 completions which are all CompletionItems
+        if len(completions) < 2 or not all(isinstance(c, CompletionItem) for c in completions):
+            return cast(List[str], completions)
+
+        completion_items = cast(List[CompletionItem], completions)
+
+        # Check if the data being completed have a numerical type
+        all_nums = all(isinstance(c.orig_value, numbers.Number) for c in completion_items)
+
+        # Sort CompletionItems before building the hint table
+        if not self._cmd2_app.matches_sorted:
+            # If all orig_value types are numbers, then sort by that value
+            if all_nums:
+                completion_items.sort(key=lambda c: c.orig_value)  # type: ignore[no-any-return]
+
+            # Otherwise sort as strings
+            else:
                 completion_items.sort(key=self._cmd2_app.default_sort_key)
-                self._cmd2_app.matches_sorted = True
+
+            self._cmd2_app.matches_sorted = True
+
+        # Check if there are too many CompletionItems to display as a table
+        if len(completions) <= self._cmd2_app.max_completion_items:
+            four_spaces = 4 * ' '
 
             # If a metavar was defined, use that instead of the dest field
             destination = arg_state.action.metavar if arg_state.action.metavar else arg_state.action.dest
@@ -588,13 +606,22 @@ class ArgparseCompleter:
                 desc_width = max(widest_line(item.description), desc_width)
 
             cols = list()
-            cols.append(Column(destination.upper(), width=token_width))
+            dest_alignment = HorizontalAlignment.RIGHT if all_nums else HorizontalAlignment.LEFT
+            cols.append(
+                Column(
+                    destination.upper(),
+                    width=token_width,
+                    header_horiz_align=dest_alignment,
+                    data_horiz_align=dest_alignment,
+                )
+            )
             cols.append(Column(desc_header, width=desc_width))
 
             hint_table = SimpleTable(cols, divider_char=self._cmd2_app.ruler)
             table_data = [[item, item.description] for item in completion_items]
             self._cmd2_app.formatted_completions = hint_table.generate_table(table_data, row_spacing=0)
 
+        # Return sorted list of completions
         return cast(List[str], completions)
 
     def complete_subcommand_help(self, text: str, line: str, begidx: int, endidx: int, tokens: List[str]) -> List[str]:

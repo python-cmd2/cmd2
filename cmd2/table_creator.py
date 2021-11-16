@@ -416,8 +416,9 @@ class TableCreator:
 
     def generate_row(
         self,
+        row_data: Sequence[Any],
+        is_header: bool,
         *,
-        row_data: Optional[Sequence[Any]] = None,
         fill_char: str = SPACE,
         pre_line: str = EMPTY,
         inter_cell: str = (2 * SPACE),
@@ -426,8 +427,9 @@ class TableCreator:
         """
         Generate a header or data table row
 
-        :param row_data: If this is None then a header row is generated. Otherwise data should have an entry for each
-                         column in the row. (Defaults to None)
+        :param row_data: data with an entry for each column in the row
+        :param is_header: True if writing a header cell, otherwise writing a data cell. This determines whether to
+                          use header or data alignment settings defined in the Columns.
         :param fill_char: character that fills remaining space in a cell. Defaults to space. If this is a tab,
                           then it will be converted to one space. (Cannot be a line breaking character)
         :param pre_line: string to print before each line of a row. This can be used for a left row border and
@@ -453,13 +455,8 @@ class TableCreator:
                 # Display width of this cell
                 self.width = 0
 
-        if row_data is None:
-            row_data = [col.header for col in self.cols]
-            is_header = True
-        else:
-            if len(row_data) != len(self.cols):
-                raise ValueError("Length of row_data must match length of cols")
-            is_header = False
+        if len(row_data) != len(self.cols):
+            raise ValueError("Length of row_data must match length of cols")
 
         # Replace tabs (tabs in data strings will be handled in _generate_cell_lines())
         fill_char = fill_char.replace('\t', SPACE)
@@ -654,14 +651,14 @@ class SimpleTable(TableCreator):
 
         # Apply background color to header text in Columns which allow it
         to_display: List[Any] = []
-        for index, col in enumerate(self.cols):
+        for col in self.cols:
             if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
             else:
                 to_display.append(col.header)
 
         # Create the header labels
-        header_labels = self.generate_row(row_data=to_display, fill_char=fill_char, inter_cell=inter_cell)
+        header_labels = self.generate_row(to_display, is_header=True, fill_char=fill_char, inter_cell=inter_cell)
         header_buf.write(header_labels)
 
         # Add the divider if necessary
@@ -696,7 +693,7 @@ class SimpleTable(TableCreator):
             else:
                 to_display.append(row_data[index])
 
-        return self.generate_row(row_data=to_display, fill_char=fill_char, inter_cell=inter_cell)
+        return self.generate_row(to_display, is_header=False, fill_char=fill_char, inter_cell=inter_cell)
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True, row_spacing: int = 1) -> str:
         """
@@ -855,7 +852,8 @@ class BorderedTable(TableCreator):
         post_line = self.padding * '═' + '╗'
 
         return self.generate_row(
-            row_data=self.empty_data,
+            self.empty_data,
+            is_header=False,
             fill_char=self.apply_border_color(fill_char),
             pre_line=self.apply_border_color(pre_line),
             inter_cell=self.apply_border_color(inter_cell),
@@ -876,7 +874,8 @@ class BorderedTable(TableCreator):
         post_line = self.padding * '═' + '╣'
 
         return self.generate_row(
-            row_data=self.empty_data,
+            self.empty_data,
+            is_header=False,
             fill_char=self.apply_border_color(fill_char),
             pre_line=self.apply_border_color(pre_line),
             inter_cell=self.apply_border_color(inter_cell),
@@ -898,7 +897,8 @@ class BorderedTable(TableCreator):
         post_line = self.padding * '─' + '╢'
 
         return self.generate_row(
-            row_data=self.empty_data,
+            self.empty_data,
+            is_header=False,
             fill_char=self.apply_border_color(fill_char),
             pre_line=self.apply_border_color(pre_line),
             inter_cell=self.apply_border_color(inter_cell),
@@ -919,7 +919,8 @@ class BorderedTable(TableCreator):
         post_line = self.padding * '═' + '╝'
 
         return self.generate_row(
-            row_data=self.empty_data,
+            self.empty_data,
+            is_header=False,
             fill_char=self.apply_border_color(fill_char),
             pre_line=self.apply_border_color(pre_line),
             inter_cell=self.apply_border_color(inter_cell),
@@ -941,7 +942,7 @@ class BorderedTable(TableCreator):
 
         # Apply background color to header text in Columns which allow it
         to_display: List[Any] = []
-        for index, col in enumerate(self.cols):
+        for col in self.cols:
             if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
             else:
@@ -953,7 +954,7 @@ class BorderedTable(TableCreator):
         header_buf.write('\n')
         header_buf.write(
             self.generate_row(
-                row_data=to_display, fill_char=fill_char, pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
+                to_display, is_header=True, fill_char=fill_char, pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
             )
         )
         header_buf.write('\n')
@@ -988,7 +989,7 @@ class BorderedTable(TableCreator):
                 to_display.append(row_data[index])
 
         return self.generate_row(
-            row_data=to_display, fill_char=fill_char, pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
+            to_display, is_header=False, fill_char=fill_char, pre_line=pre_line, inter_cell=inter_cell, post_line=post_line
         )
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True) -> str:
