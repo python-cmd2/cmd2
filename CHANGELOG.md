@@ -1,4 +1,4 @@
-## 2.3.1 (TBD, 2021)
+## 2.3.1 (November 18, 2021)
 * Bug Fixes
   * Fixed issue introduced in 2.3.0 with `AlternatingTable`, `BorderedTable`, and `SimpleTable` that caused
     header alignment settings to be overridden by data alignment settings.
@@ -6,7 +6,7 @@
   * `CompletionItems` now saves the original object from which it creates a string.
   * Using `CompletionItems` as argparse choices is fully supported. `cmd2` patched `argparse` to compare input to
     the original value instead of the `CompletionItems` instance.
-  * `ArgparseCompleter` now does the following if a list of `CompletionItems` was created with numerical types
+  * `ArgparseCompleter` now does the following if a list of `CompletionItems` was created with numerical types:
     * Sorts completion hints numerically
     * Right-aligns the left-most column in completion hint table
 
