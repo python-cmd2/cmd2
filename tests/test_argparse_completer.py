@@ -23,6 +23,7 @@ from cmd2 import (
 )
 from cmd2.utils import (
     StdSim,
+    align_right,
 )
 
 from .conftest import (
@@ -718,6 +719,53 @@ def test_autocomp_blank_token(ac_app):
     assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_2)
 
 
+def test_completion_items(ac_app):
+    # First test CompletionItems created from strings
+    text = ''
+    line = 'choices --completion_items {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None
+    assert len(ac_app.completion_matches) == len(ac_app.completion_item_choices)
+    assert len(ac_app.display_matches) == len(ac_app.completion_item_choices)
+
+    # Look for both the value and description in the hint table
+    line_found = False
+    for line in ac_app.formatted_completions.splitlines():
+        # Since the CompletionItems were created from strings, the left-most column is left-aligned.
+        # Therefore choice_1 will begin the line.
+        if line.startswith('choice_1') and 'A description' in line:
+            line_found = True
+            break
+
+    assert line_found
+
+    # Now test CompletionItems created from numbers
+    text = ''
+    line = 'choices --num_completion_items {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None
+    assert len(ac_app.completion_matches) == len(ac_app.num_completion_items)
+    assert len(ac_app.display_matches) == len(ac_app.num_completion_items)
+
+    # Look for both the value and description in the hint table
+    line_found = False
+    aligned_val = align_right('1.5', width=cmd2.ansi.style_aware_wcswidth('num_completion_items'))
+    for line in ac_app.formatted_completions.splitlines():
+        # Since the CompletionItems were created from numbers, the left-most column is right-aligned.
+        # Therefore 1.5 will be right-aligned in a field as wide as the arg ("num_completion_items").
+        if line.startswith(aligned_val) and 'One.Five' in line:
+            line_found = True
+            break
+
+    assert line_found
+
+
 @pytest.mark.parametrize(
     'num_aliases, show_description',
     [
@@ -729,7 +777,7 @@ def test_autocomp_blank_token(ac_app):
         (100, False),
     ],
 )
-def test_completion_items(ac_app, num_aliases, show_description):
+def test_max_completion_items(ac_app, num_aliases, show_description):
     # Create aliases
     for i in range(0, num_aliases):
         run_cmd(ac_app, 'alias create fake_alias{} help'.format(i))
@@ -756,27 +804,6 @@ def test_completion_items(ac_app, num_aliases, show_description):
                 break
 
         assert description_displayed
-
-
-def test_completion_item_choices(ac_app):
-    text = ''
-    line = 'choices --completion_items {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None
-    assert len(ac_app.completion_matches) == len(ac_app.completion_item_choices)
-    assert len(ac_app.display_matches) == len(ac_app.completion_item_choices)
-
-    # The table will show both the choice and description
-    description_displayed = False
-    for line in ac_app.formatted_completions.splitlines():
-        if 'choice_1' in line and 'A description' in line:
-            description_displayed = True
-            break
-
-    assert description_displayed
 
 
 @pytest.mark.parametrize(
