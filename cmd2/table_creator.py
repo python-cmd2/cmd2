@@ -386,7 +386,8 @@ class TableCreator:
         Generate the lines of a table cell
 
         :param cell_data: data to be included in cell
-        :param is_header: True if writing a header cell, otherwise writing a data cell
+        :param is_header: True if writing a header cell, otherwise writing a data cell. This determines whether to
+                          use header or data alignment settings as well as maximum lines to wrap.
         :param col: Column definition for this cell
         :param fill_char: character that fills remaining space in a cell. If your text has a background color,
                           then give fill_char the same background color. (Cannot be a line breaking character)
@@ -429,7 +430,7 @@ class TableCreator:
 
         :param row_data: data with an entry for each column in the row
         :param is_header: True if writing a header cell, otherwise writing a data cell. This determines whether to
-                          use header or data alignment settings defined in the Columns.
+                          use header or data alignment settings as well as maximum lines to wrap.
         :param fill_char: character that fills remaining space in a cell. Defaults to space. If this is a tab,
                           then it will be converted to one space. (Cannot be a line breaking character)
         :param pre_line: string to print before each line of a row. This can be used for a left row border and
