@@ -5418,7 +5418,6 @@ class Cmd(cmd.Cmd):
 
         :param cmd_support_func: command support function. This could be a completer or namespace provider
         :param cmd_self: The `self` associated with the command or subcommand
-        :return:
         """
         # figure out what class the command support function was defined in
         func_class: Optional[Type[Any]] = get_defining_class(cmd_support_func)

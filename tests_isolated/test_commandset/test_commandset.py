@@ -1104,3 +1104,46 @@ Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
                 settable_attrib_name='some_value',
             )
         )
+
+
+class NsProviderSet(cmd2.CommandSet):
+    # CommandSet which implements a namespace provider
+    def __init__(self, dummy):
+        # Use dummy argument so this won't be autoloaded by other tests
+        super(NsProviderSet, self).__init__()
+
+    def ns_provider(self) -> argparse.Namespace:
+        ns = argparse.Namespace()
+        # Save what was passed as self from with_argparser().
+        ns.self = self
+        return ns
+
+
+class NsProviderApp(cmd2.Cmd):
+    # Used to test namespace providers in CommandSets
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        super(NsProviderApp, self).__init__(*args, **kwargs)
+
+    @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(), ns_provider=NsProviderSet.ns_provider)
+    def do_test_ns(self, args: argparse.Namespace) -> None:
+        # Save args.self so the unit tests can read it.
+        self.last_result = args.self
+
+
+def test_ns_provider():
+    """This exercises code in with_argparser() decorator that calls namespace providers"""
+    ns_provider_set = NsProviderSet(1)
+    app = NsProviderApp(auto_load_commands=False)
+
+    # First test the case in which a namespace provider function resides in a CommandSet class which is registered.
+    # with_argparser() will pass the CommandSet instance to the ns_provider() function.
+    app.register_command_set(ns_provider_set)
+    run_cmd(app, "test_ns")
+    assert app.last_result == ns_provider_set
+
+    # Now test the case in which a namespace provider function resides in a CommandSet class which is not registered.
+    # with_argparser() will receive None from cmd2.Cmd._resolve_func_self() and therefore pass app as self to ns_provider().
+    app.unregister_command_set(ns_provider_set)
+    run_cmd(app, "test_ns")
+    assert app.last_result == app

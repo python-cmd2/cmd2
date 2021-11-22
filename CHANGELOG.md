@@ -1,3 +1,7 @@
+## 2.3.2 (November 22, 2021)
+* Bug Fixes
+  * Fixed issue where a `ns_provider` could be passed `None` instead of its correct `cmd2.Cmd` or `CommandSet` value.
+
 ## 2.3.1 (November 18, 2021)
 * Bug Fixes
   * Fixed issue introduced in 2.3.0 with `AlternatingTable`, `BorderedTable`, and `SimpleTable` that caused

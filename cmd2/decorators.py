@@ -276,9 +276,9 @@ def with_argparser(
     with the given instance of argparse.ArgumentParser.
 
     :param parser: unique instance of ArgumentParser
-    :param ns_provider: An optional function that accepts a cmd2.Cmd object as an argument and returns an
-                        argparse.Namespace. This is useful if the Namespace needs to be prepopulated with
-                        state data that affects parsing.
+    :param ns_provider: An optional function that accepts a cmd2.Cmd or cmd2.CommandSet object as an argument and returns an
+                        argparse.Namespace. This is useful if the Namespace needs to be prepopulated with state data that
+                        affects parsing.
     :param preserve_quotes: if ``True``, then arguments passed to argparse maintain their quotes
     :param with_unknown_args: if true, then capture unknown args
     :return: function that gets passed argparse-parsed args in a ``Namespace``
@@ -351,7 +351,7 @@ def with_argparser(
                 # functions are registered with the command argparser before anything is instantiated, we
                 # need to find an instance at runtime that matches the types during declaration
                 provider_self = cmd2_app._resolve_func_self(ns_provider, args[0])
-                namespace = ns_provider(provider_self if not None else cmd2_app)
+                namespace = ns_provider(provider_self if provider_self is not None else cmd2_app)
 
             try:
                 new_args: Union[Tuple[argparse.Namespace], Tuple[argparse.Namespace, List[str]]]
