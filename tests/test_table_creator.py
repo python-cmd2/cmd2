@@ -316,7 +316,7 @@ def test_generate_row_exceptions():
             tc.generate_row(row_data=row_data, is_header=False, **kwargs)
         assert "{} contains an unprintable character".format(arg) in str(excinfo.value)
 
-    # data with too many columns
+    # Data with too many columns
     row_data = ['Data 1', 'Extra Column']
     with pytest.raises(ValueError) as excinfo:
         tc.generate_row(row_data=row_data, is_header=False)
@@ -504,6 +504,17 @@ def test_simple_table_width():
     assert st.total_width() == 34
 
 
+def test_simple_generate_data_row_exceptions():
+    column_1 = Column("Col 1")
+    tc = SimpleTable([column_1])
+
+    # Data with too many columns
+    row_data = ['Data 1', 'Extra Column']
+    with pytest.raises(ValueError) as excinfo:
+        tc.generate_data_row(row_data=row_data)
+    assert "Length of row_data must match length of cols" in str(excinfo.value)
+
+
 def test_bordered_table_creation():
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
@@ -633,6 +644,17 @@ def test_bordered_table_width():
 
     bt = BorderedTable([column_1, column_2])
     assert bt.total_width() == 37
+
+
+def test_bordered_generate_data_row_exceptions():
+    column_1 = Column("Col 1")
+    tc = BorderedTable([column_1])
+
+    # Data with too many columns
+    row_data = ['Data 1', 'Extra Column']
+    with pytest.raises(ValueError) as excinfo:
+        tc.generate_data_row(row_data=row_data)
+    assert "Length of row_data must match length of cols" in str(excinfo.value)
 
 
 def test_alternating_table_creation():
