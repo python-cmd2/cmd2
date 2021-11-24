@@ -440,7 +440,7 @@ class TableCreator:
         :param post_line: string to print after each line of a row. This can be used for padding after
                           the last cell's text and a right row border. (Defaults to blank)
         :return: row string
-        :raises: ValueError if data isn't the same length as self.cols
+        :raises: ValueError if row_data isn't the same length as self.cols
         :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
         :raises: ValueError if fill_char, pre_line, inter_cell, or post_line contains an unprintable
                  character like a newline
@@ -682,7 +682,11 @@ class SimpleTable(TableCreator):
 
         :param row_data: data with an entry for each column in the row
         :return: data row string
+        :raises: ValueError if row_data isn't the same length as self.cols
         """
+        if len(row_data) != len(self.cols):
+            raise ValueError("Length of row_data must match length of cols")
+
         fill_char = self.apply_data_bg(SPACE)
         inter_cell = self.apply_data_bg(self.column_spacing * SPACE)
 
@@ -969,7 +973,11 @@ class BorderedTable(TableCreator):
 
         :param row_data: data with an entry for each column in the row
         :return: data row string
+        :raises: ValueError if row_data isn't the same length as self.cols
         """
+        if len(row_data) != len(self.cols):
+            raise ValueError("Length of row_data must match length of cols")
+
         fill_char = self.apply_data_bg(SPACE)
 
         pre_line = self.apply_border_color('║') + self.apply_data_bg(self.padding * SPACE)

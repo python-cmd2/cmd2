@@ -1,3 +1,7 @@
+## 2.3.3 (TBD, 2021)
+* Enhancements
+  * Added clearer exception handling to `BorderedTable` and `SimpleTable`.
+
 ## 2.3.2 (November 22, 2021)
 * Bug Fixes
   * Fixed issue where a `ns_provider` could be passed `None` instead of its correct `cmd2.Cmd` or `CommandSet` value.
