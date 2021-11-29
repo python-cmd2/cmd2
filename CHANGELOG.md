@@ -1,4 +1,4 @@
-## 2.3.3 (TBD, 2021)
+## 2.3.3 (November 29, 2021)
 * Enhancements
   * Added clearer exception handling to `BorderedTable` and `SimpleTable`.
 
