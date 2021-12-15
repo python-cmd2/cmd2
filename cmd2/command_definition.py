@@ -22,7 +22,7 @@ from .utils import (
     Settable,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import cmd2
 
 #: Callable signature for a basic command  function
