@@ -1,3 +1,7 @@
+## 2.3.4 (TBD, 2021)
+* Enhancements
+  *  Added broader exception handling when enabling clipboard functionality via `pyperclip`.
+
 ## 2.3.3 (November 29, 2021)
 * Enhancements
   * Added clearer exception handling to `BorderedTable` and `SimpleTable`.
