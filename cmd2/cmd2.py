@@ -4086,7 +4086,7 @@ class Cmd(cmd.Cmd):
             self.last_result = proc.returncode
 
             # If the process was stopped by Ctrl-C, then inform the caller by raising a KeyboardInterrupt.
-            # This is to support things like stop_on_keyboard_interrupt in run_cmds_plus_hooks().
+            # This is to support things like stop_on_keyboard_interrupt in runcmds_plus_hooks().
             if proc.returncode == ctrl_c_ret_code:
                 self._raise_keyboard_interrupt()
 

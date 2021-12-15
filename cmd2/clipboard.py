@@ -9,17 +9,19 @@ from typing import (
 import pyperclip  # type: ignore[import]
 
 # noinspection PyProtectedMember
-from pyperclip import (
-    PyperclipException,
-)
 
 # Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
+# noinspection PyBroadException
 try:
     # Try getting the contents of the clipboard
     _ = pyperclip.paste()
-except (PyperclipException, FileNotFoundError, ValueError):
-    # NOTE: FileNotFoundError is for Windows Subsystem for Linux (WSL) when Windows paths are removed from $PATH
-    # NOTE: ValueError is for headless Linux systems without Gtk installed
+
+# pyperclip raises at least the following types of exceptions. To be safe, just catch all Exceptions.
+#   FileNotFoundError on Windows Subsystem for Linux (WSL) when Windows paths are removed from $PATH
+#   ValueError for headless Linux systems without Gtk installed
+#   AssertionError can be raised by paste_klipper().
+#   PyperclipException for pyperclip-specific exceptions
+except Exception:
     can_clip = False
 else:
     can_clip = True
