@@ -3,6 +3,7 @@
 Supports the definition of commands in separate classes to be composed into cmd2.Cmd
 """
 from typing import (
+    TYPE_CHECKING,
     Callable,
     Dict,
     Mapping,
@@ -21,18 +22,8 @@ from .utils import (
     Settable,
 )
 
-# Allows IDEs to resolve types without impacting imports at runtime, breaking circular dependency issues
-try:  # pragma: no cover
-    from typing import (
-        TYPE_CHECKING,
-    )
-
-    if TYPE_CHECKING:
-        import cmd2
-
-except ImportError:  # pragma: no cover
-    pass
-
+if TYPE_CHECKING:
+    import cmd2
 
 #: Callable signature for a basic command  function
 #: Further refinements are needed to define the input parameters
