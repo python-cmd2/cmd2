@@ -1046,7 +1046,7 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     """
 
     # Split the prompt lines since it can contain newline characters.
-    prompt_lines = prompt.splitlines()
+    prompt_lines = prompt.splitlines() or ['']
 
     # Calculate how many terminal lines are taken up by all prompt lines except for the last one.
     # That will be included in the input lines calculations since that is where the cursor is.
