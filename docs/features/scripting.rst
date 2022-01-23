@@ -91,7 +91,7 @@ If you as an app designer have not explicitly disabled the run_pyscript command 
 that your application is structured for use in higher level python scripting. The following sections
 are meant as guidelines and highlight possible pitfalls with both production and consumption
 of API functionality. For clarity when speaking of "scripter" we are referring to those writing
-scripts to be run by pyscript and "designer" as th CMD2 application author. 
+scripts to be run by pyscript and "designer" as the CMD2 application author. 
 
 Basics
 ~~~~~~
@@ -134,7 +134,7 @@ information.
 Design principles
 ~~~~~~~~~~~~~~~~~
 If the cmd2 application follows the unix_design_philosophy_ a scriptor will have the most flexibility
-to piece together workflows using different commands. If the designers application is more complete
+to piece together workflows using different commands. If the designers' application is more complete
 and less likely to be augmented in the future a scripter may opt for simple serial scripts with little
 control flow. In either case, choices made by the designer will have effects on scripters. 
 
@@ -182,6 +182,7 @@ CMD2 out of the box allows scripters to take advantage of all exposed ``do_*`` c
 scripter one can easily interact with the application via  ``stdout`` and ``stderr``.
 
 As a baseline lets start off with the familiar FirstApp
+
 ::
 
     #!/usr/bin/env python
@@ -272,6 +273,7 @@ object to inspect the actual returned data.::
 
   result = app('speak')
   print(result)
+
 ::
 
   (Cmd) run_pyscript script.py 
@@ -281,8 +283,8 @@ Now we can see that there has been an error. Let's re write the script to perfor
 
   result = app('speak')
 
-  if result.stderr:
-      print("Something went wrong")
+  if not result:
+      print(result.stderr)
 
 ::
 
@@ -295,7 +297,7 @@ In python development is good practice to fail and exit quickly after user input
 
   result = app('speak TRUTH!!')
 
-  if result.stderr:
+  if not result:
       print("Something went wrong")
       sys.exit()
 
@@ -313,7 +315,7 @@ We changed the input to be a valid ``speak`` command but no output. Again we mus
 
   #Syntax error
   result = app('speak TRUTH!!!')
-  if result.stderr:
+  if not result:
       print("Something went wrong")
       sys.exit()
 
@@ -358,7 +360,6 @@ In the following command example we return an array containing directory element
         if unknown:
             self.perror("dir does not take any positional arguments:")
             self.do_help('dir')
-            self.last_result = 'Bad arguments'
             return
 
         # Get the contents as a list
@@ -478,7 +479,7 @@ The below is a possible solution via pyscript::
   result = app('build tower')
 
   # If there was an error then quit now
-  if result.stderr:
+  if not result:
       print('Build failed')
       sys.exit()
 
@@ -494,7 +495,7 @@ The below is a possible solution via pyscript::
       result = app('status tower')
 
       #error checking
-      if result.stderr:
+      if not result:
           print("Unable to determin status")
           break
 
