@@ -5,7 +5,7 @@ Overview
 ~~~~~~~~
 
 .. _cmd2_external_test_plugin:
-   https://github.com/python-cmd2/cmd2/tree/cmdset_settables/plugins/ext_test
+   https://github.com/python-cmd2/cmd2/tree/master/plugins/ext_test
 
 The `External Test Plugin <cmd2_external_test_plugin_>`_ supports testing of a cmd2 application by exposing access cmd2
 commands with the same context as from within a cmd2 :ref:`Python Scripts <scripting-python-scripts>`.  This interface
