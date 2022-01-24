@@ -96,14 +96,15 @@ scripts to be run by pyscript and "designer" as the CMD2 application author.
 Basics
 ~~~~~~
 
-When implementing a command, setting ``self.last_result`` allows for application-specific
-data to be returned to a python script from the command. This can allow python scripts to
-make decisions based on the result of previous application commands.
+Without anywork on the part of the designer a scripter can take advantage of piecing together a workflows
+using simple ``app`` calls. The result of a run_pyscript app call yields a ``CommandResult`` object exposing 
+four members: ``Stdout``, ``Stderr``, ``Stop`` and ``Data``. 
 
-The application command (default: ``app``) returns a ``cmd2.CommandResult`` for each command.
-The ``cmd2.CommandResult`` object provides the captured output to ``stdout`` and ``stderr``
-while a command is executing. Additionally, it provides the value that command stored in
-``self.last_result``.
+``Stdout`` and ``Stderr`` are fairly straight forward representation of normal data streams and acurately reflect
+what is seen by the user during normal cmd2 interaction. ``Stop`` contains information about how the invoked 
+command has ended it's lifecycle. Lastly ``Data`` contains any information the designer sets via ``self.last_result`` 
+or ``self._cmd.last_result`` if called from inside a CommandSet.
+
 
 
 Python scripts executed with :ref:`features/builtin_commands:run_pyscript` can
