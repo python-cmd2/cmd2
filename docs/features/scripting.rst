@@ -96,15 +96,14 @@ scripts to be run by pyscript and "designer" as the CMD2 application author.
 Basics
 ~~~~~~
 
-Without anywork on the part of the designer a scripter can take advantage of piecing together a workflows
+Without any work on the part of the designer, a scripter can take advantage of piecing together workflows
 using simple ``app`` calls. The result of a run_pyscript app call yields a ``CommandResult`` object exposing 
-four members: ``Stdout``, ``Stderr``, ``Stop`` and ``Data``. 
+four members: ``Stdout``, ``Stderr``, ``Stop``, and ``Data``. 
 
-``Stdout`` and ``Stderr`` are fairly straight forward representation of normal data streams and acurately reflect
+``Stdout`` and ``Stderr`` are fairly straightforward representations of normal data streams and accurately reflect
 what is seen by the user during normal cmd2 interaction. ``Stop`` contains information about how the invoked 
-command has ended it's lifecycle. Lastly ``Data`` contains any information the designer sets via ``self.last_result`` 
+command has ended its lifecycle. Lastly ``Data`` contains any information the designer sets via ``self.last_result`` 
 or ``self._cmd.last_result`` if called from inside a CommandSet.
-
 
 
 Python scripts executed with :ref:`features/builtin_commands:run_pyscript` can
