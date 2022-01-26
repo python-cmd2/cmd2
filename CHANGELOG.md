@@ -2,7 +2,8 @@
 * Bug Fixes
   * Fixed issue in `ansi.async_alert_str()` which would raise `IndexError` if prompt was blank.
 * Enhancements
-  *  Added broader exception handling when enabling clipboard functionality via `pyperclip`.
+  * Added broader exception handling when enabling clipboard functionality via `pyperclip`.
+  * Added `PassThroughException` to `__init__.py` imports.
 
 ## 2.3.3 (November 29, 2021)
 * Enhancements

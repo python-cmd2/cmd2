@@ -56,7 +56,13 @@ from .cmd2 import Cmd
 from .command_definition import CommandSet, with_default_category
 from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
 from .decorators import with_argument_list, with_argparser, with_category, as_subcommand_to
-from .exceptions import Cmd2ArgparseError, CommandSetRegistrationError, CompletionError, SkipPostcommandHooks
+from .exceptions import (
+    Cmd2ArgparseError,
+    CommandSetRegistrationError,
+    CompletionError,
+    PassThroughException,
+    SkipPostcommandHooks,
+)
 from . import plugin
 from .parsing import Statement
 from .py_bridge import CommandResult
