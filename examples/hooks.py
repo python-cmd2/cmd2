@@ -62,17 +62,19 @@ class CmdLineApp(cmd2.Cmd):
         command_pattern = re.compile(r'^([^\s\d]+)(\d+)')
         match = command_pattern.search(command)
         if match:
-            data.statement = self.statement_parser.parse(
-                "{} {} {}".format(match.group(1), match.group(2), '' if data.statement.args is None else data.statement.args)
-            )
+            command = match.group(1)
+            first_arg = match.group(2)
+            rest_args = data.statement.args
+            post_command = data.statement.post_command
+            data.statement = self.statement_parser.parse(f'{command} {first_arg} {rest_args} {post_command}')
         return data
 
     def downcase_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """A hook to make uppercase commands lowercase."""
         command = data.statement.command.lower()
-        data.statement = self.statement_parser.parse(
-            "{} {}".format(command, '' if data.statement.args is None else data.statement.args)
-        )
+        args = data.statement.args
+        post_command = data.statement.post_command
+        data.statement = self.statement_parser.parse(f'{command} {args} {post_command}')
         return data
 
     def abbrev_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
