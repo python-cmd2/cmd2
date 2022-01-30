@@ -1,0 +1,96 @@
+Name: 
+Source Code:
+Status: 
+Description: 
+Genre: 
+
+
+
+Name: Microsoft/ Azure Counterfit
+Source Code: https://github.com/Azure/counterfit
+Status: Active
+Description: Counterfit is a command-line tool and generic automation layer for assessing the security of machine learning systems.
+Genre: Security
+
+Name: MQTT-Pwn 
+Source Code: https://github.com/akamai-threat-research/mqtt-pwn
+Status: Stale 
+Description: MQTT-PWN intends to be a one-stop-shop for IoT Broker penetration-testing and security assessment operations 
+Genre: Security
+
+Name: OpenBeacon2
+Source Code: https://github.com/etherkit/OpenBeacon2
+Description: Commandline tool for interfacing with hardware in the [OpenBeacon](https://www.openbeacon.org/) environment.
+Genre: Utility 
+
+Name: GreenWaves-Technologies/gap_sdk
+Source Code: https://github.com/GreenWaves-Technologies/gap_sdk
+Status: Active 
+Description: GAP SDK allows you to compile and execute applications on the GAP IoT Application Processor.  
+Genre: Utility, IoT
+
+Name: JSShell 
+Source Code: https://github.com/Den1al/JSShell
+Status: Unknown 
+Description: An interactive multi-user web based javascript shell. 
+Genre: Utility, Web 
+
+
+Name: pyOS 
+Source Code: https://github.com/muhrin/pyos
+Status: Active 
+Description: A fresh way to interact with your python objects as though they were files on your filesystem. 
+Genre: ????  
+
+Name: darkcode357/thg-framework 
+Source Code: https://github.com/darkcode357/thg-framework
+Status: Inactive
+Description: THG is a framework for security testing and ctf games, but it can be used as a library for exploit development.
+Genre: Security 
+
+
+Name: qsecure-labs/Overloard 
+Source Code: https://github.com/qsecure-labs/overlord
+Status: Active 
+Description: Overlord provides a python-based console CLI which is used to build Red Teaming infrastructure in an automated way.  
+Genre: Security 
+
+
+Name: seemoo-lab/internalblue 
+Source Code: https://github.com/seemoo-lab/internalblue
+Status: Active 
+Description:  Bluetooth experimentation framework for Broadcom and Cypress chips.
+Genre: utility 
+
+Name: icl-rocketry/Avionics
+Source Code: https://github.com/icl-rocketry/Avionics
+Status: Active 
+Description: The main repository for hardware and software assosciated with the Ricardo Avionics Ecosystem.
+Genre: Utility 
+
+
+Name: jonny1102/nmap-parse
+Source Code: https://github.com/jonny1102/nmap-parse
+Status: Inactive 
+Description: Command line nmap XML parser 
+Genre: Security 
+
+Name: cybiere/baboossh
+Source Code: https://github.com/cybiere/baboossh
+Status: Active
+Description:SSH spreading made easy for red teams in a hurry 
+Genre: Security 
+
+Name: qilingframework/qiling
+Source Code: https://github.com/qilingframework/qiling
+Status: Active 
+Description: Qiling Advanced Binary Emulation Framework
+Genre: Security 
+
+
+Name: JohnHammond/katana
+Source Code: https://github.com/JohnHammond/katana
+Status: Active 
+Description: Katana - Automatic CTF Challenge Solver in Python3
+Genre: Security 
+

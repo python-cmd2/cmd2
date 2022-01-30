@@ -37,3 +37,6 @@ Pipfile.lock
 
 # Virtualenv directory
 .venv
+
+# Commitizen configuration
+.cz.toml
