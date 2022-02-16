@@ -100,10 +100,10 @@ CommandSets and pass in the constructor to Cmd2.
             self._arg2 = arg2
 
         def do_show_arg1(self, _: cmd2.Statement):
-            self._cmd.poutput('Arg1: ' + self._arg1)
+            self._cmd.poutput(f'Arg1: {self._arg1}')
 
         def do_show_arg2(self, _: cmd2.Statement):
-            self._cmd.poutput('Arg2: ' + self._arg2)
+            self._cmd.poutput(f'Arg2: {self._arg2}')
 
     class ExampleApp(cmd2.Cmd):
         """
