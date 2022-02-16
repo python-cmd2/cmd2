@@ -509,6 +509,9 @@ class ArgparseCompleter:
         #   1. text is a single flag prefix character that didn't complete against any argument values
         #   2. there are no more positionals to complete
         if not skip_remaining_flags and (_single_prefix_char(text, self._parser) or not remaining_positionals):
+            # Reset any completion settings that may have been set by functions which actually had no matches.
+            # Otherwise, those settings could alter how the flags are displayed.
+            self._cmd2_app._reset_completion_defaults()
             return self._complete_flags(text, line, begidx, endidx, matched_flags)
 
         return completion_results

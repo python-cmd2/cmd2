@@ -1,6 +1,7 @@
 ## 2.3.4 (TBD, 2021)
 * Bug Fixes
   * Fixed issue in `ansi.async_alert_str()` which would raise `IndexError` if prompt was blank.
+  * Fixed issue where tab completion was quoting argparse flags in some cases.
 * Enhancements
   * Added broader exception handling when enabling clipboard functionality via `pyperclip`.
   * Added `PassThroughException` to `__init__.py` imports.
