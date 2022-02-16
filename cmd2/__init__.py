@@ -28,8 +28,6 @@ from .ansi import (
     RgbBg,
     RgbFg,
     TextStyle,
-    bg,  # DEPRECATED: Use Bg
-    fg,  # DEPRECATED: Use Fg
     style,
 )
 from .argparse_custom import (
@@ -81,8 +79,6 @@ __all__: List[str] = [
     'RgbBg',
     'RgbFg',
     'TextStyle',
-    'bg',  # DEPRECATED: Use Bg
-    'fg',  # DEPRECATED: Use Fg
     'style',
     # Argparse Exports
     'Cmd2ArgumentParser',

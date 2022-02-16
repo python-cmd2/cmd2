@@ -217,8 +217,6 @@ def test_cursor():
 @pytest.mark.parametrize(
     'ansi_sequence',
     [
-        ansi.fg.green,
-        ansi.bg.blue,
         ansi.Fg.MAGENTA,
         ansi.Bg.LIGHT_GRAY,
         ansi.EightBitBg.CHARTREUSE_2A,
