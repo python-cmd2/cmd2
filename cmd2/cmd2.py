@@ -1498,11 +1498,6 @@ class Cmd(cmd.Cmd):
         # Used to complete ~ and ~user strings
         def complete_users() -> List[str]:
 
-            # We are returning ~user strings that resolve to directories,
-            # so don't append a space or quote in the case of a single result.
-            self.allow_appended_space = False
-            self.allow_closing_quote = False
-
             users = []
 
             # Windows lacks the pwd module so we can't get a list of users.
@@ -1530,6 +1525,12 @@ class Cmd(cmd.Cmd):
                             if add_trailing_sep_if_dir:
                                 cur_user += os.path.sep
                             users.append(cur_user)
+
+            if users:
+                # We are returning ~user strings that resolve to directories,
+                # so don't append a space or quote in the case of a single result.
+                self.allow_appended_space = False
+                self.allow_closing_quote = False
 
             return users
 
@@ -1581,9 +1582,6 @@ class Cmd(cmd.Cmd):
                 search_str = os.path.join(os.getcwd(), search_str)
                 cwd_added = True
 
-        # Set this to True for proper quoting of paths with spaces
-        self.matches_delimited = True
-
         # Find all matching path completions
         matches = glob.glob(search_str)
 
@@ -1591,37 +1589,41 @@ class Cmd(cmd.Cmd):
         if path_filter is not None:
             matches = [c for c in matches if path_filter(c)]
 
-        # Don't append a space or closing quote to directory
-        if len(matches) == 1 and os.path.isdir(matches[0]):
-            self.allow_appended_space = False
-            self.allow_closing_quote = False
+        if matches:
+            # Set this to True for proper quoting of paths with spaces
+            self.matches_delimited = True
 
-        # Sort the matches before any trailing slashes are added
-        matches.sort(key=self.default_sort_key)
-        self.matches_sorted = True
+            # Don't append a space or closing quote to directory
+            if len(matches) == 1 and os.path.isdir(matches[0]):
+                self.allow_appended_space = False
+                self.allow_closing_quote = False
 
-        # Build display_matches and add a slash to directories
-        for index, cur_match in enumerate(matches):
+            # Sort the matches before any trailing slashes are added
+            matches.sort(key=self.default_sort_key)
+            self.matches_sorted = True
 
-            # Display only the basename of this path in the tab completion suggestions
-            self.display_matches.append(os.path.basename(cur_match))
+            # Build display_matches and add a slash to directories
+            for index, cur_match in enumerate(matches):
 
-            # Add a separator after directories if the next character isn't already a separator
-            if os.path.isdir(cur_match) and add_trailing_sep_if_dir:
-                matches[index] += os.path.sep
-                self.display_matches[index] += os.path.sep
+                # Display only the basename of this path in the tab completion suggestions
+                self.display_matches.append(os.path.basename(cur_match))
 
-        # Remove cwd if it was added to match the text readline expects
-        if cwd_added:
-            if cwd == os.path.sep:
-                to_replace = cwd
-            else:
-                to_replace = cwd + os.path.sep
-            matches = [cur_path.replace(to_replace, '', 1) for cur_path in matches]
+                # Add a separator after directories if the next character isn't already a separator
+                if os.path.isdir(cur_match) and add_trailing_sep_if_dir:
+                    matches[index] += os.path.sep
+                    self.display_matches[index] += os.path.sep
 
-        # Restore the tilde string if we expanded one to match the text readline expects
-        if expanded_tilde_path:
-            matches = [cur_path.replace(expanded_tilde_path, orig_tilde_path, 1) for cur_path in matches]
+            # Remove cwd if it was added to match the text readline expects
+            if cwd_added:
+                if cwd == os.path.sep:
+                    to_replace = cwd
+                else:
+                    to_replace = cwd + os.path.sep
+                matches = [cur_path.replace(to_replace, '', 1) for cur_path in matches]
+
+            # Restore the tilde string if we expanded one to match the text readline expects
+            if expanded_tilde_path:
+                matches = [cur_path.replace(expanded_tilde_path, orig_tilde_path, 1) for cur_path in matches]
 
         return matches
 
