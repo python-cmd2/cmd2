@@ -3066,9 +3066,10 @@ class Cmd(cmd.Cmd):
 
             # Set up readline for our tab completion needs
             if rl_type == RlType.GNU:
-                # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
-                # We don't need to worry about setting rl_completion_suppress_quote since we never declared
-                # rl_completer_quote_characters.
+                # GNU readline automatically adds a closing quote if the text being completed has an opening quote.
+                # We don't want this behavior since cmd2 only adds a closing quote when self.allow_closing_quote is True.
+                # To fix this behavior, set readline's rl_basic_quote_characters to NULL. We don't need to worry about setting
+                # rl_completion_suppress_quote since we never declared rl_completer_quote_characters.
                 readline_settings.basic_quotes = cast(bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
                 rl_basic_quote_characters.value = None
 
