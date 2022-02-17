@@ -24,21 +24,12 @@ from pytest import (
 )
 
 import cmd2
+from cmd2.rl_utils import (
+    readline,
+)
 from cmd2.utils import (
     StdSim,
 )
-
-# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing
-    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
-    try:
-        # noinspection PyUnresolvedReferences
-        import readline
-    except ImportError:
-        pass
 
 
 def verify_help_text(

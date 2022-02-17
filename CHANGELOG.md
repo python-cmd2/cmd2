@@ -5,6 +5,7 @@
 * Enhancements
   * Added broader exception handling when enabling clipboard functionality via `pyperclip`.
   * Added `PassThroughException` to `__init__.py` imports.
+  * cmd2 now uses pyreadline3 when running any version of Python on Windows
 * Deletions (potentially breaking changes)
   * Deleted `cmd2.fg` and `cmd2.bg` which were deprecated in 2.3.0. Use `cmd2.Fg` and `cmd2.Bg` instead.
 

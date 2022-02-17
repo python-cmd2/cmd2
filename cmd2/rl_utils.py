@@ -26,13 +26,12 @@ from typing import (
 # The workaround for Python environments using libedit is to install the gnureadline Python library.
 #########################################################################################################################
 
-# Prefer statically linked gnureadline if available due to issues with libedit
+# Prefer statically linked gnureadline if installed due to compatibility issues with libedit
 try:
     # noinspection PyPackageRequirements
     import gnureadline as readline  # type: ignore[import]
 except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing.
-    # Note: If this actually fails, you should install gnureadline on Linux/Mac or pyreadline on Windows.
+    # Note: If this actually fails, you should install gnureadline on Linux/Mac or pyreadline3 on Windows.
     try:
         # noinspection PyUnresolvedReferences
         import readline  # type: ignore[no-redef]
@@ -57,8 +56,8 @@ vt100_support = False
 # Explanation for why Readline wasn't loaded
 _rl_warn_reason = ''
 
-# The order of this check matters since importing pyreadline/pyreadline3 will also show readline in the modules list
-if 'pyreadline' in sys.modules or 'pyreadline3' in sys.modules:
+# The order of this check matters since importing pyreadline3 will also show readline in the modules list
+if 'pyreadline3' in sys.modules:
     rl_type = RlType.PYREADLINE
 
     import atexit
@@ -109,7 +108,7 @@ if 'pyreadline' in sys.modules or 'pyreadline3' in sys.modules:
         vt100_support = vt100_stdout_support and vt100_stderr_support
 
     ############################################################################################################
-    # pyreadline is incomplete in terms of the Python readline API. Add the missing functions we need.
+    # pyreadline3 is incomplete in terms of the Python readline API. Add the missing functions we need.
     ############################################################################################################
     # readline.redisplay()
     try:
@@ -125,7 +124,7 @@ if 'pyreadline' in sys.modules or 'pyreadline3' in sys.modules:
         # noinspection PyProtectedMember,PyUnresolvedReferences
         def pyreadline_remove_history_item(pos: int) -> None:
             """
-            An implementation of remove_history_item() for pyreadline
+            An implementation of remove_history_item() for pyreadline3
             :param pos: The 0-based position in history to remove
             """
             # Save of the current location of the history cursor
@@ -162,7 +161,7 @@ if rl_type == RlType.NONE:  # pragma: no cover
     if not _rl_warn_reason:
         _rl_warn_reason = (
             "no supported version of readline was found. To resolve this, install\n"
-            "pyreadline on Windows or gnureadline on Linux/Mac."
+            "pyreadline3 on Windows or gnureadline on Linux/Mac."
         )
     rl_warning = "Readline features including tab completion have been disabled because\n" + _rl_warn_reason + '\n\n'
 else:

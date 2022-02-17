@@ -155,7 +155,7 @@ else:
 
     if rl_type == RlType.PYREADLINE:
 
-        # Save the original pyreadline display completion function since we need to override it and restore it
+        # Save the original pyreadline3 display completion function since we need to override it and restore it
         # noinspection PyProtectedMember,PyUnresolvedReferences
         orig_pyreadline_display = readline.rl.mode._display_completions
 
@@ -1747,7 +1747,7 @@ class Cmd(cmd.Cmd):
             padding = 2 * ' '
 
         elif rl_type == RlType.PYREADLINE:
-            # Add 3 to the padding of 1 that pyreadline uses for a total of 4.
+            # Add 3 to the padding of 1 that pyreadline3 uses for a total of 4.
             padding = 3 * ' '
 
         else:
@@ -1820,7 +1820,7 @@ class Cmd(cmd.Cmd):
             rl_force_redisplay()
 
     def _display_matches_pyreadline(self, matches: List[str]) -> None:  # pragma: no cover
-        """Prints a match list using pyreadline's _display_completions()
+        """Prints a match list using pyreadline3's _display_completions()
 
         :param matches: the tab completion matches to display
         """
@@ -1841,7 +1841,7 @@ class Cmd(cmd.Cmd):
                 # Redraw the prompt and input lines
                 rl_force_redisplay()
 
-            # Otherwise use pyreadline's formatter
+            # Otherwise use pyreadline3's formatter
             else:
                 # Check if we should show display_matches
                 if self.display_matches:
