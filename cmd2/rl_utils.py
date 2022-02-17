@@ -10,13 +10,29 @@ from typing import (
     Union,
 )
 
-# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
+#########################################################################################################################
+# NOTE ON LIBEDIT:
+#
+# On Linux/Mac, the underlying readline API may be implemented by libedit instead of GNU readline.
+# We don't support libedit because it doesn't implement all the readline features cmd2 needs.
+#
+# For example:
+#     cmd2 sets a custom display function using Python's readline.set_completion_display_matches_hook() to
+#     support many of its advanced tab completion features (e.g. tab completion tables, displaying path basenames,
+#     colored results, etc.). This function "sets or clears the rl_completion_display_matches_hook callback in the
+#     underlying library". libedit has never implemented rl_completion_display_matches_hook. It merely sets it to NULL
+#     and never references it.
+#
+# The workaround for Python environments using libedit is to install the gnureadline Python library.
+#########################################################################################################################
+
+# Prefer statically linked gnureadline if available due to issues with libedit
 try:
     # noinspection PyPackageRequirements
     import gnureadline as readline  # type: ignore[import]
 except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing
-    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
+    # Try to import readline, but allow failure for convenience in Windows unit testing.
+    # Note: If this actually fails, you should install gnureadline on Linux/Mac or pyreadline on Windows.
     try:
         # noinspection PyUnresolvedReferences
         import readline  # type: ignore[no-redef]
@@ -125,7 +141,7 @@ if 'pyreadline' in sys.modules or 'pyreadline3' in sys.modules:
         readline.remove_history_item = pyreadline_remove_history_item
 
 elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
-    # We don't support libedit
+    # We don't support libedit. See top of this file for why.
     if 'libedit' not in readline.__doc__:
         try:
             # Load the readline lib so we can access members of it
@@ -146,7 +162,7 @@ if rl_type == RlType.NONE:  # pragma: no cover
     if not _rl_warn_reason:
         _rl_warn_reason = (
             "no supported version of readline was found. To resolve this, install\n"
-            "pyreadline on Windows or gnureadline on Mac."
+            "pyreadline on Windows or gnureadline on Linux/Mac."
         )
     rl_warning = "Readline features including tab completion have been disabled because\n" + _rl_warn_reason + '\n\n'
 else:
