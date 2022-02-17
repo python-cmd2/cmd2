@@ -940,8 +940,6 @@ class RgbBg(BgColor):
         return self._sequence
 
 
-# TODO: Remove this PyShadowingNames usage when deprecated fg and bg classes are removed.
-# noinspection PyShadowingNames
 def style(
     value: Any,
     *,
@@ -1086,68 +1084,3 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     # Move the cursor to the beginning of the first prompt line and print the alert
     terminal_str += '\r' + alert_msg
     return terminal_str
-
-
-####################################################################################
-# The following classes are deprecated.
-####################################################################################
-# noinspection PyPep8Naming
-class fg(FgColor, Enum):
-    """Deprecated Enum class for foreground colors. Use Fg instead."""
-
-    black = 30
-    red = 31
-    green = 32
-    yellow = 33
-    blue = 34
-    magenta = 35
-    cyan = 36
-    white = 37
-    reset = 39
-    bright_black = 90
-    bright_red = 91
-    bright_green = 92
-    bright_yellow = 93
-    bright_blue = 94
-    bright_magenta = 95
-    bright_cyan = 96
-    bright_white = 97
-
-    def __str__(self) -> str:
-        """
-        Return ANSI color sequence instead of enum name
-        This is helpful when using an fg in an f-string or format() call
-        e.g. my_str = f"{fg.blue}hello{fg.reset}"
-        """
-        return f"{CSI}{self.value}m"
-
-
-# noinspection PyPep8Naming
-class bg(BgColor, Enum):
-    """Deprecated Enum class for background colors. Use Bg instead."""
-
-    black = 40
-    red = 41
-    green = 42
-    yellow = 43
-    blue = 44
-    magenta = 45
-    cyan = 46
-    white = 47
-    reset = 49
-    bright_black = 100
-    bright_red = 101
-    bright_green = 102
-    bright_yellow = 103
-    bright_blue = 104
-    bright_magenta = 105
-    bright_cyan = 106
-    bright_white = 107
-
-    def __str__(self) -> str:
-        """
-        Return ANSI color sequence instead of enum name
-        This is helpful when using a bg in an f-string or format() call
-        e.g. my_str = f"{bg.black}hello{bg.reset}"
-        """
-        return f"{CSI}{self.value}m"

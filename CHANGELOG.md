@@ -1,10 +1,12 @@
-## 2.3.4 (TBD, 2021)
+## 2.4.0 (TBD, 2021)
 * Bug Fixes
   * Fixed issue in `ansi.async_alert_str()` which would raise `IndexError` if prompt was blank.
   * Fixed issue where tab completion was quoting argparse flags in some cases.
 * Enhancements
   * Added broader exception handling when enabling clipboard functionality via `pyperclip`.
   * Added `PassThroughException` to `__init__.py` imports.
+* Deletions (potentially breaking changes)
+  * Deleted `cmd2.fg` and `cmd2.bg` which were deprecated in 2.3.0. Use `cmd2.Fg` and `cmd2.Bg` instead.
 
 ## 2.3.3 (November 29, 2021)
 * Enhancements
