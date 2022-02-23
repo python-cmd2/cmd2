@@ -23,8 +23,9 @@ from wcwidth import (  # type: ignore[import]
 #######################################################
 # Common ANSI escape sequence constants
 #######################################################
-CSI = '\033['
-OSC = '\033]'
+ESC = '\x1b'
+CSI = f'{ESC}['
+OSC = f'{ESC}]'
 BEL = '\a'
 
 
@@ -60,8 +61,26 @@ to control how ANSI style sequences are handled by ``style_aware_write()``.
 The default is ``AllowStyle.TERMINAL``.
 """
 
-# Regular expression to match ANSI style sequences (including 8-bit and 24-bit colors)
-ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
+# Regular expression to match ANSI style sequence
+ANSI_STYLE_RE = re.compile(fr'{ESC}\[[^m]*m')
+
+# Matches standard foreground colors: CSI(30-37|90-97|39)m
+STD_FG_RE = re.compile(fr'{ESC}\[(?:[39][0-7]|39)m')
+
+# Matches standard background colors: CSI(40-47|100-107|49)m
+STD_BG_RE = re.compile(fr'{ESC}\[(?:(?:4|10)[0-7]|49)m')
+
+# Matches eight-bit foreground colors: CSI38;5;(0-255)m
+EIGHT_BIT_FG_RE = re.compile(fr'{ESC}\[38;5;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])m')
+
+# Matches eight-bit background colors: CSI48;5;(0-255)m
+EIGHT_BIT_BG_RE = re.compile(fr'{ESC}\[48;5;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])m')
+
+# Matches RGB foreground colors: CSI38;2;(0-255);(0-255);(0-255)m
+RGB_FG_RE = re.compile(fr'{ESC}\[38;2(?:;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])){{3}}m')
+
+# Matches RGB background colors: CSI48;2;(0-255);(0-255);(0-255)m
+RGB_BG_RE = re.compile(fr'{ESC}\[48;2(?:;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])){{3}}m')
 
 
 def strip_style(text: str) -> str:
@@ -240,6 +259,7 @@ class TextStyle(AnsiSequence, Enum):
 
     # Resets all styles and colors of text
     RESET_ALL = 0
+    ALT_RESET_ALL = ''
 
     INTENSITY_BOLD = 1
     INTENSITY_DIM = 2
@@ -606,7 +626,7 @@ class EightBitFg(FgColor, Enum):
         This is helpful when using an EightBitFg in an f-string or format() call
         e.g. my_str = f"{EightBitFg.SLATE_BLUE_1}hello{Fg.RESET}"
         """
-        return f"{CSI}{38};5;{self.value}m"
+        return f"{CSI}38;5;{self.value}m"
 
 
 class EightBitBg(BgColor, Enum):
@@ -879,7 +899,7 @@ class EightBitBg(BgColor, Enum):
         This is helpful when using an EightBitBg in an f-string or format() call
         e.g. my_str = f"{EightBitBg.KHAKI_3}hello{Bg.RESET}"
         """
-        return f"{CSI}{48};5;{self.value}m"
+        return f"{CSI}48;5;{self.value}m"
 
 
 class RgbFg(FgColor):
@@ -900,7 +920,7 @@ class RgbFg(FgColor):
         if any(c < 0 or c > 255 for c in [r, g, b]):
             raise ValueError("RGB values must be integers in the range of 0 to 255")
 
-        self._sequence = f"{CSI}{38};2;{r};{g};{b}m"
+        self._sequence = f"{CSI}38;2;{r};{g};{b}m"
 
     def __str__(self) -> str:
         """
@@ -929,7 +949,7 @@ class RgbBg(BgColor):
         if any(c < 0 or c > 255 for c in [r, g, b]):
             raise ValueError("RGB values must be integers in the range of 0 to 255")
 
-        self._sequence = f"{CSI}{48};2;{r};{g};{b}m"
+        self._sequence = f"{CSI}48;2;{r};{g};{b}m"
 
     def __str__(self) -> str:
         """

@@ -165,7 +165,7 @@ class TableCreator:
         :param is_last_word: True if this is the last word of the total text being wrapped
         :return: Tuple(wrapped text, lines used, display width of last line)
         """
-        styles = utils.get_styles_in_text(word)
+        styles_dict = utils.get_styles_dict(word)
         wrapped_buf = io.StringIO()
 
         # How many lines we've used
@@ -190,9 +190,9 @@ class TableCreator:
                 break
 
             # Check if we're at a style sequence. These don't count toward display width.
-            if char_index in styles:
-                wrapped_buf.write(styles[char_index])
-                char_index += len(styles[char_index])
+            if char_index in styles_dict:
+                wrapped_buf.write(styles_dict[char_index])
+                char_index += len(styles_dict[char_index])
                 continue
 
             cur_char = word[char_index]
@@ -330,7 +330,7 @@ class TableCreator:
                 break
 
             # Locate the styles in this line
-            styles = utils.get_styles_in_text(data_line)
+            styles_dict = utils.get_styles_dict(data_line)
 
             # Display width of the current line we are building
             cur_line_width = 0
@@ -344,9 +344,9 @@ class TableCreator:
                     break
 
                 # Check if we're at a style sequence. These don't count toward display width.
-                if char_index in styles:
-                    cur_word_buf.write(styles[char_index])
-                    char_index += len(styles[char_index])
+                if char_index in styles_dict:
+                    cur_word_buf.write(styles_dict[char_index])
+                    char_index += len(styles_dict[char_index])
                     continue
 
                 cur_char = data_line[char_index]
@@ -391,7 +391,7 @@ class TableCreator:
         :param col: Column definition for this cell
         :param fill_char: character that fills remaining space in a cell. If your text has a background color,
                           then give fill_char the same background color. (Cannot be a line breaking character)
-        :return: Tuple of cell lines deque and the display width of the cell
+        :return: Tuple(deque of cell lines, display width of the cell)
         """
         # Convert data to string and replace tabs with spaces
         data_str = str(cell_data).replace('\t', SPACE * self.tab_width)
@@ -411,8 +411,10 @@ class TableCreator:
 
         aligned_text = utils.align_text(wrapped_text, fill_char=fill_char, width=col.width, alignment=text_alignment)
 
-        lines = deque(aligned_text.splitlines())
+        # Calculate cell_width first to avoid having 2 copies of aligned_text.splitlines() in memory
         cell_width = ansi.widest_line(aligned_text)
+        lines = deque(aligned_text.splitlines())
+
         return lines, cell_width
 
     def generate_row(

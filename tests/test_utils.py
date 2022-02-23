@@ -11,6 +11,9 @@ import time
 import pytest
 
 import cmd2.utils as cu
+from cmd2 import (
+    ansi,
+)
 from cmd2.constants import (
     HORIZONTAL_ELLIPSIS,
 )
@@ -341,6 +344,79 @@ def test_context_flag_exit_err(context_flag):
         context_flag.__exit__()
 
 
+def test_remove_overridden_styles():
+    from typing import (
+        List,
+    )
+
+    from cmd2 import (
+        Bg,
+        EightBitBg,
+        EightBitFg,
+        Fg,
+        RgbBg,
+        RgbFg,
+        TextStyle,
+    )
+
+    def make_strs(styles_list: List[ansi.AnsiSequence]) -> List[str]:
+        return [str(s) for s in styles_list]
+
+    # Test Reset All
+    styles_to_parse = make_strs([Fg.BLUE, TextStyle.UNDERLINE_DISABLE, TextStyle.INTENSITY_DIM, TextStyle.RESET_ALL])
+    expected = make_strs([TextStyle.RESET_ALL])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    styles_to_parse = make_strs([Fg.BLUE, TextStyle.UNDERLINE_DISABLE, TextStyle.INTENSITY_DIM, TextStyle.ALT_RESET_ALL])
+    expected = make_strs([TextStyle.ALT_RESET_ALL])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    # Test colors
+    styles_to_parse = make_strs([Fg.BLUE, Fg.RED, Fg.GREEN, Bg.BLUE, Bg.RED, Bg.GREEN])
+    expected = make_strs([Fg.GREEN, Bg.GREEN])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    styles_to_parse = make_strs([EightBitFg.BLUE, EightBitFg.RED, EightBitBg.BLUE, EightBitBg.RED])
+    expected = make_strs([EightBitFg.RED, EightBitBg.RED])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    styles_to_parse = make_strs([RgbFg(0, 3, 4), RgbFg(5, 6, 7), RgbBg(8, 9, 10), RgbBg(11, 12, 13)])
+    expected = make_strs([RgbFg(5, 6, 7), RgbBg(11, 12, 13)])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    # Test text styles
+    styles_to_parse = make_strs([TextStyle.INTENSITY_DIM, TextStyle.INTENSITY_NORMAL, TextStyle.ITALIC_ENABLE])
+    expected = make_strs([TextStyle.INTENSITY_NORMAL, TextStyle.ITALIC_ENABLE])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    styles_to_parse = make_strs([TextStyle.INTENSITY_DIM, TextStyle.ITALIC_ENABLE, TextStyle.ITALIC_DISABLE])
+    expected = make_strs([TextStyle.INTENSITY_DIM, TextStyle.ITALIC_DISABLE])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    styles_to_parse = make_strs([TextStyle.INTENSITY_BOLD, TextStyle.OVERLINE_DISABLE, TextStyle.OVERLINE_ENABLE])
+    expected = make_strs([TextStyle.INTENSITY_BOLD, TextStyle.OVERLINE_ENABLE])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    styles_to_parse = make_strs([TextStyle.OVERLINE_DISABLE, TextStyle.STRIKETHROUGH_DISABLE, TextStyle.STRIKETHROUGH_ENABLE])
+    expected = make_strs([TextStyle.OVERLINE_DISABLE, TextStyle.STRIKETHROUGH_ENABLE])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    styles_to_parse = make_strs([TextStyle.STRIKETHROUGH_DISABLE, TextStyle.UNDERLINE_DISABLE, TextStyle.UNDERLINE_ENABLE])
+    expected = make_strs([TextStyle.STRIKETHROUGH_DISABLE, TextStyle.UNDERLINE_ENABLE])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    styles_to_parse = make_strs([TextStyle.UNDERLINE_DISABLE])
+    expected = make_strs([TextStyle.UNDERLINE_DISABLE])
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+    # Test unrecognized styles
+    slow_blink = ansi.CSI + str(5)
+    rapid_blink = ansi.CSI + str(6)
+    styles_to_parse = [slow_blink, rapid_blink]
+    expected = styles_to_parse
+    assert cu._remove_overridden_styles(styles_to_parse) == expected
+
+
 def test_truncate_line():
     line = 'long'
     max_width = 3
@@ -397,26 +473,30 @@ def test_truncate_with_style():
         TextStyle,
     )
 
-    before_style = Fg.BLUE + TextStyle.UNDERLINE_ENABLE
-    after_style = Fg.RESET + TextStyle.UNDERLINE_DISABLE
+    before_text = Fg.BLUE + TextStyle.UNDERLINE_ENABLE
+    after_text = Fg.RESET + TextStyle.UNDERLINE_DISABLE + TextStyle.ITALIC_ENABLE + TextStyle.ITALIC_DISABLE
+
+    # This is what the styles after the truncated text should look like since they will be
+    # filtered by _remove_overridden_styles.
+    filtered_after_text = Fg.RESET + TextStyle.UNDERLINE_DISABLE + TextStyle.ITALIC_DISABLE
 
     # Style only before truncated text
-    line = before_style + 'long'
+    line = before_text + 'long'
     max_width = 3
     truncated = cu.truncate_line(line, max_width)
-    assert truncated == before_style + 'lo' + HORIZONTAL_ELLIPSIS
+    assert truncated == before_text + 'lo' + HORIZONTAL_ELLIPSIS
 
     # Style before and after truncated text
-    line = before_style + 'long' + after_style
+    line = before_text + 'long' + after_text
     max_width = 3
     truncated = cu.truncate_line(line, max_width)
-    assert truncated == before_style + 'lo' + HORIZONTAL_ELLIPSIS + after_style
+    assert truncated == before_text + 'lo' + HORIZONTAL_ELLIPSIS + filtered_after_text
 
     # Style only after truncated text
-    line = 'long' + after_style
+    line = 'long' + after_text
     max_width = 3
     truncated = cu.truncate_line(line, max_width)
-    assert truncated == 'lo' + HORIZONTAL_ELLIPSIS + after_style
+    assert truncated == 'lo' + HORIZONTAL_ELLIPSIS + filtered_after_text
 
 
 def test_align_text_fill_char_is_tab():
@@ -551,10 +631,6 @@ def test_align_text_has_unprintable():
 def test_align_text_term_width():
     import shutil
 
-    from cmd2 import (
-        ansi,
-    )
-
     text = 'foo'
     fill_char = ' '
 
@@ -574,11 +650,28 @@ def test_align_left():
 
 
 def test_align_left_multiline():
+    # Without style
     text = "foo\nshoes"
     fill_char = '-'
     width = 7
     aligned = cu.align_left(text, fill_char=fill_char, width=width)
-    assert aligned == ('foo----\n' 'shoes--')
+    assert aligned == 'foo----\nshoes--'
+
+    # With style
+    reset_all = str(ansi.TextStyle.RESET_ALL)
+    blue = str(ansi.Fg.BLUE)
+    red = str(ansi.Fg.RED)
+    green = str(ansi.Fg.GREEN)
+    fg_reset = str(ansi.Fg.RESET)
+
+    text = f"{blue}foo{red}moo\nshoes{fg_reset}"
+    fill_char = f"{green}-{fg_reset}"
+    width = 7
+    aligned = cu.align_left(text, fill_char=fill_char, width=width)
+
+    expected = f"{reset_all}{blue}foo{red}moo{reset_all}{green}-{fg_reset}{reset_all}\n"
+    expected += f"{reset_all}{red}shoes{fg_reset}{reset_all}{green}--{fg_reset}{reset_all}"
+    assert aligned == expected
 
 
 def test_align_left_wide_text():
@@ -615,11 +708,28 @@ def test_align_center():
 
 
 def test_align_center_multiline():
+    # Without style
     text = "foo\nshoes"
     fill_char = '-'
     width = 7
     aligned = cu.align_center(text, fill_char=fill_char, width=width)
-    assert aligned == ('--foo--\n' '-shoes-')
+    assert aligned == '--foo--\n-shoes-'
+
+    # With style
+    reset_all = str(ansi.TextStyle.RESET_ALL)
+    blue = str(ansi.Fg.BLUE)
+    red = str(ansi.Fg.RED)
+    green = str(ansi.Fg.GREEN)
+    fg_reset = str(ansi.Fg.RESET)
+
+    text = f"{blue}foo{red}moo\nshoes{fg_reset}"
+    fill_char = f"{green}-{fg_reset}"
+    width = 10
+    aligned = cu.align_center(text, fill_char=fill_char, width=width)
+
+    expected = f"{reset_all}{green}--{fg_reset}{reset_all}{blue}foo{red}moo{reset_all}{green}--{fg_reset}{reset_all}\n"
+    expected += f"{reset_all}{green}--{fg_reset}{reset_all}{red}shoes{fg_reset}{reset_all}{green}---{fg_reset}{reset_all}"
+    assert aligned == expected
 
 
 def test_align_center_wide_text():
@@ -665,11 +775,28 @@ def test_align_right():
 
 
 def test_align_right_multiline():
+    # Without style
     text = "foo\nshoes"
     fill_char = '-'
     width = 7
     aligned = cu.align_right(text, fill_char=fill_char, width=width)
-    assert aligned == ('----foo\n' '--shoes')
+    assert aligned == '----foo\n--shoes'
+
+    # With style
+    reset_all = str(ansi.TextStyle.RESET_ALL)
+    blue = str(ansi.Fg.BLUE)
+    red = str(ansi.Fg.RED)
+    green = str(ansi.Fg.GREEN)
+    fg_reset = str(ansi.Fg.RESET)
+
+    text = f"{blue}foo{red}moo\nshoes{fg_reset}"
+    fill_char = f"{green}-{fg_reset}"
+    width = 7
+    aligned = cu.align_right(text, fill_char=fill_char, width=width)
+
+    expected = f"{reset_all}{green}-{fg_reset}{reset_all}{blue}foo{red}moo{reset_all}\n"
+    expected += f"{reset_all}{green}--{fg_reset}{reset_all}{red}shoes{fg_reset}{reset_all}"
+    assert aligned == expected
 
 
 def test_align_right_wide_text():
