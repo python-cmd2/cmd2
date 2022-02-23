@@ -1,4 +1,4 @@
-## 2.4.0 (TBD, 2022)
+## 2.4.0 (February 22, 2022)
 * Bug Fixes
   * Fixed issue in `ansi.async_alert_str()` which would raise `IndexError` if prompt was blank.
   * Fixed issue where tab completion was quoting argparse flags in some cases.
