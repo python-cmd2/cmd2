@@ -362,6 +362,9 @@ class Cmd(cmd.Cmd):
         # Stores results from the last command run to enable usage of results in Python shells and pyscripts
         self.last_result: Any = None
 
+        # Store last error so transcript can fail if error
+        self.last_error: Any = None
+
         # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
         self._script_dir: List[str] = []
 
@@ -1089,6 +1092,7 @@ class Cmd(cmd.Cmd):
             final_msg = ansi.style_error(msg)
         else:
             final_msg = str(msg)
+        self.last_error = msg
         ansi.style_aware_write(sys.stderr, final_msg + end)
 
     def pwarning(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
