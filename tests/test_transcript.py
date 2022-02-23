@@ -315,6 +315,33 @@ def test_transcript_failure(request, capsys):
     assert err.endswith(expected_end)
 
 
+def test_transcript_bad_cmd(request, capsys):
+    # Get location of the transcript
+    test_dir = os.path.dirname(request.module.__file__)
+    transcript_file = os.path.join(test_dir, 'transcripts', 'fail_no_command.txt')
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with
+    # arguments equal to the py.test args
+    testargs = ['prog', '-t', transcript_file]
+    with mock.patch.object(sys, 'argv', testargs):
+        # Create a cmd2.Cmd() instance and make sure basic settings are
+        # like we want for test
+        app = CmdLineApp()
+
+    app.feedback_to_output = False
+
+    # Run the command loop
+    sys_exit_code = app.cmdloop()
+    assert sys_exit_code != 0
+
+    expected_start = "youdontsay is not a recognized command, alias, or macro\nFile "
+    expected_end = "s\n\nFAILED (failures=1)\n\n"
+    _, err = capsys.readouterr()
+    assert err.startswith(expected_start)
+    assert err.endswith(expected_end)
+
+
+
 def test_transcript_no_file(request, capsys):
     # Need to patch sys.argv so cmd2 doesn't think it was called with
     # arguments equal to the py.test args

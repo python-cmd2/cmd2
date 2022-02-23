@@ -108,7 +108,7 @@ class Cmd2TestCase(unittest.TestCase):
             stop = self.cmdapp.onecmd_plus_hooks(command)
             if self.cmdapp.last_error is not None:
                 last_error_message = f'\nFile {fname}, line {line_num}\nCommand was:\n{command}\nCaused Error: \n{self.cmdapp.last_error}\n'
-                self.assertTrue(not (self.cmdapp.last_error), last_error_message)
+                self.assertTrue(False, last_error_message)
             result = self.cmdapp.stdout.read()
             stop_msg = 'Command indicated application should quit, but more commands in transcript'
             # Read the expected result from transcript
