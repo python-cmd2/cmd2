@@ -1,4 +1,4 @@
-## 2.4.0 (TBD, 2021)
+## 2.4.0 (TBD, 2022)
 * Bug Fixes
   * Fixed issue in `ansi.async_alert_str()` which would raise `IndexError` if prompt was blank.
   * Fixed issue where tab completion was quoting argparse flags in some cases.
@@ -6,6 +6,7 @@
   * Added broader exception handling when enabling clipboard functionality via `pyperclip`.
   * Added `PassThroughException` to `__init__.py` imports.
   * cmd2 now uses pyreadline3 when running any version of Python on Windows
+  * Improved memory usage in certain use cases of tables (e.g. nested colored tables)
 * Deletions (potentially breaking changes)
   * Deleted `cmd2.fg` and `cmd2.bg` which were deprecated in 2.3.0. Use `cmd2.Fg` and `cmd2.Bg` instead.
 

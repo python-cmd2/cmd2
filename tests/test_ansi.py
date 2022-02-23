@@ -253,3 +253,47 @@ def test_rgb_bounds(r, g, b, valid):
             ansi.RgbFg(r, g, b)
         with pytest.raises(ValueError):
             ansi.RgbBg(r, g, b)
+
+
+def test_std_color_re():
+    """Test regular expressions for matching standard foreground and background colors"""
+    for color in ansi.Fg:
+        assert ansi.STD_FG_RE.match(str(color))
+        assert not ansi.STD_BG_RE.match(str(color))
+    for color in ansi.Bg:
+        assert ansi.STD_BG_RE.match(str(color))
+        assert not ansi.STD_FG_RE.match(str(color))
+
+    # Test an invalid color code
+    assert not ansi.STD_FG_RE.match(f'{ansi.CSI}38m')
+    assert not ansi.STD_BG_RE.match(f'{ansi.CSI}48m')
+
+
+def test_eight_bit_color_re():
+    """Test regular expressions for matching eight-bit foreground and background colors"""
+    for color in ansi.EightBitFg:
+        assert ansi.EIGHT_BIT_FG_RE.match(str(color))
+        assert not ansi.EIGHT_BIT_BG_RE.match(str(color))
+    for color in ansi.EightBitBg:
+        assert ansi.EIGHT_BIT_BG_RE.match(str(color))
+        assert not ansi.EIGHT_BIT_FG_RE.match(str(color))
+
+    # Test invalid eight-bit value (256)
+    assert not ansi.EIGHT_BIT_FG_RE.match(f'{ansi.CSI}38;5;256m')
+    assert not ansi.EIGHT_BIT_BG_RE.match(f'{ansi.CSI}48;5;256m')
+
+
+def test_rgb_color_re():
+    """Test regular expressions for matching RGB foreground and background colors"""
+    for i in range(256):
+        fg_color = ansi.RgbFg(i, i, i)
+        assert ansi.RGB_FG_RE.match(str(fg_color))
+        assert not ansi.RGB_BG_RE.match(str(fg_color))
+
+        bg_color = ansi.RgbBg(i, i, i)
+        assert ansi.RGB_BG_RE.match(str(bg_color))
+        assert not ansi.RGB_FG_RE.match(str(bg_color))
+
+    # Test invalid RGB value (256)
+    assert not ansi.RGB_FG_RE.match(f'{ansi.CSI}38;2;256;256;256m')
+    assert not ansi.RGB_BG_RE.match(f'{ansi.CSI}48;2;256;256;256m')
