@@ -6,6 +6,7 @@ Unit/functional testing for argparse completer in cmd2
 import argparse
 import numbers
 from typing import (
+    Dict,
     List,
     cast,
 )
@@ -285,12 +286,12 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to receiving arg_tokens
     ############################################################################################################
-    def choices_takes_arg_tokens(self, arg_tokens: argparse.Namespace) -> List[str]:
+    def choices_takes_arg_tokens(self, arg_tokens: Dict[str, List[str]]) -> List[str]:
         """Choices function that receives arg_tokens from ArgparseCompleter"""
         return [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
 
     def completer_takes_arg_tokens(
-        self, text: str, line: str, begidx: int, endidx: int, arg_tokens: argparse.Namespace
+        self, text: str, line: str, begidx: int, endidx: int, arg_tokens: Dict[str, List[str]]
     ) -> List[str]:
         """Completer function that receives arg_tokens from ArgparseCompleter"""
         match_against = [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]

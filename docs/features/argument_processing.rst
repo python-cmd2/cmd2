@@ -82,17 +82,12 @@ Here's what it looks like::
     to bugs in CPython prior to Python 3.7 which make it impossible to make a
     deep copy of an instance of a ``argparse.ArgumentParser``.
 
-    See the table_display_ example for a work-around that demonstrates how to
-    create a function which returns a unique instance of the parser you want.
-
 
 .. note::
 
    The ``@with_argparser`` decorator sets the ``prog`` variable in the argument
    parser based on the name of the method it is decorating. This will override
    anything you specify in ``prog`` variable when creating the argument parser.
-
-.. _table_display: https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py
 
 
 Help Messages

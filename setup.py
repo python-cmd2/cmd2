@@ -51,9 +51,8 @@ INSTALL_REQUIRES = [
 ]
 
 EXTRAS_REQUIRE = {
-    # Windows also requires pyreadline or the replacement, pyreadline3, to ensure tab completion works
-    ":sys_platform=='win32' and python_version<'3.8'": ["pyreadline"],
-    ":sys_platform=='win32' and python_version>='3.8'": ["pyreadline3"],
+    # Windows also requires pyreadline3 to ensure tab completion works
+    ":sys_platform=='win32'": ['pyreadline3'],
     # Extra dependencies for running unit tests
     'test': [
         "gnureadline; sys_platform=='darwin'",  # include gnureadline on macOS to ensure it is available in nox env

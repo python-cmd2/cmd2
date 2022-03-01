@@ -238,13 +238,13 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
             break
 
 
-#: Function signature for an Command Function that uses an argparse.ArgumentParser to process user input
+#: Function signature for a Command Function that uses an argparse.ArgumentParser to process user input
 #: and optionally returns a boolean
 ArgparseCommandFuncOptionalBoolReturn = Union[
     Callable[['cmd2.Cmd', argparse.Namespace], Optional[bool]],
     Callable[[CommandSet, argparse.Namespace], Optional[bool]],
 ]
-#: Function signature for an Command Function that uses an argparse.ArgumentParser to process user input
+#: Function signature for a Command Function that uses an argparse.ArgumentParser to process user input
 #: and returns a boolean
 ArgparseCommandFuncBoolReturn = Union[
     Callable[['cmd2.Cmd', argparse.Namespace], bool],
