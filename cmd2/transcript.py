@@ -24,6 +24,7 @@ from typing import (
 from . import (
     ansi,
     utils,
+    py_bridge
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -75,6 +76,7 @@ class Cmd2TestCase(unittest.TestCase):
         if self.cmdapp is None:
             return
 
+        pybridge = py_bridge.PyBridge(self.cmdapp)
         line_num = 0
         finished = False
         line = ansi.strip_style(next(transcript))
@@ -105,8 +107,9 @@ class Cmd2TestCase(unittest.TestCase):
                 line_num += 1
             command = ''.join(command_parts)
             # Send the command into the application and capture the resulting output
-            stop = self.cmdapp.onecmd_plus_hooks(command)
-            result = self.cmdapp.stdout.read()
+            cmd_result = pybridge(command)
+            stop = cmd_result.stop
+            result = cmd_result.stderr + cmd_result.stdout
             stop_msg = 'Command indicated application should quit, but more commands in transcript'
             # Read the expected result from transcript
             if ansi.strip_style(line).startswith(self.cmdapp.visible_prompt):

@@ -92,6 +92,14 @@ class CmdLineApp(cmd2.Cmd):
         """Do nothing and output nothing"""
         pass
 
+    def do_say_warn(self, statement):
+        """Do pwarn message"""
+        self.pwarning("speak a warning: "+statement)
+
+    def do_say_error(self, statement):
+        """Do perror message"""
+        self.perror("speak an error: "+statement)
+
     def do_keyboard_interrupt(self, _):
         raise KeyboardInterrupt('Interrupting this command')
 
@@ -120,6 +128,7 @@ def test_commands_at_invocation():
         ('multiline_regex.txt', False),
         ('no_output.txt', False),
         ('no_output_last.txt', False),
+        ('pwarn_perror.txt', False),
         ('regex_set.txt', False),
         ('singleslash.txt', False),
         ('slashes_escaped.txt', False),
@@ -332,3 +341,29 @@ def test_transcript_no_file(request, capsys):
     expected = 'No test files found - nothing to test\n'
     _, err = capsys.readouterr()
     assert err == expected
+
+def test_transcript_bad_cmd(request, capsys):
+    # Get location of the transcript
+    test_dir = os.path.dirname(request.module.__file__)
+    transcript_file = os.path.join(test_dir, 'transcripts', 'fail_no_command.txt')
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with
+    # arguments equal to the py.test args
+    testargs = ['prog', '-t', transcript_file]
+    with mock.patch.object(sys, 'argv', testargs):
+        # Create a cmd2.Cmd() instance and make sure basic settings are
+        # like we want for test
+        app = CmdLineApp()
+
+    app.feedback_to_output = False
+
+    # Run the command loop
+    sys_exit_code = app.cmdloop()
+    assert sys_exit_code != 0
+    expected_start = "File "
+    expected_middle = "youdontsay is not a recognized command, alias, or macro"
+    expected_end = "s\n\nFAILED (failures=1)\n\n"
+    _, err = capsys.readouterr()
+    assert err.startswith(expected_start)
+    assert expected_middle in err
+    assert err.endswith(expected_end)

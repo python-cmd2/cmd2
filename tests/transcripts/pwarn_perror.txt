@@ -1,0 +1,8 @@
+# ensure the transcript catches output to perror and pwarn from a command
+
+(Cmd) say_warn something
+speak a warning: something
+(Cmd) say_error something
+speak an error: something
+(Cmd) say something else
+something else
