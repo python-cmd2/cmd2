@@ -28,7 +28,7 @@ when using cmd.
 The developers toolbox
 ----------------------
 
-![system schema](https://github.com/python-cmd2/cmd2/blob/README_facelift/.github/images/graph.drawio.png)
+![system schema](https://github.com/python-cmd2/cmd2/blob/master/.github/images/graph.drawio.png)
 
 
 When creating solutions developers have no shortage of tools to create rich and smart user interfaces. 
