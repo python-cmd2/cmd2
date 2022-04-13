@@ -37,7 +37,7 @@ class CmdLineApp(cmd2.Cmd):
 
     We also add a postcommand hook, which updates the shell prompt to show the
     raw contents of the Statement after the postparsing hooks are finished. To
-    use this hook, run `(Cmd) set debug True`. All of the above variations of 
+    use this hook, run `(Cmd) set debug True`. All of the above variations of
     the list command should produce the same raw content.
 
     """
