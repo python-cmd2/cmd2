@@ -44,6 +44,7 @@ from .conftest import (
 def with_ansi_style(style):
     def arg_decorator(func):
         import functools
+
         @functools.wraps(func)
         def cmd_wrapper(*args, **kwargs):
             old = ansi.allow_style
@@ -53,7 +54,9 @@ def with_ansi_style(style):
             finally:
                 ansi.allow_style = old
             return retval
+
         return cmd_wrapper
+
     return arg_decorator
 
 
