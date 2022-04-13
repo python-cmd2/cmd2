@@ -41,6 +41,25 @@ from .conftest import (
 )
 
 
+def with_ansi_style(style):
+    def arg_decorator(func):
+        import functools
+
+        @functools.wraps(func)
+        def cmd_wrapper(*args, **kwargs):
+            old = ansi.allow_style
+            ansi.allow_style = style
+            try:
+                retval = func(*args, **kwargs)
+            finally:
+                ansi.allow_style = old
+            return retval
+
+        return cmd_wrapper
+
+    return arg_decorator
+
+
 def CreateOutsimApp():
     c = cmd2.Cmd()
     c.stdout = utils.StdSim(c.stdout)
@@ -1798,9 +1817,9 @@ def test_poutput_none(outsim_app):
     assert out == expected
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_poutput_ansi_always(outsim_app):
     msg = 'Hello World'
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
     colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
@@ -1809,9 +1828,9 @@ def test_poutput_ansi_always(outsim_app):
     assert out == expected
 
 
+@with_ansi_style(ansi.AllowStyle.NEVER)
 def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
-    ansi.allow_style = ansi.AllowStyle.NEVER
     colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
@@ -2236,64 +2255,64 @@ def test_nonexistent_macro(base_app):
     assert exception is not None
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_perror_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
     base_app.perror(msg)
     out, err = capsys.readouterr()
     assert err == ansi.style_error(msg) + end
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_perror_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
     base_app.perror(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_pwarning_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
     base_app.pwarning(msg)
     out, err = capsys.readouterr()
     assert err == ansi.style_warning(msg) + end
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_pwarning_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
     base_app.pwarning(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_pexcept_style(base_app, capsys):
     msg = Exception('testing...')
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
     assert err.startswith(ansi.style_error("EXCEPTION of type 'Exception' occurred with message: testing..."))
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_pexcept_no_style(base_app, capsys):
     msg = Exception('testing...')
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
 
     base_app.pexcept(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_pexcept_not_exception(base_app, capsys):
     # Pass in a msg that is not an Exception object
     msg = False
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
@@ -2322,20 +2341,20 @@ def test_ppaged_none(outsim_app):
     assert not out
 
 
+@with_ansi_style(ansi.AllowStyle.TERMINAL)
 def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.AllowStyle.TERMINAL
     outsim_app._redirecting = True
     outsim_app.ppaged(ansi.style(msg, fg=ansi.Fg.RED))
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
     outsim_app._redirecting = True
     colored_msg = ansi.style(msg, fg=ansi.Fg.RED)
     outsim_app.ppaged(colored_msg)
@@ -2526,9 +2545,9 @@ class AnsiApp(cmd2.Cmd):
         self.perror(args)
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_ansi_pouterr_always_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2549,9 +2568,9 @@ def test_ansi_pouterr_always_tty(mocker, capsys):
     assert 'oopsie' in err
 
 
+@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_ansi_pouterr_always_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.AllowStyle.ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -2572,9 +2591,9 @@ def test_ansi_pouterr_always_notty(mocker, capsys):
     assert 'oopsie' in err
 
 
+@with_ansi_style(ansi.AllowStyle.TERMINAL)
 def test_ansi_terminal_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.AllowStyle.TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2594,9 +2613,9 @@ def test_ansi_terminal_tty(mocker, capsys):
     assert 'oopsie' in err
 
 
+@with_ansi_style(ansi.AllowStyle.TERMINAL)
 def test_ansi_terminal_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.AllowStyle.TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -2609,9 +2628,9 @@ def test_ansi_terminal_notty(mocker, capsys):
     assert out == err == 'oopsie\n'
 
 
+@with_ansi_style(ansi.AllowStyle.NEVER)
 def test_ansi_never_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.AllowStyle.NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2624,9 +2643,9 @@ def test_ansi_never_tty(mocker, capsys):
     assert out == err == 'oopsie\n'
 
 
+@with_ansi_style(ansi.AllowStyle.NEVER)
 def test_ansi_never_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_style = ansi.AllowStyle.NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
