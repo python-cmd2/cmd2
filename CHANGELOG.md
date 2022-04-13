@@ -2,6 +2,8 @@
 * Bug Fixes
   * Fixed value for `ansi.Bg.YELLOW`.
   * Fixed unit tests for `ansi.allow_style`.
+* Enhancements
+  * `async_alert()` raises a `RuntimeError` if called from the main thread.
 
 ## 2.4.0 (February 22, 2022)
 * Bug Fixes
