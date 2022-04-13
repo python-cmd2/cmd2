@@ -1,4 +1,4 @@
-## 2.4.1 (TBD, 2022)
+## 2.4.1 (April 13, 2022)
 * Bug Fixes
   * Fixed value for `ansi.Bg.YELLOW`.
   * Fixed unit tests for `ansi.allow_style`.
