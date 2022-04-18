@@ -139,6 +139,7 @@ from .table_creator import (
 from .utils import (
     Settable,
     get_defining_class,
+    strip_doc_annotations,
 )
 
 # Set up readline
@@ -3808,23 +3809,7 @@ class Cmd(cmd.Cmd):
                         doc = cmd_func.__doc__
 
                     # Attempt to locate the first documentation block
-                    cmd_desc = ''
-                    if doc:
-                        found_first = False
-                        for doc_line in doc.splitlines():
-                            stripped_line = doc_line.strip()
-
-                            # Don't include :param type lines
-                            if stripped_line.startswith(':'):
-                                if found_first:
-                                    break
-                            elif stripped_line:
-                                if found_first:
-                                    cmd_desc += "\n"
-                                cmd_desc += stripped_line
-                                found_first = True
-                            elif found_first:
-                                break
+                    cmd_desc = strip_doc_annotations(doc) if doc else ''
 
                     # Add this command to the table
                     table_row = topic_table.generate_data_row([command, cmd_desc])

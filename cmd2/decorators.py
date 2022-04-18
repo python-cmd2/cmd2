@@ -29,6 +29,9 @@ from .exceptions import (
 from .parsing import (
     Statement,
 )
+from .utils import (
+    strip_doc_annotations,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2
@@ -384,7 +387,7 @@ def with_argparser(
 
         # If the description has not been set, then use the method docstring if one exists
         if parser.description is None and func.__doc__:
-            parser.description = func.__doc__
+            parser.description = strip_doc_annotations(func.__doc__)
 
         # Set the command's help text as argparser.description (which can be None)
         cmd_wrapper.__doc__ = parser.description
