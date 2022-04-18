@@ -1228,3 +1228,29 @@ class CustomCompletionSettings:
         """
         self.parser = parser
         self.preserve_quotes = preserve_quotes
+
+
+def strip_doc_annotations(doc: str) -> str:
+    """
+    Strip annotations from a docstring leaving only the text description
+
+    :param doc: documentation string
+    """
+    # Attempt to locate the first documentation block
+    cmd_desc = ''
+    found_first = False
+    for doc_line in doc.splitlines():
+        stripped_line = doc_line.strip()
+
+        # Don't include :param type lines
+        if stripped_line.startswith(':'):
+            if found_first:
+                break
+        elif stripped_line:
+            if found_first:
+                cmd_desc += "\n"
+            cmd_desc += stripped_line
+            found_first = True
+        elif found_first:
+            break
+    return cmd_desc
