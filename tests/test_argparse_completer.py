@@ -1371,5 +1371,5 @@ def test_add_parser_custom_completer():
     no_custom_completer_parser = subparsers.add_parser(name="no_custom_completer")
     assert no_custom_completer_parser.get_ap_completer_type() is None  # type: ignore[attr-defined]
 
-    custom_completer_parser = subparsers.add_parser(name="no_custom_completer", ap_completer_type=CustomCompleter)
+    custom_completer_parser = subparsers.add_parser(name="custom_completer", ap_completer_type=CustomCompleter)
     assert custom_completer_parser.get_ap_completer_type() is CustomCompleter  # type: ignore[attr-defined]
