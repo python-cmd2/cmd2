@@ -1,3 +1,8 @@
+## 2.4.2 (July 13, 2022)
+* Enhancements
+  * Updated argparse decorator to remove annotations when the docstring is used for a command's help text.
+  * Updated unit test to be Python 3.11 compliant.
+
 ## 2.4.1 (April 13, 2022)
 * Bug Fixes
   * Fixed value for `ansi.Bg.YELLOW`.
