@@ -2,18 +2,19 @@
 
 [![Latest Version](https://img.shields.io/pypi/v/cmd2.svg?style=flat-square&label=latest%20stable%20version)](https://pypi.python.org/pypi/cmd2/)
 [![GitHub Actions](https://github.com/python-cmd2/cmd2/workflows/CI/badge.svg)](https://github.com/python-cmd2/cmd2/actions?query=workflow%3ACI)
-[![Azure Build status](https://python-cmd2.visualstudio.com/cmd2/_apis/build/status/python-cmd2.cmd2?branch=master)](https://python-cmd2.visualstudio.com/cmd2/_build/latest?definitionId=1&branch=master)
 [![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/master/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
 [![Documentation Status](https://readthedocs.org/projects/cmd2/badge/?version=latest)](http://cmd2.readthedocs.io/en/latest/?badge=latest)
 <a href="https://discord.gg/RpVG6tk"><img src="https://img.shields.io/badge/chat-on%20discord-7289da.svg" alt="Chat"></a>
 
 
 <p align="center">
-  <a href="#main-features">Main Features</a> •
+  <a href="#the-developers-toolbox">Develper's Toolbox</a> •
+  <a href="#philosophy">Philosophy</a> •
   <a href="#installation">Installation</a> •
+  <a href="#documentation">Documentation</a> •
   <a href="#tutorials">Tutorials</a> •
+  <a href="#hello-world">Hello World</a> •
   <a href="#projects-using-cmd2">Projects using cmd2</a> •
-  <a href="#version-two-notes">Version 2.0 Notes</a>
 </p>
 
 [![Screenshot](https://raw.githubusercontent.com/python-cmd2/cmd2/master/cmd2.png)](https://youtu.be/DDU_JH6cFsA)

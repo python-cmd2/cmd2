@@ -20,7 +20,6 @@ gnureadline = {version = "*",sys_platform = "== 'darwin'"}
 invoke = "*"
 ipython = "*"
 isort = "*"
-mock = {version = "*",markers = "python_version < '3.6'"}
 mypy = "*"
 pyreadline3 = {version = ">=3.4",sys_platform = "== 'win32'"}
 pytest = "*"

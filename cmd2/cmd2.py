@@ -4426,7 +4426,7 @@ class Cmd(cmd.Cmd):
                 local_vars['self'] = self
 
             # Configure IPython
-            config = TraitletsLoader.Config()
+            config = TraitletsLoader.Config()  # type: ignore
             config.InteractiveShell.banner2 = (
                 'Entering an IPython shell. Type exit, quit, or Ctrl-D to exit.\n'
                 f'Run CLI commands with: {self.py_bridge_name}("command ...")\n'
@@ -5256,7 +5256,7 @@ class Cmd(cmd.Cmd):
         import signal
 
         original_sigint_handler = signal.getsignal(signal.SIGINT)
-        signal.signal(signal.SIGINT, self.sigint_handler)
+        signal.signal(signal.SIGINT, self.sigint_handler)  # type: ignore
 
         # Grab terminal lock before the command line prompt has been drawn by readline
         self.terminal_lock.acquire()

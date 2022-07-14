@@ -353,3 +353,14 @@ def flake8(context):
 
 
 namespace.add_task(flake8)
+
+
+# Black and isort auto-formatting
+@invoke.task()
+def format(context):
+    """Run black and isort auto-formatting for code style enforcement"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("black . && isort .")
+
+
+namespace.add_task(format)

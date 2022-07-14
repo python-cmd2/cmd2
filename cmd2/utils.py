@@ -41,11 +41,9 @@ from .argparse_custom import (
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2  # noqa: F401
 
-    PopenTextIO = subprocess.Popen[bytes]
-
+    PopenTextIO = subprocess.Popen[str]
 else:
     PopenTextIO = subprocess.Popen
-
 
 _T = TypeVar('_T')
 
@@ -670,12 +668,15 @@ class ProcReader:
                 self._write_bytes(write_stream, available)
 
     @staticmethod
-    def _write_bytes(stream: Union[StdSim, TextIO], to_write: bytes) -> None:
+    def _write_bytes(stream: Union[StdSim, TextIO], to_write: Union[bytes, str]) -> None:
         """
         Write bytes to a stream
         :param stream: the stream being written to
         :param to_write: the bytes being written
         """
+        if isinstance(to_write, str):
+            to_write = to_write.encode()
+
         try:
             stream.buffer.write(to_write)
         except BrokenPipeError:
