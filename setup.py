@@ -68,7 +68,7 @@ EXTRAS_REQUIRE = {
         'doc8',
         'flake8',
         'invoke',
-        'mypy==0.902',
+        'mypy==0.961',
         'nox',
         "pytest>=4.6",
         'pytest-cov',
@@ -80,7 +80,7 @@ EXTRAS_REQUIRE = {
     ],
     'validate': [
         'flake8',
-        'mypy==0.902',
+        'mypy==0.961',
         'types-pkg-resources',
     ],
 }
