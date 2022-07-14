@@ -34,6 +34,12 @@ class CmdLineApp(cmd2.Cmd):
 
     and have them all treated as valid input which prints a list of 10 numbers
     starting with the number 5.
+
+    We also add a postcommand hook, which updates the shell prompt to show the
+    raw contents of the Statement after the postparsing hooks are finished. To
+    use this hook, run `(Cmd) set debug True`. All of the above variations of
+    the list command should produce the same raw content.
+
     """
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
@@ -41,10 +47,11 @@ class CmdLineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # register three hooks
+        # register four hooks
         self.register_postparsing_hook(self.add_whitespace_hook)
         self.register_postparsing_hook(self.downcase_hook)
         self.register_postparsing_hook(self.abbrev_hook)
+        self.register_postcmd_hook(self.proof_hook)
 
     def add_whitespace_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """A hook to split alphabetic command names immediately followed by a number.
@@ -62,17 +69,19 @@ class CmdLineApp(cmd2.Cmd):
         command_pattern = re.compile(r'^([^\s\d]+)(\d+)')
         match = command_pattern.search(command)
         if match:
-            data.statement = self.statement_parser.parse(
-                "{} {} {}".format(match.group(1), match.group(2), '' if data.statement.args is None else data.statement.args)
-            )
+            command = match.group(1)
+            first_arg = match.group(2)
+            rest_args = data.statement.args
+            post_command = data.statement.post_command
+            data.statement = self.statement_parser.parse(f'{command} {first_arg} {rest_args} {post_command}')
         return data
 
     def downcase_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """A hook to make uppercase commands lowercase."""
         command = data.statement.command.lower()
-        data.statement = self.statement_parser.parse(
-            "{} {}".format(command, '' if data.statement.args is None else data.statement.args)
-        )
+        args = data.statement.args
+        post_command = data.statement.post_command
+        data.statement = self.statement_parser.parse(f'{command} {args} {post_command}')
         return data
 
     def abbrev_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
@@ -84,6 +93,12 @@ class CmdLineApp(cmd2.Cmd):
             if len(possible_cmds) == 1:
                 raw = data.statement.raw.replace(data.statement.command, possible_cmds[0], 1)
                 data.statement = self.statement_parser.parse(raw)
+        return data
+
+    def proof_hook(self, data: cmd2.plugin.PostcommandData) -> cmd2.plugin.PostcommandData:
+        """Update the shell prompt with the new raw statement after postparsing hooks are finished"""
+        if self.debug:
+            self.prompt = f'({data.statement.raw})'
         return data
 
     @cmd2.with_argument_list

@@ -35,7 +35,13 @@ class ArgparseApp(cmd2.Cmd):
 
     @cmd2.with_argparser(say_parser)
     def do_say(self, args, *, keyword_arg: Optional[str] = None):
-        """Repeat what you tell me to."""
+        """
+        Repeat what you
+        tell me to.
+
+        :param args: argparse namespace
+        :param keyword_arg: Optional keyword arguments
+        """
         words = []
         for word in args.words:
             if word is None:
@@ -198,7 +204,10 @@ def test_argparse_help_docstring(argparse_app):
     out, err = run_cmd(argparse_app, 'help say')
     assert out[0].startswith('Usage: say')
     assert out[1] == ''
-    assert out[2] == 'Repeat what you tell me to.'
+    assert out[2] == 'Repeat what you'
+    assert out[3] == 'tell me to.'
+    for line in out:
+        assert not line.startswith(':')
 
 
 def test_argparse_help_description(argparse_app):

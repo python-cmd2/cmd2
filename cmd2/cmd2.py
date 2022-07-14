@@ -139,6 +139,7 @@ from .table_creator import (
 from .utils import (
     Settable,
     get_defining_class,
+    strip_doc_annotations,
 )
 
 # Set up readline
@@ -1984,7 +1985,7 @@ class Cmd(cmd.Cmd):
             # Save the quote so we can add a matching closing quote later.
             completion_token_quote = raw_completion_token[0]
 
-            # readline still performs word breaks after a quote. Therefore something like quoted search
+            # readline still performs word breaks after a quote. Therefore, something like quoted search
             # text with a space would have resulted in begidx pointing to the middle of the token we
             # we want to complete. Figure out where that token actually begins and save the beginning
             # portion of it that was not part of the text readline gave us. We will remove it from the
@@ -2064,7 +2065,7 @@ class Cmd(cmd.Cmd):
         until it returns a non-string value. It should return the next possible completion starting with text.
 
         Since readline suppresses any exception raised in completer functions, they can be difficult to debug.
-        Therefore this function wraps the actual tab completion logic and prints to stderr any exception that
+        Therefore, this function wraps the actual tab completion logic and prints to stderr any exception that
         occurs before returning control to readline.
 
         :param text: the current word that user is typing
@@ -2097,7 +2098,7 @@ class Cmd(cmd.Cmd):
                     begidx = max(readline.get_begidx() - num_stripped, 0)
                     endidx = max(readline.get_endidx() - num_stripped, 0)
 
-                # Shortcuts are not word break characters when tab completing. Therefore shortcuts become part
+                # Shortcuts are not word break characters when tab completing. Therefore, shortcuts become part
                 # of the text variable if there isn't a word break, like a space, after it. We need to remove it
                 # from text and update the indexes. This only applies if we are at the beginning of the command line.
                 shortcut_to_restore = ''
@@ -3808,23 +3809,7 @@ class Cmd(cmd.Cmd):
                         doc = cmd_func.__doc__
 
                     # Attempt to locate the first documentation block
-                    cmd_desc = ''
-                    if doc:
-                        found_first = False
-                        for doc_line in doc.splitlines():
-                            stripped_line = doc_line.strip()
-
-                            # Don't include :param type lines
-                            if stripped_line.startswith(':'):
-                                if found_first:
-                                    break
-                            elif stripped_line:
-                                if found_first:
-                                    cmd_desc += "\n"
-                                cmd_desc += stripped_line
-                                found_first = True
-                            elif found_first:
-                                break
+                    cmd_desc = strip_doc_annotations(doc) if doc else ''
 
                     # Add this command to the table
                     table_row = topic_table.generate_data_row([command, cmd_desc])
@@ -4056,7 +4041,7 @@ class Cmd(cmd.Cmd):
             # sh reports an incorrect return code for some applications when Ctrl-C is pressed within that
             # application (e.g. less). Since sh received the SIGINT, it sets the return code to reflect being
             # closed by SIGINT even though less did not exit upon a Ctrl-C press. In the same situation, other
-            # shells like bash and zsh report the actual return code of less. Therefore we will try to run the
+            # shells like bash and zsh report the actual return code of less. Therefore, we will try to run the
             # user's preferred shell which most likely will be something other than sh. This also allows the user
             # to run builtin commands of their preferred shell.
             shell = os.environ.get("SHELL")
@@ -4103,7 +4088,7 @@ class Cmd(cmd.Cmd):
         console to create its own display settings since they won't exist.
 
         IPython does not have this problem since it always overwrites the display settings when it
-        is run. Therefore this method only needs to be called before creating a Python console.
+        is run. Therefore, this method only needs to be called before creating a Python console.
         """
         # Delete any prompts that have been set
         attributes = ['ps1', 'ps2', 'ps3']
@@ -4318,7 +4303,7 @@ class Cmd(cmd.Cmd):
                         saved_cmd2_env = self._set_up_py_shell_env(interp)
 
                     # Since quit() or exit() raise an EmbeddedConsoleExit, interact() exits before printing
-                    # the exitmsg. Therefore we will not provide it one and print it manually later.
+                    # the exitmsg. Therefore, we will not provide it one and print it manually later.
                     interp.interact(banner=banner, exitmsg='')
                 except BaseException:
                     # We don't care about any exception that happened in the interactive console
@@ -4453,7 +4438,7 @@ class Cmd(cmd.Cmd):
 
             # The IPython application is a singleton and won't be recreated next time
             # this function runs. That's a problem since the contents of local_vars
-            # may need to be changed. Therefore we must destroy all instances of the
+            # may need to be changed. Therefore, we must destroy all instances of the
             # relevant classes.
             TerminalIPythonApp.clear_instance()
             TerminalInteractiveShell.clear_instance()
@@ -5026,14 +5011,22 @@ class Cmd(cmd.Cmd):
         text and cursor location is left alone.
 
         IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
-                   a prompt is onscreen. Therefore it is best to acquire the lock before calling this function
+                   a prompt is onscreen. Therefore, it is best to acquire the lock before calling this function
                    to guarantee the alert prints and to avoid raising a RuntimeError.
+
+                   This function is only needed when you need to print an alert while the main thread is blocking
+                   at the prompt. Therefore, this should never be called from the main thread. Doing so will
+                   raise a RuntimeError.
 
         :param alert_msg: the message to display to the user
         :param new_prompt: If you also want to change the prompt that is displayed, then include it here.
                            See async_update_prompt() docstring for guidance on updating a prompt.
+        :raises RuntimeError: if called from the main thread.
         :raises RuntimeError: if called while another thread holds `terminal_lock`
         """
+        if threading.current_thread() is threading.main_thread():
+            raise RuntimeError("async_alert should not be called from the main thread")
+
         if not (vt100_support and self.use_rawinput):
             return
 
@@ -5096,14 +5089,19 @@ class Cmd(cmd.Cmd):
         be shifted and the update will not be seamless.
 
         IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
-                   a prompt is onscreen. Therefore it is best to acquire the lock before calling this function
+                   a prompt is onscreen. Therefore, it is best to acquire the lock before calling this function
                    to guarantee the prompt changes and to avoid raising a RuntimeError.
 
+                   This function is only needed when you need to update the prompt while the main thread is blocking
+                   at the prompt. Therefore, this should never be called from the main thread. Doing so will
+                   raise a RuntimeError.
+
                    If user is at a continuation prompt while entering a multiline command, the onscreen prompt will
-                   not change. However self.prompt will still be updated and display immediately after the multiline
+                   not change. However, self.prompt will still be updated and display immediately after the multiline
                    line command completes.
 
         :param new_prompt: what to change the prompt to
+        :raises RuntimeError: if called from the main thread.
         :raises RuntimeError: if called while another thread holds `terminal_lock`
         """
         self.async_alert('', new_prompt)
@@ -5113,7 +5111,7 @@ class Cmd(cmd.Cmd):
         """
         Set the terminal window title.
 
-        NOTE: This function writes to stderr. Therefore if you call this during a command run by a pyscript,
+        NOTE: This function writes to stderr. Therefore, if you call this during a command run by a pyscript,
               the string which updates the title will appear in that command's CommandResult.stderr data.
 
         :param title: the new window title

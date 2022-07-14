@@ -48,7 +48,11 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(pow_parser)
     def do_pow(self, args: argparse.Namespace) -> None:
-        """Raise an integer to a small integer exponent, either positive or negative"""
+        """
+        Raise an integer to a small integer exponent, either positive or negative
+
+        :param args: argparse arguments
+        """
         self.poutput('{} ** {} == {}'.format(args.base, args.exponent, args.base**args.exponent))
 
 
