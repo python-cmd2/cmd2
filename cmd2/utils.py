@@ -16,6 +16,7 @@ from enum import (
     Enum,
 )
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -36,6 +37,13 @@ from .argparse_custom import (
     ChoicesProviderFunc,
     CompleterFunc,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    import cmd2  # noqa: F401
+
+    PopenTextIO = subprocess.Popen[str]
+else:
+    PopenTextIO = subprocess.Popen
 
 _T = TypeVar('_T')
 
@@ -578,7 +586,7 @@ class ProcReader:
     If neither are pipes, then the process will run normally and no output will be captured.
     """
 
-    def __init__(self, proc: subprocess.Popen[str], stdout: Union[StdSim, TextIO], stderr: Union[StdSim, TextIO]) -> None:
+    def __init__(self, proc: PopenTextIO, stdout: Union[StdSim, TextIO], stderr: Union[StdSim, TextIO]) -> None:
         """
         ProcReader initializer
         :param proc: the Popen process being read from
