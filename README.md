@@ -16,7 +16,7 @@
   <a href="#version-two-notes">Version 2.0 Notes</a>
 </p>
 
-[![Screenshot](cmd2.png)](https://youtu.be/DDU_JH6cFsA)
+[![Screenshot](https://raw.githubusercontent.com/python-cmd2/cmd2/master/cmd2.png)](https://youtu.be/DDU_JH6cFsA)
 
 cmd2 is a tool for building interactive command line applications in Python. Its goal is to make it
 quick and easy for developers to build feature-rich and user-friendly interactive command line
@@ -28,7 +28,7 @@ when using cmd.
 The developers toolbox
 ----------------------
 
-![system schema](https://github.com/python-cmd2/cmd2/blob/master/.github/images/graph.drawio.png)
+![system schema](https://raw.githubusercontent.com/python-cmd2/cmd2/master/.github/images/graph.drawio.png)
 
 
 When creating solutions developers have no shortage of tools to create rich and smart user interfaces. 
