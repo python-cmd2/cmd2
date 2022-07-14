@@ -1033,7 +1033,7 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 ############################################################################################################
 
 # noinspection PyPep8Naming,PyProtectedMember
-def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:
+def _SubParsersAction_remove_parser(self: Any, name: str) -> None:
     """
     Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
 
@@ -1333,7 +1333,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
     # noinspection PyProtectedMember
-    def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:
+    def add_subparsers(self, **kwargs: Any) -> Any:
         """
         Custom override. Sets a default title if one was not given.
 
