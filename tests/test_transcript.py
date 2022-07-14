@@ -94,11 +94,11 @@ class CmdLineApp(cmd2.Cmd):
 
     def do_say_warn(self, statement):
         """Do pwarn message"""
-        self.pwarning("speak a warning: "+statement)
+        self.pwarning("speak a warning: " + statement)
 
     def do_say_error(self, statement):
         """Do perror message"""
-        self.perror("speak an error: "+statement)
+        self.perror("speak an error: " + statement)
 
     def do_keyboard_interrupt(self, _):
         raise KeyboardInterrupt('Interrupting this command')
@@ -341,6 +341,7 @@ def test_transcript_no_file(request, capsys):
     expected = 'No test files found - nothing to test\n'
     _, err = capsys.readouterr()
     assert err == expected
+
 
 def test_transcript_bad_cmd(request, capsys):
     # Get location of the transcript

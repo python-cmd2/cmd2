@@ -21,11 +21,7 @@ from typing import (
     cast,
 )
 
-from . import (
-    ansi,
-    utils,
-    py_bridge
-)
+from . import ansi, utils, py_bridge
 
 if TYPE_CHECKING:  # pragma: no cover
     from cmd2 import (
