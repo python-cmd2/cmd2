@@ -91,7 +91,7 @@ def strip_quotes(arg: str) -> str:
 
 def to_bool(val: Any) -> bool:
     """Converts anything to a boolean based on its value.
-    
+
     Strings like "True", "true", "False", and "false" return True, True, False, and False
     respectively. All other values are converted using bool()
 
