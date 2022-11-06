@@ -89,11 +89,14 @@ def strip_quotes(arg: str) -> str:
     return arg
 
 
-def to_bool(val: str) -> bool:
-    """Converts a string to a boolean based on its value.
+def to_bool(val: Any) -> bool:
+    """Converts anything to a boolean based on its value.
+    
+    Strings like "True", "true", "False", and "false" return True, True, False, and False
+    respectively. All other values are converted using bool()
 
-    :param val: string being converted
-    :return: boolean value expressed in the string
+    :param val: value being converted
+    :return: boolean value expressed in the passed in value
     :raises: ValueError if the string does not contain a value corresponding to a boolean value
     """
     if isinstance(val, str):
