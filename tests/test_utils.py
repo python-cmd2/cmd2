@@ -846,7 +846,7 @@ def test_to_bool_str_invalid():
 def test_to_bool_bool():
     assert cu.to_bool(True)
     assert not cu.to_bool(False)
-    
+
 
 def test_to_bool_int():
     assert cu.to_bool(1)
