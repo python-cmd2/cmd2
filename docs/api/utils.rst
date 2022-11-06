@@ -88,7 +88,7 @@ Text Alignment
 Miscellaneous
 -------------
 
-.. autofunction:: cmd2.utils.str_to_bool
+.. autofunction:: cmd2.utils.to_bool
 
 .. autofunction:: cmd2.utils.categorize
 

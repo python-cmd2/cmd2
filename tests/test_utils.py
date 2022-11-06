@@ -824,28 +824,36 @@ def test_align_right_wide_fill_needs_padding():
     assert aligned == fill_char + ' ' + text
 
 
-def test_str_to_bool_true():
-    assert cu.str_to_bool('true')
-    assert cu.str_to_bool('True')
-    assert cu.str_to_bool('TRUE')
-    assert cu.str_to_bool('tRuE')
+def test_to_bool_str_true():
+    assert cu.to_bool('true')
+    assert cu.to_bool('True')
+    assert cu.to_bool('TRUE')
+    assert cu.to_bool('tRuE')
 
 
-def test_str_to_bool_false():
-    assert not cu.str_to_bool('false')
-    assert not cu.str_to_bool('False')
-    assert not cu.str_to_bool('FALSE')
-    assert not cu.str_to_bool('fAlSe')
+def test_to_bool_str_false():
+    assert not cu.to_bool('false')
+    assert not cu.to_bool('False')
+    assert not cu.to_bool('FALSE')
+    assert not cu.to_bool('fAlSe')
 
 
-def test_str_to_bool_invalid():
+def test_to_bool_str_invalid():
     with pytest.raises(ValueError):
-        cu.str_to_bool('other')
+        cu.to_bool('other')
 
 
-def test_str_to_bool_bad_input():
-    with pytest.raises(ValueError):
-        cu.str_to_bool(1)
+def test_to_bool_int():
+    assert cu.to_bool(1)
+    assert cu.to_bool(-1)
+    assert not cu.to_bool(0)
+
+
+def test_to_bool_float():
+    assert cu.to_bool(2.35)
+    assert cu.to_bool(0.25)
+    assert cu.to_bool(-3.1415)
+    assert not cu.to_bool(0)
 
 
 def test_find_editor_specified():
