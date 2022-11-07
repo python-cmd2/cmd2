@@ -89,11 +89,14 @@ def strip_quotes(arg: str) -> str:
     return arg
 
 
-def str_to_bool(val: str) -> bool:
-    """Converts a string to a boolean based on its value.
+def to_bool(val: Any) -> bool:
+    """Converts anything to a boolean based on its value.
 
-    :param val: string being converted
-    :return: boolean value expressed in the string
+    Strings like "True", "true", "False", and "false" return True, True, False, and False
+    respectively. All other values are converted using bool()
+
+    :param val: value being converted
+    :return: boolean value expressed in the passed in value
     :raises: ValueError if the string does not contain a value corresponding to a boolean value
     """
     if isinstance(val, str):
@@ -101,7 +104,11 @@ def str_to_bool(val: str) -> bool:
             return True
         elif val.capitalize() == str(False):
             return False
-    raise ValueError("must be True or False (case-insensitive)")
+        raise ValueError("must be True or False (case-insensitive)")
+    elif isinstance(val, bool):
+        return val
+    else:
+        return bool(val)
 
 
 class Settable:
@@ -126,7 +133,7 @@ class Settable:
         :param name: name of the instance attribute being made settable
         :param val_type: callable used to cast the string value from the command line into its proper type and
                          even validate its value. Setting this to bool provides tab completion for true/false and
-                         validation using str_to_bool(). The val_type function should raise an exception if it fails.
+                         validation using to_bool(). The val_type function should raise an exception if it fails.
                          This exception will be caught and printed by Cmd.do_set().
         :param description: string describing this setting
         :param settable_object: object to which the instance attribute belongs (e.g. self)
@@ -153,7 +160,7 @@ class Settable:
                 """Used to tab complete lowercase boolean values"""
                 return ['true', 'false']
 
-            val_type = str_to_bool
+            val_type = to_bool
             choices_provider = cast(ChoicesProviderFunc, get_bool_choices)
 
         self.name = name
