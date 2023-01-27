@@ -3688,9 +3688,10 @@ class Cmd(cmd.Cmd):
             if totwidth <= display_width:
                 break
         else:
+            # The output is wider than display_width. Print 1 column with each string on its own row.
             nrows = len(str_list)
             ncols = 1
-            colwidths = [0]
+            colwidths = [1]
         for row in range(nrows):
             texts = []
             for col in range(ncols):
