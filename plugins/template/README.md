@@ -298,8 +298,9 @@ unit tests found in the `tests` directory.
 
 ### Use nox to run unit tests in multiple versions of python
 
-The included `noxfile.py` is setup to run the unit tests in python 3.6, 3.7, 3.8,
-and 3.9. You can run your unit tests in all of these versions of python by:
+The included `noxfile.py` is setup to run the unit tests in python 3.7, 3.8,
+3.9, 3.10, and 3.11 You can run your unit tests in all of these versions of
+python by:
 ```
 $ nox
 ```
