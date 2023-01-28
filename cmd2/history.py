@@ -40,11 +40,7 @@ class HistoryItem:
     # Used in JSON dictionaries
     _statement_field = 'statement'
 
-    statement: Statement = None
-
-    def __post_init__(self):
-        if not isinstance(self.statement, Statement):
-            raise TypeError("HistoryItem must be instantiated using a valid Statement instance")
+    statement: Statement
 
     def __str__(self) -> str:
         """A convenient human-readable representation of the history item"""
