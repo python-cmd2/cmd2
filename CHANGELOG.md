@@ -1,4 +1,4 @@
-## 2.4.3 (TBD, 2023)
+## 2.4.3 (January 27, 2023)
 * Bug Fixes
   * Fixed ValueError caused when passing `Cmd.columnize()` strings wider than `display_width`.
 * Enhancements
