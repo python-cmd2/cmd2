@@ -276,7 +276,7 @@ try:
         runtime_checkable,
     )
 except ImportError:
-    from typing_extensions import (  # type: ignore[misc]
+    from typing_extensions import (  # type: ignore[assignment]
         Protocol,
         runtime_checkable,
     )

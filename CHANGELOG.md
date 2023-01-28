@@ -1,3 +1,10 @@
+## 2.4.3 (January 27, 2023)
+* Bug Fixes
+  * Fixed ValueError caused when passing `Cmd.columnize()` strings wider than `display_width`.
+* Enhancements
+  * Renamed `utils.str_to_bool()` -> `utils.to_bool()`.
+  * Enhanced `utils.to_bool()` so that it accepts and converts `bool`, `int`, and `float` in addition to `str`.
+
 ## 2.4.2 (July 13, 2022)
 * Enhancements
   * Updated argparse decorator to remove annotations when the docstring is used for a command's help text.

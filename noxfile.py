@@ -17,7 +17,7 @@ def docs(session):
     )
 
 
-@nox.session(python=['3.6', '3.7', '3.8', '3.9', '3.10'])
+@nox.session(python=['3.7', '3.8', '3.9', '3.10', '3.11'])
 @nox.parametrize('plugin', [None, 'ext_test', 'template', 'coverage'])
 def tests(session, plugin):
     if plugin is None:

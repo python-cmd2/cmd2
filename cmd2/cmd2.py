@@ -2431,7 +2431,8 @@ class Cmd(cmd.Cmd):
             if raise_keyboard_interrupt and not stop:
                 raise ex
         except SystemExit as ex:
-            self.exit_code = ex.code
+            if isinstance(ex.code, int):
+                self.exit_code = ex.code
             stop = True
         except PassThroughException as ex:
             raise ex.wrapped_ex
@@ -2444,7 +2445,8 @@ class Cmd(cmd.Cmd):
                 if raise_keyboard_interrupt and not stop:
                     raise ex
             except SystemExit as ex:
-                self.exit_code = ex.code
+                if isinstance(ex.code, int):
+                    self.exit_code = ex.code
                 stop = True
             except PassThroughException as ex:
                 raise ex.wrapped_ex
@@ -3688,9 +3690,10 @@ class Cmd(cmd.Cmd):
             if totwidth <= display_width:
                 break
         else:
+            # The output is wider than display_width. Print 1 column with each string on its own row.
             nrows = len(str_list)
             ncols = 1
-            colwidths = [0]
+            colwidths = [1]
         for row in range(nrows):
             texts = []
             for col in range(ncols):

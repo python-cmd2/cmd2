@@ -1454,7 +1454,7 @@ def test_select_eof(select_app, monkeypatch):
     assert read_input_mock.call_count == 2
 
 
-def test_select_ctrl_c(outsim_app, monkeypatch, capsys):
+def test_select_ctrl_c(outsim_app, monkeypatch):
     # Ctrl-C during select prints ^C and raises a KeyboardInterrupt
     read_input_mock = mock.MagicMock(name='read_input', side_effect=KeyboardInterrupt)
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
@@ -2866,3 +2866,12 @@ def test_transcripts_at_init():
     transcript_files = ['foo', 'bar']
     app = cmd2.Cmd(allow_cli_args=False, transcript_files=transcript_files)
     assert app._transcript_files == transcript_files
+
+
+def test_columnize_too_wide(outsim_app):
+    """Test calling columnize with output that wider than display_width"""
+    str_list = ["way too wide", "much wider than the first"]
+    outsim_app.columnize(str_list, display_width=5)
+
+    expected = "\n".join(str_list) + "\n"
+    assert outsim_app.stdout.getvalue() == expected
