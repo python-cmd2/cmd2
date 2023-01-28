@@ -233,8 +233,6 @@ If you prefer to create these virtualenvs by hand, do the following:
 $ cd cmd2_abbrev
 $ pyenv install 3.7.0
 $ pyenv virtualenv -p python3.7 3.7.0 cmd2-3.7
-$ pyenv install 3.6.5
-$ pyenv virtualenv -p python3.6 3.6.5 cmd2-3.6
 $ pyenv install 3.8.5
 $ pyenv virtualenv -p python3.8 3.8.5 cmd2-3.8
 $ pyenv install 3.9.0
@@ -243,7 +241,7 @@ $ pyenv virtualenv -p python3.9 3.9.0 cmd2-3.9
 
 Now set pyenv to make all three of those available at the same time:
 ```
-$ pyenv local cmd2-3.7 cmd2-3.6 cmd2-3.8 cmd2-3.9
+$ pyenv local cmd2-3.7 cmd2-3.8 cmd2-3.9
 ```
 
 Whether you ran the script, or did it by hand, you now have isolated virtualenvs
@@ -253,16 +251,10 @@ utilize.
 
 | Command     | python | virtualenv |
 | ----------- | ------ | ---------- |
-| `python`    | 3.7.0  | cmd2-3.6   |
-| `python3`   | 3.7.0  | cmd2-3.6   |
 | `python3.7` | 3.7.0  | cmd2-3.7   |
-| `python3.6` | 3.6.5  | cmd2-3.6   |
 | `python3.8` | 3.8.5  | cmd2-3.8   |
 | `python3.9` | 3.9.0  | cmd2-3.9   |
-| `pip`       | 3.7.0  | cmd2-3.6   |
-| `pip3`      | 3.7.0  | cmd2-3.6   |
 | `pip3.7`    | 3.7.0  | cmd2-3.7   |
-| `pip3.6`    | 3.6.5  | cmd2-3.6   |
 | `pip3.8`    | 3.8.5  | cmd2-3.8   |
 | `pip3.9`    | 3.9.0  | cmd2-3.9   |
 

@@ -1,7 +1,7 @@
 import nox
 
 
-@nox.session(python=['3.10'])
+@nox.session(python=['3.11'])
 def docs(session):
     session.install(
         'sphinx',
@@ -41,7 +41,7 @@ def tests(session, plugin):
         )
 
 
-@nox.session(python=['3.8', '3.9', '3.10'])
+@nox.session(python=['3.8', '3.9', '3.10', '3.11'])
 @nox.parametrize('step', ['mypy', 'flake8'])
 def validate(session, step):
     session.install('invoke', './[validate]')

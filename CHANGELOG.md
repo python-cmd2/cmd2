@@ -1,3 +1,7 @@
+## 2.5.0 (TBD)
+* Breaking Change
+  * `cmd2` 2.5 supports Python 3.7+ (removed support for Python 3.6)
+
 ## 2.4.3 (January 27, 2023)
 * Bug Fixes
   * Fixed ValueError caused when passing `Cmd.columnize()` strings wider than `display_width`.
