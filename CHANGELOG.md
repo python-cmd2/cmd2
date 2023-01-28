@@ -1,6 +1,8 @@
 ## 2.5.0 (TBD)
 * Breaking Change
   * `cmd2` 2.5 supports Python 3.7+ (removed support for Python 3.6)
+* Enhancements
+  * Removed dependency on `attrs` and replaced with [dataclasses](https://docs.python.org/3/library/dataclasses.html)
 
 ## 2.4.3 (January 27, 2023)
 * Bug Fixes

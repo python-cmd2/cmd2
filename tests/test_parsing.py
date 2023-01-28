@@ -3,7 +3,8 @@
 """
 Test the parsing logic in parsing.py
 """
-import attr
+import dataclasses
+
 import pytest
 
 import cmd2
@@ -939,9 +940,9 @@ def test_statement_is_immutable():
     assert string == statement
     assert statement.args == statement
     assert statement.raw == ''
-    with pytest.raises(attr.exceptions.FrozenInstanceError):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         statement.args = 'bar'
-    with pytest.raises(attr.exceptions.FrozenInstanceError):
+    with pytest.raises(dataclasses.FrozenInstanceError):
         statement.raw = 'baz'
 
 

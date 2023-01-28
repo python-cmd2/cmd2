@@ -184,7 +184,6 @@ def test_apcustom_narg_tuple_one_base():
 
 # noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_other_ranges():
-
     # Test range with no upper bound on max
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2,))

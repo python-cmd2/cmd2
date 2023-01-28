@@ -4,7 +4,6 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [packages]
-attrs = ">=16.3.0"
 pyperclip = ">=1.6"
 setuptools = ">=34.4"
 wcwidth = ">=0.1.7"

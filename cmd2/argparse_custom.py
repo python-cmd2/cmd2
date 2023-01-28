@@ -807,7 +807,6 @@ def _add_argument_wrapper(
         nargs_adjusted: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None]
         # Check if nargs was given as a range
         if isinstance(nargs, tuple):
-
             # Handle 1-item tuple by setting max to INFINITY
             if len(nargs) == 1:
                 nargs = (nargs[0], constants.INFINITY)
@@ -1032,6 +1031,7 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 # Patch argparse._SubParsersAction to add remove_parser function
 ############################################################################################################
 
+
 # noinspection PyPep8Naming,PyProtectedMember
 def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore
     """
@@ -1123,7 +1123,6 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             # wrap the usage parts if it's too long
             text_width = self._width - self._current_indent
             if len(prefix) + len(usage) > text_width:
-
                 # Begin cmd2 customization
 
                 # break usage into wrappable parts
