@@ -38,7 +38,6 @@ import pydoc
 import re
 import sys
 import tempfile
-import typing
 import threading
 from code import (
     InteractiveConsole,
