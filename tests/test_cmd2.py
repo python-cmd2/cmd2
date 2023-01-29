@@ -729,8 +729,20 @@ def test_pipe_to_shell_error(base_app):
     assert not out
     assert "Pipe process exited with code" in err[0]
 
+try:
+    # try getting the contents of the clipboard
+    _ = clipboard.get_paste_buffer()
+    # pyperclip raises at least the following types of exceptions
+    #   FileNotFoundError on Windows Subsystem for Linux (WSL) when Windows paths are removed from $PATH
+    #   ValueError for headless Linux systems without Gtk installed
+    #   AssertionError can be raised by paste_klipper().
+    #   PyperclipException for pyperclip-specific exceptions
+except Exception:
+    can_paste = False
+else:
+    can_paste = True
 
-@pytest.mark.skipif(not clipboard.can_clip, reason="Pyperclip could not find a copy/paste mechanism for your system")
+@pytest.mark.skipif(can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
@@ -742,6 +754,35 @@ def test_send_to_paste_buffer(base_app):
     appended_contents = cmd2.cmd2.get_paste_buffer()
     assert appended_contents.startswith(paste_contents)
     assert len(appended_contents) > len(paste_contents)
+
+def test_get_paste_buffer_exception(base_app, mocker, capsys):
+    # Force get_paste_buffer to throw an exception
+    pastemock = mocker.patch('pyperclip.paste')
+    pastemock.side_effect = ValueError('foo')
+
+    # Redirect command output to the clipboard
+    base_app.onecmd_plus_hooks('help > ')
+
+    # Make sure we got the exception output
+    out, err = capsys.readouterr()
+    assert out == ''
+    # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.paste
+    assert 'ValueError' in err and 'foo' in err
+
+def test_allow_clipboard_initializer(base_app):
+    assert base_app.allow_clipboard == True
+    noclipcmd = cmd2.Cmd(allow_clipboard=False)
+    assert noclipcmd.allow_clipboard == False
+
+# if clipboard access is not allowed, cmd2 should check that first
+# before it tries to do anything with pyperclip, that's why we can
+# safely run this test without skipping it if pyperclip doesn't
+# work in the test environment, like we do for test_send_to_paste_buffer()
+def test_allow_clipboard(base_app):
+    base_app.allow_clipboard = False
+    out, err = run_cmd(base_app, 'help >')
+    assert not out
+    assert "Clipboard access not allowed" in err
 
 
 def test_base_timing(base_app):
@@ -1564,19 +1605,6 @@ def test_multiline_input_line_to_statement(multiline_app):
     assert statement == 'hi person'
     assert statement.command == 'orate'
     assert statement.multiline_command == 'orate'
-
-
-def test_clipboard_failure(base_app, capsys):
-    # Force cmd2 clipboard to be disabled
-    base_app._can_clip = False
-
-    # Redirect command output to the clipboard when a clipboard isn't present
-    base_app.onecmd_plus_hooks('help > ')
-
-    # Make sure we got the error output
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert 'Cannot redirect to paste buffer;' in err and 'pyperclip' in err
 
 
 class CommandResultApp(cmd2.Cmd):

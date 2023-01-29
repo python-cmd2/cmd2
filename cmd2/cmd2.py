@@ -37,6 +37,8 @@ import os
 import pydoc
 import re
 import sys
+import tempfile
+import typing
 import threading
 from code import (
     InteractiveConsole,
@@ -83,7 +85,6 @@ from .argparse_custom import (
     CompletionItem,
 )
 from .clipboard import (
-    can_clip,
     get_paste_buffer,
     write_to_paste_buffer,
 )
@@ -236,6 +237,7 @@ class Cmd(cmd.Cmd):
         shortcuts: Optional[Dict[str, str]] = None,
         command_sets: Optional[Iterable[CommandSet]] = None,
         auto_load_commands: bool = True,
+        allow_clipboard: bool = True,
     ) -> None:
         """An easy but powerful framework for writing line-oriented command
         interpreters. Extends Python's cmd package.
@@ -283,6 +285,7 @@ class Cmd(cmd.Cmd):
                                    that are currently loaded by Python and automatically
                                    instantiate and register all commands. If False, CommandSets
                                    must be manually installed with `register_command_set`.
+        :param allow_clipboard: If False, cmd2 will disable clipboard interactions
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -436,8 +439,8 @@ class Cmd(cmd.Cmd):
             self.pager = 'less -RXF'
             self.pager_chop = 'less -SRXF'
 
-        # This boolean flag determines whether or not the cmd2 application can interact with the clipboard
-        self._can_clip = can_clip
+        # This boolean flag stores whether cmd2 will allow clipboard related features
+        self.allow_clipboard = allow_clipboard
 
         # This determines the value returned by cmdloop() when exiting the application
         self.exit_code = 0
@@ -2734,13 +2737,9 @@ class Cmd(cmd.Cmd):
                 sys.stdout = self.stdout = new_stdout
 
         elif statement.output:
-            import tempfile
 
-            if (not statement.output_to) and (not self._can_clip):
-                raise RedirectionError("Cannot redirect to paste buffer; missing 'pyperclip' and/or pyperclip dependencies")
-
-            # Redirecting to a file
-            elif statement.output_to:
+            if statement.output_to:
+                # redirecting to a file
                 # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
                 mode = 'a' if statement.output == constants.REDIRECTION_APPEND else 'w'
                 try:
@@ -2752,14 +2751,26 @@ class Cmd(cmd.Cmd):
                 redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
 
-            # Redirecting to a paste buffer
             else:
+                # Redirecting to a paste buffer
+                # we are going to direct output to a temporary file, then read it back in and
+                # put it in the paste buffer later
+                if not self.allow_clipboard:
+                    raise RedirectionError("Clipboard access not allowed")
+
+                # attempt to get the paste buffer, this forces pyperclip to go figure
+                # out if it can actually interact with the paste buffer, and will throw exceptions
+                # if it's not gonna work. That way we throw the exception before we go
+                # run the command and queue up all the output. if this is going to fail,
+                # no point opening up the temporary file
+                current_paste_buffer = get_paste_buffer()
+                # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))
                 redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
 
                 if statement.output == constants.REDIRECTION_APPEND:
-                    self.stdout.write(get_paste_buffer())
+                    self.stdout.write(current_paste_buffer)
                     self.stdout.flush()
 
         # These are updated regardless of whether the command redirected
@@ -4551,8 +4562,6 @@ class Cmd(cmd.Cmd):
                 self.last_result = True
                 return stop
         elif args.edit:
-            import tempfile
-
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             fobj: TextIO
             with os.fdopen(fd, 'w') as fobj:
