@@ -9,7 +9,7 @@ try:
     # For python 3.8 and later
     import importlib.metadata as importlib_metadata
 except ImportError:  # pragma: no cover
-    # For everyone else
+    # Remove this import when we no longer support Python 3.7
     # MyPy Issue # 1153 causes a spurious error that must be ignored
     import importlib_metadata  # type: ignore
 

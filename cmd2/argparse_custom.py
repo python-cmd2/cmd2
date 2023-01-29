@@ -276,6 +276,7 @@ try:
         runtime_checkable,
     )
 except ImportError:
+    # Remove these imports when we no longer support Python 3.7
     from typing_extensions import (  # type: ignore[assignment]
         Protocol,
         runtime_checkable,

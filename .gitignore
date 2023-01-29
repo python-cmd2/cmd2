@@ -40,3 +40,6 @@ Pipfile.lock
 
 # Commitizen configuration
 .cz.toml
+
+# pyenv version file
+.python-version
