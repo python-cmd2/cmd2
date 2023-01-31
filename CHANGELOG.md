@@ -1,3 +1,8 @@
+## 2.5.0 (TBD)
+* Enhancements
+  * add `allow_clipboard` initialization parameter and attribute to disable ability to
+    add output to the operating system clipboard
+
 ## 2.4.3 (January 27, 2023)
 * Bug Fixes
   * Fixed ValueError caused when passing `Cmd.columnize()` strings wider than `display_width`.
@@ -84,7 +89,7 @@
   * Added `ap_completer_type` keyword arg to `Cmd2ArgumentParser.__init__()` which saves a call
     to `set_ap_completer_type()`. This keyword will also work with `add_parser()` when creating subcommands
     if the base command's parser is a `Cmd2ArgumentParser`.
-  * New function `register_argparse_argument_parameter()` allows developers to specify custom 
+  * New function `register_argparse_argument_parameter()` allows developers to specify custom
     parameters to be passed to the argparse parser's `add_argument()` method. These parameters will
     become accessible in the resulting argparse Action object when modifying `ArgparseCompleter` behavior.
   * Using `SimpleTable` in the output for the following commands to improve appearance.
@@ -257,12 +262,12 @@
 
 ## 1.3.7 (August 27, 2020)
 * Bug Fixes
-    * Fixes an issue introduced in 1.3.0 with processing command strings containing terminator/separator 
+    * Fixes an issue introduced in 1.3.0 with processing command strings containing terminator/separator
       character(s) that are manually passed to a command that uses argparse.
 
 ## 1.3.6 (August 27, 2020)
 * Breaking changes
-    * The functions cmd2 adds to Namespaces (`get_statement()` and `get_handler()`) are now 
+    * The functions cmd2 adds to Namespaces (`get_statement()` and `get_handler()`) are now
     `Cmd2AttributeWrapper` objects named `cmd2_statement` and `cmd2_handler`. This makes it
     easy to filter out which attributes in an `argparse.Namespace` were added by `cmd2`.
 * Deprecations
@@ -288,7 +293,7 @@
 * Breaking changes
     * CommandSet command functions (do_, complete_, help_) will no longer have the cmd2 app
       passed in as the first parameter after `self` since this is already a class member.
-    * Renamed `install_command_set()` and `uninstall_command_set()` to `register_command_set()` and 
+    * Renamed `install_command_set()` and `uninstall_command_set()` to `register_command_set()` and
       `unregister_command_set()` for better name consistency.
 * Bug Fixes
     * Fixed help formatting bug in `Cmd2ArgumentParser` when `metavar` is a tuple
@@ -298,8 +303,8 @@
     * Removed explicit type hints that fail due to a bug in 3.5.2 favoring comment-based hints instead
     * When passing a ns_provider to an argparse command, will now attempt to resolve the correct
       CommandSet instance for self. If not, it'll fall back and pass in the cmd2 app
-* Other 
-    * Added missing doc-string for new cmd2.Cmd __init__ parameters 
+* Other
+    * Added missing doc-string for new cmd2.Cmd __init__ parameters
       introduced by CommandSet enhancement
 
 ## 1.3.2 (August 10, 2020)
@@ -314,8 +319,8 @@
 ## 1.3.1 (August 6, 2020)
 * Bug Fixes
     * Fixed issue determining whether an argparse completer function required a reference to a containing
-      CommandSet. Also resolves issues determining the correct CommandSet instance when calling the argparse 
-      argument completer function.  Manifested as a TypeError when using `cmd2.Cmd.path_complete` as a completer 
+      CommandSet. Also resolves issues determining the correct CommandSet instance when calling the argparse
+      argument completer function.  Manifested as a TypeError when using `cmd2.Cmd.path_complete` as a completer
       for an argparse-based command defined in a CommandSet
 
 ## 1.3.0 (August 4, 2020)
@@ -324,7 +329,7 @@
       with your cmd2 application.
 * Other
     * Marked with_argparser_and_unknown_args pending deprecation and consolidated implementation into
-      with_argparser 
+      with_argparser
 
 ## 1.2.1 (July 14, 2020)
 * Bug Fixes
@@ -332,7 +337,7 @@
 
 ## 1.2.0 (July 13, 2020)
 * Bug Fixes
-    * Fixed `typing` module compatibility issue with Python 3.5 prior to 3.5.4 
+    * Fixed `typing` module compatibility issue with Python 3.5 prior to 3.5.4
 * Enhancements
     * Switched to getting version using `importlib.metadata` instead of using `pkg_resources`
         * Improves `cmd2` application launch time on systems that have a lot of Python packages on `sys.path`
@@ -341,7 +346,7 @@
 ## 1.1.0 (June 6, 2020)
 * Bug Fixes
     * Fixed issue where subcommand usage text could contain a subcommand alias instead of the actual name
-    * Fixed bug in `ArgparseCompleter` where `fill_width` could become negative if `token_width` was large 
+    * Fixed bug in `ArgparseCompleter` where `fill_width` could become negative if `token_width` was large
       relative to the terminal width.
 * Enhancements
     * Made `ipy` consistent with `py` in the following ways
@@ -365,7 +370,7 @@
           after parsing fails, just return instead of raising an exception.
     * Added explicit handling of `SystemExit`. If a command raises this exception, the command loop will be
       gracefully stopped.
-    
+
 ## 1.0.2 (April 06, 2020)
 * Bug Fixes
     * Ctrl-C now stops a running text script instead of just the current `run_script` command
@@ -388,9 +393,9 @@
 * Bug Fixes
     * Corrected issue where the actual new value was not always being printed in do_set. This occurred in cases where
       the typed value differed from what the setter had converted it to.
-    * Fixed bug where ANSI style sequences were not correctly handled in `utils.truncate_line()`. 
+    * Fixed bug where ANSI style sequences were not correctly handled in `utils.truncate_line()`.
     * Fixed bug where pyscripts could edit `cmd2.Cmd.py_locals` dictionary.
-    * Fixed bug where cmd2 set `sys.path[0]` for a pyscript to cmd2's working directory instead of the 
+    * Fixed bug where cmd2 set `sys.path[0]` for a pyscript to cmd2's working directory instead of the
     script file's directory.
     * Fixed bug where `sys.path` was not being restored after a pyscript ran.
 * Enhancements

@@ -171,9 +171,9 @@ now: True
     out, err = run_cmd(base_app, 'set quiet')
     expected = normalize(
         """
-Name   Value                           Description                                                 
+Name   Value                           Description
 ===================================================================================================
-quiet  True                            Don't print nonessential feedback                           
+quiet  True                            Don't print nonessential feedback
 """
     )
     assert out == expected
@@ -729,6 +729,7 @@ def test_pipe_to_shell_error(base_app):
     assert not out
     assert "Pipe process exited with code" in err[0]
 
+
 try:
     # try getting the contents of the clipboard
     _ = clipboard.get_paste_buffer()
@@ -742,7 +743,8 @@ except Exception:
 else:
     can_paste = True
 
-@pytest.mark.skipif(can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
+
+@pytest.mark.skipif(not can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
@@ -754,6 +756,7 @@ def test_send_to_paste_buffer(base_app):
     appended_contents = cmd2.cmd2.get_paste_buffer()
     assert appended_contents.startswith(paste_contents)
     assert len(appended_contents) > len(paste_contents)
+
 
 def test_get_paste_buffer_exception(base_app, mocker, capsys):
     # Force get_paste_buffer to throw an exception
@@ -769,10 +772,12 @@ def test_get_paste_buffer_exception(base_app, mocker, capsys):
     # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.paste
     assert 'ValueError' in err and 'foo' in err
 
+
 def test_allow_clipboard_initializer(base_app):
     assert base_app.allow_clipboard == True
     noclipcmd = cmd2.Cmd(allow_clipboard=False)
     assert noclipcmd.allow_clipboard == False
+
 
 # if clipboard access is not allowed, cmd2 should check that first
 # before it tries to do anything with pyperclip, that's why we can
