@@ -7,6 +7,9 @@ import os
 import signal
 import sys
 import time
+from unittest import (
+    mock,
+)
 
 import pytest
 
@@ -17,14 +20,6 @@ from cmd2 import (
 from cmd2.constants import (
     HORIZONTAL_ELLIPSIS,
 )
-
-try:
-    import mock
-except ImportError:
-    from unittest import (
-        mock,
-    )
-
 
 HELLO_WORLD = 'Hello, world!'
 

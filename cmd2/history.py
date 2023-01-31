@@ -8,6 +8,9 @@ import re
 from collections import (
     OrderedDict,
 )
+from dataclasses import (
+    dataclass,
+)
 from typing import (
     Any,
     Callable,
@@ -19,8 +22,6 @@ from typing import (
     overload,
 )
 
-import attr
-
 from . import (
     utils,
 )
@@ -29,7 +30,7 @@ from .parsing import (
 )
 
 
-@attr.s(auto_attribs=True, frozen=True)
+@dataclass(frozen=True)
 class HistoryItem:
     """Class used to represent one command in the history list"""
 
@@ -39,10 +40,10 @@ class HistoryItem:
     # Used in JSON dictionaries
     _statement_field = 'statement'
 
-    statement: Statement = attr.ib(default=None, validator=attr.validators.instance_of(Statement))
+    statement: Statement
 
     def __str__(self) -> str:
-        """A convenient human readable representation of the history item"""
+        """A convenient human-readable representation of the history item"""
         return self.statement.raw
 
     @property
@@ -90,7 +91,7 @@ class HistoryItem:
                 if self.statement.multiline_command:
                     # This is an approximation and not meant to be a perfect piecing together of lines.
                     # All newlines will be converted to spaces, including the ones in quoted strings that
-                    # are considered literals. Also if the final line starts with a terminator, then the
+                    # are considered literals. Also, if the final line starts with a terminator, then the
                     # terminator will have an extra space before it in the 1 line version.
                     ret_str = ret_str.replace('\n', ' ')
 

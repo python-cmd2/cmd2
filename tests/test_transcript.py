@@ -30,7 +30,6 @@ from .conftest import (
 
 
 class CmdLineApp(cmd2.Cmd):
-
     MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']

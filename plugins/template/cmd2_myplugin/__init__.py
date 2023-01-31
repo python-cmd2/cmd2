@@ -14,7 +14,7 @@ try:
     # For python 3.8 and later
     import importlib.metadata as importlib_metadata
 except ImportError:  # pragma: no cover
-    # For everyone else
+    # Remove this import when we no longer support Python 3.7
     import importlib_metadata
 try:
     __version__ = importlib_metadata.version(__name__)

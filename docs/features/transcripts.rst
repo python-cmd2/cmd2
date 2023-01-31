@@ -127,8 +127,8 @@ If your output has slashes in it, you will need to escape those slashes so the
 stuff between them is not interpred as a regular expression. In this
 transcript::
 
-   (Cmd) say cd /usr/local/lib/python3.6/site-packages
-   /usr/local/lib/python3.6/site-packages
+   (Cmd) say cd /usr/local/lib/python3.11/site-packages
+   /usr/local/lib/python3.11/site-packages
 
 the output contains slashes. The text between the first slash and the second
 slash, will be interpreted as a regular expression, and those two slashes will
@@ -136,8 +136,8 @@ not be included in the comparison. When replayed, this transcript would
 therefore fail. To fix it, we could either write a regular expression to match
 the path instead of specifying it verbatim, or we can escape the slashes::
 
-   (Cmd) say cd /usr/local/lib/python3.6/site-packages
-   \/usr\/local\/lib\/python3.6\/site-packages
+   (Cmd) say cd /usr/local/lib/python3.11/site-packages
+   \/usr\/local\/lib\/python3.11\/site-packages
 
 .. warning::
 

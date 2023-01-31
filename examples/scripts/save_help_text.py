@@ -22,7 +22,6 @@ def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
 
     # Check if this is parser has subcommands
     if parser is not None and parser._subparsers is not None:
-
         # Find the _SubParsersAction for the subcommands of this parser
         for action in parser._subparsers._actions:
             if isinstance(action, argparse._SubParsersAction):

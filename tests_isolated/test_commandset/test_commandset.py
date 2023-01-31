@@ -186,7 +186,6 @@ def test_custom_construct_commandsets():
 
 
 def test_load_commands(command_sets_manual, capsys):
-
     # now install a command set and verify the commands are now present
     cmd_set = CommandSetA()
 
@@ -454,7 +453,6 @@ class LoadableVegetables(cmd2.CommandSet):
 
 
 def test_subcommands(command_sets_manual):
-
     base_cmds = LoadableBase(1)
     badbase_cmds = LoadableBadBase(1)
     fruit_cmds = LoadableFruits(1)

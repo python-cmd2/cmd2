@@ -46,9 +46,8 @@ The tables below list all prerequisites along with the minimum required version 
 #### Prerequisites to run cmd2 applications
 
 | Prerequisite                                        | Minimum Version |
-| --------------------------------------------------- | --------------- |
-| [python](https://www.python.org/downloads/)         | `3.6`           |
-| [attrs](https://github.com/python-attrs/attrs)      | `16.3`          |
+| --------------------------------------------------- |-----------------|
+| [python](https://www.python.org/downloads/)         | `3.7`           |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
 | [setuptools](https://pypi.org/project/setuptools/)  | `34.4`          |
 | [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.1.7`         |

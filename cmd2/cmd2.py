@@ -155,13 +155,11 @@ else:
     orig_rl_delims = readline.get_completer_delims()
 
     if rl_type == RlType.PYREADLINE:
-
         # Save the original pyreadline3 display completion function since we need to override it and restore it
         # noinspection PyProtectedMember,PyUnresolvedReferences
         orig_pyreadline_display = readline.rl.mode._display_completions
 
     elif rl_type == RlType.GNU:
-
         # Get the readline lib so we can make changes to it
         import ctypes
 
@@ -1498,7 +1496,6 @@ class Cmd(cmd.Cmd):
 
         # Used to complete ~ and ~user strings
         def complete_users() -> List[str]:
-
             users = []
 
             # Windows lacks the pwd module so we can't get a list of users.
@@ -1516,10 +1513,8 @@ class Cmd(cmd.Cmd):
 
                 # Iterate through a list of users from the password database
                 for cur_pw in pwd.getpwall():
-
                     # Check if the user has an existing home dir
                     if os.path.isdir(cur_pw.pw_dir):
-
                         # Add a ~ to the user to match against text
                         cur_user = '~' + cur_pw.pw_name
                         if cur_user.startswith(text):
@@ -1605,7 +1600,6 @@ class Cmd(cmd.Cmd):
 
             # Build display_matches and add a slash to directories
             for index, cur_match in enumerate(matches):
-
                 # Display only the basename of this path in the tab completion suggestions
                 self.display_matches.append(os.path.basename(cur_match))
 
@@ -1674,7 +1668,6 @@ class Cmd(cmd.Cmd):
 
         # Must at least have the command
         if len(raw_tokens) > 1:
-
             # True when command line contains any redirection tokens
             has_redirection = False
 
@@ -1766,7 +1759,6 @@ class Cmd(cmd.Cmd):
         :param longest_match_length: longest printed length of the matches
         """
         if rl_type == RlType.GNU:
-
             # Print hint if one exists and we are supposed to display it
             hint_printed = False
             if self.always_show_hint and self.completion_hint:
@@ -1826,7 +1818,6 @@ class Cmd(cmd.Cmd):
         :param matches: the tab completion matches to display
         """
         if rl_type == RlType.PYREADLINE:
-
             # Print hint if one exists and we are supposed to display it
             hint_printed = False
             if self.always_show_hint and self.completion_hint:
@@ -1980,7 +1971,6 @@ class Cmd(cmd.Cmd):
 
         # Check if the token being completed has an opening quote
         if raw_completion_token and raw_completion_token[0] in constants.QUOTES:
-
             # Since the token is still being completed, we know the opening quote is unclosed.
             # Save the quote so we can add a matching closing quote later.
             completion_token_quote = raw_completion_token[0]
@@ -2005,7 +1995,6 @@ class Cmd(cmd.Cmd):
         self.completion_matches = self._redirect_complete(text, line, begidx, endidx, completer_func)
 
         if self.completion_matches:
-
             # Eliminate duplicates
             self.completion_matches = utils.remove_duplicates(self.completion_matches)
             self.display_matches = utils.remove_duplicates(self.display_matches)
@@ -2020,7 +2009,6 @@ class Cmd(cmd.Cmd):
 
             # Check if we need to add an opening quote
             if not completion_token_quote:
-
                 add_quote = False
 
                 # This is the tab completion text that will appear on the command line.
@@ -2103,7 +2091,7 @@ class Cmd(cmd.Cmd):
                 # from text and update the indexes. This only applies if we are at the beginning of the command line.
                 shortcut_to_restore = ''
                 if begidx == 0 and custom_settings is None:
-                    for (shortcut, _) in self.statement_parser.shortcuts:
+                    for shortcut, _ in self.statement_parser.shortcuts:
                         if text.startswith(shortcut):
                             # Save the shortcut to restore later
                             shortcut_to_restore = shortcut
@@ -3066,7 +3054,6 @@ class Cmd(cmd.Cmd):
         readline_settings = _SavedReadlineSettings()
 
         if self._completion_supported():
-
             # Set up readline for our tab completion needs
             if rl_type == RlType.GNU:
                 # GNU readline automatically adds a closing quote if the text being completed has an opening quote.
@@ -3100,7 +3087,6 @@ class Cmd(cmd.Cmd):
         :param readline_settings: the readline settings to restore
         """
         if self._completion_supported():
-
             # Restore what we changed in readline
             readline.set_completer(readline_settings.completer)
             readline.set_completer_delims(readline_settings.delims)
@@ -3881,7 +3867,7 @@ class Cmd(cmd.Cmd):
                     fulloptions.append((opt[0], opt[1]))
                 except IndexError:
                     fulloptions.append((opt[0], opt[0]))
-        for (idx, (_, text)) in enumerate(fulloptions):
+        for idx, (_, text) in enumerate(fulloptions):
             self.poutput('  %2d. %s' % (idx + 1, text))
 
         while True:
@@ -5035,7 +5021,6 @@ class Cmd(cmd.Cmd):
 
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
-
             # Windows terminals tend to flicker when we redraw the prompt and input lines.
             # To reduce how often this occurs, only update terminal if there are changes.
             update_terminal = False
