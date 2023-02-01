@@ -17,6 +17,7 @@ import invoke
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
 
+
 # shared function
 def rmrf(items, verbose=True):
     """Silently remove a list of directories or files"""

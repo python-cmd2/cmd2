@@ -273,10 +273,8 @@ class ArgparseCompleter:
             # Check if this action is in a mutually exclusive group
             for group in self._parser._mutually_exclusive_groups:
                 if arg_action in group._group_actions:
-
                     # Check if the group this action belongs to has already been completed
                     if group in completed_mutex_groups:
-
                         # If this is the action that completed the group, then there is no error
                         # since it's allowed to appear on the command line more than once.
                         completer_action = completed_mutex_groups[group]
@@ -307,7 +305,6 @@ class ArgparseCompleter:
         # Parse all but the last token
         #############################################################################################
         for token_index, token in enumerate(tokens[:-1]):
-
             # If we're in a positional REMAINDER arg, force all future tokens to go to that
             if pos_arg_state is not None and pos_arg_state.is_remainder:
                 consume_argument(pos_arg_state)
@@ -339,7 +336,6 @@ class ArgparseCompleter:
 
             # Check the format of the current token to see if it can be an argument's value
             if _looks_like_flag(token, self._parser) and not skip_remaining_flags:
-
                 # Check if there is an unfinished flag
                 if (
                     flag_arg_state is not None
@@ -484,7 +480,6 @@ class ArgparseCompleter:
 
         # Otherwise check if we have a positional to complete
         elif pos_arg_state is not None or remaining_positionals:
-
             # If we aren't current tracking a positional, then get the next positional arg to handle this token
             if pos_arg_state is None:
                 action = remaining_positionals.popleft()

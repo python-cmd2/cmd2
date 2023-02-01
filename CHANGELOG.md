@@ -1,6 +1,8 @@
 ## 2.5.0 (TBD)
+* Breaking Change
+  * `cmd2` 2.5 supports Python 3.7+ (removed support for Python 3.6)
 * Enhancements
-  * add `allow_clipboard` initialization parameter and attribute to disable ability to
+  * Removed dependency on `attrs` and replaced with [dataclasses](https://docs.python.org/3/library/dataclasses.html)
     add output to the operating system clipboard
 
 ## 2.4.3 (January 27, 2023)

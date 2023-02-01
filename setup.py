@@ -28,11 +28,11 @@ Intended Audience :: System Administrators
 License :: OSI Approved :: MIT License
 Programming Language :: Python
 Programming Language :: Python :: 3
-Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
 Programming Language :: Python :: 3.8
 Programming Language :: Python :: 3.9
 Programming Language :: Python :: 3.10
+Programming Language :: Python :: 3.11
 Programming Language :: Python :: Implementation :: CPython
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines(),
@@ -43,7 +43,6 @@ Topic :: Software Development :: Libraries :: Python Modules
 SETUP_REQUIRES = ['setuptools >= 34.4', 'setuptools_scm >= 3.0']
 
 INSTALL_REQUIRES = [
-    'attrs >= 16.3.0',
     'importlib_metadata>=1.6.0;python_version<"3.8"',
     'pyperclip >= 1.6',
     'typing_extensions; python_version<"3.8"',
@@ -104,7 +103,7 @@ setup(
     package_data=PACKAGE_DATA,
     packages=['cmd2'],
     keywords='command prompt console cmd',
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     setup_requires=SETUP_REQUIRES,
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,

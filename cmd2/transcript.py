@@ -60,7 +60,7 @@ class Cmd2TestCase(unittest.TestCase):
     def runTest(self) -> None:  # was testall
         if self.cmdapp:
             its = sorted(self.transcripts.items())
-            for (fname, transcript) in its:
+            for fname, transcript in its:
                 self._test_transcript(fname, transcript)
 
     def _fetchTranscripts(self) -> None:

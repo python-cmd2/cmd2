@@ -4,6 +4,10 @@
 
 import re
 import shlex
+from dataclasses import (
+    dataclass,
+    field,
+)
 from typing import (
     Any,
     Dict,
@@ -13,8 +17,6 @@ from typing import (
     Tuple,
     Union,
 )
-
-import attr
 
 from . import (
     constants,
@@ -36,7 +38,7 @@ def shlex_split(str_to_split: str) -> List[str]:
     return shlex.split(str_to_split, comments=False, posix=False)
 
 
-@attr.s(auto_attribs=True, frozen=True)
+@dataclass(frozen=True)
 class MacroArg:
     """
     Information used to replace or unescape arguments in a macro value when the macro is resolved
@@ -45,15 +47,15 @@ class MacroArg:
     """
 
     # The starting index of this argument in the macro value
-    start_index: int = attr.ib(validator=attr.validators.instance_of(int))
+    start_index: int
 
     # The number string that appears between the braces
     # This is a string instead of an int because we support unicode digits and must be able
     # to reproduce this string later
-    number_str: str = attr.ib(validator=attr.validators.instance_of(str))
+    number_str: str
 
     # Tells if this argument is escaped and therefore needs to be unescaped
-    is_escaped: bool = attr.ib(validator=attr.validators.instance_of(bool))
+    is_escaped: bool
 
     # Pattern used to find normal argument
     # Digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
@@ -69,24 +71,24 @@ class MacroArg:
     digit_pattern = re.compile(r'\d+')
 
 
-@attr.s(auto_attribs=True, frozen=True)
+@dataclass(frozen=True)
 class Macro:
     """Defines a cmd2 macro"""
 
     # Name of the macro
-    name: str = attr.ib(validator=attr.validators.instance_of(str))
+    name: str
 
     # The string the macro resolves to
-    value: str = attr.ib(validator=attr.validators.instance_of(str))
+    value: str
 
     # The minimum number of args the user has to pass to this macro
-    minimum_arg_count: int = attr.ib(validator=attr.validators.instance_of(int))
+    minimum_arg_count: int
 
     # Used to fill in argument placeholders in the macro
-    arg_list: List[MacroArg] = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
+    arg_list: List[MacroArg] = field(default_factory=list)
 
 
-@attr.s(auto_attribs=True, frozen=True)
+@dataclass(frozen=True)
 class Statement(str):  # type: ignore[override]
     """String subclass with additional attributes to store the results of parsing.
 
@@ -118,34 +120,34 @@ class Statement(str):  # type: ignore[override]
     """
 
     # the arguments, but not the command, nor the output redirection clauses.
-    args: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    args: str = ''
 
     # string containing exactly what we input by the user
-    raw: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    raw: str = ''
 
     # the command, i.e. the first whitespace delimited word
-    command: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    command: str = ''
 
     # list of arguments to the command, not including any output redirection or terminators; quoted args remain quoted
-    arg_list: List[str] = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
+    arg_list: List[str] = field(default_factory=list)
 
     # if the command is a multiline command, the name of the command, otherwise empty
-    multiline_command: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    multiline_command: str = ''
 
     # the character which terminated the multiline command, if there was one
-    terminator: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    terminator: str = ''
 
     # characters appearing after the terminator but before output redirection, if any
-    suffix: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    suffix: str = ''
 
     # if output was piped to a shell command, the shell command as a string
-    pipe_to: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    pipe_to: str = ''
 
     # if output was redirected, the redirection token, i.e. '>>'
-    output: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    output: str = ''
 
     # if output was redirected, the destination file token (quotes preserved)
-    output_to: str = attr.ib(default='', validator=attr.validators.instance_of(str))
+    output_to: str = ''
 
     # Used in JSON dictionaries
     _args_field = 'args'
@@ -156,7 +158,7 @@ class Statement(str):  # type: ignore[override]
         We must override __new__ because we are subclassing `str` which is
         immutable and takes a different number of arguments as Statement.
 
-        NOTE:  attrs takes care of initializing other members in the __init__ it
+        NOTE:  @dataclass takes care of initializing other members in the __init__ it
         generates.
         """
         stmt = super().__new__(cls, value)
@@ -348,7 +350,7 @@ class StatementParser:
             return False, 'cannot start with the comment character'
 
         if not is_subcommand:
-            for (shortcut, _) in self.shortcuts:
+            for shortcut, _ in self.shortcuts:
                 if word.startswith(shortcut):
                     # Build an error string with all shortcuts listed
                     errmsg = 'cannot start with a shortcut: '
@@ -481,7 +483,6 @@ class StatementParser:
 
         # Check if output should be piped to a shell command
         if pipe_index < redir_index and pipe_index < append_index:
-
             # Get the tokens for the pipe command and expand ~ where needed
             pipe_to_tokens = tokens[pipe_index + 1 :]
             utils.expand_user_in_tokens(pipe_to_tokens)
@@ -656,7 +657,7 @@ class StatementParser:
                     keep_expanding = bool(remaining_aliases)
 
         # expand shortcuts
-        for (shortcut, expansion) in self.shortcuts:
+        for shortcut, expansion in self.shortcuts:
             if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
                 shortcut_len = len(shortcut)
@@ -701,7 +702,6 @@ class StatementParser:
         punctuated_tokens = []
 
         for cur_initial_token in tokens:
-
             # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
             if len(cur_initial_token) <= 1 or cur_initial_token[0] in constants.QUOTES:
                 punctuated_tokens.append(cur_initial_token)
@@ -716,7 +716,6 @@ class StatementParser:
 
             while True:
                 if cur_char not in punctuation:
-
                     # Keep appending to new_token until we hit a punctuation char
                     while cur_char not in punctuation:
                         new_token += cur_char
