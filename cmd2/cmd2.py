@@ -2724,7 +2724,6 @@ class Cmd(cmd.Cmd):
                 sys.stdout = self.stdout = new_stdout
 
         elif statement.output:
-
             if statement.output_to:
                 # redirecting to a file
                 # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
