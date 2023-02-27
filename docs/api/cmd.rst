@@ -65,3 +65,10 @@ cmd2.Cmd
         The symbol name which :ref:`features/scripting:Python Scripts` run
         using the :ref:`features/builtin_commands:run_pyscript` command can use
         to reference the parent ``cmd2`` application.
+
+    .. attribute:: allow_clipboard
+
+        If ``True``, ``cmd2`` will allow output to be written to or appended to
+        the operating system pasteboard. If ``False``, this capability will not
+        be allowed. See :ref:`features/clipboard:Clipboard Integration` for more
+        information.

@@ -66,6 +66,8 @@ EXTRAS_REQUIRE = {
         'codecov',
         'doc8',
         'flake8',
+        'black',
+        'isort',
         'invoke',
         'mypy',
         'nox',
