@@ -1056,7 +1056,7 @@ class Cmd(cmd.Cmd):
         """
         return ansi.strip_style(self.prompt)
 
-    def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
+    def poutput(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Print message to self.stdout and appends a newline by default
 
         Also handles BrokenPipeError exceptions for when a command's output has
@@ -1065,9 +1065,15 @@ class Cmd(cmd.Cmd):
 
         :param msg: object to print
         :param end: string appended after the end of the message, default a newline
+        :param apply_style: If True, then ansi.style_output will be applied to the message text. Set to False in cases
+                            where the message text already has the desired style. Defaults to True.
         """
+        if apply_style:
+            final_msg = ansi.style_output(msg)
+        else:
+            final_msg = str(msg)
         try:
-            ansi.style_aware_write(self.stdout, f"{msg}{end}")
+            ansi.style_aware_write(self.stdout, f"{final_msg}{end}")
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another
             # process and that process closes before the command is
@@ -1076,6 +1082,20 @@ class Cmd(cmd.Cmd):
             # to the message you want printed.
             if self.broken_pipe_warning:
                 sys.stderr.write(self.broken_pipe_warning)
+
+    def psuccess(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
+        """Wraps poutput but applies ansi.style_success by default
+
+        :param msg: object to print
+        :param end: string appended after the end of the message, default a newline
+        :param apply_style: If True, then ansi.style_success will be applied to the message text. Set to False in cases
+                            where the message text already has the desired style. Defaults to True.
+        """
+        if apply_style:
+            msg = ansi.style_success(msg)
+        else:
+            msg = str(msg)
+        self.poutput(msg, end=end, apply_style=False)
 
     # noinspection PyMethodMayBeStatic
     def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
@@ -4985,8 +5005,8 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             ansi.style_aware_write(sys.stderr, stream.read())
             finish_msg = f' {num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds '
-            finish_msg = ansi.style_success(utils.align_center(finish_msg, fill_char='='))
-            self.poutput(finish_msg)
+            finish_msg = utils.align_center(finish_msg, fill_char='=')
+            self.psuccess(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()
