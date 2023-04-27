@@ -1151,20 +1151,22 @@ class Cmd(cmd.Cmd):
 
         self.perror(final_msg, end=end, apply_style=False)
 
-    def pfeedback(self, msg: Any, *, end: str = '\n') -> None:
+    def pfeedback(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
         Inclusion in redirected output is controlled by `feedback_to_output`.
 
         :param msg: object to print
         :param end: string appended after the end of the message, default a newline
+        :param apply_style: If True, then ansi.style_output will be applied to the message text. Set to False in cases
+                            where the message text already has the desired style. Defaults to True.
         """
         if not self.quiet:
             if self.feedback_to_output:
-                self.poutput(msg, end=end)
+                self.poutput(msg, end=end, apply_style=apply_style)
             else:
                 self.perror(msg, end=end, apply_style=False)
 
-    def ppaged(self, msg: Any, *, end: str = '\n', chop: bool = False) -> None:
+    def ppaged(self, msg: Any, *, end: str = '\n', chop: bool = False, apply_style: bool = True) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
@@ -1177,6 +1179,8 @@ class Cmd(cmd.Cmd):
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
                               - wrapping is ideal when you want to keep users from having to use horizontal scrolling
+        :param apply_style: If True, then ansi.style_output will be applied to the message text. Set to False in cases
+                            where the message text already has the desired style. Defaults to True.
 
         WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
@@ -1215,7 +1219,7 @@ class Cmd(cmd.Cmd):
                     pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                     pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
             else:
-                self.poutput(msg_str, end=end)
+                self.poutput(msg_str, end=end, apply_style=apply_style)
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another process and that process closes before the
             # command is finished. If you would like your application to print a warning message, then set the
