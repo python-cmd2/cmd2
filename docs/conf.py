@@ -164,7 +164,9 @@ texinfo_documents = [
 
 # -- Options for Extensions  -------------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {
+    'python 3': ('https://docs.python.org/3/', None),
+}
 
 # options for autodoc
 autodoc_default_options = {'member-order': 'bysource'}
