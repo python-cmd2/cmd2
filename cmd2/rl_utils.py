@@ -70,7 +70,7 @@ if 'pyreadline3' in sys.modules:
     )
 
     # Check if we are running in a terminal
-    if sys.stdout and sys.stdout.isatty():  # pragma: no cover
+    if sys.stdout is not None and sys.stdout.isatty():  # pragma: no cover
         # noinspection PyPep8Naming,PyUnresolvedReferences
         def enable_win_vt100(handle: HANDLE) -> bool:
             """
