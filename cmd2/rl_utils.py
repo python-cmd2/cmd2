@@ -141,7 +141,7 @@ if 'pyreadline3' in sys.modules:
 
 elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
     # We don't support libedit. See top of this file for why.
-    if 'libedit' not in readline.__doc__:
+    if readline.__doc__ is not None and 'libedit' not in readline.__doc__:
         try:
             # Load the readline lib so we can access members of it
             import ctypes
