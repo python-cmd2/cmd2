@@ -1118,7 +1118,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
             # build full usage string
             format = self._format_actions_usage
-            action_usage = format(required_options + optionals + positionals, groups)
+            action_usage = format(required_options + optionals + positionals, groups)  # type: ignore[arg-type]
             usage = ' '.join([s for s in [prog, action_usage] if s])
 
             # wrap the usage parts if it's too long
@@ -1128,9 +1128,9 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
                 # break usage into wrappable parts
                 part_regexp = r'\(.*?\)+|\[.*?\]+|\S+'
-                req_usage = format(required_options, groups)
-                opt_usage = format(optionals, groups)
-                pos_usage = format(positionals, groups)
+                req_usage = format(required_options, groups)  # type: ignore[arg-type]
+                opt_usage = format(optionals, groups)  # type: ignore[arg-type]
+                pos_usage = format(positionals, groups)  # type: ignore[arg-type]
                 req_parts = re.findall(part_regexp, req_usage)
                 opt_parts = re.findall(part_regexp, opt_usage)
                 pos_parts = re.findall(part_regexp, pos_usage)

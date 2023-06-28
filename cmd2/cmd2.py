@@ -54,6 +54,7 @@ from types import (
     ModuleType,
 )
 from typing import (
+    IO,
     Any,
     Callable,
     Dict,
@@ -601,11 +602,14 @@ class Cmd(cmd.Cmd):
                     raise CommandSetRegistrationError(f'Duplicate settable {key} is already registered')
 
         cmdset.on_register(self)
-        methods = inspect.getmembers(
-            cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
-            and hasattr(meth, '__name__')
-            and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
+        methods = cast(
+            List[Tuple[str, Callable[..., Any]]],
+            inspect.getmembers(
+                cmdset,
+                predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
+                and hasattr(meth, '__name__')
+                and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
+            ),
         )
 
         default_category = getattr(cmdset, CLASS_ATTR_DEFAULT_HELP_CATEGORY, None)
@@ -1056,7 +1060,40 @@ class Cmd(cmd.Cmd):
         """
         return ansi.strip_style(self.prompt)
 
-    def poutput(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
+    def print_to(
+        self,
+        dest: Union[TextIO, IO[str]],
+        msg: Any,
+        *,
+        end: str = '\n',
+        style: Optional[Callable[[str], str]] = None,
+        paged: bool = False,
+        chop: bool = False,
+    ) -> None:
+        final_msg = style(msg) if style is not None else msg
+        if paged:
+            self.ppaged(final_msg, end=end, chop=chop, dest=dest)
+        else:
+            try:
+                ansi.style_aware_write(dest, f'{final_msg}{end}')
+            except BrokenPipeError:
+                # This occurs if a command's output is being piped to another
+                # process and that process closes before the command is
+                # finished. If you would like your application to print a
+                # warning message, then set the broken_pipe_warning attribute
+                # to the message you want printed.
+                if self.broken_pipe_warning:
+                    sys.stderr.write(self.broken_pipe_warning)
+
+    def poutput(
+        self,
+        msg: Any = '',
+        *,
+        end: str = '\n',
+        apply_style: bool = True,
+        paged: bool = False,
+        chop: bool = False,
+    ) -> None:
         """Print message to self.stdout and appends a newline by default
 
         Also handles BrokenPipeError exceptions for when a command's output has
@@ -1067,62 +1104,85 @@ class Cmd(cmd.Cmd):
         :param end: string appended after the end of the message, default a newline
         :param apply_style: If True, then ansi.style_output will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: If paged is True, True to truncate long lines or False to wrap long lines.
         """
-        if apply_style:
-            final_msg = ansi.style_output(msg)
-        else:
-            final_msg = str(msg)
-        try:
-            ansi.style_aware_write(self.stdout, f"{final_msg}{end}")
-        except BrokenPipeError:
-            # This occurs if a command's output is being piped to another
-            # process and that process closes before the command is
-            # finished. If you would like your application to print a
-            # warning message, then set the broken_pipe_warning attribute
-            # to the message you want printed.
-            if self.broken_pipe_warning:
-                sys.stderr.write(self.broken_pipe_warning)
-
-    def psuccess(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
-        """Wraps poutput but applies ansi.style_success by default
-
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ansi.style_success will be applied to the message text. Set to False in cases
-                            where the message text already has the desired style. Defaults to True.
-        """
-        if apply_style:
-            msg = ansi.style_success(msg)
-        else:
-            msg = str(msg)
-        self.poutput(msg, end=end, apply_style=False)
+        self.print_to(self.stdout, msg, end=end, style=ansi.style_output if apply_style else None, paged=paged, chop=chop)
 
     # noinspection PyMethodMayBeStatic
-    def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
+    def perror(
+        self,
+        msg: Any = '',
+        *,
+        end: str = '\n',
+        apply_style: bool = True,
+        paged: bool = False,
+        chop: bool = False,
+    ) -> None:
         """Print message to sys.stderr
 
         :param msg: object to print
         :param end: string appended after the end of the message, default a newline
         :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: If paged is True, True to truncate long lines or False to wrap long lines.
         """
-        if apply_style:
-            final_msg = ansi.style_error(msg)
-        else:
-            final_msg = str(msg)
-        ansi.style_aware_write(sys.stderr, final_msg + end)
+        self.print_to(sys.stderr, msg, end=end, style=ansi.style_error if apply_style else None, paged=paged, chop=chop)
 
-    def pwarning(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
+    def psuccess(
+        self,
+        msg: Any = '',
+        *,
+        end: str = '\n',
+        paged: bool = False,
+        chop: bool = False,
+    ) -> None:
+        """Writes to stdout applying ansi.style_success by default
+
+        :param msg: object to print
+        :param end: string appended after the end of the message, default a newline
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: If paged is True, True to truncate long lines or False to wrap long lines.
+        """
+        self.print_to(self.stdout, msg, end=end, style=ansi.style_success, paged=paged, chop=chop)
+
+    def pwarning(
+        self,
+        msg: Any = '',
+        *,
+        end: str = '\n',
+        apply_style: bool = True,
+        paged: bool = False,
+        chop: bool = False,
+    ) -> None:
         """Wraps perror, but applies ansi.style_warning by default
 
         :param msg: object to print
         :param end: string appended after the end of the message, default a newline
         :param apply_style: If True, then ansi.style_warning will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: If paged is True, True to truncate long lines or False to wrap long lines.
         """
-        if apply_style:
-            msg = ansi.style_warning(msg)
-        self.perror(msg, end=end, apply_style=False)
+        self.print_to(sys.stderr, msg, end=end, style=ansi.style_warning if apply_style else None, paged=paged, chop=chop)
+
+    def pfailure(
+        self,
+        msg: Any = '',
+        *,
+        end: str = '\n',
+        paged: bool = False,
+        chop: bool = False,
+    ) -> None:
+        """Writes to stderr applying ansi.style_error by default
+
+        :param msg: object to print
+        :param end: string appended after the end of the message, default a newline
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: If paged is True, True to truncate long lines or False to wrap long lines.
+        """
+        self.print_to(sys.stderr, msg, end=end, style=ansi.style_error, paged=paged, chop=chop)
 
     def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
@@ -1151,7 +1211,15 @@ class Cmd(cmd.Cmd):
 
         self.perror(final_msg, end=end, apply_style=False)
 
-    def pfeedback(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+    def pfeedback(
+        self,
+        msg: Any,
+        *,
+        end: str = '\n',
+        apply_style: bool = True,
+        paged: bool = False,
+        chop: bool = False,
+    ) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
         Inclusion in redirected output is controlled by `feedback_to_output`.
 
@@ -1159,17 +1227,23 @@ class Cmd(cmd.Cmd):
         :param end: string appended after the end of the message, default a newline
         :param apply_style: If True, then ansi.style_output will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: If paged is True, True to truncate long lines or False to wrap long lines.
         """
         if not self.quiet:
-            if self.feedback_to_output:
-                self.poutput(msg, end=end, apply_style=apply_style)
-            else:
-                self.perror(msg, end=end, apply_style=False)
+            self.print_to(
+                self.stdout if self.feedback_to_output else sys.stderr,
+                msg,
+                end=end,
+                style=ansi.style_output if apply_style else None,
+                paged=paged,
+                chop=chop,
+            )
 
-    def ppaged(self, msg: Any, *, end: str = '\n', chop: bool = False, apply_style: bool = True) -> None:
+    def ppaged(self, msg: Any, *, end: str = '\n', chop: bool = False, dest: Optional[Union[TextIO, IO[str]]] = None) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
-        Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
+        Never uses a pager inside a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
         :param msg: object to print
@@ -1179,13 +1253,13 @@ class Cmd(cmd.Cmd):
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
                               - wrapping is ideal when you want to keep users from having to use horizontal scrolling
-        :param apply_style: If True, then ansi.style_output will be applied to the message text. Set to False in cases
-                            where the message text already has the desired style. Defaults to True.
+        :param dest: Optionally specify the destination stream to write to. If unspecified, defaults to self.stdout
 
         WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
         # msg can be any type, so convert to string before checking if it's blank
         msg_str = str(msg)
+        dest = self.stdout if dest is None else dest
 
         # Consider None to be no data to print
         if msg is None or msg_str == '':
@@ -1219,7 +1293,7 @@ class Cmd(cmd.Cmd):
                     pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                     pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
             else:
-                self.poutput(msg_str, end=end, apply_style=apply_style)
+                ansi.style_aware_write(dest, f'{msg_str}{end}')
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another process and that process closes before the
             # command is finished. If you would like your application to print a warning message, then set the
