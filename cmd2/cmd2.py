@@ -1160,8 +1160,12 @@ class Cmd(cmd.Cmd):
 
         :param msg: object to print
         :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ansi.style_warning will be applied to the message text. Set to False in cases
-                            where the message text already has the desired style. Defaults to True.
+        :param apply_style:
+            If True, then ansi.style_warning will be applied to the message text. Set to False in cases
+            where the message text already has the desired style. Defaults to True.
+
+            .. deprecated: 2.4.4
+                Use :meth:`~cmd2.Cmd.print_to` instead to print to stderr without style applied.
         :param paged: If True, pass the output through the configured pager.
         :param chop: If paged is True, True to truncate long lines or False to wrap long lines.
         """
