@@ -72,3 +72,9 @@ cmd2.Cmd
         the operating system pasteboard. If ``False``, this capability will not
         be allowed. See :ref:`features/clipboard:Clipboard Integration` for more
         information.
+
+    .. attribute:: suggest_similar_command
+
+        If ``True``, ``cmd2`` will suggest the most similar command when the user
+        types a command that does not exist.
+        Default: ``False``.

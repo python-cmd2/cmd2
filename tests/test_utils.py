@@ -872,3 +872,37 @@ def test_find_editor_not_specified():
     with mock.patch.dict(os.environ, {'PATH': 'fake_dir'}, clear=True):
         editor = cu.find_editor()
     assert editor is None
+
+
+def test_similarity():
+    suggested_command = cu.suggest_similar("comand", ["command", "UNRELATED", "NOT_SIMILAR"])
+    assert suggested_command == "command"
+    suggested_command = cu.suggest_similar("command", ["COMMAND", "acommands"])
+    assert suggested_command == "COMMAND"
+
+
+def test_similarity_without_good_canididates():
+    suggested_command = cu.suggest_similar("comand", ["UNRELATED", "NOT_SIMILAR"])
+    assert suggested_command is None
+    suggested_command = cu.suggest_similar("comand", [])
+    assert suggested_command is None
+
+
+def test_similarity_overwrite_function():
+    suggested_command = cu.suggest_similar("test", ["history", "test"])
+    assert suggested_command == 'test'
+
+    def custom_similarity_function(s1, s2):
+        return 1.0 if 'history' in (s1, s2) else 0.0
+
+    suggested_command = cu.suggest_similar("test", ["history", "test"],
+                                           similarity_function_to_use=custom_similarity_function)
+    assert suggested_command == 'history'
+
+    suggested_command = cu.suggest_similar("history", ["history", "test"],
+                                           similarity_function_to_use=custom_similarity_function)
+    assert suggested_command == 'history'
+
+    suggested_command = cu.suggest_similar("test", ["test"],
+                                           similarity_function_to_use=custom_similarity_function)
+    assert suggested_command is None
