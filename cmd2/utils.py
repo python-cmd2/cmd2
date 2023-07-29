@@ -12,6 +12,7 @@ import subprocess
 import sys
 import threading
 import unicodedata
+from difflib import SequenceMatcher
 from enum import (
     Enum,
 )
@@ -1262,3 +1263,36 @@ def strip_doc_annotations(doc: str) -> str:
         elif found_first:
             break
     return cmd_desc
+
+
+def similarity_function(s1: str, s2: str) -> float:
+    # The ratio from s1,s2 may be different to s2,s1. We keep the max.
+    # See https://docs.python.org/3/library/difflib.html#difflib.SequenceMatcher.ratio
+    return max(SequenceMatcher(None, s1, s2).ratio(), SequenceMatcher(None, s2, s1).ratio())
+
+
+MIN_SIMIL_TO_CONSIDER = 0.7
+
+
+def suggest_similar(requested_command: str, options: Iterable[str],
+                    similarity_function_to_use: Optional[Callable[[str, str], float]] = None) -> Optional[str]:
+    """
+    Given a requested command and an iterable of possible options
+    returns the most similar (if any is similar)
+
+    :param requested_command: The command entered by the user
+    :param options: The list of avaiable commands to search for the most similar
+    :param similarity_function_to_use: An optional callable to use to compare commands
+    :returns The most similar command or None if no one is similar
+
+    """
+    proposed_command = None
+    best_simil = MIN_SIMIL_TO_CONSIDER
+    requested_command_to_compare = requested_command.lower()
+    similarity_function_to_use = similarity_function_to_use or similarity_function
+    for each in options:
+        simil = similarity_function_to_use(each.lower(), requested_command_to_compare)
+        if best_simil < simil:
+            best_simil = simil
+            proposed_command = each
+    return proposed_command

@@ -141,6 +141,7 @@ from .utils import (
     Settable,
     get_defining_class,
     strip_doc_annotations,
+    suggest_similar,
 )
 
 # Set up readline
@@ -236,6 +237,7 @@ class Cmd(cmd.Cmd):
         command_sets: Optional[Iterable[CommandSet]] = None,
         auto_load_commands: bool = True,
         allow_clipboard: bool = True,
+        suggest_similar_command: bool = False,
     ) -> None:
         """An easy but powerful framework for writing line-oriented command
         interpreters. Extends Python's cmd package.
@@ -529,6 +531,9 @@ class Cmd(cmd.Cmd):
 
         # Add functions decorated to be subcommands
         self._register_subcommands(self)
+
+        self.suggest_similar_command = suggest_similar_command
+        self.default_suggestion_message = "Did you mean {}?"
 
     def find_commandsets(self, commandset_type: Type[CommandSet], *, subclass_match: bool = False) -> List[CommandSet]:
         """
@@ -2968,10 +2973,16 @@ class Cmd(cmd.Cmd):
             return self.do_shell(statement.command_and_args)
         else:
             err_msg = self.default_error.format(statement.command)
-
+            if self.suggest_similar_command:
+                suggested_command = self._suggest_similar_command(statement.command)
+                if suggested_command:
+                    err_msg = err_msg + ' ' + self.default_suggestion_message.format(suggested_command)
             # Set apply_style to False so default_error's style is not overridden
             self.perror(err_msg, apply_style=False)
             return None
+
+    def _suggest_similar_command(self, command: str) -> Optional[str]:
+        return suggest_similar(command, self.get_visible_commands())
 
     def read_input(
         self,

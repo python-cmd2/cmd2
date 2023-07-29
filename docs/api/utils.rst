@@ -97,3 +97,5 @@ Miscellaneous
 .. autofunction:: cmd2.utils.alphabetical_sort
 
 .. autofunction:: cmd2.utils.natural_sort
+
+.. autofunction:: cmd2.utils.suggest_similar

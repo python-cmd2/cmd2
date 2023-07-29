@@ -323,6 +323,16 @@ def test_base_error(base_app):
     assert "is not a recognized command" in err[0]
 
 
+def test_base_error_suggest_command(base_app):
+    try:
+        old_suggest_similar_command = base_app.suggest_similar_command
+        base_app.suggest_similar_command = True
+        out, err = run_cmd(base_app, 'historic')
+        assert "history" in err[0]
+    finally:
+        base_app.suggest_similar_command = old_suggest_similar_command
+
+
 def test_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
