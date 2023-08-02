@@ -1274,8 +1274,9 @@ def similarity_function(s1: str, s2: str) -> float:
 MIN_SIMIL_TO_CONSIDER = 0.7
 
 
-def suggest_similar(requested_command: str, options: Iterable[str],
-                    similarity_function_to_use: Optional[Callable[[str, str], float]] = None) -> Optional[str]:
+def suggest_similar(
+        requested_command: str, options: Iterable[str], similarity_function_to_use: Optional[Callable[[str, str], float]] = None
+) -> Optional[str]:
     """
     Given a requested command and an iterable of possible options
     returns the most similar (if any is similar)

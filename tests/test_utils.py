@@ -889,20 +889,18 @@ def test_similarity_without_good_canididates():
 
 
 def test_similarity_overwrite_function():
-    suggested_command = cu.suggest_similar("test", ["history", "test"])
+    options = ["history", "test"]
+    suggested_command = cu.suggest_similar("test", options)
     assert suggested_command == 'test'
 
     def custom_similarity_function(s1, s2):
         return 1.0 if 'history' in (s1, s2) else 0.0
 
-    suggested_command = cu.suggest_similar("test", ["history", "test"],
-                                           similarity_function_to_use=custom_similarity_function)
+    suggested_command = cu.suggest_similar("test", options, similarity_function_to_use=custom_similarity_function)
     assert suggested_command == 'history'
 
-    suggested_command = cu.suggest_similar("history", ["history", "test"],
-                                           similarity_function_to_use=custom_similarity_function)
+    suggested_command = cu.suggest_similar("history", options, similarity_function_to_use=custom_similarity_function)
     assert suggested_command == 'history'
 
-    suggested_command = cu.suggest_similar("test", ["test"],
-                                           similarity_function_to_use=custom_similarity_function)
+    suggested_command = cu.suggest_similar("test", ["test"], similarity_function_to_use=custom_similarity_function)
     assert suggested_command is None
