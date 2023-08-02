@@ -1275,7 +1275,7 @@ MIN_SIMIL_TO_CONSIDER = 0.7
 
 
 def suggest_similar(
-        requested_command: str, options: Iterable[str], similarity_function_to_use: Optional[Callable[[str, str], float]] = None
+    requested_command: str, options: Iterable[str], similarity_function_to_use: Optional[Callable[[str, str], float]] = None
 ) -> Optional[str]:
     """
     Given a requested command and an iterable of possible options
@@ -1285,7 +1285,6 @@ def suggest_similar(
     :param options: The list of avaiable commands to search for the most similar
     :param similarity_function_to_use: An optional callable to use to compare commands
     :returns The most similar command or None if no one is similar
-
     """
     proposed_command = None
     best_simil = MIN_SIMIL_TO_CONSIDER
