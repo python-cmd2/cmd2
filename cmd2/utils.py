@@ -12,7 +12,9 @@ import subprocess
 import sys
 import threading
 import unicodedata
-from difflib import SequenceMatcher
+from difflib import (
+    SequenceMatcher,
+)
 from enum import (
     Enum,
 )
@@ -1278,14 +1280,14 @@ def suggest_similar(
     requested_command: str, options: Iterable[str], similarity_function_to_use: Optional[Callable[[str, str], float]] = None
 ) -> Optional[str]:
     """
-    Given a requested command and an iterable of possible options
-    returns the most similar (if any is similar)
+    Given a requested command and an iterable of possible options returns the most similar (if any is similar)
 
     :param requested_command: The command entered by the user
-    :param options: The list of avaiable commands to search for the most similar
+    :param options: The list of available commands to search for the most similar
     :param similarity_function_to_use: An optional callable to use to compare commands
-    :returns The most similar command or None if no one is similar
+    :return: The most similar command or None if no one is similar
     """
+
     proposed_command = None
     best_simil = MIN_SIMIL_TO_CONSIDER
     requested_command_to_compare = requested_command.lower()
