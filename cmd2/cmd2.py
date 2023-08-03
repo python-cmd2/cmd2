@@ -547,7 +547,7 @@ class Cmd(cmd.Cmd):
         return [
             cmdset
             for cmdset in self._installed_command_sets
-            if type(cmdset) == commandset_type or (subclass_match and isinstance(cmdset, commandset_type))
+            if type(cmdset) == commandset_type or (subclass_match and isinstance(cmdset, commandset_type))  # noqa: E721
         ]
 
     def find_commandset_for_command(self, command_name: str) -> Optional[CommandSet]:
@@ -5551,7 +5551,7 @@ class Cmd(cmd.Cmd):
                 func_self = None
                 candidate_sets: List[CommandSet] = []
                 for installed_cmd_set in self._installed_command_sets:
-                    if type(installed_cmd_set) == func_class:
+                    if type(installed_cmd_set) == func_class:  # noqa: E721
                         # Case 2: CommandSet is an exact type match for the function's CommandSet
                         func_self = installed_cmd_set
                         break
