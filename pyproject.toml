@@ -14,6 +14,7 @@ exclude = '''
   | \.mypy_cache
   | \.pytest_cache
   | \.tox
+  | \.nox
   | \.venv
   | \.vscode
   | _build
