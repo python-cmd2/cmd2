@@ -99,6 +99,8 @@ def mypy(context):
     """Run mypy optional static type checker"""
     with context.cd(TASK_ROOT_STR):
         context.run("mypy cmd2")
+    with context.cd(str(TASK_ROOT / 'examples')):
+        context.run("mypy decorator_example.py")
 
 
 namespace.add_task(mypy)
