@@ -30,6 +30,7 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 # setting is True
 import argparse
 import cmd
+import copy
 import functools
 import glob
 import inspect
@@ -55,6 +56,7 @@ from types import (
 )
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -99,6 +101,7 @@ from .constants import (
     HELP_FUNC_PREFIX,
 )
 from .decorators import (
+    CommandParent,
     as_subcommand_to,
     with_argparser,
 )
@@ -195,6 +198,14 @@ class _SavedCmd2Env:
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
 DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function', 'completer_function'])
+
+
+if TYPE_CHECKING:  # pragma: no cover
+    StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
+    ClassArgParseBuilder = classmethod[Union['Cmd', CommandSet], [], argparse.ArgumentParser]
+else:
+    StaticArgParseBuilder = staticmethod
+    ClassArgParseBuilder = classmethod
 
 
 class Cmd(cmd.Cmd):
@@ -510,6 +521,16 @@ class Cmd(cmd.Cmd):
         # This does not affect self.formatted_completions.
         self.matches_sorted = False
 
+        # Command parsers for this Cmd instance.
+        self._command_parsers: Dict[str, argparse.ArgumentParser] = {}
+
+        # Locates the command parser template or factory and creates an instance-specific parser
+        for command in self.get_all_commands():
+            self._register_command_parser(command, self.cmd_func(command))  # type: ignore[arg-type]
+
+        # Add functions decorated to be subcommands
+        self._register_subcommands(self)
+
         ############################################################################################################
         # The following code block loads CommandSets, verifies command names, and registers subcommands.
         # This block should appear after all attributes have been created since the registration code
@@ -528,9 +549,6 @@ class Cmd(cmd.Cmd):
             valid, errmsg = self.statement_parser.is_valid_command(cur_cmd)
             if not valid:
                 raise ValueError(f"Invalid command name '{cur_cmd}': {errmsg}")
-
-        # Add functions decorated to be subcommands
-        self._register_subcommands(self)
 
         self.suggest_similar_command = suggest_similar_command
         self.default_suggestion_message = "Did you mean {}?"
@@ -662,6 +680,48 @@ class Cmd(cmd.Cmd):
             cmdset.on_unregistered()
             raise
 
+    def _build_parser(
+        self,
+        parent: CommandParent,
+        parser_builder: Optional[
+            Union[argparse.ArgumentParser, Callable[[], argparse.ArgumentParser], StaticArgParseBuilder, ClassArgParseBuilder]
+        ],
+    ) -> Optional[argparse.ArgumentParser]:
+        parser: Optional[argparse.ArgumentParser] = None
+        if isinstance(parser_builder, staticmethod):
+            parser = parser_builder.__func__()
+        elif isinstance(parser_builder, classmethod):
+            parser = parser_builder.__func__(parent if not None else self)
+        elif callable(parser_builder):
+            parser = parser_builder()
+        elif isinstance(parser_builder, argparse.ArgumentParser):
+            if sys.version_info >= (3, 6, 4):
+                parser = copy.deepcopy(parser_builder)
+            else:  # pragma: no cover
+                parser = parser_builder
+        return parser
+
+    def _register_command_parser(self, command: str, command_method: Callable[..., Any]) -> None:
+        if command not in self._command_parsers:
+            parser_builder = getattr(command_method, constants.CMD_ATTR_ARGPARSER, None)
+            parent = self.find_commandset_for_command(command) or self
+            parser = self._build_parser(parent, parser_builder)
+            if parser is None:
+                return
+
+            # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
+            from .decorators import (
+                _set_parser_prog,
+            )
+
+            _set_parser_prog(parser, command)
+
+            # If the description has not been set, then use the method docstring if one exists
+            if parser.description is None and hasattr(command_method, '__wrapped__') and command_method.__wrapped__.__doc__:
+                parser.description = strip_doc_annotations(command_method.__wrapped__.__doc__)
+
+            self._command_parsers[command] = parser
+
     def _install_command_function(self, command: str, command_wrapper: Callable[..., Any], context: str = '') -> None:
         cmd_func_name = COMMAND_FUNC_PREFIX + command
 
@@ -683,6 +743,8 @@ class Cmd(cmd.Cmd):
         if command in self.macros:
             self.pwarning(f"Deleting macro '{command}' because it shares its name with a new command")
             del self.macros[command]
+
+        self._register_command_parser(command, command_wrapper)
 
         setattr(self, cmd_func_name, command_wrapper)
 
@@ -730,6 +792,8 @@ class Cmd(cmd.Cmd):
                     del self._cmd_to_command_sets[cmd_name]
 
                 delattr(self, COMMAND_FUNC_PREFIX + cmd_name)
+                if cmd_name in self._command_parsers:
+                    del self._command_parsers[cmd_name]
 
                 if hasattr(self, COMPLETER_FUNC_PREFIX + cmd_name):
                     delattr(self, COMPLETER_FUNC_PREFIX + cmd_name)
@@ -749,14 +813,7 @@ class Cmd(cmd.Cmd):
 
         for method in methods:
             command_name = method[0][len(COMMAND_FUNC_PREFIX) :]
-
-            # Search for the base command function and verify it has an argparser defined
-            if command_name in self.disabled_commands:
-                command_func = self.disabled_commands[command_name].command_function
-            else:
-                command_func = self.cmd_func(command_name)
-
-            command_parser = cast(argparse.ArgumentParser, getattr(command_func, constants.CMD_ATTR_ARGPARSER, None))
+            command_parser = self._command_parsers.get(command_name, None)
 
             def check_parser_uninstallable(parser: argparse.ArgumentParser) -> None:
                 for action in parser._actions:
@@ -795,7 +852,7 @@ class Cmd(cmd.Cmd):
         for method_name, method in methods:
             subcommand_name: str = getattr(method, constants.SUBCMD_ATTR_NAME)
             full_command_name: str = getattr(method, constants.SUBCMD_ATTR_COMMAND)
-            subcmd_parser = getattr(method, constants.CMD_ATTR_ARGPARSER)
+            subcmd_parser_builder = getattr(method, constants.CMD_ATTR_ARGPARSER)
 
             subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
             if not subcommand_valid:
@@ -815,7 +872,7 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError(
                     f"Could not find command '{command_name}' needed by subcommand: {str(method)}"
                 )
-            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
+            command_parser = self._command_parsers.get(command_name, None)
             if command_parser is None:
                 raise CommandSetRegistrationError(
                     f"Could not find argparser for command '{command_name}' needed by subcommand: {str(method)}"
@@ -835,16 +892,17 @@ class Cmd(cmd.Cmd):
 
             target_parser = find_subcommand(command_parser, subcommand_names)
 
+            subcmd_parser = cast(argparse.ArgumentParser, self._build_parser(cmdset, subcmd_parser_builder))
+            from .decorators import (
+                _set_parser_prog,
+            )
+
+            _set_parser_prog(subcmd_parser, f'{command_name} {subcommand_name}')
+            if subcmd_parser.description is None and method.__doc__:
+                subcmd_parser.description = strip_doc_annotations(method.__doc__)
+
             for action in target_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    # Temporary workaround for avoiding subcommand help text repeatedly getting added to
-                    # action._choices_actions. Until we have instance-specific parser objects, we will remove
-                    # any existing subcommand which has the same name before replacing it. This problem is
-                    # exercised when more than one cmd2.Cmd-based object is created and the same subcommands
-                    # get added each time. Argparse overwrites the previous subcommand but keeps growing the help
-                    # text which is shown by running something like 'alias -h'.
-                    action.remove_parser(subcommand_name)  # type: ignore[arg-type,attr-defined]
-
                     # Get the kwargs for add_parser()
                     add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
 
@@ -916,7 +974,7 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError(
                     f"Could not find command '{command_name}' needed by subcommand: {str(method)}"
                 )
-            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
+            command_parser = self._command_parsers.get(command_name, None)
             if command_parser is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
@@ -2037,7 +2095,7 @@ class Cmd(cmd.Cmd):
                 else:
                     # There's no completer function, next see if the command uses argparse
                     func = self.cmd_func(command)
-                    argparser: Optional[argparse.ArgumentParser] = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
+                    argparser = self._command_parsers.get(command, None)
 
                     if func is not None and argparser is not None:
                         # Get arguments for complete()
@@ -3272,14 +3330,19 @@ class Cmd(cmd.Cmd):
     #############################################################
 
     # Top-level parser for alias
-    alias_description = "Manage aliases\n" "\n" "An alias is a command that enables replacement of a word by another string."
-    alias_epilog = "See also:\n" "  macro"
-    alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
-    alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    alias_subparsers.required = True
+    @staticmethod
+    def _build_alias_parser() -> argparse.ArgumentParser:
+        alias_description = (
+            "Manage aliases\n" "\n" "An alias is a command that enables replacement of a word by another string."
+        )
+        alias_epilog = "See also:\n" "  macro"
+        alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
+        alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+        alias_subparsers.required = True
+        return alias_parser
 
     # Preserve quotes since we are passing strings to other commands
-    @with_argparser(alias_parser, preserve_quotes=True)
+    @with_argparser(_build_alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases"""
         # Call handler for whatever subcommand was selected
@@ -3694,7 +3757,7 @@ class Cmd(cmd.Cmd):
 
         # Check if this command uses argparse
         func = self.cmd_func(command)
-        argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
+        argparser = self._command_parsers.get(command, None)
         if func is None or argparser is None:
             return []
 
@@ -3730,7 +3793,7 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             func = self.cmd_func(args.command)
             help_func = getattr(self, constants.HELP_FUNC_PREFIX + args.command, None)
-            argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
+            argparser = self._command_parsers.get(args.command, None)
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
@@ -3866,7 +3929,7 @@ class Cmd(cmd.Cmd):
                 help_topics.remove(command)
 
                 # Non-argparse commands can have help_functions for their documentation
-                if not hasattr(func, constants.CMD_ATTR_ARGPARSER):
+                if command not in self._command_parsers:
                     has_help_func = True
 
             if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
@@ -3912,7 +3975,7 @@ class Cmd(cmd.Cmd):
                     doc: Optional[str]
 
                     # Non-argparse commands can have help_functions for their documentation
-                    if not hasattr(cmd_func, constants.CMD_ATTR_ARGPARSER) and command in topics:
+                    if command not in self._command_parsers and command in topics:
                         help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
                         result = io.StringIO()
 

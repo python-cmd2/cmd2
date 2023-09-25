@@ -13,6 +13,7 @@ import pytest
 import cmd2
 
 from .conftest import (
+    find_subcommand,
     run_cmd,
 )
 
@@ -27,13 +28,16 @@ class ArgparseApp(cmd2.Cmd):
         ns.custom_stuff = "custom"
         return ns
 
-    say_parser = cmd2.Cmd2ArgumentParser()
-    say_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    say_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    say_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    say_parser.add_argument('words', nargs='+', help='words to say')
+    @staticmethod
+    def _say_parser_builder() -> cmd2.Cmd2ArgumentParser:
+        say_parser = cmd2.Cmd2ArgumentParser()
+        say_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+        say_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+        say_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+        say_parser.add_argument('words', nargs='+', help='words to say')
+        return say_parser
 
-    @cmd2.with_argparser(say_parser)
+    @cmd2.with_argparser(_say_parser_builder)
     def do_say(self, args, *, keyword_arg: Optional[str] = None):
         """
         Repeat what you
@@ -86,12 +90,15 @@ class ArgparseApp(cmd2.Cmd):
     def do_preservelist(self, arglist):
         self.stdout.write('{}'.format(arglist))
 
-    known_parser = cmd2.Cmd2ArgumentParser()
-    known_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    known_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    @classmethod
+    def _speak_parser_builder(cls) -> cmd2.Cmd2ArgumentParser:
+        known_parser = cmd2.Cmd2ArgumentParser()
+        known_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+        known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+        known_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+        return known_parser
 
-    @cmd2.with_argparser(known_parser, with_unknown_args=True)
+    @cmd2.with_argparser(_speak_parser_builder, with_unknown_args=True)
     def do_speak(self, args, extra, *, keyword_arg: Optional[str] = None):
         """Repeat what you tell me to."""
         words = []
@@ -240,11 +247,15 @@ def test_preservelist(argparse_app):
     assert out[0] == "['foo', '\"bar baz\"']"
 
 
+def _build_has_subcmd_parser() -> cmd2.Cmd2ArgumentParser:
+    has_subcmds_parser = cmd2.Cmd2ArgumentParser(description="Tests as_subcmd_to decorator")
+    has_subcmds_subparsers = has_subcmds_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+    has_subcmds_subparsers.required = True
+    return has_subcmds_parser
+
+
 class SubcommandApp(cmd2.Cmd):
     """Example cmd2 application where we a base command which has a couple subcommands."""
-
-    def __init__(self):
-        cmd2.Cmd.__init__(self)
 
     # subcommand functions for the base command
     def base_foo(self, args):
@@ -291,11 +302,7 @@ class SubcommandApp(cmd2.Cmd):
         func(self, args)
 
     # Add subcommands using as_subcommand_to decorator
-    has_subcmds_parser = cmd2.Cmd2ArgumentParser(description="Tests as_subcmd_to decorator")
-    has_subcmds_subparsers = has_subcmds_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    has_subcmds_subparsers.required = True
-
-    @cmd2.with_argparser(has_subcmds_parser)
+    @cmd2.with_argparser(_build_has_subcmd_parser)
     def do_test_subcmd_decorator(self, args: argparse.Namespace):
         handler = args.cmd2_handler.get()
         handler(args)
@@ -396,7 +403,13 @@ def test_add_another_subcommand(subcommand_app):
     This tests makes sure _set_parser_prog() sets _prog_prefix on every _SubParsersAction so that all future calls
     to add_parser() write the correct prog value to the parser being added.
     """
-    new_parser = subcommand_app.base_subparsers.add_parser('new_sub', help="stuff")
+    base_parser = subcommand_app._command_parsers.get('base')
+    subcommand_parser = find_subcommand(subcommand_app._command_parsers.get('base'), [])
+    for sub_action in base_parser._actions:
+        if isinstance(sub_action, argparse._SubParsersAction):
+            new_parser = sub_action.add_parser('new_sub', help='stuff')
+            break
+
     assert new_parser.prog == "base new_sub"
 
 

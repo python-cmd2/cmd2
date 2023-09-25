@@ -2,6 +2,7 @@
 """
 Cmd2 unit/functional testing
 """
+import argparse
 import sys
 from contextlib import (
     redirect_stderr,
@@ -190,3 +191,16 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Opti
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 return app.complete(text, 0)
+
+
+def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
+    if not subcmd_names:
+        return action
+    cur_subcmd = subcmd_names.pop(0)
+    for sub_action in action._actions:
+        if isinstance(sub_action, argparse._SubParsersAction):
+            for choice_name, choice in sub_action.choices.items():
+                if choice_name == cur_subcmd:
+                    return find_subcommand(choice, subcmd_names)
+            break
+    raise ValueError(f"Could not find subcommand '{subcmd_names}'")

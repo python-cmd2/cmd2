@@ -12,6 +12,7 @@ from typing import (
     Tuple,
     TypeVar,
     Union,
+    overload,
 )
 
 from . import (
@@ -29,9 +30,6 @@ from .exceptions import (
 )
 from .parsing import (
     Statement,
-)
-from .utils import (
-    strip_doc_annotations,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -261,8 +259,30 @@ ArgparseCommandFunc = Union[
 ]
 
 
+@overload
 def with_argparser(
     parser: argparse.ArgumentParser,
+    *,
+    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
+    preserve_quotes: bool = False,
+    with_unknown_args: bool = False,
+) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]:
+    ...  # pragma: no cover
+
+
+@overload
+def with_argparser(
+    parser: Callable[[], argparse.ArgumentParser],
+    *,
+    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
+    preserve_quotes: bool = False,
+    with_unknown_args: bool = False,
+) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]:
+    ...  # pragma: no cover
+
+
+def with_argparser(
+    parser: Union[argparse.ArgumentParser, Callable[[], argparse.ArgumentParser]],
     *,
     ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
     preserve_quotes: bool = False,
@@ -271,7 +291,7 @@ def with_argparser(
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
-    :param parser: unique instance of ArgumentParser
+    :param parser: unique instance of ArgumentParser or a callable that returns an ArgumentParser
     :param ns_provider: An optional function that accepts a cmd2.Cmd or cmd2.CommandSet object as an argument and returns an
                         argparse.Namespace. This is useful if the Namespace needs to be prepopulated with state data that
                         affects parsing.
@@ -339,6 +359,10 @@ def with_argparser(
             statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(
                 command_name, statement_arg, preserve_quotes
             )
+            arg_parser = cmd2_app._command_parsers.get(command_name, None)
+            if arg_parser is None:
+                # This shouldn't be possible to reach
+                raise ValueError(f'No argument parser found for {command_name}')  # pragma: no cover
 
             if ns_provider is None:
                 namespace = None
@@ -352,9 +376,9 @@ def with_argparser(
             try:
                 new_args: Union[Tuple[argparse.Namespace], Tuple[argparse.Namespace, List[str]]]
                 if with_unknown_args:
-                    new_args = parser.parse_known_args(parsed_arglist, namespace)
+                    new_args = arg_parser.parse_known_args(parsed_arglist, namespace)
                 else:
-                    new_args = (parser.parse_args(parsed_arglist, namespace),)
+                    new_args = (arg_parser.parse_args(parsed_arglist, namespace),)
                 ns = new_args[0]
             except SystemExit:
                 raise Cmd2ArgparseError
@@ -374,16 +398,7 @@ def with_argparser(
                 args_list = _arg_swap(args, statement_arg, *new_args)
                 return func(*args_list, **kwargs)  # type: ignore[call-arg]
 
-        # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
-        _set_parser_prog(parser, command_name)
-
-        # If the description has not been set, then use the method docstring if one exists
-        if parser.description is None and func.__doc__:
-            parser.description = strip_doc_annotations(func.__doc__)
-
-        # Set the command's help text as argparser.description (which can be None)
-        cmd_wrapper.__doc__ = parser.description
 
         # Set some custom attributes for this command
         setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, parser)
@@ -395,10 +410,34 @@ def with_argparser(
     return arg_decorator
 
 
+@overload
 def as_subcommand_to(
     command: str,
     subcommand: str,
     parser: argparse.ArgumentParser,
+    *,
+    help: Optional[str] = None,
+    aliases: Optional[List[str]] = None,
+) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]:
+    ...  # pragma: no cover
+
+
+@overload
+def as_subcommand_to(
+    command: str,
+    subcommand: str,
+    parser: Callable[[], argparse.ArgumentParser],
+    *,
+    help: Optional[str] = None,
+    aliases: Optional[List[str]] = None,
+) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]:
+    ...  # pragma: no cover
+
+
+def as_subcommand_to(
+    command: str,
+    subcommand: str,
+    parser: Union[argparse.ArgumentParser, Callable[[], argparse.ArgumentParser]],
     *,
     help: Optional[str] = None,
     aliases: Optional[List[str]] = None,
@@ -417,12 +456,6 @@ def as_subcommand_to(
     """
 
     def arg_decorator(func: ArgparseCommandFunc[CommandParent]) -> ArgparseCommandFunc[CommandParent]:
-        _set_parser_prog(parser, command + ' ' + subcommand)
-
-        # If the description has not been set, then use the method docstring if one exists
-        if parser.description is None and func.__doc__:
-            parser.description = func.__doc__
-
         # Set some custom attributes for this command
         setattr(func, constants.SUBCMD_ATTR_COMMAND, command)
         setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
