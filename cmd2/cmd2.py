@@ -535,6 +535,9 @@ class Cmd(cmd.Cmd):
         self.suggest_similar_command = suggest_similar_command
         self.default_suggestion_message = "Did you mean {}?"
 
+        # the current command being executed
+        self.current_command: Optional[Statement] = None
+
     def find_commandsets(self, commandset_type: Type[CommandSet], *, subclass_match: bool = False) -> List[CommandSet]:
         """
         Find all CommandSets that match the provided CommandSet type.
@@ -2363,7 +2366,13 @@ class Cmd(cmd.Cmd):
 
         # Check if we are allowed to re-raise the KeyboardInterrupt
         if not self.sigint_protection:
-            self._raise_keyboard_interrupt()
+            raise_interrupt = True
+            if self.current_command is not None:
+                command_set = self.find_commandset_for_command(self.current_command.command)
+                if command_set is not None:
+                    raise_interrupt = not command_set.sigint_handler()
+            if raise_interrupt:
+                self._raise_keyboard_interrupt()
 
     def _raise_keyboard_interrupt(self) -> None:
         """Helper function to raise a KeyboardInterrupt"""
@@ -2953,7 +2962,11 @@ class Cmd(cmd.Cmd):
             ):
                 self.history.append(statement)
 
-            stop = func(statement)
+            try:
+                self.current_command = statement
+                stop = func(statement)
+            finally:
+                self.current_command = None
 
         else:
             stop = self.default(statement)
