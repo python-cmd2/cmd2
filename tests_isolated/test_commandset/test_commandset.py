@@ -5,6 +5,7 @@ Test CommandSet
 """
 
 import argparse
+import signal
 from typing import (
     List,
 )
@@ -196,6 +197,9 @@ def test_load_commands(command_sets_manual, capsys):
 
     assert command_sets_manual.find_commandsets(CommandSetA)[0] is cmd_set
     assert command_sets_manual.find_commandset_for_command('elderberry') is cmd_set
+
+    out = command_sets_manual.app_cmd('apple')
+    assert 'Apple!' in out.stdout
 
     # Make sure registration callbacks ran
     out, err = capsys.readouterr()
@@ -571,6 +575,38 @@ def test_subcommands(command_sets_manual):
 
     command_sets_manual.unregister_command_set(veg_cmds)
     command_sets_manual.unregister_command_set(base_cmds)
+
+
+def test_commandset_sigint(command_sets_manual):
+    # shows that the command is able to continue execution if the sigint_handler
+    # returns True that we've handled interrupting the command.
+    class SigintHandledCommandSet(cmd2.CommandSet):
+        def do_foo(self, _):
+            self._cmd.poutput('in foo')
+            self._cmd.sigint_handler(signal.SIGINT, None)
+            self._cmd.poutput('end of foo')
+
+        def sigint_handler(self) -> bool:
+            return True
+
+    cs1 = SigintHandledCommandSet()
+    command_sets_manual.register_command_set(cs1)
+    out = command_sets_manual.app_cmd('foo')
+    assert 'in foo' in out.stdout
+    assert 'end of foo' in out.stdout
+
+    # shows that the command is interrupted if we don't report we've handled the sigint
+    class SigintUnhandledCommandSet(cmd2.CommandSet):
+        def do_bar(self, _):
+            self._cmd.poutput('in do bar')
+            self._cmd.sigint_handler(signal.SIGINT, None)
+            self._cmd.poutput('end of do bar')
+
+    cs2 = SigintUnhandledCommandSet()
+    command_sets_manual.register_command_set(cs2)
+    out = command_sets_manual.app_cmd('bar')
+    assert 'in do bar' in out.stdout
+    assert 'end of do bar' not in out.stdout
 
 
 def test_nested_subcommands(command_sets_manual):

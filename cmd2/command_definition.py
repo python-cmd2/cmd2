@@ -165,3 +165,12 @@ class CommandSet(object):
             del self._settables[name]
         except KeyError:
             raise KeyError(name + " is not a settable parameter")
+
+    def sigint_handler(self) -> bool:
+        """
+        Handle a SIGINT that occurred for a command in this CommandSet.
+
+        :return: True if this completes the interrupt handling and no KeyboardInterrupt will be raised.
+                 False to raise a KeyboardInterrupt.
+        """
+        return False
