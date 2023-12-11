@@ -684,14 +684,19 @@ class Cmd(cmd.Cmd):
         self,
         parent: CommandParent,
         parser_builder: Optional[
-            Union[argparse.ArgumentParser, Callable[[], argparse.ArgumentParser], StaticArgParseBuilder, ClassArgParseBuilder]
+            Union[
+                argparse.ArgumentParser,
+                Callable[[], argparse.ArgumentParser],
+                StaticArgParseBuilder,
+                ClassArgParseBuilder,
+            ]
         ],
     ) -> Optional[argparse.ArgumentParser]:
         parser: Optional[argparse.ArgumentParser] = None
         if isinstance(parser_builder, staticmethod):
             parser = parser_builder.__func__()
         elif isinstance(parser_builder, classmethod):
-            parser = parser_builder.__func__(parent if not None else self)
+            parser = parser_builder.__func__(parent if not None else self)  # type: ignore[arg-type]
         elif callable(parser_builder):
             parser = parser_builder()
         elif isinstance(parser_builder, argparse.ArgumentParser):
