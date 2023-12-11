@@ -22,7 +22,7 @@ jobs:
           # Set fetch-depth: 0 to fetch all history for all branches and tags.
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
       - name: Set up Python
-        uses: actions/setup-python@v4  # https://github.com/actions/setup-python
+        uses: actions/setup-python@v5  # https://github.com/actions/setup-python
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install python prerequisites
