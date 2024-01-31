@@ -323,6 +323,7 @@ class Cmd(cmd.Cmd):
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.quiet = False  # Do not suppress nonessential output
         self.timing = False  # Prints elapsed time for each command
+        self.history_includes_scripts = True # Should the history contain commands issued by scripts?
 
         # The maximum number of CompletionItems to display during tab completion. If the number of completion
         # suggestions exceeds this number, they will be displayed in the typical columnized format and will
@@ -1103,6 +1104,7 @@ class Cmd(cmd.Cmd):
         )
         self.add_settable(Settable('quiet', bool, "Don't print nonessential feedback", self))
         self.add_settable(Settable('timing', bool, "Report execution times", self))
+        self.add_settable(Settable('history_includes_scripts', bool, "History should contain commands issued by scripts", self))
 
     # -----  Methods related to presenting output to the user -----
 
@@ -5048,8 +5050,8 @@ class Cmd(cmd.Cmd):
         completer=path_complete,
     )
     run_script_parser.add_argument(
-        '--no-history',
-        action='store_true',
+        '--history',
+        action=argparse.BooleanOptionalAction,
         help="Don't add commands issued by script to the history",
     )
     run_script_parser.add_argument('script_path', help="path to the script file", completer=path_complete)
@@ -5090,7 +5092,10 @@ class Cmd(cmd.Cmd):
             return None
 
         orig_script_dir_count = len(self._script_dir)
-        add_to_history = not args.no_history
+        if args.history == None:
+            add_to_history = self.history_includes_scripts
+        else:
+            add_to_history = args.history
 
         try:
             self._script_dir.append(os.path.dirname(expanded_path))
