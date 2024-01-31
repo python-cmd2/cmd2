@@ -4894,7 +4894,8 @@ class Cmd(cmd.Cmd):
         except OSError as ex:
             self.perror(f"Cannot write persistent history file '{self.persistent_history_file}': {ex}")
 
-    def _generate_transcript(self, history: Union[List[HistoryItem], List[str]], transcript_file: str) -> None:
+    def _generate_transcript(self, history: Union[List[HistoryItem], List[str]], transcript_file: str,
+                             add_to_history: bool = True) -> None:
         """Generate a transcript file from a given history of commands"""
         self.last_result = False
 
@@ -4944,7 +4945,8 @@ class Cmd(cmd.Cmd):
 
                 # then run the command and let the output go into our buffer
                 try:
-                    stop = self.onecmd_plus_hooks(history_item, raise_keyboard_interrupt=True)
+                    stop = self.onecmd_plus_hooks(history_item, raise_keyboard_interrupt=True,
+                                                  add_to_history=add_to_history)
                 except KeyboardInterrupt as ex:
                     self.perror(ex)
                     stop = True
@@ -5045,6 +5047,11 @@ class Cmd(cmd.Cmd):
         help='record the output of the script as a transcript file',
         completer=path_complete,
     )
+    run_script_parser.add_argument(
+        '--no-history',
+        action='store_true',
+        help="Don't add commands issued by script to the history",
+    )
     run_script_parser.add_argument('script_path', help="path to the script file", completer=path_complete)
 
     @with_argparser(run_script_parser)
@@ -5083,15 +5090,18 @@ class Cmd(cmd.Cmd):
             return None
 
         orig_script_dir_count = len(self._script_dir)
+        add_to_history = not args.no_history
 
         try:
             self._script_dir.append(os.path.dirname(expanded_path))
 
             if args.transcript:
                 # self.last_resort will be set by _generate_transcript()
-                self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
+                self._generate_transcript(script_commands, os.path.expanduser(args.transcript),
+                                          add_to_history=add_to_history)
             else:
-                stop = self.runcmds_plus_hooks(script_commands, stop_on_keyboard_interrupt=True)
+                stop = self.runcmds_plus_hooks(script_commands, stop_on_keyboard_interrupt=True,
+                                               add_to_history=add_to_history)
                 self.last_result = True
                 return stop
 
