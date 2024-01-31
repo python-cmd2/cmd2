@@ -323,6 +323,7 @@ class Cmd(cmd.Cmd):
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.quiet = False  # Do not suppress nonessential output
         self.timing = False  # Prints elapsed time for each command
+        self.history_includes_scripts = True # Should the history contain commands issued by scripts?
 
         # The maximum number of CompletionItems to display during tab completion. If the number of completion
         # suggestions exceeds this number, they will be displayed in the typical columnized format and will
@@ -1103,6 +1104,7 @@ class Cmd(cmd.Cmd):
         )
         self.add_settable(Settable('quiet', bool, "Don't print nonessential feedback", self))
         self.add_settable(Settable('timing', bool, "Report execution times", self))
+        self.add_settable(Settable('history_includes_scripts', bool, "History should contain commands issued by scripts", self))
 
     # -----  Methods related to presenting output to the user -----
 
@@ -4894,7 +4896,8 @@ class Cmd(cmd.Cmd):
         except OSError as ex:
             self.perror(f"Cannot write persistent history file '{self.persistent_history_file}': {ex}")
 
-    def _generate_transcript(self, history: Union[List[HistoryItem], List[str]], transcript_file: str) -> None:
+    def _generate_transcript(self, history: Union[List[HistoryItem], List[str]], transcript_file: str,
+                             add_to_history: bool = True) -> None:
         """Generate a transcript file from a given history of commands"""
         self.last_result = False
 
@@ -4944,7 +4947,8 @@ class Cmd(cmd.Cmd):
 
                 # then run the command and let the output go into our buffer
                 try:
-                    stop = self.onecmd_plus_hooks(history_item, raise_keyboard_interrupt=True)
+                    stop = self.onecmd_plus_hooks(history_item, raise_keyboard_interrupt=True,
+                                                  add_to_history=add_to_history)
                 except KeyboardInterrupt as ex:
                     self.perror(ex)
                     stop = True
@@ -5045,6 +5049,11 @@ class Cmd(cmd.Cmd):
         help='record the output of the script as a transcript file',
         completer=path_complete,
     )
+    run_script_parser.add_argument(
+        '--history',
+        action=argparse.BooleanOptionalAction,
+        help="Don't add commands issued by script to the history",
+    )
     run_script_parser.add_argument('script_path', help="path to the script file", completer=path_complete)
 
     @with_argparser(run_script_parser)
@@ -5083,15 +5092,21 @@ class Cmd(cmd.Cmd):
             return None
 
         orig_script_dir_count = len(self._script_dir)
+        if args.history == None:
+            add_to_history = self.history_includes_scripts
+        else:
+            add_to_history = args.history
 
         try:
             self._script_dir.append(os.path.dirname(expanded_path))
 
             if args.transcript:
                 # self.last_resort will be set by _generate_transcript()
-                self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
+                self._generate_transcript(script_commands, os.path.expanduser(args.transcript),
+                                          add_to_history=add_to_history)
             else:
-                stop = self.runcmds_plus_hooks(script_commands, stop_on_keyboard_interrupt=True)
+                stop = self.runcmds_plus_hooks(script_commands, stop_on_keyboard_interrupt=True,
+                                               add_to_history=add_to_history)
                 self.last_result = True
                 return stop
 
