@@ -209,6 +209,7 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
     """
     # Set the prog value for this parser
     parser.prog = prog
+    req_args = []
 
     # Set the prog value for the parser's subcommands
     for action in parser._actions:
@@ -233,13 +234,18 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
                 if subcmd_parser in processed_parsers:
                     continue
 
-                subcmd_prog = parser.prog + ' ' + subcmd_name
+                subcmd_prog = parser.prog
+                if req_args:
+                    subcmd_prog += " " + " ".join(req_args)
+                subcmd_prog += " " + subcmd_name
                 _set_parser_prog(subcmd_parser, subcmd_prog)
                 processed_parsers.append(subcmd_parser)
 
             # We can break since argparse only allows 1 group of subcommands per level
             break
-
+        # need to save required args so they can be prepended to the subcommand usage
+        elif action.required:
+            req_args.append(action.dest)
 
 #: Function signature for a Command Function that uses an argparse.ArgumentParser to process user input
 #: and optionally returns a boolean
