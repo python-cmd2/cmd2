@@ -209,7 +209,7 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
     """
     # Set the prog value for this parser
     parser.prog = prog
-    req_args = []
+    req_args: List[str] = []
 
     # Set the prog value for the parser's subcommands
     for action in parser._actions:
