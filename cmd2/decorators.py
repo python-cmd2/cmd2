@@ -247,6 +247,7 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
         elif action.required:
             req_args.append(action.dest)
 
+
 #: Function signature for a Command Function that uses an argparse.ArgumentParser to process user input
 #: and optionally returns a boolean
 ArgparseCommandFuncOptionalBoolReturn = Callable[[CommandParent, argparse.Namespace], Optional[bool]]
@@ -272,8 +273,7 @@ def with_argparser(
     ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
     preserve_quotes: bool = False,
     with_unknown_args: bool = False,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]:
-    ...  # pragma: no cover
+) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]: ...  # pragma: no cover
 
 
 @overload
@@ -283,8 +283,7 @@ def with_argparser(
     ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
     preserve_quotes: bool = False,
     with_unknown_args: bool = False,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]:
-    ...  # pragma: no cover
+) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]: ...  # pragma: no cover
 
 
 def with_argparser(
@@ -424,8 +423,7 @@ def as_subcommand_to(
     *,
     help: Optional[str] = None,
     aliases: Optional[List[str]] = None,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]:
-    ...  # pragma: no cover
+) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]: ...  # pragma: no cover
 
 
 @overload
@@ -436,8 +434,7 @@ def as_subcommand_to(
     *,
     help: Optional[str] = None,
     aliases: Optional[List[str]] = None,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]:
-    ...  # pragma: no cover
+) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]: ...  # pragma: no cover
 
 
 def as_subcommand_to(
