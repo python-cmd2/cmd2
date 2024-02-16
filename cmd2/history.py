@@ -154,12 +154,10 @@ class History(List[HistoryItem]):
         return result
 
     @overload
-    def append(self, new: HistoryItem) -> None:
-        ...  # pragma: no cover
+    def append(self, new: HistoryItem) -> None: ...  # pragma: no cover
 
     @overload
-    def append(self, new: Statement) -> None:
-        ...  # pragma: no cover
+    def append(self, new: Statement) -> None: ...  # pragma: no cover
 
     def append(self, new: Union[Statement, HistoryItem]) -> None:
         """Append a new statement to the end of the History list.
