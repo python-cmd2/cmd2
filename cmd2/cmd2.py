@@ -778,7 +778,7 @@ class Cmd(cmd.Cmd):
             cmdset.on_unregister()
             self._unregister_subcommands(cmdset)
 
-            methods = inspect.getmembers(
+            methods: List[Tuple[str, Callable[[Any], Any]]] = inspect.getmembers(
                 cmdset,
                 predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
                 and hasattr(meth, '__name__')
@@ -809,7 +809,7 @@ class Cmd(cmd.Cmd):
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
-        methods = inspect.getmembers(
+        methods: List[Tuple[str, Callable[[Any], Any]]] = inspect.getmembers(
             cmdset,
             predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
             and hasattr(meth, '__name__')
