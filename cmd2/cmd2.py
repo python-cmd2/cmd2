@@ -4813,7 +4813,12 @@ class Cmd(cmd.Cmd):
                           to this file when the application exits.
         """
         import json
-        import lzma
+        try:
+            import lzma
+            bz2 = None
+        except ModuleNotFoundError:  # pragma: no cover
+            lzma = None
+            import bz2
 
         self.history = History()
         # with no persistent history, nothing else in this method is relevant
@@ -4841,7 +4846,10 @@ class Cmd(cmd.Cmd):
         try:
             with open(hist_file, 'rb') as fobj:
                 compressed_bytes = fobj.read()
-            history_json = lzma.decompress(compressed_bytes).decode(encoding='utf-8')
+            if lzma is not None:
+                history_json = lzma.decompress(compressed_bytes).decode(encoding='utf-8')
+            else:
+                history_json = bz2.decompress(compressed_bytes).decode(encoding='utf-8')
             self.history = History.from_json(history_json)
         except FileNotFoundError:
             # Just use an empty history
@@ -4879,7 +4887,12 @@ class Cmd(cmd.Cmd):
 
     def _persist_history(self) -> None:
         """Write history out to the persistent history file as compressed JSON"""
-        import lzma
+        try:
+            import lzma
+            bz2 = None
+        except ModuleNotFoundError:  # pragma: no cover
+            lzma = None
+            import bz2
 
         if not self.persistent_history_file:
             return
@@ -4887,7 +4900,10 @@ class Cmd(cmd.Cmd):
         self.history.truncate(self._persistent_history_length)
         try:
             history_json = self.history.to_json()
-            compressed_bytes = lzma.compress(history_json.encode(encoding='utf-8'))
+            if lzma is not None:
+                compressed_bytes = lzma.compress(history_json.encode(encoding='utf-8'))
+            else:
+                compressed_bytes = bz2.compress(history_json.encode(encoding='utf-8'))
 
             with open(self.persistent_history_file, 'wb') as fobj:
                 fobj.write(compressed_bytes)
