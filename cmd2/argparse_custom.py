@@ -257,31 +257,20 @@ from typing import (
     List,
     NoReturn,
     Optional,
+    Protocol,
     Sequence,
     Set,
     Tuple,
     Type,
     Union,
     cast,
+    runtime_checkable,
 )
 
 from . import (
     ansi,
     constants,
 )
-
-try:
-    from typing import (
-        Protocol,
-        runtime_checkable,
-    )
-except ImportError:
-    # Remove these imports when we no longer support Python 3.7
-    from typing_extensions import (  # type: ignore[assignment]
-        Protocol,
-        runtime_checkable,
-    )
-
 
 if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import (
@@ -352,8 +341,7 @@ class ChoicesProviderFuncBase(Protocol):
     Function that returns a list of choices in support of tab completion
     """
 
-    def __call__(self) -> List[str]:
-        ...  # pragma: no cover
+    def __call__(self) -> List[str]: ...  # pragma: no cover
 
 
 @runtime_checkable
@@ -362,8 +350,7 @@ class ChoicesProviderFuncWithTokens(Protocol):
     Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments.
     """
 
-    def __call__(self, *, arg_tokens: Dict[str, List[str]] = {}) -> List[str]:
-        ...  # pragma: no cover
+    def __call__(self, *, arg_tokens: Dict[str, List[str]] = {}) -> List[str]: ...  # pragma: no cover
 
 
 ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens]
@@ -381,8 +368,7 @@ class CompleterFuncBase(Protocol):
         line: str,
         begidx: int,
         endidx: int,
-    ) -> List[str]:
-        ...  # pragma: no cover
+    ) -> List[str]: ...  # pragma: no cover
 
 
 @runtime_checkable
@@ -400,8 +386,7 @@ class CompleterFuncWithTokens(Protocol):
         endidx: int,
         *,
         arg_tokens: Dict[str, List[str]] = {},
-    ) -> List[str]:
-        ...  # pragma: no cover
+    ) -> List[str]: ...  # pragma: no cover
 
 
 CompleterFunc = Union[CompleterFuncBase, CompleterFuncWithTokens]
