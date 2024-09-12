@@ -1,6 +1,8 @@
 ## 2.5.0 (TBD)
 * Breaking Change
   * `cmd2` 2.5 supports Python 3.8+ (removed support for Python 3.6 and 3.7)
+* Bug Fixes
+  * Fixed issue where persistent history file was not saved upon SIGHUP and SIGTERM signals.
 * Enhancements
   * Removed dependency on `attrs` and replaced with [dataclasses](https://docs.python.org/3/library/dataclasses.html)
   * add `allow_clipboard` initialization parameter and attribute to disable ability to
