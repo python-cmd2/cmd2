@@ -8,7 +8,7 @@
 # version numbers are: major.minor.patch
 #
 # this script will delete and recreate existing virtualenvs named
-# cmd2-3.7, etc. It will also create a .python-version
+# cmd2-3.8, etc. It will also create a .python-version
 #
 # Prerequisites:
 #   - *nix-ish environment like macOS or Linux
@@ -23,7 +23,7 @@
 # virtualenvs will be added to '.python-version'. Feel free to modify
 # this list, but note that this script intentionally won't install
 # dev, rc, or beta python releases
-declare -a pythons=("3.7" "3.8" "3.9", "3.10", "3.11")
+declare -a pythons=("3.8" "3.9", "3.10", "3.11", "3.12")
 
 # function to find the latest patch of a minor version of python
 function find_latest_version {
