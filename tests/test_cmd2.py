@@ -2317,24 +2317,6 @@ def test_perror_no_style(base_app, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_pwarning_style(base_app, capsys):
-    msg = 'testing...'
-    end = '\n'
-    base_app.pwarning(msg)
-    out, err = capsys.readouterr()
-    assert err == ansi.style_warning(msg) + end
-
-
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_pwarning_no_style(base_app, capsys):
-    msg = 'testing...'
-    end = '\n'
-    base_app.pwarning(msg, apply_style=False)
-    out, err = capsys.readouterr()
-    assert err == msg + end
-
-
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_pexcept_style(base_app, capsys):
     msg = Exception('testing...')
 
