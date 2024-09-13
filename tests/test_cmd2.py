@@ -75,16 +75,20 @@ def test_version(base_app):
     assert cmd2.__version__
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 8), reason="failing in CI systems for Python 3.8 and 3.9")
 def test_not_in_main_thread(base_app, capsys):
     import threading
 
-    cli_thread = threading.Thread(name='cli_thread', target=base_app.cmdloop)
+    # Mock threading.main_thread() to return our fake thread
+    saved_main_thread = threading.main_thread
+    fake_main = threading.Thread()
+    threading.main_thread = mock.MagicMock(name='main_thread', return_value=fake_main)
 
-    cli_thread.start()
-    cli_thread.join()
-    out, err = capsys.readouterr()
-    assert "cmdloop must be run in the main thread" in err
+    with pytest.raises(RuntimeError) as excinfo:
+        base_app.cmdloop()
+
+    # Restore threading.main_thread()
+    threading.main_thread = saved_main_thread
+    assert "cmdloop must be run in the main thread" in str(excinfo.value)
 
 
 def test_empty_statement(base_app):
