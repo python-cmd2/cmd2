@@ -75,14 +75,6 @@ Here's what it looks like::
          for i in range(min(repetitions, self.maxrepeats)):
             self.poutput(arg)
 
-.. warning::
-
-    It is important that each command which uses the ``@with_argparser``
-    decorator be passed a unique instance of a parser.  This limitation is due
-    to bugs in CPython prior to Python 3.7 which make it impossible to make a
-    deep copy of an instance of a ``argparse.ArgumentParser``.
-
-
 .. note::
 
    The ``@with_argparser`` decorator sets the ``prog`` variable in the argument

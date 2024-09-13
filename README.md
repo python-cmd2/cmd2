@@ -32,14 +32,14 @@ The developers toolbox
 ![system schema](https://raw.githubusercontent.com/python-cmd2/cmd2/master/.github/images/graph.drawio.png)
 
 
-When creating solutions developers have no shortage of tools to create rich and smart user interfaces. 
-System administrators have long been duct taping together brittle workflows based on a menagerie of simple command line tools created by strangers on github and the guy down the hall. 
-Unfortunately, when CLIs become significantly complex the ease of command discoverability tends to fade quickly. 
-On the other hand, Web and traditional desktop GUIs are first in class when it comes to easily discovering functionality. 
+When creating solutions developers have no shortage of tools to create rich and smart user interfaces.
+System administrators have long been duct taping together brittle workflows based on a menagerie of simple command line tools created by strangers on github and the guy down the hall.
+Unfortunately, when CLIs become significantly complex the ease of command discoverability tends to fade quickly.
+On the other hand, Web and traditional desktop GUIs are first in class when it comes to easily discovering functionality.
 The price we pay for beautifully colored displays is complexity required to aggregate disperate applications into larger systems.
-`cmd2` fills the niche between high [ease of command discovery](https://clig.dev/#ease-of-discovery) applications and smart workflow automation systems. 
+`cmd2` fills the niche between high [ease of command discovery](https://clig.dev/#ease-of-discovery) applications and smart workflow automation systems.
 
-The `cmd2` framework provides a great mixture of both worlds. Application designers can easily create complex applications and rely on the cmd2 library to offer effortless user facing help and extensive tab completion. 
+The `cmd2` framework provides a great mixture of both worlds. Application designers can easily create complex applications and rely on the cmd2 library to offer effortless user facing help and extensive tab completion.
 When users become comfortable with functionality, cmd2 turns into a feature rich library enabling a smooth transition to full automation. If designed with enough forethought, a well implemented cmd2 application can serve as a boutique workflow tool. `cmd2` pulls off this flexibility based on two pillars of philosophy:
 
 * Tab Completion
@@ -78,7 +78,7 @@ On all operating systems, the latest stable version of `cmd2` can be installed u
 pip install -U cmd2
 ```
 
-cmd2 works with Python 3.7+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party dependencies.
+cmd2 works with Python 3.8+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party dependencies.
 
 For information on other installation options, see
 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html) in the cmd2
@@ -97,7 +97,7 @@ The best way to learn the cmd2 api is to delve into the example applications loc
 Tutorials
 ---------
 
-* PyOhio 2019 presentation: 
+* PyOhio 2019 presentation:
     * [video](https://www.youtube.com/watch?v=pebeWrTqIIw)
     * [slides](https://github.com/python-cmd2/talks/blob/master/PyOhio_2019/cmd2-PyOhio_2019.pdf)
     * [example code](https://github.com/python-cmd2/talks/tree/master/PyOhio_2019/examples)
@@ -161,4 +161,4 @@ Projects using cmd2
 Possibly defunct but still good examples
 
 * [JSShell](https://github.com/Den1al/JSShell)
-* [FLASHMINGO](https://github.com/fireeye/flashmingo) 
+* [FLASHMINGO](https://github.com/fireeye/flashmingo)

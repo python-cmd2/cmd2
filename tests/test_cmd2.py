@@ -1038,6 +1038,17 @@ def test_raise_keyboard_interrupt(base_app):
     assert 'Got a keyboard interrupt' in str(excinfo.value)
 
 
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="SIGTERM only handeled on Linux/Mac")
+def test_termination_signal_handler(base_app):
+    with pytest.raises(SystemExit) as excinfo:
+        base_app.termination_signal_handler(signal.SIGHUP, 1)
+    assert excinfo.value.code == signal.SIGHUP + 128
+
+    with pytest.raises(SystemExit) as excinfo:
+        base_app.termination_signal_handler(signal.SIGTERM, 1)
+    assert excinfo.value.code == signal.SIGTERM + 128
+
+
 class HookFailureApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -2312,24 +2323,6 @@ def test_perror_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
     base_app.perror(msg, apply_style=False)
-    out, err = capsys.readouterr()
-    assert err == msg + end
-
-
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_pwarning_style(base_app, capsys):
-    msg = 'testing...'
-    end = '\n'
-    base_app.pwarning(msg)
-    out, err = capsys.readouterr()
-    assert err == ansi.style_warning(msg) + end
-
-
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_pwarning_no_style(base_app, capsys):
-    msg = 'testing...'
-    end = '\n'
-    base_app.pwarning(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
 

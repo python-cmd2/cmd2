@@ -260,7 +260,7 @@ def test_generate_transcript_stop(capsys):
         # strings with zero or one slash or with escaped slashes means no regular
         # expression present, so the result should just be what re.escape returns.
         # we don't use static strings in these tests because re.escape behaves
-        # differently in python 3.7 than in prior versions
+        # differently in python 3.7+ than in prior versions
         ('text with no slashes', re.escape('text with no slashes')),
         ('specials .*', re.escape('specials .*')),
         ('use 2/3 cup', re.escape('use 2/3 cup')),
