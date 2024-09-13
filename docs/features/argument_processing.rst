@@ -75,13 +75,6 @@ Here's what it looks like::
          for i in range(min(repetitions, self.maxrepeats)):
             self.poutput(arg)
 
-.. warning::
-
-    It is important that each command which uses the ``@with_argparser``
-    decorator be passed a unique instance of a parser since command-specific
-    changes could be made to it.
-
-
 .. note::
 
    The ``@with_argparser`` decorator sets the ``prog`` variable in the argument

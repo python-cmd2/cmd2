@@ -700,10 +700,7 @@ class Cmd(cmd.Cmd):
         elif callable(parser_builder):
             parser = parser_builder()
         elif isinstance(parser_builder, argparse.ArgumentParser):
-            if sys.version_info >= (3, 6, 4):
-                parser = copy.deepcopy(parser_builder)
-            else:  # pragma: no cover
-                parser = parser_builder
+            parser = copy.deepcopy(parser_builder)
         return parser
 
     def _register_command_parser(self, command: str, command_method: Callable[..., Any]) -> None:
@@ -780,7 +777,7 @@ class Cmd(cmd.Cmd):
 
             methods: List[Tuple[str, Callable[[Any], Any]]] = inspect.getmembers(
                 cmdset,
-                predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type, var-annotated]
+                predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
                 and hasattr(meth, '__name__')
                 and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
             )
@@ -811,7 +808,7 @@ class Cmd(cmd.Cmd):
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
         methods: List[Tuple[str, Callable[[Any], Any]]] = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type, var-annotated]
+            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
             and hasattr(meth, '__name__')
             and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
         )
@@ -3328,19 +3325,14 @@ class Cmd(cmd.Cmd):
     #############################################################
 
     # Top-level parser for alias
-    @staticmethod
-    def _build_alias_parser() -> argparse.ArgumentParser:
-        alias_description = (
-            "Manage aliases\n" "\n" "An alias is a command that enables replacement of a word by another string."
-        )
-        alias_epilog = "See also:\n" "  macro"
-        alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
-        alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-        alias_subparsers.required = True
-        return alias_parser
+    alias_description = "Manage aliases\n" "\n" "An alias is a command that enables replacement of a word by another string."
+    alias_epilog = "See also:\n" "  macro"
+    alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
+    alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+    alias_subparsers.required = True
 
     # Preserve quotes since we are passing strings to other commands
-    @with_argparser(_build_alias_parser, preserve_quotes=True)
+    @with_argparser(alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases"""
         # Call handler for whatever subcommand was selected

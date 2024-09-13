@@ -243,7 +243,8 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
 
             # We can break since argparse only allows 1 group of subcommands per level
             break
-        # need to save required args so they can be prepended to the subcommand usage
+
+        # Need to save required args so they can be prepended to the subcommand usage
         elif action.required:
             req_args.append(action.dest)
 

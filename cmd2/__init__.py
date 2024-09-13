@@ -5,12 +5,8 @@
 
 import sys
 
-# For python 3.8 and later
-if sys.version_info >= (3, 8):
-    import importlib.metadata as importlib_metadata
-else:
-    # For everyone else
-    import importlib_metadata
+import importlib.metadata as importlib_metadata
+
 try:
     __version__ = importlib_metadata.version(__name__)
 except importlib_metadata.PackageNotFoundError:  # pragma: no cover
