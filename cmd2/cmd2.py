@@ -2405,13 +2405,13 @@ class Cmd(cmd.Cmd):
         return [topic for topic in all_topics if topic not in self.hidden_commands and topic not in self.disabled_commands]
 
     # noinspection PyUnusedLocal
-    def sigint_handler(self, signum: int, _: FrameType) -> None:
+    def sigint_handler(self, signum: int, _: Optional[FrameType]) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
 
-        If you need custom SIGINT behavior, then override this function.
+        If you need custom SIGINT behavior, then override this method.
 
         :param signum: signal number
-        :param _: required param for signal handlers
+        :param _: the current stack frame or None
         """
         if self._cur_pipe_proc_reader is not None:
             # Pass the SIGINT to the current pipe process
@@ -2426,6 +2426,23 @@ class Cmd(cmd.Cmd):
                     raise_interrupt = not command_set.sigint_handler()
             if raise_interrupt:
                 self._raise_keyboard_interrupt()
+
+    def termination_signal_handler(self, signum: int, _: Optional[FrameType]) -> None:
+        """
+        Signal handler for SIGHUP and SIGTERM. Only runs on Linux and Mac.
+
+        SIGHUP - received when terminal window is closed
+        SIGTERM - received when this app has been requested to terminate
+
+        The basic purpose of this method is to call sys.exit() so our exit handler will run
+        and save the persistent history file. If you need more complex behavior like killing
+        threads and performing cleanup, then override this method.
+
+        :param signum: signal number
+        :param _: the current stack frame or None
+        """
+        # POSIX systems add 128 to signal numbers for the exit code
+        sys.exit(128 + signum)
 
     def _raise_keyboard_interrupt(self) -> None:
         """Helper function to raise a KeyboardInterrupt"""
@@ -5426,11 +5443,18 @@ class Cmd(cmd.Cmd):
         if not threading.current_thread() is threading.main_thread():
             raise RuntimeError("cmdloop must be run in the main thread")
 
-        # Register a SIGINT signal handler for Ctrl+C
+        # Register signal handlers
         import signal
 
         original_sigint_handler = signal.getsignal(signal.SIGINT)
-        signal.signal(signal.SIGINT, self.sigint_handler)  # type: ignore
+        signal.signal(signal.SIGINT, self.sigint_handler)
+
+        if not sys.platform.startswith('win'):
+            original_sighup_handler = signal.getsignal(signal.SIGHUP)
+            signal.signal(signal.SIGHUP, self.termination_signal_handler)
+
+            original_sigterm_handler = signal.getsignal(signal.SIGTERM)
+            signal.signal(signal.SIGTERM, self.termination_signal_handler)
 
         # Grab terminal lock before the command line prompt has been drawn by readline
         self.terminal_lock.acquire()
@@ -5464,8 +5488,12 @@ class Cmd(cmd.Cmd):
         # This will also zero the lock count in case cmdloop() is called again
         self.terminal_lock.release()
 
-        # Restore the original signal handler
+        # Restore original signal handlers
         signal.signal(signal.SIGINT, original_sigint_handler)
+
+        if not sys.platform.startswith('win'):
+            signal.signal(signal.SIGHUP, original_sighup_handler)
+            signal.signal(signal.SIGTERM, original_sigterm_handler)
 
         return self.exit_code
 
