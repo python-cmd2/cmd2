@@ -257,31 +257,20 @@ from typing import (
     List,
     NoReturn,
     Optional,
+    Protocol,
     Sequence,
     Set,
     Tuple,
     Type,
     Union,
     cast,
+    runtime_checkable,
 )
 
 from . import (
     ansi,
     constants,
 )
-
-try:
-    from typing import (
-        Protocol,
-        runtime_checkable,
-    )
-except ImportError:
-    # Remove these imports when we no longer support Python 3.7
-    from typing_extensions import (  # type: ignore[assignment]
-        Protocol,
-        runtime_checkable,
-    )
-
 
 if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import (
