@@ -58,7 +58,6 @@ def test_style_bg(bg_color):
     assert ansi.style(base_str, bg=bg_color) == ansi_str
 
 
-# noinspection PyTypeChecker
 def test_style_invalid_types():
     # Use a BgColor with fg
     with pytest.raises(TypeError):

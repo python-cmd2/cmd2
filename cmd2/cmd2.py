@@ -161,7 +161,6 @@ else:
 
     if rl_type == RlType.PYREADLINE:
         # Save the original pyreadline3 display completion function since we need to override it and restore it
-        # noinspection PyProtectedMember,PyUnresolvedReferences
         orig_pyreadline_display = readline.rl.mode._display_completions
 
     elif rl_type == RlType.GNU:
@@ -1177,7 +1176,6 @@ class Cmd(cmd.Cmd):
         """
         self.print_to(self.stdout, msg, end=end, style=ansi.style_output if apply_style else None, paged=paged, chop=chop)
 
-    # noinspection PyMethodMayBeStatic
     def perror(
         self,
         msg: Any = '',
@@ -1385,7 +1383,6 @@ class Cmd(cmd.Cmd):
         if rl_type == RlType.GNU:
             readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
         elif rl_type == RlType.PYREADLINE:
-            # noinspection PyUnresolvedReferences
             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[List[str], List[str]]:
@@ -1452,7 +1449,6 @@ class Cmd(cmd.Cmd):
 
         return tokens, raw_tokens
 
-    # noinspection PyMethodMayBeStatic, PyUnusedLocal
     def basic_complete(
         self,
         text: str,
@@ -1643,7 +1639,6 @@ class Cmd(cmd.Cmd):
 
         return matches
 
-    # noinspection PyUnusedLocal
     def path_complete(
         self, text: str, line: str, begidx: int, endidx: int, *, path_filter: Optional[Callable[[str], bool]] = None
     ) -> List[str]:
@@ -1963,7 +1958,6 @@ class Cmd(cmd.Cmd):
 
                 # rl_display_match_list() expects matches to be in argv format where
                 # substitution is the first element, followed by the matches, and then a NULL.
-                # noinspection PyCallingNonCallable,PyTypeChecker
                 strings_array = cast(List[Optional[bytes]], (ctypes.c_char_p * (1 + len(encoded_matches) + 1))())
 
                 # Copy in the encoded strings and add a NULL to the end
@@ -2226,7 +2220,6 @@ class Cmd(cmd.Cmd):
         :param custom_settings: used when not tab completing the main command line
         :return: the next possible completion for text or None
         """
-        # noinspection PyBroadException
         try:
             if state == 0:
                 self._reset_completion_defaults()
@@ -2404,7 +2397,6 @@ class Cmd(cmd.Cmd):
         # Filter out hidden and disabled commands
         return [topic for topic in all_topics if topic not in self.hidden_commands and topic not in self.disabled_commands]
 
-    # noinspection PyUnusedLocal
     def sigint_handler(self, signum: int, _: Optional[FrameType]) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
 
@@ -3007,7 +2999,6 @@ class Cmd(cmd.Cmd):
         target = constants.COMMAND_FUNC_PREFIX + command
         return target if callable(getattr(self, target, None)) else ''
 
-    # noinspection PyMethodOverriding
     def onecmd(self, statement: Union[Statement, str], *, add_to_history: bool = True) -> bool:
         """This executes the actual do_* method for a command.
 
@@ -3052,7 +3043,6 @@ class Cmd(cmd.Cmd):
             if 'shell' not in self.exclude_from_history:
                 self.history.append(statement)
 
-            # noinspection PyTypeChecker
             return self.do_shell(statement.command_and_args)
         else:
             err_msg = self.default_error.format(statement.command)
@@ -3130,7 +3120,7 @@ class Cmd(cmd.Cmd):
 
                 # Disable completion
                 if completion_mode == utils.CompletionMode.NONE:
-                    # noinspection PyUnusedLocal
+
                     def complete_none(text: str, state: int) -> Optional[str]:  # pragma: no cover
                         return None
 
@@ -3161,7 +3151,6 @@ class Cmd(cmd.Cmd):
             if completion_mode != utils.CompletionMode.COMMANDS or history is not None:
                 saved_history = []
                 for i in range(1, readline.get_current_history_length() + 1):
-                    # noinspection PyArgumentList
                     saved_history.append(readline.get_history_item(i))
 
                 readline.clear_history()
@@ -3300,7 +3289,6 @@ class Cmd(cmd.Cmd):
                 readline.set_completion_display_matches_hook(None)
                 rl_basic_quote_characters.value = readline_settings.basic_quotes
             elif rl_type == RlType.PYREADLINE:
-                # noinspection PyUnresolvedReferences
                 readline.rl.mode._display_completions = orig_pyreadline_display
 
     def _cmdloop(self) -> None:
@@ -4035,7 +4023,6 @@ class Cmd(cmd.Cmd):
         self.poutput()
 
         # self.last_result will be set by do_quit()
-        # noinspection PyTypeChecker
         return self.do_quit('')
 
     quit_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Exit this application")
@@ -4171,7 +4158,6 @@ class Cmd(cmd.Cmd):
                 try:
                     orig_value = settable.get_value()
                     new_value = settable.set_value(utils.strip_quotes(args.value))
-                # noinspection PyBroadException
                 except Exception as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
@@ -4307,7 +4293,6 @@ class Cmd(cmd.Cmd):
         if rl_type != RlType.NONE:
             # Save cmd2 history
             for i in range(1, readline.get_current_history_length() + 1):
-                # noinspection PyArgumentList
                 cmd2_env.history.append(readline.get_history_item(i))
 
             readline.clear_history()
@@ -4341,7 +4326,6 @@ class Cmd(cmd.Cmd):
                 if rl_type == RlType.GNU:
                     readline.set_completion_display_matches_hook(None)
                 elif rl_type == RlType.PYREADLINE:
-                    # noinspection PyUnresolvedReferences
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
                 # Save off the current completer and set a new one in the Python console
@@ -4376,7 +4360,6 @@ class Cmd(cmd.Cmd):
             # Save py's history
             self._py_history.clear()
             for i in range(1, readline.get_current_history_length() + 1):
-                # noinspection PyArgumentList
                 self._py_history.append(readline.get_history_item(i))
 
             readline.clear_history()
@@ -4472,7 +4455,6 @@ class Cmd(cmd.Cmd):
 
             # Check if we are running Python code
             if py_code_to_run:
-                # noinspection PyBroadException
                 try:
                     interp.runcode(py_code_to_run)  # type: ignore[arg-type]
                 except BaseException:
@@ -4490,7 +4472,6 @@ class Cmd(cmd.Cmd):
 
                 saved_cmd2_env = None
 
-                # noinspection PyBroadException
                 try:
                     # Get sigint protection while we set up the Python shell environment
                     with self.sigint_protection:
@@ -4571,7 +4552,6 @@ class Cmd(cmd.Cmd):
 
     ipython_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell")
 
-    # noinspection PyPackageRequirements
     @with_argparser(ipython_parser)
     def do_ipy(self, _: argparse.Namespace) -> Optional[bool]:  # pragma: no cover
         """
@@ -4754,7 +4734,6 @@ class Cmd(cmd.Cmd):
                 self.run_editor(fname)
 
                 # self.last_resort will be set by do_run_script()
-                # noinspection PyTypeChecker
                 return self.do_run_script(utils.quote_string(fname))
             finally:
                 os.remove(fname)
@@ -5044,7 +5023,6 @@ class Cmd(cmd.Cmd):
         if file_path:
             command += " " + utils.quote_string(os.path.expanduser(file_path))
 
-        # noinspection PyTypeChecker
         self.do_shell(command)
 
     @property
@@ -5156,7 +5134,6 @@ class Cmd(cmd.Cmd):
         relative_path = os.path.join(self._current_script_dir or '', file_path)
 
         # self.last_result will be set by do_run_script()
-        # noinspection PyTypeChecker
         return self.do_run_script(utils.quote_string(relative_path))
 
     def _run_transcript_tests(self, transcript_paths: List[str]) -> None:
@@ -5199,7 +5176,6 @@ class Cmd(cmd.Cmd):
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
         stream = cast(TextIO, utils.StdSim(sys.stderr))
-        # noinspection PyTypeChecker
         runner = unittest.TextTestRunner(stream=stream)
         start_time = time.time()
         test_results = runner.run(testcase)
@@ -5283,7 +5259,6 @@ class Cmd(cmd.Cmd):
                     sys.stderr.write(terminal_str)
                     sys.stderr.flush()
                 elif rl_type == RlType.PYREADLINE:
-                    # noinspection PyUnresolvedReferences
                     readline.rl.mode.console.write(terminal_str)
 
                 # Update Readline's prompt before we redraw it

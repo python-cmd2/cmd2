@@ -191,14 +191,11 @@ def with_argument_list(
         return cmd_wrapper
 
     if callable(func_arg):
-        # noinspection PyTypeChecker
         return arg_decorator(func_arg)
     else:
-        # noinspection PyTypeChecker
         return arg_decorator
 
 
-# noinspection PyProtectedMember
 def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
     """
     Recursively set prog attribute of a parser and all of its subparsers so that the root command
@@ -412,7 +409,6 @@ def with_argparser(
 
         return cmd_wrapper
 
-    # noinspection PyTypeChecker
     return arg_decorator
 
 
@@ -476,5 +472,4 @@ def as_subcommand_to(
 
         return func
 
-    # noinspection PyTypeChecker
     return arg_decorator

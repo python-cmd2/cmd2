@@ -43,7 +43,6 @@ class ArgparseCompletion(Cmd):
             return self.sport_item_strs
         raise CompletionError("debug must be true")
 
-    # noinspection PyMethodMayBeStatic
     def choices_completion_item(self) -> List[CompletionItem]:
         """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
         fancy_item = "These things can\ncontain newlines and\n"
@@ -51,7 +50,6 @@ class ArgparseCompletion(Cmd):
         items = {1: "My item", 2: "Another item", 3: "Yet another item", 4: fancy_item}
         return [CompletionItem(item_id, description) for item_id, description in items.items()]
 
-    # noinspection PyMethodMayBeStatic
     def choices_arg_tokens(self, arg_tokens: Dict[str, List[str]]) -> List[str]:
         """
         If a choices or completer function/method takes a value called arg_tokens, then it will be

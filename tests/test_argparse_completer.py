@@ -38,7 +38,6 @@ standalone_choices = ['standalone', 'provider']
 standalone_completions = ['standalone', 'completer']
 
 
-# noinspection PyUnusedLocal
 def standalone_choice_provider(cli: cmd2.Cmd) -> List[str]:
     return standalone_choices
 
@@ -47,7 +46,6 @@ def standalone_completer(cli: cmd2.Cmd, text: str, line: str, begidx: int, endid
     return cli.basic_complete(text, line, begidx, endidx, standalone_completions)
 
 
-# noinspection PyMethodMayBeStatic,PyUnusedLocal,PyProtectedMember
 class ArgparseCompleterTester(cmd2.Cmd):
     """Cmd2 app that exercises ArgparseCompleter class"""
 
@@ -234,7 +232,6 @@ class ArgparseCompleterTester(cmd2.Cmd):
     nargs_parser.add_argument(
         "--optional", help="a flag with an optional value", nargs=argparse.OPTIONAL, choices=optional_choices
     )
-    # noinspection PyTypeChecker
     nargs_parser.add_argument("--range", help="a flag with nargs range", nargs=(1, 2), choices=range_choices)
     nargs_parser.add_argument(
         "--remainder", help="a flag wanting remaining", nargs=argparse.REMAINDER, choices=remainder_choices
@@ -345,7 +342,6 @@ class ArgparseCompleterTester(cmd2.Cmd):
 @pytest.fixture
 def ac_app():
     app = ArgparseCompleterTester()
-    # noinspection PyTypeChecker
     app.stdout = StdSim(app.stdout)
     return app
 
@@ -1043,7 +1039,7 @@ def test_autocomp_hint_no_help_text(ac_app, capsys):
         not out
         == '''
 Hint:
-  NO_HELP_POS            
+  NO_HELP_POS
 
 '''
     )

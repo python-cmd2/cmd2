@@ -224,7 +224,6 @@ class BgColor(AnsiSequence):
 ####################################################################################
 # Implementations intended for direct use
 ####################################################################################
-# noinspection PyPep8Naming
 class Cursor:
     """Create ANSI sequences to alter the cursor position"""
 

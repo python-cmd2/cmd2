@@ -145,7 +145,6 @@ class History(List[HistoryItem]):
         """Start a new session, thereby setting the next index as the first index in the new session."""
         self.session_start_index = len(self)
 
-    # noinspection PyMethodMayBeStatic
     def _zero_based_index(self, onebased: Union[int, str]) -> int:
         """Convert a one-based index to a zero-based index."""
         result = int(onebased)

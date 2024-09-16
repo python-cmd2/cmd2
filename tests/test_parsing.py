@@ -968,7 +968,6 @@ def test_statement_as_dict(parser):
 
 def test_is_valid_command_invalid(mocker, parser):
     # Non-string command
-    # noinspection PyTypeChecker
     valid, errmsg = parser.is_valid_command(5)
     assert not valid and 'must be a string' in errmsg
 

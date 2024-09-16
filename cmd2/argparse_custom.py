@@ -237,8 +237,6 @@ sub-parser from a sub-parsers group. See
 import argparse
 import re
 import sys
-
-# noinspection PyUnresolvedReferences,PyProtectedMember
 from argparse import (
     ONE_OR_MORE,
     ZERO_OR_MORE,
@@ -307,7 +305,6 @@ class CompletionItem(str):
     def __new__(cls, value: object, *args: Any, **kwargs: Any) -> 'CompletionItem':
         return super(CompletionItem, cls).__new__(cls, value)
 
-    # noinspection PyUnusedLocal
     def __init__(self, value: object, description: str = '', *args: Any) -> None:
         """
         CompletionItem Initializer
@@ -731,11 +728,9 @@ def register_argparse_argument_parameter(param_name: str, param_type: Optional[T
 
 
 # Save original _ActionsContainer.add_argument so we can call it in our wrapper
-# noinspection PyProtectedMember
 orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
-# noinspection PyProtectedMember
 def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
@@ -870,7 +865,6 @@ def _add_argument_wrapper(
 
 
 # Overwrite _ActionsContainer.add_argument with our wrapper
-# noinspection PyProtectedMember
 setattr(argparse._ActionsContainer, 'add_argument', _add_argument_wrapper)
 
 ############################################################################################################
@@ -878,11 +872,9 @@ setattr(argparse._ActionsContainer, 'add_argument', _add_argument_wrapper)
 ############################################################################################################
 
 # Save original ArgumentParser._get_nargs_pattern so we can call it in our wrapper
-# noinspection PyProtectedMember
 orig_argument_parser_get_nargs_pattern = argparse.ArgumentParser._get_nargs_pattern
 
 
-# noinspection PyProtectedMember
 def _get_nargs_pattern_wrapper(self: argparse.ArgumentParser, action: argparse.Action) -> str:
     # Wrapper around ArgumentParser._get_nargs_pattern behavior to support nargs ranges
     nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
@@ -904,18 +896,15 @@ def _get_nargs_pattern_wrapper(self: argparse.ArgumentParser, action: argparse.A
 
 
 # Overwrite ArgumentParser._get_nargs_pattern with our wrapper
-# noinspection PyProtectedMember
 setattr(argparse.ArgumentParser, '_get_nargs_pattern', _get_nargs_pattern_wrapper)
 
 
 ############################################################################################################
 # Patch ArgumentParser._match_argument with our wrapper to support nargs ranges
 ############################################################################################################
-# noinspection PyProtectedMember
 orig_argument_parser_match_argument = argparse.ArgumentParser._match_argument
 
 
-# noinspection PyProtectedMember
 def _match_argument_wrapper(self: argparse.ArgumentParser, action: argparse.Action, arg_strings_pattern: str) -> int:
     # Wrapper around ArgumentParser._match_argument behavior to support nargs ranges
     nargs_pattern = self._get_nargs_pattern(action)
@@ -931,7 +920,6 @@ def _match_argument_wrapper(self: argparse.ArgumentParser, action: argparse.Acti
 
 
 # Overwrite ArgumentParser._match_argument with our wrapper
-# noinspection PyProtectedMember
 setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 
 
@@ -945,7 +933,6 @@ setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 ATTR_AP_COMPLETER_TYPE = 'ap_completer_type'
 
 
-# noinspection PyPep8Naming
 def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Optional[Type['ArgparseCompleter']]:
     """
     Get the ap_completer_type attribute of an argparse ArgumentParser.
@@ -963,7 +950,6 @@ def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Opti
 setattr(argparse.ArgumentParser, 'get_ap_completer_type', _ArgumentParser_get_ap_completer_type)
 
 
-# noinspection PyPep8Naming
 def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: Type['ArgparseCompleter']) -> None:
     """
     Set the ap_completer_type attribute of an argparse ArgumentParser.
@@ -984,7 +970,6 @@ setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap
 ############################################################################################################
 # Patch ArgumentParser._check_value to support CompletionItems as choices
 ############################################################################################################
-# noinspection PyPep8Naming
 def _ArgumentParser_check_value(self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:
     """
     Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
@@ -1018,7 +1003,6 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 ############################################################################################################
 
 
-# noinspection PyPep8Naming,PyProtectedMember
 def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore
     """
     Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
@@ -1047,7 +1031,6 @@ def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str)
             del self._name_parser_map[cur_name]
 
 
-# noinspection PyProtectedMember
 setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_parser)
 
 
@@ -1059,11 +1042,9 @@ setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_pa
 ############################################################################################################
 
 
-# noinspection PyCompatibility,PyShadowingBuiltins
 class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
-    # noinspection PyProtectedMember
     def _format_usage(
         self,
         usage: Optional[str],
@@ -1126,7 +1107,6 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 # End cmd2 customization
 
                 # helper for wrapping lines
-                # noinspection PyMissingOrEmptyDocstring,PyShadowingNames
                 def get_lines(parts: List[str], indent: str, prefix: Optional[str] = None) -> List[str]:
                     lines: List[str] = []
                     line: List[str] = []
@@ -1209,7 +1189,6 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 return ', '.join(action.option_strings) + ' ' + args_string
             # End cmd2 customization
 
-    # noinspection PyMethodMayBeStatic
     def _determine_metavar(
         self,
         action: argparse.Action,
@@ -1234,7 +1213,6 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     ) -> Callable[[int], Tuple[str, ...]]:
         metavar = self._determine_metavar(action, default_metavar)
 
-        # noinspection PyMissingOrEmptyDocstring
         def format(tuple_size: int) -> Tuple[str, ...]:
             if isinstance(metavar, tuple):
                 return metavar
@@ -1243,7 +1221,6 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
         return format
 
-    # noinspection PyProtectedMember
     def _format_args(self, action: argparse.Action, default_metavar: Union[str, Tuple[str, ...]]) -> str:
         """Customized to handle ranged nargs and make other output less verbose"""
         metavar = self._determine_metavar(action, default_metavar)
@@ -1272,7 +1249,6 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         return super()._format_args(action, default_metavar)  # type: ignore[arg-type]
 
 
-# noinspection PyCompatibility
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output"""
 
@@ -1317,7 +1293,6 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
-    # noinspection PyProtectedMember
     def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:  # type: ignore
         """
         Custom override. Sets a default title if one was not given.
@@ -1346,7 +1321,6 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         formatted_message = ansi.style_error(formatted_message)
         self.exit(2, f'{formatted_message}\n\n')
 
-    # noinspection PyProtectedMember
     def format_help(self) -> str:
         """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
         formatter = self._get_formatter()

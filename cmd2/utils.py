@@ -671,7 +671,6 @@ class ProcReader:
 
         # Run until process completes
         while self._proc.poll() is None:
-            # noinspection PyUnresolvedReferences
             available = read_stream.peek()  # type: ignore[attr-defined]
             if available:
                 read_stream.read(len(available))
