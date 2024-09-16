@@ -61,7 +61,6 @@ class CompletionError(Exception):
         """
         self.apply_style = apply_style
 
-        # noinspection PyArgumentList
         super().__init__(*args)
 
 

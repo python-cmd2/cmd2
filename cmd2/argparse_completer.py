@@ -61,7 +61,6 @@ DEFAULT_DESCRIPTIVE_HEADER = 'Description'
 ARG_TOKENS = 'arg_tokens'
 
 
-# noinspection PyProtectedMember
 def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) -> str:
     """Build tab completion hint for a given argument"""
     # Check if hinting is disabled for this argument
@@ -82,7 +81,6 @@ def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
     return len(token) == 1 and token[0] in parser.prefix_chars
 
 
-# noinspection PyProtectedMember
 def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
     """
     Determine if a token looks like a flag. Unless an argument has nargs set to argparse.REMAINDER,
@@ -144,7 +142,6 @@ class _ArgumentState:
             self.max = self.action.nargs
 
 
-# noinspection PyProtectedMember
 class _UnfinishedFlagError(CompletionError):
     def __init__(self, flag_arg_state: _ArgumentState) -> None:
         """
@@ -171,7 +168,6 @@ class _NoResultsError(CompletionError):
         super().__init__(_build_hint(parser, arg_action), apply_style=False)
 
 
-# noinspection PyProtectedMember
 class ArgparseCompleter:
     """Automatic command line tab completion based on argparse parameters"""
 

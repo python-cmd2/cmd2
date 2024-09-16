@@ -63,7 +63,6 @@ class ReadInputApp(cmd2.Cmd):
         else:
             self.custom_history.append(input_str)
 
-    # noinspection PyMethodMayBeStatic
     def choices_provider(self) -> List[str]:
         """Example choices provider function"""
         return ["from_provider_1", "from_provider_2", "from_provider_3"]

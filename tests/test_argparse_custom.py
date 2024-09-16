@@ -146,7 +146,6 @@ def test_apcustom_narg_tuple_negative():
     assert 'Negative numbers are invalid for nargs range' in str(excinfo.value)
 
 
-# noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_zero_base():
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0,))
@@ -167,7 +166,6 @@ def test_apcustom_narg_tuple_zero_base():
     assert "arg{0..3}" in parser.format_help()
 
 
-# noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_one_base():
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1,))
@@ -182,7 +180,6 @@ def test_apcustom_narg_tuple_one_base():
     assert "arg{1..5}" in parser.format_help()
 
 
-# noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_other_ranges():
     # Test range with no upper bound on max
     parser = Cmd2ArgumentParser()
@@ -321,7 +318,6 @@ def test_completion_items_as_choices(capsys):
     ##############################################################
     choices = [CompletionItem(1, "Description One"), CompletionItem(2, "Two")]
     parser = Cmd2ArgumentParser()
-    # noinspection PyTypeChecker
     parser.add_argument("choices_arg", type=int, choices=choices)
 
     # First test valid choices. Confirm the parsed data matches the correct type of int.

@@ -53,7 +53,6 @@ class Pirate(cmd2.Cmd):
             stop = True
         return stop
 
-    # noinspection PyUnusedLocal
     def do_loot(self, arg):
         """Seize booty from a passing ship."""
         self.gold += 1
