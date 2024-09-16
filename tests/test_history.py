@@ -903,7 +903,34 @@ def test_history_file_permission_error(mocker, capsys):
     cmd2.Cmd(persistent_history_file='/tmp/doesntmatter')
     out, err = capsys.readouterr()
     assert not out
-    assert 'Cannot read' in err
+    assert 'Cannot read persistent history file' in err
+
+
+def test_history_file_bad_compression(mocker, capsys):
+    history_file = '/tmp/doesntmatter'
+    with open(history_file, "wb") as f:
+        f.write(b"THIS IS NOT COMPRESSED DATA")
+
+    cmd2.Cmd(persistent_history_file=history_file)
+    out, err = capsys.readouterr()
+    assert not out
+    assert 'Error decompressing persistent history data' in err
+
+
+def test_history_file_bad_json(mocker, capsys):
+    import lzma
+
+    data = b"THIS IS NOT JSON"
+    compressed_data = lzma.compress(data)
+
+    history_file = '/tmp/doesntmatter'
+    with open(history_file, "wb") as f:
+        f.write(compressed_data)
+
+    cmd2.Cmd(persistent_history_file=history_file)
+    out, err = capsys.readouterr()
+    assert not out
+    assert 'Error processing persistent history data' in err
 
 
 def test_history_populates_readline(hist_file):
@@ -960,4 +987,4 @@ def test_persist_history_permission_error(hist_file, mocker, capsys):
     app._persist_history()
     out, err = capsys.readouterr()
     assert not out
-    assert 'Cannot write' in err
+    assert 'Cannot write persistent history file' in err

@@ -8,6 +8,7 @@
   * add `allow_clipboard` initialization parameter and attribute to disable ability to
     add output to the operating system clipboard
   * Updated unit tests to be Python 3.12 compliant.
+  * Fall back to bz2 compression of history file when lzma is not installed.
 * Deletions (potentially breaking changes)
   * Removed `apply_style` from `Cmd.pwarning()`.
 
