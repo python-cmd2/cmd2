@@ -843,6 +843,25 @@ def test_parse_command_only_quoted_args(parser):
     assert statement.output_to == ''
 
 
+def test_parse_command_only_unclosed_quote(parser):
+    # Quoted trailing spaces will be preserved
+    line = 'command with unclosed "quote     '
+    statement = parser.parse_command_only(line)
+    assert statement == 'with unclosed "quote     '
+    assert statement.args == statement
+    assert statement.arg_list == []
+    assert statement.command == 'command'
+    assert statement.command_and_args == line
+    assert statement.multiline_command == ''
+    assert statement.raw == line
+    assert statement.multiline_command == ''
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == ''
+    assert statement.output_to == ''
+
+
 @pytest.mark.parametrize(
     'line,args',
     [

@@ -118,6 +118,7 @@ from .exceptions import (
 from .history import (
     History,
     HistoryItem,
+    single_line_format,
 )
 from .parsing import (
     Macro,
@@ -2048,11 +2049,14 @@ class Cmd(cmd.Cmd):
 
             expanded_line = statement.command_and_args
 
-            # We overwrote line with a properly formatted but fully stripped version
-            # Restore the end spaces since line is only supposed to be lstripped when
-            # passed to completer functions according to Python docs
-            rstripped_len = len(line) - len(line.rstrip())
-            expanded_line += ' ' * rstripped_len
+            if not expanded_line[-1:].isspace():
+                # Unquoted trailing whitespace gets stripped by parse_command_only().
+                # Restore it since line is only supposed to be lstripped when passed
+                # to completer functions according to the Python cmd docs. Regardless
+                # of what type of whitespace (' ', \n) was stripped, just append spaces
+                # since shlex treats whitespace characters the same when splitting.
+                rstripped_len = len(line) - len(line.rstrip())
+                expanded_line += ' ' * rstripped_len
 
             # Fix the index values if expanded_line has a different size than line
             if len(expanded_line) != len(line):
@@ -2227,7 +2231,7 @@ class Cmd(cmd.Cmd):
                 # Check if we are completing a multiline command
                 if self._at_continuation_prompt:
                     # lstrip and prepend the previously typed portion of this multiline command
-                    lstripped_previous = self._multiline_in_progress.lstrip().replace(constants.LINE_FEED, ' ')
+                    lstripped_previous = self._multiline_in_progress.lstrip()
                     line = lstripped_previous + readline.get_line_buffer()
 
                     # Increment the indexes to account for the prepended text
@@ -2503,7 +2507,13 @@ class Cmd(cmd.Cmd):
         return statement.command, statement.args, statement.command_and_args
 
     def onecmd_plus_hooks(
-        self, line: str, *, add_to_history: bool = True, raise_keyboard_interrupt: bool = False, py_bridge_call: bool = False
+        self,
+        line: str,
+        *,
+        add_to_history: bool = True,
+        raise_keyboard_interrupt: bool = False,
+        py_bridge_call: bool = False,
+        orig_rl_history_length: Optional[int] = None,
     ) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
@@ -2515,6 +2525,9 @@ class Cmd(cmd.Cmd):
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
                                command's stdout.
+        :param orig_rl_history_length: Optional length of the readline history before the current command was typed.
+                                       This is used to assist in combining multiline readline history entries and is only
+                                       populated by cmd2. Defaults to None.
         :return: True if running of commands should stop
         """
         import datetime
@@ -2524,7 +2537,7 @@ class Cmd(cmd.Cmd):
 
         try:
             # Convert the line into a Statement
-            statement = self._input_line_to_statement(line)
+            statement = self._input_line_to_statement(line, orig_rl_history_length=orig_rl_history_length)
 
             # call the postparsing hooks
             postparsing_data = plugin.PostparsingData(False, statement)
@@ -2678,7 +2691,7 @@ class Cmd(cmd.Cmd):
 
         return False
 
-    def _complete_statement(self, line: str) -> Statement:
+    def _complete_statement(self, line: str, *, orig_rl_history_length: Optional[int] = None) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
@@ -2687,10 +2700,29 @@ class Cmd(cmd.Cmd):
         backwards compatibility with the standard library version of cmd.
 
         :param line: the line being parsed
+        :param orig_rl_history_length: Optional length of the readline history before the current command was typed.
+                                       This is used to assist in combining multiline readline history entries and is only
+                                       populated by cmd2. Defaults to None.
         :return: the completed Statement
         :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
         :raises: EmptyStatement when the resulting Statement is blank
         """
+
+        def combine_rl_history(statement: Statement) -> None:
+            """Combine all lines of a multiline command into a single readline history entry"""
+            if orig_rl_history_length is None or not statement.multiline_command:
+                return
+
+            # Remove all previous lines added to history for this command
+            while readline.get_current_history_length() > orig_rl_history_length:
+                readline.remove_history_item(readline.get_current_history_length() - 1)
+
+            formatted_command = single_line_format(statement)
+
+            # If formatted command is different than the previous history item, add it
+            if orig_rl_history_length == 0 or formatted_command != readline.get_history_item(orig_rl_history_length):
+                readline.add_history(formatted_command)
+
         while True:
             try:
                 statement = self.statement_parser.parse(line)
@@ -2702,7 +2734,7 @@ class Cmd(cmd.Cmd):
                     # so we are done
                     break
             except Cmd2ShlexError:
-                # we have unclosed quotation marks, lets parse only the command
+                # we have an unclosed quotation mark, let's parse only the command
                 # and see if it's a multiline
                 statement = self.statement_parser.parse_command_only(line)
                 if not statement.multiline_command:
@@ -2718,6 +2750,7 @@ class Cmd(cmd.Cmd):
                 # Save the command line up to this point for tab completion
                 self._multiline_in_progress = line + '\n'
 
+                # Get next line of this command
                 nextline = self._read_command_line(self.continuation_prompt)
                 if nextline == 'eof':
                     # they entered either a blank line, or we hit an EOF
@@ -2726,7 +2759,14 @@ class Cmd(cmd.Cmd):
                     # terminator
                     nextline = '\n'
                     self.poutput(nextline)
-                line = f'{self._multiline_in_progress}{nextline}'
+
+                line += f'\n{nextline}'
+
+                # Combine all history lines of this multiline command as we go.
+                if nextline:
+                    statement = self.statement_parser.parse_command_only(line)
+                    combine_rl_history(statement)
+
             except KeyboardInterrupt:
                 self.poutput('^C')
                 statement = self.statement_parser.parse('')
@@ -2736,13 +2776,20 @@ class Cmd(cmd.Cmd):
 
         if not statement.command:
             raise EmptyStatement
+        else:
+            # If necessary, update history with completed multiline command.
+            combine_rl_history(statement)
+
         return statement
 
-    def _input_line_to_statement(self, line: str) -> Statement:
+    def _input_line_to_statement(self, line: str, *, orig_rl_history_length: Optional[int] = None) -> Statement:
         """
         Parse the user's input line and convert it to a Statement, ensuring that all macros are also resolved
 
         :param line: the line being parsed
+        :param orig_rl_history_length: Optional length of the readline history before the current command was typed.
+                                       This is used to assist in combining multiline readline history entries and is only
+                                       populated by cmd2. Defaults to None.
         :return: parsed command line as a Statement
         :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
         :raises: EmptyStatement when the resulting Statement is blank
@@ -2753,11 +2800,13 @@ class Cmd(cmd.Cmd):
         # Continue until all macros are resolved
         while True:
             # Make sure all input has been read and convert it to a Statement
-            statement = self._complete_statement(line)
+            statement = self._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
 
-            # Save the fully entered line if this is the first loop iteration
+            # If this is the first loop iteration, save the original line and stop
+            # combining multiline history entries in the remaining iterations.
             if orig_line is None:
                 orig_line = statement.raw
+                orig_rl_history_length = None
 
             # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
             if statement.command in self.macros.keys() and statement.command not in used_macros:
@@ -3111,7 +3160,7 @@ class Cmd(cmd.Cmd):
             nonlocal saved_history
             nonlocal parser
 
-            if readline_configured:  # pragma: no cover
+            if readline_configured or rl_type == RlType.NONE:  # pragma: no cover
                 return
 
             # Configure tab completion
@@ -3163,7 +3212,7 @@ class Cmd(cmd.Cmd):
         def restore_readline() -> None:
             """Restore readline tab completion and history"""
             nonlocal readline_configured
-            if not readline_configured:  # pragma: no cover
+            if not readline_configured or rl_type == RlType.NONE:  # pragma: no cover
                 return
 
             if self._completion_supported():
@@ -3310,6 +3359,13 @@ class Cmd(cmd.Cmd):
             self._startup_commands.clear()
 
             while not stop:
+                # Used in building multiline readline history entries. Only applies
+                # when command line is read by input() in a terminal.
+                if rl_type != RlType.NONE and self.use_rawinput and sys.stdin.isatty():
+                    orig_rl_history_length = readline.get_current_history_length()
+                else:
+                    orig_rl_history_length = None
+
                 # Get commands from user
                 try:
                     line = self._read_command_line(self.prompt)
@@ -3318,7 +3374,7 @@ class Cmd(cmd.Cmd):
                     line = ''
 
                 # Run the command along with all associated pre and post hooks
-                stop = self.onecmd_plus_hooks(line)
+                stop = self.onecmd_plus_hooks(line, orig_rl_history_length=orig_rl_history_length)
         finally:
             # Get sigint protection while we restore readline settings
             with self.sigint_protection:
@@ -4871,15 +4927,13 @@ class Cmd(cmd.Cmd):
 
         # Populate readline history
         if rl_type != RlType.NONE:
-            last = None
             for item in self.history:
-                # Break the command into its individual lines
-                for line in item.raw.splitlines():
-                    # readline only adds a single entry for multiple sequential identical lines
-                    # so we emulate that behavior here
-                    if line != last:
-                        readline.add_history(line)
-                        last = line
+                formatted_command = single_line_format(item.statement)
+
+                # If formatted command is different than the previous history item, add it
+                cur_history_length = readline.get_current_history_length()
+                if cur_history_length == 0 or formatted_command != readline.get_history_item(cur_history_length):
+                    readline.add_history(formatted_command)
 
     def _persist_history(self) -> None:
         """Write history out to the persistent history file as compressed JSON"""

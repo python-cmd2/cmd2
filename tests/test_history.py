@@ -422,6 +422,27 @@ def test_multiline_histitem(parser):
     assert pr_lines[0].endswith('multiline foo bar')
 
 
+def test_multiline_with_quotes_histitem(parser):
+    # Test that spaces and newlines in quotes are preserved
+    from cmd2.history import (
+        History,
+    )
+
+    line = 'Look, "There are newlines\n  and spaces  \n "\n in\nquotes.\n;\n'
+    statement = parser.parse(line)
+    history = History()
+    history.append(statement)
+    assert len(history) == 1
+    hist_item = history[0]
+    assert hist_item.raw == line
+
+    # Since spaces and newlines in quotes are preserved, this history entry spans multiple lines.
+    pr_lines = hist_item.pr(1).splitlines()
+    assert pr_lines[0].endswith('Look, "There are newlines')
+    assert pr_lines[1] == '  and spaces  '
+    assert pr_lines[2] == ' " in quotes.;'
+
+
 def test_multiline_histitem_verbose(parser):
     from cmd2.history import (
         History,
@@ -437,6 +458,16 @@ def test_multiline_histitem_verbose(parser):
     pr_lines = hist_item.pr(1, verbose=True).splitlines()
     assert pr_lines[0].endswith('multiline foo')
     assert pr_lines[1] == 'bar'
+
+
+def test_single_line_format_blank(parser):
+    from cmd2.history import (
+        single_line_format,
+    )
+
+    line = ""
+    statement = parser.parse(line)
+    assert single_line_format(statement) == line
 
 
 def test_history_item_instantiate():
