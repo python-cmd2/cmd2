@@ -3,6 +3,7 @@
   * `cmd2` 2.5 supports Python 3.8+ (removed support for Python 3.6 and 3.7)
 * Bug Fixes
   * Fixed issue where persistent history file was not saved upon SIGHUP and SIGTERM signals.
+  * Multiline commands are no longer fragmented in up-arrow history.
 * Enhancements
   * Removed dependency on `attrs` and replaced with [dataclasses](https://docs.python.org/3/library/dataclasses.html)
   * add `allow_clipboard` initialization parameter and attribute to disable ability to
@@ -11,7 +12,6 @@
   * Fall back to bz2 compression of history file when lzma is not installed.
 * Deletions (potentially breaking changes)
   * Removed `apply_style` from `Cmd.pwarning()`.
-
 
 ## 2.4.3 (January 27, 2023)
 * Bug Fixes

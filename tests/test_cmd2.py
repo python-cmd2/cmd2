@@ -6,6 +6,7 @@ Cmd2 unit/functional testing
 import builtins
 import io
 import os
+import readline
 import signal
 import sys
 import tempfile
@@ -1637,6 +1638,100 @@ def test_multiline_input_line_to_statement(multiline_app):
     assert statement.multiline_command == 'orate'
 
 
+def test_multiline_history_no_prior_history(multiline_app):
+    # Test no existing history prior to typing the command
+    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
+    builtins.input = m
+
+    # Set orig_rl_history_length to 0 before the first line is typed.
+    readline.clear_history()
+    orig_rl_history_length = readline.get_current_history_length()
+
+    line = "orate hi"
+    readline.add_history(line)
+    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+
+    assert readline.get_current_history_length() == orig_rl_history_length + 1
+    assert readline.get_history_item(1) == "orate hi person"
+
+
+def test_multiline_history_first_line_matches_prev_entry(multiline_app):
+    # Test when first line of multiline command matches previous history entry
+    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
+    builtins.input = m
+
+    # Since the first line of our command matches the previous entry,
+    # orig_rl_history_length is set before the first line is typed.
+    line = "orate hi"
+    readline.clear_history()
+    readline.add_history(line)
+    orig_rl_history_length = readline.get_current_history_length()
+
+    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+
+    assert readline.get_current_history_length() == orig_rl_history_length + 1
+    assert readline.get_history_item(1) == line
+    assert readline.get_history_item(2) == "orate hi person"
+
+
+def test_multiline_history_matches_prev_entry(multiline_app):
+    # Test combined multiline command that matches previous history entry
+    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
+    builtins.input = m
+
+    readline.clear_history()
+    readline.add_history("orate hi person")
+    orig_rl_history_length = readline.get_current_history_length()
+
+    line = "orate hi"
+    readline.add_history(line)
+    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+
+    # Since it matches the previous history item, nothing was added to readline history
+    assert readline.get_current_history_length() == orig_rl_history_length
+    assert readline.get_history_item(1) == "orate hi person"
+
+
+def test_multiline_history_does_not_match_prev_entry(multiline_app):
+    # Test combined multiline command that does not match previous history entry
+    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
+    builtins.input = m
+
+    readline.clear_history()
+    readline.add_history("no match")
+    orig_rl_history_length = readline.get_current_history_length()
+
+    line = "orate hi"
+    readline.add_history(line)
+    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+
+    # Since it doesn't match the previous history item, it was added to readline history
+    assert readline.get_current_history_length() == orig_rl_history_length + 1
+    assert readline.get_history_item(1) == "no match"
+    assert readline.get_history_item(2) == "orate hi person"
+
+
+def test_multiline_history_with_quotes(multiline_app):
+    # Test combined multiline command with quotes
+    m = mock.MagicMock(name='input', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
+    builtins.input = m
+
+    readline.clear_history()
+    orig_rl_history_length = readline.get_current_history_length()
+
+    line = 'orate Look, "There are newlines'
+    readline.add_history(line)
+    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+
+    # Since spaces and newlines in quotes are preserved, this history entry spans multiple lines.
+    assert readline.get_current_history_length() == orig_rl_history_length + 1
+
+    history_lines = readline.get_history_item(1).splitlines()
+    assert history_lines[0] == 'orate Look, "There are newlines'
+    assert history_lines[1] == '  and spaces  '
+    assert history_lines[2] == ' " in quotes.;'
+
+
 class CommandResultApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1731,8 +1826,6 @@ def test_read_input_rawinput_true(capsys, monkeypatch):
         assert line == input_str
 
         # Run custom history code
-        import readline
-
         readline.add_history('old_history')
         custom_history = ['cmd1', 'cmd2']
         line = app.read_input(prompt_str, history=custom_history, completion_mode=cmd2.CompletionMode.NONE)
@@ -2414,12 +2507,12 @@ def test_parseline_empty(base_app):
     assert not line
 
 
-def test_parseline(base_app):
+def test_parseline_quoted(base_app):
     statement = " command with 'partially completed quotes  "
     command, args, line = base_app.parseline(statement)
     assert command == 'command'
-    assert args == "with 'partially completed quotes"
-    assert line == statement.strip()
+    assert args == "with 'partially completed quotes  "
+    assert line == statement.lstrip()
 
 
 def test_onecmd_raw_str_continue(outsim_app):

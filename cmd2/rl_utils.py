@@ -38,7 +38,7 @@ except ImportError:
 
 
 class RlType(Enum):
-    """Readline library types we recognize"""
+    """Readline library types we support"""
 
     GNU = 1
     PYREADLINE = 2
@@ -151,7 +151,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
             rl_type = RlType.GNU
             vt100_support = sys.stdout.isatty()
 
-# Check if readline was loaded
+# Check if we loaded a supported version of readline
 if rl_type == RlType.NONE:  # pragma: no cover
     if not _rl_warn_reason:
         _rl_warn_reason = (

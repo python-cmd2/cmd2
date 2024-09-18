@@ -581,8 +581,15 @@ class StatementParser:
 
             # take everything from the end of the first match group to
             # the end of the line as the arguments (stripping leading
-            # and trailing spaces)
-            args = line[match.end(1) :].strip()
+            # and unquoted trailing whitespace)
+            args = line[match.end(1) :].lstrip()
+            try:
+                shlex_split(args)
+            except ValueError:
+                # Unclosed quote. Leave trailing whitespace.
+                pass
+            else:
+                args = args.rstrip()
             # if the command is empty that means the input was either empty
             # or something weird like '>'. args should be empty if we couldn't
             # parse a command

@@ -27,7 +27,46 @@ from . import (
 )
 from .parsing import (
     Statement,
+    shlex_split,
 )
+
+
+def single_line_format(statement: Statement) -> str:
+    """
+    Format a command line to display on a single line.
+
+    Spaces and newlines in quotes are preserved so those strings will span multiple lines.
+
+    :param statement: Statement being formatted.
+    :return: formatted command line
+    """
+    if not statement.raw:
+        return ""
+
+    lines = statement.raw.splitlines()
+    formatted_command = lines[0]
+
+    # Append any remaining lines to the command.
+    for line in lines[1:]:
+        try:
+            shlex_split(formatted_command)
+        except ValueError:
+            # We are in quotes, so restore the newline.
+            separator = "\n"
+        else:
+            # Don't add a space before line if one already exists or if it begins with the terminator.
+            if (
+                formatted_command.endswith(" ")
+                or line.startswith(" ")
+                or (statement.terminator and line.startswith(statement.terminator))
+            ):
+                separator = ""
+            else:
+                separator = " "
+
+        formatted_command += separator + line
+
+    return formatted_command
 
 
 @dataclass(frozen=True)
@@ -85,15 +124,7 @@ class HistoryItem:
             if expanded:
                 ret_str = self.expanded
             else:
-                ret_str = self.raw.rstrip()
-
-                # In non-verbose mode, display raw multiline commands on 1 line
-                if self.statement.multiline_command:
-                    # This is an approximation and not meant to be a perfect piecing together of lines.
-                    # All newlines will be converted to spaces, including the ones in quoted strings that
-                    # are considered literals. Also, if the final line starts with a terminator, then the
-                    # terminator will have an extra space before it in the 1 line version.
-                    ret_str = ret_str.replace('\n', ' ')
+                ret_str = single_line_format(self.statement).rstrip()
 
             # Display a numbered list if not writing to a script
             if not script:
