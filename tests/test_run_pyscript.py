@@ -107,6 +107,27 @@ def test_run_pyscript_help(base_app, request):
     assert out1 and out1 == out2
 
 
+def test_scripts_add_to_history(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', 'help.py')
+    command = f'run_pyscript {python_script}'
+
+    # Add to history
+    base_app.scripts_add_to_history = True
+    base_app.history.clear()
+    run_cmd(base_app, command)
+    assert len(base_app.history) == 2
+    assert base_app.history.get(1).raw == command
+    assert base_app.history.get(2).raw == 'help'
+
+    # Do not add to history
+    base_app.scripts_add_to_history = False
+    base_app.history.clear()
+    run_cmd(base_app, command)
+    assert len(base_app.history) == 1
+    assert base_app.history.get(1).raw == command
+
+
 def test_run_pyscript_dir(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'pyscript_dir.py')

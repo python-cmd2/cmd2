@@ -322,6 +322,7 @@ class Cmd(cmd.Cmd):
         self.editor = Cmd.DEFAULT_EDITOR
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.quiet = False  # Do not suppress nonessential output
+        self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
         self.timing = False  # Prints elapsed time for each command
 
         # The maximum number of CompletionItems to display during tab completion. If the number of completion
@@ -1084,12 +1085,7 @@ class Cmd(cmd.Cmd):
         )
 
         self.add_settable(
-            Settable(
-                'always_show_hint',
-                bool,
-                'Display tab completion hint even when completion suggestions print',
-                self,
-            )
+            Settable('always_show_hint', bool, 'Display tab completion hint even when completion suggestions print', self)
         )
         self.add_settable(Settable('debug', bool, "Show full traceback on exception", self))
         self.add_settable(Settable('echo', bool, "Echo command issued into output", self))
@@ -1099,6 +1095,7 @@ class Cmd(cmd.Cmd):
             Settable('max_completion_items', int, "Maximum number of CompletionItems to display during tab completion", self)
         )
         self.add_settable(Settable('quiet', bool, "Don't print nonessential feedback", self))
+        self.add_settable(Settable('scripts_add_to_history', bool, 'Scripts and pyscripts add commands to history', self))
         self.add_settable(Settable('timing', bool, "Report execution times", self))
 
     # -----  Methods related to presenting output to the user -----
@@ -4459,7 +4456,8 @@ class Cmd(cmd.Cmd):
             PyBridge,
         )
 
-        py_bridge = PyBridge(self)
+        add_to_history = self.scripts_add_to_history if pyscript else True
+        py_bridge = PyBridge(self, add_to_history=add_to_history)
         saved_sys_path = None
 
         if self.in_pyscript():
@@ -4955,7 +4953,13 @@ class Cmd(cmd.Cmd):
         except OSError as ex:
             self.perror(f"Cannot write persistent history file '{self.persistent_history_file}': {ex}")
 
-    def _generate_transcript(self, history: Union[List[HistoryItem], List[str]], transcript_file: str) -> None:
+    def _generate_transcript(
+        self,
+        history: Union[List[HistoryItem], List[str]],
+        transcript_file: str,
+        *,
+        add_to_history: bool = True,
+    ) -> None:
         """Generate a transcript file from a given history of commands"""
         self.last_result = False
 
@@ -5005,7 +5009,11 @@ class Cmd(cmd.Cmd):
 
                 # then run the command and let the output go into our buffer
                 try:
-                    stop = self.onecmd_plus_hooks(history_item, raise_keyboard_interrupt=True)
+                    stop = self.onecmd_plus_hooks(
+                        history_item,
+                        add_to_history=add_to_history,
+                        raise_keyboard_interrupt=True,
+                    )
                 except KeyboardInterrupt as ex:
                     self.perror(ex)
                     stop = True
@@ -5149,9 +5157,17 @@ class Cmd(cmd.Cmd):
 
             if args.transcript:
                 # self.last_resort will be set by _generate_transcript()
-                self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
+                self._generate_transcript(
+                    script_commands,
+                    os.path.expanduser(args.transcript),
+                    add_to_history=self.scripts_add_to_history,
+                )
             else:
-                stop = self.runcmds_plus_hooks(script_commands, stop_on_keyboard_interrupt=True)
+                stop = self.runcmds_plus_hooks(
+                    script_commands,
+                    add_to_history=self.scripts_add_to_history,
+                    stop_on_keyboard_interrupt=True,
+                )
                 self.last_result = True
                 return stop
 

@@ -10,6 +10,8 @@
     add output to the operating system clipboard
   * Updated unit tests to be Python 3.12 compliant.
   * Fall back to bz2 compression of history file when lzma is not installed.
+  * Added settable called `scripts_add_to_history` which determines whether scripts and pyscripts
+    add commands to history.
 * Deletions (potentially breaking changes)
   * Removed `apply_style` from `Cmd.pwarning()`.
 

@@ -83,10 +83,17 @@ class CommandResult(NamedTuple):
 
 
 class PyBridge:
-    """Provides a Python API wrapper for application commands."""
+    """
+    Provides a Python API wrapper for application commands.
 
-    def __init__(self, cmd2_app: 'cmd2.Cmd') -> None:
+    :param cmd2_app: app being controlled by this PyBridge.
+    :param add_to_history: If True, then add all commands run by this PyBridge to history.
+                           Defaults to True.
+    """
+
+    def __init__(self, cmd2_app: 'cmd2.Cmd', *, add_to_history: bool = True) -> None:
         self._cmd2_app = cmd2_app
+        self._add_to_history = add_to_history
         self.cmd_echo = False
 
         # Tells if any of the commands run via __call__ returned True for stop
@@ -126,7 +133,11 @@ class PyBridge:
             self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
             with redirect_stdout(cast(IO[str], copy_cmd_stdout)):
                 with redirect_stderr(cast(IO[str], copy_stderr)):
-                    stop = self._cmd2_app.onecmd_plus_hooks(command, py_bridge_call=True)
+                    stop = self._cmd2_app.onecmd_plus_hooks(
+                        command,
+                        add_to_history=self._add_to_history,
+                        py_bridge_call=True,
+                    )
         finally:
             with self._cmd2_app.sigint_protection:
                 self._cmd2_app.stdout = cast(IO[str], copy_cmd_stdout.inner_stream)

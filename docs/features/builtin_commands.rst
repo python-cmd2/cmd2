@@ -103,20 +103,21 @@ within a running application:
 .. code-block:: text
 
     (Cmd) set
-    Name                  Value                           Description
-    ==================================================================================================================
-    allow_style           Terminal                        Allow ANSI text style sequences in output (valid values:
-                                                          Always, Never, Terminal)
-    always_show_hint      False                           Display tab completion hint even when completion suggestions
-                                                          print
-    debug                 True                            Show full traceback on exception
-    echo                  False                           Echo command issued into output
-    editor                vi                              Program used by 'edit'
-    feedback_to_output    False                           Include nonessentials in '|', '>' results
-    max_completion_items  50                              Maximum number of CompletionItems to display during tab
-                                                          completion
-    quiet                 False                           Don't print nonessential feedback
-    timing                False                           Report execution times
+    Name                    Value                           Description
+    ====================================================================================================================
+    allow_style             Terminal                        Allow ANSI text style sequences in output (valid values:
+                                                            Always, Never, Terminal)
+    always_show_hint        False                           Display tab completion hint even when completion suggestions
+                                                            print
+    debug                   True                            Show full traceback on exception
+    echo                    False                           Echo command issued into output
+    editor                  vi                              Program used by 'edit'
+    feedback_to_output      False                           Include nonessentials in '|', '>' results
+    max_completion_items    50                              Maximum number of CompletionItems to display during tab
+                                                            completion
+    quiet                   False                           Don't print nonessential feedback
+    scripts_add_to_history  True                            Scripts and pyscripts add commands to history
+    timing                  False                           Report execution times
 
 
 Any of these user-settable parameters can be set while running your app with
