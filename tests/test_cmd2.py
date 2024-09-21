@@ -442,6 +442,27 @@ def test_run_script_with_utf8_file(base_app, request):
     assert script_err == manual_err
 
 
+def test_scripts_add_to_history(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'help.txt')
+    command = f'run_script {filename}'
+
+    # Add to history
+    base_app.scripts_add_to_history = True
+    base_app.history.clear()
+    run_cmd(base_app, command)
+    assert len(base_app.history) == 2
+    assert base_app.history.get(1).raw == command
+    assert base_app.history.get(2).raw == 'help -v'
+
+    # Do not add to history
+    base_app.scripts_add_to_history = False
+    base_app.history.clear()
+    run_cmd(base_app, command)
+    assert len(base_app.history) == 1
+    assert base_app.history.get(1).raw == command
+
+
 def test_run_script_nested_run_scripts(base_app, request):
     # Verify that running a script with nested run_script commands works correctly,
     # and runs the nested script commands in the correct order.

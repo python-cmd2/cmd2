@@ -104,17 +104,19 @@ Public instance attributes
 Here are instance attributes of ``cmd2.Cmd`` which developers might wish
 override:
 
+- **always_show_hint**: if ``True``, display tab completion hint even when
+  completion suggestions print (Default: ``False``)
 - **broken_pipe_warning**: if non-empty, this string will be displayed if a
   broken pipe error occurs
 - **continuation_prompt**: used for multiline commands on 2nd+ line of input
-- **debug**: if ``True`` show full stack trace on error (Default: ``False``)
+- **debug**: if ``True``, show full stack trace on error (Default: ``False``)
 - **default_category**: if any command has been categorized, then all other
   commands that haven't been categorized will display under this section in the
   help output.
 - **default_error**: the error that prints when a non-existent command is run
 - **default_sort_key**: the default key for sorting string results. Its default
   value performs a case-insensitive alphabetical sort.
-- **default_to_shell**: if ``True`` attempt to run unrecognized commands as
+- **default_to_shell**: if ``True``, attempt to run unrecognized commands as
   shell commands (Default: ``False``)
 - **disabled_commands**: commands that have been disabled from use. This is to
   support commands that are only available during specific states of the
@@ -130,7 +132,7 @@ override:
 - **exclude_from_history**: commands to exclude from the *history* command
 - **exit_code**: this determines the value returned by ``cmdloop()`` when
   exiting the application
-- **feedback_to_output**: if ``True`` send nonessential output to stdout, if
+- **feedback_to_output**: if ``True``, send nonessential output to stdout, if
   ``False`` send them to stderr (Default: ``False``)
 - **help_error**: the error that prints when no help information can be found
 - **hidden_commands**: commands to exclude from the help menu and tab
@@ -139,8 +141,6 @@ override:
   of results in a Python script or interactive console. Built-in commands don't
   make use of this.  It is purely there for user-defined commands and
   convenience.
-- **self_in_py**: if ``True`` allow access to your application in *py*
-  command via ``self`` (Default: ``False``)
 - **macros**: dictionary of macro names and their values
 - **max_completion_items**: max number of CompletionItems to display during
   tab completion (Default: 50)
@@ -154,9 +154,13 @@ override:
 - **py_locals**: dictionary that defines specific variables/functions available
   in Python shells and scripts (provides more fine-grained control than making
   everything available with **self_in_py**)
-- **quiet**: if ``True`` then completely suppress nonessential output (Default:
+- **quiet**: if ``True``, then completely suppress nonessential output (Default:
   ``False``)
+- **scripts_add_to_history**: if ``True``, scripts and pyscripts add commands to
+  history (Default: ``True``)
+- **self_in_py**: if ``True``, allow access to your application in *py*
+  command via ``self`` (Default: ``False``)
 - **settable**: dictionary that controls which of these instance attributes
   are settable at runtime using the *set* command
-- **timing**: if ``True`` display execution time for each command (Default:
+- **timing**: if ``True``, display execution time for each command (Default:
   ``False``)

@@ -33,4 +33,4 @@ user to type in a SQL command, which can often span lines and which are
 terminated with a semicolon.
 
 We estimate that less than 5 percent of ``cmd2`` applications use this feature.
-But it is here for those uses cases where it provides value.
+But it is here for those use cases where it provides value.

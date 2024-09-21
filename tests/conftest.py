@@ -98,20 +98,21 @@ SHORTCUTS_TXT = """Shortcuts for other commands:
 
 # Output from the set command
 SET_TXT = (
-    "Name                  Value                           Description                                                 \n"
-    "==================================================================================================================\n"
-    "allow_style           Terminal                        Allow ANSI text style sequences in output (valid values:    \n"
-    "                                                      Always, Never, Terminal)                                    \n"
-    "always_show_hint      False                           Display tab completion hint even when completion suggestions\n"
-    "                                                      print                                                       \n"
-    "debug                 False                           Show full traceback on exception                            \n"
-    "echo                  False                           Echo command issued into output                             \n"
-    "editor                vim                             Program used by 'edit'                                      \n"
-    "feedback_to_output    False                           Include nonessentials in '|', '>' results                   \n"
-    "max_completion_items  50                              Maximum number of CompletionItems to display during tab     \n"
-    "                                                      completion                                                  \n"
-    "quiet                 False                           Don't print nonessential feedback                           \n"
-    "timing                False                           Report execution times                                      \n"
+    "Name                    Value                           Description                                                 \n"
+    "====================================================================================================================\n"
+    "allow_style             Terminal                        Allow ANSI text style sequences in output (valid values:    \n"
+    "                                                        Always, Never, Terminal)                                    \n"
+    "always_show_hint        False                           Display tab completion hint even when completion suggestions\n"
+    "                                                        print                                                       \n"
+    "debug                   False                           Show full traceback on exception                            \n"
+    "echo                    False                           Echo command issued into output                             \n"
+    "editor                  vim                             Program used by 'edit'                                      \n"
+    "feedback_to_output      False                           Include nonessentials in '|', '>' results                   \n"
+    "max_completion_items    50                              Maximum number of CompletionItems to display during tab     \n"
+    "                                                        completion                                                  \n"
+    "quiet                   False                           Don't print nonessential feedback                           \n"
+    "scripts_add_to_history  True                            Scripts and pyscripts add commands to history               \n"
+    "timing                  False                           Report execution times                                      \n"
 )
 
 
