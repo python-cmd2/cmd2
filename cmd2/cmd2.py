@@ -297,6 +297,9 @@ class Cmd(cmd.Cmd):
                                    instantiate and register all commands. If False, CommandSets
                                    must be manually installed with `register_command_set`.
         :param allow_clipboard: If False, cmd2 will disable clipboard interactions
+        :param suggest_similar_command: If ``True``, ``cmd2`` will attempt to suggest the most
+                                        similar command when the user types a command that does
+                                        not exist. Default: ``False``.
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -404,7 +407,7 @@ class Cmd(cmd.Cmd):
         self.help_error = "No help on {}"
 
         # The error that prints when a non-existent command is run
-        self.default_error = "{} is not a recognized command, alias, or macro"
+        self.default_error = "{} is not a recognized command, alias, or macro."
 
         # If non-empty, this string will be displayed if a broken pipe error occurs
         self.broken_pipe_warning = ''
@@ -3092,11 +3095,10 @@ class Cmd(cmd.Cmd):
             return self.do_shell(statement.command_and_args)
         else:
             err_msg = self.default_error.format(statement.command)
-            if self.suggest_similar_command:
-                suggested_command = self._suggest_similar_command(statement.command)
-                if suggested_command:
-                    err_msg = err_msg + ' ' + self.default_suggestion_message.format(suggested_command)
-            # Set apply_style to False so default_error's style is not overridden
+            if self.suggest_similar_command and (suggested_command := self._suggest_similar_command(statement.command)):
+                err_msg += f"\n{self.default_suggestion_message.format(suggested_command)}"
+
+            # Set apply_style to False so styles for default_error and default_suggestion_message are not overridden
             self.perror(err_msg, apply_style=False)
             return None
 
