@@ -29,6 +29,9 @@ from cmd2 import (
     plugin,
     utils,
 )
+from cmd2.rl_utils import (
+    readline,  # This ensures gnureadline is used in macOS tests
+)
 
 from .conftest import (
     HELP_HISTORY,
