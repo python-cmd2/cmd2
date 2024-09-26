@@ -29,6 +29,9 @@ from cmd2 import (
     plugin,
     utils,
 )
+from cmd2.rl_utils import (
+    readline,  # This ensures gnureadline is used in macOS tests
+)
 
 from .conftest import (
     HELP_HISTORY,
@@ -333,7 +336,7 @@ def test_base_error_suggest_command(base_app):
         old_suggest_similar_command = base_app.suggest_similar_command
         base_app.suggest_similar_command = True
         out, err = run_cmd(base_app, 'historic')
-        assert "history" in err[0]
+        assert "history" in err[1]
     finally:
         base_app.suggest_similar_command = old_suggest_similar_command
 

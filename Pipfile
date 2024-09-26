@@ -27,7 +27,6 @@ pytest-mock = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
-tableformatter="*"
 twine = ">=1.11"
 
 [pipenv]

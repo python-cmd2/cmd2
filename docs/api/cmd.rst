@@ -9,7 +9,7 @@ cmd2.Cmd
     .. attribute:: default_error
 
       The error message displayed when a non-existent command is run.
-      Default: ``{} is not a recognized command, alias, or macro``
+      Default: ``{} is not a recognized command, alias, or macro.``
 
     .. attribute:: help_error
 
@@ -75,6 +75,5 @@ cmd2.Cmd
 
     .. attribute:: suggest_similar_command
 
-        If ``True``, ``cmd2`` will suggest the most similar command when the user
-        types a command that does not exist.
-        Default: ``False``.
+        If ``True``, ``cmd2`` will attempt to suggest the most similar command
+        when the user types a command that does not exist. Default: ``False``.
