@@ -18,7 +18,6 @@ add these directories to sys.path here. If the directory is relative to the
 documentation root, use os.path.abspath to make it absolute, like shown here.
 """
 # Import for custom theme from Read the Docs
-import sphinx_rtd_theme
 
 import cmd2
 
@@ -89,10 +88,6 @@ autosectionlabel_prefix_document = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-
-# Custom theme from ReadTheDocs
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
