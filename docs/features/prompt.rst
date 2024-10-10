@@ -39,7 +39,7 @@ PythonScripting_ for an example of dynamically updating the prompt.
 Asynchronous Feedback
 ---------------------
 
-``cmd2`` provides two functions to provide asynchronous feedback to the user
+``cmd2`` provides these functions to provide asynchronous feedback to the user
 without interfering with the command line. This means the feedback is provided
 to the user when they are still entering text at the prompt. To use this
 functionality, the application must be running in a terminal that supports
@@ -50,6 +50,12 @@ all support these.
     :noindex:
 
 .. automethod:: cmd2.Cmd.async_update_prompt
+    :noindex:
+
+.. automethod:: cmd2.Cmd.async_refresh_prompt
+    :noindex:
+
+.. automethod:: cmd2.Cmd.need_prompt_refresh
     :noindex:
 
 ``cmd2`` also provides a function to change the title of the terminal window.
@@ -64,5 +70,3 @@ The easiest way to understand these functions is to see the AsyncPrinting_
 example for a demonstration.
 
 .. _AsyncPrinting: https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py
-
-

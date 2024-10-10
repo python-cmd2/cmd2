@@ -130,8 +130,10 @@ from .parsing import (
 from .rl_utils import (
     RlType,
     rl_escape_prompt,
+    rl_get_display_prompt,
     rl_get_point,
     rl_get_prompt,
+    rl_in_search_mode,
     rl_set_prompt,
     rl_type,
     rl_warning,
@@ -353,6 +355,7 @@ class Cmd(cmd.Cmd):
         self.hidden_commands = ['eof', '_relative_run_script']
 
         # Initialize history
+        self.persistent_history_file = ''
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
 
@@ -3295,6 +3298,12 @@ class Cmd(cmd.Cmd):
         """
         readline_settings = _SavedReadlineSettings()
 
+        if rl_type == RlType.GNU:
+            # To calculate line count when printing async_alerts, we rely on commands wider than
+            # the terminal to wrap across multiple lines. The default for horizontal-scroll-mode
+            # is "off" but a user may have overridden it in their readline initialization file.
+            readline.parse_and_bind("set horizontal-scroll-mode off")
+
         if self._completion_supported():
             # Set up readline for our tab completion needs
             if rl_type == RlType.GNU:
@@ -5273,16 +5282,16 @@ class Cmd(cmd.Cmd):
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
         Display an important message to the user while they are at a command line prompt.
-        To the user it appears as if an alert message is printed above the prompt and their current input
-        text and cursor location is left alone.
+        To the user it appears as if an alert message is printed above the prompt and their
+        current input text and cursor location is left alone.
 
-        IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
-                   a prompt is onscreen. Therefore, it is best to acquire the lock before calling this function
-                   to guarantee the alert prints and to avoid raising a RuntimeError.
+        This function needs to acquire self.terminal_lock to ensure a prompt is on screen.
+        Therefore, it is best to acquire the lock before calling this function to avoid
+        raising a RuntimeError.
 
-                   This function is only needed when you need to print an alert while the main thread is blocking
-                   at the prompt. Therefore, this should never be called from the main thread. Doing so will
-                   raise a RuntimeError.
+        This function is only needed when you need to print an alert or update the prompt while the
+        main thread is blocking at the prompt. Therefore, this should never be called from the main
+        thread. Doing so will raise a RuntimeError.
 
         :param alert_msg: the message to display to the user
         :param new_prompt: If you also want to change the prompt that is displayed, then include it here.
@@ -5309,20 +5318,18 @@ class Cmd(cmd.Cmd):
             if new_prompt is not None:
                 self.prompt = new_prompt
 
-            # Check if the prompt to display has changed from what's currently displayed
-            cur_onscreen_prompt = rl_get_prompt()
-            new_onscreen_prompt = self.continuation_prompt if self._at_continuation_prompt else self.prompt
-
-            if new_onscreen_prompt != cur_onscreen_prompt:
+            # Check if the onscreen prompt needs to be refreshed to match self.prompt.
+            if self.need_prompt_refresh():
                 update_terminal = True
+                rl_set_prompt(self.prompt)
 
             if update_terminal:
                 import shutil
 
-                # Generate the string which will replace the current prompt and input lines with the alert
+                # Print a string which replaces the onscreen prompt and input lines with the alert.
                 terminal_str = ansi.async_alert_str(
                     terminal_columns=shutil.get_terminal_size().columns,
-                    prompt=cur_onscreen_prompt,
+                    prompt=rl_get_display_prompt(),
                     line=readline.get_line_buffer(),
                     cursor_offset=rl_get_point(),
                     alert_msg=alert_msg,
@@ -5332,9 +5339,6 @@ class Cmd(cmd.Cmd):
                     sys.stderr.flush()
                 elif rl_type == RlType.PYREADLINE:
                     readline.rl.mode.console.write(terminal_str)
-
-                # Update Readline's prompt before we redraw it
-                rl_set_prompt(new_onscreen_prompt)
 
                 # Redraw the prompt and input lines below the alert
                 rl_force_redisplay()
@@ -5346,29 +5350,49 @@ class Cmd(cmd.Cmd):
 
     def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
         """
-        Update the command line prompt while the user is still typing at it. This is good for alerting the user to
-        system changes dynamically in between commands. For instance you could alter the color of the prompt to
-        indicate a system status or increase a counter to report an event. If you do alter the actual text of the
-        prompt, it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
-        be shifted and the update will not be seamless.
+        Update the command line prompt while the user is still typing at it.
 
-        IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
-                   a prompt is onscreen. Therefore, it is best to acquire the lock before calling this function
-                   to guarantee the prompt changes and to avoid raising a RuntimeError.
+        This is good for alerting the user to system changes dynamically in between commands.
+        For instance you could alter the color of the prompt to indicate a system status or increase a
+        counter to report an event. If you do alter the actual text of the prompt, it is best to keep
+        the prompt the same width as what's on screen. Otherwise the user's input text will be shifted
+        and the update will not be seamless.
 
-                   This function is only needed when you need to update the prompt while the main thread is blocking
-                   at the prompt. Therefore, this should never be called from the main thread. Doing so will
-                   raise a RuntimeError.
-
-                   If user is at a continuation prompt while entering a multiline command, the onscreen prompt will
-                   not change. However, self.prompt will still be updated and display immediately after the multiline
-                   line command completes.
+        If user is at a continuation prompt while entering a multiline command, the onscreen prompt will
+        not change. However, self.prompt will still be updated and display immediately after the multiline
+        line command completes.
 
         :param new_prompt: what to change the prompt to
         :raises RuntimeError: if called from the main thread.
         :raises RuntimeError: if called while another thread holds `terminal_lock`
         """
         self.async_alert('', new_prompt)
+
+    def async_refresh_prompt(self) -> None:  # pragma: no cover
+        """
+        Refresh the oncreen prompt to match self.prompt.
+
+        One case where the onscreen prompt and self.prompt can get out of sync is
+        when async_alert() is called while a user is in search mode (e.g. Ctrl-r).
+        To prevent overwriting readline's onscreen search prompt, self.prompt is updated
+        but readline's saved prompt isn't.
+
+        Therefore when a user aborts a search, the old prompt is still on screen until they
+        press Enter or this method is called. Call need_prompt_refresh() in an async print
+        thread to know when a refresh is needed.
+
+        :raises RuntimeError: if called from the main thread.
+        :raises RuntimeError: if called while another thread holds `terminal_lock`
+        """
+        self.async_alert('')
+
+    def need_prompt_refresh(self) -> bool:  # pragma: no cover
+        """Check whether the onscreen prompt needs to be asynchronously refreshed to match self.prompt."""
+        if not (vt100_support and self.use_rawinput):
+            return False
+
+        # Don't overwrite a readline search prompt or a continuation prompt.
+        return not rl_in_search_mode() and not self._at_continuation_prompt and self.prompt != rl_get_prompt()
 
     @staticmethod
     def set_window_title(title: str) -> None:  # pragma: no cover
