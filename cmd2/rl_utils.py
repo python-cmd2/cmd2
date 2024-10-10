@@ -276,3 +276,32 @@ def rl_unescape_prompt(prompt: str) -> str:
         prompt = prompt.replace(escape_start, "").replace(escape_end, "")
 
     return prompt
+
+
+def rl_in_search_mode() -> bool:
+    """Check if readline is doing either an incremental (e.g. Ctrl-r) or non-incremental (e.g. Esc-p) search"""
+    if rl_type == RlType.GNU:
+        # GNU Readline defines constants that we can use to determine if in search mode.
+        #     RL_STATE_ISEARCH    0x0000080
+        #     RL_STATE_NSEARCH    0x0000100
+        IN_SEARCH_MODE = 0x0000180
+
+        readline_state = ctypes.c_int.in_dll(readline_lib, "rl_readline_state").value
+        return bool(IN_SEARCH_MODE & readline_state)
+    elif rl_type == RlType.PYREADLINE:
+        from pyreadline3.modes.emacs import (  # type: ignore[import]
+            EmacsMode,
+        )
+
+        # These search modes only apply to Emacs mode, which is the default.
+        if not isinstance(readline.rl.mode, EmacsMode):
+            return False
+
+        # While in search mode, the current keyevent function is set one of the following.
+        search_funcs = (
+            readline.rl.mode._process_incremental_search_keyevent,
+            readline.rl.mode._process_non_incremental_search_keyevent,
+        )
+        return readline.rl.mode.process_keyevent_queue[-1] in search_funcs
+    else:
+        return False

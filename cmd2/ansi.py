@@ -1071,9 +1071,9 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     # Calculate how many terminal lines are taken up by all prompt lines except for the last one.
     # That will be included in the input lines calculations since that is where the cursor is.
     num_prompt_terminal_lines = 0
-    for line in prompt_lines[:-1]:
-        line_width = style_aware_wcswidth(line)
-        num_prompt_terminal_lines += int(line_width / terminal_columns) + 1
+    for prompt_line in prompt_lines[:-1]:
+        prompt_line_width = style_aware_wcswidth(prompt_line)
+        num_prompt_terminal_lines += int(prompt_line_width / terminal_columns) + 1
 
     # Now calculate how many terminal lines are take up by the input
     last_prompt_line = prompt_lines[-1]

@@ -132,6 +132,7 @@ from .rl_utils import (
     rl_escape_prompt,
     rl_get_point,
     rl_get_prompt,
+    rl_in_search_mode,
     rl_set_prompt,
     rl_type,
     rl_warning,
@@ -3295,6 +3296,12 @@ class Cmd(cmd.Cmd):
         """
         readline_settings = _SavedReadlineSettings()
 
+        if rl_type == RlType.GNU:
+            # To calculate line count when printing async_alerts, we rely on commands wider than
+            # the terminal to wrap across multiple lines. The default for horizontal-scroll-mode
+            # is "off" but a user may have overridden it in their readline initialization file.
+            readline.parse_and_bind("set horizontal-scroll-mode off")
+
         if self._completion_supported():
             # Set up readline for our tab completion needs
             if rl_type == RlType.GNU:
@@ -5309,17 +5316,20 @@ class Cmd(cmd.Cmd):
             if new_prompt is not None:
                 self.prompt = new_prompt
 
-            # Check if the prompt to display has changed from what's currently displayed
             cur_onscreen_prompt = rl_get_prompt()
-            new_onscreen_prompt = self.continuation_prompt if self._at_continuation_prompt else self.prompt
 
-            if new_onscreen_prompt != cur_onscreen_prompt:
-                update_terminal = True
+            # We won't change the onscreen prompt while readline is in search mode (e.g. Ctrl-r)
+            if not rl_in_search_mode():
+                # Check if the prompt to display has changed from what's currently displayed
+                new_onscreen_prompt = self.continuation_prompt if self._at_continuation_prompt else self.prompt
+                if new_onscreen_prompt != cur_onscreen_prompt:
+                    update_terminal = True
+                    rl_set_prompt(new_onscreen_prompt)
 
             if update_terminal:
                 import shutil
 
-                # Generate the string which will replace the current prompt and input lines with the alert
+                # Print a string which replaces the current prompt and input lines with the alert
                 terminal_str = ansi.async_alert_str(
                     terminal_columns=shutil.get_terminal_size().columns,
                     prompt=cur_onscreen_prompt,
@@ -5332,9 +5342,6 @@ class Cmd(cmd.Cmd):
                     sys.stderr.flush()
                 elif rl_type == RlType.PYREADLINE:
                     readline.rl.mode.console.write(terminal_str)
-
-                # Update Readline's prompt before we redraw it
-                rl_set_prompt(new_onscreen_prompt)
 
                 # Redraw the prompt and input lines below the alert
                 rl_force_redisplay()
