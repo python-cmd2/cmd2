@@ -106,12 +106,6 @@ if 'pyreadline3' in sys.modules:
     ############################################################################################################
     # pyreadline3 is incomplete in terms of the Python readline API. Add the missing functions we need.
     ############################################################################################################
-    # readline.redisplay()
-    try:
-        getattr(readline, 'redisplay')
-    except AttributeError:
-        readline.redisplay = readline.rl.mode._update_line
-
     # readline.remove_history_item()
     try:
         getattr(readline, 'remove_history_item')
@@ -200,7 +194,7 @@ def rl_get_point() -> int:  # pragma: no cover
 
 
 def rl_get_prompt() -> str:  # pragma: no cover
-    """Gets Readline's current prompt"""
+    """Get Readline's prompt"""
     if rl_type == RlType.GNU:
         encoded_prompt = ctypes.c_char_p.in_dll(readline_lib, "rl_prompt").value
         if encoded_prompt is None:
@@ -221,6 +215,24 @@ def rl_get_prompt() -> str:  # pragma: no cover
     return rl_unescape_prompt(prompt)
 
 
+def rl_get_display_prompt() -> str:  # pragma: no cover
+    """
+    Get Readline's currently displayed prompt.
+
+    In GNU Readline, the displayed prompt sometimes differs from the prompt.
+    This occurs in functions that use the prompt string as a message area, such as incremental search.
+    """
+    if rl_type == RlType.GNU:
+        encoded_prompt = ctypes.c_char_p.in_dll(readline_lib, "rl_display_prompt").value
+        if encoded_prompt is None:
+            prompt = ''
+        else:
+            prompt = encoded_prompt.decode(encoding='utf-8')
+        return rl_unescape_prompt(prompt)
+    else:
+        return rl_get_prompt()
+
+
 def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
     """
     Sets Readline's prompt
@@ -237,7 +249,8 @@ def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
 
 
 def rl_escape_prompt(prompt: str) -> str:
-    """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes
+    """
+    Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes
 
     :param prompt: original prompt
     :return: prompt safe to pass to GNU Readline
@@ -276,3 +289,32 @@ def rl_unescape_prompt(prompt: str) -> str:
         prompt = prompt.replace(escape_start, "").replace(escape_end, "")
 
     return prompt
+
+
+def rl_in_search_mode() -> bool:  # pragma: no cover
+    """Check if readline is doing either an incremental (e.g. Ctrl-r) or non-incremental (e.g. Esc-p) search"""
+    if rl_type == RlType.GNU:
+        # GNU Readline defines constants that we can use to determine if in search mode.
+        #     RL_STATE_ISEARCH    0x0000080
+        #     RL_STATE_NSEARCH    0x0000100
+        IN_SEARCH_MODE = 0x0000180
+
+        readline_state = ctypes.c_int.in_dll(readline_lib, "rl_readline_state").value
+        return bool(IN_SEARCH_MODE & readline_state)
+    elif rl_type == RlType.PYREADLINE:
+        from pyreadline3.modes.emacs import (  # type: ignore[import]
+            EmacsMode,
+        )
+
+        # These search modes only apply to Emacs mode, which is the default.
+        if not isinstance(readline.rl.mode, EmacsMode):
+            return False
+
+        # While in search mode, the current keyevent function is set one of the following.
+        search_funcs = (
+            readline.rl.mode._process_incremental_search_keyevent,
+            readline.rl.mode._process_non_incremental_search_keyevent,
+        )
+        return readline.rl.mode.process_keyevent_queue[-1] in search_funcs
+    else:
+        return False

@@ -4,6 +4,10 @@
 * Bug Fixes
   * Fixed issue where persistent history file was not saved upon SIGHUP and SIGTERM signals.
   * Multiline commands are no longer fragmented in up-arrow history.
+  * Fixed bug where `async_alert()` overwrites readline's incremental and non-incremental search prompts.
+    * This fix introduces behavior where an updated prompt won't display after an aborted search
+      until a user presses Enter. See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
+      example for how to handle this case using `Cmd.need_prompt_refresh()` and `Cmd.async_refresh_prompt()`.
 * Enhancements
   * Removed dependency on `attrs` and replaced with [dataclasses](https://docs.python.org/3/library/dataclasses.html)
   * add `allow_clipboard` initialization parameter and attribute to disable ability to

@@ -173,8 +173,8 @@ class AlerterApp(cmd2.Cmd):
         self._next_alert_time = 0
 
         while not self._stop_event.is_set():
-            # Always acquire terminal_lock before printing alerts or updating the prompt
-            # To keep the app responsive, do not block on this call
+            # Always acquire terminal_lock before printing alerts or updating the prompt.
+            # To keep the app responsive, do not block on this call.
             if self.terminal_lock.acquire(blocking=False):
                 # Get any alerts that need to be printed
                 alert_str = self._generate_alert_str()
@@ -189,9 +189,12 @@ class AlerterApp(cmd2.Cmd):
                     new_title = "Alerts Printed: {}".format(self._alert_count)
                     self.set_window_title(new_title)
 
-                # No alerts needed to be printed, check if the prompt changed
-                elif new_prompt != self.prompt:
+                # Otherwise check if the prompt needs to be updated or refreshed
+                elif self.prompt != new_prompt:
                     self.async_update_prompt(new_prompt)
+
+                elif self.need_prompt_refresh():
+                    self.async_refresh_prompt()
 
                 # Don't forget to release the lock
                 self.terminal_lock.release()
