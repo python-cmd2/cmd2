@@ -3,7 +3,6 @@ requires = [
   "setuptools>=64",
   "setuptools-scm>=8",
 ]
-build-backend = "setuptools.build_meta"
 
 #[project]
 #name = "cmd2"
