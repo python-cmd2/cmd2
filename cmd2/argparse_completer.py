@@ -92,7 +92,7 @@ def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
         return False
 
     # Flags have to start with a prefix character
-    if not token[0] in parser.prefix_chars:
+    if token[0] not in parser.prefix_chars:
         return False
 
     # If it looks like a negative number, it is not a flag unless there are negative-number-like flags

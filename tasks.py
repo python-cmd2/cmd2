@@ -99,8 +99,6 @@ def mypy(context):
     """Run mypy optional static type checker"""
     with context.cd(TASK_ROOT_STR):
         context.run("mypy cmd2")
-    with context.cd(str(TASK_ROOT / 'examples')):
-        context.run("mypy decorator_example.py")
 
 
 namespace.add_task(mypy)
@@ -310,7 +308,7 @@ namespace.add_task(validatetag)
 def sdist(context):
     """Create a source distribution"""
     with context.cd(TASK_ROOT_STR):
-        context.run('python setup.py sdist')
+        context.run('python -m build --sdist')
 
 
 namespace.add_task(sdist)
@@ -320,7 +318,7 @@ namespace.add_task(sdist)
 def wheel(context):
     """Build a wheel distribution"""
     with context.cd(TASK_ROOT_STR):
-        context.run('python setup.py bdist_wheel')
+        context.run('python -m build')
 
 
 namespace.add_task(wheel)
@@ -366,3 +364,14 @@ def format(context):
 
 
 namespace.add_task(format)
+
+
+# Black and isort auto-formatting
+@invoke.task()
+def ruff(context):
+    """Run ruff auto-formatter and linter"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff check")
+
+
+namespace.add_task(ruff)

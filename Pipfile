@@ -10,11 +10,13 @@ wcwidth = ">=0.1.7"
 
 [dev-packages]
 black = "*"
+build = "*"
 cmd2 = {editable = true,path = "."}
 cmd2_ext_test = {editable = true,path = "plugins/ext_test"}
 codecov = "*"
 doc8 = "*"
 flake8 = "*"
+Flake8-pyproject = "*"
 gnureadline = {version = "*",sys_platform = "== 'darwin'"}
 invoke = "*"
 ipython = "*"
@@ -24,6 +26,7 @@ pyreadline3 = {version = ">=3.4",sys_platform = "== 'win32'"}
 pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
+ruff = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"

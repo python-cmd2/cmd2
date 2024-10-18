@@ -106,4 +106,5 @@ __all__: List[str] = [
     'CompletionMode',
     'CustomCompletionSettings',
     'Settable',
+    'PassThroughException',
 ]

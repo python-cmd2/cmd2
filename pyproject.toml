@@ -1,5 +1,87 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+requires = [
+  "setuptools>=64",
+  "setuptools-scm>=8",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cmd2"
+description = "Quickly build feature-rich and user-friendly interactive command line applications in Python"
+readme = "README.md"
+license.file = "LICENSE"
+authors = [ { name = "cmd2 Contributors" } ]
+requires-python = ">=3.8"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Operating System :: Unix",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Topic :: Software Development :: Libraries",
+]
+keywords = [
+  "cmd",
+  "command",
+  "console",
+  "prompt",
+]
+dynamic = [
+  "version",
+]
+dependencies = [
+  "pyperclip",
+  "wcwidth",
+  'gnureadline ; platform_system == "Darwin"',
+  'pyreadline3 ; platform_system == "Windows"',
+]
+[project.optional-dependencies]
+dev = [
+  "codecov",
+  "doc8",
+  "flake8",
+  "Flake8-pyproject",
+  "black",
+  "isort",
+  "invoke",
+  "mypy",
+  "nox",
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+  "sphinx",
+  "sphinx-rtd-theme",
+  "sphinx-autobuild",
+  "twine",
+]
+test = [
+  "codecov",
+  "coverage",
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+]
+validate = [
+  "flake8",
+  "Flake8-pyproject",
+  "mypy",
+  "types-setuptools",
+]
+[project.urls]
+documentation = "https://cmd2.readthedocs.io/"
+repository = "https://github.com/python-cmd2/cmd2"
 
 [tool.black]
 skip-string-normalization = true
@@ -25,3 +107,132 @@ exclude = '''
   | htmlcov
 )/
 '''
+
+[tool.doc8]
+ignore-path = [
+  "__pycache__",
+  "*.egg",
+  ".git",
+  ".idea",
+  ".nox",
+  ".pytest_cache",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "build",
+  "cmd2",
+  "cmd2.egg-info",
+  "dist",
+  "docs/_build",
+  "examples",
+  "htmlcov",
+  "plugins",
+  "tests",
+]
+max-line-length = 120
+verbose = 0
+
+[tool.flake8]
+count = true
+ignore = ['E203', 'E704', 'W503']
+max-complexity = 26
+max-line-length = 127
+per-file-ignores = [
+  '__init__.py:F401',
+]
+show-source = true
+statistics = true
+exclude = [
+  "__pycache__",
+  ".eggs",
+  "*.eggs",
+  ".git",
+  ".idea",
+  ".nox",
+  ".pytest_cache",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "build",
+  "dist",
+  "htmlcov",
+]
+
+[tool.isort]
+profile = "black"
+force_grid_wrap = 0
+include_trailing_comma = true
+line_length = 1
+multi_line_output = 3
+use_parentheses = true
+skip = [
+  "__pycache",
+  ".eggs",
+  ".git",
+  ".idea",
+  ".nox",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "cmd2/__init__.py",
+  "build",
+  "dist",
+  "htmlcov",
+]
+
+[tool.mypy]
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+exclude = [
+  "examples",
+  "plugins",
+]
+strict = true
+show_column_numbers = true
+show_error_codes = true
+show_error_context = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = false
+warn_unreachable = true
+
+[tool.pytest.ini_options]
+minversion = "8"
+addopts = "--cov=cmd2 --cov-append --cov-report=term --cov-report=html"
+testpaths = [
+    "tests",
+]
+
+[tool.ruff]
+src = ["cmd2"]
+fix = true
+line-length = 127
+lint.preview = true
+exclude=[
+    ".git",
+    "__pycache__",
+    "dist",
+    "docs/_build",
+    "build",
+]
+
+[tool.ruff.format]
+docstring-code-format = true
+#quote-style = "double"
+
+[tool.ruff.lint.isort]
+force-single-line = true
+from-first = false
+lines-between-types = 1
+order-by-type = true
+
+[tool.setuptools.package-data]
+"cmd2" = ["py.typed"]
+
+[tool.setuptools.packages.find]
+where = ["cmd2"]
+namespaces = false
+
+[tool.setuptools_scm]
+
