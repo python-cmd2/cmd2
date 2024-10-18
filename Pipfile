@@ -4,9 +4,9 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [packages]
-pyperclip = ">=1.6"
-setuptools = ">=34.4"
-wcwidth = ">=0.1.7"
+pyperclip = "*"
+setuptools = "*"
+wcwidth = "*"
 
 [dev-packages]
 black = "*"
@@ -24,6 +24,7 @@ pyreadline3 = {version = ">=3.4",sys_platform = "== 'win32'"}
 pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
+ruff = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"

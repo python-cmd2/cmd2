@@ -366,3 +366,14 @@ def format(context):
 
 
 namespace.add_task(format)
+
+
+# Ruff fast auto-formatter and linter
+@invoke.task()
+def ruff(context):
+    """Run ruff fast auto-formatter and linter"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff check")
+
+
+namespace.add_task(ruff)
