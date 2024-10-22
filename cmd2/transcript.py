@@ -9,6 +9,7 @@ a unit test, comparing the expected output to the actual output.
 This file contains the class necessary to make that work. This
 class is used in cmd2.py::run_transcript_tests()
 """
+
 import re
 import unittest
 from typing import (

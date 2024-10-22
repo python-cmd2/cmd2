@@ -3,6 +3,7 @@
 """
 This is intended to be a completely bare-bones cmd2 application suitable for rapid testing and debugging.
 """
+
 from cmd2 import (
     cmd2,
 )

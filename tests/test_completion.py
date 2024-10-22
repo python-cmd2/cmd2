@@ -6,6 +6,7 @@ Unit/functional testing for readline tab completion functions in the cmd2.py mod
 These are primarily tests related to readline completer functions which handle tab completion of cmd2/cmd commands,
 file system paths, and shell commands.
 """
+
 import enum
 import os
 import sys
@@ -274,7 +275,7 @@ def test_cmd2_help_completion_nomatch(cmd2_app):
 def test_set_allow_style_completion(cmd2_app):
     """Confirm that completing allow_style presents AllowStyle strings"""
     text = ''
-    line = 'set allow_style'.format(text)
+    line = 'set allow_style'.format()
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -288,7 +289,7 @@ def test_set_allow_style_completion(cmd2_app):
 def test_set_bool_completion(cmd2_app):
     """Confirm that completing a boolean Settable presents true and false strings"""
     text = ''
-    line = 'set debug'.format(text)
+    line = 'set debug'.format()
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1331,7 +1332,7 @@ def test_help_subcommand_completion_nomatch_scu(scu_app):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
-    assert first_match == None
+    assert first_match is None
 
 
 def test_subcommand_tab_completion_scu(scu_app):

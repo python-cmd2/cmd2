@@ -10,6 +10,7 @@ To run it you should do the following:
 Note: The "app" function is defined within the cmd2 embedded Python environment and in there "self" is your cmd2
 application instance. Note: self only exists in this environment if self_in_py is True.
 """
+
 import os
 import sys
 

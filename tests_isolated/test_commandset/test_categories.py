@@ -3,6 +3,7 @@
 """
 Simple example demonstrating basic CommandSet usage.
 """
+
 from typing import (
     Any,
 )

@@ -3,6 +3,7 @@
 """
 Cmd2 testing for argument parsing
 """
+
 import argparse
 from typing import (
     Optional,
@@ -404,7 +405,7 @@ def test_add_another_subcommand(subcommand_app):
     to add_parser() write the correct prog value to the parser being added.
     """
     base_parser = subcommand_app._command_parsers.get('base')
-    subcommand_parser = find_subcommand(subcommand_app._command_parsers.get('base'), [])
+    find_subcommand(subcommand_app._command_parsers.get('base'), [])
     for sub_action in base_parser._actions:
         if isinstance(sub_action, argparse._SubParsersAction):
             new_parser = sub_action.add_parser('new_sub', help='stuff')
@@ -449,16 +450,16 @@ def test_unittest_mock():
 
     with mock.patch.object(ArgparseApp, 'namespace_provider'):
         with pytest.raises(CommandSetRegistrationError):
-            app = ArgparseApp()
+            ArgparseApp()
 
     with mock.patch.object(ArgparseApp, 'namespace_provider', spec=True):
-        app = ArgparseApp()
+        ArgparseApp()
 
     with mock.patch.object(ArgparseApp, 'namespace_provider', spec_set=True):
-        app = ArgparseApp()
+        ArgparseApp()
 
     with mock.patch.object(ArgparseApp, 'namespace_provider', autospec=True):
-        app = ArgparseApp()
+        ArgparseApp()
 
 
 def test_pytest_mock_invalid(mocker):
@@ -468,7 +469,7 @@ def test_pytest_mock_invalid(mocker):
 
     mocker.patch.object(ArgparseApp, 'namespace_provider')
     with pytest.raises(CommandSetRegistrationError):
-        app = ArgparseApp()
+        ArgparseApp()
 
 
 @pytest.mark.parametrize(
@@ -481,4 +482,4 @@ def test_pytest_mock_invalid(mocker):
 )
 def test_pytest_mock_valid(mocker, spec_param):
     mocker.patch.object(ArgparseApp, 'namespace_provider', **spec_param)
-    app = ArgparseApp()
+    ArgparseApp()

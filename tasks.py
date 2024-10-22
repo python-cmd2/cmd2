@@ -8,6 +8,7 @@ Make sure you satisfy the following Python module requirements if you are trying
     - wheel >= 0.31.0
     - setuptools >= 39.1.0
 """
+
 import os
 import pathlib
 import re
@@ -366,3 +367,14 @@ def format(context):
 
 
 namespace.add_task(format)
+
+
+# ruff extremely fast Python linter and formatter written in Rust
+@invoke.task()
+def ruff(context):
+    """Run ruff linter and formatter"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff check && ruff format --check")
+
+
+namespace.add_task(ruff)

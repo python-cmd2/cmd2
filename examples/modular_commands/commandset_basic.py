@@ -2,6 +2,7 @@
 """
 A simple example demonstrating a loadable command set
 """
+
 from typing import (
     List,
 )

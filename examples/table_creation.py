@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 """Examples of using the cmd2 table creation API"""
+
 import functools
 import sys
 from typing import (

@@ -3,6 +3,7 @@
 """
 Unit testing for get_defining_class in cmd2/utils.py module.
 """
+
 import functools
 
 import cmd2.utils as cu
@@ -23,7 +24,8 @@ class ChildClass(ParentClass):
     def child_function(self):
         pass
 
-    lambda1 = lambda: 1
+    def lambda1():
+        return 1
 
     lambda2 = (lambda: lambda: 2)()
 

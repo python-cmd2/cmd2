@@ -3,6 +3,7 @@
 """
 Setuptools setup file, used to install or test 'cmd2'
 """
+
 import codecs
 
 from setuptools import (

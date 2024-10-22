@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
-"""A simple example demonstrating how do_* commands can be created in a loop.
-"""
+"""A simple example demonstrating how do_* commands can be created in a loop."""
+
 import functools
 
 import cmd2

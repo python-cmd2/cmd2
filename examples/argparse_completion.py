@@ -3,6 +3,7 @@
 """
 A simple example demonstrating how to integrate tab completion with argparse-based commands.
 """
+
 import argparse
 from typing import (
     Dict,

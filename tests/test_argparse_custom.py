@@ -2,6 +2,7 @@
 """
 Unit/functional testing for argparse customizations in cmd2
 """
+
 import argparse
 
 import pytest

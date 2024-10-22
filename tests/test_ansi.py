@@ -3,6 +3,7 @@
 """
 Unit testing for cmd2/ansi.py module
 """
+
 import pytest
 
 from cmd2 import (

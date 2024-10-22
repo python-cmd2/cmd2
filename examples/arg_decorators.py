@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding=utf-8
 """An example demonstrating how use one of cmd2's argument parsing decorators"""
+
 import argparse
 import os
 

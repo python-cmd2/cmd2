@@ -3,10 +3,10 @@
 """
 Cmd2 unit/functional testing
 """
+
 import builtins
 import io
 import os
-import readline
 import signal
 import sys
 import tempfile
@@ -149,7 +149,7 @@ def test_base_shortcuts(base_app):
 
 def test_command_starts_with_shortcut():
     with pytest.raises(ValueError) as excinfo:
-        app = cmd2.Cmd(shortcuts={'help': 'fake'})
+        cmd2.Cmd(shortcuts={'help': 'fake'})
     assert "Invalid command name 'help'" in str(excinfo.value)
 
 
@@ -813,9 +813,9 @@ def test_get_paste_buffer_exception(base_app, mocker, capsys):
 
 
 def test_allow_clipboard_initializer(base_app):
-    assert base_app.allow_clipboard == True
+    assert base_app.allow_clipboard is True
     noclipcmd = cmd2.Cmd(allow_clipboard=False)
-    assert noclipcmd.allow_clipboard == False
+    assert noclipcmd.allow_clipboard is False
 
 
 # if clipboard access is not allowed, cmd2 should check that first

@@ -2,6 +2,7 @@
 """
 Imports the proper Readline for the platform and provides utility functions for it
 """
+
 import sys
 from enum import (
     Enum,
