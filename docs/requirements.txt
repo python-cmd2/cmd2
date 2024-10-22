@@ -1,0 +1,3 @@
+Sphinx>=8.1.0
+sphinx-autobuild>=2024.10.3
+sphinx-rtd-theme>=3.0.1
