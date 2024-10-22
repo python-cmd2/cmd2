@@ -347,34 +347,23 @@ def pypi_test(context):
 namespace.add_task(pypi_test)
 
 
-# Flake8 - linter and tool for style guide enforcement and linting
+# ruff fast linter
 @invoke.task(post=[plugin_tasks.flake8])
-def flake8(context):
-    """Run flake8 linter and tool for style guide enforcement"""
+def lint(context):
+    """Run ruff fast linter"""
     with context.cd(TASK_ROOT_STR):
-        context.run("flake8")
+        context.run("ruff check")
 
 
-namespace.add_task(flake8)
+namespace.add_task(lint)
 
 
-# Black and isort auto-formatting
+# ruff fast formatter
 @invoke.task()
 def format(context):
-    """Run black and isort auto-formatting for code style enforcement"""
+    """Run ruff format --checkt"""
     with context.cd(TASK_ROOT_STR):
-        context.run("black . && isort .")
+        context.run("ruff format --check")
 
 
 namespace.add_task(format)
-
-
-# ruff extremely fast Python linter and formatter written in Rust
-@invoke.task()
-def ruff(context):
-    """Run ruff linter and formatter"""
-    with context.cd(TASK_ROOT_STR):
-        context.run("ruff check && ruff format --check")
-
-
-namespace.add_task(ruff)

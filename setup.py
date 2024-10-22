@@ -34,6 +34,7 @@ Programming Language :: Python :: 3.9
 Programming Language :: Python :: 3.10
 Programming Language :: Python :: 3.11
 Programming Language :: Python :: 3.12
+Programming Language :: Python :: 3.13
 Programming Language :: Python :: Implementation :: CPython
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines(),
@@ -41,11 +42,11 @@ Topic :: Software Development :: Libraries :: Python Modules
     )
 )  # noqa: E128
 
-SETUP_REQUIRES = ['setuptools >= 34.4', 'setuptools_scm >= 3.0']
+SETUP_REQUIRES = ['setuptools', 'setuptools_scm']
 
 INSTALL_REQUIRES = [
-    'pyperclip >= 1.6',
-    'wcwidth >= 0.1.7',
+    'pyperclip',
+    'wcwidth',
 ]
 
 EXTRAS_REQUIRE = {
@@ -56,7 +57,7 @@ EXTRAS_REQUIRE = {
         "gnureadline; sys_platform=='darwin'",  # include gnureadline on macOS to ensure it is available in nox env
         'codecov',
         'coverage',
-        'pytest>=4.6',
+        'pytest',
         'pytest-cov',
         'pytest-mock',
     ],
@@ -64,9 +65,6 @@ EXTRAS_REQUIRE = {
     'dev': [
         'codecov',
         'doc8',
-        'flake8',
-        'black',
-        'isort',
         'invoke',
         'mypy',
         'nox',
@@ -76,11 +74,12 @@ EXTRAS_REQUIRE = {
         'sphinx',
         'sphinx-rtd-theme',
         'sphinx-autobuild',
-        'twine>=1.11',
+        'ruff',
+        'twine',
     ],
     'validate': [
-        'flake8',
         'mypy',
+        'ruff',
         'types-setuptools',
     ],
 }
