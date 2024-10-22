@@ -2020,7 +2020,8 @@ class Cmd(cmd.Cmd):
         :param parser: the parser to examine
         :return: type of ArgparseCompleter
         """
-        completer_type: Optional[Type[argparse_completer.ArgparseCompleter]] = parser.get_ap_completer_type()
+        Completer = Optional[Type[argparse_completer.ArgparseCompleter]]
+        completer_type: Completer = parser.get_ap_completer_type()  # type: ignore[attr-defined]
 
         if completer_type is None:
             completer_type = argparse_completer.DEFAULT_AP_COMPLETER
