@@ -275,7 +275,7 @@ def test_cmd2_help_completion_nomatch(cmd2_app):
 def test_set_allow_style_completion(cmd2_app):
     """Confirm that completing allow_style presents AllowStyle strings"""
     text = ''
-    line = 'set allow_style'.format()
+    line = 'set allow_style'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -289,7 +289,7 @@ def test_set_allow_style_completion(cmd2_app):
 def test_set_bool_completion(cmd2_app):
     """Confirm that completing a boolean Settable presents true and false strings"""
     text = ''
-    line = 'set debug'.format()
+    line = 'set debug'
     endidx = len(line)
     begidx = endidx - len(text)
 
