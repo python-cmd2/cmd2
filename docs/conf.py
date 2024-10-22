@@ -18,6 +18,12 @@ add these directories to sys.path here. If the directory is relative to the
 documentation root, use os.path.abspath to make it absolute, like shown here.
 """
 
+import sys
+from os.path import abspath, dirname
+
+# Make sure we get the version of this copy of cmd2
+sys.path.insert(1, dirname(dirname(abspath(__file__))))
+
 # Import for custom theme from Read the Docs
 import sphinx_rtd_theme
 
