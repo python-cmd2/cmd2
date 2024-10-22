@@ -1,5 +1,6 @@
 # coding=utf-8
 """Shared utility functions"""
+
 import argparse
 import collections
 import functools
@@ -157,7 +158,7 @@ class Settable:
         :param choices_provider: function that provides choices for this argument
         :param completer: tab completion function that provides choices for this argument
         """
-        if val_type == bool:
+        if val_type is bool:
 
             def get_bool_choices(_) -> List[str]:  # type: ignore[no-untyped-def]
                 """Used to tab complete lowercase boolean values"""
@@ -1189,9 +1190,7 @@ def get_defining_class(meth: Callable[..., Any]) -> Optional[Type[Any]]:
     if isinstance(meth, functools.partial):
         return get_defining_class(meth.func)
     if inspect.ismethod(meth) or (
-        inspect.isbuiltin(meth)
-        and getattr(meth, '__self__') is not None
-        and getattr(meth.__self__, '__class__')  # type: ignore[attr-defined]
+        inspect.isbuiltin(meth) and getattr(meth, '__self__') is not None and getattr(meth.__self__, '__class__')
     ):
         for cls in inspect.getmro(meth.__self__.__class__):  # type: ignore[attr-defined]
             if meth.__name__ in cls.__dict__:

@@ -2,7 +2,8 @@
 """
 Support for ANSI escape sequences which are used for things like applying style to text,
 setting the window title, and asynchronous alerts.
- """
+"""
+
 import functools
 import re
 from enum import (
@@ -62,25 +63,25 @@ The default is ``AllowStyle.TERMINAL``.
 """
 
 # Regular expression to match ANSI style sequence
-ANSI_STYLE_RE = re.compile(fr'{ESC}\[[^m]*m')
+ANSI_STYLE_RE = re.compile(rf'{ESC}\[[^m]*m')
 
 # Matches standard foreground colors: CSI(30-37|90-97|39)m
-STD_FG_RE = re.compile(fr'{ESC}\[(?:[39][0-7]|39)m')
+STD_FG_RE = re.compile(rf'{ESC}\[(?:[39][0-7]|39)m')
 
 # Matches standard background colors: CSI(40-47|100-107|49)m
-STD_BG_RE = re.compile(fr'{ESC}\[(?:(?:4|10)[0-7]|49)m')
+STD_BG_RE = re.compile(rf'{ESC}\[(?:(?:4|10)[0-7]|49)m')
 
 # Matches eight-bit foreground colors: CSI38;5;(0-255)m
-EIGHT_BIT_FG_RE = re.compile(fr'{ESC}\[38;5;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])m')
+EIGHT_BIT_FG_RE = re.compile(rf'{ESC}\[38;5;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])m')
 
 # Matches eight-bit background colors: CSI48;5;(0-255)m
-EIGHT_BIT_BG_RE = re.compile(fr'{ESC}\[48;5;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])m')
+EIGHT_BIT_BG_RE = re.compile(rf'{ESC}\[48;5;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])m')
 
 # Matches RGB foreground colors: CSI38;2;(0-255);(0-255);(0-255)m
-RGB_FG_RE = re.compile(fr'{ESC}\[38;2(?:;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])){{3}}m')
+RGB_FG_RE = re.compile(rf'{ESC}\[38;2(?:;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])){{3}}m')
 
 # Matches RGB background colors: CSI48;2;(0-255);(0-255);(0-255)m
-RGB_BG_RE = re.compile(fr'{ESC}\[48;2(?:;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])){{3}}m')
+RGB_BG_RE = re.compile(rf'{ESC}\[48;2(?:;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5])){{3}}m')
 
 
 def strip_style(text: str) -> str:

@@ -10,6 +10,7 @@ Running `python example.py -t transcript_regex.txt` will run all the commands in
 the transcript against example.py, verifying that the output produced matches
 the transcript.
 """
+
 import random
 
 import cmd2

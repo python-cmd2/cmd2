@@ -5,6 +5,7 @@ A sample application for tagging categories on commands.
 
 It also demonstrates the effects of decorator order when it comes to argparse errors occurring.
 """
+
 import functools
 
 import cmd2

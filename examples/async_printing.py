@@ -4,6 +4,7 @@
 A simple example demonstrating an application that asynchronously prints alerts, updates the prompt
 and changes the window title
 """
+
 import random
 import threading
 import time

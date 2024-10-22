@@ -3,6 +3,7 @@
 """
 Test history functions of cmd2
 """
+
 import os
 import tempfile
 from unittest import (
@@ -478,7 +479,7 @@ def test_history_item_instantiate():
         Statement,
     )
 
-    statement = Statement(
+    Statement(
         'history',
         raw='help history',
         command='help',
@@ -898,7 +899,7 @@ def test_history_file_is_directory(capsys):
 def test_history_can_create_directory(mocker):
     # Mock out atexit.register so the persistent file doesn't written when this function
     # exists because we will be deleting the directory it needs to go to.
-    mock_register = mocker.patch('atexit.register')
+    mocker.patch('atexit.register')
 
     # Create a temp path for us to use and let it get deleted
     with tempfile.TemporaryDirectory() as test_dir:

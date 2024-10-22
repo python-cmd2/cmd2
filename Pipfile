@@ -9,18 +9,15 @@ setuptools = ">=34.4"
 wcwidth = ">=0.1.7"
 
 [dev-packages]
-black = "*"
-cmd2 = {editable = true,path = "."}
-cmd2_ext_test = {editable = true,path = "plugins/ext_test"}
+cmd2 = { editable = true, path = "." }
+cmd2_ext_test = { editable = true, path = "plugins/ext_test" }
 codecov = "*"
 doc8 = "*"
-flake8 = "*"
-gnureadline = {version = "*",sys_platform = "== 'darwin'"}
+gnureadline = { version = "*", sys_platform = "== 'darwin'" }
 invoke = "*"
 ipython = "*"
-isort = "*"
 mypy = "*"
-pyreadline3 = {version = ">=3.4",sys_platform = "== 'win32'"}
+pyreadline3 = { version = ">=3.4", sys_platform = "== 'win32'" }
 pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"

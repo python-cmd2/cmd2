@@ -2,6 +2,7 @@
 """
 Supports the definition of commands in separate classes to be composed into cmd2.Cmd
 """
+
 from typing import (
     TYPE_CHECKING,
     Callable,

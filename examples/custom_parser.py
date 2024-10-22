@@ -2,6 +2,7 @@
 """
 Defines the CustomParser used with override_parser.py example
 """
+
 import sys
 
 from cmd2 import (

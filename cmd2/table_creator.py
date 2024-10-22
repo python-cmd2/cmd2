@@ -5,6 +5,7 @@ This API is built upon two core classes: Column and TableCreator
 The general use case is to inherit from TableCreator to create a table class with custom formatting options.
 There are already implemented and ready-to-use examples of this below TableCreator's code.
 """
+
 import copy
 import io
 from collections import (

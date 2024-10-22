@@ -2,6 +2,7 @@
 """
 Cmd2 unit/functional testing
 """
+
 import sys
 from contextlib import (
     redirect_stderr,

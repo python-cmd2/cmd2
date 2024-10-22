@@ -3,10 +3,10 @@
 """
 Cmd2 unit/functional testing
 """
+
 import builtins
 import io
 import os
-import readline
 import signal
 import sys
 import tempfile
@@ -149,7 +149,7 @@ def test_base_shortcuts(base_app):
 
 def test_command_starts_with_shortcut():
     with pytest.raises(ValueError) as excinfo:
-        app = cmd2.Cmd(shortcuts={'help': 'fake'})
+        cmd2.Cmd(shortcuts={'help': 'fake'})
     assert "Invalid command name 'help'" in str(excinfo.value)
 
 
@@ -813,9 +813,9 @@ def test_get_paste_buffer_exception(base_app, mocker, capsys):
 
 
 def test_allow_clipboard_initializer(base_app):
-    assert base_app.allow_clipboard == True
+    assert base_app.allow_clipboard is True
     noclipcmd = cmd2.Cmd(allow_clipboard=False)
-    assert noclipcmd.allow_clipboard == False
+    assert noclipcmd.allow_clipboard is False
 
 
 # if clipboard access is not allowed, cmd2 should check that first
@@ -855,9 +855,7 @@ def _expected_no_editor_error():
         """
 EXCEPTION of type '{}' occurred with message: Please use 'set editor' to specify your text editing program of choice.
 To enable full traceback, run the following command: 'set debug true'
-""".format(
-            expected_exception
-        )
+""".format(expected_exception)
     )
 
     return expected_text
@@ -1360,9 +1358,7 @@ def test_select_options(select_app, monkeypatch):
    1. sweet
    2. salty
 {} with salty sauce, yum!
-""".format(
-            food
-        )
+""".format(food)
     )
 
     # Make sure our mock was called with the expected arguments
@@ -1388,9 +1384,7 @@ def test_select_invalid_option_too_big(select_app, monkeypatch):
    2. salty
 '3' isn't a valid choice. Pick a number between 1 and 2:
 {} with sweet sauce, yum!
-""".format(
-            food
-        )
+""".format(food)
     )
 
     # Make sure our mock was called exactly twice with the expected arguments
@@ -1419,9 +1413,7 @@ def test_select_invalid_option_too_small(select_app, monkeypatch):
    2. salty
 '0' isn't a valid choice. Pick a number between 1 and 2:
 {} with sweet sauce, yum!
-""".format(
-            food
-        )
+""".format(food)
     )
 
     # Make sure our mock was called exactly twice with the expected arguments
@@ -1445,9 +1437,7 @@ def test_select_list_of_strings(select_app, monkeypatch):
    1. math
    2. science
 Good luck learning {}!
-""".format(
-            'science'
-        )
+""".format('science')
     )
 
     # Make sure our mock was called with the expected arguments
@@ -1468,9 +1458,7 @@ def test_select_list_of_tuples(select_app, monkeypatch):
    1. Netflix
    2. WebSurfing
 Have fun procrasinating with {}!
-""".format(
-            'YouTube'
-        )
+""".format('YouTube')
     )
 
     # Make sure our mock was called with the expected arguments
@@ -1491,9 +1479,7 @@ def test_select_uneven_list_of_tuples(select_app, monkeypatch):
    1. Electric Guitar
    2. Drums
 Charm us with the {}...
-""".format(
-            'Drums'
-        )
+""".format('Drums')
     )
 
     # Make sure our mock was called with the expected arguments
@@ -1523,9 +1509,7 @@ def test_select_return_type(select_app, monkeypatch, selection, type_str):
    2. String
    3. Method
 The return type is {}
-""".format(
-            type_str
-        )
+""".format(type_str)
     )
 
     # Make sure our mock was called with the expected arguments

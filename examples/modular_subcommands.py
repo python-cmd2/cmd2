@@ -10,6 +10,7 @@ The cut command is implemented with the `do_cut` function that has been tagged a
 The `load` and `unload` command will load and unload the CommandSets. The available top level commands as well as
 subcommands to the `cut` command will change depending on which CommandSets are loaded.
 """
+
 import argparse
 
 import cmd2

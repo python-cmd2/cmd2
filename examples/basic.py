@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # coding=utf-8
 """A simple example demonstrating the following:
-    1) How to add a command
-    2) How to add help for that command
-    3) Persistent history
-    4) How to run an initialization script at startup
-    5) How to add custom command aliases using the alias command
-    6) Shell-like capabilities
+1) How to add a command
+2) How to add help for that command
+3) Persistent history
+4) How to run an initialization script at startup
+5) How to add custom command aliases using the alias command
+6) Shell-like capabilities
 """
+
 import cmd2
 from cmd2 import (
     Bg,

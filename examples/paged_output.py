@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""A simple example demonstrating the using paged output via the ppaged() method.
-"""
+"""A simple example demonstrating the using paged output via the ppaged() method."""
+
 import os
 from typing import (
     List,

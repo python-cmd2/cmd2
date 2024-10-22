@@ -3,6 +3,7 @@
 """
 Unit/functional testing for run_pytest in cmd2
 """
+
 import builtins
 import os
 from unittest import (

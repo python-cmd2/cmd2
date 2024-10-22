@@ -21,6 +21,7 @@ is used in place of `print`.
 
 Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
+
 # This module has many imports, quite a few of which are only
 # infrequently utilized. To reduce the initial overhead of
 # import this module, many of these imports are lazy-loaded
@@ -2019,9 +2020,8 @@ class Cmd(cmd.Cmd):
         :param parser: the parser to examine
         :return: type of ArgparseCompleter
         """
-        completer_type: Optional[
-            Type[argparse_completer.ArgparseCompleter]
-        ] = parser.get_ap_completer_type()  # type: ignore[attr-defined]
+        Completer = Optional[Type[argparse_completer.ArgparseCompleter]]
+        completer_type: Completer = parser.get_ap_completer_type()  # type: ignore[attr-defined]
 
         if completer_type is None:
             completer_type = argparse_completer.DEFAULT_AP_COMPLETER
@@ -5537,7 +5537,7 @@ class Cmd(cmd.Cmd):
         """
         # cmdloop() expects to be run in the main thread to support extensive use of KeyboardInterrupts throughout the
         # other built-in functions. You are free to override cmdloop, but much of cmd2's features will be limited.
-        if not threading.current_thread() is threading.main_thread():
+        if threading.current_thread() is not threading.main_thread():
             raise RuntimeError("cmdloop must be run in the main thread")
 
         # Register signal handlers

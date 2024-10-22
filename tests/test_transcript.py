@@ -3,6 +3,7 @@
 """
 Cmd2 functional testing based on transcript
 """
+
 import os
 import random
 import re

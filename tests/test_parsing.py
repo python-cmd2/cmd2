@@ -3,6 +3,7 @@
 """
 Test the parsing logic in parsing.py
 """
+
 import dataclasses
 
 import pytest

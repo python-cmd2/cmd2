@@ -1,5 +1,6 @@
 # coding=utf-8
 """Decorators for ``cmd2`` commands"""
+
 import argparse
 from typing import (
     TYPE_CHECKING,

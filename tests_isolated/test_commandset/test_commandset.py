@@ -963,7 +963,7 @@ def test_bad_subcommand():
             self.poutput('cutting banana: ' + ns.direction)
 
     with pytest.raises(CommandSetRegistrationError):
-        app = BadSubcommandApp()
+        BadSubcommandApp()
 
 
 def test_commandset_settables():

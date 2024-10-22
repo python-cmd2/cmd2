@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""A simple example demonstrating support for unicode command names.
-"""
+"""A simple example demonstrating support for unicode command names."""
+
 import math
 
 import cmd2

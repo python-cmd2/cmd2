@@ -3,6 +3,7 @@
 """
 Test plugin infrastructure and hooks.
 """
+
 import argparse
 import sys
 from unittest import (

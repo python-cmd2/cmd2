@@ -3,6 +3,7 @@
 """
 Unit/functional testing for argparse completer in cmd2
 """
+
 import argparse
 import numbers
 from typing import (

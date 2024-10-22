@@ -3,6 +3,7 @@
 """
 A sample application for cmd2 demonstrating customized environment parameters
 """
+
 import cmd2
 
 

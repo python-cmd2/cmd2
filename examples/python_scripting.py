@@ -20,6 +20,7 @@ scripts inside a cmd2 application via the run_pyscript command and the
 This application and the "examples/scripts/conditional.py" script serve as an
 example for one way in which this can be done.
 """
+
 import os
 
 import cmd2
