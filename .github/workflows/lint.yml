@@ -28,4 +28,4 @@ jobs:
       - name: Install python prerequisites
         run: pip install -U --user ruff
       - name: Ruff lint
-        run: ruff --check
+        run: ruff check
