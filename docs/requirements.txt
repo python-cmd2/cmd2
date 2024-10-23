@@ -1,7 +1,7 @@
 
 pyperclip
 setuptools
-setuptools-scm<8
+setuptools-scm
 Sphinx
 sphinx-autobuild
 sphinx-rtd-theme

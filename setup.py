@@ -77,6 +77,13 @@ EXTRAS_REQUIRE = {
         'ruff',
         'twine',
     ],
+    'docs': [
+        'setuptools',
+        'setuptools_scm',
+        'sphinx',
+        'sphinx-rtd-theme',
+        'sphinx-autobuild',
+    ],
     'validate': [
         'mypy',
         'ruff',
