@@ -1,4 +1,4 @@
-## 2.5.0 (TBD)
+## 2.5.0 (October 22, 2024)
 * Breaking Change
   * `cmd2` 2.5 supports Python 3.8+ (removed support for Python 3.6 and 3.7)
 * Bug Fixes
@@ -12,7 +12,7 @@
   * Removed dependency on `attrs` and replaced with [dataclasses](https://docs.python.org/3/library/dataclasses.html)
   * add `allow_clipboard` initialization parameter and attribute to disable ability to
     add output to the operating system clipboard
-  * Updated unit tests to be Python 3.12 compliant.
+  * Updated unit tests to be Python 3.13 compliant.
   * Fall back to bz2 compression of history file when lzma is not installed.
   * Added settable called `scripts_add_to_history` which determines whether scripts and pyscripts
     add commands to history.
