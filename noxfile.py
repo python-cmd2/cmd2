@@ -1,7 +1,7 @@
 import nox
 
 
-@nox.session(python=['3.13'])
+@nox.session(python=['3.12'])
 def docs(session):
     session.install(
         'sphinx',
