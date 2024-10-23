@@ -78,7 +78,7 @@ required for two reasons:
 
 ### Add commands
 
-Your plugin can add user visable commands. You do it the same way in a plugin
+Your plugin can add user visible commands. You do it the same way in a plugin
 that you would in a `cmd2.Cmd` app:
 
 ```python
@@ -197,7 +197,7 @@ You can run multiple tasks in a single invocation, for example:
 $ invoke clean docs sdist wheel
 ```
 
-That one command will remove all superflous cache, testing, and build
+That one command will remove all superfluous cache, testing, and build
 files, render the documentation, and build a source distribution and a
 wheel distribution.
 

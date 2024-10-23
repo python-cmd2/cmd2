@@ -8,7 +8,7 @@
 
 
 <p align="center">
-  <a href="#the-developers-toolbox">Develper's Toolbox</a> •
+  <a href="#the-developers-toolbox">Developer's Toolbox</a> •
   <a href="#philosophy">Philosophy</a> •
   <a href="#installation">Installation</a> •
   <a href="#documentation">Documentation</a> •
@@ -153,7 +153,7 @@ Projects using cmd2
 | [Poseidon](https://github.com/CyberReboot/poseidon)             | Leverages software-defined networks (SDNs) to acquire and then feed network traffic to a number of machine learning techniques. |   |
 | [Unipacker](https://github.com/unipacker/unipacker)             | Automatic and platform-independent unpacker for Windows binaries based on emulation                                             |   |
 | [tomcatmanager](https://github.com/tomcatmanager/tomcatmanager) | A command line tool and python library for managing a tomcat server                                                             |   |
-| [Expliot](https://gitlab.com/expliot_framework/expliot)         | Internet of Things (IoT) exploitation framework                                                                                 |   |
+| [Exploit](https://gitlab.com/expliot_framework/expliot)         | Internet of Things (IoT) exploitation framework                                                                                 |   |
 | [mptcpanalyzer]()                                               | Tool to help analyze mptcp pcaps                                                                                                |   |
 | [clanvas](https://github.com/marklalor/clanvas)                 | Command-line client for Canvas by Instructure                                                                                   |   |
 

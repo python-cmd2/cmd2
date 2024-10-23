@@ -6,10 +6,10 @@ Genre:
 
 
 
-Name: Microsoft/ Azure Counterfit
+Name: Microsoft/ Azure Counterfeit
 Source Code: https://github.com/Azure/counterfit
 Status: Active
-Description: Counterfit is a command-line tool and generic automation layer for assessing the security of machine learning systems.
+Description: Counterfeit is a command-line tool and generic automation layer for assessing the security of machine learning systems.
 Genre: Security
 
 Name: MQTT-Pwn 
@@ -65,7 +65,7 @@ Genre: utility
 Name: icl-rocketry/Avionics
 Source Code: https://github.com/icl-rocketry/Avionics
 Status: Active 
-Description: The main repository for hardware and software assosciated with the Ricardo Avionics Ecosystem.
+Description: The main repository for hardware and software associated with the Ricardo Avionics Ecosystem.
 Genre: Utility 
 
 

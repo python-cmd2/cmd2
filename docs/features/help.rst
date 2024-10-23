@@ -41,7 +41,7 @@ Providing Help
 ``cmd2`` makes it easy for developers of ``cmd2`` applications to provide this
 help.  By default, the help for a command is the docstring for the ``do_*``
 method defining the command - e.g. for a command **foo**, that command is
-implementd by defining the ``do_foo`` method and the docstring for that method
+implemented by defining the ``do_foo`` method and the docstring for that method
 is the help.
 
 For commands which use one of the ``argparse`` decorators to parse arguments,

@@ -38,7 +38,7 @@ class Plugin:
     ###
     #
     # preloop and postloop hooks
-    # which share the same signature and are thus interchangable
+    # which share the same signature and are thus interchangeable
     #
     ###
     def prepost_hook_one(self) -> None:

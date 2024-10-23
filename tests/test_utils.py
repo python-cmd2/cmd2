@@ -876,16 +876,16 @@ def test_find_editor_not_specified():
 
 
 def test_similarity():
-    suggested_command = cu.suggest_similar("comand", ["command", "UNRELATED", "NOT_SIMILAR"])
+    suggested_command = cu.suggest_similar("command", ["command", "UNRELATED", "NOT_SIMILAR"])
     assert suggested_command == "command"
     suggested_command = cu.suggest_similar("command", ["COMMAND", "acommands"])
     assert suggested_command == "COMMAND"
 
 
 def test_similarity_without_good_canididates():
-    suggested_command = cu.suggest_similar("comand", ["UNRELATED", "NOT_SIMILAR"])
+    suggested_command = cu.suggest_similar("command", ["UNRELATED", "NOT_SIMILAR"])
     assert suggested_command is None
-    suggested_command = cu.suggest_similar("comand", [])
+    suggested_command = cu.suggest_similar("command", [])
     assert suggested_command is None
 
 

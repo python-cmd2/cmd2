@@ -999,7 +999,7 @@ def test_completion_items_descriptive_header(ac_app):
         ('nargs --one_or_more', '-', True),
         # This flag has reached its minimum value count and therefore a new flag could start.
         # However the flag can still consume values and the text is not a single prefix character.
-        # Therefor a hint will be shown.
+        # Therefore a hint will be shown.
         ('nargs --one_or_more choices', 'bad_completion', True),
         # Like the previous case, but this time text is a single prefix character which will cause flag
         # name completion to occur instead of a hint for the current flag.

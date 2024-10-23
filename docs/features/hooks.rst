@@ -171,7 +171,7 @@ object, including ``.raw`` which contains exactly what the user typed.
 
 The hook method must return a :class:`cmd2.plugin.PostparsingData` object, and
 it is very convenient to just return the object passed into the hook method.
-The hook method may modify the attributes of the object to influece the
+The hook method may modify the attributes of the object to influence the
 behavior of the application. If ``params.stop`` is set to true, a fatal failure
 is triggered prior to execution of the command, and the application exits.
 
@@ -287,7 +287,7 @@ Any postcommand hook can change the value of the ``stop`` attribute before
 returning it, and the modified value will be passed to the next postcommand
 hook. The value returned by the final postcommand hook will be passed to the
 command finalization hooks, which may further modify the value. If your hook
-blindly returns ``False``, a prior hook's requst to exit the application will
+blindly returns ``False``, a prior hook's request to exit the application will
 not be honored. It's best to return the value you were passed unless you have a
 compelling reason to do otherwise.
 
@@ -330,7 +330,7 @@ hook. The value returned by the final command finalization hook will determine
 whether the application terminates or not.
 
 This approach to command finalization hooks can be powerful, but it can also
-cause problems. If your hook blindly returns ``False``, a prior hook's requst
+cause problems. If your hook blindly returns ``False``, a prior hook's request
 to exit the application will not be honored. It's best to return the value you
 were passed unless you have a compelling reason to do otherwise.
 

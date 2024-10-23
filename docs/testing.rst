@@ -30,7 +30,7 @@ If you need to mock anything in your cmd2 application, and most specifically in
 sub-classes of :class:`~cmd2.Cmd` or
 :class:`~cmd2.command_definition.CommandSet`, you must use `Autospeccing
 <python_mock_autospeccing_>`_, `spec=True <python_mock_patch_>`_, or whatever
-equivalant is provided in the mocking library you're using.
+equivalent is provided in the mocking library you're using.
 
 In order to automatically load functions as commands cmd2 performs a number of
 reflection calls to look up attributes of classes defined in your cmd2
