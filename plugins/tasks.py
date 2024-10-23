@@ -9,6 +9,8 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 
+import pathlib
+
 import invoke
 
 from plugins.ext_test import (
@@ -31,6 +33,9 @@ namespace.add_collection(namespace_clean, 'clean')
 # pytest, pylint, and codecov
 #
 #####
+
+TASK_ROOT = pathlib.Path(__file__).resolve().parent
+TASK_ROOT_STR = str(TASK_ROOT)
 
 
 @invoke.task(pre=[ext_test_tasks.pytest])
@@ -130,11 +135,22 @@ def wheel(_):
 namespace.add_task(wheel)
 
 
-# Flake8 - linter and tool for style guide enforcement and linting
-@invoke.task(pre=[ext_test_tasks.flake8])
-def flake8(_):
-    """Run flake8 linter and tool for style guide enforcement"""
-    pass
+# ruff linter
+@invoke.task(pre=[ext_test_tasks.lint])
+def lint(context):
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff check")
 
 
-namespace.add_task(flake8)
+namespace.add_task(lint)
+
+
+# ruff formatter
+@invoke.task(pre=[ext_test_tasks.format])
+def format(context):
+    """Run formatter"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff format --check")
+
+
+namespace.add_task(format)

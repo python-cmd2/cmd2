@@ -39,10 +39,3 @@ def tests(session, plugin):
             '--no-pty',
             '--append-cov',
         )
-
-
-@nox.session(python=['3.8', '3.9', '3.10', '3.11', '3.12', '3.13'])
-@nox.parametrize('step', ['mypy', 'flake8'])
-def validate(session, step):
-    session.install('invoke', './[validate]')
-    session.run('invoke', step)
