@@ -82,8 +82,7 @@ namespace_clean.add_task(pytest_clean, 'pytest')
 def mypy(context):
     """Run mypy optional static type checker"""
     with context.cd(TASK_ROOT_STR):
-        context.run("mypy cmd2_ext_test")
-        namespace.add_task(mypy)
+        context.run("mypy .")
 
 
 namespace.add_task(mypy)
@@ -194,15 +193,22 @@ def pypi_test(context):
 namespace.add_task(pypi_test)
 
 
-# Flake8 - linter and tool for style guide enforcement and linting
+# ruff fast linter
 @invoke.task
-def flake8(context):
-    """Run flake8 linter and tool for style guide enforcement"""
+def lint(context):
+    """Run ruff fast linter"""
     with context.cd(TASK_ROOT_STR):
-        context.run(
-            "flake8 --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics "
-            "--exclude=.git,__pycache__,.tox,.nox,.eggs,*.egg,.venv,.idea,.pytest_cache,.vscode,build,dist,htmlcov"
-        )
+        context.run("ruff check")
 
 
-namespace.add_task(flake8)
+namespace.add_task(lint)
+
+
+@invoke.task
+def format(context):
+    """Run ruff format --check"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff format --check")
+
+
+namespace.add_task(format)

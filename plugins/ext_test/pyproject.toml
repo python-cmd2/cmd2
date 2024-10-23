@@ -1,43 +1,16 @@
 [build-system]
 requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
 
-[tool.doc8]
-ignore-path = [
-    "__pycache__",
-    "*.egg",
-    ".git",
-    ".idea",
-    ".nox",
-    ".pytest_cache",
-    ".tox",
-    ".venv",
-    ".vscode",
-    "build",
-    "cmd2",
-    "cmd2.egg-info",
-    "dist",
-    "docs/_build",
-    "examples",
-    "htmlcov",
-    "plugins",
-    "tests",
-]
-max-line-length = 120
-verbose = 0
-
 [tool.mypy]
 disallow_incomplete_defs = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 exclude = [
-    "^docs/", # docs directory
     "^examples/", # examples directory
-    "^plugins/*", # plugins directory
     "^noxfile\\.py$", # nox config file
     "setup\\.py$", # any files named setup.py
     "^tasks\\.py$", # tasks.py invoke config file
     "^tests/", # tests directory
-    "^tests_isolated/" # tests_isolated directory
 ]
 show_column_numbers = true
 show_error_codes = true

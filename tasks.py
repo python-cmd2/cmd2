@@ -95,19 +95,17 @@ def pytest_clean(context):
 namespace_clean.add_task(pytest_clean, 'pytest')
 
 
-@invoke.task(post=[plugin_tasks.mypy])
+@invoke.task()
 def mypy(context):
     """Run mypy optional static type checker"""
     with context.cd(TASK_ROOT_STR):
-        context.run("mypy cmd2")
-    with context.cd(str(TASK_ROOT / 'examples')):
-        context.run("mypy decorator_example.py")
+        context.run("mypy .")
 
 
 namespace.add_task(mypy)
 
 
-@invoke.task(post=[plugin_tasks.mypy_clean])
+@invoke.task()
 def mypy_clean(context):
     """Remove mypy cache directory"""
     # pylint: disable=unused-argument
@@ -348,7 +346,7 @@ namespace.add_task(pypi_test)
 
 
 # ruff fast linter
-@invoke.task(post=[plugin_tasks.flake8])
+@invoke.task()
 def lint(context):
     """Run ruff fast linter"""
     with context.cd(TASK_ROOT_STR):
@@ -361,7 +359,7 @@ namespace.add_task(lint)
 # ruff fast formatter
 @invoke.task()
 def format(context):
-    """Run ruff format --checkt"""
+    """Run ruff format --check"""
     with context.cd(TASK_ROOT_STR):
         context.run("ruff format --check")
 
