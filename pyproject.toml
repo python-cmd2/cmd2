@@ -1,30 +1,29 @@
 [build-system]
 requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
 
-[tool.black]
-skip-string-normalization = true
-line-length = 127
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.github
-  | \.idea
-  | \.mypy_cache
-  | \.pytest_cache
-  | \.tox
-  | \.nox
-  | \.venv
-  | \.vscode
-  | _build
-  | build
-  | cmd2.egg-info
-  | cmd2_history.dat
-  | dist
-  | htmlcov
-)/
-'''
+[tool.doc8]
+ignore-path = [
+    "__pycache__",
+    "*.egg",
+    ".git",
+    ".idea",
+    ".nox",
+    ".pytest_cache",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "build",
+    "cmd2",
+    "cmd2.egg-info",
+    "dist",
+    "docs/_build",
+    "examples",
+    "htmlcov",
+    "plugins",
+    "tests",
+]
+max-line-length = 120
+verbose = 0
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
@@ -72,20 +71,24 @@ output-format = "full"
 select = [
     # https://beta.ruff.rs/docs/rules
     #    "A", # flake8-builtins
+    #    "ANN",  # flake8-annotations
     #    "ARG", # flake8-unused-arguments
     "ASYNC", # flake8-async
     #    "B", # flake8-bugbear
     #    "BLE", # flake8-blind-except
     #    "C4", # flake8-comprehensions
     "C90", # McCabe cyclomatic complexity
+    #    "COM",  # flake8-commas
+    #    "D",    # pydocstyle
     "DJ", # flake8-django
     #    "DTZ", # flake8-datetimez
     "E", # pycodestyle
     #    "EM", # flake8-errmsg
+    #    "ERA",  # eradicate
     #    "EXE", # flake8-executable
     "F", # Pyflakes
     "FA", # flake8-future-annotations
-    #    "FLY", # flynt
+    #    "FBT",  # flake8-boolean-trap
     "G", # flake8-logging-format
     #    "I", # isort
     "ICN", # flake8-import-conventions
@@ -99,29 +102,24 @@ select = [
     #    "PIE", # flake8-pie
     #    "PL", # Pylint
     #    "PT", # flake8-pytest-style
+    #    "PTH",  # flake8-use-pathlib
     #    "PYI", # flake8-pyi
+    #    "RET",  # flake8-return
     "RSE", # flake8-raise
+    #    "Q",    # flake8-quotes
     #    "RUF", # Ruff-specific rules
     #    "S", # flake8-bandit
     #    "SIM", # flake8-simplify
     #    "SLF", # flake8-self
     #    "T10", # flake8-debugger
+    #    "T20",  # flake8-print
+    #    "TCH",  # flake8-type-checking
     #    "TD", # flake8-todos
     #    "TID", # flake8-tidy-imports
+    #    "TRY",  # tryceratops
     #    "UP", # pyupgrade
     #    "W", # pycodestyle
     #    "YTT", # flake8-2020
-    # "ANN",  # flake8-annotations  # FIX ME?
-    # "COM",  # flake8-commas
-    # "D",    # pydocstyle -- FIX ME?
-    # "ERA",  # eradicate -- DO NOT FIX
-    # "FBT",  # flake8-boolean-trap  # FIX ME
-    # "PTH",  # flake8-use-pathlib  # FIX ME
-    # "Q",    # flake8-quotes
-    # "RET",  # flake8-return  # FIX ME?
-    # "T20",  # flake8-print
-    # "TCH",  # flake8-type-checking
-    # "TRY",  # tryceratops
 ]
 ignore = [
     # `ruff rule S101` for a description of that rule
