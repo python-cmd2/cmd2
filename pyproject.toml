@@ -48,6 +48,18 @@ warn_return_any = true
 warn_unreachable = true
 warn_unused_ignores = false
 
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "tests_isolated",
+]
+addopts = [
+    "--cov=cmd2",
+    "--cov-append",
+    "--cov-report=term",
+    "--cov-report=html",
+]
+
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
 exclude = [
