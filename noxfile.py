@@ -17,7 +17,7 @@ def docs(session):
     )
 
 
-@nox.session(python=['3.8', '3.9', '3.10', '3.11', '3.12'])
+@nox.session(python=['3.8', '3.9', '3.10', '3.11', '3.12', '3.13'])
 @nox.parametrize('plugin', [None, 'ext_test', 'template', 'coverage'])
 def tests(session, plugin):
     if plugin is None:
@@ -41,7 +41,7 @@ def tests(session, plugin):
         )
 
 
-@nox.session(python=['3.8', '3.9', '3.10', '3.11', '3.12'])
+@nox.session(python=['3.8', '3.9', '3.10', '3.11', '3.12', '3.13'])
 @nox.parametrize('step', ['mypy', 'flake8'])
 def validate(session, step):
     session.install('invoke', './[validate]')

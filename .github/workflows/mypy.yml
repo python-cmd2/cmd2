@@ -2,30 +2,22 @@
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
 name: MyPy
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 permissions:
   contents: read
 
 jobs:
   mypy:
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.12"]
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4  # https://github.com/actions/checkout
+      - uses: actions/setup-python@v5  # https://github.com/actions/setup-python
         with:
+          python-version: 3.13
+          allow-prereleases: true
           # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
           # Set fetch-depth: 0 to fetch all history for all branches and tags.
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
-      - name: Set up Python
-        uses: actions/setup-python@v5  # https://github.com/actions/setup-python
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install python prerequisites
-        run: pip install -U --user pip setuptools setuptools-scm nox
-      - name: MyPy
-        run: python -m nox --non-interactive --session validate-${{ matrix.python-version }} -k mypy  # Run nox for mypy
+      - run: pip install -U --user pip setuptools setuptools-scm nox
+      - run: python -m nox --non-interactive --session validate-${{ python-version }} -k mypy  # Run nox for mypy
