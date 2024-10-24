@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+requires = ["build", "setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
 
 [tool.doc8]
 ignore-path = [
@@ -30,6 +31,7 @@ disallow_incomplete_defs = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 exclude = [
+    "^build/", # .build directory
     "^docs/", # docs directory
     "^examples/", # examples directory
     "^plugins/*", # plugins directory
