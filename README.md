@@ -8,7 +8,7 @@
 
 
 <p align="center">
-  <a href="#the-developers-toolbox">Develper's Toolbox</a> •
+  <a href="#the-developers-toolbox">Developer's Toolbox</a> •
   <a href="#philosophy">Philosophy</a> •
   <a href="#installation">Installation</a> •
   <a href="#documentation">Documentation</a> •

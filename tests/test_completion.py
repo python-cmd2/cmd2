@@ -384,7 +384,7 @@ def test_shell_command_completion_does_path_completion_when_after_command(cmd2_a
     assert first_match is not None and cmd2_app.completion_matches == [text + '.py ']
 
 
-def test_shell_commmand_complete_in_path(cmd2_app, request):
+def test_shell_command_complete_in_path(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 's')

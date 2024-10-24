@@ -4,7 +4,7 @@ Commands
 .. _cmd: https://docs.python.org/3/library/cmd.html
 
 ``cmd2`` is designed to make it easy for you to create new commands. These
-commmands form the backbone of your application. If you started writing your
+commands form the backbone of your application. If you started writing your
 application using cmd_, all the commands you have built will work when you move
 to ``cmd2``. However, there are many more capabilities available in ``cmd2``
 which you can take advantage of to add more robust features to your commands,
@@ -222,5 +222,3 @@ to:
 
 - Define commands in separate CommandSet modules
 - Load or unload commands at runtime
-
-

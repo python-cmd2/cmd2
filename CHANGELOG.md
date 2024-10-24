@@ -725,7 +725,7 @@
 * Enhancements
     * Added ability to include command name placeholders in the message printed when trying to run a disabled command.
         * See docstring for ``disable_command()`` or ``disable_category()`` for more details.
-    * Added instance attributes to customize error messages without having to override methods. Theses messages can
+    * Added instance attributes to customize error messages without having to override methods. These messages can
     also be colored.
         * `help_error` - the error that prints when no help information can be found
         * `default_error` - the error that prints when a non-existent command is run
@@ -862,7 +862,7 @@
     * Aliases are now sorted alphabetically
     * The **set** command now tab completes settable parameter names
     * Added ``async_alert``, ``async_update_prompt``, and ``set_window_title`` functions
-        * These allow you to provide feedback to the user in an asychronous fashion, meaning alerts can
+        * These allow you to provide feedback to the user in an asynchronous fashion, meaning alerts can
         display when the user is still entering text at the prompt. See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
         for an example.
     * Cross-platform colored output support
@@ -962,7 +962,7 @@
     * New pyscript approach that provides a pythonic interface to commands in the cmd2 application.
     * Switch command parsing from pyparsing to custom code which utilizes shlex.
         * The object passed to do_* methods has changed. It no longer is the pyparsing object, it's a new Statement object, which is a subclass of ``str``. The statement object has many attributes which give you access to various components of the parsed input. If you were using anything but the string in your do_* methods, this change will require you to update your code.
-        * ``commentGrammers`` is no longer supported or available. Comments are C-style or python style.
+        * ``commentGrammars`` is no longer supported or available. Comments are C-style or python style.
         * Input redirection no longer supported. Use the load command instead.
         * ``multilineCommand`` attribute is ``now multiline_command``
         * ``identchars`` is now ignored. The standardlibrary cmd uses those characters to split the first "word" of the input, but cmd2 hasn't used those for a while, and the new parsing logic parses on whitespace, which has the added benefit of full unicode support, unlike cmd or prior versions of cmd2.

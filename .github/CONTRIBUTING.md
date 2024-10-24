@@ -284,7 +284,7 @@ You can run multiple tasks in a single invocation, for example::
 $ invoke docs sdist wheel
 ```
 
-That one command will remove all superflous cache, testing, and build
+That one command will remove all superfluous cache, testing, and build
 files, render the documentation, and build a source distribution and a
 wheel distribution.
 
@@ -298,7 +298,7 @@ $ cd ~src/cmd2
 $ invoke pytest
 ```
 
-If the tests are executed it means that dependencies and project are installed succesfully.
+If the tests are executed it means that dependencies and project are installed successfully.
 
 You can also run the example app and see a prompt that says "(Cmd)" running the command:
 

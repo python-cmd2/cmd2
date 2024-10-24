@@ -335,7 +335,7 @@ Developing an Advanced API
 
 Until now the application designer has paid little attention to scripters and their needs.
 Wouldn't it be nice if while creating py_scripts one did not have to parse data from ``stdout``? We can
-accomodate the weary scripter by adding one small line at the end of our ``do_*`` commands.
+accommodate the weary scripter by adding one small line at the end of our ``do_*`` commands.
 
 ``self.last_result = <value>``
 
@@ -446,7 +446,7 @@ app.py::
           self._status_cache[args.name] = status
 
           self.poutput(
-              f"Build {args.name.upper()} successfuly stared with id : {status.id}"
+              f"Build {args.name.upper()} successfully stared with id : {status.id}"
           )
           self.last_result = status
 
@@ -496,7 +496,7 @@ The below is a possible solution via pyscript::
 
       #error checking
       if not result:
-          print("Unable to determin status")
+          print("Unable to determine status")
           break
 
       build_status = result.data

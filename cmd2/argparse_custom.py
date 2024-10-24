@@ -101,7 +101,7 @@ dynamic. Therefore it is up to the developer to validate if the user has typed
 an acceptable value for these arguments.
 
 There are times when what's being tab completed is determined by a previous
-argument on the command line. In theses cases, ArgparseCompleter can pass a
+argument on the command line. In these cases, ArgparseCompleter can pass a
 dictionary that maps the command line tokens up through the one being completed
 to their argparse argument name. To receive this dictionary, your
 choices/completer function should have an argument called arg_tokens.
