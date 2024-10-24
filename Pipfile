@@ -4,11 +4,12 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [packages]
-pyperclip = ">=1.6"
-setuptools = ">=34.4"
-wcwidth = ">=0.1.7"
+pyperclip = "*"
+setuptools = "*"
+wcwidth = "*"
 
 [dev-packages]
+build = "*"
 cmd2 = { editable = true, path = "." }
 cmd2_ext_test = { editable = true, path = "plugins/ext_test" }
 codecov = "*"
@@ -22,6 +23,7 @@ pytest = "*"
 pytest-cov = "*"
 pytest-mock = "*"
 ruff = "*"
+setuptools-scm = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
