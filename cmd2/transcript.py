@@ -205,7 +205,7 @@ class Cmd2TestCase(unittest.TestCase):
                 # escaped. We found it.
                 break
             else:
-                # check if the slash is preceeded by a backslash
+                # check if the slash is preceded by a backslash
                 if s[pos - 1 : pos] == '\\':
                     # it is.
                     if in_regex:

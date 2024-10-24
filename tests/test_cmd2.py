@@ -1065,7 +1065,7 @@ def test_raise_keyboard_interrupt(base_app):
     assert 'Got a keyboard interrupt' in str(excinfo.value)
 
 
-@pytest.mark.skipif(sys.platform.startswith('win'), reason="SIGTERM only handeled on Linux/Mac")
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="SIGTERM only handled on Linux/Mac")
 def test_termination_signal_handler(base_app):
     with pytest.raises(SystemExit) as excinfo:
         base_app.termination_signal_handler(signal.SIGHUP, 1)

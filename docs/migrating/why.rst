@@ -77,6 +77,6 @@ Next Steps
 ----------
 
 In addition to the features you get with no additional work, ``cmd2`` offers a
-broad range of additional capabilties which can be easily added to your
+broad range of additional capabilities which can be easily added to your
 application. :ref:`migrating/next_steps:Next Steps` has some ideas of where
 you can start, or you can dig in to all the :ref:`features/index:Features`.

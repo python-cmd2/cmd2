@@ -59,8 +59,8 @@ Titles and Headings
 -------------------
 
 reStructuredText allows flexibility in how headings are defined. You only have
-to worry about the heirarchy of headings within a single file. Sphinx magically
-handles the intra-file heirarchy on it's own. This magic means that no matter
+to worry about the hierarchy of headings within a single file. Sphinx magically
+handles the intra-file hierarchy on it's own. This magic means that no matter
 how you style titles and headings in the various files that comprise the
 documentation, Sphinx will render properly structured output. To ensure we have
 a similar consistency when viewing the source files, we use the following

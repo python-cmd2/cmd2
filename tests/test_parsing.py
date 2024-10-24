@@ -503,7 +503,7 @@ def test_parse_output_to_paste_buffer(parser):
 
 
 def test_parse_redirect_inside_terminator(parser):
-    """The terminator designates the end of the commmand/arguments portion.
+    """The terminator designates the end of the command/arguments portion.
     If a redirector occurs before a terminator, then it will be treated as
     part of the arguments and not as a redirector."""
     line = 'has > inside;'
