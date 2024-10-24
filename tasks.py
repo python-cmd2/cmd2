@@ -339,7 +339,7 @@ namespace.add_task(pypi)
 def pypi_test(context):
     """Build and upload a distribution to https://test.pypi.org"""
     with context.cd(TASK_ROOT_STR):
-        context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
+        context.run('twine upload --repository testpypi dist/*')
 
 
 namespace.add_task(pypi_test)
