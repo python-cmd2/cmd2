@@ -1,3 +1,7 @@
+## 3.0.0 (TBD)
+* Breaking Change
+  * Removed macros
+
 ## 2.5.0 (October 23, 2024)
 * Breaking Change
   * `cmd2` 2.5 supports Python 3.8+ (removed support for Python 3.6 and 3.7)

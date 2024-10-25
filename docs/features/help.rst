@@ -19,8 +19,8 @@ of the commands available:
 
     Documented commands (use 'help -v' for verbose/'help <topic>' for details):
     ===========================================================================
-    alias  help     ipy    py    run_pyscript  set    shortcuts
-    edit   history  macro  quit  run_script    shell
+    alias  help     ipy  quit          run_script  shell
+    edit   history  py   run_pyscript  set         shortcuts
 
 The ``help`` command can also be used to provide detailed help for a specific
 command:
@@ -63,8 +63,8 @@ By default, the ``help`` command displays::
 
   Documented commands (use 'help -v' for verbose/'help <topic>' for details):
   ===========================================================================
-  alias  help     ipy    py    run_pyscript  set    shortcuts
-  edit   history  macro  quit  run_script    shell
+  alias  help     ipy  quit          run_script  shell
+  edit   history  py   run_pyscript  set         shortcuts
 
 If you have a large number of commands, you can optionally group your commands
 into categories. Here's the output from the example ``help_categories.py``::
@@ -90,8 +90,8 @@ into categories. Here's the output from the example ``help_categories.py``::
 
   Other
   =====
-  alias   edit  history  py    run_pyscript  set    shortcuts
-  config  help  macro    quit  run_script    shell  version
+  alias   edit  history  run_pyscript  set    shortcuts
+  config  help  quit     run_script    shell  version
 
 There are 2 methods of specifying command categories, using the
 ``@with_category`` decorator or with the ``categorize()`` function. Once a
@@ -142,51 +142,49 @@ The ``help`` command also has a verbose option (``help -v`` or ``help
     Documented commands (use 'help -v' for verbose/'help <topic>' for details):
 
     Application Management
-    ================================================================================
-    deploy              Deploy command
-    expire              Expire command
-    findleakers         Find Leakers command
-    list                List command
-    redeploy            Redeploy command
-    restart             usage: restart [-h] {now,later,sometime,whenever}
-    sessions            Sessions command
-    start               Start command
-    stop                Stop command
-    undeploy            Undeploy command
+    ======================================================================================================
+    deploy                Deploy command
+    expire                Expire command
+    findleakers           Find Leakers command
+    list                  List command
+    redeploy              Redeploy command
+    restart               Restart command
+    sessions              Sessions command
+    start                 Start command
+    stop                  Stop command
+    undeploy              Undeploy command
 
     Connecting
-    ================================================================================
-    connect             Connect command
-    which               Which command
+    ======================================================================================================
+    connect               Connect command
+    which                 Which command
 
     Server Information
-    ================================================================================
-    resources              Resources command
-    serverinfo             Server Info command
-    sslconnectorciphers    SSL Connector Ciphers command is an example of a command that contains
-                           multiple lines of help information for the user. Each line of help in a
-                           contiguous set of lines will be printed and aligned in the verbose output
-                           provided with 'help --verbose'
-    status                 Status command
-    thread_dump            Thread Dump command
-    vminfo                 VM Info command
+    ======================================================================================================
+    resources             Resources command
+    serverinfo            Server Info command
+    sslconnectorciphers   SSL Connector Ciphers command is an example of a command that contains
+                          multiple lines of help information for the user. Each line of help in a
+                          contiguous set of lines will be printed and aligned in the verbose output
+                          provided with 'help --verbose'
+    status                Status command
+    thread_dump           Thread Dump command
+    vminfo                VM Info command
 
     Other
-    ================================================================================
-    alias               Manage aliases
-    config              Config command
-    edit                Run a text editor and optionally open a file with it
-    help                List available commands or provide detailed help for a specific command
-    history             View, run, edit, save, or clear previously entered commands
-    macro               Manage macros
-    py                  Invoke Python command or shell
-    quit                Exits this application
-    run_pyscript        Runs a python script file inside the console
-    run_script          Runs commands in script file that is encoded as either ASCII or UTF-8 text
-    set                 Set a settable parameter or show current settings of parameters
-    shell               Execute a command as if at the OS prompt
-    shortcuts           List available shortcuts
-    version             Version command
+    ======================================================================================================
+    alias                 Manage aliases
+    config                Config command
+    edit                  Run a text editor and optionally open a file with it
+    help                  List available commands or provide detailed help for a specific command
+    history               View, run, edit, save, or clear previously entered commands
+    quit                  Exit this application
+    run_pyscript          Run a Python script file inside the console
+    run_script            Run commands in script file that is encoded as either ASCII or UTF-8 text.
+    set                   Set a settable parameter or show current settings of parameters
+    shell                 Execute a command as if at the OS prompt
+    shortcuts             List available shortcuts
+    version               Version command
 
 When called with the ``-v`` flag for verbose help, the one-line description for
 each command is provided by the first line of the docstring for that command's

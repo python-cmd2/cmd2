@@ -38,7 +38,7 @@ characters in command names while simultaneously using ``identchars``
 functionality can be somewhat painful. Requiring white space to delimit
 arguments also ensures reliable operation of many other useful ``cmd2``
 features, including :ref:`features/completion:Completion` and
-:ref:`features/shortcuts_aliases_macros:Shortcuts, Aliases, and Macros`.
+:ref:`features/shortcuts_aliases:Shortcuts and Aliases`.
 
 If you really need this functionality in your app, you can add it back in by
 writing a :ref:`Postparsing Hook <features/hooks:Postparsing Hooks>`.

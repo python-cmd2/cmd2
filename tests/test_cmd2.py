@@ -1630,8 +1630,8 @@ def test_multiline_complete_statement_with_unclosed_quotes(multiline_app):
     assert statement.terminator == ';'
 
 
-def test_multiline_input_line_to_statement(multiline_app):
-    # Verify _input_line_to_statement saves the fully entered input line for multiline commands
+def test_multiline_complete_statement(multiline_app):
+    # Verify _complete_statement saves the fully entered input line for multiline commands
 
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
@@ -1639,7 +1639,7 @@ def test_multiline_input_line_to_statement(multiline_app):
     builtins.input = m
 
     line = 'orate hi'
-    statement = multiline_app._input_line_to_statement(line)
+    statement = multiline_app._complete_statement(line)
     assert statement.raw == 'orate hi\nperson\n'
     assert statement == 'hi person'
     assert statement.command == 'orate'
@@ -1998,8 +1998,7 @@ def test_poutput_ansi_never(outsim_app):
     assert out == expected
 
 
-# These are invalid names for aliases and macros
-invalid_command_name = [
+invalid_alias_names = [
     '""',  # Blank name
     constants.COMMENT_CHAR,
     '!no_shortcut',
@@ -2023,19 +2022,6 @@ def test_get_alias_completion_items(base_app):
         assert cur_res in base_app.aliases
         # Strip trailing spaces from table output
         assert cur_res.description.rstrip() == base_app.aliases[cur_res]
-
-
-def test_get_macro_completion_items(base_app):
-    run_cmd(base_app, 'macro create foo !echo foo')
-    run_cmd(base_app, 'macro create bar !echo bar')
-
-    results = base_app._get_macro_completion_items()
-    assert len(results) == len(base_app.macros)
-
-    for cur_res in results:
-        assert cur_res in base_app.macros
-        # Strip trailing spaces from table output
-        assert cur_res.description.rstrip() == base_app.macros[cur_res].value
 
 
 def test_get_settable_completion_items(base_app):
@@ -2113,7 +2099,7 @@ def test_alias_create_with_quoted_tokens(base_app):
     assert base_app.last_result[alias_name] == alias_command
 
 
-@pytest.mark.parametrize('alias_name', invalid_command_name)
+@pytest.mark.parametrize('alias_name', invalid_alias_names)
 def test_alias_create_invalid_name(base_app, alias_name, capsys):
     out, err = run_cmd(base_app, 'alias create {} help'.format(alias_name))
     assert "Invalid alias name" in err[0]
@@ -2123,14 +2109,6 @@ def test_alias_create_invalid_name(base_app, alias_name, capsys):
 def test_alias_create_with_command_name(base_app):
     out, err = run_cmd(base_app, 'alias create help stuff')
     assert "Alias cannot have the same name as a command" in err[0]
-    assert base_app.last_result is False
-
-
-def test_alias_create_with_macro_name(base_app):
-    macro = "my_macro"
-    run_cmd(base_app, 'macro create {} help'.format(macro))
-    out, err = run_cmd(base_app, 'alias create {} help'.format(macro))
-    assert "Alias cannot have the same name as a macro" in err[0]
     assert base_app.last_result is False
 
 
@@ -2190,228 +2168,6 @@ def test_multiple_aliases(base_app):
 
     out, err = run_cmd(base_app, alias2)
     verify_help_text(base_app, out)
-
-
-def test_macro_no_subcommand(base_app):
-    out, err = run_cmd(base_app, 'macro')
-    assert "Usage: macro [-h]" in err[0]
-    assert "Error: the following arguments are required: SUBCOMMAND" in err[1]
-
-
-def test_macro_create(base_app):
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake run_pyscript')
-    assert out == normalize("Macro 'fake' created")
-    assert base_app.last_result is True
-
-    # Use the macro
-    out, err = run_cmd(base_app, 'fake')
-    assert "the following arguments are required: script_path" in err[1]
-
-    # See a list of macros
-    out, err = run_cmd(base_app, 'macro list')
-    assert out == normalize('macro create fake run_pyscript')
-    assert len(base_app.last_result) == len(base_app.macros)
-    assert base_app.last_result['fake'] == "run_pyscript"
-
-    # Look up the new macro
-    out, err = run_cmd(base_app, 'macro list fake')
-    assert out == normalize('macro create fake run_pyscript')
-    assert len(base_app.last_result) == 1
-    assert base_app.last_result['fake'] == "run_pyscript"
-
-    # Overwrite macro
-    out, err = run_cmd(base_app, 'macro create fake help')
-    assert out == normalize("Macro 'fake' overwritten")
-    assert base_app.last_result is True
-
-    # Look up the updated macro
-    out, err = run_cmd(base_app, 'macro list fake')
-    assert out == normalize('macro create fake help')
-    assert len(base_app.last_result) == 1
-    assert base_app.last_result['fake'] == "help"
-
-
-def test_macro_create_with_quoted_tokens(base_app):
-    """Demonstrate that quotes in macro value will be preserved"""
-    macro_name = "fake"
-    macro_command = 'help ">" "out file.txt" ";"'
-    create_command = f"macro create {macro_name} {macro_command}"
-
-    # Create the macro
-    out, err = run_cmd(base_app, create_command)
-    assert out == normalize("Macro 'fake' created")
-
-    # Look up the new macro and verify all quotes are preserved
-    out, err = run_cmd(base_app, 'macro list fake')
-    assert out == normalize(create_command)
-    assert len(base_app.last_result) == 1
-    assert base_app.last_result[macro_name] == macro_command
-
-
-@pytest.mark.parametrize('macro_name', invalid_command_name)
-def test_macro_create_invalid_name(base_app, macro_name):
-    out, err = run_cmd(base_app, 'macro create {} help'.format(macro_name))
-    assert "Invalid macro name" in err[0]
-    assert base_app.last_result is False
-
-
-def test_macro_create_with_command_name(base_app):
-    out, err = run_cmd(base_app, 'macro create help stuff')
-    assert "Macro cannot have the same name as a command" in err[0]
-    assert base_app.last_result is False
-
-
-def test_macro_create_with_alias_name(base_app):
-    macro = "my_macro"
-    run_cmd(base_app, 'alias create {} help'.format(macro))
-    out, err = run_cmd(base_app, 'macro create {} help'.format(macro))
-    assert "Macro cannot have the same name as an alias" in err[0]
-    assert base_app.last_result is False
-
-
-def test_macro_create_with_args(base_app):
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake {1} {2}')
-    assert out == normalize("Macro 'fake' created")
-
-    # Run the macro
-    out, err = run_cmd(base_app, 'fake help -v')
-    verify_help_text(base_app, out)
-
-
-def test_macro_create_with_escaped_args(base_app):
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake help {{1}}')
-    assert out == normalize("Macro 'fake' created")
-
-    # Run the macro
-    out, err = run_cmd(base_app, 'fake')
-    assert err[0].startswith('No help on {1}')
-
-
-def test_macro_usage_with_missing_args(base_app):
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake help {1} {2}')
-    assert out == normalize("Macro 'fake' created")
-
-    # Run the macro
-    out, err = run_cmd(base_app, 'fake arg1')
-    assert "expects at least 2 arguments" in err[0]
-
-
-def test_macro_usage_with_exta_args(base_app):
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake help {1}')
-    assert out == normalize("Macro 'fake' created")
-
-    # Run the macro
-    out, err = run_cmd(base_app, 'fake alias create')
-    assert "Usage: alias create" in out[0]
-
-
-def test_macro_create_with_missing_arg_nums(base_app):
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake help {1} {3}')
-    assert "Not all numbers between 1 and 3" in err[0]
-    assert base_app.last_result is False
-
-
-def test_macro_create_with_invalid_arg_num(base_app):
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake help {1} {-1} {0}')
-    assert "Argument numbers must be greater than 0" in err[0]
-    assert base_app.last_result is False
-
-
-def test_macro_create_with_unicode_numbered_arg(base_app):
-    # Create the macro expecting 1 argument
-    out, err = run_cmd(base_app, 'macro create fake help {\N{ARABIC-INDIC DIGIT ONE}}')
-    assert out == normalize("Macro 'fake' created")
-
-    # Run the macro
-    out, err = run_cmd(base_app, 'fake')
-    assert "expects at least 1 argument" in err[0]
-
-
-def test_macro_create_with_missing_unicode_arg_nums(base_app):
-    out, err = run_cmd(base_app, 'macro create fake help {1} {\N{ARABIC-INDIC DIGIT THREE}}')
-    assert "Not all numbers between 1 and 3" in err[0]
-    assert base_app.last_result is False
-
-
-def test_macro_that_resolves_into_comment(base_app):
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake {1} blah blah')
-    assert out == normalize("Macro 'fake' created")
-
-    # Use the macro
-    out, err = run_cmd(base_app, 'fake ' + constants.COMMENT_CHAR)
-    assert not out
-    assert not err
-
-
-def test_macro_list_invalid_macro(base_app):
-    # Look up invalid macro
-    out, err = run_cmd(base_app, 'macro list invalid')
-    assert "Macro 'invalid' not found" in err[0]
-    assert base_app.last_result == {}
-
-
-def test_macro_delete(base_app):
-    # Create an macro
-    run_cmd(base_app, 'macro create fake run_pyscript')
-
-    # Delete the macro
-    out, err = run_cmd(base_app, 'macro delete fake')
-    assert out == normalize("Macro 'fake' deleted")
-    assert base_app.last_result is True
-
-
-def test_macro_delete_all(base_app):
-    out, err = run_cmd(base_app, 'macro delete --all')
-    assert out == normalize("All macros deleted")
-    assert base_app.last_result is True
-
-
-def test_macro_delete_non_existing(base_app):
-    out, err = run_cmd(base_app, 'macro delete fake')
-    assert "Macro 'fake' does not exist" in err[0]
-    assert base_app.last_result is True
-
-
-def test_macro_delete_no_name(base_app):
-    out, err = run_cmd(base_app, 'macro delete')
-    assert "Either --all or macro name(s)" in err[0]
-    assert base_app.last_result is False
-
-
-def test_multiple_macros(base_app):
-    macro1 = 'h1'
-    macro2 = 'h2'
-    run_cmd(base_app, 'macro create {} help'.format(macro1))
-    run_cmd(base_app, 'macro create {} help -v'.format(macro2))
-    out, err = run_cmd(base_app, macro1)
-    verify_help_text(base_app, out)
-
-    out2, err2 = run_cmd(base_app, macro2)
-    verify_help_text(base_app, out2)
-    assert len(out2) > len(out)
-
-
-def test_nonexistent_macro(base_app):
-    from cmd2.parsing import (
-        StatementParser,
-    )
-
-    exception = None
-
-    try:
-        base_app._resolve_macro(StatementParser().parse('fake'))
-    except KeyError as e:
-        exception = e
-
-    assert exception is not None
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
@@ -2567,7 +2323,6 @@ def test_get_all_commands(base_app):
         'help',
         'history',
         'ipy',
-        'macro',
         'py',
         'quit',
         'run_pyscript',

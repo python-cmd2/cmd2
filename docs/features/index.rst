@@ -26,7 +26,7 @@ Features
    redirection
    scripting
    settings
-   shortcuts_aliases_macros
+   shortcuts_aliases
    startup_commands
    table_creation
    transcripts
