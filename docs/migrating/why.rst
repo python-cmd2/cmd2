@@ -55,8 +55,8 @@ new features and capabilities, without you having to do anything:
 - Users can load script files, which contain a series of commands
   to be executed.
 
-- Users can create :ref:`features/shortcuts_aliases_macros:Shortcuts, Aliases,
-  and Macros` to reduce the typing required for repetitive commands.
+- Users can create :ref:`features/shortcuts_aliases:Shortcuts and Aliases`
+  to reduce the typing required for repetitive commands.
 
 - Embedded python shell allows a user to execute python code from within your
   ``cmd2`` app. How meta.

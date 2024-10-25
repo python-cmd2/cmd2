@@ -14,7 +14,7 @@ operating system shell::
 
     (Cmd) shell ls -al
 
-If you use the default :ref:`features/shortcuts_aliases_macros:Shortcuts`
+If you use the default :ref:`features/shortcuts_aliases:Shortcuts`
 defined in ``cmd2`` you'll get a ``!`` shortcut for ``shell``, which allows you
 to type::
 
@@ -107,8 +107,8 @@ loop::
 
     Documented commands (use 'help -v' for verbose/'help <topic>' for details):
     ===========================================================================
-    alias  help     macro   orate  quit          run_script  set    shortcuts
-    edit   history  mumble  py     run_pyscript  say         shell  speak
+    alias  help     ipy  quit          run_script  shell
+    edit   history  py   run_pyscript  set         shortcuts
 
     (Cmd)
 

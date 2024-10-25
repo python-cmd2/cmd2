@@ -13,7 +13,7 @@ alias
 ~~~~~
 
 This command manages aliases via subcommands ``create``, ``delete``, and
-``list``.  See :ref:`features/shortcuts_aliases_macros:Aliases` for more
+``list``.  See :ref:`features/shortcuts_aliases:Aliases` for more
 information.
 
 edit
@@ -49,14 +49,6 @@ ipy
 
 This optional opt-in command enters an interactive IPython shell.  See
 :ref:`features/embedded_python_shells:IPython (optional)` for more information.
-
-macro
-~~~~~
-
-This command manages macros via subcommands ``create``, ``delete``, and
-``list``.  A macro is similar to an alias, but it can contain argument
-placeholders.  See :ref:`features/shortcuts_aliases_macros:Macros` for more
-information.
 
 py
 ~~
@@ -143,7 +135,7 @@ shortcuts
 ~~~~~~~~~
 
 This command lists available shortcuts.  See
-:ref:`features/shortcuts_aliases_macros:Shortcuts` for more information.
+:ref:`features/shortcuts_aliases:Shortcuts` for more information.
 
 
 Remove Builtin Commands

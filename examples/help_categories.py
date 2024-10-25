@@ -37,6 +37,9 @@ class HelpCategories(cmd2.Cmd):
     def __init__(self):
         super().__init__()
 
+        # Set the default category for uncategorized commands
+        self.default_category = 'Other'
+
     def do_connect(self, _):
         """Connect command"""
         self.poutput('Connect')

@@ -15,7 +15,7 @@ Classes for parsing and storing user input.
 
     .. attribute:: command
 
-      The name of the command after shortcuts and macros have been expanded
+      The name of the command after shortcuts have been expanded
 
     .. attribute:: args
 

@@ -232,9 +232,9 @@ clipboard::
 
     (Cmd) history -s 1:3
 
-``cmd2`` supports both aliases and macros, which allow you to substitute a
-short, more convenient input string with a longer replacement string. Say we
-create an alias like this, and then use it::
+``cmd2`` supports aliases which allow you to substitute a short, more
+convenient input string with a longer replacement string. Say we create
+an alias like this, and then use it::
 
     (Cmd) alias create ls shell ls -aF
     Alias 'ls' created
@@ -248,7 +248,7 @@ By default, the ``history`` command shows exactly what we typed::
         2  ls -d h*
 
 There are two ways to modify that display so you can see what aliases and
-macros were expanded to. The first is to use ``-x`` or ``--expanded``. These
+shortcuts were expanded to. The first is to use ``-x`` or ``--expanded``. These
 options show the expanded command instead of the entered command::
 
     (Cmd) history -x
@@ -264,6 +264,6 @@ If you want to see both the entered command and the expanded command, use the
         2x shell ls -aF -d h*
 
 If the entered command had no expansion, it is displayed as usual. However, if
-there is some change as the result of expanding macros and aliases, then the
-entered command is displayed with the number, and the expanded command is
-displayed with the number followed by an ``x``.
+there is some change as the result of expanding aliases, then the entered
+command is displayed with the number, and the expanded command is displayed
+with the number followed by an ``x``.

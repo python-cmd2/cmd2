@@ -67,7 +67,7 @@ the cmd_ module. This parsing handles:
 - quoted arguments
 - output redirection and piping
 - multi-line commands
-- shortcut, macro, and alias expansion
+- shortcut and alias expansion
 
 In addition to parsing all of these elements from the user input, ``cmd2`` also
 has code to make all of these items work; it's almost transparent to you and to

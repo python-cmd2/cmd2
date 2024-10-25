@@ -299,17 +299,17 @@ def test_load_commandset_errors(command_sets_manual, capsys):
 
     delattr(command_sets_manual, 'do_durian')
 
-    # pre-create intentionally conflicting macro and alias names
-    command_sets_manual.app_cmd('macro create apple run_pyscript')
+    # pre-create intentionally conflicting aliases
+    command_sets_manual.app_cmd('alias create apple run_pyscript')
     command_sets_manual.app_cmd('alias create banana run_pyscript')
 
     # now install a command set and verify the commands are now present
     command_sets_manual.register_command_set(cmd_set)
     out, err = capsys.readouterr()
 
-    # verify aliases and macros are deleted with warning if they conflict with a command
+    # verify aliases are deleted with warning if they conflict with a command
+    assert "Deleting alias 'apple'" in err
     assert "Deleting alias 'banana'" in err
-    assert "Deleting macro 'apple'" in err
 
     # verify duplicate commands are detected
     with pytest.raises(CommandSetRegistrationError):

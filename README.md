@@ -62,9 +62,9 @@ Deep extensive tab completion and help text generation based on the argparse lib
 
 <a href="https://imgflip.com/i/66t0y0"><img src="https://i.imgflip.com/66t0y0.jpg" title="made at imgflip.com" width="70%" height="70%"/></a>
 
-cmd2 creates the second pillar of 'ease of transition to automation' through alias/macro creation, command line argument parsing and execution of cmd2 scripting.
+cmd2 creates the second pillar of 'ease of transition to automation' through alias creation, command line argument parsing and execution of cmd2 scripting.
 
-- Flexible alias and macro creation for quick abstraction of commands.
+- Flexible alias creation for quick abstraction of commands.
 - Text file scripting of your application with `run_script` (`@`) and `_relative_run_script` (`@@`)
 - Powerful and flexible built-in Python scripting of your application using the `run_pyscript` command
 - Transcripts for use with built-in regression can be automatically generated from `history -t` or `run_script -t`

@@ -11,7 +11,7 @@ features of ``cmd2``:
 * :ref:`features/argument_processing:Argument Processing`
 * :ref:`features/generating_output:Generating Output`
 * :ref:`features/help:Help`
-* :ref:`features/shortcuts_aliases_macros:Shortcuts`
+* :ref:`features/shortcuts_aliases:Shortcuts`
 * :ref:`features/multiline_commands:Multiline Commands`
 * :ref:`features/history:History`
 
@@ -178,8 +178,8 @@ Shortcuts
 ---------
 
 ``cmd2`` has several capabilities to simplify repetitive user input:
-:ref:`Shortcuts, Aliases, and Macros
-<features/shortcuts_aliases_macros:Shortcuts, Aliases, and Macros>`. Let's add
+:ref:`Shortcuts and Aliases
+<features/shortcuts_aliases:Shortcuts and Aliases>`. Let's add
 a shortcut to our application. Shortcuts are character strings that can be used
 instead of a command name. For example, ``cmd2`` has support for a shortcut
 ``!`` which runs the ``shell`` command. So instead of typing this:

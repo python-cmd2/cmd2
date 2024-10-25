@@ -1,5 +1,5 @@
-Shortcuts, Aliases, and Macros
-==============================
+Shortcuts and Aliases
+=====================
 
 Shortcuts
 ---------
@@ -38,7 +38,7 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
   updating the ``shortcuts`` attribute  This warning applies in general to many
   other attributes which are not settable at runtime.
 
-Note: Command, alias, and macro names cannot start with a shortcut
+Note: Command and alias names cannot start with a shortcut
 
 Aliases
 -------
@@ -74,44 +74,4 @@ Use ``alias delete`` to remove aliases
 
 For more details run: ``help alias delete``
 
-Note: Aliases cannot have the same name as a command or macro
-
-Macros
-------
-
-``cmd2`` provides a feature that is similar to aliases called macros. The major
-difference between macros and aliases is that macros can contain argument
-placeholders. Arguments are expressed when creating a macro using {#} notation
-where {1} means the first argument.
-
-The following creates a macro called my_macro that expects two arguments:
-
-  macro create my_macro make_dinner -meat {1} -veggie {2}
-
-When the macro is called, the provided arguments are resolved and the assembled
-command is run. For example:
-
-  my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli
-
-Similar to aliases, pipes and redirectors need to be quoted in the definition
-of a macro::
-
-    macro create lc !cat "{1}" "|" less
-
-To use the literal string ``{1}`` in your command, escape it this way:
-``{{1}}``.  Because macros do not resolve until after hitting ``<Enter>``,
-tab completion will only complete paths while typing a macro.
-
-
-For more details run: ``help macro create``
-
-The macro command has ``list`` and ``delete`` subcommands that function
-identically to the alias subcommands of the same name. Like aliases, macros can
-be created via a ``cmd2`` startup script to preserve them across application
-sessions.
-
-For more details on listing macros run: ``help macro list``
-
-For more details on deleting macros run: ``help macro delete``
-
-Note: Macros cannot have the same name as a command or alias
+Note: Aliases cannot have the same name as a command

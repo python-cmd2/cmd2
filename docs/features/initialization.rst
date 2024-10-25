@@ -141,7 +141,6 @@ override:
   of results in a Python script or interactive console. Built-in commands don't
   make use of this.  It is purely there for user-defined commands and
   convenience.
-- **macros**: dictionary of macro names and their values
 - **max_completion_items**: max number of CompletionItems to display during
   tab completion (Default: 50)
 - **pager**: sets the pager command used by the ``Cmd.ppaged()`` method for
