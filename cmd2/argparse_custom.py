@@ -1402,14 +1402,21 @@ class Cmd2AttributeWrapper:
         self.__attribute = new_val
 
 
-# The default ArgumentParser class for a cmd2 app
-DEFAULT_ARGUMENT_PARSER: Type[argparse.ArgumentParser] = Cmd2ArgumentParser
+# Parser type used by cmd2's built-in commands.
+# Set it using cmd2.set_default_argument_parser_type().
+DEFAULT_ARGUMENT_PARSER: Type[Cmd2ArgumentParser] = Cmd2ArgumentParser
 
 
-def set_default_argument_parser_type(parser_type: Type[argparse.ArgumentParser]) -> None:
+def set_default_argument_parser_type(parser_type: Type[Cmd2ArgumentParser]) -> None:
     """
-    Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
-    you want to override the parser for cmd2's built-in commands. See examples/override_parser.py.
+    Set the default ArgumentParser class for cmd2's built-in commands.
+
+    Since built-in commands rely on customizations made in Cmd2ArgumentParser,
+    your custom parser class should inherit from Cmd2ArgumentParser.
+
+    This should be called prior to instantiating your CLI object.
+
+    See examples/custom_parser.py.
     """
     global DEFAULT_ARGUMENT_PARSER
     DEFAULT_ARGUMENT_PARSER = parser_type
