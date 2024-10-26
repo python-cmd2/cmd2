@@ -11,9 +11,9 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     TypeVar,
     Union,
-    overload,
 )
 
 from . import (
@@ -65,19 +65,18 @@ def with_category(category: str) -> Callable[[CommandFunc], CommandFunc]:
     return cat_decorator
 
 
-##########################
-# The _parse_positionals and _arg_swap functions allow for additional positional args to be preserved
-# in cmd2 command functions/callables. As long as the 2-ple of arguments we expect to be there can be
-# found we can swap out the statement with each decorator's specific parameters
-##########################
-
-
 CommandParent = TypeVar('CommandParent', bound=Union['cmd2.Cmd', CommandSet])
+CommandParentType = TypeVar('CommandParentType', bound=Union[Type['cmd2.Cmd'], Type[CommandSet]])
 
 
 RawCommandFuncOptionalBoolReturn = Callable[[CommandParent, Union[Statement, str]], Optional[bool]]
 
 
+##########################
+# The _parse_positionals and _arg_swap functions allow for additional positional args to be preserved
+# in cmd2 command functions/callables. As long as the 2-ple of arguments we expect to be there can be
+# found we can swap out the statement with each decorator's specific parameters
+##########################
 def _parse_positionals(args: Tuple[Any, ...]) -> Tuple['cmd2.Cmd', Union[Statement, str]]:
     """
     Helper function for cmd2 decorators to inspect the positional arguments until the cmd2.Cmd argument is found
@@ -265,28 +264,12 @@ ArgparseCommandFunc = Union[
 ]
 
 
-@overload
 def with_argparser(
-    parser: argparse.ArgumentParser,
-    *,
-    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
-    preserve_quotes: bool = False,
-    with_unknown_args: bool = False,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]: ...  # pragma: no cover
-
-
-@overload
-def with_argparser(
-    parser: Callable[[], argparse.ArgumentParser],
-    *,
-    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
-    preserve_quotes: bool = False,
-    with_unknown_args: bool = False,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]: ...  # pragma: no cover
-
-
-def with_argparser(
-    parser: Union[argparse.ArgumentParser, Callable[[], argparse.ArgumentParser]],
+    parser: Union[
+        argparse.ArgumentParser,  # existing parser
+        Callable[[], argparse.ArgumentParser],  # function or staticmethod
+        Callable[[CommandParentType], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
+    ],
     *,
     ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
     preserve_quotes: bool = False,
@@ -413,32 +396,14 @@ def with_argparser(
     return arg_decorator
 
 
-@overload
 def as_subcommand_to(
     command: str,
     subcommand: str,
-    parser: argparse.ArgumentParser,
-    *,
-    help: Optional[str] = None,
-    aliases: Optional[List[str]] = None,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]: ...  # pragma: no cover
-
-
-@overload
-def as_subcommand_to(
-    command: str,
-    subcommand: str,
-    parser: Callable[[], argparse.ArgumentParser],
-    *,
-    help: Optional[str] = None,
-    aliases: Optional[List[str]] = None,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]: ...  # pragma: no cover
-
-
-def as_subcommand_to(
-    command: str,
-    subcommand: str,
-    parser: Union[argparse.ArgumentParser, Callable[[], argparse.ArgumentParser]],
+    parser: Union[
+        argparse.ArgumentParser,  # existing parser
+        Callable[[], argparse.ArgumentParser],  # function or staticmethod
+        Callable[[CommandParentType], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
+    ],
     *,
     help: Optional[str] = None,
     aliases: Optional[List[str]] = None,
