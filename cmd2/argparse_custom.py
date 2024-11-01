@@ -7,7 +7,7 @@ recommended that developers of cmd2-based apps either use it or write their own
 parser that inherits from it. This will give a consistent look-and-feel between
 the help/error output of built-in cmd2 commands and the app-specific commands.
 If you wish to override the parser used by cmd2's built-in commands, see
-override_parser.py example.
+custom_parser.py example.
 
 Since the new capabilities are added by patching at the argparse API level,
 they are available whether or not Cmd2ArgumentParser is used. However, the help
@@ -263,6 +263,18 @@ from typing import (
     Union,
     cast,
     runtime_checkable,
+)
+
+from rich.console import (
+    Group,
+    RenderableType,
+)
+from rich_argparse import (
+    ArgumentDefaultsRichHelpFormatter,
+    MetavarTypeRichHelpFormatter,
+    RawDescriptionRichHelpFormatter,
+    RawTextRichHelpFormatter,
+    RichHelpFormatter,
 )
 
 from . import (
@@ -1042,8 +1054,13 @@ setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_pa
 ############################################################################################################
 
 
-class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
+class Cmd2HelpFormatter(RichHelpFormatter):
     """Custom help formatter to configure ordering of help text"""
+
+    # Render markup in usage, help, description, and epilog text.
+    RichHelpFormatter.usage_markup = True
+    RichHelpFormatter.help_markup = True
+    RichHelpFormatter.text_markup = True
 
     def _format_usage(
         self,
@@ -1249,6 +1266,84 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         return super()._format_args(action, default_metavar)  # type: ignore[arg-type]
 
 
+class RawDescriptionCmd2HelpFormatter(
+    RawDescriptionRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    """Cmd2 help message formatter which retains any formatting in descriptions and epilogs."""
+
+
+class RawTextCmd2HelpFormatter(
+    RawTextRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    """Cmd2 help message formatter which retains formatting of all help text."""
+
+
+class ArgumentDefaultsCmd2HelpFormatter(
+    ArgumentDefaultsRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    """Cmd2 help message formatter which adds default values to argument help."""
+
+
+class MetavarTypeCmd2HelpFormatter(
+    MetavarTypeRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    """
+    Cmd2 help message formatter which uses the argument 'type' as the default
+    metavar value (instead of the argument 'dest').
+    """
+
+
+class TextGroup:
+    """
+    A block of text which is formatted like an argparse argument group, including a title.
+
+    Title:
+      Here is the first row of text.
+      Here is yet another row of text.
+    """
+
+    def __init__(
+        self,
+        title: str,
+        text: RenderableType,
+        formatter_creator: Callable[[], Cmd2HelpFormatter],
+    ) -> None:
+        """
+        :param title: the group's title
+        :param text: the group's text (string or object that may be rendered by Rich)
+        :param formatter_creator: callable which returns a Cmd2HelpFormatter instance
+        """
+        self.title = title
+        self.text = text
+        self.formatter_creator = formatter_creator
+
+    def __rich__(self) -> Group:
+        """Custom rendering logic."""
+        import rich
+
+        formatter = self.formatter_creator()
+
+        styled_title = rich.text.Text(
+            type(formatter).group_name_formatter(f"{self.title}:"),
+            style=formatter.styles["argparse.groups"],
+        )
+
+        # Left pad the text like an argparse argument group does
+        left_padding = formatter._indent_increment
+
+        text_table = rich.table.Table(
+            box=None,
+            show_header=False,
+            padding=(0, 0, 0, left_padding),
+        )
+        text_table.add_row(self.text)
+        return Group(styled_title, text_table)
+
+
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output"""
 
@@ -1256,10 +1351,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self,
         prog: Optional[str] = None,
         usage: Optional[str] = None,
-        description: Optional[str] = None,
-        epilog: Optional[str] = None,
+        description: Optional[RenderableType] = None,
+        epilog: Optional[RenderableType] = None,
         parents: Sequence[argparse.ArgumentParser] = (),
-        formatter_class: Type[argparse.HelpFormatter] = Cmd2HelpFormatter,
+        formatter_class: Type[Cmd2HelpFormatter] = Cmd2HelpFormatter,
         prefix_chars: str = '-',
         fromfile_prefix_chars: Optional[str] = None,
         argument_default: Optional[str] = None,
@@ -1279,10 +1374,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         super(Cmd2ArgumentParser, self).__init__(
             prog=prog,
             usage=usage,
-            description=description,
-            epilog=epilog,
+            description=description,  # type: ignore[arg-type]
+            epilog=epilog,  # type: ignore[arg-type]
             parents=parents if parents else [],
-            formatter_class=formatter_class,  # type: ignore[arg-type]
+            formatter_class=formatter_class,
             prefix_chars=prefix_chars,
             fromfile_prefix_chars=fromfile_prefix_chars,
             argument_default=argument_default,
@@ -1290,6 +1385,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             add_help=add_help,
             allow_abbrev=allow_abbrev,
         )
+
+        # Recast to assist type checkers since in a Cmd2HelpFormatter, these can be Rich renderables.
+        self.description: Optional[RenderableType] = self.description  # type: ignore[assignment]
+        self.epilog: Optional[RenderableType] = self.epilog  # type: ignore[assignment]
 
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
@@ -1321,6 +1420,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         formatted_message = ansi.style_error(formatted_message)
         self.exit(2, f'{formatted_message}\n\n')
 
+    def _get_formatter(self) -> Cmd2HelpFormatter:
+        """Copy of _get_formatter() with a different return type to assist type checkers."""
+        return cast(Cmd2HelpFormatter, super()._get_formatter())
+
     def format_help(self) -> str:
         """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
         formatter = self._get_formatter()
@@ -1329,7 +1432,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)  # type: ignore[arg-type]
 
         # description
-        formatter.add_text(self.description)
+        formatter.add_text(self.description)  # type: ignore[arg-type]
 
         # Begin cmd2 customization (separate required and optional arguments)
 
@@ -1370,7 +1473,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # End cmd2 customization
 
         # epilog
-        formatter.add_text(self.epilog)
+        formatter.add_text(self.epilog)  # type: ignore[arg-type]
 
         # determine help from format above
         return formatter.format_help() + '\n'
@@ -1381,6 +1484,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             if file is None:
                 file = sys.stderr
             ansi.style_aware_write(file, message)
+
+    def create_text_group(self, title: str, text: RenderableType) -> TextGroup:
+        """Create a TextGroup using this parser's formatter creator."""
+        return TextGroup(title, text, self._get_formatter)
 
 
 class Cmd2AttributeWrapper:

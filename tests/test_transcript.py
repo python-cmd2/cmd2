@@ -48,7 +48,9 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action="store_true", help="atinLay")
     speak_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
-    speak_parser.add_argument('-r', '--repeat', type=int, help="output [n] times")
+
+    # Escape open bracket since help text can contain markup
+    speak_parser.add_argument('-r', '--repeat', type=int, help="output \[n] times")
 
     @cmd2.with_argparser(speak_parser, with_unknown_args=True)
     def do_speak(self, opts, arg):

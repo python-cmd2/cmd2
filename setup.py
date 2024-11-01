@@ -46,6 +46,8 @@ SETUP_REQUIRES = ['setuptools', 'setuptools_scm']
 
 INSTALL_REQUIRES = [
     'pyperclip',
+    'rich',
+    'rich-argparse',
     'wcwidth',
 ]
 
