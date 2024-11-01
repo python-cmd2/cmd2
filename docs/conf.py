@@ -185,4 +185,7 @@ nitpick_ignore = [
     ('py:class', 'argparse._SubParsersAction'),
     ('py:class', 'cmd2.utils._T'),
     ('py:class', 'types.FrameType'),
+    ('py:class', 'rich.console.Console'),
+    ('py:class', 'rich.console.ConsoleRenderable'),
+    ('py:class', 'rich.console.RichCast'),
 ]

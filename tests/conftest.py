@@ -53,35 +53,36 @@ def verify_help_text(
             assert verbose_string in help_text
 
 
-# Help text for the history command
+# Help text for the history command (Generated when terminal width is 80)
 HELP_HISTORY = """Usage: history [-h] [-r | -e | -o FILE | -t TRANSCRIPT_FILE | -c] [-s] [-x]
                [-v] [-a]
                [arg]
 
-View, run, edit, save, or clear previously entered commands
+View, run, edit, save, or clear previously entered commands.
 
-positional arguments:
+Positional Arguments:
   arg                   empty               all history items
                         a                   one history item by number
                         a..b, a:b, a:, ..b  items by indices (inclusive)
                         string              items containing string
                         /regex/             items matching regular expression
 
-optional arguments:
+Optional Arguments:
   -h, --help            show this help message and exit
   -r, --run             run selected history items
   -e, --edit            edit and then run selected history items
   -o, --output_file FILE
-                        output commands to a script file, implies -s
+                        output commands to a script file, implies --script
   -t, --transcript TRANSCRIPT_FILE
                         output commands and results to a transcript file,
-                        implies -s
+                        implies --script
   -c, --clear           clear all history
 
-formatting:
+Formatting:
   -s, --script          output commands in script format, i.e. without command
                         numbers
-  -x, --expanded        output fully parsed commands with aliases and shortcuts expanded
+  -x, --expanded        output fully parsed commands with aliases and shortcuts
+                        expanded
   -v, --verbose         display history and include expanded commands if they
                         differ from the typed command
   -a, --all             display all commands, including ones persisted from

@@ -5,6 +5,8 @@ verify_ssl = true
 
 [packages]
 pyperclip = "*"
+rich = "*"
+rich-argparse = "*"
 setuptools = "*"
 wcwidth = "*"
 

@@ -99,39 +99,39 @@ def test_subcommand_help(subcommand_app):
     out, err = run_cmd(subcommand_app, 'help base foo')
     assert out[0].startswith('Usage: base foo')
     assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    assert out[2] == 'Positional Arguments:'
 
     # bar has aliases (usage should never show alias name)
     out, err = run_cmd(subcommand_app, 'help base bar')
     assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    assert out[2] == 'Positional Arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base bar_1')
     assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    assert out[2] == 'Positional Arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base bar_2')
     assert out[0].startswith('Usage: base bar')
     assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    assert out[2] == 'Positional Arguments:'
 
     # helpless has aliases and no help text (usage should never show alias name)
     out, err = run_cmd(subcommand_app, 'help base helpless')
     assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    assert out[2] == 'Positional Arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base helpless_1')
     assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    assert out[2] == 'Positional Arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base helpless_2')
     assert out[0].startswith('Usage: base helpless')
     assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    assert out[2] == 'Positional Arguments:'
 
 
 def test_subcommand_invalid_help(subcommand_app):

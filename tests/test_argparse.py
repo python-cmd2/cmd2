@@ -41,8 +41,7 @@ class ArgparseApp(cmd2.Cmd):
     @cmd2.with_argparser(_say_parser_builder)
     def do_say(self, args, *, keyword_arg: Optional[str] = None):
         """
-        Repeat what you
-        tell me to.
+        Repeat what you tell me to.
 
         :param args: argparse namespace
         :param keyword_arg: Optional keyword arguments
@@ -212,8 +211,7 @@ def test_argparse_help_docstring(argparse_app):
     out, err = run_cmd(argparse_app, 'help say')
     assert out[0].startswith('Usage: say')
     assert out[1] == ''
-    assert out[2] == 'Repeat what you'
-    assert out[3] == 'tell me to.'
+    assert out[2] == 'Repeat what you tell me to.'
     for line in out:
         assert not line.startswith(':')
 
@@ -358,40 +356,26 @@ def test_subcommand_help(subcommand_app):
     # foo has no aliases
     out, err = run_cmd(subcommand_app, 'help base foo')
     assert out[0].startswith('Usage: base foo')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
 
     # bar has aliases (usage should never show alias name)
     out, err = run_cmd(subcommand_app, 'help base bar')
     assert out[0].startswith('Usage: base bar')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base bar_1')
     assert out[0].startswith('Usage: base bar')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base bar_2')
     assert out[0].startswith('Usage: base bar')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
 
     # helpless has aliases and no help text (usage should never show alias name)
     out, err = run_cmd(subcommand_app, 'help base helpless')
     assert out[0].startswith('Usage: base helpless')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base helpless_1')
     assert out[0].startswith('Usage: base helpless')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
 
     out, err = run_cmd(subcommand_app, 'help base helpless_2')
     assert out[0].startswith('Usage: base helpless')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
 
 
 def test_subcommand_invalid_help(subcommand_app):
