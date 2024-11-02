@@ -9,9 +9,7 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 
-import os
 import pathlib
-import shutil
 
 import invoke
 
@@ -38,23 +36,6 @@ namespace.add_collection(namespace_clean, 'clean')
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
-
-
-# shared function
-def rmrf(items, verbose=True):
-    """Silently remove a list of directories or files"""
-    if isinstance(items, str):
-        items = [items]
-
-    for item in items:
-        if verbose:
-            print("Removing {}".format(item))
-        shutil.rmtree(item, ignore_errors=True)
-        # rmtree doesn't remove bare files
-        try:
-            os.remove(item)
-        except FileNotFoundError:
-            pass
 
 
 @invoke.task(pre=[ext_test_tasks.pytest])
@@ -173,14 +154,3 @@ def format(context):
 
 
 namespace.add_task(format)
-
-
-@invoke.task()
-def ruff_clean(context):
-    """Remove .ruff_cache directory"""
-    with context.cd(TASK_ROOT_STR):
-        dirs = ['.ruff_cache']
-        rmrf(dirs)
-
-
-namespace_clean.add_task(ruff_clean, 'ruff')

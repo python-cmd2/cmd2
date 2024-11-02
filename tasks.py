@@ -371,8 +371,7 @@ namespace.add_task(format)
 def ruff_clean(context):
     """Remove .ruff_cache directory"""
     with context.cd(TASK_ROOT_STR):
-        dirs = ['.ruff_cache']
-        rmrf(dirs)
+        context.run("ruff clean")
 
 
 namespace_clean.add_task(ruff_clean, 'ruff')
