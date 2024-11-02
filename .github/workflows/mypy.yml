@@ -11,13 +11,13 @@ jobs:
   mypy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # https://github.com/actions/checkout
-      - uses: actions/setup-python@v5  # https://github.com/actions/setup-python
+      - uses: actions/checkout@v4 # https://github.com/actions/checkout
+      - uses: actions/setup-python@v5 # https://github.com/actions/setup-python
         with:
           python-version: 3.13
           allow-prereleases: true
           # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
           # Set fetch-depth: 0 to fetch all history for all branches and tags.
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
-      - run: pip install -U --user pip mypy
+      - run: pip install -U --user pip mypy ipython-stubs
       - run: mypy .
