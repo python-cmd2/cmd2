@@ -131,7 +131,7 @@ from .parsing import (
 
 # NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
 try:
-    from IPython import start_ipython
+    from IPython import start_ipython  # type: ignore[import]
 except ImportError:
     pass
 
@@ -4641,7 +4641,7 @@ class Cmd(cmd.Cmd):
             try:
                 start_ipython  # noqa F823
             except NameError:
-                from IPython import start_ipython
+                from IPython import start_ipython  # type: ignore[import]
 
             from IPython.terminal.interactiveshell import (  # type: ignore[import]
                 TerminalInteractiveShell,
