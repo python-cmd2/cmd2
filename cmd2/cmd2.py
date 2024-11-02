@@ -128,6 +128,13 @@ from .parsing import (
     StatementParser,
     shlex_split,
 )
+
+# NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
+try:
+    from IPython import start_ipython  # type: ignore[import]
+except ImportError:
+    pass
+
 from .rl_utils import (
     RlType,
     rl_escape_prompt,
@@ -4629,9 +4636,13 @@ class Cmd(cmd.Cmd):
         # Detect whether IPython is installed
         try:
             import traitlets.config.loader as TraitletsLoader  # type: ignore[import]
-            from IPython import (  # type: ignore[import]
-                start_ipython,
-            )
+
+            # Allow users to install ipython from a cmd2 prompt when needed and still have ipy command work
+            try:
+                start_ipython  # noqa F823
+            except NameError:
+                from IPython import start_ipython  # type: ignore[import]
+
             from IPython.terminal.interactiveshell import (  # type: ignore[import]
                 TerminalInteractiveShell,
             )

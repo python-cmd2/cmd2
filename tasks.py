@@ -365,3 +365,13 @@ def format(context):
 
 
 namespace.add_task(format)
+
+
+@invoke.task()
+def ruff_clean(context):
+    """Remove .ruff_cache directory"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff clean")
+
+
+namespace_clean.add_task(ruff_clean, 'ruff')
