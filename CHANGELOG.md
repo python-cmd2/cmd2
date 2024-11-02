@@ -1,4 +1,4 @@
-# 2.5.1 (November TBD, 2024)
+# 2.5.1 (November 2, 2024)
 * Bug Fixes
   * Fixed readline bug when using `ipy` command with `gnureadline` and Python 3.13
 
