@@ -11,7 +11,7 @@ attribute. This contains the string which should be printed as a prompt
 for user input.  See the Pirate_ example for the simple use case of statically
 setting the prompt.
 
-.. _Pirate: https://github.com/python-cmd2/cmd2/blob/master/examples/pirate.py#L33
+.. _Pirate: https://github.com/python-cmd2/cmd2/blob/master/examples/pirate.py#L39
 
 Continuation Prompt
 -------------------
@@ -24,7 +24,7 @@ subsequent lines of input is defined by the
 :attr:`cmd2.Cmd.continuation_prompt` attribute.See the Initialization_ example
 for a demonstration of customizing the continuation prompt.
 
-.. _Initialization: https://github.com/python-cmd2/cmd2/blob/master/examples/initialization.py#L33
+.. _Initialization: https://github.com/python-cmd2/cmd2/blob/master/examples/initialization.py#L42
 
 Updating the prompt
 -------------------
@@ -34,7 +34,7 @@ the :ref:`Application Lifecycle Hooks <features/hooks:Hooks>` such as a
 :ref:`Postcommand hook <features/hooks:Postcommand Hooks>`.  See
 PythonScripting_ for an example of dynamically updating the prompt.
 
-.. _PythonScripting: https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py#L34-L48
+.. _PythonScripting: https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py#L38-L55
 
 Asynchronous Feedback
 ---------------------

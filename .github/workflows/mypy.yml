@@ -11,8 +11,8 @@ jobs:
   mypy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # https://github.com/actions/checkout
-      - uses: actions/setup-python@v5  # https://github.com/actions/setup-python
+      - uses: actions/checkout@v4 # https://github.com/actions/checkout
+      - uses: actions/setup-python@v5 # https://github.com/actions/setup-python
         with:
           python-version: 3.13
           allow-prereleases: true

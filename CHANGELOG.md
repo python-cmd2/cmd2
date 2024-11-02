@@ -6,6 +6,10 @@
     See [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/master/examples/custom_parser.py)
     example for more details.
 
+# 2.5.1 (November 2, 2024)
+* Bug Fixes
+  * Fixed readline bug when using `ipy` command with `gnureadline` and Python 3.13
+
 ## 2.5.0 (October 23, 2024)
 * Breaking Change
   * `cmd2` 2.5 supports Python 3.8+ (removed support for Python 3.6 and 3.7)
