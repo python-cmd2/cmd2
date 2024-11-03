@@ -305,4 +305,7 @@ docstring-code-format = false
 # enabled.
 docstring-code-line-length = "dynamic"
 
+[tool.setuptools]
+packages = ["cmd2"]
+
 [tool.setuptools_scm]
