@@ -55,6 +55,7 @@ dev = [
     "nox",
     "pytest",
     "pytest-cov",
+    "pytest-mock",
     "sphinx",
     "sphinx-rtd-theme",
     "sphinx-autobuild",
@@ -73,6 +74,7 @@ test = [
     "coverage",
     "pytest",
     "pytest-cov",
+    "pytest-mock",
 ]
 validate = [
     "mypy",
