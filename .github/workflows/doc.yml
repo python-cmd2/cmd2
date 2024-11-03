@@ -26,6 +26,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install python prerequisites
-        run: pip install -U --user pip setuptools setuptools-scm sphinx sphinx-autobuild sphinx-rtd-theme
+        run: pip install -U --user pip setuptools setuptools-scm sphinx sphinx-autobuild sphinx-rtd-theme . plugins/ext_test
       - name: Sphinx documentation build
         run: python -m sphinx -M html docs docs/_build -nvWT

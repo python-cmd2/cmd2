@@ -35,6 +35,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
+    "cmd2-ext-test",
     "gnureadline; platform_system == 'Darwin'",
     "pyperclip",
     "pyreadline3; platform_system == 'Windows'",
@@ -333,3 +334,6 @@ dev-dependencies = [
     "ruff",
     "twine",
 ]
+
+[tool.uv.sources]
+cmd2-ext-test = { path = "plugins/ext_test", editable = true }
