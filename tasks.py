@@ -257,6 +257,38 @@ def pycache_clean(context):
 
 namespace_clean.add_task(pycache_clean, 'pycache')
 
+
+# ruff fast linter
+@invoke.task()
+def lint(context):
+    """Run ruff fast linter"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff check")
+
+
+namespace.add_task(lint)
+
+
+# ruff fast formatter
+@invoke.task()
+def format(context):
+    """Run ruff format --check"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff format --check")
+
+
+namespace.add_task(format)
+
+
+@invoke.task()
+def ruff_clean(context):
+    """Remove .ruff_cache directory"""
+    with context.cd(TASK_ROOT_STR):
+        context.run("ruff clean")
+
+
+namespace_clean.add_task(ruff_clean, 'ruff')
+
 #
 # make a dummy clean task which runs all the tasks in the clean namespace
 clean_tasks = list(namespace_clean.tasks.values())
@@ -343,35 +375,3 @@ def pypi_test(context):
 
 
 namespace.add_task(pypi_test)
-
-
-# ruff fast linter
-@invoke.task()
-def lint(context):
-    """Run ruff fast linter"""
-    with context.cd(TASK_ROOT_STR):
-        context.run("ruff check")
-
-
-namespace.add_task(lint)
-
-
-# ruff fast formatter
-@invoke.task()
-def format(context):
-    """Run ruff format --check"""
-    with context.cd(TASK_ROOT_STR):
-        context.run("ruff format --check")
-
-
-namespace.add_task(format)
-
-
-@invoke.task()
-def ruff_clean(context):
-    """Remove .ruff_cache directory"""
-    with context.cd(TASK_ROOT_STR):
-        context.run("ruff clean")
-
-
-namespace_clean.add_task(ruff_clean, 'ruff')
