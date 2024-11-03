@@ -557,7 +557,7 @@ class ArgparseCompleter:
         if not self._cmd2_app.matches_sorted:
             # If all orig_value types are numbers, then sort by that value
             if all_nums:
-                completion_items.sort(key=lambda c: c.orig_value)  # type: ignore[no-any-return]
+                completion_items.sort(key=lambda c: c.orig_value)
 
             # Otherwise sort as strings
             else:
@@ -744,12 +744,12 @@ class ArgparseCompleter:
                 if not arg_choices.is_completer:
                     choices_func = arg_choices.choices_provider
                     if isinstance(choices_func, ChoicesProviderFuncWithTokens):
-                        completion_items = choices_func(*args, **kwargs)  # type: ignore[arg-type]
+                        completion_items = choices_func(*args, **kwargs)
                     else:  # pragma: no cover
                         # This won't hit because runtime checking doesn't check function argument types and will always
                         # resolve true above. Mypy, however, does see the difference and gives an error that can't be
                         # ignored. Mypy issue #5485 discusses this problem
-                        completion_items = choices_func(*args)  # type: ignore[arg-type]
+                        completion_items = choices_func(*args)
                 # else case is already covered above
             else:
                 completion_items = arg_choices
