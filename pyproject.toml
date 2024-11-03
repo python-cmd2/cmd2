@@ -2,6 +2,84 @@
 requires = ["build", "setuptools>=64", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "cmd2"
+dynamic = ["version"]
+description = "cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python"
+authors = [{ name = "cmd2 Contributors" }]
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = [
+    "CLI",
+    "cmd",
+    "command",
+    "interactive",
+    "prompt",
+    "Python",
+]
+license = { file = "LICENSE" }
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "gnureadline; os_name=='darwin'",
+    "pyperclip",
+    "pyreadline3; os_name=='nt'",
+    "wcwidth",
+]
+
+[project.optional-dependencies]
+build = [
+    "build",
+    "setuptools",
+    "setuptools-scm",
+]
+dev = [
+    "codecov",
+    "doc8",
+    "invoke",
+    "mypy",
+    "nox",
+    "pytest",
+    "pytest-cov",
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-autobuild",
+    "ruff",
+    "twine",
+]
+docs = [
+    "setuptools",
+    "setuptools_scm",
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinx-autobuild",
+]
+test = [
+    "codecov",
+    "coverage",
+    "pytest",
+    "pytest-cov",
+]
+validate = [
+    "mypy",
+    "ruff",
+    "types-setuptools",
+]
+
 [tool.doc8]
 ignore-path = [
     "__pycache__",
@@ -232,3 +310,5 @@ docstring-code-format = false
 # This only has an effect when the `docstring-code-format` setting is
 # enabled.
 docstring-code-line-length = "dynamic"
+
+[tool.setuptools_scm]
