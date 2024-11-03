@@ -312,6 +312,7 @@ packages = ["cmd2"]
 
 [tool.uv]
 dev-dependencies = [
+    "cmd2-ext-test",
     "codecov",
     "doc8",
     "invoke",
@@ -325,3 +326,6 @@ dev-dependencies = [
     "ruff",
     "twine",
 ]
+
+[tool.uv.sources]
+cmd2-ext-test = { path = "plugins/ext_test", editable = true }

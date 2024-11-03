@@ -1,22 +1,6 @@
 import nox
 
 
-@nox.session(python=['3.12'])
-def docs(session):
-    session.install(
-        'sphinx',
-        'sphinx-rtd-theme',
-        '.',
-        'plugins/ext_test',
-    )
-    session.chdir('docs')
-    tmpdir = session.create_tmp()
-
-    session.run(
-        'sphinx-build', '-a', '-W', '-T', '-b', 'html', '-d', '{}/doctrees'.format(tmpdir), '.', '{}/html'.format(tmpdir)
-    )
-
-
 @nox.session(python=['3.8', '3.9', '3.10', '3.11', '3.12', '3.13'])
 @nox.parametrize('plugin', [None, 'ext_test', 'template', 'coverage'])
 def tests(session, plugin):
