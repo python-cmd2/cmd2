@@ -290,9 +290,9 @@ def test_proc_reader_send_sigint(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.send_sigint()
     pr_none.wait()
-
-    # Mac sure a SIGINT killed the process
     ret_code = pr_none._proc.poll()
+
+    # Make sure a SIGINT killed the process
     if sys.platform.startswith('win'):
         assert ret_code is not None
     else:

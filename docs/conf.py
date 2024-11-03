@@ -23,10 +23,13 @@ from importlib.metadata import version as get_version
 from os.path import abspath, dirname
 
 # Make sure we get the version of this copy of cmd2
-sys.path.insert(1, dirname(dirname(abspath(__file__))))
+root_path = dirname(dirname(abspath(__file__)))
+cmd2_ext_test_path = f'{root_path}/plugins/ext_test/'
+sys.path.insert(1, root_path)  # cmd2
+sys.path.insert(2, cmd2_ext_test_path)  # cmd2_ext_test
 
 # Import for custom theme from Read the Docs
-import sphinx_rtd_theme
+import sphinx_rtd_theme  # noqa E402
 
 # -- General configuration -----------------------------------------------------
 
@@ -179,9 +182,13 @@ autodoc_default_options = {'member-order': 'bysource'}
 # Ignore nitpicky warnings from autodoc which are occurring for very new versions of Sphinx and autodoc
 # They seem to be happening because autodoc is now trying to add hyperlinks to docs for typehint classes
 nitpick_ignore = [
-    ('py:class', 'cmd2.decorators.CommandParent'),
-    ('py:obj', 'cmd2.decorators.CommandParent'),
+    ('py:class', 'ArgparseCommandFunc'),
     ('py:class', 'argparse._SubParsersAction'),
+    ('py:class', 'cmd2.decorators.CommandParent'),
     ('py:class', 'cmd2.utils._T'),
+    ('py:class', 'CommandParent'),
+    ('py:class', 'frame'),
+    ('py:class', 'RawCommandFuncOptionalBoolReturn'),
     ('py:class', 'types.FrameType'),
+    ('py:obj', 'cmd2.decorators.CommandParent'),
 ]
