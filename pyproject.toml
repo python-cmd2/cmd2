@@ -58,8 +58,8 @@ dev = [
     "pytest-cov",
     "pytest-mock",
     "sphinx",
-    "sphinx-rtd-theme",
     "sphinx-autobuild",
+    "sphinx-rtd-theme",
     "ruff",
     "twine",
 ]
@@ -67,8 +67,8 @@ docs = [
     "setuptools",
     "setuptools_scm",
     "sphinx",
-    "sphinx-rtd-theme",
     "sphinx-autobuild",
+    "sphinx-rtd-theme",
 ]
 test = [
     "codecov",
@@ -309,3 +309,19 @@ docstring-code-line-length = "dynamic"
 packages = ["cmd2"]
 
 [tool.setuptools_scm]
+
+[tool.uv]
+dev-dependencies = [
+    "codecov",
+    "doc8",
+    "invoke",
+    "mypy",
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "sphinx",
+    "sphinx-autobuild",
+    "sphinx-rtd-theme",
+    "ruff",
+    "twine",
+]
