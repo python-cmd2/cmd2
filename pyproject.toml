@@ -35,7 +35,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "cmd2-ext-test",
     "gnureadline; platform_system == 'Darwin'",
     "pyperclip",
     "pyreadline3; platform_system == 'Windows'",
@@ -321,6 +320,7 @@ packages = ["cmd2"]
 
 [tool.uv]
 dev-dependencies = [
+    "cmd2-ext-test",
     "codecov",
     "doc8",
     "invoke",
