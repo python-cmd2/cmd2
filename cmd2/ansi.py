@@ -17,7 +17,7 @@ from typing import (
     cast,
 )
 
-from wcwidth import (  # type: ignore[import]
+from wcwidth import (  # type: ignore[import-untyped]
     wcswidth,
 )
 

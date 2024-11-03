@@ -24,7 +24,7 @@ from typing import (
     Union,
 )
 
-from wcwidth import (  # type: ignore[import]
+from wcwidth import (  # type: ignore[import-untyped]
     wcwidth,
 )
 

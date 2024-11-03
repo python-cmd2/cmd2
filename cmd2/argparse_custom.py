@@ -807,11 +807,11 @@ def _add_argument_wrapper(
             # Validate nargs tuple
             if (
                 len(nargs) != 2
-                or not isinstance(nargs[0], int)  # type: ignore[unreachable]
-                or not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY)  # type: ignore[misc]
+                or not isinstance(nargs[0], int)
+                or not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY)
             ):
                 raise ValueError('Ranged values for nargs must be a tuple of 1 or 2 integers')
-            if nargs[0] >= nargs[1]:  # type: ignore[misc]
+            if nargs[0] >= nargs[1]:
                 raise ValueError('Invalid nargs range. The first value must be less than the second')
             if nargs[0] < 0:
                 raise ValueError('Negative numbers are invalid for nargs range')
@@ -819,7 +819,7 @@ def _add_argument_wrapper(
             # Save the nargs tuple as our range setting
             nargs_range = nargs
             range_min = nargs_range[0]
-            range_max = nargs_range[1]  # type: ignore[misc]
+            range_max = nargs_range[1]
 
             # Convert nargs into a format argparse recognizes
             if range_min == 0:
@@ -858,7 +858,7 @@ def _add_argument_wrapper(
     new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
     # Set the custom attributes
-    new_arg.set_nargs_range(nargs_range)  # type: ignore[arg-type, attr-defined]
+    new_arg.set_nargs_range(nargs_range)  # type: ignore[attr-defined]
 
     if choices_provider:
         new_arg.set_choices_provider(choices_provider)  # type: ignore[attr-defined]
@@ -894,7 +894,7 @@ def _get_nargs_pattern_wrapper(self: argparse.ArgumentParser, action: argparse.A
         if nargs_range[1] == constants.INFINITY:
             range_max = ''
         else:
-            range_max = nargs_range[1]  # type: ignore[assignment]
+            range_max = nargs_range[1]
 
         nargs_pattern = f'(-*A{{{nargs_range[0]},{range_max}}}-*)'
 
@@ -1429,10 +1429,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         formatter = self._get_formatter()
 
         # usage
-        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)  # type: ignore[arg-type]
+        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)
 
         # description
-        formatter.add_text(self.description)  # type: ignore[arg-type]
+        formatter.add_text(self.description)
 
         # Begin cmd2 customization (separate required and optional arguments)
 
@@ -1473,7 +1473,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # End cmd2 customization
 
         # epilog
-        formatter.add_text(self.epilog)  # type: ignore[arg-type]
+        formatter.add_text(self.epilog)
 
         # determine help from format above
         return formatter.format_help() + '\n'

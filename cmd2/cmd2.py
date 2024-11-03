@@ -987,7 +987,7 @@ class Cmd(cmd.Cmd):
 
             for action in command_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    action.remove_parser(subcommand_name)  # type: ignore[arg-type,attr-defined]
+                    action.remove_parser(subcommand_name)  # type: ignore[attr-defined]
                     break
 
     @property
@@ -2095,7 +2095,7 @@ class Cmd(cmd.Cmd):
                             completer.complete, tokens=raw_tokens[1:] if preserve_quotes else tokens[1:], cmd_set=cmd_set
                         )
                     else:
-                        completer_func = self.completedefault  # type: ignore[assignment]
+                        completer_func = self.completedefault
 
             # Not a recognized command
             else:
@@ -2103,7 +2103,7 @@ class Cmd(cmd.Cmd):
                 if self.default_to_shell and command in utils.get_exes_in_path(command):
                     completer_func = self.path_complete
                 else:
-                    completer_func = self.completedefault  # type: ignore[assignment]
+                    completer_func = self.completedefault
 
         # Otherwise we are completing the command token or performing custom completion
         else:
@@ -2805,11 +2805,11 @@ class Cmd(cmd.Cmd):
                     kwargs['executable'] = shell
 
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # type: ignore[call-overload]
+            proc = subprocess.Popen(
                 statement.pipe_to,
                 stdin=subproc_stdin,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
+                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                 shell=True,
                 **kwargs,
             )
@@ -2829,7 +2829,7 @@ class Cmd(cmd.Cmd):
                 new_stdout.close()
                 raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
             else:
-                redir_saved_state.redirecting = True  # type: ignore[unreachable]
+                redir_saved_state.redirecting = True
                 cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
                 sys.stdout = self.stdout = new_stdout
 
@@ -3068,7 +3068,7 @@ class Cmd(cmd.Cmd):
                         parser.add_argument(
                             'arg',
                             suppress_tab_hint=True,
-                            choices=choices,  # type: ignore[arg-type]
+                            choices=choices,
                             choices_provider=choices_provider,
                             completer=completer,
                         )
@@ -3846,7 +3846,7 @@ class Cmd(cmd.Cmd):
             arg_name,
             metavar=arg_name,
             help=settable.description,
-            choices=settable.choices,  # type: ignore[arg-type]
+            choices=settable.choices,
             choices_provider=settable.choices_provider,
             completer=settable.completer,
         )
@@ -4001,15 +4001,15 @@ class Cmd(cmd.Cmd):
         # still receive the SIGINT since it is in the same process group as us.
         with self.sigint_protection:
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # type: ignore[call-overload]
+            proc = subprocess.Popen(
                 expanded_command,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
+                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                 shell=True,
                 **kwargs,
             )
 
-            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)  # type: ignore[arg-type]
+            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
@@ -4101,10 +4101,10 @@ class Cmd(cmd.Cmd):
         self._reset_py_display()
 
         cmd2_env.sys_stdout = sys.stdout
-        sys.stdout = self.stdout  # type: ignore[assignment]
+        sys.stdout = self.stdout
 
         cmd2_env.sys_stdin = sys.stdin
-        sys.stdin = self.stdin  # type: ignore[assignment]
+        sys.stdin = self.stdin
 
         return cmd2_env
 
@@ -4114,8 +4114,8 @@ class Cmd(cmd.Cmd):
 
         :param cmd2_env: the environment settings to restore
         """
-        sys.stdout = cmd2_env.sys_stdout  # type: ignore[assignment]
-        sys.stdin = cmd2_env.sys_stdin  # type: ignore[assignment]
+        sys.stdout = cmd2_env.sys_stdout
+        sys.stdin = cmd2_env.sys_stdin
 
         # Set up readline for cmd2
         if rl_type != RlType.NONE:

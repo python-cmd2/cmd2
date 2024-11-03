@@ -184,7 +184,7 @@ def with_argument_list(
             cmd2_app, statement = _parse_positionals(args)
             _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name, statement, preserve_quotes)
             args_list = _arg_swap(args, statement, parsed_arglist)
-            return func(*args_list, **kwargs)  # type: ignore[call-arg]
+            return func(*args_list, **kwargs)
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
         cmd_wrapper.__doc__ = func.__doc__
@@ -383,7 +383,7 @@ def with_argparser(
                     delattr(ns, constants.NS_ATTR_SUBCMD_HANDLER)
 
                 args_list = _arg_swap(args, statement_arg, *new_args)
-                return func(*args_list, **kwargs)  # type: ignore[call-arg]
+                return func(*args_list, **kwargs)
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
