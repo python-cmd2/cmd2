@@ -35,9 +35,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "gnureadline; os_name=='darwin'",
+    "gnureadline; platform_system == 'Darwin'",
     "pyperclip",
-    "pyreadline3; os_name=='nt'",
+    "pyreadline3; platform_system == 'Windows'",
     "wcwidth",
 ]
 
