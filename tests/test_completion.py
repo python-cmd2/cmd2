@@ -463,14 +463,14 @@ def test_path_completion_no_text(cmd2_app):
 
 def test_path_completion_no_path(cmd2_app):
     # Run path complete with search text that isn't preceded by a path. This should use CWD as the path.
-    text = 's'
+    text = 'p'
     line = 'shell ls {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_no_text = cmd2_app.path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
-    text = os.getcwd() + os.path.sep + 's'
+    text = os.getcwd() + os.path.sep + text
     line = 'shell ls {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)

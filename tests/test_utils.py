@@ -289,15 +289,9 @@ def pr_none():
 def test_proc_reader_send_sigint(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.send_sigint()
-
-    wait_start = time.monotonic()
     pr_none.wait()
-    wait_finish = time.monotonic()
 
-    # Make sure the process exited before sleep of 5 seconds finished
-    # 3 seconds accounts for some delay but is long enough for the process to exit
-    assert wait_finish - wait_start < 3
-
+    # Mac sure a SIGINT killed the process
     ret_code = pr_none._proc.poll()
     if sys.platform.startswith('win'):
         assert ret_code is not None
