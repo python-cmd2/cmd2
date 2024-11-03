@@ -157,7 +157,7 @@ namespace_clean.add_task(clean_all, 'all')
 def sdist(context):
     """Create a source distribution"""
     with context.cd(TASK_ROOT_STR):
-        context.run('python setup.py sdist')
+        context.run('python -m build --sdist')
 
 
 namespace.add_task(sdist)
@@ -167,7 +167,7 @@ namespace.add_task(sdist)
 def wheel(context):
     """Build a wheel distribution"""
     with context.cd(TASK_ROOT_STR):
-        context.run('python setup.py bdist_wheel')
+        context.run('python -m build --wheel')
 
 
 namespace.add_task(wheel)
