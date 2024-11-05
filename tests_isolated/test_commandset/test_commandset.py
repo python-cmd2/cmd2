@@ -93,8 +93,7 @@ class CommandSetA(CommandSetBase):
     # Test that CommandSet with as_subcommand_to decorator successfully loads
     # during `cmd2.Cmd.__init__()`.
     main_parser = cmd2.Cmd2ArgumentParser(description="Main Command")
-    main_subparsers = main_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    main_subparsers.required = True
+    main_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
 
     @cmd2.with_category('Alone')
     @cmd2.with_argparser(main_parser)
