@@ -92,9 +92,30 @@ class CommandSet(object):
     """
 
     def __init__(self) -> None:
-        self._cmd: Optional[cmd2.Cmd] = None
+        # Private reference to the CLI instance in which this CommandSet running.
+        # This will be set when the CommandSet is registered and it should be
+        # accessed by child classes using the self._cmd property.
+        self.__private_cmd: Optional[cmd2.Cmd] = None
+
         self._settables: Dict[str, Settable] = {}
         self._settable_prefix = self.__class__.__name__
+
+    @property
+    def _cmd(self) -> 'cmd2.Cmd':
+        """
+        Property for child classes to access self.__private_cmd.
+
+        Using this property ensures that self.__private_cmd has been set
+        and it tells type checkers that it's no longer a None type.
+
+        Override this property if you need to change its return type to a
+        child class of Cmd.
+
+        :raises: CommandSetRegistrationError if CommandSet is not registered.
+        """
+        if self.__private_cmd is None:
+            raise CommandSetRegistrationError('This CommandSet is not registered')
+        return self.__private_cmd
 
     def on_register(self, cmd: 'cmd2.Cmd') -> None:
         """
@@ -103,9 +124,10 @@ class CommandSet(object):
         requiring access to the Cmd object (e.g. configure commands and their parsers based on CLI state data).
 
         :param cmd: The cmd2 main application
+        :raises: CommandSetRegistrationError if CommandSet is already registered.
         """
-        if self._cmd is None:
-            self._cmd = cmd
+        if self.__private_cmd is None:
+            self.__private_cmd = cmd
         else:
             raise CommandSetRegistrationError('This CommandSet has already been registered')
 
@@ -129,7 +151,7 @@ class CommandSet(object):
         Called by ``cmd2.Cmd`` after a CommandSet has been unregistered and all its commands removed from the CLI.
         Subclasses can override this to perform remaining cleanup steps.
         """
-        self._cmd = None
+        self.__private_cmd = None
 
     @property
     def settable_prefix(self) -> str:
@@ -145,7 +167,7 @@ class CommandSet(object):
 
         :param settable: Settable object being added
         """
-        if self._cmd:
+        if self.__private_cmd is not None:
             if not self._cmd.always_prefix_settables:
                 if settable.name in self._cmd.settables.keys() and settable.name not in self._settables.keys():
                     raise KeyError(f'Duplicate settable: {settable.name}')
