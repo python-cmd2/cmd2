@@ -5,6 +5,9 @@
   * Simplified the process to set a custom parser for `cmd2's` built-in commands.
     See [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/master/examples/custom_parser.py)
     example for more details.
+  * Integrated `rich-argparse` with `Cmd2HelpFormatter`.
+    * Added `RawDescriptionCmd2HelpFormatter`, `RawTextCmd2HelpFormatter`, `ArgumentDefaultsCmd2HelpFormatter`,
+      and `MetavarTypeCmd2HelpFormatter` and they all use `rich-argparse`.
 
 ## 2.5.3 (November 5, 2024)
 * Enhancements
