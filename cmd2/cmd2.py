@@ -3278,8 +3278,7 @@ class Cmd(cmd.Cmd):
     def _build_alias_parser() -> Cmd2ArgumentParser:
         alias_description = "Manage aliases."
         alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description)
-        alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-        alias_subparsers.required = True
+        alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
 
         return alias_parser
 

@@ -248,8 +248,7 @@ def test_preservelist(argparse_app):
 
 def _build_has_subcmd_parser() -> cmd2.Cmd2ArgumentParser:
     has_subcmds_parser = cmd2.Cmd2ArgumentParser(description="Tests as_subcmd_to decorator")
-    has_subcmds_subparsers = has_subcmds_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    has_subcmds_subparsers.required = True
+    has_subcmds_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
     return has_subcmds_parser
 
 
@@ -271,8 +270,7 @@ class SubcommandApp(cmd2.Cmd):
 
     # create the top-level parser for the base command
     base_parser = cmd2.Cmd2ArgumentParser()
-    base_subparsers = base_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    base_subparsers.required = True
+    base_subparsers = base_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
 
     # create the parser for the "foo" subcommand
     parser_foo = base_subparsers.add_parser('foo', help='foo help')
