@@ -319,6 +319,7 @@ packages = ["cmd2"]
 
 [tool.uv]
 dev-dependencies = [
+    "build",
     "cmd2-ext-test",
     "codecov",
     "doc8",
