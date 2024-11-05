@@ -150,8 +150,14 @@ def test_autoload_commands(command_sets_app):
 
 
 def test_custom_construct_commandsets():
-    # Verifies that a custom initialized CommandSet loads correctly when passed into the constructor
     command_set_b = CommandSetB('foo')
+
+    # Verify that _cmd cannot be accessed until CommandSet is registered.
+    with pytest.raises(CommandSetRegistrationError) as excinfo:
+        command_set_b._cmd.poutput("test")
+    assert "is not registered" in str(excinfo.value)
+
+    # Verifies that a custom initialized CommandSet loads correctly when passed into the constructor
     app = WithCommandSets(command_sets=[command_set_b])
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = app._build_command_info()

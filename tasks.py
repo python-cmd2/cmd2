@@ -49,7 +49,7 @@ namespace.add_collection(namespace_clean, 'clean')
 
 #####
 #
-# pytest, nox, pylint, and codecov
+# pytest, pylint, and codecov
 #
 #####
 
@@ -115,17 +115,6 @@ def mypy_clean(context):
 
 
 namespace_clean.add_task(mypy_clean, 'mypy')
-
-
-@invoke.task
-def nox_clean(context):
-    """Remove nox virtualenvs and logs"""
-    # pylint: disable=unused-argument
-    with context.cd(TASK_ROOT_STR):
-        rmrf('.nox')
-
-
-namespace_clean.add_task(nox_clean, 'nox')
 
 
 #####
