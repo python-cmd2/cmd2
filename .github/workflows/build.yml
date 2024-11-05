@@ -22,7 +22,10 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
 
       - name: Install the project
         run: uv sync --all-extras --dev
