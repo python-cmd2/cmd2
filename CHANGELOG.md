@@ -1,14 +1,14 @@
-# 2.5.3 (November 5, 2024)
+## 2.5.3 (November 5, 2024)
 * Enhancements
   * Changed `CommandSet._cmd` to a read-only property which never returns `None` because it
     is meant to be called after the `CommandSet` is registered. This addresses type checker
     errors that occurred if `CommandSet._cmd` wasn't cast or checked if `None` before use.
 
-# 2.5.2 (November 3, 2024)
+## 2.5.2 (November 3, 2024)
 * Bug Fixes
   * Fixed default `pytest` execution when not using cmd2's custom `invoke` command via `inv pytest`
 
-# 2.5.1 (November 2, 2024)
+## 2.5.1 (November 2, 2024)
 * Bug Fixes
   * Fixed readline bug when using `ipy` command with `gnureadline` and Python 3.13
 
