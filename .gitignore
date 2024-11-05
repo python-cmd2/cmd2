@@ -29,6 +29,9 @@ coverage.xml
 dmypy.json
 dmypy.sock
 
+# ruff formatter/linter
+.ruff_cache
+
 # cmd2 history file used in hello_cmd2.py
 cmd2_history.dat
 
