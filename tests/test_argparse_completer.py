@@ -1249,8 +1249,7 @@ class CustomCompleterApp(cmd2.Cmd):
 
     # Test as_subcommand_to decorator with custom completer
     top_parser = Cmd2ArgumentParser(description="Top Command")
-    top_subparsers = top_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    top_subparsers.required = True
+    top_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
 
     @with_argparser(top_parser)
     def do_top(self, args: argparse.Namespace) -> None:

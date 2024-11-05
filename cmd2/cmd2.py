@@ -3404,8 +3404,7 @@ class Cmd(cmd.Cmd):
     alias_description = "Manage aliases\n" "\n" "An alias is a command that enables replacement of a word by another string."
     alias_epilog = "See also:\n" "  macro"
     alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
-    alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    alias_subparsers.required = True
+    alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
 
     # Preserve quotes since we are passing strings to other commands
     @with_argparser(alias_parser, preserve_quotes=True)
@@ -3573,8 +3572,7 @@ class Cmd(cmd.Cmd):
     macro_description = "Manage macros\n" "\n" "A macro is similar to an alias, but it can contain argument placeholders."
     macro_epilog = "See also:\n" "  alias"
     macro_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_description, epilog=macro_epilog)
-    macro_subparsers = macro_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    macro_subparsers.required = True
+    macro_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
 
     # Preserve quotes since we are passing strings to other commands
     @with_argparser(macro_parser, preserve_quotes=True)

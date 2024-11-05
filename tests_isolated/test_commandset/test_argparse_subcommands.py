@@ -35,8 +35,7 @@ class SubcommandSet(cmd2.CommandSet):
 
     # create the top-level parser for the base command
     base_parser = cmd2.Cmd2ArgumentParser()
-    base_subparsers = base_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    base_subparsers.required = True
+    base_subparsers = base_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
 
     # create the parser for the "foo" subcommand
     parser_foo = base_subparsers.add_parser('foo', help='foo help')
