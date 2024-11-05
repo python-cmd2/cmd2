@@ -52,7 +52,6 @@ dev = [
     "doc8",
     "invoke",
     "mypy",
-    "nox",
     "pytest",
     "pytest-cov",
     "pytest-mock",
