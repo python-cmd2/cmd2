@@ -17,6 +17,7 @@ import pytest
 import cmd2.utils as cu
 from cmd2 import (
     ansi,
+    constants,
 )
 from cmd2.constants import (
     HORIZONTAL_ELLIPSIS,
@@ -624,7 +625,9 @@ def test_align_text_term_width():
     text = 'foo'
     fill_char = ' '
 
-    term_width = shutil.get_terminal_size().columns
+    # Prior to Python 3.11 this can return 0, so use a fallback, so
+    # use the same fallback that cu.align_text() does if needed.
+    term_width = shutil.get_terminal_size().columns or constants.DEFAULT_TERMINAL_WIDTH
     expected_fill = (term_width - ansi.style_aware_wcswidth(text)) * fill_char
 
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char)
