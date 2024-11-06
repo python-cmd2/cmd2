@@ -1,3 +1,8 @@
+## 2.5.4 (TBD)
+* Bug Fixes
+  * Fixed `ZeroDivisionError` in `async_alert()` when `shutil.get_terminal_size().columns`
+    returned 0.
+
 ## 2.5.3 (November 5, 2024)
 * Enhancements
   * Changed `CommandSet._cmd` to a read-only property which never returns `None` because it
