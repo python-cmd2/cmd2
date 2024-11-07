@@ -874,7 +874,8 @@ def align_text(
     )
 
     if width is None:
-        width = shutil.get_terminal_size().columns
+        # Prior to Python 3.11 this can return 0, so use a fallback if needed.
+        width = shutil.get_terminal_size().columns or constants.DEFAULT_TERMINAL_WIDTH
 
     if width < 1:
         raise ValueError("width must be at least 1")

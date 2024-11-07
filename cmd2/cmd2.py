@@ -5077,9 +5077,12 @@ class Cmd(cmd.Cmd):
             if update_terminal:
                 import shutil
 
+                # Prior to Python 3.11 this can return 0, so use a fallback if needed.
+                terminal_columns = shutil.get_terminal_size().columns or constants.DEFAULT_TERMINAL_WIDTH
+
                 # Print a string which replaces the onscreen prompt and input lines with the alert.
                 terminal_str = ansi.async_alert_str(
-                    terminal_columns=shutil.get_terminal_size().columns,
+                    terminal_columns=terminal_columns,
                     prompt=rl_get_display_prompt(),
                     line=readline.get_line_buffer(),
                     cursor_offset=rl_get_point(),
