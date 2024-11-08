@@ -450,9 +450,9 @@ def as_subcommand_to(
     :param subcommand: Subcommand name
     :param parser: argparse Parser for this subcommand
     :param help: Help message for this subcommand which displays in the list of subcommands of the command we are adding to.
-                 This is passed as the help argument to ArgumentParser.add_subparser().
+                 This is passed as the help argument to subparsers.add_parser().
     :param aliases: Alternative names for this subcommand. This is passed as the alias argument to
-                    ArgumentParser.add_subparser().
+                    subparsers.add_parser().
     :return: Wrapper function that can receive an argparse.Namespace
     """
 
@@ -462,7 +462,7 @@ def as_subcommand_to(
         setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
         setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
 
-        # Keyword arguments for ArgumentParser.add_subparser()
+        # Keyword arguments for subparsers.add_parser()
         add_parser_kwargs: Dict[str, Any] = dict()
         if help is not None:
             add_parser_kwargs['help'] = help
