@@ -3902,7 +3902,7 @@ class Cmd(cmd.Cmd):
 
     def columnize(self, str_list: Optional[List[str]], display_width: int = 80) -> None:
         """Display a list of single-line strings as a compact set of columns.
-        Override of cmd's print_topics() to handle strings with ANSI style sequences and wide characters
+        Override of cmd's columnize() to handle strings with ANSI style sequences and wide characters
 
         Each column is only as wide as necessary.
         Columns are separated by two spaces (one was not legible enough).
