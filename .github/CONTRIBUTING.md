@@ -217,7 +217,7 @@ package from the source.
 contains configuration for using `uv` in it's `pyproject.toml` file  which  makes it extremely easy to setup a `cmd2` 
 development environment using `uv`.
 
-To create a virtual environment and install everything needed for `cmd2` development using `pipenv`, do the following
+To create a virtual environment and install everything needed for `cmd2` development using `uv`, do the following
 from a GitHub checkout:
 
 ```sh
