@@ -59,7 +59,7 @@ The tables below list all prerequisites along with the minimum required version 
 | [build](https://pypi.org/project/build/)                 | `1.2.2`         |
 | [setuptools](https://pypi.org/project/setuptools/)       | `72.1.0`        |
 | [setuptools-scm](https://github.com/pypa/setuptools-scm) | `8.0.4`         |
-| [uv](https://github.com/astral-sh/uv)                    | `0.5.1`         |
+| [twine](https://github.com/pypa/twine)                   | `5.1.1`         |
 
 #### Additional prerequisites for developing cmd2
 
