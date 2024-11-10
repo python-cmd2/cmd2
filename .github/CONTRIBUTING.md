@@ -46,20 +46,21 @@ The tables below list all prerequisites along with the minimum required version 
 
 #### Prerequisites to run cmd2 applications
 
-| Prerequisite                                         | Minimum Version |
-|------------------------------------------------------|-----------------|
-| [python](https://www.python.org/downloads/)          | `3.8`           |
-| [pyperclip](https://github.com/asweigart/pyperclip)  | `1.8.2`         |
-| [wcwidth](https://pypi.python.org/pypi/wcwidth)      | `0.2.12`        |
+| Prerequisite                                             | Minimum Version | Purpose                                |
+|----------------------------------------------------------|-----------------|----------------------------------------|
+| [python](https://www.python.org/downloads/)              | `3.8`           | Python programming language            |
+| [pyperclip](https://github.com/asweigart/pyperclip)      | `1.8.2`         | Cross-platform clipboard functions     |
+| [rich-argparse](https://pypi.org/project/rich-argparse/) | `1.6.0`         | Rich help formatters for argparse      |
+| [wcwidth](https://pypi.python.org/pypi/wcwidth)          | `0.2.12`        | Measure the displayed width of unicode |
 
 #### Additional prerequisites to build and publish cmd2
 
-| Prerequisite                                             | Minimum Version |
-|----------------------------------------------------------|-----------------|
-| [build](https://pypi.org/project/build/)                 | `1.2.2`         |
-| [setuptools](https://pypi.org/project/setuptools/)       | `72.1.0`        |
-| [setuptools-scm](https://github.com/pypa/setuptools-scm) | `8.0.4`         |
-| [twine](https://github.com/pypa/twine)                   | `5.1.1`         |
+| Prerequisite                                             | Minimum Version | Purpose                             |
+|----------------------------------------------------------|-----------------|-------------------------------------|
+| [build](https://pypi.org/project/build/)                 | `1.2.2`         | Python build frontend               |
+| [setuptools](https://pypi.org/project/setuptools/)       | `72.1.0`        | Python package management           |
+| [setuptools-scm](https://github.com/pypa/setuptools-scm) | `8.0.4`         | Manage your versions by scm tag s   |
+| [twine](https://github.com/pypa/twine)                   | `5.1.1`         | Utilities for interacting with PyPI |
 
 #### Additional prerequisites for developing cmd2
 
