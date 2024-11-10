@@ -11,10 +11,10 @@ We welcome pull requests from cmd2 users and seasoned Python developers alike! F
 
 Remember to feel free to ask for help by leaving a comment within the Issue.
 
-Working on your first pull request? You can learn how from this *free* series
-[How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github).
+Working on your first pull request? You can learn how from the 
+[GitHub Docs](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
 
-###### If you've found a bug that is not on the board, [follow these steps](README.md#found-a-bug).
+###### If you've found a bug that is not on the board, [follow these steps](../README.md#found-a-bug).
 
 --------------------------------------------------------------------------------
 
@@ -42,37 +42,43 @@ Working on your first pull request? You can learn how from this *free* series
 
 The tables below list all prerequisites along with the minimum required version for each.
 
-> _Updating to the latest releases for all prerequisites via pip or conda is recommended_.
+> _Updating to the latest releases for all prerequisites via `uv` is recommended_.
 
 #### Prerequisites to run cmd2 applications
 
-| Prerequisite                                        | Minimum Version |
-|-----------------------------------------------------|-----------------|
-| [python](https://www.python.org/downloads/)         | `3.8`           |
-| [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
-| [setuptools](https://pypi.org/project/setuptools/)  | `34.4`          |
-| [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.1.7`         |
-
-#### Additional prerequisites to run cmd2 unit tests
-
 | Prerequisite                                         | Minimum Version |
 |------------------------------------------------------|-----------------|
-| [pytest](http://doc.pytest.org/en/latest/)           | `3.0.6`         |
-| [pytest-mock](https://pypi.org/project/pytest-mock/) | `1.3`           |
+| [python](https://www.python.org/downloads/)          | `3.8`           |
+| [pyperclip](https://github.com/asweigart/pyperclip)  | `1.8.2`         |
+| [wcwidth](https://pypi.python.org/pypi/wcwidth)      | `0.2.12`        |
 
-#### Additional prerequisites to build cmd2 documentation
+#### Additional prerequisites to build and publish cmd2
 
-| Prerequisite                                                  | Minimum Version |
-|---------------------------------------------------------------|-----------------|
-| [sphinx](http://www.sphinx-doc.org)                           | `2.0.0`         |
-| [sphinx-rtd-theme](https://github.com/snide/sphinx_rtd_theme) | `0.1.9`         |
+| Prerequisite                                             | Minimum Version |
+|----------------------------------------------------------|-----------------|
+| [build](https://pypi.org/project/build/)                 | `1.2.2`         |
+| [setuptools](https://pypi.org/project/setuptools/)       | `72.1.0`        |
+| [setuptools-scm](https://github.com/pypa/setuptools-scm) | `8.0.4`         |
+| [twine](https://github.com/pypa/twine)                   | `5.1.1`         |
 
-#### Optional prerequisites for enhanced unit test features
+#### Additional prerequisites for developing cmd2
 
-| Prerequisite                                          | Minimum Version |
-|-------------------------------------------------------|-----------------|
-| [pytest-cov](https://pypi.python.org/pypi/pytest-cov) | `2.4`           |
-| [ruff](https://github.com/astral-sh/ruff)             | `0.7.0`         |
+| Prerequisite                                                         | Minimum Version | Purpose                    |
+|----------------------------------------------------------------------|-----------------|----------------------------|
+| [codecov](http://doc.pytest.org/en/latest/)                          | `2.1.13`        | Cover coverage reporting   |
+| [doc8](https://github.com/PyCQA/doc8)                                | `1.1.2`         | Sphinx style checker       |
+| [invoke](https://www.pyinvoke.org/)                                  | `2.2.0`         | Command automation         |
+| [mypy](https://mypy-lang.org/)                                       | `1.13.0`        | Static type checker        |
+| [pytest](https://docs.pytest.org/en/stable/)                         | `3.0.6`         | Unit and integration tests | 
+| [pytest-cov](http://doc.pytest.org/en/latest/)                       | `6.0.0`         | Pytest code coverage       |
+| [pytest-mock](https://pypi.org/project/pytest-mock/)                 | `3.14.0`        | Pytest mocker fixture      |
+| [sphinx](https://www.sphinx-doc.org/en/master/)                      | `8.1.3`         | Documentation              |
+| [sphinx-autobuild](hhttps://pypi.org/project/sphinx-autobuild/)      | `2024.10.3`     | Rebuild docs on changes    |
+| [sphinx-rtd-theme](https://github.com/readthedocs/sphinx_rtd_theme ) | `3.0.1`         | Sphinx theme for RTD       |
+| [ruff](https://github.com/astral-sh/ruff)                            | `0.7.3`         | Fast linter and formatter  |
+| [uv](https://github.com/astral-sh/uv)                                | `0.5.1`         | Python package management  |
+
+
 
 If Python is already installed in your machine, run the following commands to validate the versions:
 
@@ -83,10 +89,14 @@ $ pip freeze | grep pyperclip
 
 If your versions are lower than the prerequisite versions, you should update.
 
-If you do not already have Python installed on your machine, we recommend using the
-[Anaconda](https://www.continuum.io/downloads) distribution because it provides an excellent out-of-the-box install on
-all platforms (Windows, Mac, and Linux) and because it supports having multiple Python environments (versions of Python)
-installed simultaneously.
+If you do not already have Python installed on your machine, we recommend using [uv](https://github.com/astral-sh/uv)     
+for all of your Python needs because it is extremely fast, meets all Python installation and packaging needs, and works
+on all platforms (Windows, Mac, and Linux).  You can install `uv` using instructions at the link above.
+
+You can then install multiple versions of Python using `uv` like so:
+```sh
+uv python install 3.10 3.11 3.12 3.13
+```
 
 ### Forking the project
 
@@ -199,62 +209,40 @@ _[this](https://github.com/Kunena/Kunena-Forum/wiki/Create-a-new-branch-with-git
 For doing cmd2 development, it is recommended you create a virtual environment using Conda or Virtualenv and install the
 package from the source.
 
-#### Create a new environment for cmd2 using Pipenv
+#### Create a new environment for cmd2 using uv
 
-`cmd2` has support for using [Pipenv](https://docs.pipenv.org/en/latest/) for development.
+`cmd2` has support for using [uv](https://github.com/astral-sh/uv) for development.
 
-`Pipenv` essentially combines the features of `pip` and `virtualenv` into a single tool.  `cmd2` contains a Pipfile
-which
-makes it extremely easy to setup a `cmd2` development environment using `pipenv`.
+`uv` is single tool to replace `pip`, `pip-tools`, `pipx`, `poetry`, `pyenv`, `twine`, `virtualenv`, and more. `cmd2` 
+contains configuration for using `uv` in it's `pyproject.toml` file  which  makes it extremely easy to setup a `cmd2` 
+development environment using `uv`.
 
-To create a virtual environment and install everything needed for `cmd2` development using `pipenv`, do the following
+To create a virtual environment and install everything needed for `cmd2` development using `uv`, do the following
 from a GitHub checkout:
 
 ```sh
-pipenv install --dev
+uv venv
 ```
 
-To create a new virtualenv, using a specific version of Python you have installed (and on your PATH), use the
+To create a new virtualenv, using a specific version of Python you have installed, use the
 --python VERSION flag, like so:
 
 ```sh
-pipenv install --dev --python 3.8
+uv venv --python 3.12
 ```
 
-Then you can enter that virtual environment with:
+Then you can run commands in this isolated virtual environment using `uv` like so:
 
 ```sh
-pipenv shell
+uv run examples/basic.py
 ```
 
-#### Create a new environment for cmd2 using Conda
-
+Alternatively you can activate the virtual environment using the OS-specific command such as this on Linux or macOS:
 ```sh
-$ conda create -n cmd2_py38 python=3.8
-$ conda activate cmd2_py38
+source .venv/bin/activate
 ```
 
-#### Create a new environment for cmd using Virtualenv
-
-We recommend that you use [pyenv](https://github.com/pyenv/pyenv) to manage your installed python versions.
-
-```sh
-# Check pyenv versions installed
-pyenv versions
-
-# Install python version defined
-pyenv install 3.8.2
-```
-
-With the Python version installed, you can set the virtualenv properly.
-
-```sh
-$ cd ~/src/cmd2
-$ virtualenv -p $(pyenv root)/versions/3.8.2/ cmd_py38
-$ source ~/src/cmd2/bin/activate
-```
-
-Assuming you cloned the repository to `~/src/cmd2` you can install cmd2 in
+Assuming you cloned the repository to `~/src/cmd2` and setup a virtual environment using `uv`, `cmd2` in this venv in
 [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs).
 Changes to the source code are immediately available when the python interpreter
 imports `cmd2`, there is no need to re-install the module after every change. This
@@ -262,7 +250,7 @@ command will also install all of the runtime dependencies for `cmd2` and modules
 
 ```sh
 $ cd ~/src/cmd2
-$ pip install -e .[dev]
+$ uv venv
 ```
 
 This project uses many python modules for various development tasks, including
@@ -275,13 +263,13 @@ high-level interface for these development tasks. To see the full list of functi
 available:
 
 ```sh
-$ invoke -l
+$ uv run inv -l
 ```
 
 You can run multiple tasks in a single invocation, for example::
 
 ```sh
-$ invoke docs sdist wheel
+$ uv run inv docs sdist wheel
 ```
 
 That one command will remove all superfluous cache, testing, and build
@@ -295,7 +283,7 @@ Now you can check if everything is installed and working:
 
 ```sh
 $ cd ~src/cmd2
-$ invoke pytest
+$ uv run inv pytest
 ```
 
 If the tests are executed it means that dependencies and project are installed successfully.
@@ -303,7 +291,7 @@ If the tests are executed it means that dependencies and project are installed s
 You can also run the example app and see a prompt that says "(Cmd)" running the command:
 
 ```sh
-$ python examples/example.py
+$ uv run examples/example.py
 ```
 
 You can type `help` to get help or `quit` to quit. If you see that, then congratulations
@@ -331,7 +319,7 @@ If you made changes to any file in the `/docs` directory, you need to build the
 Sphinx documentation and make sure your changes look good:
 
 ```sh
-$ invoke docs
+$ uv inv docs
 ```
 
 In order to see the changes, use your web browser of choice to open `~/cmd2/docs/_build/html/index.html`.
@@ -340,13 +328,13 @@ If you would rather use a webserver to view the documentation, including
 automatic page refreshes as you edit the files, use:
 
 ```sh
-$ invoke livehtml
+$ uv inv livehtml
 ```
 
 You will be shown the IP address and port number where the documents are now
 served (usually [http://localhost:8000](http://localhost:8000)).
 
-### Static code analysis
+### Code Quality Checks
 
 You should have some sort of [PEP 8](https://www.python.org/dev/peps/pep-0008/)-based linting running in your editor or
 IDE or at the command line before you commit code.  `cmd2` uses [ruff](https://github.com/astral-sh/ruff) as part of
@@ -356,13 +344,41 @@ its continuous integration (CI) process for both linting and auto-formatting.
 > clean and simple code base. Don't worry about linting errors in code you don't touch though - cleaning up the legacy
 > code is a work in progress.
 
+#### Formatting
+
+To check if formatting is correct:
+
+```sh
+uv run inv format
+```
+
+To automatically fix formatting:
+
+```sh
+uv run ruff format
+```
+
+#### Linting
+
+To run the linter:
+
+```shell
+uv run inv lint
+```
+
+#### Static Type Checking
+
+```shell
+uv run inv mypy
+```
+
 ### Running the test suite
 
 When you're ready to share your code, run the test suite:
 
 ```sh
 $ cd ~/cmd2
-$ invoke pytest
+$ uv run pytest
 ```
 
 and ensure all tests pass.
