@@ -48,7 +48,7 @@ The tables below list all prerequisites along with the minimum required version 
 
 | Prerequisite                                             | Minimum Version | Purpose                                |
 |----------------------------------------------------------|-----------------|----------------------------------------|
-| [python](https://www.python.org/downloads/)              | `3.8`           | Python programming language            |
+| [python](https://www.python.org/downloads/)              | `3.9`           | Python programming language            |
 | [pyperclip](https://github.com/asweigart/pyperclip)      | `1.8.2`         | Cross-platform clipboard functions     |
 | [rich-argparse](https://pypi.org/project/rich-argparse/) | `1.6.0`         | Rich help formatters for argparse      |
 | [wcwidth](https://pypi.python.org/pypi/wcwidth)          | `0.2.12`        | Measure the displayed width of unicode |
@@ -96,7 +96,7 @@ on all platforms (Windows, Mac, and Linux).  You can install `uv` using instruct
 
 You can then install multiple versions of Python using `uv` like so:
 ```sh
-uv python install 3.10 3.11 3.12 3.13
+uv python install 3.9 3.10 3.11 3.12 3.13
 ```
 
 ### Forking the project

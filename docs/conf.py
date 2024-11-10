@@ -190,6 +190,7 @@ nitpick_ignore = [
     ('py:class', 'CommandParent'),
     ('py:class', 'frame'),
     ('py:class', 'RawCommandFuncOptionalBoolReturn'),
+    ('py:class', 'r.Console'),
     ('py:class', 'rich.console.Console'),
     ('py:class', 'rich.console.ConsoleRenderable'),
     ('py:class', 'rich.console.RichCast'),

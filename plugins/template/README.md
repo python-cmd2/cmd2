@@ -231,15 +231,15 @@ automates the creation of these environments.
 If you prefer to create these virtualenvs by hand, do the following:
 ```
 $ cd cmd2_abbrev
-$ pyenv install 3.8.5
-$ pyenv virtualenv -p python3.8 3.8.5 cmd2-3.8
-$ pyenv install 3.9.0
-$ pyenv virtualenv -p python3.9 3.9.0 cmd2-3.9
+$ pyenv install 3.12
+$ pyenv virtualenv -p python3.12 3.12 cmd2-3.12
+$ pyenv install 3.13
+$ pyenv virtualenv -p python3.13 3.13 cmd2-3.13
 ```
 
 Now set pyenv to make both of those available at the same time:
 ```
-$ pyenv local cmd2-3.8 cmd2-3.9
+$ pyenv local cmd2-3.13 cmd2-3.13
 ```
 
 Whether you ran the script, or did it by hand, you now have isolated virtualenvs
@@ -247,12 +247,12 @@ for each of the major python versions. This table shows various python commands,
 the version of python which will be executed, and the virtualenv it will
 utilize.
 
-| Command     | python | virtualenv |
-| ----------- | ------ | ---------- |
-| `python3.8` | 3.8.5  | cmd2-3.8   |
-| `python3.9` | 3.9.0  | cmd2-3.9   |
-| `pip3.8`    | 3.8.5  | cmd2-3.8   |
-| `pip3.9`    | 3.9.0  | cmd2-3.9   |
+| Command      | python | virtualenv |
+|--------------|--------|------------|
+| `python3.12` | 3.12   | cmd2-3.12  |
+| `python3.13` | 3.13   | cmd2-3.13  |
+| `pip3.12`    | 3.12   | cmd2-3.12  |
+| `pip3.13`    | 3.13   | cmd2-3.13  |
 
 ## Install Dependencies
 
@@ -264,11 +264,11 @@ $ pip install -e .[dev]
 This command also installs `cmd2-myplugin` "in-place", so the package points to
 the source code instead of copying files to the python `site-packages` folder.
 
-All the dependencies now have been installed in the `cmd2-3.8`
+All the dependencies now have been installed in the `cmd2-3.13`
 virtualenv. If you want to work in other virtualenvs, you'll need to manually
 select it, and install again::
 
-   $ pyenv shell cmd2-3.4
+   $ pyenv shell cmd2-3.13
    $ pip install -e .[dev]
 
 Now that you have your python environments created, you need to install the
@@ -286,8 +286,8 @@ unit tests found in the `tests` directory.
 
 ### Use nox to run unit tests in multiple versions of python
 
-The included `noxfile.py` is setup to run the unit tests in python 3.8, 3.9
-3.10, 3.11, and 3.12 You can run your unit tests in all of these versions
+The included `noxfile.py` is setup to run the unit tests in python 3.9
+3.10, 3.11, 3.12, and 3.13 You can run your unit tests in all of these versions
 of python by:
 ```
 $ nox
