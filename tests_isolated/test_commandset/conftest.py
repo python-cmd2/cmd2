@@ -9,7 +9,6 @@ from contextlib import (
     redirect_stdout,
 )
 from typing import (
-    List,
     Optional,
     Union,
 )
@@ -34,7 +33,7 @@ from cmd2.utils import (
 
 
 def verify_help_text(
-    cmd2_app: cmd2.Cmd, help_output: Union[str, List[str]], verbose_strings: Optional[List[str]] = None
+    cmd2_app: cmd2.Cmd, help_output: Union[str, list[str]], verbose_strings: Optional[list[str]] = None
 ) -> None:
     """This function verifies that all expected commands are present in the help text.
 

@@ -250,15 +250,11 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Iterable,
-    List,
     NoReturn,
     Optional,
     Protocol,
     Sequence,
-    Set,
-    Tuple,
     Type,
     Union,
     cast,
@@ -350,7 +346,7 @@ class ChoicesProviderFuncBase(Protocol):
     Function that returns a list of choices in support of tab completion
     """
 
-    def __call__(self) -> List[str]: ...  # pragma: no cover
+    def __call__(self) -> list[str]: ...  # pragma: no cover
 
 
 @runtime_checkable
@@ -359,7 +355,7 @@ class ChoicesProviderFuncWithTokens(Protocol):
     Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments.
     """
 
-    def __call__(self, *, arg_tokens: Dict[str, List[str]] = {}) -> List[str]: ...  # pragma: no cover
+    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]: ...  # pragma: no cover
 
 
 ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens]
@@ -377,7 +373,7 @@ class CompleterFuncBase(Protocol):
         line: str,
         begidx: int,
         endidx: int,
-    ) -> List[str]: ...  # pragma: no cover
+    ) -> list[str]: ...  # pragma: no cover
 
 
 @runtime_checkable
@@ -394,8 +390,8 @@ class CompleterFuncWithTokens(Protocol):
         begidx: int,
         endidx: int,
         *,
-        arg_tokens: Dict[str, List[str]] = {},
-    ) -> List[str]: ...  # pragma: no cover
+        arg_tokens: dict[str, list[str]] = {},
+    ) -> list[str]: ...  # pragma: no cover
 
 
 CompleterFunc = Union[CompleterFuncBase, CompleterFuncWithTokens]
@@ -598,7 +594,7 @@ setattr(argparse.Action, 'set_descriptive_header', _action_set_descriptive_heade
 ############################################################################################################
 # Patch argparse.Action with accessors for nargs_range attribute
 ############################################################################################################
-def _action_get_nargs_range(self: argparse.Action) -> Optional[Tuple[int, Union[int, float]]]:
+def _action_get_nargs_range(self: argparse.Action) -> Optional[tuple[int, Union[int, float]]]:
     """
     Get the nargs_range attribute of an argparse Action.
 
@@ -609,13 +605,13 @@ def _action_get_nargs_range(self: argparse.Action) -> Optional[Tuple[int, Union[
     :param self: argparse Action being queried
     :return: The value of nargs_range or None if attribute does not exist
     """
-    return cast(Optional[Tuple[int, Union[int, float]]], getattr(self, ATTR_NARGS_RANGE, None))
+    return cast(Optional[tuple[int, Union[int, float]]], getattr(self, ATTR_NARGS_RANGE, None))
 
 
 setattr(argparse.Action, 'get_nargs_range', _action_get_nargs_range)
 
 
-def _action_set_nargs_range(self: argparse.Action, nargs_range: Optional[Tuple[int, Union[int, float]]]) -> None:
+def _action_set_nargs_range(self: argparse.Action, nargs_range: Optional[tuple[int, Union[int, float]]]) -> None:
     """
     Set the nargs_range attribute of an argparse Action.
 
@@ -673,7 +669,7 @@ setattr(argparse.Action, 'set_suppress_tab_hint', _action_set_suppress_tab_hint)
 # Allow developers to add custom action attributes
 ############################################################################################################
 
-CUSTOM_ACTION_ATTRIBS: Set[str] = set()
+CUSTOM_ACTION_ATTRIBS: set[str] = set()
 _CUSTOM_ATTRIB_PFX = '_attr_'
 
 
@@ -746,7 +742,7 @@ orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
-    nargs: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None] = None,
+    nargs: Union[int, str, tuple[int], tuple[int, int], tuple[int, float], None] = None,
     choices_provider: Optional[ChoicesProviderFunc] = None,
     completer: Optional[CompleterFunc] = None,
     suppress_tab_hint: bool = False,
@@ -797,7 +793,7 @@ def _add_argument_wrapper(
     nargs_range = None
 
     if nargs is not None:
-        nargs_adjusted: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None]
+        nargs_adjusted: Union[int, str, tuple[int], tuple[int, int], tuple[int, float], None]
         # Check if nargs was given as a range
         if isinstance(nargs, tuple):
             # Handle 1-item tuple by setting max to INFINITY
@@ -847,7 +843,7 @@ def _add_argument_wrapper(
         kwargs['nargs'] = nargs_adjusted
 
     # Extract registered custom keyword arguments
-    custom_attribs: Dict[str, Any] = {}
+    custom_attribs: dict[str, Any] = {}
     for keyword, value in kwargs.items():
         if keyword in CUSTOM_ACTION_ATTRIBS:
             custom_attribs[keyword] = value
@@ -1124,9 +1120,9 @@ class Cmd2HelpFormatter(RichHelpFormatter):
                 # End cmd2 customization
 
                 # helper for wrapping lines
-                def get_lines(parts: List[str], indent: str, prefix: Optional[str] = None) -> List[str]:
-                    lines: List[str] = []
-                    line: List[str] = []
+                def get_lines(parts: list[str], indent: str, prefix: Optional[str] = None) -> list[str]:
+                    lines: list[str] = []
+                    line: list[str] = []
                     if prefix is not None:
                         line_len = len(prefix) - 1
                     else:
@@ -1188,7 +1184,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
             return metavar
 
         else:
-            parts: List[str] = []
+            parts: list[str] = []
 
             # if the Optional doesn't take a value, format is:
             #    -s, --long
@@ -1209,8 +1205,8 @@ class Cmd2HelpFormatter(RichHelpFormatter):
     def _determine_metavar(
         self,
         action: argparse.Action,
-        default_metavar: Union[str, Tuple[str, ...]],
-    ) -> Union[str, Tuple[str, ...]]:
+        default_metavar: Union[str, tuple[str, ...]],
+    ) -> Union[str, tuple[str, ...]]:
         """Custom method to determine what to use as the metavar value of an action"""
         if action.metavar is not None:
             result = action.metavar
@@ -1226,11 +1222,11 @@ class Cmd2HelpFormatter(RichHelpFormatter):
     def _metavar_formatter(
         self,
         action: argparse.Action,
-        default_metavar: Union[str, Tuple[str, ...]],
-    ) -> Callable[[int], Tuple[str, ...]]:
+        default_metavar: Union[str, tuple[str, ...]],
+    ) -> Callable[[int], tuple[str, ...]]:
         metavar = self._determine_metavar(action, default_metavar)
 
-        def format(tuple_size: int) -> Tuple[str, ...]:
+        def format(tuple_size: int) -> tuple[str, ...]:
             if isinstance(metavar, tuple):
                 return metavar
             else:
@@ -1238,7 +1234,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
 
         return format
 
-    def _format_args(self, action: argparse.Action, default_metavar: Union[str, Tuple[str, ...]]) -> str:
+    def _format_args(self, action: argparse.Action, default_metavar: Union[str, tuple[str, ...]]) -> str:
         """Customized to handle ranged nargs and make other output less verbose"""
         metavar = self._determine_metavar(action, default_metavar)
         metavar_formatter = self._metavar_formatter(action, default_metavar)

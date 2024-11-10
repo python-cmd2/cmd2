@@ -11,8 +11,6 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
     # package is not installed
     pass
 
-from typing import List
-
 from . import plugin
 from .ansi import (
     Bg,
@@ -64,7 +62,7 @@ from .utils import (
     categorize,
 )
 
-__all__: List[str] = [
+__all__: list[str] = [
     'COMMAND_NAME',
     'DEFAULT_SHORTCUTS',
     # ANSI Exports

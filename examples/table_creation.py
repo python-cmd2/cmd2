@@ -4,10 +4,7 @@
 
 import functools
 import sys
-from typing import (
-    Any,
-    List,
-)
+from typing import Any
 
 from cmd2 import (
     EightBitBg,
@@ -63,8 +60,8 @@ class Author:
         self.name = name
         self.birthday = birthday
         self.place_of_birth = place_of_birth
-        self.books: List[Book] = []
-        self.relatives: List[Relative] = []
+        self.books: list[Book] = []
+        self.relatives: list[Relative] = []
 
 
 def ansi_print(text):
@@ -76,7 +73,7 @@ def basic_tables():
     """Demonstrates basic examples of the table classes"""
 
     # Table data which demonstrates handling of wrapping and text styles
-    data_list: List[List[Any]] = list()
+    data_list: list[list[Any]] = list()
     data_list.append(["Billy Smith", "123 Sesame St.\n" "Fake Town, USA 33445", DollarFormatter(100333.03)])
     data_list.append(
         [
@@ -96,7 +93,7 @@ def basic_tables():
     data_list.append(["John Jones", "9235 Highway 32\n" + green("Greenville") + ", SC 29604", DollarFormatter(82987.71)])
 
     # Table Columns (width does not account for any borders or padding which may be added)
-    columns: List[Column] = list()
+    columns: list[Column] = list()
     columns.append(Column("Name", width=20))
     columns.append(Column("Address", width=38))
     columns.append(
@@ -123,7 +120,7 @@ def nested_tables():
     """
 
     # Create data for this example
-    author_data: List[Author] = []
+    author_data: list[Author] = []
     author_1 = Author("Frank Herbert", "10/08/1920", "Tacoma, Washington")
     author_1.books.append(Book("Dune", "1965"))
     author_1.books.append(Book("Dune Messiah", "1969"))
@@ -159,7 +156,7 @@ def nested_tables():
 
     # Define table which presents Author data fields vertically with no header.
     # This will be nested in the parent table's first column.
-    author_columns: List[Column] = list()
+    author_columns: list[Column] = list()
     author_columns.append(Column("", width=14))
     author_columns.append(Column("", width=20))
 
@@ -174,7 +171,7 @@ def nested_tables():
 
     # Define AlternatingTable for books checked out by people in the first table.
     # This will be nested in the parent table's second column.
-    books_columns: List[Column] = list()
+    books_columns: list[Column] = list()
     books_columns.append(Column(ansi.style("Title", bold=True), width=25))
     books_columns.append(
         Column(
@@ -196,7 +193,7 @@ def nested_tables():
 
     # Define BorderedTable for relatives of the author
     # This will be nested in the parent table's third column.
-    relative_columns: List[Column] = list()
+    relative_columns: list[Column] = list()
     relative_columns.append(Column(ansi.style("Name", bold=True), width=25))
     relative_columns.append(Column(ansi.style("Relationship", bold=True), width=12))
 
@@ -220,7 +217,7 @@ def nested_tables():
     )
 
     # Define parent AlternatingTable which contains Author and Book tables
-    parent_tbl_columns: List[Column] = list()
+    parent_tbl_columns: list[Column] = list()
 
     # All of the nested tables already have background colors. Set style_data_text
     # to False so the parent AlternatingTable does not apply background color to them.
@@ -242,7 +239,7 @@ def nested_tables():
     )
 
     # Construct the tables
-    parent_table_data: List[List[Any]] = []
+    parent_table_data: list[list[Any]] = []
     for row, author in enumerate(author_data, start=1):
         # First build the author table and color it based on row number
         author_tbl = even_author_tbl if row % 2 == 0 else odd_author_tbl

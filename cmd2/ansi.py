@@ -12,7 +12,6 @@ from enum import (
 from typing import (
     IO,
     Any,
-    List,
     Optional,
     cast,
 )
@@ -992,11 +991,11 @@ def style(
     :raises: TypeError if bg isn't None or a subclass of BgColor
     :return: the stylized string
     """
-    # List of strings that add style
-    additions: List[AnsiSequence] = []
+    # list of strings that add style
+    additions: list[AnsiSequence] = []
 
-    # List of strings that remove style
-    removals: List[AnsiSequence] = []
+    # list of strings that remove style
+    removals: list[AnsiSequence] = []
 
     # Process the style settings
     if fg is not None:

@@ -8,7 +8,6 @@ with examples of how to integrate tab completion with argparse-based commands.
 import argparse
 from typing import (
     Iterable,
-    List,
     Optional,
 )
 
@@ -35,7 +34,7 @@ class WithCommandSets(Cmd):
         super().__init__(command_sets=command_sets)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
-    def choices_provider(self) -> List[str]:
+    def choices_provider(self) -> list[str]:
         """A choices provider is useful when the choice list is based on instance data of your application"""
         return self.sport_item_strs
 

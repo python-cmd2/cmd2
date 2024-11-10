@@ -4,10 +4,6 @@
 A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion
 """
 
-from typing import (
-    List,
-)
-
 import cmd2
 
 EXAMPLE_COMMANDS = "Example Commands"
@@ -64,7 +60,7 @@ class ReadInputApp(cmd2.Cmd):
         else:
             self.custom_history.append(input_str)
 
-    def choices_provider(self) -> List[str]:
+    def choices_provider(self) -> list[str]:
         """Example choices provider function"""
         return ["from_provider_1", "from_provider_2", "from_provider_3"]
 

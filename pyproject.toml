@@ -205,7 +205,7 @@ select = [
     "FA", # flake8-future-annotations
     #    "FBT",  # flake8-boolean-trap
     "G", # flake8-logging-format
-    #    "I", # isort
+    "I", # isort
     "ICN", # flake8-import-conventions
     #    "INP", # flake8-no-pep420
     "INT", # flake8-gettext

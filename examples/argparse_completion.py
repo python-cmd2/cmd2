@@ -5,10 +5,6 @@ A simple example demonstrating how to integrate tab completion with argparse-bas
 """
 
 import argparse
-from typing import (
-    Dict,
-    List,
-)
 
 from cmd2 import (
     Cmd,
@@ -28,11 +24,11 @@ class ArgparseCompletion(Cmd):
         super().__init__(*args, **kwargs)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
-    def choices_provider(self) -> List[str]:
+    def choices_provider(self) -> list[str]:
         """A choices provider is useful when the choice list is based on instance data of your application"""
         return self.sport_item_strs
 
-    def choices_completion_error(self) -> List[str]:
+    def choices_completion_error(self) -> list[str]:
         """
         CompletionErrors can be raised if an error occurs while tab completing.
 
@@ -44,14 +40,14 @@ class ArgparseCompletion(Cmd):
             return self.sport_item_strs
         raise CompletionError("debug must be true")
 
-    def choices_completion_item(self) -> List[CompletionItem]:
+    def choices_completion_item(self) -> list[CompletionItem]:
         """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
         fancy_item = "These things can\ncontain newlines and\n"
         fancy_item += ansi.style("styled text!!", fg=ansi.Fg.LIGHT_YELLOW, underline=True)
         items = {1: "My item", 2: "Another item", 3: "Yet another item", 4: fancy_item}
         return [CompletionItem(item_id, description) for item_id, description in items.items()]
 
-    def choices_arg_tokens(self, arg_tokens: Dict[str, List[str]]) -> List[str]:
+    def choices_arg_tokens(self, arg_tokens: dict[str, list[str]]) -> list[str]:
         """
         If a choices or completer function/method takes a value called arg_tokens, then it will be
         passed a dictionary that maps the command line tokens up through the one being completed

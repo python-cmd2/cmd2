@@ -8,9 +8,6 @@ and changes the window title
 import random
 import threading
 import time
-from typing import (
-    List,
-)
 
 import cmd2
 from cmd2 import (
@@ -89,7 +86,7 @@ class AlerterApp(cmd2.Cmd):
         else:
             print("The alert thread is already stopped")
 
-    def _get_alerts(self) -> List[str]:
+    def _get_alerts(self) -> list[str]:
         """
         Reports alerts
         :return: the list of alerts

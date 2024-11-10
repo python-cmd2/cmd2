@@ -6,9 +6,6 @@ Test CommandSet
 
 import argparse
 import signal
-from typing import (
-    List,
-)
 
 import pytest
 
@@ -61,7 +58,7 @@ class CommandSetA(CommandSetBase):
     cranberry_parser.add_argument('arg1', choices=['lemonade', 'juice', 'sauce'])
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
-    def do_cranberry(self, ns: argparse.Namespace, unknown: List[str]):
+    def do_cranberry(self, ns: argparse.Namespace, unknown: list[str]):
         self._cmd.poutput('Cranberry {}!!'.format(ns.arg1))
         if unknown and len(unknown):
             self._cmd.poutput('Unknown: ' + ', '.join(['{}'] * len(unknown)).format(*unknown))
@@ -72,13 +69,13 @@ class CommandSetA(CommandSetBase):
 
     @cmd2.with_argument_list
     @cmd2.with_category('Also Alone')
-    def do_durian(self, args: List[str]):
+    def do_durian(self, args: list[str]):
         """Durian Command"""
         self._cmd.poutput('{} Arguments: '.format(len(args)))
         self._cmd.poutput(', '.join(['{}'] * len(args)).format(*args))
         self._cmd.last_result = {'args': args}
 
-    def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return self._cmd.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
 
     elderberry_parser = cmd2.Cmd2ArgumentParser()
@@ -450,7 +447,7 @@ class LoadableVegetables(cmd2.CommandSet):
     def do_arugula(self, _: cmd2.Statement):
         self._cmd.poutput('Arugula')
 
-    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return ['quartered', 'diced']
 
     bokchoy_parser = cmd2.Cmd2ArgumentParser()
@@ -688,7 +685,7 @@ class AppWithSubCommands(cmd2.Cmd):
         """Cut banana"""
         self.poutput('cutting banana: ' + ns.direction)
 
-    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return ['quartered', 'diced']
 
     bokchoy_parser = cmd2.Cmd2ArgumentParser()
@@ -743,7 +740,7 @@ class SupportFuncProvider(cmd2.CommandSet):
         """dummy variable prevents this from being autoloaded in other tests"""
         super(SupportFuncProvider, self).__init__()
 
-    def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         assert self is complete_states_expected_self
         return self._cmd.basic_complete(text, line, begidx, endidx, self.states)
 

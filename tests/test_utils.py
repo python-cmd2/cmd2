@@ -336,10 +336,6 @@ def test_context_flag_exit_err(context_flag):
 
 
 def test_remove_overridden_styles():
-    from typing import (
-        List,
-    )
-
     from cmd2 import (
         Bg,
         EightBitBg,
@@ -350,7 +346,7 @@ def test_remove_overridden_styles():
         TextStyle,
     )
 
-    def make_strs(styles_list: List[ansi.AnsiSequence]) -> List[str]:
+    def make_strs(styles_list: list[ansi.AnsiSequence]) -> list[str]:
         return [str(s) for s in styles_list]
 
     # Test Reset All

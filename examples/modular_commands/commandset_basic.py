@@ -3,10 +3,6 @@
 A simple example demonstrating a loadable command set
 """
 
-from typing import (
-    List,
-)
-
 from cmd2 import (
     Cmd,
     CommandSet,
@@ -19,7 +15,7 @@ from cmd2 import (
 
 @with_default_category('Basic Completion')
 class BasicCompletionCommandSet(CommandSet):
-    # List of strings used with completion functions
+    # list of strings used with completion functions
     food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
     sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
@@ -40,7 +36,7 @@ class BasicCompletionCommandSet(CommandSet):
         """
         self._cmd.poutput("Args: {}".format(statement.args))
 
-    def complete_flag_based(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_flag_based(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         """Completion function for do_flag_based"""
         flag_dict = {
             # Tab complete food items after -f and --food flags in command line
@@ -60,7 +56,7 @@ class BasicCompletionCommandSet(CommandSet):
         """Tab completes first 3 arguments using index_based_complete"""
         self._cmd.poutput("Args: {}".format(statement.args))
 
-    def complete_index_based(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_index_based(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         """Completion function for do_index_based"""
         index_dict = {
             1: self.food_item_strs,  # Tab complete food items at index 1 in command line
@@ -74,14 +70,14 @@ class BasicCompletionCommandSet(CommandSet):
         """Tab completes files from a list using delimiter_complete"""
         self._cmd.poutput("Args: {}".format(statement.args))
 
-    def complete_delimiter_complete(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_delimiter_complete(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return cmd.delimiter_complete(text, line, begidx, endidx, match_against=self.file_strs, delimiter='/')
 
     def do_raise_error(self, cmd: Cmd, statement: Statement):
         """Demonstrates effect of raising CompletionError"""
         self._cmd.poutput("Args: {}".format(statement.args))
 
-    def complete_raise_error(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_raise_error(self, cmd: Cmd, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         """
         CompletionErrors can be raised if an error occurs while tab completing.
 

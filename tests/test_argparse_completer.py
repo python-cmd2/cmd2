@@ -6,11 +6,7 @@ Unit/functional testing for argparse completer in cmd2
 
 import argparse
 import numbers
-from typing import (
-    Dict,
-    List,
-    cast,
-)
+from typing import cast
 
 import pytest
 
@@ -39,11 +35,11 @@ standalone_choices = ['standalone', 'provider']
 standalone_completions = ['standalone', 'completer']
 
 
-def standalone_choice_provider(cli: cmd2.Cmd) -> List[str]:
+def standalone_choice_provider(cli: cmd2.Cmd) -> list[str]:
     return standalone_choices
 
 
-def standalone_completer(cli: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+def standalone_completer(cli: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> list[str]:
     return cli.basic_complete(text, line, begidx, endidx, standalone_completions)
 
 
@@ -125,11 +121,11 @@ class ArgparseCompleterTester(cmd2.Cmd):
     # This tests that CompletionItems created with numerical values are sorted as numbers.
     num_completion_items = [CompletionItem(5, "Five"), CompletionItem(1.5, "One.Five"), CompletionItem(2, "Five")]
 
-    def choices_provider(self) -> List[str]:
+    def choices_provider(self) -> list[str]:
         """Method that provides choices"""
         return self.choices_from_provider
 
-    def completion_item_method(self) -> List[CompletionItem]:
+    def completion_item_method(self) -> list[CompletionItem]:
         """Choices method that returns CompletionItems"""
         items = []
         for i in range(0, 10):
@@ -191,13 +187,13 @@ class ArgparseCompleterTester(cmd2.Cmd):
     completions_for_pos_1 = ['completions', 'positional_1', 'probably', 'missed', 'spot']
     completions_for_pos_2 = ['completions', 'positional_2', 'probably', 'missed', 'me']
 
-    def flag_completer(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def flag_completer(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return self.basic_complete(text, line, begidx, endidx, self.completions_for_flag)
 
-    def pos_1_completer(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def pos_1_completer(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return self.basic_complete(text, line, begidx, endidx, self.completions_for_pos_1)
 
-    def pos_2_completer(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def pos_2_completer(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return self.basic_complete(text, line, begidx, endidx, self.completions_for_pos_2)
 
     completer_parser = Cmd2ArgumentParser()
@@ -265,11 +261,11 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to CompletionError
     ############################################################################################################
-    def completer_raise_error(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def completer_raise_error(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         """Raises CompletionError"""
         raise CompletionError('completer broke something')
 
-    def choice_raise_error(self) -> List[str]:
+    def choice_raise_error(self) -> list[str]:
         """Raises CompletionError"""
         raise CompletionError('choice broke something')
 
@@ -284,13 +280,13 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to receiving arg_tokens
     ############################################################################################################
-    def choices_takes_arg_tokens(self, arg_tokens: Dict[str, List[str]]) -> List[str]:
+    def choices_takes_arg_tokens(self, arg_tokens: dict[str, list[str]]) -> list[str]:
         """Choices function that receives arg_tokens from ArgparseCompleter"""
         return [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
 
     def completer_takes_arg_tokens(
-        self, text: str, line: str, begidx: int, endidx: int, arg_tokens: Dict[str, List[str]]
-    ) -> List[str]:
+        self, text: str, line: str, begidx: int, endidx: int, arg_tokens: dict[str, list[str]]
+    ) -> list[str]:
         """Completer function that receives arg_tokens from ArgparseCompleter"""
         match_against = [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
         return self.basic_complete(text, line, begidx, endidx, match_against)
@@ -1204,7 +1200,7 @@ def test_complete_standalone(ac_app, flag, completions):
 
 # Custom ArgparseCompleter-based class
 class CustomCompleter(argparse_completer.ArgparseCompleter):
-    def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, matched_flags: List[str]) -> List[str]:
+    def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, matched_flags: list[str]) -> list[str]:
         """Override so flags with 'complete_when_ready' set to True will complete only when app is ready"""
 
         # Find flags which should not be completed and place them in matched_flags

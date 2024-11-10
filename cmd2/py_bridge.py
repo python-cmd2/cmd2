@@ -13,7 +13,6 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    List,
     NamedTuple,
     Optional,
     TextIO,
@@ -99,9 +98,9 @@ class PyBridge:
         # Tells if any of the commands run via __call__ returned True for stop
         self.stop = False
 
-    def __dir__(self) -> List[str]:
+    def __dir__(self) -> list[str]:
         """Return a custom set of attribute names"""
-        attributes: List[str] = []
+        attributes: list[str] = []
         attributes.insert(0, 'cmd_echo')
         return attributes
 

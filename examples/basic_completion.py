@@ -14,13 +14,10 @@ argparse-based completion. For an example integrating tab completion with argpar
 """
 
 import functools
-from typing import (
-    List,
-)
 
 import cmd2
 
-# List of strings used with completion functions
+# list of strings used with completion functions
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
@@ -46,7 +43,7 @@ class BasicCompletion(cmd2.Cmd):
         """
         self.poutput("Args: {}".format(statement.args))
 
-    def complete_flag_based(self, text, line, begidx, endidx) -> List[str]:
+    def complete_flag_based(self, text, line, begidx, endidx) -> list[str]:
         """Completion function for do_flag_based"""
         flag_dict = {
             # Tab complete food items after -f and --food flags in command line
@@ -66,7 +63,7 @@ class BasicCompletion(cmd2.Cmd):
         """Tab completes first 3 arguments using index_based_complete"""
         self.poutput("Args: {}".format(statement.args))
 
-    def complete_index_based(self, text, line, begidx, endidx) -> List[str]:
+    def complete_index_based(self, text, line, begidx, endidx) -> list[str]:
         """Completion function for do_index_based"""
         index_dict = {
             1: food_item_strs,  # Tab complete food items at index 1 in command line
@@ -87,7 +84,7 @@ class BasicCompletion(cmd2.Cmd):
         """Demonstrates effect of raising CompletionError"""
         self.poutput("Args: {}".format(statement.args))
 
-    def complete_raise_error(self, text, line, begidx, endidx) -> List[str]:
+    def complete_raise_error(self, text, line, begidx, endidx) -> list[str]:
         """
         CompletionErrors can be raised if an error occurs while tab completing.
 

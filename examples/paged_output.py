@@ -3,9 +3,6 @@
 """A simple example demonstrating the using paged output via the ppaged() method."""
 
 import os
-from typing import (
-    List,
-)
 
 import cmd2
 
@@ -27,7 +24,7 @@ class PagedOutput(cmd2.Cmd):
             self.pexcept('Error reading {!r}: {}'.format(filename, ex))
 
     @cmd2.with_argument_list
-    def do_page_wrap(self, args: List[str]):
+    def do_page_wrap(self, args: list[str]):
         """Read in a text file and display its output in a pager, wrapping long lines if they don't fit.
 
         Usage: page_wrap <file_path>
@@ -40,7 +37,7 @@ class PagedOutput(cmd2.Cmd):
     complete_page_wrap = cmd2.Cmd.path_complete
 
     @cmd2.with_argument_list
-    def do_page_truncate(self, args: List[str]):
+    def do_page_truncate(self, args: list[str]):
         """Read in a text file and display its output in a pager, truncating long lines if they don't fit.
 
         Truncated lines can still be accessed by scrolling to the right using the arrow keys.

@@ -6,7 +6,6 @@ Supports the definition of commands in separate classes to be composed into cmd2
 from typing import (
     TYPE_CHECKING,
     Callable,
-    Dict,
     Mapping,
     Optional,
     Type,
@@ -97,7 +96,7 @@ class CommandSet(object):
         # accessed by child classes using the self._cmd property.
         self.__cmd_internal: Optional[cmd2.Cmd] = None
 
-        self._settables: Dict[str, Settable] = {}
+        self._settables: dict[str, Settable] = {}
         self._settable_prefix = self.__class__.__name__
 
     @property

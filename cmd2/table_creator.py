@@ -17,10 +17,8 @@ from enum import (
 from typing import (
     Any,
     Deque,
-    List,
     Optional,
     Sequence,
-    Tuple,
     Union,
 )
 
@@ -156,7 +154,7 @@ class TableCreator:
                 col.width = max(1, ansi.widest_line(col.header))
 
     @staticmethod
-    def _wrap_long_word(word: str, max_width: int, max_lines: Union[int, float], is_last_word: bool) -> Tuple[str, int, int]:
+    def _wrap_long_word(word: str, max_width: int, max_lines: Union[int, float], is_last_word: bool) -> tuple[str, int, int]:
         """
         Used by _wrap_text() to wrap a long word over multiple lines
 
@@ -164,7 +162,7 @@ class TableCreator:
         :param max_width: maximum display width of a line
         :param max_lines: maximum lines to wrap before ending the last line displayed with an ellipsis
         :param is_last_word: True if this is the last word of the total text being wrapped
-        :return: Tuple(wrapped text, lines used, display width of last line)
+        :return: tuple(wrapped text, lines used, display width of last line)
         """
         styles_dict = utils.get_styles_dict(word)
         wrapped_buf = io.StringIO()
@@ -382,7 +380,7 @@ class TableCreator:
 
         return wrapped_buf.getvalue()
 
-    def _generate_cell_lines(self, cell_data: Any, is_header: bool, col: Column, fill_char: str) -> Tuple[Deque[str], int]:
+    def _generate_cell_lines(self, cell_data: Any, is_header: bool, col: Column, fill_char: str) -> tuple[Deque[str], int]:
         """
         Generate the lines of a table cell
 
@@ -392,7 +390,7 @@ class TableCreator:
         :param col: Column definition for this cell
         :param fill_char: character that fills remaining space in a cell. If your text has a background color,
                           then give fill_char the same background color. (Cannot be a line breaking character)
-        :return: Tuple(deque of cell lines, display width of the cell)
+        :return: tuple(deque of cell lines, display width of the cell)
         """
         # Convert data to string and replace tabs with spaces
         data_str = str(cell_data).replace('\t', SPACE * self.tab_width)
@@ -654,7 +652,7 @@ class SimpleTable(TableCreator):
         inter_cell = self.apply_header_bg(self.column_spacing * SPACE)
 
         # Apply background color to header text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for col in self.cols:
             if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
@@ -694,7 +692,7 @@ class SimpleTable(TableCreator):
         inter_cell = self.apply_data_bg(self.column_spacing * SPACE)
 
         # Apply background color to data text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for index, col in enumerate(self.cols):
             if col.style_data_text:
                 to_display.append(self.apply_data_bg(row_data[index]))
@@ -949,7 +947,7 @@ class BorderedTable(TableCreator):
         post_line = self.apply_header_bg(self.padding * SPACE) + self.apply_border_color('║')
 
         # Apply background color to header text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for col in self.cols:
             if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
@@ -993,7 +991,7 @@ class BorderedTable(TableCreator):
         post_line = self.apply_data_bg(self.padding * SPACE) + self.apply_border_color('║')
 
         # Apply background color to data text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for index, col in enumerate(self.cols):
             if col.style_data_text:
                 to_display.append(self.apply_data_bg(row_data[index]))

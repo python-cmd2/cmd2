@@ -2,10 +2,6 @@
 # coding=utf-8
 """A simple example demonstrating the following how to emit a non-zero exit code in your cmd2 application."""
 
-from typing import (
-    List,
-)
-
 import cmd2
 
 
@@ -16,7 +12,7 @@ class ReplWithExitCode(cmd2.Cmd):
         super().__init__()
 
     @cmd2.with_argument_list
-    def do_exit(self, arg_list: List[str]) -> bool:
+    def do_exit(self, arg_list: list[str]) -> bool:
         """Exit the application with an optional exit code.
 
         Usage:  exit [exit_code]

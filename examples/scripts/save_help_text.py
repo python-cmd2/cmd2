@@ -8,15 +8,12 @@ This is meant to be run within a cmd2 session using run_pyscript.
 import argparse
 import os
 import sys
-from typing import (
-    List,
-    TextIO,
-)
+from typing import TextIO
 
 ASTERISKS = "********************************************************"
 
 
-def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
+def get_sub_commands(parser: argparse.ArgumentParser) -> list[str]:
     """Get a list of subcommands for an ArgumentParser"""
     sub_cmds = []
 
