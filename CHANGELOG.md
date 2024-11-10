@@ -1,5 +1,6 @@
 ## 3.0.0 (TBD)
 * Breaking Changes
+  * `cmd2` 3.x supports Python 3.9+ (removed support for Python 3.8)
   * Removed macros
 * Enhancements
   * Simplified the process to set a custom parser for `cmd2's` built-in commands.

@@ -1,4 +1,3 @@
-
 Installation Instructions
 =========================
 
@@ -7,7 +6,7 @@ Installation Instructions
 .. _setuptools: https://pypi.org/project/setuptools
 .. _PyPI: https://pypi.org
 
-``cmd2`` works on Linux, macOS, and Windows. It requires Python 3.8 or
+``cmd2`` works on Linux, macOS, and Windows. It requires Python 3.9 or
 higher, pip_, and setuptools_. If you've got all that, then you can just:
 
 .. code-block:: shell
@@ -30,7 +29,7 @@ higher, pip_, and setuptools_. If you've got all that, then you can just:
 Prerequisites
 -------------
 
-If you have Python 3 >=3.8 installed from `python.org
+If you have Python 3 >=3.9 installed from `python.org
 <https://www.python.org>`_, you will already have pip_ and setuptools_, but may
 need to upgrade to the latest versions:
 

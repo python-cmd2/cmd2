@@ -24,7 +24,7 @@ setuptools.setup(
     url='https://github.com/python-cmd2/cmd2-plugin-template',
     license='MIT',
     packages=['cmd2_myplugin'],
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     install_requires=['cmd2 >= 2, <3'],
     setup_requires=['setuptools_scm'],
     classifiers=[
@@ -34,11 +34,11 @@ setuptools.setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
     ],
     # dependencies for development and testing
     # $ pip install -e .[dev]
