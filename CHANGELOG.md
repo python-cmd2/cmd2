@@ -1,4 +1,4 @@
-## 2.5.5 (TBD)
+## 2.5.5 (November 13, 2024)
 * Bug Fixes
    * Fixed type hints for passing a class method to `with_argparser` and `as_subcommand_to`.
    * Fixed issue where `set` command was not always printing a settable's current value.
