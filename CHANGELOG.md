@@ -1,3 +1,8 @@
+## 2.5.5 (TBD)
+* Bug Fixes
+   * Fixed type hints for passing a class method to `with_argparser` and `as_subcommand_to`.
+   * Fixed issue where `set` command was not always printing a settable's current value.
+
 ## 2.5.4 (November 6, 2024)
 * Bug Fixes
   * Fixed `ZeroDivisionError` in `async_alert()` when `shutil.get_terminal_size().columns` is 0.
