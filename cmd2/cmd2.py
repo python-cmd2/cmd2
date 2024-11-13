@@ -4226,11 +4226,11 @@ class Cmd(cmd.Cmd):
                 # Try to update the settable's value
                 try:
                     orig_value = settable.get_value()
-                    new_value = settable.set_value(utils.strip_quotes(args.value))
+                    settable.set_value(utils.strip_quotes(args.value))
                 except Exception as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
-                    self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {new_value!r}")
+                    self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {settable.get_value()!r}")
                     self.last_result = True
                 return
 

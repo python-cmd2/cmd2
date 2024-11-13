@@ -178,17 +178,14 @@ class Settable:
         self.completer = completer
 
     def get_value(self) -> Any:
-        """
-        Get the value of the settable attribute
-        :return:
-        """
+        """Get the value of the settable attribute."""
         return getattr(self.settable_obj, self.settable_attrib_name)
 
-    def set_value(self, value: Any) -> Any:
+    def set_value(self, value: Any) -> None:
         """
-        Set the settable attribute on the specified destination object
-        :param value: New value to set
-        :return: New value that the attribute was set to
+        Set the settable attribute on the specified destination object.
+
+        :param value: new value to set
         """
         # Run the value through its type function to handle any conversion or validation
         new_value = self.val_type(value)
@@ -205,7 +202,6 @@ class Settable:
         # Check if we need to call an onchange callback
         if orig_value != new_value and self.onchange_cb:
             self.onchange_cb(self.name, orig_value, new_value)
-        return new_value
 
 
 def is_text_file(file_path: str) -> bool:
