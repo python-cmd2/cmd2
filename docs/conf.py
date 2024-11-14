@@ -184,6 +184,7 @@ autodoc_default_options = {'member-order': 'bysource'}
 nitpick_ignore = [
     ('py:class', 'ArgparseCommandFunc'),
     ('py:class', 'argparse._SubParsersAction'),
+    ('py:class', 'cmd2.command_definition.CommandSetType'),
     ('py:class', 'cmd2.decorators.CommandParent'),
     ('py:class', 'cmd2.decorators.CommandParentType'),
     ('py:class', 'cmd2.utils._T'),

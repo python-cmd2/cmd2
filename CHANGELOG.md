@@ -1,3 +1,8 @@
+## 2.5.6 (TBD)
+* Bug Fixes
+   * Fixed type hint for `with_default_category` decorator which caused type checkers to mistype
+     a decorated subclass of `CommandSet` and a plain `CommandSet`.
+
 ## 2.5.5 (November 13, 2024)
 * Bug Fixes
    * Fixed type hints for passing a class method to `with_argparser` and `as_subcommand_to`.
