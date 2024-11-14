@@ -10,6 +10,7 @@ from typing import (
     Mapping,
     Optional,
     Type,
+    TypeVar,
 )
 
 from .constants import (
@@ -30,8 +31,10 @@ if TYPE_CHECKING:  # pragma: no cover
 #: Further refinements are needed to define the input parameters
 CommandFunc = Callable[..., Optional[bool]]
 
+CommandSetType = TypeVar('CommandSetType', bound=Type['CommandSet'])
 
-def with_default_category(category: str, *, heritable: bool = True) -> Callable[[Type['CommandSet']], Type['CommandSet']]:
+
+def with_default_category(category: str, *, heritable: bool = True) -> Callable[[CommandSetType], CommandSetType]:
     """
     Decorator that applies a category to all ``do_*`` command methods in a class that do not already
     have a category specified.
@@ -42,7 +45,7 @@ def with_default_category(category: str, *, heritable: bool = True) -> Callable[
     override the default category.
 
     If `heritable` is set to False, then only the commands declared locally to this CommandSet will be placed in the
-    specified category. Dynamically created commands, and commands declared in sub-classes will not receive this
+    specified category. Dynamically created commands and commands declared in sub-classes will not receive this
     category.
 
     :param category: category to put all uncategorized commands in
@@ -50,7 +53,7 @@ def with_default_category(category: str, *, heritable: bool = True) -> Callable[
     :return: decorator function
     """
 
-    def decorate_class(cls: Type[CommandSet]) -> Type[CommandSet]:
+    def decorate_class(cls: CommandSetType) -> CommandSetType:
         if heritable:
             setattr(cls, CLASS_ATTR_DEFAULT_HELP_CATEGORY, category)
 
