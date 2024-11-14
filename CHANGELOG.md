@@ -1,7 +1,7 @@
-## 2.5.6 (TBD)
+## 2.5.6 (November 14, 2024)
 * Bug Fixes
    * Fixed type hint for `with_default_category` decorator which caused type checkers to mistype
-     a decorated subclass of `CommandSet` and a plain `CommandSet`.
+     a subclass of `CommandSet` as a plain `CommandSet`.
 
 ## 2.5.5 (November 13, 2024)
 * Bug Fixes
