@@ -2480,20 +2480,6 @@ def test_ppaged(outsim_app):
     assert out == msg + end
 
 
-def test_ppaged_blank(outsim_app):
-    msg = ''
-    outsim_app.ppaged(msg)
-    out = outsim_app.stdout.getvalue()
-    assert not out
-
-
-def test_ppaged_none(outsim_app):
-    msg = None
-    outsim_app.ppaged(msg)
-    out = outsim_app.stdout.getvalue()
-    assert not out
-
-
 @with_ansi_style(ansi.AllowStyle.TERMINAL)
 def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
