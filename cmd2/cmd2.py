@@ -1419,7 +1419,7 @@ class Cmd(cmd.Cmd):
             # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
             functional_terminal = False
 
-            if self.stdin.isatty() and self.stdout.isatty():
+            if self.stdin.isatty() and dest.isatty():
                 if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
                     functional_terminal = True
 
