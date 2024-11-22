@@ -1403,49 +1403,43 @@ class Cmd(cmd.Cmd):
 
         WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
-        # msg can be any type, so convert to string before checking if it's blank
-        msg_str = str(msg)
         dest = self.stdout if dest is None else dest
 
-        # Consider None to be no data to print
-        if msg is None or msg_str == '':
-            return
+        # Attempt to detect if we are not running within a fully functional terminal.
+        # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
+        functional_terminal = False
 
-        try:
-            import subprocess
+        if self.stdin.isatty() and dest.isatty():
+            if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
+                functional_terminal = True
 
-            # Attempt to detect if we are not running within a fully functional terminal.
-            # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
-            functional_terminal = False
+        # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python).
+        # Also only attempt to use a pager if actually running in a real fully functional terminal.
+        if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
+            final_msg = f"{msg}{end}"
+            if ansi.allow_style == ansi.AllowStyle.NEVER:
+                final_msg = ansi.strip_style(final_msg)
 
-            if self.stdin.isatty() and dest.isatty():
-                if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
-                    functional_terminal = True
+            pager = self.pager
+            if chop:
+                pager = self.pager_chop
 
-            # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
-            # Also only attempt to use a pager if actually running in a real fully functional terminal
-            if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
-                if ansi.allow_style == ansi.AllowStyle.NEVER:
-                    msg_str = ansi.strip_style(msg_str)
-                msg_str += end
-
-                pager = self.pager
-                if chop:
-                    pager = self.pager_chop
-
+            try:
                 # Prevent KeyboardInterrupts while in the pager. The pager application will
                 # still receive the SIGINT since it is in the same process group as us.
                 with self.sigint_protection:
+                    import subprocess
+
                     pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE, stdout=dest)
-                    pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
-            else:
-                ansi.style_aware_write(dest, f'{msg_str}{end}')
-        except BrokenPipeError:
-            # This occurs if a command's output is being piped to another process and that process closes before the
-            # command is finished. If you would like your application to print a warning message, then set the
-            # broken_pipe_warning attribute to the message you want printed.`
-            if self.broken_pipe_warning:
-                sys.stderr.write(self.broken_pipe_warning)
+                    pipe_proc.communicate(final_msg.encode('utf-8', 'replace'))
+            except BrokenPipeError:
+                # This occurs if a command's output is being piped to another process and that process closes before the
+                # command is finished. If you would like your application to print a warning message, then set the
+                # broken_pipe_warning attribute to the message you want printed.`
+                if self.broken_pipe_warning:
+                    sys.stderr.write(self.broken_pipe_warning)
+        else:
+            self.print_to(dest, msg, end=end, paged=False)
 
     # -----  Methods related to tab completion -----
 
