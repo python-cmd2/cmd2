@@ -164,8 +164,10 @@ def test_command_synonyms():
         # Create a synonym to a command inside of this CommandSet
         do_builtin_synonym = do_builtin
 
-        # Create a synonym to a command outside of this CommandSet
-        do_help_synonym = cmd2.Cmd.do_help
+        # Create a synonym to a command outside of this CommandSet with subcommands.
+        # This will best test the synonym check in cmd2.Cmd._check_uninstallable() when
+        # we unresgister this CommandSet.
+        do_alias_synonym = cmd2.Cmd.do_alias
 
     cs = SynonymCommandSet("foo")
     app = WithCommandSets(command_sets=[cs])
@@ -176,21 +178,21 @@ def test_command_synonyms():
     assert builtin_parser is not None
     assert builtin_parser is builtin_synonym_parser
 
-    help_parser = app._command_parsers.get(cmd2.Cmd.do_help)
-    help_synonym_parser = app._command_parsers.get(app.do_help_synonym)
-    assert help_parser is not None
-    assert help_parser is help_synonym_parser
+    alias_parser = app._command_parsers.get(cmd2.Cmd.do_alias)
+    alias_synonym_parser = app._command_parsers.get(app.do_alias_synonym)
+    assert alias_parser is not None
+    assert alias_parser is alias_synonym_parser
 
     # Unregister the CommandSet and make sure built-in command and synonyms are gone
     app.unregister_command_set(cs)
     assert not hasattr(app, "do_builtin")
     assert not hasattr(app, "do_builtin_synonym")
-    assert not hasattr(app, "do_help_synonym")
+    assert not hasattr(app, "do_alias_synonym")
 
-    # Make sure the help command still exists, has the same parser, and works.
-    assert help_parser is app._command_parsers.get(cmd2.Cmd.do_help)
-    out, err = run_cmd(app, 'help')
-    assert app.doc_header in out
+    # Make sure the alias command still exists, has the same parser, and works.
+    assert alias_parser is app._command_parsers.get(cmd2.Cmd.do_alias)
+    out, err = run_cmd(app, 'alias --help')
+    assert normalize(alias_parser.format_help())[0] in out
 
 
 def test_custom_construct_commandsets():

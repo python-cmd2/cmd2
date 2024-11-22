@@ -875,7 +875,8 @@ class Cmd(cmd.Cmd):
                 if command in self._cmd_to_command_sets:
                     del self._cmd_to_command_sets[command]
 
-                # A command synonym does not own the parser.
+                # Only remove the parser if this is the actual
+                # command since command synonyms don't own it.
                 if cmd_func_name == command_method.__name__:
                     self._command_parsers.remove(command_method)
 
@@ -890,6 +891,18 @@ class Cmd(cmd.Cmd):
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
+        def check_parser_uninstallable(parser: argparse.ArgumentParser) -> None:
+            for action in parser._actions:
+                if isinstance(action, argparse._SubParsersAction):
+                    for subparser in action.choices.values():
+                        attached_cmdset = getattr(subparser, constants.PARSER_ATTR_COMMANDSET, None)
+                        if attached_cmdset is not None and attached_cmdset is not cmdset:
+                            raise CommandSetRegistrationError(
+                                'Cannot uninstall CommandSet when another CommandSet depends on it'
+                            )
+                        check_parser_uninstallable(subparser)
+                    break
+
         methods: List[Tuple[str, Callable[..., Any]]] = inspect.getmembers(
             cmdset,
             predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
@@ -898,26 +911,12 @@ class Cmd(cmd.Cmd):
         )
 
         for cmd_func_name, command_method in methods:
-            # Do nothing if this is a command synonym since it does not own the parser.
-            if cmd_func_name != command_method.__name__:
-                continue
-
-            command_parser = self._command_parsers.get(command_method)
-
-            def check_parser_uninstallable(parser: argparse.ArgumentParser) -> None:
-                for action in parser._actions:
-                    if isinstance(action, argparse._SubParsersAction):
-                        for subparser in action.choices.values():
-                            attached_cmdset = getattr(subparser, constants.PARSER_ATTR_COMMANDSET, None)
-                            if attached_cmdset is not None and attached_cmdset is not cmdset:
-                                raise CommandSetRegistrationError(
-                                    'Cannot uninstall CommandSet when another CommandSet depends on it'
-                                )
-                            check_parser_uninstallable(subparser)
-                        break
-
-            if command_parser is not None:
-                check_parser_uninstallable(command_parser)
+            # We only need to check if it's safe to remove the parser if this
+            # is the actual command since command synonyms don't own it.
+            if cmd_func_name == command_method.__name__:
+                command_parser = self._command_parsers.get(command_method)
+                if command_parser is not None:
+                    check_parser_uninstallable(command_parser)
 
     def _register_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
         """
