@@ -328,6 +328,7 @@ dev-dependencies = [
     "pytest",
     "pytest-cov",
     "pytest-mock",
+    "ruff",
     "sphinx",
     "sphinx-autobuild",
     "sphinx-rtd-theme",

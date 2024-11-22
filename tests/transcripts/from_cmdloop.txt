@@ -2,7 +2,7 @@
 # so you can see where they are.
 
 (Cmd) help say
-Usage: say [-h] [-p] [-s] [-r REPEAT]/ */
+Usage: speak [-h] [-p] [-s] [-r REPEAT]/ */
 
 Repeats what you tell me to./ */
 
