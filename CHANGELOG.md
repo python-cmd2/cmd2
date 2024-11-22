@@ -1,3 +1,7 @@
+## 2.5.7 (TBD)
+* Bug Fixes
+   * Fixed issue where argument parsers for overridden commands were not being created.
+
 ## 2.5.6 (November 14, 2024)
 * Bug Fixes
    * Fixed type hint for `with_default_category` decorator which caused type checkers to mistype

@@ -14,7 +14,6 @@ import pytest
 import cmd2
 
 from .conftest import (
-    find_subcommand,
     run_cmd,
 )
 
@@ -402,8 +401,7 @@ def test_add_another_subcommand(subcommand_app):
     This tests makes sure _set_parser_prog() sets _prog_prefix on every _SubParsersAction so that all future calls
     to add_parser() write the correct prog value to the parser being added.
     """
-    base_parser = subcommand_app._command_parsers.get('base')
-    find_subcommand(subcommand_app._command_parsers.get('base'), [])
+    base_parser = subcommand_app._command_parsers.get(subcommand_app.do_base)
     for sub_action in base_parser._actions:
         if isinstance(sub_action, argparse._SubParsersAction):
             new_parser = sub_action.add_parser('new_sub', help='stuff')

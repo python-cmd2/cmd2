@@ -1210,6 +1210,13 @@ class HelpApp(cmd2.Cmd):
         """
         pass
 
+    parser_cmd_parser = cmd2.Cmd2ArgumentParser(description="This is the description.")
+
+    @cmd2.with_argparser(parser_cmd_parser)
+    def do_parser_cmd(self, args):
+        """This is the docstring."""
+        pass
+
 
 @pytest.fixture
 def help_app():
@@ -1247,6 +1254,11 @@ def test_help_multiline_docstring(help_app):
     expected = normalize('This documentation\nis multiple lines\nand there are no\ntabs')
     assert out == expected
     assert help_app.last_result is True
+
+
+def test_help_verbose_uses_parser_description(help_app: HelpApp):
+    out, err = run_cmd(help_app, 'help --verbose')
+    verify_help_text(help_app, out, verbose_strings=[help_app.parser_cmd_parser.description])
 
 
 class HelpCategoriesApp(cmd2.Cmd):
@@ -3016,3 +3028,26 @@ def test_columnize_too_wide(outsim_app):
 
     expected = "\n".join(str_list) + "\n"
     assert outsim_app.stdout.getvalue() == expected
+
+
+def test_command_parser_retrieval(outsim_app: cmd2.Cmd):
+    # Pass something that isn't a method
+    not_a_method = "just a string"
+    assert outsim_app._command_parsers.get(not_a_method) is None
+
+    # Pass a non-command method
+    assert outsim_app._command_parsers.get(outsim_app.__init__) is None
+
+
+def test_command_synonym_parser():
+    # Make sure a command synonym returns the same parser as what it aliases
+    class SynonymApp(cmd2.cmd2.Cmd):
+        do_synonym = cmd2.cmd2.Cmd.do_help
+
+    app = SynonymApp()
+
+    synonym_parser = app._command_parsers.get(app.do_synonym)
+    help_parser = app._command_parsers.get(app.do_help)
+
+    assert synonym_parser is not None
+    assert synonym_parser is help_parser

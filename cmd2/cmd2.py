@@ -218,6 +218,81 @@ else:
     ClassArgParseBuilder = classmethod
 
 
+class _CommandParsers:
+    """
+    Create and store all command method argument parsers for a given Cmd instance.
+
+    Parser creation and retrieval are accomplished through the get() method.
+    """
+
+    def __init__(self, cmd: 'Cmd') -> None:
+        self._cmd = cmd
+
+        # Keyed by the fully qualified method names. This is more reliable than
+        # the methods themselves, since wrapping a method will change its address.
+        self._parsers: Dict[str, argparse.ArgumentParser] = {}
+
+    @staticmethod
+    def _fully_qualified_name(command_method: CommandFunc) -> str:
+        """Return the fully qualified name of a method or None if a method wasn't passed in."""
+        try:
+            return f"{command_method.__module__}.{command_method.__qualname__}"
+        except AttributeError:
+            return ""
+
+    def __contains__(self, command_method: CommandFunc) -> bool:
+        """
+        Return whether a given method's parser is in self.
+
+        If the parser does not yet exist, it will be created if applicable.
+        This is basically for checking if a method is argarse-based.
+        """
+        parser = self.get(command_method)
+        return bool(parser)
+
+    def get(self, command_method: CommandFunc) -> Optional[argparse.ArgumentParser]:
+        """
+        Return a given method's parser or None if the method is not argparse-based.
+
+        If the parser does not yet exist, it will be created.
+        """
+        full_method_name = self._fully_qualified_name(command_method)
+        if not full_method_name:
+            return None
+
+        if full_method_name not in self._parsers:
+            if not command_method.__name__.startswith(COMMAND_FUNC_PREFIX):
+                return None
+            command = command_method.__name__[len(COMMAND_FUNC_PREFIX) :]
+
+            parser_builder = getattr(command_method, constants.CMD_ATTR_ARGPARSER, None)
+            parent = self._cmd.find_commandset_for_command(command) or self._cmd
+            parser = self._cmd._build_parser(parent, parser_builder)
+            if parser is None:
+                return None
+
+            # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
+            from .decorators import (
+                _set_parser_prog,
+            )
+
+            _set_parser_prog(parser, command)
+
+            # If the description has not been set, then use the method docstring if one exists
+            if parser.description is None and hasattr(command_method, '__wrapped__') and command_method.__wrapped__.__doc__:
+                parser.description = strip_doc_annotations(command_method.__wrapped__.__doc__)
+
+            self._parsers[full_method_name] = parser
+
+        return self._parsers.get(full_method_name)
+
+    def remove(self, command_method: CommandFunc) -> None:
+        """Remove a given method's parser if it exists."""
+        full_method_name = self._fully_qualified_name(command_method)
+        if full_method_name in self._parsers:
+            del self._parsers[full_method_name]
+
+
 class Cmd(cmd.Cmd):
     """An easy but powerful framework for writing line-oriented command interpreters.
 
@@ -537,11 +612,7 @@ class Cmd(cmd.Cmd):
         self.matches_sorted = False
 
         # Command parsers for this Cmd instance.
-        self._command_parsers: Dict[str, argparse.ArgumentParser] = {}
-
-        # Locates the command parser template or factory and creates an instance-specific parser
-        for command in self.get_all_commands():
-            self._register_command_parser(command, self.cmd_func(command))  # type: ignore[arg-type]
+        self._command_parsers = _CommandParsers(self)
 
         # Add functions decorated to be subcommands
         self._register_subcommands(self)
@@ -657,11 +728,11 @@ class Cmd(cmd.Cmd):
 
         installed_attributes = []
         try:
-            for method_name, method in methods:
-                command = method_name[len(COMMAND_FUNC_PREFIX) :]
+            for cmd_func_name, command_method in methods:
+                command = cmd_func_name[len(COMMAND_FUNC_PREFIX) :]
 
-                self._install_command_function(command, method, type(cmdset).__name__)
-                installed_attributes.append(method_name)
+                self._install_command_function(cmd_func_name, command_method, type(cmdset).__name__)
+                installed_attributes.append(cmd_func_name)
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
@@ -677,8 +748,8 @@ class Cmd(cmd.Cmd):
 
                 self._cmd_to_command_sets[command] = cmdset
 
-                if default_category and not hasattr(method, constants.CMD_ATTR_HELP_CATEGORY):
-                    utils.categorize(method, default_category)
+                if default_category and not hasattr(command_method, constants.CMD_ATTR_HELP_CATEGORY):
+                    utils.categorize(command_method, default_category)
 
             self._installed_command_sets.add(cmdset)
 
@@ -718,33 +789,31 @@ class Cmd(cmd.Cmd):
             parser = copy.deepcopy(parser_builder)
         return parser
 
-    def _register_command_parser(self, command: str, command_method: Callable[..., Any]) -> None:
-        if command not in self._command_parsers:
-            parser_builder = getattr(command_method, constants.CMD_ATTR_ARGPARSER, None)
-            parent = self.find_commandset_for_command(command) or self
-            parser = self._build_parser(parent, parser_builder)
-            if parser is None:
-                return
+    def _install_command_function(self, command_func_name: str, command_method: CommandFunc, context: str = '') -> None:
+        """
+        Install a new command function into the CLI.
 
-            # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
-            from .decorators import (
-                _set_parser_prog,
-            )
+        :param command_func_name: name of command function to add
+                                  This points to the command method and may differ from the method's
+                                  name if it's being used as a synonym. (e.g. do_exit = do_quit)
+        :param command_method: the actual command method which runs when the command function is called
+        :param context: optional info to provide in error message. (e.g. class this function belongs to)
+        :raises CommandSetRegistrationError: if the command function fails to install
+        """
 
-            _set_parser_prog(parser, command)
+        # command_func_name must begin with COMMAND_FUNC_PREFIX to be identified as a command by cmd2.
+        if not command_func_name.startswith(COMMAND_FUNC_PREFIX):
+            raise CommandSetRegistrationError(f"{command_func_name} does not begin with '{COMMAND_FUNC_PREFIX}'")
 
-            # If the description has not been set, then use the method docstring if one exists
-            if parser.description is None and hasattr(command_method, '__wrapped__') and command_method.__wrapped__.__doc__:
-                parser.description = strip_doc_annotations(command_method.__wrapped__.__doc__)
+        # command_method must start with COMMAND_FUNC_PREFIX for use in self._command_parsers.
+        if not command_method.__name__.startswith(COMMAND_FUNC_PREFIX):
+            raise CommandSetRegistrationError(f"{command_method.__name__} does not begin with '{COMMAND_FUNC_PREFIX}'")
 
-            self._command_parsers[command] = parser
-
-    def _install_command_function(self, command: str, command_wrapper: Callable[..., Any], context: str = '') -> None:
-        cmd_func_name = COMMAND_FUNC_PREFIX + command
+        command = command_func_name[len(COMMAND_FUNC_PREFIX) :]
 
         # Make sure command function doesn't share name with existing attribute
-        if hasattr(self, cmd_func_name):
-            raise CommandSetRegistrationError(f'Attribute already exists: {cmd_func_name} ({context})')
+        if hasattr(self, command_func_name):
+            raise CommandSetRegistrationError(f'Attribute already exists: {command_func_name} ({context})')
 
         # Check if command has an invalid name
         valid, errmsg = self.statement_parser.is_valid_command(command)
@@ -761,9 +830,7 @@ class Cmd(cmd.Cmd):
             self.pwarning(f"Deleting macro '{command}' because it shares its name with a new command")
             del self.macros[command]
 
-        self._register_command_parser(command, command_wrapper)
-
-        setattr(self, cmd_func_name, command_wrapper)
+        setattr(self, command_func_name, command_method)
 
     def _install_completer_function(self, cmd_name: str, cmd_completer: CompleterFunc) -> None:
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
@@ -790,47 +857,52 @@ class Cmd(cmd.Cmd):
             cmdset.on_unregister()
             self._unregister_subcommands(cmdset)
 
-            methods: List[Tuple[str, Callable[[Any], Any]]] = inspect.getmembers(
+            methods: List[Tuple[str, Callable[..., Any]]] = inspect.getmembers(
                 cmdset,
                 predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
                 and hasattr(meth, '__name__')
                 and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
             )
 
-            for method in methods:
-                cmd_name = method[0][len(COMMAND_FUNC_PREFIX) :]
+            for cmd_func_name, command_method in methods:
+                command = cmd_func_name[len(COMMAND_FUNC_PREFIX) :]
 
                 # Enable the command before uninstalling it to make sure we remove both
                 # the real functions and the ones used by the DisabledCommand object.
-                if cmd_name in self.disabled_commands:
-                    self.enable_command(cmd_name)
+                if command in self.disabled_commands:
+                    self.enable_command(command)
 
-                if cmd_name in self._cmd_to_command_sets:
-                    del self._cmd_to_command_sets[cmd_name]
+                if command in self._cmd_to_command_sets:
+                    del self._cmd_to_command_sets[command]
 
-                delattr(self, COMMAND_FUNC_PREFIX + cmd_name)
-                if cmd_name in self._command_parsers:
-                    del self._command_parsers[cmd_name]
+                # A command synonym does not own the parser.
+                if cmd_func_name == command_method.__name__:
+                    self._command_parsers.remove(command_method)
 
-                if hasattr(self, COMPLETER_FUNC_PREFIX + cmd_name):
-                    delattr(self, COMPLETER_FUNC_PREFIX + cmd_name)
-                if hasattr(self, HELP_FUNC_PREFIX + cmd_name):
-                    delattr(self, HELP_FUNC_PREFIX + cmd_name)
+                if hasattr(self, COMPLETER_FUNC_PREFIX + command):
+                    delattr(self, COMPLETER_FUNC_PREFIX + command)
+                if hasattr(self, HELP_FUNC_PREFIX + command):
+                    delattr(self, HELP_FUNC_PREFIX + command)
+
+                delattr(self, cmd_func_name)
 
             cmdset.on_unregistered()
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
-        methods: List[Tuple[str, Callable[[Any], Any]]] = inspect.getmembers(
+        methods: List[Tuple[str, Callable[..., Any]]] = inspect.getmembers(
             cmdset,
             predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
             and hasattr(meth, '__name__')
             and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
         )
 
-        for method in methods:
-            command_name = method[0][len(COMMAND_FUNC_PREFIX) :]
-            command_parser = self._command_parsers.get(command_name, None)
+        for cmd_func_name, command_method in methods:
+            # Do nothing if this is a command synonym since it does not own the parser.
+            if cmd_func_name != command_method.__name__:
+                continue
+
+            command_parser = self._command_parsers.get(command_method)
 
             def check_parser_uninstallable(parser: argparse.ArgumentParser) -> None:
                 for action in parser._actions:
@@ -889,7 +961,7 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError(
                     f"Could not find command '{command_name}' needed by subcommand: {str(method)}"
                 )
-            command_parser = self._command_parsers.get(command_name, None)
+            command_parser = self._command_parsers.get(command_func)
             if command_parser is None:
                 raise CommandSetRegistrationError(
                     f"Could not find argparser for command '{command_name}' needed by subcommand: {str(method)}"
@@ -991,7 +1063,7 @@ class Cmd(cmd.Cmd):
                 raise CommandSetRegistrationError(
                     f"Could not find command '{command_name}' needed by subcommand: {str(method)}"
                 )
-            command_parser = self._command_parsers.get(command_name, None)
+            command_parser = self._command_parsers.get(command_func)
             if command_parser is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
@@ -2098,12 +2170,12 @@ class Cmd(cmd.Cmd):
                 else:
                     # There's no completer function, next see if the command uses argparse
                     func = self.cmd_func(command)
-                    argparser = self._command_parsers.get(command, None)
+                    argparser = None if func is None else self._command_parsers.get(func)
 
                     if func is not None and argparser is not None:
                         # Get arguments for complete()
                         preserve_quotes = getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES)
-                        cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
+                        cmd_set = self.find_commandset_for_command(command)
 
                         # Create the argparse completer
                         completer_type = self._determine_ap_completer_type(argparser)
@@ -3044,19 +3116,9 @@ class Cmd(cmd.Cmd):
 
         helpfunc now contains a reference to the ``do_help`` method
         """
-        func_name = self._cmd_func_name(command)
-        if func_name:
-            return cast(Optional[CommandFunc], getattr(self, func_name))
-        return None
-
-    def _cmd_func_name(self, command: str) -> str:
-        """Get the method name associated with a given command.
-
-        :param command: command to look up method name which implements it
-        :return: method name which implements the given command
-        """
-        target = constants.COMMAND_FUNC_PREFIX + command
-        return target if callable(getattr(self, target, None)) else ''
+        func_name = constants.COMMAND_FUNC_PREFIX + command
+        func = getattr(self, func_name, None)
+        return cast(CommandFunc, func) if callable(func) else None
 
     def onecmd(self, statement: Union[Statement, str], *, add_to_history: bool = True) -> bool:
         """This executes the actual do_* method for a command.
@@ -3404,7 +3466,7 @@ class Cmd(cmd.Cmd):
     alias_description = "Manage aliases\n" "\n" "An alias is a command that enables replacement of a word by another string."
     alias_epilog = "See also:\n" "  macro"
     alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
-    alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
+    alias_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
 
     # Preserve quotes since we are passing strings to other commands
     @with_argparser(alias_parser, preserve_quotes=True)
@@ -3572,7 +3634,7 @@ class Cmd(cmd.Cmd):
     macro_description = "Manage macros\n" "\n" "A macro is similar to an alias, but it can contain argument placeholders."
     macro_epilog = "See also:\n" "  alias"
     macro_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_description, epilog=macro_epilog)
-    macro_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
+    macro_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
 
     # Preserve quotes since we are passing strings to other commands
     @with_argparser(macro_parser, preserve_quotes=True)
@@ -3820,9 +3882,7 @@ class Cmd(cmd.Cmd):
             return []
 
         # Check if this command uses argparse
-        func = self.cmd_func(command)
-        argparser = self._command_parsers.get(command, None)
-        if func is None or argparser is None:
+        if (func := self.cmd_func(command)) is None or (argparser := self._command_parsers.get(func)) is None:
             return []
 
         completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
@@ -3857,7 +3917,7 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             func = self.cmd_func(args.command)
             help_func = getattr(self, constants.HELP_FUNC_PREFIX + args.command, None)
-            argparser = self._command_parsers.get(args.command, None)
+            argparser = None if func is None else self._command_parsers.get(func)
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
@@ -3979,28 +4039,29 @@ class Cmd(cmd.Cmd):
     def _build_command_info(self) -> Tuple[Dict[str, List[str]], List[str], List[str], List[str]]:
         # Get a sorted list of help topics
         help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
+
         # Get a sorted list of visible command names
         visible_commands = sorted(self.get_visible_commands(), key=self.default_sort_key)
         cmds_doc: List[str] = []
         cmds_undoc: List[str] = []
         cmds_cats: Dict[str, List[str]] = {}
         for command in visible_commands:
-            func = self.cmd_func(command)
+            func = cast(CommandFunc, self.cmd_func(command))
             has_help_func = False
+            has_parser = func in self._command_parsers
 
             if command in help_topics:
                 # Prevent the command from showing as both a command and help topic in the output
                 help_topics.remove(command)
 
                 # Non-argparse commands can have help_functions for their documentation
-                if command not in self._command_parsers:
-                    has_help_func = True
+                has_help_func = not has_parser
 
             if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
                 category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
                 cmds_cats.setdefault(category, [])
                 cmds_cats[category].append(command)
-            elif func.__doc__ or has_help_func:
+            elif func.__doc__ or has_help_func or has_parser:
                 cmds_doc.append(command)
             else:
                 cmds_undoc.append(command)
@@ -4035,11 +4096,17 @@ class Cmd(cmd.Cmd):
                 # Try to get the documentation string for each command
                 topics = self.get_help_topics()
                 for command in cmds:
-                    cmd_func = self.cmd_func(command)
+                    if (cmd_func := self.cmd_func(command)) is None:
+                        continue
+
                     doc: Optional[str]
 
+                    # If this is an argparse command, use its description.
+                    if (cmd_parser := self._command_parsers.get(cmd_func)) is not None:
+                        doc = cmd_parser.description
+
                     # Non-argparse commands can have help_functions for their documentation
-                    if command not in self._command_parsers and command in topics:
+                    elif command in topics:
                         help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
                         result = io.StringIO()
 
@@ -5436,12 +5503,13 @@ class Cmd(cmd.Cmd):
         if command not in self.disabled_commands:
             return
 
+        cmd_func_name = constants.COMMAND_FUNC_PREFIX + command
         help_func_name = constants.HELP_FUNC_PREFIX + command
         completer_func_name = constants.COMPLETER_FUNC_PREFIX + command
 
         # Restore the command function to its original value
         dc = self.disabled_commands[command]
-        setattr(self, self._cmd_func_name(command), dc.command_function)
+        setattr(self, cmd_func_name, dc.command_function)
 
         # Restore the help function to its original value
         if dc.help_function is None:
@@ -5489,6 +5557,7 @@ class Cmd(cmd.Cmd):
         if command_function is None:
             raise AttributeError(f"'{command}' does not refer to a command")
 
+        cmd_func_name = constants.COMMAND_FUNC_PREFIX + command
         help_func_name = constants.HELP_FUNC_PREFIX + command
         completer_func_name = constants.COMPLETER_FUNC_PREFIX + command
 
@@ -5503,7 +5572,7 @@ class Cmd(cmd.Cmd):
         new_func = functools.partial(
             self._report_disabled_command_usage, message_to_print=message_to_print.replace(constants.COMMAND_NAME, command)
         )
-        setattr(self, self._cmd_func_name(command), new_func)
+        setattr(self, cmd_func_name, new_func)
         setattr(self, help_func_name, new_func)
 
         # Set the completer to a function that returns a blank list

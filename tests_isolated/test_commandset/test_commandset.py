@@ -149,6 +149,50 @@ def test_autoload_commands(command_sets_app):
     assert 'Command Set B' not in cmds_cats
 
 
+def test_command_synonyms():
+    """Test the use of command synonyms in CommandSets"""
+
+    class SynonymCommandSet(cmd2.CommandSet):
+        def __init__(self, arg1):
+            super().__init__()
+            self._arg1 = arg1
+
+        @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(description="Native Command"))
+        def do_builtin(self, _):
+            pass
+
+        # Create a synonym to a command inside of this CommandSet
+        do_builtin_synonym = do_builtin
+
+        # Create a synonym to a command outside of this CommandSet
+        do_help_synonym = cmd2.Cmd.do_help
+
+    cs = SynonymCommandSet("foo")
+    app = WithCommandSets(command_sets=[cs])
+
+    # Make sure the synonyms have the same parser as what they alias
+    builtin_parser = app._command_parsers.get(app.do_builtin)
+    builtin_synonym_parser = app._command_parsers.get(app.do_builtin_synonym)
+    assert builtin_parser is not None
+    assert builtin_parser is builtin_synonym_parser
+
+    help_parser = app._command_parsers.get(cmd2.Cmd.do_help)
+    help_synonym_parser = app._command_parsers.get(app.do_help_synonym)
+    assert help_parser is not None
+    assert help_parser is help_synonym_parser
+
+    # Unregister the CommandSet and make sure built-in command and synonyms are gone
+    app.unregister_command_set(cs)
+    assert not hasattr(app, "do_builtin")
+    assert not hasattr(app, "do_builtin_synonym")
+    assert not hasattr(app, "do_help_synonym")
+
+    # Make sure the help command still exists, has the same parser, and works.
+    assert help_parser is app._command_parsers.get(cmd2.Cmd.do_help)
+    out, err = run_cmd(app, 'help')
+    assert app.doc_header in out
+
+
 def test_custom_construct_commandsets():
     command_set_b = CommandSetB('foo')
 
@@ -291,7 +335,7 @@ def test_load_commandset_errors(command_sets_manual, capsys):
     cmd_set = CommandSetA()
 
     # create a conflicting command before installing CommandSet to verify rollback behavior
-    command_sets_manual._install_command_function('durian', cmd_set.do_durian)
+    command_sets_manual._install_command_function('do_durian', cmd_set.do_durian)
     with pytest.raises(CommandSetRegistrationError):
         command_sets_manual.register_command_set(cmd_set)
 
@@ -316,13 +360,21 @@ def test_load_commandset_errors(command_sets_manual, capsys):
     assert "Deleting alias 'banana'" in err
     assert "Deleting macro 'apple'" in err
 
+    # verify command functions which don't start with "do_" raise an exception
+    with pytest.raises(CommandSetRegistrationError):
+        command_sets_manual._install_command_function('new_cmd', cmd_set.do_banana)
+
+    # verify methods which don't start with "do_" raise an exception
+    with pytest.raises(CommandSetRegistrationError):
+        command_sets_manual._install_command_function('do_new_cmd', cmd_set.on_register)
+
     # verify duplicate commands are detected
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual._install_command_function('banana', cmd_set.do_banana)
+        command_sets_manual._install_command_function('do_banana', cmd_set.do_banana)
 
     # verify bad command names are detected
     with pytest.raises(CommandSetRegistrationError):
-        command_sets_manual._install_command_function('bad command', cmd_set.do_banana)
+        command_sets_manual._install_command_function('do_bad command', cmd_set.do_banana)
 
     # verify error conflict with existing completer function
     with pytest.raises(CommandSetRegistrationError):
