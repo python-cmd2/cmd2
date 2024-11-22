@@ -1436,7 +1436,7 @@ class Cmd(cmd.Cmd):
                 # Prevent KeyboardInterrupts while in the pager. The pager application will
                 # still receive the SIGINT since it is in the same process group as us.
                 with self.sigint_protection:
-                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
+                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE, stdout=dest)
                     pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
             else:
                 ansi.style_aware_write(dest, f'{msg_str}{end}')

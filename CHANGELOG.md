@@ -1,7 +1,7 @@
 ## 2.5.7 (TBD)
 * Bug Fixes
    * Fixed issue where argument parsers for overridden commands were not being created.
-   * Fixed terminal check in `Cmd.ppaged()` to use correct output stream.
+   * Fixed issue where `Cmd.ppaged()` was not writing to the passed in destination.
 
 ## 2.5.6 (November 14, 2024)
 * Bug Fixes
