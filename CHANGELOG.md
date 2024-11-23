@@ -1,4 +1,4 @@
-## 2.5.7 (TBD)
+## 2.5.7 (November 22, 2024)
 * Bug Fixes
    * Fixed issue where argument parsers for overridden commands were not being created.
    * Fixed issue where `Cmd.ppaged()` was not writing to the passed in destination.
