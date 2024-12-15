@@ -24,9 +24,7 @@ example for one way in which this can be done.
 import os
 
 import cmd2
-from cmd2 import (
-    ansi,
-)
+from cmd2 import ansi
 
 
 class CmdLineApp(cmd2.Cmd):
@@ -41,7 +39,7 @@ class CmdLineApp(cmd2.Cmd):
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.prompt = ansi.style(f'{self.cwd} $ ', fg='cyan')
+        self.prompt = ansi.style(f'{self.cwd} $ ', fg=ansi.Fg.CYAN)
 
     def postcmd(self, stop: bool, line: str) -> bool:
         """Hook method executed just after a command dispatch is finished.
