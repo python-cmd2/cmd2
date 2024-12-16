@@ -11,7 +11,7 @@ The following code shows how to override it with your own parser class.
 # with the custom parser's type.
 import argparse
 
-argparse.cmd2_parser_module = 'examples.custom_parser'
+argparse.cmd2_parser_module = 'custom_parser'
 
 # Next import from cmd2. It will import your module just before the cmd2.Cmd class file is imported
 # and therefore override the parser class it uses on its commands.
