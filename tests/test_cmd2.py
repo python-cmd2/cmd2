@@ -1992,7 +1992,7 @@ def test_poutput_none(outsim_app):
 def test_poutput_ansi_always(outsim_app):
     msg = 'Hello World'
     colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
-    outsim_app.poutput(colored_msg, apply_style=False)
+    outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
     expected = colored_msg + '\n'
     assert colored_msg != msg
@@ -2003,7 +2003,7 @@ def test_poutput_ansi_always(outsim_app):
 def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
     colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
-    outsim_app.poutput(colored_msg, apply_style=False)
+    outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
     assert colored_msg != msg

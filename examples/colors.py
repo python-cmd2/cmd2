@@ -77,7 +77,7 @@ class CmdLineApp(cmd2.Cmd):
 
         for _ in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
-            self.poutput(output_str, apply_style=False)
+            self.poutput(output_str)
 
     def do_timetravel(self, _):
         """A command which always generates an error message, to demonstrate custom error colors"""

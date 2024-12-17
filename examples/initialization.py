@@ -65,7 +65,7 @@ class BasicApp(cmd2.Cmd):
     def do_echo(self, arg):
         """Example of a multiline command"""
         fg_color = Fg[self.foreground_color.upper()]
-        self.poutput(style(arg, fg=fg_color), apply_style=False)
+        self.poutput(style(arg, fg=fg_color))
 
 
 if __name__ == '__main__':
