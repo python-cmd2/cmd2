@@ -1,3 +1,7 @@
+## 2.5.8 (TBD)
+* Bug Fixes
+   * Rolled back undocumented changes to printing functions introduced in 2.5.0.
+
 ## 2.5.7 (November 22, 2024)
 * Bug Fixes
    * Fixed issue where argument parsers for overridden commands were not being created.

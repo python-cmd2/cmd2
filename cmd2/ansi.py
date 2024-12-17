@@ -1042,9 +1042,6 @@ def style(
 # Default styles for printing strings of various types.
 # These can be altered to suit an application's needs and only need to be a
 # function with the following structure: func(str) -> str
-style_output = functools.partial(style)
-"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text for normal output"""
-
 style_success = functools.partial(style, fg=Fg.GREEN)
 """Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify success"""
 

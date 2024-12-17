@@ -75,7 +75,7 @@ class Pirate(cmd2.Cmd):
 
     def do_sing(self, arg):
         """Sing a colorful song."""
-        self.poutput(cmd2.ansi.style(arg, fg=Fg[self.songcolor.upper()]), apply_style=False)
+        self.poutput(cmd2.ansi.style(arg, fg=Fg[self.songcolor.upper()]))
 
     yo_parser = cmd2.Cmd2ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")
