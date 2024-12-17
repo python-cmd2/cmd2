@@ -1211,8 +1211,21 @@ class Cmd(cmd.Cmd):
         return ansi.strip_style(self.prompt)
 
     def print_to(
-        self, dest: Union[TextIO, IO[str]], msg: Any, *, end: str = '\n', style: Optional[Callable[[str], str]] = None
+        self,
+        dest: IO[str],
+        msg: Any,
+        *,
+        end: str = '\n',
+        style: Optional[Callable[[str], str]] = None,
     ) -> None:
+        """
+        Print message to a given file object.
+
+        :param dest: the file object being written to
+        :param msg: object to print
+        :param end: string appended after the end of the message, default a newline
+        :param style: optional style function to format msg with (e.g. ansi.style_success)
+        """
         final_msg = style(msg) if style is not None else msg
         try:
             ansi.style_aware_write(dest, f'{final_msg}{end}')
