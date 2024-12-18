@@ -1,4 +1,4 @@
-## 2.5.8 (TBD)
+## 2.5.8 (December 17, 2024)
 * Bug Fixes
    * Rolled back undocumented changes to printing functions introduced in 2.5.0.
 
