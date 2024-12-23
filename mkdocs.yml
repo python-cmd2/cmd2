@@ -2,7 +2,7 @@
 site_name: cmd2
 site_description: cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python.
 site_dir: build/html
-site_url: https://cmd2.readthedocs.io/
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, https://cmd2.readthedocs.io/] 
 
 # Repository
 repo_name: cmd2
@@ -16,6 +16,7 @@ copyright: Copyright &copy; 2010-2024, cmd2 contributors.
 theme:
   name: material
   language: en
+  custom_dir: docs/overrides
   icon:
     repo: fontawesome/brands/github
     logo: material/home
@@ -96,7 +97,6 @@ extra:
       link: https://github.com/python-cmd2/cmd2
     - icon: simple/pypi
       link: https://pypi.org/project/cmd2/
-  release: "2.5"
 
 # Extensions
 # - These are carefully chosen to work with pandoc markdown support for whole document translation
@@ -209,3 +209,11 @@ nav:
       - api/plugin_external_test.md
   - Meta:
       - doc_conventions.md
+
+# Include extra CSS to make some style adjustments
+extra_css:
+  - stylesheets/readthedocs.css
+
+# Include extra JS to setup Read the Docs addons integrations
+extra_javascript:
+  - javascripts/readthedocs.js
