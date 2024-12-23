@@ -76,36 +76,16 @@ If you wish to permanently uninstall `cmd2`, this can also easily be done with [
 
     $ pip uninstall cmd2
 
-## macOS Considerations
+## readline Considerations
 
-macOS comes with the [libedit](http://thrysoee.dk/editline/) library which is similar, but not identical, to GNU Readline. Tab completion for `cmd2` applications is only tested against GNU Readline.
+Tab completion for `cmd2` applications is only tested against GNU Readline. It does not work properly with the [libedit](http://thrysoee.dk/editline/) library which is similar, but not identical to GNU Readline. `cmd2` will disable all tab-completion support if an incompatible version of `readline` is found.
 
-There are several ways GNU Readline can be installed within a Python environment on a Mac, detailed in the following subsections.
+When installed using `pip`, `uv`, or similar Python packaging tool on either `macOS` or `Windows`, `cmd2` will automatically install a compatiable version of readline.
 
-### gnureadline Python module
+Most `Linux` OSes come with a compatible version of readline. However, if you are using a tool like `uv` to install Python on your system and configure a virtual environment, `uv` installed versions of Python come with `libEdit`.
 
-Install the [gnureadline](https://pypi.org/project/gnureadline) Python module which is statically linked against a specific compatible version of GNU Readline:
+macOS comes with the [libedit](http://thrysoee.dk/editline/) library which is similar, but not identical, to GNU Readline. Tab completion for `cmd2` applications is only tested against GNU Readline. In this case you just need to install the `gnureadline` Python package which is statically linked against GNU Readline:
 
 ```shell
 $ pip install -U gnureadline
 ```
-
-### readline via conda
-
-Install the **readline** package using the `conda` package manager included with the Anaconda Python distribution:
-
-```shell
-$ conda install readline
-```
-
-### readline via brew
-
-Install the **readline** package using the Homebrew package manager (compiles from source):
-
-```shell
-$ brew install openssl
-$ brew install pyenv
-$ brew install readline
-```
-
-Then use pyenv to compile Python and link against the installed readline
