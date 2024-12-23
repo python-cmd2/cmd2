@@ -67,7 +67,28 @@ plugins:
       on_undefined: strict
       j2_block_start_string: "[[%"
       j2_block_end_string: "%]]"
-  - mkdocstrings
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            extensions:
+            - griffe_typingdoc
+            show_root_heading: true
+            show_if_no_docstring: true
+            preload_modules:
+            - argparse
+            - cmd
+            inherited_members: true
+            members_order: source
+            separate_signature: true
+            unwrap_annotated: true
+            filters:
+            - '!^_'
+            merge_init_into_class: true
+            docstring_section_style: spacy
+            signature_crossrefs: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
 
 # Customizations
 extra:

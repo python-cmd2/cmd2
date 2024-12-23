@@ -13,8 +13,8 @@ build = "*"
 cmd2 = { editable = true, path = "." }
 cmd2_ext_test = { editable = true, path = "plugins/ext_test" }
 codecov = "*"
-doc8 = "*"
 gnureadline = { version = "*", sys_platform = "== 'darwin'" }
+griffe-typingdoc = "*"
 invoke = "*"
 ipython = "*"
 mypy = "*"
@@ -27,6 +27,7 @@ setuptools-scm = "*"
 mkdocs-include-markdown-plugin = "*"
 mkdocs-macros-plugin = "*"
 mkdocs-material = "*"
+mkdocstrings[python] = "*"
 twine = ">=1.11"
 
 [pipenv]

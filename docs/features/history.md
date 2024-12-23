@@ -6,9 +6,9 @@ The `cmd` module from the Python standard library includes `readline` history.
 
 `cmd2.Cmd`{.interpreted-text role="class"} offers the same `readline` capabilities, but also maintains its own data structures for the history of all commands entered by the user. When the class is initialized, it creates an instance of the `cmd2.history.History`{.interpreted-text role="class"} class (which is a subclass of `list`) as `cmd2.Cmd.history`{.interpreted-text role="data"}.
 
-Each time a command is executed (this gets complex, see `features/hooks:Command Processing Loop`{.interpreted-text role="ref"} for exactly when) the parsed `cmd2.Statement`{.interpreted-text role="class"} is appended to `cmd2.Cmd.history`{.interpreted-text role="data"}.
+Each time a command is executed (this gets complex, see [Command Processing Loop](./hooks.md#command-processing-loop) for exactly when) the parsed `cmd2.Statement`{.interpreted-text role="class"} is appended to `cmd2.Cmd.history`{.interpreted-text role="data"}.
 
-`cmd2` adds the option of making this history persistent via optional arguments to `cmd2.Cmd.__init__`{.interpreted-text role="meth"}. If you pass a filename in the `persistent_history_file` argument, the contents of `cmd2.Cmd.history`{.interpreted-text role="data"} will be written as compressed JSON to that history file. We chose this format instead of plain text to preserve the complete `cmd2.Statement`{.interpreted-text role="class"} object for each command.
+`cmd2` adds the option of making this history persistent via optional arguments to `cmd2.Cmd.__init__`. If you pass a filename in the `persistent_history_file` argument, the contents of `cmd2.Cmd.history` will be written as compressed JSON to that history file. We chose this format instead of plain text to preserve the complete `cmd2.Statement` object for each command.
 
 !!! note
 
@@ -16,7 +16,7 @@ Each time a command is executed (this gets complex, see `features/hooks:Command 
 
     However, this design choice causes an inconsistency between the `readline` history and the `cmd2` history when you enter an invalid command: it is saved to the `readline` history, but not to the `cmd2` history.
 
-The `cmd2.Cmd.history`{.interpreted-text role="data"} attribute, the `cmd2.history.History`{.interpreted-text role="class"} class, and the `cmd2.history.HistoryItem`{.interpreted-text role="class"} class are all part of the public API for `cmd2.Cmd`{.interpreted-text role="class"}. You could use these classes to implement write your own `history` command (see below for documentation on how the included `history` command works).
+The `cmd2.Cmd.history` attribute, the `cmd2.history.History` class, and the `cmd2.history.HistoryItem` class are all part of the public API for `cmd2.Cmd`. You could use these classes to implement write your own `history` command (see below for documentation on how the included `history` command works).
 
 ## For Users
 
@@ -117,11 +117,11 @@ Say you want to re-run some previously entered commands, but you would really li
 
     (Cmd) history --edit 2:4
 
-If you want to save the commands to a text file, but not edit and re-run them, use the `-o` or `--output-file` option. This is a great way to create `Scripts <features/scripting:Scripting>`{.interpreted-text role="ref"}, which can be executed using the `run_script` command. To save the first 5 commands entered in this session to a text file:
+If you want to save the commands to a text file, but not edit and re-run them, use the `-o` or `--output-file` option. This is a great way to create [Scripts](./scripting.md), which can be executed using the `run_script` command. To save the first 5 commands entered in this session to a text file:
 
     (Cmd) history :5 -o history.txt
 
-The `history` command can also save both the commands and their output to a text file. This is called a transcript. See `features/transcripts:Transcripts`{.interpreted-text role="ref"} for more information on how transcripts work, and what you can use them for. To create a transcript use the `-t` or `--transcription` option:
+The `history` command can also save both the commands and their output to a text file. This is called a transcript. See [Transcripts](./transcripts.md) for more information on how transcripts work, and what you can use them for. To create a transcript use the `-t` or `--transcription` option:
 
     (Cmd) history 2:3 --transcript transcript.txt
 

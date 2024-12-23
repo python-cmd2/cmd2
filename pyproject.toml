@@ -38,6 +38,7 @@ dependencies = [
 build = ["build", "setuptools", "setuptools-scm"]
 dev = [
     "codecov",
+    "griffe-typingdoc",
     "invoke",
     "mkdocs-include-markdown-plugin",
     "mkdocs-macros-plugin",
@@ -51,6 +52,7 @@ dev = [
     "twine",
 ]
 docs = [
+    "griffe-typingdoc",
     "mkdocs-include-markdown-plugin",
     "mkdocs-macros-plugin",
     "mkdocs-material",
@@ -276,6 +278,7 @@ dev-dependencies = [
     "build",
     "cmd2-ext-test",
     "codecov",
+    "griffe-typingdoc",
     "invoke",
     "mkdocs-include-markdown-plugin",
     "mkdocs-macros-plugin",

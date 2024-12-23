@@ -67,6 +67,7 @@ The tables below list all prerequisites along with the minimum required version 
 | ------------------------------------------------------------------------------------------ | --------------- | --------------------------------- |
 | [codecov](http://doc.pytest.org/en/latest/)                                                | `2.1.13`        | Cover coverage reporting          |
 | [invoke](https://www.pyinvoke.org/)                                                        | `2.2.0`         | Command automation                |
+| [griffe_typingdoc](https://github.com/mkdocstrings/griffe-typingdoc)                       | `0.2.7`         | mkdocstrings extension for typing |
 | [mypy](https://mypy-lang.org/)                                                             | `1.13.0`        | Static type checker               |
 | [pytest](https://docs.pytest.org/en/stable/)                                               | `3.0.6`         | Unit and integration tests        |
 | [pytest-cov](http://doc.pytest.org/en/latest/)                                             | `6.0.0`         | Pytest code coverage              |
@@ -74,7 +75,7 @@ The tables below list all prerequisites along with the minimum required version 
 | [mkdocs-include-markdown-plugin](https://pypi.org/project/mkdocs-include-markdown-plugin/) | `7.1.2`         | MkDocs Plugin include MkDn        |
 | [mkdocs-macros-plugin](https://mkdocs-macros-plugin.readthedocs.io/)                       | `1.3.7`         | MkDocs Plugin for macros          |
 | [mkdocs-material](https://squidfunk.github.io/mkdocs-material/)                            | `9.5.49`        | Documentation                     |
-| [mkdocstrings](https://mkdocstrings.github.io/)                                            | `0.27.0`        | Automatic documentation from code |
+| [mkdocstrings[python]](https://mkdocstrings.github.io/)                                    | `0.27.0`        | MkDocs Plugin for Python AutoDoc  |
 | [ruff](https://github.com/astral-sh/ruff)                                                  | `0.7.3`         | Fast linter and formatter         |
 | [uv](https://github.com/astral-sh/uv)                                                      | `0.5.1`         | Python package management         |
 

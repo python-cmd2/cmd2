@@ -6,7 +6,7 @@ From our experience, end users rarely read documentation no matter how high-qual
 
 `cmd2` makes it easy for end users of `cmd2` applications to get help via the built-in `help` command. The `help` command by itself displays a list of the commands available:
 
-``` text
+```text
 (Cmd) help
 
 Documented commands (use 'help -v' for verbose/'help <topic>' for details):
@@ -17,7 +17,7 @@ edit   history  macro  quit  run_script    shell
 
 The `help` command can also be used to provide detailed help for a specific command:
 
-``` text
+```text
 (Cmd) help quit
 Usage: quit [-h]
 
@@ -31,7 +31,7 @@ optional arguments:
 
 `cmd2` makes it easy for developers of `cmd2` applications to provide this help. By default, the help for a command is the docstring for the `do_*` method defining the command - e.g. for a command **foo**, that command is implemented by defining the `do_foo` method and the docstring for that method is the help.
 
-For commands which use one of the `argparse` decorators to parse arguments, help is provided by `argparse`. See `features/argument_processing:Help Messages`{.interpreted-text role="ref"} for more information.
+For commands which use one of the `argparse` decorators to parse arguments, help is provided by `argparse`. See [Help Messages](./argument_processing.md#help-messages) for more information.
 
 Occasionally there might be an unusual circumstance where providing static help text isn't good enough and you want to provide dynamic information in the help text for a command. To meet this need, if a `help_foo` method is defined to match the `do_foo` method, then that method will be used to provide the help for command **foo**. This dynamic help is only supported for commands which do not use an `argparse` decorator because didn't want different output for `help cmd` than for `cmd -h`.
 
@@ -70,44 +70,50 @@ If you have a large number of commands, you can optionally group your commands i
     alias   edit  history  py    run_pyscript  set    shortcuts
     config  help  macro    quit  run_script    shell  version
 
-There are 2 methods of specifying command categories, using the `@with_category` decorator or with the `categorize()` function. Once a single command category is detected, the help output switches to a categorized mode of display. All commands with an explicit category defined default to the category ``Other``.
+There are 2 methods of specifying command categories, using the `@with_category` decorator or with the `categorize()` function. Once a single command category is detected, the help output switches to a categorized mode of display. All commands with an explicit category defined default to the category `Other`.
 
 Using the `@with_category` decorator:
 
-    @with_category(CMD_CAT_CONNECTING)
-    def do_which(self, _):
-        """Which command"""
-        self.poutput('Which')
+```py
+@with_category(CMD_CAT_CONNECTING)
+def do_which(self, _):
+    """Which command"""
+    self.poutput('Which')
+```
 
 Using the `categorize()` function:
 
-> You can call with a single function:
->
->     def do_connect(self, _):
->         """Connect command"""
->         self.poutput('Connect')
->
->     # Tag the above command functions under the category Connecting
->     categorize(do_connect, CMD_CAT_CONNECTING)
->
-> Or with an Iterable container of functions:
->
->     def do_undeploy(self, _):
->         """Undeploy command"""
->         self.poutput('Undeploy')
->
->     def do_stop(self, _):
->         """Stop command"""
->         self.poutput('Stop')
->
->     def do_findleakers(self, _):
->         """Find Leakers command"""
->         self.poutput('Find Leakers')
->
->     # Tag the above command functions under the category Application Management
->     categorize((do_undeploy,
->                 do_stop,
->                 do_findleakers), CMD_CAT_APP_MGMT)
+You can call with a single function:
+
+```py
+def do_connect(self, _):
+    """Connect command"""
+    self.poutput('Connect')
+
+# Tag the above command functions under the category Connecting
+categorize(do_connect, CMD_CAT_CONNECTING)
+```
+
+Or with an Iterable container of functions:
+
+```py
+def do_undeploy(self, _):
+    """Undeploy command"""
+    self.poutput('Undeploy')
+
+def do_stop(self, _):
+    """Stop command"""
+    self.poutput('Stop')
+
+def do_findleakers(self, _):
+    """Find Leakers command"""
+    self.poutput('Find Leakers')
+
+# Tag the above command functions under the category Application Management
+categorize((do_undeploy,
+            do_stop,
+            do_findleakers), CMD_CAT_APP_MGMT)
+```
 
 The `help` command also has a verbose option (`help -v` or `help --verbose`) that combines the help categories with per-command Help Messages:
 

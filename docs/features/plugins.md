@@ -2,7 +2,7 @@
 
 `cmd2` has a built-in plugin framework which allows developers to create a a `cmd2` plugin which can extend basic `cmd2` functionality and can be used by multiple applications.
 
-There are many ways to add functionality to `cmd2` using a plugin. Most plugins will be implemented as a mixin. A mixin is a class that encapsulates and injects code into another class. Developers who use a plugin in their `cmd2` project will inject the plugin's code into their subclass of `cmd2.Cmd`{.interpreted-text role="class"}.
+There are many ways to add functionality to `cmd2` using a plugin. Most plugins will be implemented as a mixin. A mixin is a class that encapsulates and injects code into another class. Developers who use a plugin in their `cmd2` project will inject the plugin's code into their subclass of `cmd2.Cmd`.
 
 ## Mixin and Initialization
 
@@ -10,55 +10,63 @@ The following short example shows how to mix in a plugin and how the plugin gets
 
 Here's the plugin:
 
-    class MyPlugin:
-        def __init__(self, *args, **kwargs):
-            # code placed here runs before cmd2.Cmd initializes
-            super().__init__(*args, **kwargs)
-            # code placed here runs after cmd2.Cmd initializes
+```py
+class MyPlugin:
+    def __init__(self, *args, **kwargs):
+        # code placed here runs before cmd2.Cmd initializes
+        super().__init__(*args, **kwargs)
+        # code placed here runs after cmd2.Cmd initializes
+```
 
 and an example app which uses the plugin:
 
-    import cmd2
-    import cmd2_myplugin
+```py
+import cmd2
+import cmd2_myplugin
 
-    class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
-        """An class to show how to use a plugin"""
-        def __init__(self, *args, **kwargs):
-            # code placed here runs before cmd2.Cmd or
-            # any plugins initialize
-            super().__init__(*args, **kwargs)
-            # code placed here runs after cmd2.Cmd and
-            # all plugins have initialized
+class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
+    """An class to show how to use a plugin"""
+    def __init__(self, *args, **kwargs):
+        # code placed here runs before cmd2.Cmd or
+        # any plugins initialize
+        super().__init__(*args, **kwargs)
+        # code placed here runs after cmd2.Cmd and
+        # all plugins have initialized
+```
 
-Note how the plugin must be inherited (or mixed in) before `cmd2.Cmd`{.interpreted-text role="class"}. This is required for two reasons:
+Note how the plugin must be inherited (or mixed in) before `cmd2.Cmd`. This is required for two reasons:
 
 -   The `cmd.Cmd.__init__` method in the python standard library does not call `super().__init__()`. Because of this oversight, if you don't inherit from `MyPlugin` first, the `MyPlugin.__init__()` method will never be called.
--   You may want your plugin to be able to override methods from `cmd2.Cmd`{.interpreted-text role="class"}. If you mixin the plugin after `cmd2.Cmd`, the python method resolution order will call `cmd2.Cmd`{.interpreted-text role="class"} methods before it calls those in your plugin.
+-   You may want your plugin to be able to override methods from `cmd2.Cmd`. If you mixin the plugin after `cmd2.Cmd`, the python method resolution order will call `cmd2.Cmd`{.interpreted-text role="class"} methods before it calls those in your plugin.
 
 ## Add commands
 
-Your plugin can add user visible commands. You do it the same way in a plugin that you would in a `cmd2.Cmd`{.interpreted-text role="class"} app:
+Your plugin can add user visible commands. You do it the same way in a plugin that you would in a `cmd2.Cmd` app:
 
-    class MyPlugin:
-        def do_say(self, statement):
-            """Simple say command"""
-            self.poutput(statement)
+```py
+class MyPlugin:
+    def do_say(self, statement):
+        """Simple say command"""
+        self.poutput(statement)
+```
 
-You have all the same capabilities within the plugin that you do inside a `cmd2.Cmd`{.interpreted-text role="class"} app, including argument parsing via decorators and custom help methods.
+You have all the same capabilities within the plugin that you do inside a `cmd2.Cmd` app, including argument parsing via decorators and custom help methods.
 
 ## Add (or hide) settings
 
 A plugin may add user controllable settings to the application. Here's an example:
 
-    class MyPlugin:
-        def __init__(self, *args, **kwargs):
-            # code placed here runs before cmd2.Cmd initializes
-            super().__init__(*args, **kwargs)
-            # code placed here runs after cmd2.Cmd initializes
-            self.mysetting = 'somevalue'
-            self.add_settable(cmd2.Settable('mysetting', str, 'short help message for mysetting', self))
+```py
+class MyPlugin:
+    def __init__(self, *args, **kwargs):
+        # code placed here runs before cmd2.Cmd initializes
+        super().__init__(*args, **kwargs)
+        # code placed here runs after cmd2.Cmd initializes
+        self.mysetting = 'somevalue'
+        self.add_settable(cmd2.Settable('mysetting', str, 'short help message for mysetting', self))
+```
 
-You can hide settings from the user by calling `~cmd2.Cmd.remove_settable`{.interpreted-text role="meth"}. See `features/settings:Settings`{.interpreted-text role="ref"} for more information.
+You can hide settings from the user by calling `cmd2.Cmd.remove_settable`. See [Settings](./settings.md) for more information.
 
 ## Decorators
 
@@ -66,34 +74,36 @@ Your plugin can provide a decorator which users of your plugin can use to wrap f
 
 ## Override methods
 
-Your plugin can override core `cmd2.Cmd`{.interpreted-text role="class"} methods, changing their behavior. This approach should be used sparingly, because it is very brittle. If a developer chooses to use multiple plugins in their application, and several of the plugins override the same method, only the first plugin to be mixed in will have the overridden method called.
+Your plugin can override core `cmd2.Cmd` methods, changing their behavior. This approach should be used sparingly, because it is very brittle. If a developer chooses to use multiple plugins in their application, and several of the plugins override the same method, only the first plugin to be mixed in will have the overridden method called.
 
 Hooks are a much better approach.
 
 ## Hooks
 
-Plugins can register hook methods, which are called by `cmd2.Cmd`{.interpreted-text role="class"} during various points in the application and command processing lifecycle. Plugins should not override any of the deprecated hook methods, instead they should register their hooks as described in the `features/hooks:Hooks`{.interpreted-text role="ref"} section.
+Plugins can register hook methods, which are called by `cmd2.Cmd`{.interpreted-text role="class"} during various points in the application and command processing lifecycle. Plugins should not override any of the deprecated hook methods, instead they should register their hooks as described in the [Hooks](./hooks.md) section.
 
 You should name your hooks so that they begin with the name of your plugin. Hook methods get mixed into the `cmd2` application and this naming convention helps avoid unintentional method overriding.
 
 Here's a simple example:
 
-    class MyPlugin:
-        def __init__(self, *args, **kwargs):
-            # code placed here runs before cmd2 initializes
-            super().__init__(*args, **kwargs)
-            # code placed here runs after cmd2 initializes
-            # this is where you register any hook functions
-            self.register_postparsing_hook(self.cmd2_myplugin_postparsing_hook)
+```py
+class MyPlugin:
+    def __init__(self, *args, **kwargs):
+        # code placed here runs before cmd2 initializes
+        super().__init__(*args, **kwargs)
+        # code placed here runs after cmd2 initializes
+        # this is where you register any hook functions
+        self.register_postparsing_hook(self.cmd2_myplugin_postparsing_hook)
 
-        def cmd2_myplugin_postparsing_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-            """Method to be called after parsing user input, but before running the command"""
-            self.poutput('in postparsing_hook')
-            return data
+    def cmd2_myplugin_postparsing_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
+        """Method to be called after parsing user input, but before running the command"""
+        self.poutput('in postparsing_hook')
+        return data
+```
 
 Registration allows multiple plugins (or even the application itself) to each inject code to be called during the application or command processing lifecycle.
 
-See the `features/hooks:Hooks`{.interpreted-text role="ref"} documentation for full details of the application and command lifecycle, including all available hooks and the ways hooks can influence the lifecycle.
+See the [Hooks](./hooks.md) documentation for full details of the application and command lifecycle, including all available hooks and the ways hooks can influence the lifecycle.
 
 ## Classes and Functions
 

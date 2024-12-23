@@ -2,7 +2,7 @@
 
 ## How to redirect output
 
-See `features/redirection:Output Redirection and Pipes`{.interpreted-text role="ref"}
+See [Output Redirection and Pipes](./redirection.md#output-redirection-and-pipes)
 
 ## Executing OS commands from within `cmd2`
 
@@ -10,7 +10,7 @@ See `features/redirection:Output Redirection and Pipes`{.interpreted-text role="
 
     (Cmd) shell ls -al
 
-If you use the default `features/shortcuts_aliases_macros:Shortcuts`{.interpreted-text role="ref"} defined in `cmd2` you'll get a `!` shortcut for `shell`, which allows you to type:
+If you use the default [Shortcuts](./shortcuts_aliases_macros.md#shortcuts) defined in `cmd2` you'll get a `!` shortcut for `shell`, which allows you to type:
 
     (Cmd) !ls -al
 
@@ -30,13 +30,13 @@ If you have the `EDITOR` environment variable set, then this will be the default
 
 ## Terminal pagers
 
-Output of any command can be displayed one page at a time using the `~.cmd2.Cmd.ppaged`{.interpreted-text role="meth"} method.
+Output of any command can be displayed one page at a time using the `cmd2.Cmd.ppaged` method.
 
 Alternatively, a terminal pager can be invoked directly using the ability to run shell commands with the `!` shortcut like so:
 
     (Cmd) !less foo.txt
 
-NOTE: Once you are in a terminal pager, that program temporarily has control of your terminal, **NOT** `cmd2`. Typically you can use either the arrow keys or <PageUp>/<PageDown> keys to scroll around or type `q` to quit the pager and return control to your `cmd2` application.
+NOTE: Once you are in a terminal pager, that program temporarily has control of your terminal, **NOT** `cmd2`. Typically you can use either the arrow keys or `<PageUp>`/`<PageDown>` keys to scroll around or type `q` to quit the pager and return control to your `cmd2` application.
 
 ## Exit codes
 

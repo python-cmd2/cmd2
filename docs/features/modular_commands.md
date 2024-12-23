@@ -6,15 +6,15 @@ Cmd2 also enables developers to modularize their command definitions into `Comma
 
 ### Features
 
--   Modular Command Sets - Commands can be broken into separate modules rather than in one god class holding all commands.
--   Automatic Command Discovery - In your application, merely defining and importing a CommandSet is sufficient for cmd2 to discover and load your command. No manual registration is necessary.
--   Dynamically Loadable/Unloadable Commands - Command functions and CommandSets can both be loaded and unloaded dynamically during application execution. This can enable features such as dynamically loaded modules that add additional commands.
--   Events handlers - Four event handlers are provided in `CommandSet` class for custom initialization and cleanup steps. See `features/modular_commands:Event Handlers`{.interpreted-text role="ref"}.
--   Subcommand Injection - Subcommands can be defined separately from the base command. This allows for a more action-centric instead of object-centric command system while still organizing your code and handlers around the objects being managed.
+- Modular Command Sets - Commands can be broken into separate modules rather than in one god class holding all commands.
+- Automatic Command Discovery - In your application, merely defining and importing a CommandSet is sufficient for cmd2 to discover and load your command. No manual registration is necessary.
+- Dynamically Loadable/Unloadable Commands - Command functions and CommandSets can both be loaded and unloaded dynamically during application execution. This can enable features such as dynamically loaded modules that add additional commands.
+- Events handlers - Four event handlers are provided in `CommandSet` class for custom initialization and cleanup steps. See [Event Handlers](#event-handlers).
+- Subcommand Injection - Subcommands can be defined separately from the base command. This allows for a more action-centric instead of object-centric command system while still organizing your code and handlers around the objects being managed.
 
-See API documentation for `cmd2.command_definition.CommandSet`{.interpreted-text role="attr"}
+See API documentation for `cmd2.command_definition.CommandSet`.
 
-See [the examples](<https://github.com/python-cmd2/cmd2/tree/master/examples/modular_commands>) for more details.
+See [the examples](https://github.com/python-cmd2/cmd2/tree/master/examples/modular_commands) for more details.
 
 ## Defining Commands
 
@@ -26,9 +26,9 @@ A new decorator `with_default_category` is provided to categorize all commands w
 
 CommandSet command methods will always expect the same parameters as when defined in a `cmd2.Cmd` sub-class, except that `self` will now refer to the `CommandSet` instead of the cmd2 instance. The cmd2 instance can be accessed through `self._cmd` that is populated when the `CommandSet` is registered.
 
-CommandSets will only be auto-loaded if the constructor takes no arguments. If you need to provide constructor arguments, see `features/modular_commands:Manual CommandSet Construction`{.interpreted-text role="ref"}
+CommandSets will only be auto-loaded if the constructor takes no arguments. If you need to provide constructor arguments, see [Manual CommandSet Construction](#manual-commandset-construction).
 
-``` python
+```py
 import cmd2
 from cmd2 import CommandSet, with_default_category
 
@@ -58,7 +58,7 @@ class ExampleApp(cmd2.Cmd):
 
 If a CommandSet class requires parameters to be provided to the constructor, you man manually construct CommandSets and pass in the constructor to Cmd2.
 
-``` python
+```py
 import cmd2
 from cmd2 import CommandSet, with_default_category
 
@@ -101,7 +101,7 @@ You can also dynamically load and unload commands by installing and removing Com
 
 You may need to disable command auto-loading if you need dynamically load commands at runtime.
 
-``` python
+```py
 import argparse
 import cmd2
 from cmd2 import CommandSet, with_argparser, with_category, with_default_category
@@ -195,15 +195,15 @@ The following functions are called at different points in the `CommandSet` life 
 
 ### Description
 
-Using the ``with_argparse`` decorator, it is possible to define subcommands for your command. This has a tendency to either drive your interface into an object-centric interface. For example, imagine you have a tool that manages your media collection and you want to manage movies or shows. An object-centric approach would push you to have base commands such as ``movies`` and ``shows`` which each have subcommands ``add``, ``edit``, ``list``, ``delete``. If you wanted to present an action-centric command set, so that ``add``, ``edit``, ``list``, and ``delete`` are the base commands, you'd have to organize your code around these similar actions rather than organizing your code around similar objects being managed.
+Using the `with_argparse` decorator, it is possible to define subcommands for your command. This has a tendency to either drive your interface into an object-centric interface. For example, imagine you have a tool that manages your media collection and you want to manage movies or shows. An object-centric approach would push you to have base commands such as `movies` and `shows` which each have subcommands `add`, `edit`, `list`, `delete`. If you wanted to present an action-centric command set, so that `add`, `edit`, `list`, and `delete` are the base commands, you'd have to organize your code around these similar actions rather than organizing your code around similar objects being managed.
 
 Subcommand injection allows you to inject subcommands into a base command to present an interface that is sensible to a user while still organizing your code in whatever structure make more logical sense to the developer.
 
 ### Example
 
-This example is a variation on the Dynamic Commands example above. A ``cut`` command is introduced as a base command and each CommandSet
+This example is a variation on the Dynamic Commands example above. A `cut` command is introduced as a base command and each CommandSet
 
-``` python
+```py
 import argparse
 import cmd2
 from cmd2 import CommandSet, with_argparser, with_category, with_default_category

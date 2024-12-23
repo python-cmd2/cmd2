@@ -14,42 +14,36 @@ Presents numbered options to user, as bash `select`.
 
 `app.select` is called from within a method (not by the user directly; it is `app.select`, not `app.do_select`).
 
-TODO replace with mkdocstrings:
+::: cmd2.Cmd.select
 
-    .. automethod:: cmd2.Cmd.select
-        :noindex:
+```py
+def do_eat(self, arg):
+    sauce = self.select('sweet salty', 'Sauce? ')
+    result = '{food} with {sauce} sauce, yum!'
+    result = result.format(food=arg, sauce=sauce)
+    self.stdout.write(result + '\n')
+```
 
-    def do_eat(self, arg):
-        sauce = self.select('sweet salty', 'Sauce? ')
-        result = '{food} with {sauce} sauce, yum!'
-        result = result.format(food=arg, sauce=sauce)
-        self.stdout.write(result + '\n')
-
-    (Cmd) eat wheaties
-        1. sweet
-        2. salty
-    Sauce? 2
-    wheaties with salty sauce, yum!
+```text
+(Cmd) eat wheaties
+    1. sweet
+    2. salty
+Sauce? 2
+wheaties with salty sauce, yum!
+```
 
 ## Disabling Commands
 
 `cmd2` supports disabling commands during runtime. This is useful if certain commands should only be available when the application is in a specific state. When a command is disabled, it will not show up in the help menu or tab complete. If a user tries to run the command, a command-specific message supplied by the developer will be printed. The following functions support this feature.
 
-enable[command]{#command}()
-
-: Enable an individual command
-
-enable[category]{#category}()
-
-: Enable an entire category of commands
-
-disable[command]{#command}()
-
-: Disable an individual command and set the message that will print when this command is run or help is called on it while disabled
-
-disable[category]{#category}()
-
-: Disable an entire category of commands and set the message that will print when anything in this category is run or help is called on it while disabled
+- **enable_command**
+  : Enable an individual command
+- **enable_category**
+  : Enable an entire category of commands
+- **disable_command**
+  : Disable an individual command and set the message that will print when this command is run or help is called on it while disabled
+- **disable_category**
+  : Disable an entire category of commands and set the message that will print when anything in this category is run or help is called on it while disabled
 
 See the definitions of these functions for descriptions of their arguments.
 
