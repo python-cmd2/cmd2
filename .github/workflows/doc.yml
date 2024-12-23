@@ -26,6 +26,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install python prerequisites
-        run: pip install -U --user pip setuptools setuptools-scm mkdocs-include-markdown-plugin mkdocs-macros-plugin mkdocs-material . plugins/ext_test
+        run: pip install -U --user pip setuptools setuptools-scm mkdocs-include-markdown-plugin mkdocs-macros-plugin mkdocs-material mkdocstrings[python] . plugins/ext_test
       - name: MkDocs documentation build
         run: mkdocs build
