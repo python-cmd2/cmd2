@@ -42,9 +42,9 @@ This command invokes a Python command or shell. See [Embedded Python Shells](./e
 
 This command exits the `cmd2` application.
 
-### run_pyscript {: #feature-builtin-commands-run-pyscript }
+### run_pyscript
 
-This command runs a Python script file inside the `cmd2` application. See [Python Scripts](./scripting.md#scripting-python-scripts) for more information.
+This command runs a Python script file inside the `cmd2` application. See [Python Scripts](./scripting.md#python-scripts) for more information.
 
 ### run_script
 

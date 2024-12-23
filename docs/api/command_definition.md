@@ -1,7 +1,3 @@
-# cmd2.command[definition]{#definition}
+# cmd2.command_definition
 
-TODO replace with mkdocstrings:
-
-    > ::: {.automodule members=""}
-    > cmd2.command[definition]{#definition}
-    > :::
+::: cmd2.command_definition

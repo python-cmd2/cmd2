@@ -1,7 +1,3 @@
-# cmd2.argparse[completer]{#completer}
+# cmd2.argparse_completer
 
-TODO replace with mkdocstrings:
-
-    > ::: {.automodule members=""}
-    > cmd2.argparse[completer]{#completer}
-    > :::
+::: cmd2.argparse_completer

@@ -29,9 +29,9 @@ Comments are useful in scripts, but would be pointless within an interactive ses
     (Cmd) # this is a comment
     (Cmd) command # this is not a comment
 
-## Python Scripts {: #scripting-python-scripts }
+## Python Scripts
 
-If you require logic flow, loops, branching, or other advanced features, you can write a python script which executes in the context of your `cmd2` app. This script is run using the [run_pyscript](./builtin_commands.md#feature-builtin-commands-run-pyscript) command. Here's a simple example that uses the [arg_printer](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/arg_printer.py) script:
+If you require logic flow, loops, branching, or other advanced features, you can write a python script which executes in the context of your `cmd2` app. This script is run using the [run_pyscript](./builtin_commands.md#run_pyscript) command. Here's a simple example that uses the [arg_printer](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/arg_printer.py) script:
 
     (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar 'baz 23'
     Running Python script 'arg_printer.py' which was called with 3 arguments
@@ -39,7 +39,7 @@ If you require logic flow, loops, branching, or other advanced features, you can
     arg 2: 'bar'
     arg 3: 'baz 23'
 
-[run_pyscript](./builtin_commands.md#feature-builtin-commands-run-pyscript) supports tab completion of file system paths, and as shown above it has the ability to pass command-line arguments to the scripts invoked.
+[run_pyscript](./builtin_commands.md#run_pyscript) supports tab completion of file system paths, and as shown above it has the ability to pass command-line arguments to the scripts invoked.
 
 ## Developing a cmd2 API
 
@@ -51,7 +51,7 @@ Without any work on the part of the designer, a scripter can take advantage of p
 
 `Stdout` and `Stderr` are fairly straightforward representations of normal data streams and accurately reflect what is seen by the user during normal cmd2 interaction. `Stop` contains information about how the invoked command has ended its lifecycle. Lastly `Data` contains any information the designer sets via `self.last_result` or `self._cmd.last_result` if called from inside a CommandSet.
 
-Python scripts executed with [run_pyscript](./builtin_commands.md#feature-builtin-commands-run-pyscript) can run `cmd2` application commands by using the syntax:
+Python scripts executed with [run_pyscript](./builtin_commands.md#run_pyscript) can run `cmd2` application commands by using the syntax:
 
 ```py
 app(‘command args’)

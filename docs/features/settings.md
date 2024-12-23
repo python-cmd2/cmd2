@@ -113,5 +113,5 @@ class MyApp(cmd2.Cmd):
 
     def __init__(self):
         super().__init__()
-        self.remove_settable('debug')
+      self.remove_settable('debug')
 ```

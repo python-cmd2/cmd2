@@ -4,29 +4,20 @@
 
 Command shortcuts for long command names and common commands can make life more convenient for your users. Shortcuts are used without a space separating them from their arguments, like `!ls`. By default, the following shortcuts are defined:
 
-> `?`
->
-> : help
->
-> `!`
->
-> : shell: run as OS-level command
->
-> `@`
->
-> : run script file
->
-> `@@`
->
-> : run script file; filename is relative to current script location
+-   **`?`** - help
+-   **`!`** - shell: run as OS-level command
+-   **`@`** - run script file
+-   **`@@`** - run script file; filename is relative to current script location
 
-To define more shortcuts, update the dict `App.shortcuts` with the {'shortcut': 'command[name]{#name}'} (omit `do_`):
+To define more shortcuts, update the dict `App.shortcuts` with the `{'shortcut': 'command_name'}` (omit `do_`):
 
-    class App(Cmd):
-        def __init__(self):
-          shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
-          shortcuts.update({'*': 'sneeze', '~': 'squirm'})
-          cmd2.Cmd.__init__(self, shortcuts=shortcuts)
+```py
+class App(Cmd):
+    def __init__(self):
+        shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
+        shortcuts.update({'*': 'sneeze', '~': 'squirm'})
+        cmd2.Cmd.__init__(self, shortcuts=shortcuts)
+```
 
 !!! warning
 
@@ -38,9 +29,7 @@ Note: Command, alias, and macro names cannot start with a shortcut
 
 In addition to shortcuts, `cmd2` provides a full alias feature via the `alias` command. Aliases work in a similar fashion to aliases in the Bash shell.
 
-The syntax to create an alias is: `alias create name command [args]`.
-
-> Ex: `alias create ls !ls -lF`
+The syntax to create an alias is: `alias create name command [args]`, e.g. `alias create ls !ls -lF`.
 
 Redirectors and pipes should be quoted in alias definition to prevent the `alias create` command from being redirected:
 
@@ -68,11 +57,11 @@ Note: Aliases cannot have the same name as a command or macro
 
 The following creates a macro called my[macro]{#macro} that expects two arguments:
 
-> macro create my[macro]{#macro} make[dinner]{#dinner} -meat {1} -veggie {2}
+    macro create my[macro]{#macro} make[dinner]{#dinner} -meat {1} -veggie {2}
 
 When the macro is called, the provided arguments are resolved and the assembled command is run. For example:
 
-> my[macro]{#macro} beef broccoli ---> make[dinner]{#dinner} -meat beef -veggie broccoli
+    my[macro]{#macro} beef broccoli ---> make[dinner]{#dinner} -meat beef -veggie broccoli
 
 Similar to aliases, pipes and redirectors need to be quoted in the definition of a macro:
 

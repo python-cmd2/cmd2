@@ -52,7 +52,6 @@ theme:
     - navigation.top
     - navigation.tracking
     - toc.follow
-    - toc.integrate
 
 # Plugins
 plugins:
@@ -197,8 +196,8 @@ nav:
       - api/ansi.md
       - api/argparse_completer.md
       - api/argparse_custom.md
-      - api/constants.md
       - api/command_definition.md
+      - api/constants.md
       - api/decorators.md
       - api/exceptions.md
       - api/history.md

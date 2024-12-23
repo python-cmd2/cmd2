@@ -1,7 +1,3 @@
-# cmd2.py[bridge]{#bridge}
+# cmd2.py_bridge
 
-TODO replace with mkdocstrings:
-
-    > ::: {.automodule members=""}
-    > cmd2.py[bridge]{#bridge}
-    > :::
+::: cmd2.py_bridge
