@@ -1,8 +1,7 @@
-
+mkdocs-include-markdown-plugin
+mkdocs-macros-plugin
+mkdocs-material
 pyperclip
 setuptools
 setuptools-scm
-Sphinx
-sphinx-autobuild
-sphinx-rtd-theme
 wcwidth

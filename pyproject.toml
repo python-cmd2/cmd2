@@ -9,14 +9,7 @@ description = "cmd2 - quickly build feature-rich and user-friendly interactive c
 authors = [{ name = "cmd2 Contributors" }]
 readme = "README.md"
 requires-python = ">=3.8"
-keywords = [
-    "CLI",
-    "cmd",
-    "command",
-    "interactive",
-    "prompt",
-    "Python",
-]
+keywords = ["CLI", "cmd", "command", "interactive", "prompt", "Python"]
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -42,83 +35,46 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-build = [
-    "build",
-    "setuptools",
-    "setuptools-scm",
-]
+build = ["build", "setuptools", "setuptools-scm"]
 dev = [
     "codecov",
-    "doc8",
     "invoke",
+    "mkdocs-include-markdown-plugin",
+    "mkdocs-macros-plugin",
+    "mkdocs-material",
+    "mkdocstrings[python]",
     "mypy",
     "pytest",
     "pytest-cov",
     "pytest-mock",
-    "sphinx",
-    "sphinx-autobuild",
-    "sphinx-rtd-theme",
     "ruff",
     "twine",
 ]
 docs = [
+    "mkdocs-include-markdown-plugin",
+    "mkdocs-macros-plugin",
+    "mkdocs-material",
+    "mkdocstrings[python]",
     "setuptools",
     "setuptools_scm",
-    "sphinx",
-    "sphinx-autobuild",
-    "sphinx-rtd-theme",
 ]
-test = [
-    "codecov",
-    "coverage",
-    "pytest",
-    "pytest-cov",
-    "pytest-mock",
-]
-validate = [
-    "mypy",
-    "ruff",
-    "types-setuptools",
-]
-
-[tool.doc8]
-ignore-path = [
-    "__pycache__",
-    "*.egg",
-    ".git",
-    ".idea",
-    ".nox",
-    ".pytest_cache",
-    ".tox",
-    ".venv",
-    ".vscode",
-    "build",
-    "cmd2",
-    "cmd2.egg-info",
-    "dist",
-    "docs/_build",
-    "examples",
-    "htmlcov",
-    "plugins",
-    "tests",
-]
-max-line-length = 120
-verbose = 0
+test = ["codecov", "coverage", "pytest", "pytest-cov", "pytest-mock"]
+validate = ["mypy", "ruff", "types-setuptools"]
 
 [tool.mypy]
 disallow_incomplete_defs = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 exclude = [
-    "^build/", # .build directory
-    "^docs/", # docs directory
-    "^examples/", # examples directory
-    "^plugins/*", # plugins directory
-    "^noxfile\\.py$", # nox config file
-    "setup\\.py$", # any files named setup.py
-    "^tasks\\.py$", # tasks.py invoke config file
-    "^tests/", # tests directory
-    "^tests_isolated/" # tests_isolated directory
+    "^build/",          # .build directory
+    "^docs/",           # docs directory
+    "^examples/",       # examples directory
+    "^plugins/*",       # plugins directory
+    "^noxfile\\.py$",   # nox config file
+    "setup\\.py$",      # any files named setup.py
+    "^tasks\\.py$",     # tasks.py invoke config file
+    "^tests/",          # tests directory
+    "^tests_isolated/", # tests_isolated directory
 ]
 show_column_numbers = true
 show_error_codes = true
@@ -130,9 +86,7 @@ warn_unreachable = true
 warn_unused_ignores = false
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
 addopts = [
     "--cov=cmd2",
     "--cov-append",
@@ -201,7 +155,7 @@ select = [
     #    "EM", # flake8-errmsg
     #    "ERA",  # eradicate
     #    "EXE", # flake8-executable
-    "F", # Pyflakes
+    "F",  # Pyflakes
     "FA", # flake8-future-annotations
     #    "FBT",  # flake8-boolean-trap
     "G", # flake8-logging-format
@@ -212,7 +166,7 @@ select = [
     #    "ISC", # flake8-implicit-str-concat
     #    "N", # pep8-naming
     "NPY", # NumPy-specific rules
-    "PD", # pandas-vet
+    "PD",  # pandas-vet
     #    "PGH", # pygrep-hooks
     #    "PIE", # flake8-pie
     #    "PL", # Pylint
@@ -238,21 +192,21 @@ select = [
 ]
 ignore = [
     # `ruff rule S101` for a description of that rule
-    "B904", # Within an `except` clause, raise exceptions with `raise ... from err` -- FIX ME
-    "B905", # `zip()` without an explicit `strict=` parameter -- FIX ME
-    "E501", # Line too long
-    "EM101", # Exception must not use a string literal, assign to variable first
-    "EXE001", # Shebang is present but file is not executable -- DO NOT FIX
-    "G004", # Logging statement uses f-string
+    "B904",    # Within an `except` clause, raise exceptions with `raise ... from err` -- FIX ME
+    "B905",    # `zip()` without an explicit `strict=` parameter -- FIX ME
+    "E501",    # Line too long
+    "EM101",   # Exception must not use a string literal, assign to variable first
+    "EXE001",  # Shebang is present but file is not executable -- DO NOT FIX
+    "G004",    # Logging statement uses f-string
     "PLC1901", # `{}` can be simplified to `{}` as an empty string is falsey
-    "PLW060", # Using global for `{name}` but no assignment is done -- DO NOT FIX
+    "PLW060",  # Using global for `{name}` but no assignment is done -- DO NOT FIX
     "PLW2901", # PLW2901: Redefined loop variable -- FIX ME
-    "PT011", # `pytest.raises(Exception)` is too broad, set the `match` parameter or use a more specific exception
-    "PT018", # Assertion should be broken down into multiple parts
-    "S101", # Use of `assert` detected -- DO NOT FIX
-    "S311", # Standard pseudo-random generators are not suitable for cryptographic purposes -- FIX ME
-    "SLF001", # Private member accessed: `_Iterator` -- FIX ME
-    "UP038", # Use `X | Y` in `{}` call instead of `(X, Y)` -- DO NOT FIX
+    "PT011",   # `pytest.raises(Exception)` is too broad, set the `match` parameter or use a more specific exception
+    "PT018",   # Assertion should be broken down into multiple parts
+    "S101",    # Use of `assert` detected -- DO NOT FIX
+    "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes -- FIX ME
+    "SLF001",  # Private member accessed: `_Iterator` -- FIX ME
+    "UP038",   # Use `X | Y` in `{}` call instead of `(X, Y)` -- DO NOT FIX
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -322,16 +276,16 @@ dev-dependencies = [
     "build",
     "cmd2-ext-test",
     "codecov",
-    "doc8",
     "invoke",
+    "mkdocs-include-markdown-plugin",
+    "mkdocs-macros-plugin",
+    "mkdocs-material",
+    "mkdocstrings[python]",
     "mypy",
     "pytest",
     "pytest-cov",
     "pytest-mock",
     "ruff",
-    "sphinx",
-    "sphinx-autobuild",
-    "sphinx-rtd-theme",
     "ruff",
     "twine",
 ]
