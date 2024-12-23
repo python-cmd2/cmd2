@@ -198,31 +198,20 @@ more details.
 cmd2 has patched ``argparse.Action`` to include the following accessor methods
 for cases in which you need to manually access the cmd2-specific attributes.
 
-- ``argparse.Action.get_choices_callable()`` - See
-  :func:`_action_get_choices_callable` for more details.
-- ``argparse.Action.set_choices_provider()`` - See
-  :func:`_action_set_choices_provider` for more details.
-- ``argparse.Action.set_completer()`` - See
-  :func:`_action_set_completer` for more details.
-- ``argparse.Action.get_descriptive_header()`` - See
-  :func:`_action_get_descriptive_header` for more details.
-- ``argparse.Action.set_descriptive_header()`` - See
-  :func:`_action_set_descriptive_header` for more details.
-- ``argparse.Action.get_nargs_range()`` - See
-  :func:`_action_get_nargs_range` for more details.
-- ``argparse.Action.set_nargs_range()`` - See
-  :func:`_action_set_nargs_range` for more details.
-- ``argparse.Action.get_suppress_tab_hint()`` - See
-  :func:`_action_get_suppress_tab_hint` for more details.
-- ``argparse.Action.set_suppress_tab_hint()`` - See
-  :func:`_action_set_suppress_tab_hint` for more details.
+- ``argparse.Action.get_choices_callable()`` - See `action_get_choices_callable` for more details.
+- ``argparse.Action.set_choices_provider()`` - See `_action_set_choices_provider` for more details.
+- ``argparse.Action.set_completer()`` - See `_action_set_completer` for more details.
+- ``argparse.Action.get_descriptive_header()`` - See `_action_get_descriptive_header` for more details.
+- ``argparse.Action.set_descriptive_header()`` - See `_action_set_descriptive_header` for more details.
+- ``argparse.Action.get_nargs_range()`` - See `_action_get_nargs_range` for more details.
+- ``argparse.Action.set_nargs_range()`` - See `_action_set_nargs_range` for more details.
+- ``argparse.Action.get_suppress_tab_hint()`` - See `_action_get_suppress_tab_hint` for more details.
+- ``argparse.Action.set_suppress_tab_hint()`` - See `_action_set_suppress_tab_hint` for more details.
 
 cmd2 has patched ``argparse.ArgumentParser`` to include the following accessor methods
 
-- ``argparse.ArgumentParser.get_ap_completer_type()`` - See
-  :func:`_ArgumentParser_get_ap_completer_type` for more details.
-- ``argparse.Action.set_ap_completer_type()`` - See
-  :func:`_ArgumentParser_set_ap_completer_type` for more details.
+- ``argparse.ArgumentParser.get_ap_completer_type()`` - See `_ArgumentParser_get_ap_completer_type` for more details.
+- ``argparse.Action.set_ap_completer_type()`` - See `_ArgumentParser_set_ap_completer_type` for more details.
 
 **Subcommand removal**
 
@@ -230,8 +219,7 @@ cmd2 has patched ``argparse._SubParsersAction`` to include a ``remove_parser()``
 method which can be used to remove a subcommand.
 
 ``argparse._SubParsersAction.remove_parser`` - new function which removes a
-sub-parser from a sub-parsers group. See
-:func:`_SubParsersAction_remove_parser` for more details.
+sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser` for more details.
 """
 
 import argparse

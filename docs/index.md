@@ -4,7 +4,7 @@ A python package for building powerful command-line interpreter (CLI) programs. 
 
 The basic use of `cmd2` is identical to that of [cmd](https://docs.python.org/3/library/cmd.html).
 
-1.  Create a subclass of `cmd2.Cmd`. Define attributes and `do_*` methods to control its behavior. Throughout this documentation, we will assume that you are naming your subclass `App`:
+1.  Create a subclass of [cmd2.Cmd][]. Define attributes and `do_*` methods to control its behavior. Throughout this documentation, we will assume that you are naming your subclass `App`:
 
 ```py title="Creating a class inherited from cmd2.Cmd" linenums="1"
 from cmd2 import Cmd

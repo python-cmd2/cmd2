@@ -349,7 +349,7 @@ class Cmd(cmd.Cmd):
                                        suppressed. Anything written to stderr will still display.
         :param include_py: should the "py" command be included for an embedded Python shell
         :param include_ipy: should the "ipy" command be included for an embedded IPython shell
-        :param allow_cli_args: if ``True``, then :meth:`cmd2.Cmd.__init__` will process command
+        :param allow_cli_args: if ``True``, then [cmd2.Cmd.__init__][] will process command
                                line arguments as either commands to be run or, if ``-t`` or
                                ``--test`` are given, transcript files to run. This should be
                                set to ``False`` if your application parses its own command line
@@ -2446,50 +2446,47 @@ class Cmd(cmd.Cmd):
 
     def precmd(self, statement: Union[Statement, str]) -> Statement:
         """Hook method executed just before the command is executed by
-        :meth:`~cmd2.Cmd.onecmd` and after adding it to history.
+        [cmd2.Cmd.onecmd][] and after adding it to history.
 
         :param statement: subclass of str which also contains the parsed input
         :return: a potentially modified version of the input Statement object
 
-        See :meth:`~cmd2.Cmd.register_postparsing_hook` and
-        :meth:`~cmd2.Cmd.register_precmd_hook` for more robust ways
+        See [cmd2.Cmd.register_postparsing_hook][] and
+        [cmd2.Cmd.register_precmd_hook][] for more robust ways
         to run hooks before the command is executed. See
-        :ref:`features/hooks:Postparsing Hooks` and
-        :ref:`features/hooks:Precommand Hooks` for more information.
+        [Hooks](../features/hooks.md) for more information.
         """
         return Statement(statement) if not isinstance(statement, Statement) else statement
 
     def postcmd(self, stop: bool, statement: Union[Statement, str]) -> bool:
         """Hook method executed just after a command is executed by
-        :meth:`~cmd2.Cmd.onecmd`.
+        [cmd2.Cmd.onecmd][].
 
         :param stop: return `True` to request the command loop terminate
         :param statement: subclass of str which also contains the parsed input
 
-        See :meth:`~cmd2.Cmd.register_postcmd_hook` and :meth:`~cmd2.Cmd.register_cmdfinalization_hook` for more robust ways
+        See [cmd2.Cmd.register_postcmd_hook][] and [cmd2.Cmd.register_cmdfinalization_hook][] for more robust ways
         to run hooks after the command is executed. See
-        :ref:`features/hooks:Postcommand Hooks` and
-        :ref:`features/hooks:Command Finalization Hooks` for more information.
+        [Hooks](../features/hooks.md) for more information.
         """
         return stop
 
     def preloop(self) -> None:
-        """Hook method executed once when the :meth:`~.cmd2.Cmd.cmdloop()`
+        """Hook method executed once when the [cmd2.Cmd.cmdloop][]
         method is called.
 
-        See :meth:`~cmd2.Cmd.register_preloop_hook` for a more robust way
+        See [cmd2.Cmd.register_preloop_hook][] for a more robust way
         to run hooks before the command loop begins. See
-        :ref:`features/hooks:Application Lifecycle Hooks` for more information.
+        [Hooks](../features/hooks.md) for more information.
         """
         pass
 
     def postloop(self) -> None:
-        """Hook method executed once when the :meth:`~.cmd2.Cmd.cmdloop()`
-        method is about to return.
+        """Hook method executed once when the [cmd2.Cmd.cmdloop][] method is about to return.
 
-        See :meth:`~cmd2.Cmd.register_postloop_hook` for a more robust way
+        See [cmd2.Cmd.register_postloop_hook][] for a more robust way
         to run hooks after the command loop completes. See
-        :ref:`features/hooks:Application Lifecycle Hooks` for more information.
+        [Hooks](../features/hooks.md) for more information.
         """
         pass
 
@@ -3028,9 +3025,11 @@ class Cmd(cmd.Cmd):
 
         :param command: the name of the command
 
-        :Example:
+        Example:
 
-        >>> helpfunc = self.cmd_func('help')
+        ```py
+        helpfunc = self.cmd_func('help')
+        ```
 
         helpfunc now contains a reference to the ``do_help`` method
         """

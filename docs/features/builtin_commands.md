@@ -52,8 +52,7 @@ This command runs commands in a script file that is encoded as either ASCII or U
 
 ### \_relative_run_script
 
-This command is hidden from the help that's visible to end users. It runs a script like [run_script](#run_script) but does so using a path relative to the script that is currently executing. This is useful when you have scripts that run other scripts. See `features/scripting:Running
-Command Scripts`{.interpreted-text role="ref"} for more information.
+This command is hidden from the help that's visible to end users. It runs a script like [run_script](#run_script) but does so using a path relative to the script that is currently executing. This is useful when you have scripts that run other scripts. See [Running Command Scripts](../features/scripting.md#running-command-scripts) for more information.
 
 ### set
 
@@ -101,7 +100,7 @@ This command lists available shortcuts. See [Shortcuts](./shortcuts_aliases_macr
 
 ## Remove Builtin Commands
 
-Developers may not want to offer the commands builtin to `cmd2.Cmd`{.interpreted-text role="class"} to users of their application. To remove a command you must delete the method implementing that command from the `cmd2.Cmd`{.interpreted-text role="class"} object at runtime. For example, if you wanted to remove the `features/builtin_commands:shell`{.interpreted-text role="ref"} command from your application:
+Developers may not want to offer the commands builtin to [cmd2.Cmd][] to users of their application. To remove a command you must delete the method implementing that command from the [cmd2.Cmd][] object at runtime. For example, if you wanted to remove the [shell](#shell) command from your application:
 
 ```py
 class NoShellApp(cmd2.Cmd):

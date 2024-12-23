@@ -16,12 +16,12 @@ mycommand arg1 arg2 >>
 
 ## Developers
 
-You can control whether the above user features of adding output to the operating system clipboard are allowed for the user by setting the `~cmd2.Cmd.allow_clipboard`{.interpreted-text role="attr"} attribute. The default value is `True`. Set it to `False` and the above functionality will generate an error message instead of adding the output to the clipboard. `~cmd2.Cmd.allow_clipboard`{.interpreted-text role="attr"} can be set upon initialization, and you can change it at any time from within your code.
+You can control whether the above user features of adding output to the operating system clipboard are allowed for the user by setting the [cmd2.Cmd.allow_clipboard][] attribute. The default value is `True`. Set it to `False` and the above functionality will generate an error message instead of adding the output to the clipboard. [cmd2.Cmd.allow_clipboard][] can be set upon initialization, and you can change it at any time from within your code.
 
 If you would like your `cmd2` based application to be able to use the clipboard in additional or alternative ways, you can use the following methods (which work uniformly on Windows, macOS, and Linux).
 
 ::: cmd2.clipboard
-    handler: python
-    options:
-      show_root_heading: false
-      show_source: false
+handler: python
+options:
+show_root_heading: false
+show_source: false

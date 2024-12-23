@@ -96,7 +96,7 @@ extra:
       link: https://github.com/python-cmd2/cmd2
     - icon: simple/pypi
       link: https://pypi.org/project/cmd2/
-  version: "2.5"
+  release: "2.5"
 
 # Extensions
 # - These are carefully chosen to work with pandoc markdown support for whole document translation

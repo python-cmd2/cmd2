@@ -4,9 +4,9 @@
 
 The `cmd` module from the Python standard library includes `readline` history.
 
-`cmd2.Cmd`{.interpreted-text role="class"} offers the same `readline` capabilities, but also maintains its own data structures for the history of all commands entered by the user. When the class is initialized, it creates an instance of the `cmd2.history.History`{.interpreted-text role="class"} class (which is a subclass of `list`) as `cmd2.Cmd.history`{.interpreted-text role="data"}.
+[cmd2.Cmd][] offers the same `readline` capabilities, but also maintains its own data structures for the history of all commands entered by the user. When the class is initialized, it creates an instance of the [cmd2.history.History][] class (which is a subclass of `list`) as `cmd2.Cmd.history`.
 
-Each time a command is executed (this gets complex, see [Command Processing Loop](./hooks.md#command-processing-loop) for exactly when) the parsed `cmd2.Statement`{.interpreted-text role="class"} is appended to `cmd2.Cmd.history`{.interpreted-text role="data"}.
+Each time a command is executed (this gets complex, see [Command Processing Loop](./hooks.md#command-processing-loop) for exactly when) the parsed [cmd2.Statement][] is appended to `cmd2.Cmd.history`.
 
 `cmd2` adds the option of making this history persistent via optional arguments to `cmd2.Cmd.__init__`. If you pass a filename in the `persistent_history_file` argument, the contents of `cmd2.Cmd.history` will be written as compressed JSON to that history file. We chose this format instead of plain text to preserve the complete `cmd2.Statement` object for each command.
 
@@ -99,11 +99,11 @@ If your regular expression contains any characters that `argparse` finds interes
 
 This all sounds great, but doesn't it seem like a bit of overkill to have all these ways to select commands if all we can do is display them? Turns out, displaying history commands is just the beginning. The history command can perform many other actions:
 
-- running previously entered commands
-- saving previously entered commands to a text file
-- opening previously entered commands in your favorite text editor
-- running previously entered commands, saving the commands and their output to a text file
-- clearing the history of entered commands
+-   running previously entered commands
+-   saving previously entered commands to a text file
+-   opening previously entered commands in your favorite text editor
+-   running previously entered commands, saving the commands and their output to a text file
+-   clearing the history of entered commands
 
 Each of these actions is invoked using a command line option. The `-r` or `--run` option runs one or more previously entered commands. To run command number 1:
 

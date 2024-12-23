@@ -8,7 +8,7 @@ These pages document the public API for `cmd2`. If a method, class, function, at
 
 If a release of this library changes any of the items documented here, the version number will be incremented according to the [Semantic Version Specification](https://semver.org).
 
-This documentation is for `cmd2` version {{ version }}.
+This documentation is for `cmd2` version {{ release }}.
 
 ## Modules
 

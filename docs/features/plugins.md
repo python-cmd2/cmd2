@@ -37,7 +37,7 @@ class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
 Note how the plugin must be inherited (or mixed in) before `cmd2.Cmd`. This is required for two reasons:
 
 -   The `cmd.Cmd.__init__` method in the python standard library does not call `super().__init__()`. Because of this oversight, if you don't inherit from `MyPlugin` first, the `MyPlugin.__init__()` method will never be called.
--   You may want your plugin to be able to override methods from `cmd2.Cmd`. If you mixin the plugin after `cmd2.Cmd`, the python method resolution order will call `cmd2.Cmd`{.interpreted-text role="class"} methods before it calls those in your plugin.
+-   You may want your plugin to be able to override methods from `cmd2.Cmd`. If you mixin the plugin after `cmd2.Cmd`, the python method resolution order will call [cmd2.Cmd][] methods before it calls those in your plugin.
 
 ## Add commands
 
@@ -80,7 +80,7 @@ Hooks are a much better approach.
 
 ## Hooks
 
-Plugins can register hook methods, which are called by `cmd2.Cmd`{.interpreted-text role="class"} during various points in the application and command processing lifecycle. Plugins should not override any of the deprecated hook methods, instead they should register their hooks as described in the [Hooks](./hooks.md) section.
+Plugins can register hook methods, which are called by [cmd2.Cmd][] during various points in the application and command processing lifecycle. Plugins should not override any of the deprecated hook methods, instead they should register their hooks as described in the [Hooks](./hooks.md) section.
 
 You should name your hooks so that they begin with the name of your plugin. Hook methods get mixed into the `cmd2` application and this naming convention helps avoid unintentional method overriding.
 

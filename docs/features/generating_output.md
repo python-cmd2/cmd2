@@ -7,9 +7,9 @@ print("Greetings, Professor Falken.", file=self.stdout)
 self.stdout.write("Shall we play a game?\n")
 ```
 
-While you could send output directly to `sys.stdout`, `cmd2.Cmd`{.interpreted-text role="mod"} can be initialized with a `stdin` and `stdout` variables, which it stores as `self.stdin` and `self.stdout`. By using these variables every time you produce output, you can trivially change where all the output goes by changing how you initialize your class.
+While you could send output directly to `sys.stdout`, [cmd2.Cmd][] can be initialized with a `stdin` and `stdout` variables, which it stores as `self.stdin` and `self.stdout`. By using these variables every time you produce output, you can trivially change where all the output goes by changing how you initialize your class.
 
-`cmd2.Cmd` extends this approach in a number of convenient ways. See [Output Redirection and Pipes](./redirection.md#output-redirection-and-pipes) for information on how users can change where the output of a command is sent. In order for those features to work, the output you generate must be sent to `self.stdout`. You can use the methods described above, and everything will work fine. `cmd2.Cmd`{.interpreted-text role="mod"} also includes a number of output related methods which you may use to enhance the output your application produces.
+`cmd2.Cmd` extends this approach in a number of convenient ways. See [Output Redirection and Pipes](./redirection.md#output-redirection-and-pipes) for information on how users can change where the output of a command is sent. In order for those features to work, the output you generate must be sent to `self.stdout`. You can use the methods described above, and everything will work fine. [cmd2.Cmd][] also includes a number of output related methods which you may use to enhance the output your application produces.
 
 ## Ordinary Output
 
@@ -52,7 +52,7 @@ If you know you are going to generate a lot of output, you may want to display i
 
 You can add your own [ANSI escape sequences](https://en.wikipedia.org/wiki/ANSI_escape_code#Colors) to your output which tell the terminal to change the foreground and background colors.
 
-`cmd2` provides a number of convenience functions and classes for adding color and other styles to text. These are all documented in `cmd2.ansi`{.interpreted-text role="mod"}.
+`cmd2` provides a number of convenience functions and classes for adding color and other styles to text. These are all documented in [cmd2.ansi][].
 
 After adding the desired escape sequences to your output, you should use one of these methods to present the output to the user:
 

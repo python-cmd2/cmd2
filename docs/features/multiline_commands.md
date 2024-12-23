@@ -6,7 +6,7 @@ In multiline commands, output redirection characters like `>` and `|` are part o
 
 ## Continuation prompt
 
-When a user types a **Multiline Command** it may span more than one line of input. The prompt for the first line of input is specified by the `cmd2.Cmd.prompt`{.interpreted-text role="attr"} instance attribute - see [Customizing the Prompt](./prompt.md#customizing-the-prompt). The prompt for subsequent lines of input is defined by the `cmd2.Cmd.continuation_prompt` attribute.
+When a user types a **Multiline Command** it may span more than one line of input. The prompt for the first line of input is specified by the [cmd2.Cmd.prompt][] instance attribute - see [Customizing the Prompt](./prompt.md#customizing-the-prompt). The prompt for subsequent lines of input is defined by the `cmd2.Cmd.continuation_prompt` attribute.
 
 ## Use cases
 

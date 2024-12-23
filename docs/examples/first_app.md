@@ -41,7 +41,7 @@ if __name__ == '__main__':
     sys.exit(c.cmdloop())
 ```
 
-We have a new class `FirstApp` which is a subclass of `cmd2.Cmd`{.interpreted-text role="class"}. When we tell python to run our file like this:
+We have a new class `FirstApp` which is a subclass of [cmd2.Cmd][]. When we tell python to run our file like this:
 
 ```shell
 $ python first_app.py
@@ -64,7 +64,7 @@ def __init__(self):
     self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
 ```
 
-In that initializer, the first thing to do is to make sure we initialize `cmd2`. That's what the `super().__init__()` line does. Next create an attribute to hold the setting. Finally, call the `~cmd2.Cmd.add_settable`{.interpreted-text role="meth"} method with a new instance of a `~cmd2.utils.Settable`{.interpreted-text role="meth"} class. Now if you run the script, and enter the `set` command to see the settings, like this:
+In that initializer, the first thing to do is to make sure we initialize `cmd2`. That's what the `super().__init__()` line does. Next create an attribute to hold the setting. Finally, call the [cmd2.Cmd.add_settable][] method with a new instance of a [cmd2.utils.Settable][] class. Now if you run the script, and enter the `set` command to see the settings, like this:
 
 ```shell
 $ python first_app.py
