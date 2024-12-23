@@ -37,6 +37,7 @@ dependencies = [
 [project.optional-dependencies]
 build = ["build", "setuptools", "setuptools-scm"]
 dev = [
+    "black",
     "codecov",
     "griffe-typingdoc",
     "invoke",
@@ -52,6 +53,7 @@ dev = [
     "twine",
 ]
 docs = [
+    "black",
     "griffe-typingdoc",
     "mkdocs-include-markdown-plugin",
     "mkdocs-macros-plugin",
@@ -275,6 +277,7 @@ packages = ["cmd2"]
 
 [tool.uv]
 dev-dependencies = [
+    "black",
     "build",
     "cmd2-ext-test",
     "codecov",

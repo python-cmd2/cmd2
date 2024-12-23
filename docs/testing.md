@@ -6,7 +6,7 @@ This covers special considerations when writing unit tests for a cmd2 applicatio
 
 ## Testing Commands
 
-The [External Test Plugin](plugins/external_test.md) provides a mixin class with an function that allows external calls to application commands. The `cmd2_ext_test.ExternalTestMixin.app_cmd()` function captures and returns stdout, stderr, and the command-specific result data.
+The [External Test Plugin](plugins/external_test.md) provides a mixin class with an function that allows external calls to application commands. The `cmd2_ext_test.ExternalTestMixin.app_cmd` function captures and returns stdout, stderr, and the command-specific result data.
 
 ## Mocking
 
