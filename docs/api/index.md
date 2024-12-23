@@ -20,4 +20,3 @@ If a release of this library changes any of the items documented here, the versi
 -   [cmd2.py_bridge](./py_bridge.md) - classes for bridging calls from the embedded python environment to the host app
 -   [cmd2.table_creator](./table_creator.md) - table creation module
 -   [cmd2.utils](./utils.md) - various utility classes and functions
--   [cmd2_ext_test](./plugin_external_test.md) - External test plugin

@@ -210,7 +210,6 @@ nav:
       - api/py_bridge.md
       - api/table_creator.md
       - api/utils.md
-      - api/plugin_external_test.md
   - Meta:
       - doc_conventions.md
 
