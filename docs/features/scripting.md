@@ -79,26 +79,23 @@ If the cmd2 application follows the [unix_design_philosophy](https://en.wikipedi
 
 The following diagram illustrates the different boundaries to keep in mind.
 
-    +---------------------------------------------+
-    |                                             |
-    | Py scripts                                  |
-    |                                             |
-    | +-----------------------------------------+ |
-    | |  CMD2 Application                       | |
-    | |                                         | |
-    | | +-------------------------------------+ | |
-    | | |   Class Library                     | | |
-    | | | +------+ +------+ +------+ +------+ | | |
-    | | | |      | |      | |      | |      | | | |
-    | | | |  C   | |  C   | |  C   | |  C   | | | |
-    | | | |      | |      | |      | |      | | | |
-    | | | +------+ +------+ +------+ +------+ | | |
-    | | |                                     | | |
-    | | +-------------------------------------+ | |
-    | |                                         | |
-    | +-----------------------------------------+ |
-    |                                             |
-    +---------------------------------------------+
+```mermaid
+flowchart LR
+    subgraph Py scripts
+        direction TB
+        subgraph cmd2 Application
+            direction TB
+            subgraph Class Library
+                direction TB
+                class1
+                class2
+                class3
+                class4
+            end
+        end
+    end
+
+```
 
 !!! note
 
