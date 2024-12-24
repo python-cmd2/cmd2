@@ -150,13 +150,13 @@ class HistoryItem:
 
 
 class History(List[HistoryItem]):
-    """A list of :class:`~cmd2.history.HistoryItem` objects with additional methods
+    """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods
     for searching and managing the list.
 
-    :class:`~cmd2.Cmd` instantiates this class into the :data:`~cmd2.Cmd.history`
+    [cmd2.Cmd][] instantiates this class into the `cmd2.Cmd.history`
     attribute, and adds commands to it as a user enters them.
 
-    See :ref:`features/history:History` for information about the built-in command
+    See [History](../features/history.md) for information about the built-in command
     which allows users to view, search, run, and save previously entered commands.
 
     Developers interested in accessing previously entered commands can use this
@@ -207,7 +207,7 @@ class History(List[HistoryItem]):
         """Get item from the History list using 1-based indexing.
 
         :param index: optional item to get
-        :return: a single :class:`~cmd2.history.HistoryItem`
+        :return: a single [cmd2.history.HistoryItem][]
         """
         if index == 0:
             raise IndexError('The first command in history is command 1.')

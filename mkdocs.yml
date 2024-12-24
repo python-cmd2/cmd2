@@ -1,0 +1,222 @@
+# Project information
+site_name: cmd2
+site_description: cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python.
+site_dir: build/html
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, https://cmd2.readthedocs.io/] 
+
+# Repository
+repo_name: cmd2
+repo_url: https://github.com/python-cmd2/cmd2
+edit_uri: edit/main/docs
+
+# Copyright
+copyright: Copyright &copy; 2010-2024, cmd2 contributors.
+
+# Configuration
+theme:
+  name: material
+  language: en
+  custom_dir: docs/overrides
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/home
+    edit: material/pencil
+    view: material/eye
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: light blue
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: deep purple
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - announce.dismiss
+    - content.action.view
+    - content.action.edit
+    - content.code.copy
+    - content.tabs.link
+    - navigation.footer
+    - navigation.indexes
+    - navigation.prune
+    - navigation.sections
+    - navigation.tabs
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+
+# Plugins
+plugins:
+  - search
+  - include-markdown:
+      preserve_includer_indent: true
+      dedent: true
+      comments: false
+  - macros:
+      render_by_default: false
+      on_error_fail: true
+      on_undefined: strict
+      j2_block_start_string: "[[%"
+      j2_block_end_string: "%]]"
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            extensions:
+            - griffe_typingdoc
+            show_root_heading: true
+            show_if_no_docstring: true
+            preload_modules:
+            - argparse
+            - cmd
+            inherited_members: true
+            members_order: source
+            separate_signature: true
+            unwrap_annotated: true
+            filters:
+            - '!^_'
+            merge_init_into_class: true
+            docstring_section_style: spacy
+            signature_crossrefs: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+
+# Customizations
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/python-cmd2/cmd2
+    - icon: simple/pypi
+      link: https://pypi.org/project/cmd2/
+
+# Extensions
+# - These are carefully chosen to work with pandoc markdown support for whole document translation
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - md_in_html
+  - tables
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      options:
+        custom_icons:
+          - overrides/.icons
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+          - name: mermaid
+            class: mermaid
+            format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+# Validation
+validation:
+  nav:
+    omitted_files: info
+    not_found: warn
+    absolute_links: info
+  links:
+    not_found: warn
+    absolute_links: info
+    unrecognized_links: info
+
+not_in_nav: |
+  **/download/*.md
+
+# Page tree
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Overview: overview/index.md
+      - Installation Instructions: overview/installation.md
+      - Integrate cmd2 Into Your Project: overview/integrating.md
+      - Alternatives: overview/alternatives.md
+      - Resources: overview/resources.md
+  - Migrating From cmd:
+      - migrating/index.md
+      - migrating/why.md
+      - migrating/incompatibilities.md
+      - migrating/minimum.md
+      - migrating/next_steps.md
+  - Features:
+      - features/index.md
+      - features/argument_processing.md
+      - features/builtin_commands.md
+      - features/clipboard.md
+      - features/commands.md
+      - features/completion.md
+      - features/disable_commands.md
+      - features/embedded_python_shells.md
+      - features/generating_output.md
+      - features/help.md
+      - features/history.md
+      - features/hooks.md
+      - features/initialization.md
+      - features/misc.md
+      - features/modular_commands.md
+      - features/multiline_commands.md
+      - features/os.md
+      - features/packaging.md
+      - features/plugins.md
+      - features/prompt.md
+      - features/redirection.md
+      - features/scripting.md
+      - features/settings.md
+      - features/shortcuts_aliases_macros.md
+      - features/startup_commands.md
+      - features/table_creation.md
+      - features/transcripts.md
+  - Examples:
+      - examples/index.md
+      - examples/first_app.md
+      - examples/alternate_event_loops.md
+  - Plugins:
+      - plugins/index.md
+      - plugins/external_test.md
+  - Testing:
+      - testing.md
+  - API Reference:
+      - api/index.md
+      - api/cmd.md
+      - api/ansi.md
+      - api/argparse_completer.md
+      - api/argparse_custom.md
+      - api/command_definition.md
+      - api/constants.md
+      - api/decorators.md
+      - api/exceptions.md
+      - api/history.md
+      - api/parsing.md
+      - api/plugin.md
+      - api/py_bridge.md
+      - api/table_creator.md
+      - api/utils.md
+  - Meta:
+      - doc_conventions.md
+
+# Include extra CSS to make some style adjustments for ReadTheDocs
+extra_css:
+  - stylesheets/readthedocs.css
+
+# Include extra JS to setup Read the Docs addons integrations
+extra_javascript:
+  - javascripts/readthedocs.js

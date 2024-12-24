@@ -98,7 +98,7 @@ class Statement(str):  # type: ignore[override]
     we add our own attributes to this subclass.
 
     Instances of this class should not be created by anything other than the
-    :meth:`cmd2.parsing.StatementParser.parse` method, nor should any of the
+    [StatementParser.parse][cmd2.parsing.StatementParser.parse] method, nor should any of the
     attributes be modified once the object is created.
 
     The string portion of the class contains the arguments, but not the
@@ -108,15 +108,15 @@ class Statement(str):  # type: ignore[override]
 
     1. `argparse <https://docs.python.org/3/library/argparse.html>`_ is your
        friend for anything complex. ``cmd2`` has the decorator
-       (:func:`~cmd2.decorators.with_argparser`) which you can
+       ([cmd2.decorators.with_argparser][]) which you can
        use to make your command method receive a namespace of parsed arguments,
        whether positional or denoted with switches.
 
     2. For commands with simple positional arguments, use
-       :attr:`~cmd2.Statement.args` or :attr:`~cmd2.Statement.arg_list`
+       [args][cmd2.Statement.args] or [arg_list][cmd2.Statement.arg_list]
 
     3. If you don't want to have to worry about quoted arguments, see
-       :attr:`argv` for a trick which strips quotes off for you.
+       [argv][cmd2.Statement.argv] for a trick which strips quotes off for you.
     """
 
     # the arguments, but not the command, nor the output redirection clauses.
@@ -202,8 +202,7 @@ class Statement(str):  # type: ignore[override]
 
     @property
     def expanded_command_line(self) -> str:
-        """Concatenate :meth:`~cmd2.Statement.command_and_args`
-        and :meth:`~cmd2.Statement.post_command`"""
+        """Concatenate [command_and_args][cmd2.Statement.command_and_args] and [post_command][cmd2.Statement.post_command]"""
         return self.command_and_args + self.post_command
 
     @property
@@ -399,12 +398,12 @@ class StatementParser:
 
     def parse(self, line: str) -> Statement:
         """
-        Tokenize the input and parse it into a :class:`~cmd2.Statement` object,
+        Tokenize the input and parse it into a [cmd2.parsing.Statement][] object,
         stripping comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
 
         :param line: the command line being parsed
-        :return: a new :class:`~cmd2.Statement` object
+        :return: a new [cmd2.parsing.Statement][] object
         :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
         """
 
@@ -544,7 +543,7 @@ class StatementParser:
         return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
-        """Partially parse input into a :class:`~cmd2.Statement` object.
+        """Partially parse input into a [cmd2.Statement][] object.
 
         The command is identified, and shortcuts and aliases are expanded.
         Multiline commands are identified, but terminators and output
@@ -553,21 +552,21 @@ class StatementParser:
         This method is used by tab completion code and therefore must not
         generate an exception if there are unclosed quotes.
 
-        The :class:`~cmd2.Statement` object returned by this method can at most
+        The [cmd2.parsing.Statement][] object returned by this method can at most
         contain values in the following attributes:
-        :attr:`~cmd2.Statement.args`, :attr:`~cmd2.Statement.raw`,
-        :attr:`~cmd2.Statement.command`,
-        :attr:`~cmd2.Statement.multiline_command`
+        [cmd2.parsing.Statement.args][], [cmd2.parsing.Statement.raw][],
+        [cmd2.parsing.Statement.command][],
+        [cmd2.parsing.Statement.multiline_command][]
 
-        :attr:`~cmd2.Statement.args` will include all output redirection
+        [cmd2.parsing.Statement.args][] will include all output redirection
         clauses and command terminators.
 
-        Different from :meth:`~cmd2.parsing.StatementParser.parse` this method
+        Different from [cmd2.parsing.StatementParser.parse][] this method
         does not remove redundant whitespace within args. However, it does
         ensure args has no leading or trailing whitespace.
 
         :param rawinput: the command line as entered by the user
-        :return: a new :class:`~cmd2.Statement` object
+        :return: a new [cmd2.Statement][] object
         """
         # expand shortcuts and aliases
         line = self._expand(rawinput)
@@ -617,18 +616,18 @@ class StatementParser:
         :param command_name: name of the command being run
         :param to_parse: what is being passed to the ``do_*`` method. It can be one of two types:
 
-                             1. An already parsed :class:`~cmd2.Statement`
+                             1. An already parsed [cmd2.Statement][]
                              2. An argument string in cases where a ``do_*`` method is
                                 explicitly called. Calling ``do_help('alias create')`` would
                                 cause ``to_parse`` to be 'alias create'.
 
                                 In this case, the string will be converted to a
-                                :class:`~cmd2.Statement` and returned along with
+                                [cmd2.Statement][] and returned along with
                                 the argument list.
 
         :param preserve_quotes: if ``True``, then quotes will not be stripped from
                                 the arguments
-        :return: A tuple containing the :class:`~cmd2.Statement` and a list of
+        :return: A tuple containing the [cmd2.Statement][] and a list of
                  strings representing the arguments
         """
         # Check if to_parse needs to be converted to a Statement

@@ -13,8 +13,8 @@ build = "*"
 cmd2 = { editable = true, path = "." }
 cmd2_ext_test = { editable = true, path = "plugins/ext_test" }
 codecov = "*"
-doc8 = "*"
 gnureadline = { version = "*", sys_platform = "== 'darwin'" }
+griffe-typingdoc = "*"
 invoke = "*"
 ipython = "*"
 mypy = "*"
@@ -24,9 +24,10 @@ pytest-cov = "*"
 pytest-mock = "*"
 ruff = "*"
 setuptools-scm = "*"
-sphinx = "*"
-sphinx-autobuild = "*"
-sphinx-rtd-theme = "*"
+mkdocs-include-markdown-plugin = "*"
+mkdocs-macros-plugin = "*"
+mkdocs-material = "*"
+mkdocstrings[python] = "*"
 twine = ">=1.11"
 
 [pipenv]

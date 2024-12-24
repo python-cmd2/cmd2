@@ -2,7 +2,7 @@
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
 name: Doc
 
-on: [ push, pull_request, workflow_dispatch ]
+on: [push, pull_request, workflow_dispatch]
 
 permissions:
   contents: read
@@ -11,21 +11,21 @@ jobs:
   doc:
     strategy:
       matrix:
-        os: [ ubuntu-latest ]
-        python-version: [ "3.12" ]
+        os: [ubuntu-latest]
+        python-version: ["3.12"]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4  # https://github.com/actions/checkout
+      - uses: actions/checkout@v4 # https://github.com/actions/checkout
         with:
           # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
           # Set fetch-depth: 0 to fetch all history for all branches and tags.
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
       - name: Set up Python
-        uses: actions/setup-python@v5  # https://github.com/actions/setup-python
+        uses: actions/setup-python@v5 # https://github.com/actions/setup-python
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install python prerequisites
-        run: pip install -U --user pip setuptools setuptools-scm sphinx sphinx-autobuild sphinx-rtd-theme . plugins/ext_test
-      - name: Sphinx documentation build
-        run: python -m sphinx -M html docs docs/_build -nvWT
+        run: pip install -U --user pip setuptools setuptools-scm griffe_typingdoc mkdocs-include-markdown-plugin mkdocs-macros-plugin mkdocs-material mkdocstrings[python] . plugins/ext_test
+      - name: MkDocs documentation build
+        run: mkdocs build

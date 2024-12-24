@@ -1043,13 +1043,13 @@ def style(
 # These can be altered to suit an application's needs and only need to be a
 # function with the following structure: func(str) -> str
 style_success = functools.partial(style, fg=Fg.GREEN)
-"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify success"""
+"""Partial function supplying arguments to [cmd2.ansi.style][] which colors text to signify success"""
 
 style_warning = functools.partial(style, fg=Fg.LIGHT_YELLOW)
-"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify a warning"""
+"""Partial function supplying arguments to [cmd2.ansi.style][] which colors text to signify a warning"""
 
 style_error = functools.partial(style, fg=Fg.LIGHT_RED)
-"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify an error"""
+"""Partial function supplying arguments to [cmd2.ansi.style][] which colors text to signify an error"""
 
 
 def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_offset: int, alert_msg: str) -> str:

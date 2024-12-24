@@ -41,7 +41,7 @@ cmd2/table_creator.py      @kmvanbrunt
 cmd2/transcript.py         @kotfu
 cmd2/utils.py              @tleonhardt @kotfu @kmvanbrunt
 
-# Sphinx documentation
+# Documentation
 docs/*                  @tleonhardt @kotfu
 
 # Examples

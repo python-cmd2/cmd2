@@ -1152,17 +1152,18 @@ def categorize(func: Union[Callable[..., Any], Iterable[Callable[..., Any]]], ca
     :param func: function or list of functions to categorize
     :param category: category to put it in
 
-    :Example:
+    Example:
 
-    >>> import cmd2
-    >>> class MyApp(cmd2.Cmd):
-    >>>   def do_echo(self, arglist):
-    >>>     self.poutput(' '.join(arglist)
-    >>>
-    >>>   cmd2.utils.categorize(do_echo, "Text Processing")
+    ```py
+    import cmd2
+    class MyApp(cmd2.Cmd):
+      def do_echo(self, arglist):
+        self.poutput(' '.join(arglist)
 
-    For an alternative approach to categorizing commands using a decorator, see
-    :func:`~cmd2.decorators.with_category`
+      cmd2.utils.categorize(do_echo, "Text Processing")
+    ```
+
+    For an alternative approach to categorizing commands using a decorator, see [cmd2.decorators.with_category][]
     """
     if isinstance(func, Iterable):
         for item in func:

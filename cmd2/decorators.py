@@ -43,15 +43,17 @@ def with_category(category: str) -> Callable[[CommandFunc], CommandFunc]:
     :param category: the name of the category in which this command should
                      be grouped when displaying the list of commands.
 
-    :Example:
+    Example:
 
-    >>> class MyApp(cmd2.Cmd):
-    >>>   @cmd2.with_category('Text Functions')
-    >>>   def do_echo(self, args)
-    >>>     self.poutput(args)
+    ```py
+    class MyApp(cmd2.Cmd):
+        @cmd2.with_category('Text Functions')
+        def do_echo(self, args)
+            self.poutput(args)
+    ```
 
     For an alternative approach to categorizing commands using a function, see
-    :func:`~cmd2.utils.categorize`
+    [cmd2.utils.categorize][]
     """
 
     def cat_decorator(func: CommandFunc) -> CommandFunc:
@@ -152,12 +154,13 @@ def with_argument_list(
     :param preserve_quotes: if ``True``, then argument quotes will not be stripped
     :return: function that gets passed a list of argument strings
 
-    :Example:
-
-    >>> class MyApp(cmd2.Cmd):
-    >>>     @cmd2.with_argument_list
-    >>>     def do_echo(self, arglist):
-    >>>         self.poutput(' '.join(arglist)
+    Example:
+    ```py
+    class MyApp(cmd2.Cmd):
+        @cmd2.with_argument_list
+        def do_echo(self, arglist):
+            self.poutput(' '.join(arglist)
+    ```
     """
     import functools
 
@@ -285,38 +288,41 @@ def with_argparser(
     :param preserve_quotes: if ``True``, then arguments passed to argparse maintain their quotes
     :param with_unknown_args: if true, then capture unknown args
     :return: function that gets passed argparse-parsed args in a ``Namespace``
-             A :class:`cmd2.argparse_custom.Cmd2AttributeWrapper` called ``cmd2_statement`` is included
-             in the ``Namespace`` to provide access to the :class:`cmd2.Statement` object that was created when
+             A [cmd2.argparse_custom.Cmd2AttributeWrapper][] called ``cmd2_statement`` is included
+             in the ``Namespace`` to provide access to the [cmd2.Statement][] object that was created when
              parsing the command line. This can be useful if the command function needs to know the command line.
 
-    :Example:
+    Example:
 
-    >>> parser = cmd2.Cmd2ArgumentParser()
-    >>> parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    >>> parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    >>> parser.add_argument('words', nargs='+', help='words to print')
-    >>>
-    >>> class MyApp(cmd2.Cmd):
-    >>>     @cmd2.with_argparser(parser, preserve_quotes=True)
-    >>>     def do_argprint(self, args):
-    >>>         "Print the options and argument list this options command was called with."
-    >>>         self.poutput(f'args: {args!r}')
+    ```py
+    parser = cmd2.Cmd2ArgumentParser()
+    parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    parser.add_argument('words', nargs='+', help='words to print')
 
-    :Example with unknown args:
+    class MyApp(cmd2.Cmd):
+        @cmd2.with_argparser(parser, preserve_quotes=True)
+        def do_argprint(self, args):
+            "Print the options and argument list this options command was called with."
+            self.poutput(f'args: {args!r}')
+    ```
 
-    >>> parser = cmd2.Cmd2ArgumentParser()
-    >>> parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    >>> parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    >>>
-    >>> class MyApp(cmd2.Cmd):
-    >>>     @cmd2.with_argparser(parser, with_unknown_args=True)
-    >>>     def do_argprint(self, args, unknown):
-    >>>         "Print the options and argument list this options command was called with."
-    >>>         self.poutput(f'args: {args!r}')
-    >>>         self.poutput(f'unknowns: {unknown}')
+    Example with unknown args:
 
+    ```py
+    parser = cmd2.Cmd2ArgumentParser()
+    parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+
+    class MyApp(cmd2.Cmd):
+        @cmd2.with_argparser(parser, with_unknown_args=True)
+        def do_argprint(self, args, unknown):
+            "Print the options and argument list this options command was called with."
+            self.poutput(f'args: {args!r}')
+            self.poutput(f'unknowns: {unknown}')
+    ```
     """
     import functools
 
