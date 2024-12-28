@@ -39,8 +39,8 @@ The price we pay for beautifully colored displays is complexity required to aggr
 The `cmd2` framework provides a great mixture of both worlds. Application designers can easily create complex applications and rely on the cmd2 library to offer effortless user facing help and extensive tab completion.
 When users become comfortable with functionality, cmd2 turns into a feature rich library enabling a smooth transition to full automation. If designed with enough forethought, a well implemented cmd2 application can serve as a boutique workflow tool. `cmd2` pulls off this flexibility based on two pillars of philosophy:
 
-- Tab Completion
-- Automation Transition
+-   Tab Completion
+-   Automation Transition
 
 ## Philosophy
 
@@ -48,21 +48,21 @@ When users become comfortable with functionality, cmd2 turns into a feature rich
 
 Deep extensive tab completion and help text generation based on the argparse library create the first pillar of 'ease of command discovery'. The following is a list of features in this category.
 
-- Great tab completion of commands, subcommands, file system paths, and shell commands.
-- Custom tab completion for user designed commands via simple function overloading.
-- Tab completion from `persistent_history_file` sources added with very little friction.
-- Automatic tab completion of `argparse` flags and optional arguments.
-- Path completion easily enabled.
-- When all else fails, custom tab completion based on `choices_provider` can fill any gaps.
+-   Great tab completion of commands, subcommands, file system paths, and shell commands.
+-   Custom tab completion for user designed commands via simple function overloading.
+-   Tab completion from `persistent_history_file` sources added with very little friction.
+-   Automatic tab completion of `argparse` flags and optional arguments.
+-   Path completion easily enabled.
+-   When all else fails, custom tab completion based on `choices_provider` can fill any gaps.
 
 <a href="https://imgflip.com/i/66t0y0"><img src="https://i.imgflip.com/66t0y0.jpg" title="made at imgflip.com" width="70%" height="70%"/></a>
 
 cmd2 creates the second pillar of 'ease of transition to automation' through alias/macro creation, command line argument parsing and execution of cmd2 scripting.
 
-- Flexible alias and macro creation for quick abstraction of commands.
-- Text file scripting of your application with `run_script` (`@`) and `_relative_run_script` (`@@`)
-- Powerful and flexible built-in Python scripting of your application using the `run_pyscript` command
-- Transcripts for use with built-in regression can be automatically generated from `history -t` or `run_script -t`
+-   Flexible alias and macro creation for quick abstraction of commands.
+-   Text file scripting of your application with `run_script` (`@`) and `_relative_run_script` (`@@`)
+-   Powerful and flexible built-in Python scripting of your application using the `run_pyscript` command
+-   Transcripts for use with built-in regression can be automatically generated from `history -t` or `run_script -t`
 
 ## Installation
 
@@ -88,14 +88,17 @@ The best way to learn the cmd2 api is to delve into the example applications loc
 
 ## Tutorials
 
-- PyOhio 2019 presentation:
-  - [video](https://www.youtube.com/watch?v=pebeWrTqIIw)
-  - [slides](https://github.com/python-cmd2/talks/blob/master/PyOhio_2019/cmd2-PyOhio_2019.pdf)
-  - [example code](https://github.com/python-cmd2/talks/tree/master/PyOhio_2019/examples)
-- [Cookiecutter](https://github.com/cookiecutter/cookiecutter) Templates from community
-  - Basic cookiecutter template for cmd2 application : https://github.com/jayrod/cookiecutter-python-cmd2
-  - Advanced cookiecutter template with external plugin support : https://github.com/jayrod/cookiecutter-python-cmd2-ext-plug
-- [Example Applications](https://github.com/jayrod/cmd2-example-apps)
+-   PyOhio 2019 presentation:
+    -   [video](https://www.youtube.com/watch?v=pebeWrTqIIw)
+    -   [slides](https://github.com/python-cmd2/talks/blob/master/PyOhio_2019/cmd2-PyOhio_2019.pdf)
+    -   [example code](https://github.com/python-cmd2/talks/tree/master/PyOhio_2019/examples)
+-   [Cookiecutter](https://github.com/cookiecutter/cookiecutter) Templates from community
+    -   Basic cookiecutter template for cmd2 application : https://github.com/jayrod/cookiecutter-python-cmd2
+    -   Advanced cookiecutter template with external plugin support : https://github.com/jayrod/cookiecutter-python-cmd2-ext-plug
+-   [cmd2 example applications](https://github.com/python-cmd2/cmd2/tree/master/examples)
+    -   Basic cmd2 examples to demonstrate how to use various features
+-   [Advanced Examples](https://github.com/jayrod/cmd2-example-apps)
+    -   More complex examples that demonstrate more featuers about how to put together a complete application
 
 ## Hello World
 
@@ -122,11 +125,11 @@ if __name__ == '__main__':
 
 If you think you've found a bug, please first read through the open [Issues](https://github.com/python-cmd2/cmd2/issues). If you're confident it's a new bug, go ahead and create a new GitHub issue. Be sure to include as much information as possible so we can reproduce the bug. At a minimum, please state the following:
 
-- `cmd2` version
-- Python version
-- OS name and version
-- What you did to cause the bug to occur
-- Include any traceback or error message associated with the bug
+-   `cmd2` version
+-   Python version
+-   OS name and version
+-   What you did to cause the bug to occur
+-   Include any traceback or error message associated with the bug
 
 ## Projects using cmd2
 
