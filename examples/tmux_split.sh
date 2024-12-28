@@ -29,6 +29,6 @@ if [ $# -eq 1 ]
     SECOND_COMMAND=$2
 fi
 
-tmux new-session "$FIRST_COMMAND ; read" \; \
+tmux new-session -s "tmux split pane demo" "$FIRST_COMMAND ; read" \; \
   split-window "$SECOND_COMMAND ; read" \; \
   select-layout even-vertical

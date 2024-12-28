@@ -80,5 +80,9 @@ Here is the list of examples in alphabetical order by filename along with a brie
     -   Shows how to use `argparse` to easily support sub-commands within your cmd2 commands
 -   [table_creation.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_creation.py)
     -   Contains various examples of using cmd2's table creation capabilities
+-   [tmux_launch.sh](https://github.com/python-cmd2/cmd2/blob/master/examples/tmux_launch.sh)
+    -   Shell script that launches two applications using tmux in different windows/tabs
+-   [tmux_split.sh](https://github.com/python-cmd2/cmd2/blob/master/examples/tmux_split.sh)
+    -   Shell script that launches two applications using tmux in a split pane view
 -   [unicode_commands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/unicode_commands.py)
     -   Shows that cmd2 supports unicode everywhere, including within command names
