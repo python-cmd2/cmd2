@@ -5,7 +5,7 @@
 # If the second isn't provided, then the user's default shell is launched for this.
 #
 # byobu must be installed for this script to work and you can install it using your
-# operating system package manager. or info on how to use Byobu, see: https://www.byobu.org/
+# operating system package manager. For info on how to use Byobu, see: https://www.byobu.org/
 #
 # To shift focus between tabs in byobu, just hit F3.
 

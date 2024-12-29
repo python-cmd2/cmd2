@@ -8,7 +8,7 @@
 # See the tmux Wiki for info on how to use it: https://github.com/tmux/tmux/wiki.
 # To shift focus between different windows in tmux use Ctrl-b followed by l (lowercase "L").
 #
-# NOTE: IF you have byobu installed, it is a wrapper around tmux and will likely run instead of tmux.
+# NOTE: If you have byobu installed, it is a wrapper around tmux and will likely run instead of tmux.
 # For info on how to use Byobu, see: https://www.byobu.org/
 # To shift focus between windows/tabs in byobu, simply hit F3.
 

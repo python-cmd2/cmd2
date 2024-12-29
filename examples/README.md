@@ -11,7 +11,7 @@ Here is the list of examples in alphabetical order by filename along with a brie
 -   [arg_decorators.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_decorators.py)
     -   Demonstrates how to use the `cmd2.with_argparser` decorator to specify command arguments using [argparse](https://docs.python.org/3/library/argparse.html)
 -   [arg_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py)
-    -   Demonstrates how arguments and options get parsed and passed to commands and shows how shortcust work
+    -   Demonstrates how arguments and options get parsed and passed to commands and shows how shortcuts work
 -   [argparse_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py)
     -   Shows how to integrate tab-completion with argparse-based commands
 -   [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
@@ -27,7 +27,7 @@ Here is the list of examples in alphabetical order by filename along with a brie
 -   [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/master/examples/custom_parser.py)
     -   Demonstrates how to create your own customer `Cmd2ArgumentParser`; used by the `override_parser.py` example
 -   [decorator_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/decorator_example.py)
-    -   Shows how to use cmd2's various argparse decotrators to processes command-line arguments
+    -   Shows how to use cmd2's various argparse decorators to processes command-line arguments
 -   [default_categories.py](https://github.com/python-cmd2/cmd2/blob/master/examples/default_categories.py)
     -   Demonstrates usage of `@with_default_category` decorator to group and categorize commands and `CommandSet` use
 -   [dynamic_commands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/dynamic_commands.py)
@@ -59,7 +59,7 @@ Here is the list of examples in alphabetical order by filename along with a brie
 -   [modular_commands_main.py](https://github.com/python-cmd2/cmd2/blob/master/examples/modular_commands_main.py)
     -   Complex example demonstrating a variety of methods to load `CommandSets` using a mix of command decorators
 -   [modular_subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/modular_subcommands.py)
-    -   Shows how to use dynamically add and remove subcommands at runtime using `CommandSets`
+    -   Shows how to dynamically add and remove subcommands at runtime using `CommandSets`
 -   [override-parser.py](https://github.com/python-cmd2/cmd2/blob/master/examples/override_parser.py)
     -   Shows how to override cmd2's default `Cmd2ArgumentParser` with your own customer parser class
 -   [paged_output.py](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py)
@@ -69,7 +69,7 @@ Here is the list of examples in alphabetical order by filename along with a brie
 -   [pirate.py](https://github.com/python-cmd2/cmd2/blob/master/examples/pirate.py)
     -   Demonstrates many features including colorized output, multiline commands, shorcuts, defaulting to shell, etc.
 -   [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py)
-    -   Shows how cmd2's built-in `run_pyscript` command and provide advanced Python scripting of cmd2 applications
+    -   Shows how cmd2's built-in `run_pyscript` command can provide advanced Python scripting of cmd2 applications
 -   [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
     -   Demonstrates the various ways to call `cmd2.Cmd.read_input()` for input history and tab completion
 -   [remove_builtin_commands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/remove_builtin_commands.py)
