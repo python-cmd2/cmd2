@@ -2,7 +2,7 @@
 site_name: cmd2
 site_description: cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python.
 site_dir: build/html
-site_url: !ENV [READTHEDOCS_CANONICAL_URL, https://cmd2.readthedocs.io/] 
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, https://cmd2.readthedocs.io/]
 
 # Repository
 repo_name: cmd2
@@ -72,18 +72,18 @@ plugins:
         python:
           options:
             extensions:
-            - griffe_typingdoc
+              - griffe_typingdoc
             show_root_heading: true
             show_if_no_docstring: true
             preload_modules:
-            - argparse
-            - cmd
+              - argparse
+              - cmd
             inherited_members: true
             members_order: source
             separate_signature: true
             unwrap_annotated: true
             filters:
-            - '!^_'
+              - "!^_"
             merge_init_into_class: true
             docstring_section_style: spacy
             signature_crossrefs: true
@@ -122,9 +122,9 @@ markdown_extensions:
   - pymdownx.smartsymbols
   - pymdownx.superfences:
       custom_fences:
-          - name: mermaid
-            class: mermaid
-            format: !!python/name:pymdownx.superfences.fence_code_format
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
 
@@ -189,6 +189,7 @@ nav:
       - examples/index.md
       - examples/first_app.md
       - examples/alternate_event_loops.md
+      - examples/examples.md
   - Plugins:
       - plugins/index.md
       - plugins/external_test.md
