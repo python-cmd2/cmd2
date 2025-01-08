@@ -91,7 +91,7 @@ def _parse_positionals(args: Tuple[Any, ...]) -> Tuple['cmd2.Cmd', Union[Stateme
             Cmd,
         )
 
-        if (isinstance(arg, Cmd) or isinstance(arg, CommandSet)) and len(args) > pos:
+        if isinstance(arg, (Cmd, CommandSet)) and len(args) > pos + 1:
             if isinstance(arg, CommandSet):
                 arg = arg._cmd
             next_arg = args[pos + 1]
@@ -100,7 +100,7 @@ def _parse_positionals(args: Tuple[Any, ...]) -> Tuple['cmd2.Cmd', Union[Stateme
 
     # This shouldn't happen unless we forget to pass statement in `Cmd.onecmd` or
     # somehow call the unbound class method.
-    raise TypeError('Expected arguments: cmd: cmd2.Cmd, statement: Union[Statement, str] Not found')  # pragma: no cover
+    raise TypeError('Expected arguments: cmd: cmd2.Cmd, statement: Union[Statement, str] Not found')
 
 
 def _arg_swap(args: Union[Sequence[Any]], search_arg: Any, *replace_arg: Any) -> List[Any]:
