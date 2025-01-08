@@ -118,17 +118,17 @@ def _arg_swap(args: Union[Sequence[Any]], search_arg: Any, *replace_arg: Any) ->
     return args_list
 
 
-#: Function signature for an Command Function that accepts a pre-processed argument list from user input
+#: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and optionally returns a boolean
 ArgListCommandFuncOptionalBoolReturn = Callable[[CommandParent, List[str]], Optional[bool]]
-#: Function signature for an Command Function that accepts a pre-processed argument list from user input
+#: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and returns a boolean
 ArgListCommandFuncBoolReturn = Callable[[CommandParent, List[str]], bool]
-#: Function signature for an Command Function that accepts a pre-processed argument list from user input
+#: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and returns Nothing
 ArgListCommandFuncNoneReturn = Callable[[CommandParent, List[str]], None]
 
-#: Aggregate of all accepted function signatures for Command Functions that accept a pre-processed argument list
+#: Aggregate of all accepted function signatures for command functions that accept a pre-processed argument list
 ArgListCommandFunc = Union[
     ArgListCommandFuncOptionalBoolReturn[CommandParent],
     ArgListCommandFuncBoolReturn[CommandParent],
@@ -249,21 +249,29 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
             req_args.append(action.dest)
 
 
-#: Function signature for a Command Function that uses an argparse.ArgumentParser to process user input
-#: and optionally returns a boolean
+#: Function signatures for command functions that use an argparse.ArgumentParser to process user input
+#: and optionally return a boolean
 ArgparseCommandFuncOptionalBoolReturn = Callable[[CommandParent, argparse.Namespace], Optional[bool]]
-#: Function signature for a Command Function that uses an argparse.ArgumentParser to process user input
-#: and returns a boolean
-ArgparseCommandFuncBoolReturn = Callable[[CommandParent, argparse.Namespace], bool]
-#: Function signature for an Command Function that uses an argparse.ArgumentParser to process user input
-#: and returns nothing
-ArgparseCommandFuncNoneReturn = Callable[[CommandParent, argparse.Namespace], None]
+ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn = Callable[[CommandParent, argparse.Namespace, List[str]], Optional[bool]]
 
-#: Aggregate of all accepted function signatures for an argparse Command Function
+#: Function signatures for command functions that use an argparse.ArgumentParser to process user input
+#: and return a boolean
+ArgparseCommandFuncBoolReturn = Callable[[CommandParent, argparse.Namespace], bool]
+ArgparseCommandFuncWithUnknownArgsBoolReturn = Callable[[CommandParent, argparse.Namespace, List[str]], bool]
+
+#: Function signatures for command functions that use an argparse.ArgumentParser to process user input
+#: and return nothing
+ArgparseCommandFuncNoneReturn = Callable[[CommandParent, argparse.Namespace], None]
+ArgparseCommandFuncWithUnknownArgsNoneReturn = Callable[[CommandParent, argparse.Namespace, List[str]], None]
+
+#: Aggregate of all accepted function signatures for an argparse command function
 ArgparseCommandFunc = Union[
     ArgparseCommandFuncOptionalBoolReturn[CommandParent],
+    ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn[CommandParent],
     ArgparseCommandFuncBoolReturn[CommandParent],
+    ArgparseCommandFuncWithUnknownArgsBoolReturn[CommandParent],
     ArgparseCommandFuncNoneReturn[CommandParent],
+    ArgparseCommandFuncWithUnknownArgsNoneReturn[CommandParent],
 ]
 
 
