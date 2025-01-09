@@ -148,6 +148,13 @@ def test_argparse_remove_quotes(argparse_app):
     assert out == ['hello there']
 
 
+def test_argparse_with_no_args(argparse_app):
+    """Make sure we receive TypeError when calling argparse-based function with no args"""
+    with pytest.raises(TypeError) as excinfo:
+        argparse_app.do_say()
+    assert 'Expected arguments' in str(excinfo.value)
+
+
 def test_argparser_kwargs(argparse_app, capsys):
     """Test with_argparser wrapper passes through kwargs to command function"""
     argparse_app.do_say('word', keyword_arg="foo")

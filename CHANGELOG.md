@@ -1,3 +1,7 @@
+## 2.5.9 (TBD)
+* Bug Fixes
+   * Fixed 'index out of range' error when passing no arguments to an argparse-based command function.
+
 ## 2.5.8 (December 17, 2024)
 * Bug Fixes
    * Rolled back undocumented changes to printing functions introduced in 2.5.0.
