@@ -50,3 +50,8 @@ Pipfile.lock
 
 # uv
 uv.lock
+
+# Node/npm used for installing Prettier locally to override the outdated version that is bundled with the VSCode extension
+node_modules/
+package-lock.json
+package.json
