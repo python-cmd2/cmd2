@@ -36,8 +36,8 @@ class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
 
 Note how the plugin must be inherited (or mixed in) before `cmd2.Cmd`. This is required for two reasons:
 
--   The `cmd.Cmd.__init__` method in the python standard library does not call `super().__init__()`. Because of this oversight, if you don't inherit from `MyPlugin` first, the `MyPlugin.__init__()` method will never be called.
--   You may want your plugin to be able to override methods from `cmd2.Cmd`. If you mixin the plugin after `cmd2.Cmd`, the python method resolution order will call [cmd2.Cmd][] methods before it calls those in your plugin.
+- The `cmd.Cmd.__init__` method in the python standard library does not call `super().__init__()`. Because of this oversight, if you don't inherit from `MyPlugin` first, the `MyPlugin.__init__()` method will never be called.
+- You may want your plugin to be able to override methods from `cmd2.Cmd`. If you mixin the plugin after `cmd2.Cmd`, the python method resolution order will call [cmd2.Cmd][] methods before it calls those in your plugin.
 
 ## Add commands
 

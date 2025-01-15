@@ -54,16 +54,16 @@ The approach of registering hooks instead of overriding methods allows multiple 
 
 There are numerous attributes on `cmd2.Cmd` which affect application behavior upon entering or during the command loop:
 
--   `cmd2.Cmd.intro` - if provided this serves as the intro banner printed once at start of application, after `cmd2.Cmd.preloop` is called
--   `cmd2.Cmd.prompt` - see [Prompt](./prompt.md) for more information
--   `cmd2.Cmd.continuation_prompt` - The prompt issued to solicit input for the 2nd and subsequent lines of a `multiline command [Multiline Commands](./multiline_commands.md)
--   `cmd2.Cmd.echo` - if `True` write the prompt and the command into the output stream
+- `cmd2.Cmd.intro` - if provided this serves as the intro banner printed once at start of application, after `cmd2.Cmd.preloop` is called
+- `cmd2.Cmd.prompt` - see [Prompt](./prompt.md) for more information
+- `cmd2.Cmd.continuation_prompt` - The prompt issued to solicit input for the 2nd and subsequent lines of a `multiline command [Multiline Commands](./multiline_commands.md)
+- `cmd2.Cmd.echo` - if `True` write the prompt and the command into the output stream
 
 In addition, several arguments to `cmd2.Cmd.__init__` also affect the command loop behavior:
 
--   `allow_cli_args` - allows commands to be specified on the operating system command line which are executed before the command processing loop begins
--   `transcript_files` - see [Transcripts](./transcripts.md) for more information
--   `startup_script` - run a script on initialization. See [Scripting](./scripting.md) for more information
+- `allow_cli_args` - allows commands to be specified on the operating system command line which are executed before the command processing loop begins
+- `transcript_files` - see [Transcripts](./transcripts.md) for more information
+- `startup_script` - run a script on initialization. See [Scripting](./scripting.md) for more information
 
 ## Command Processing Loop
 
@@ -91,9 +91,9 @@ Postparsing, precommand, and postcommand hook methods share some common ways to 
 
 If a hook raises an exception:
 
--   no more hooks (except command finalization hooks) of any kind will be called
--   if the command has not yet been executed, it will not be executed
--   the exception message will be displayed for the user.
+- no more hooks (except command finalization hooks) of any kind will be called
+- if the command has not yet been executed, it will not be executed
+- the exception message will be displayed for the user.
 
 Specific types of hook methods have additional options as described below.
 
@@ -101,10 +101,10 @@ Specific types of hook methods have additional options as described below.
 
 Postparsing hooks are called after the user input has been parsed but before execution of the command. These hooks can be used to:
 
--   modify the user input
--   run code before every command executes
--   cancel execution of the current command
--   exit the application
+- modify the user input
+- run code before every command executes
+- cancel execution of the current command
+- exit the application
 
 When postparsing hooks are called, output has not been redirected, nor has the timer for command execution been started.
 
@@ -142,10 +142,10 @@ def myhookmethod(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.Postp
 
 If a postparsing hook returns a `cmd2.plugin.PostparsingData` object with the `cmd2.plugin.PostparsingData.stop` attribute set to `True`:
 
--   no more hooks of any kind (except [Command Finalization Hooks](#command-finalization-hooks)) will be called
--   the command will not be executed
--   no error message will be displayed to the user
--   the application will exit
+- no more hooks of any kind (except [Command Finalization Hooks](#command-finalization-hooks)) will be called
+- the command will not be executed
+- no error message will be displayed to the user
+- the application will exit
 
 ## Precommand Hooks
 
@@ -201,8 +201,8 @@ Any postcommand hook can change the value of the `stop` attribute before returni
 
 To purposefully and silently skip postcommand hooks, commands can raise any of of the following exceptions.
 
--   `cmd2.exceptions.SkipPostcommandHooks`
--   `cmd2.exceptions.Cmd2ArgparseError`
+- `cmd2.exceptions.SkipPostcommandHooks`
+- `cmd2.exceptions.Cmd2ArgparseError`
 
 ## Command Finalization Hooks
 

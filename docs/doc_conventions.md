@@ -6,10 +6,10 @@ Follow the [Documentation Principles](http://www.writethedocs.org/guide/writing/
 
 In addition:
 
--   We have gone to great lengths to retain compatibility with the standard library cmd, the documentation should make it easy for developers to understand how to move from cmd to cmd2, and what benefits that will provide
--   We should provide both descriptive and reference documentation.
--   API reference documentation should be generated from docstrings in the code
--   Documentation should include rich hyperlinking to other areas of the documentation, and to the API reference
+- We have gone to great lengths to retain compatibility with the standard library cmd, the documentation should make it easy for developers to understand how to move from cmd to cmd2, and what benefits that will provide
+- We should provide both descriptive and reference documentation.
+- API reference documentation should be generated from docstrings in the code
+- Documentation should include rich hyperlinking to other areas of the documentation, and to the API reference
 
 ## Style Checker
 
@@ -19,9 +19,9 @@ We strongly encourage all developers to use [Prettier](https://prettier.io/) for
 
 All source files in the documentation must:
 
--   have all lower case file names
--   if the name has multiple words, separate them with an underscore
--   end in '.rst'
+- have all lower case file names
+- if the name has multiple words, separate them with an underscore
+- end in '.rst'
 
 ## Indenting
 
@@ -39,8 +39,8 @@ Reference the [Markdown Basic Syntax](https://www.markdownguide.org/basic-syntax
 
 Code blocks can be created in two ways:
 
--   Indent the block - this will show as a monospace code block, but won't include highighting
--   use the triple backticks followed by the code language, e.e. `python` and close with triple backticks
+- Indent the block - this will show as a monospace code block, but won't include highighting
+- use the triple backticks followed by the code language, e.e. `python` and close with triple backticks
 
 If you want to show non-Python code, like shell commands, then use a different language such as `javascript`, `shell`, `json`, etc.
 

@@ -10,7 +10,6 @@
 - [Packaging and Distribution](#packaging-and-distribution)
 - [License](#license)
 
-
 ## Using this template
 
 This template assumes you are creating a new cmd2 plugin called `myplugin`. Your
@@ -19,12 +18,10 @@ directories in this template. Don't forget to modify the imports and `setup.py`.
 
 You'll probably also want to rewrite the README :)
 
-
 ## Naming
 
 You should prefix the name of your project with `cmd2-`. Within that project,
 you should have a package with a prefix of `cmd2_`.
-
 
 ## Adding functionality
 
@@ -32,7 +29,6 @@ There are many ways to add functionality to `cmd2` using a plugin. Most plugins
 will be implemented as a mixin. A mixin is a class that encapsulates and injects
 code into another class. Developers who use a plugin in their `cmd2` project,
 will inject the plugin's code into their subclass of `cmd2.Cmd`.
-
 
 ### Mixin and Initialization
 
@@ -74,7 +70,6 @@ required for two reasons:
 - You may want your plugin to be able to override methods from `cmd2.Cmd`.
   If you mixin the plugin after `cmd2.Cmd`, the python method resolution order
   will call `cmd2.Cmd` methods before it calls those in your plugin.
-
 
 ### Add commands
 
@@ -137,7 +132,6 @@ You should name your hooks so that they begin with the name of your plugin. Hook
 methods get mixed into the `cmd2` application and this naming convention helps
 avoid unintentional method overriding.
 
-
 Here's a simple example:
 
 ```python
@@ -163,20 +157,17 @@ See the [cmd2 hook documentation](https://cmd2.readthedocs.io/en/latest/hooks.ht
 for full details of the application and command lifecycle, including all
 available hooks and the ways hooks can influence the lifecycle.
 
-
 ### Classes and Functions
 
 Your plugin can also provide classes and functions which can be used by
 developers of cmd2 based applications. Describe these classes and functions in
 your documentation so users of your plugin will know what's available.
 
-
 ## Examples
 
 Include an example or two in the `examples` directory which demonstrate how your
 plugin works. This will help developers utilize it from within their
 application.
-
 
 ## Development Tasks
 
@@ -185,14 +176,16 @@ including testing, linting, building wheels, and distributing releases. These
 modules can be configured many different ways, which can make it difficult to
 learn the specific incantations required for each project you are familiar with.
 
-This project uses [invoke](<http://www.pyinvoke.org>) to provide a clean,
+This project uses [invoke](http://www.pyinvoke.org) to provide a clean,
 high level interface for these development tasks. To see the full list of
 functions available:
+
 ```
 $ invoke -l
 ```
 
 You can run multiple tasks in a single invocation, for example:
+
 ```
 $ invoke clean docs sdist wheel
 ```
@@ -215,7 +208,6 @@ tiered testing strategy to accomplish this objective.
 
 This plugin template is set up to use the same strategy.
 
-
 ### Create python environments
 
 This project uses [nox](https://nox.thea.codes/en/stable/) to run the test
@@ -229,6 +221,7 @@ This distribution includes a shell script `build-pyenvs.sh` which
 automates the creation of these environments.
 
 If you prefer to create these virtualenvs by hand, do the following:
+
 ```
 $ cd cmd2_abbrev
 $ pyenv install 3.8.5
@@ -238,6 +231,7 @@ $ pyenv virtualenv -p python3.9 3.9.0 cmd2-3.9
 ```
 
 Now set pyenv to make both of those available at the same time:
+
 ```
 $ pyenv local cmd2-3.8 cmd2-3.9
 ```
@@ -257,6 +251,7 @@ utilize.
 ## Install Dependencies
 
 Install all the development dependencies:
+
 ```
 $ pip install -e .[dev]
 ```
@@ -268,36 +263,34 @@ All the dependencies now have been installed in the `cmd2-3.8`
 virtualenv. If you want to work in other virtualenvs, you'll need to manually
 select it, and install again::
 
-   $ pyenv shell cmd2-3.4
-   $ pip install -e .[dev]
+$ pyenv shell cmd2-3.4
+$ pip install -e .[dev]
 
 Now that you have your python environments created, you need to install the
 package in place, along with all the other development dependencies:
+
 ```
 $ pip install -e .[dev]
 ```
-
 
 ### Running unit tests
 
 Run `invoke pytest` from the top level directory of your plugin to run all the
 unit tests found in the `tests` directory.
 
-
 ### Use nox to run unit tests in multiple versions of python
 
 The included `noxfile.py` is setup to run the unit tests in python 3.8, 3.9
 3.10, 3.11, and 3.12 You can run your unit tests in all of these versions
 of python by:
+
 ```
 $ nox
 ```
 
-
 ### Run unit tests on multiple platforms
 
 [GitHub Actions](https://github.com/features/actions) offers free plans for open source projects
-
 
 ## Packaging and Distribution
 
@@ -308,7 +301,6 @@ When creating your `setup.py` file, keep the following in mind:
   `install_requires=['cmd2 >= 0.9.4, <=2']` to make sure that your plugin
   doesn't try and run with a future version of `cmd2` with which it may not be
   compatible
-
 
 ## License
 

@@ -2,14 +2,14 @@
 
 Here's a quick walkthrough of a simple application which demonstrates 8 features of `cmd2`:
 
--   [Settings](../features/settings.md)
--   [Commands](../features/commands.md)
--   [Argument Processing](../features/argument_processing.md)
--   [Generating Output](../features/generating_output.md)
--   [Help](../features/help.md)
--   [Shortcuts](../features/shortcuts_aliases_macros.md#shortcuts)
--   [Multiline Commands](../features/multiline_commands.md)
--   [History](../features/history.md)
+- [Settings](../features/settings.md)
+- [Commands](../features/commands.md)
+- [Argument Processing](../features/argument_processing.md)
+- [Generating Output](../features/generating_output.md)
+- [Help](../features/help.md)
+- [Shortcuts](../features/shortcuts_aliases_macros.md#shortcuts)
+- [Multiline Commands](../features/multiline_commands.md)
+- [History](../features/history.md)
 
 If you don't want to type as we go, here is the complete source (you can click to expand and then click the **Copy** button in the top-right):
 
@@ -215,17 +215,17 @@ Notice the prompt changes to indicate that input is still ongoing. `cmd2` will c
 
 Users can access command history using two methods:
 
--   the [readline](https://docs.python.org/3/library/readline.html) library which provides a python interface to the [GNU readline library](https://en.wikipedia.org/wiki/GNU_Readline)
--   the `history` command which is built-in to `cmd2`
+- the [readline](https://docs.python.org/3/library/readline.html) library which provides a python interface to the [GNU readline library](https://en.wikipedia.org/wiki/GNU_Readline)
+- the `history` command which is built-in to `cmd2`
 
 From the prompt in a `cmd2`-based application, you can press `Control-p` to move to the previously entered command, and `Control-n` to move to the next command. You can also search through the command history using `Control-r`. The [GNU Readline User Manual](http://man7.org/linux/man-pages/man3/readline.3.html) has all the details, including all the available commands, and instructions for customizing the key bindings.
 
 The `history` command allows a user to view the command history, and select commands from history by number, range, string search, or regular expression. With the selected commands, users can:
 
--   re-run the commands
--   edit the selected commands in a text editor, and run them after the text editor exits
--   save the commands to a file
--   run the commands, saving both the commands and their output to a file
+- re-run the commands
+- edit the selected commands in a text editor, and run them after the text editor exits
+- save the commands to a file
+- run the commands, saving both the commands and their output to a file
 
 Learn more about the `history` command by typing `history -h` at any `cmd2` input prompt, or by exploring [Command History For Users](../features/history.md#for-users).
 
@@ -233,6 +233,6 @@ Learn more about the `history` command by typing `history -h` at any `cmd2` inpu
 
 You've just created a simple, but functional command line application. With minimal work on your part, the application leverages many robust features of `cmd2`. To learn more you can:
 
--   Dive into all of the [Features](../features/index.md) that `cmd2` provides
--   Look at more [Examples](../examples/index.md)
--   Browse the [API Reference](../api/index.md)
+- Dive into all of the [Features](../features/index.md) that `cmd2` provides
+- Look at more [Examples](../examples/index.md)
+- Browse the [API Reference](../api/index.md)

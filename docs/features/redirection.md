@@ -8,8 +8,8 @@ As in POSIX shells, output of a command can be redirected and/or piped. This fea
 
 Redirecting the output of a `cmd2` command to a file works just like in POSIX shells:
 
--   send to a file with `>`, as in `mycommand args > filename.txt`
--   append to a file with `>>`, as in `mycommand args >> filename.txt`
+- send to a file with `>`, as in `mycommand args > filename.txt`
+- append to a file with `>>`, as in `mycommand args >> filename.txt`
 
 If you need to include any of these redirection characters in your command, you can enclose them in quotation marks, `mycommand 'with > in the argument'`.
 
@@ -17,14 +17,14 @@ If you need to include any of these redirection characters in your command, you 
 
 `cmd2` output redirection supports an additional feature not found in most shells - if the file name following the `>` or `>>` is left blank, then the output is redirected to the operating system clipboard so that it can then be pasted into another program.
 
--   overwrite the clipboard with `mycommand args >`
--   append to the clipboard with `mycommand args >>`
+- overwrite the clipboard with `mycommand args >`
+- append to the clipboard with `mycommand args >>`
 
 ## Pipes
 
 Piping the output of a `cmd2` command to a shell command works just like in POSIX shells:
 
--   pipe as input to a shell command with `|`, as in `mycommand args | wc`
+- pipe as input to a shell command with `|`, as in `mycommand args | wc`
 
 ## Multiple Pipes and Redirection
 
@@ -53,5 +53,5 @@ The above runs the **help** command, pipes its output to **grep** searching for 
 
 Some limitations apply to redirection and piping within `cmd2` applications:
 
--   Can only pipe to shell commands, not other `cmd2` application commands
--   **stdout** gets redirected/piped, **stderr** does not
+- Can only pipe to shell commands, not other `cmd2` application commands
+- **stdout** gets redirected/piped, **stderr** does not

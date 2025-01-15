@@ -483,17 +483,17 @@ how to do it.
 4. The title (also called the subject) of your PR should be descriptive of your
    changes and succinctly indicate what is being fixed
 
-   - **Do not add the issue number in the PR title or commit message**
+    - **Do not add the issue number in the PR title or commit message**
 
-   - Examples: `Add test cases for Unicode support`; `Correct typo in overview documentation`
+    - Examples: `Add test cases for Unicode support`; `Correct typo in overview documentation`
 
 5. In the body of your PR include a more detailed summary of the changes you
    made and why
 
-   - If the PR is meant to fix an existing bug/issue, then, at the end of
-     your PR's description, append the keyword `closes` and #xxxx (where xxxx
-     is the issue number). Example: `closes #1337`. This tells GitHub to
-     close the existing issue if the PR is merged.
+    - If the PR is meant to fix an existing bug/issue, then, at the end of
+      your PR's description, append the keyword `closes` and #xxxx (where xxxx
+      is the issue number). Example: `closes #1337`. This tells GitHub to
+      close the existing issue if the PR is merged.
 
 6. Indicate what local testing you have done (e.g. what OS and version(s) of Python did you run the
    unit test suite with)
@@ -634,7 +634,7 @@ mostly automated. The manual steps are all git operations. Here's the checklist:
 1. Make sure latest year in `LICENSE` matches current year
 1. Make sure `CHANGELOG.md` describes the version and has the correct release date
 1. Add a git tag representing the version number using `invoke tag x.y.z`
-   - Where x, y, and z are all small non-negative integers
+    - Where x, y, and z are all small non-negative integers
 1. (Optional) Run `invoke pypi-test` to clean, build, and upload a new release to [Test PyPi](https://test.pypi.org)
 1. Run `invoke pypi` to clean, build, and upload a new release to [PyPi](https://pypi.org/)
 

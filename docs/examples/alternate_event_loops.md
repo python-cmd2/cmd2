@@ -56,6 +56,6 @@ The `cmd2.Cmd.onecmd_plus_hooks()` method will do the following to execute a sin
 
 Running in this fashion enables the ability to integrate with an external event loop. However, how to integrate with any specific event loop is beyond the scope of this documentation. Please note that running in this fashion comes with several disadvantages, including:
 
--   Requires the developer to write more code
--   Does not support transcript testing
--   Does not allow commands at invocation via command-line arguments
+- Requires the developer to write more code
+- Does not support transcript testing
+- Does not allow commands at invocation via command-line arguments
