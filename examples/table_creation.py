@@ -77,18 +77,18 @@ def basic_tables():
 
     # Table data which demonstrates handling of wrapping and text styles
     data_list: List[List[Any]] = list()
-    data_list.append(["Billy Smith", "123 Sesame St.\n" "Fake Town, USA 33445", DollarFormatter(100333.03)])
+    data_list.append(["Billy Smith", "123 Sesame St.\nFake Town, USA 33445", DollarFormatter(100333.03)])
     data_list.append(
         [
             "William Longfellow Marmaduke III",
-            "984 Really Long Street Name Which Will Wrap Nicely\n" "Apt 22G\n" "Pensacola, FL 32501",
+            "984 Really Long Street Name Which Will Wrap Nicely\nApt 22G\nPensacola, FL 32501",
             DollarFormatter(55135.22),
         ]
     )
     data_list.append(
         [
             "James " + blue("Bluestone"),
-            bold_yellow("This address has line feeds,\n" "text styles, and wrapping. ")
+            bold_yellow("This address has line feeds,\ntext styles, and wrapping. ")
             + blue("Style is preserved across lines."),
             DollarFormatter(300876.10),
         ]

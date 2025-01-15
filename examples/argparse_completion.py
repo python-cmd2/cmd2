@@ -68,7 +68,7 @@ class ArgparseCompletion(Cmd):
 
     # Parser for example command
     example_parser = Cmd2ArgumentParser(
-        description="Command demonstrating tab completion with argparse\n" "Notice even the flags of this command tab complete"
+        description="Command demonstrating tab completion with argparse\nNotice even the flags of this command tab complete"
     )
 
     # Tab complete from a list using argparse choices. Set metavar if you don't

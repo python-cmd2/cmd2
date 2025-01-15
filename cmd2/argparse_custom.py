@@ -477,12 +477,11 @@ def _action_set_choices_callable(self: argparse.Action, choices_callable: Choice
     """
     # Verify consistent use of parameters
     if self.choices is not None:
-        err_msg = "None of the following parameters can be used alongside a choices parameter:\n" "choices_provider, completer"
+        err_msg = "None of the following parameters can be used alongside a choices parameter:\nchoices_provider, completer"
         raise (TypeError(err_msg))
     elif self.nargs == 0:
         err_msg = (
-            "None of the following parameters can be used on an action that takes no arguments:\n"
-            "choices_provider, completer"
+            "None of the following parameters can be used on an action that takes no arguments:\nchoices_provider, completer"
         )
         raise (TypeError(err_msg))
 
@@ -766,7 +765,7 @@ def _add_argument_wrapper(
     num_params_set = len(choices_callables) - choices_callables.count(None)
 
     if num_params_set > 1:
-        err_msg = "Only one of the following parameters may be used at a time:\n" "choices_provider, completer"
+        err_msg = "Only one of the following parameters may be used at a time:\nchoices_provider, completer"
         raise (ValueError(err_msg))
 
     # Pre-process special ranged nargs
