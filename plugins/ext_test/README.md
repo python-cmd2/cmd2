@@ -8,12 +8,10 @@
 - [Writing Tests](#writing-tests)
 - [License](#license)
 
-
 ## Overview
 
-This plugin supports testing of a cmd2 application by exposing access cmd2 commands with the same context 
-as from within a cmd2 pyscript.  This allows for verification of an application's support for pyscripts.
-
+This plugin supports testing of a cmd2 application by exposing access cmd2 commands with the same context
+as from within a cmd2 pyscript. This allows for verification of an application's support for pyscripts.
 
 ## Example cmd2 Application
 
@@ -62,7 +60,7 @@ def example_app():
 Now write your tests that validate your application using the `app_cmd` function to access
 the cmd2 application's commands. This allows invocation of the application's commands in the
 same format as a user would type. The results from calling a command matches what is returned
-from running an python script with cmd2's pyscript command, which provides stdout, stderr, and 
+from running an python script with cmd2's pyscript command, which provides stdout, stderr, and
 the command's result data.
 
 ```python

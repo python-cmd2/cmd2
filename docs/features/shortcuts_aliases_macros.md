@@ -4,10 +4,10 @@
 
 Command shortcuts for long command names and common commands can make life more convenient for your users. Shortcuts are used without a space separating them from their arguments, like `!ls`. By default, the following shortcuts are defined:
 
--   **`?`** - help
--   **`!`** - shell: run as OS-level command
--   **`@`** - run script file
--   **`@@`** - run script file; filename is relative to current script location
+- **`?`** - help
+- **`!`** - shell: run as OS-level command
+- **`@`** - run script file
+- **`@@`** - run script file; filename is relative to current script location
 
 To define more shortcuts, update the dict `App.shortcuts` with the `{'shortcut': 'command_name'}` (omit `do_`):
 

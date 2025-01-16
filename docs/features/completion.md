@@ -2,10 +2,10 @@
 
 `cmd2.Cmd` adds tab completion of file system paths for all built-in commands where it makes sense, including:
 
--   [edit](./builtin_commands.md#edit)
--   [run_pyscript](./builtin_commands.md#run_pyscript)
--   [run_script](./builtin_commands.md#run_script)
--   [shell](./builtin_commands.md#shell)
+- [edit](./builtin_commands.md#edit)
+- [run_pyscript](./builtin_commands.md#run_pyscript)
+- [run_script](./builtin_commands.md#run_script)
+- [shell](./builtin_commands.md#shell)
 
 `cmd2.Cmd` also adds tab completion of shell commands to the [shell](./builtin_commands.md#shell) command.
 
@@ -28,31 +28,31 @@ complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.pa
 
 `cmd2` provides the following tab completion functions
 
--   `cmd2.Cmd.basic_complete` - helper method for tab completion against a list
+- `cmd2.Cmd.basic_complete` - helper method for tab completion against a list
 
--   `cmd2.Cmd.path_complete` - helper method provides flexible tab completion of file system paths
+- `cmd2.Cmd.path_complete` - helper method provides flexible tab completion of file system paths
 
-    > -   See the [paged_output](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py) example for a simple use case
-    > -   See the [python_scripting](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) example for a more full-featured use case
+    > - See the [paged_output](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py) example for a simple use case
+    > - See the [python_scripting](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) example for a more full-featured use case
 
--   `cmd2.Cmd.delimiter_complete` - helper method for tab completion against a list but each match is split on a delimiter
+- `cmd2.Cmd.delimiter_complete` - helper method for tab completion against a list but each match is split on a delimiter
 
-    > -   See the [basic_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
+    > - See the [basic_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
 
--   `cmd2.Cmd.flag_based_complete` - helper method for tab completion based on a particular flag preceding the token being completed
+- `cmd2.Cmd.flag_based_complete` - helper method for tab completion based on a particular flag preceding the token being completed
 
--   `cmd2.Cmd.index_based_complete` - helper method for tab completion based on a fixed position in the input string
+- `cmd2.Cmd.index_based_complete` - helper method for tab completion based on a fixed position in the input string
 
-    > -   See the [basic_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use these features
-    > -   `flag_based_complete()` and `index_based_complete()` are basic methods and should only be used if you are not familiar with argparse. The recommended approach for tab completing positional tokens and flags is to use [argparse-based](#argparse-based) completion.
+    > - See the [basic_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use these features
+    > - `flag_based_complete()` and `index_based_complete()` are basic methods and should only be used if you are not familiar with argparse. The recommended approach for tab completing positional tokens and flags is to use [argparse-based](#argparse-based) completion.
 
 ## Raising Exceptions During Completion
 
 There are times when an error occurs while tab completing and a message needs to be reported to the user. These include the following example cases:
 
--   Reading a database to retrieve a tab completion data set failed
--   A previous command line argument that determines the data set being completed is invalid
--   Tab completion hints
+- Reading a database to retrieve a tab completion data set failed
+- A previous command line argument that determines the data set being completed is invalid
+- Tab completion hints
 
 `cmd2` provides the `cmd2.exceptions.CompletionError` exception class for this capability. If an error occurs in which it is more desirable to display a message than a stack trace, then raise a `CompletionError`. By default, the message displays in red like an error. However, `CompletionError` has a member called `apply_style`. Set this False if the error style should not be applied. For instance, `ArgparseCompleter` sets it to False when displaying completion hints.
 
@@ -62,9 +62,9 @@ When using one the argparse-based [cmd2.decorators](../api/decorators.md), `cmd2
 
 Tab completion of argument values can be configured by using one of three parameters to `argparse.ArgumentParser.add_argument`
 
--   `choices`
--   `choices_provider`
--   `completer`
+- `choices`
+- `choices_provider`
+- `completer`
 
 See the [arg_decorators](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_decorators.py) or [colors](https://github.com/python-cmd2/cmd2/blob/master/examples/colors.py) example for a demonstration of how to use the `choices` parameter. See the [argparse_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py) example for a demonstration of how to use the `choices_provider` parameter. See the [arg_decorators](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_decorators.py) or [argparse_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py) example for a demonstration of how to use the `completer` parameter.
 

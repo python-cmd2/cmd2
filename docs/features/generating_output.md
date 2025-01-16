@@ -56,12 +56,12 @@ You can add your own [ANSI escape sequences](https://en.wikipedia.org/wiki/ANSI_
 
 After adding the desired escape sequences to your output, you should use one of these methods to present the output to the user:
 
--   `cmd2.Cmd.poutput`
--   `cmd2.Cmd.perror`
--   `cmd2.Cmd.pwarning`
--   `cmd2.Cmd.pexcept`
--   `cmd2.Cmd.pfeedback`
--   `cmd2.Cmd.ppaged`
+- `cmd2.Cmd.poutput`
+- `cmd2.Cmd.perror`
+- `cmd2.Cmd.pwarning`
+- `cmd2.Cmd.pexcept`
+- `cmd2.Cmd.pfeedback`
+- `cmd2.Cmd.ppaged`
 
 These methods all honor the [allow_style](./settings.md#allow_style) setting, which users can modify to control whether these escape codes are passed through to the terminal or not.
 
@@ -69,9 +69,9 @@ These methods all honor the [allow_style](./settings.md#allow_style) setting, wh
 
 If you would like to generate output which is left, center, or right aligned within a specified width or the terminal width, the following functions can help:
 
--   `cmd2.utils.align_left`
--   `cmd2.utils.align_center`
--   `cmd2.utils.align_right`
+- `cmd2.utils.align_left`
+- `cmd2.utils.align_center`
+- `cmd2.utils.align_right`
 
 These functions differ from Python's string justifying functions in that they support characters with display widths greater than 1. Additionally, ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is supported. If text has line breaks, then each line is aligned independently.
 

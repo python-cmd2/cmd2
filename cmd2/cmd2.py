@@ -305,7 +305,7 @@ class Cmd(cmd.Cmd):
     DEFAULT_EDITOR = utils.find_editor()
 
     INTERNAL_COMMAND_EPILOG = (
-        "Notes:\n" "  This command is for internal use and is not intended to be called from the\n" "  command line."
+        "Notes:\n  This command is for internal use and is not intended to be called from the\n  command line."
     )
 
     # Sorting keys for strings
@@ -3380,8 +3380,8 @@ class Cmd(cmd.Cmd):
     #############################################################
 
     # Top-level parser for alias
-    alias_description = "Manage aliases\n" "\n" "An alias is a command that enables replacement of a word by another string."
-    alias_epilog = "See also:\n" "  macro"
+    alias_description = "Manage aliases\n\nAn alias is a command that enables replacement of a word by another string."
+    alias_epilog = "See also:\n  macro"
     alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
     alias_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
 
@@ -3548,8 +3548,8 @@ class Cmd(cmd.Cmd):
     #############################################################
 
     # Top-level parser for macro
-    macro_description = "Manage macros\n" "\n" "A macro is similar to an alias, but it can contain argument placeholders."
-    macro_epilog = "See also:\n" "  alias"
+    macro_description = "Manage macros\n\nA macro is similar to an alias, but it can contain argument placeholders."
+    macro_epilog = "See also:\n  alias"
     macro_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_description, epilog=macro_epilog)
     macro_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
 
@@ -3806,7 +3806,7 @@ class Cmd(cmd.Cmd):
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
 
     help_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
-        description="List available commands or provide " "detailed help for a specific command"
+        description="List available commands or provide detailed help for a specific command"
     )
     help_parser.add_argument(
         '-v', '--verbose', action='store_true', help="print a list of all commands with descriptions of each"
@@ -4699,22 +4699,22 @@ class Cmd(cmd.Cmd):
 
     history_format_group = history_parser.add_argument_group(title='formatting')
     history_format_group.add_argument(
-        '-s', '--script', action='store_true', help='output commands in script format, i.e. without command\n' 'numbers'
+        '-s', '--script', action='store_true', help='output commands in script format, i.e. without command\nnumbers'
     )
     history_format_group.add_argument(
         '-x',
         '--expanded',
         action='store_true',
-        help='output fully parsed commands with any aliases and\n' 'macros expanded, instead of typed commands',
+        help='output fully parsed commands with any aliases and\nmacros expanded, instead of typed commands',
     )
     history_format_group.add_argument(
         '-v',
         '--verbose',
         action='store_true',
-        help='display history and include expanded commands if they\n' 'differ from the typed command',
+        help='display history and include expanded commands if they\ndiffer from the typed command',
     )
     history_format_group.add_argument(
-        '-a', '--all', action='store_true', help='display all commands, including ones persisted from\n' 'previous sessions'
+        '-a', '--all', action='store_true', help='display all commands, including ones persisted from\nprevious sessions'
     )
 
     history_arg_help = (
@@ -5189,7 +5189,7 @@ class Cmd(cmd.Cmd):
         "interpreted relative to the already-running script's directory."
     )
 
-    relative_run_script_epilog = "Notes:\n" "  This command is intended to only be used within text file scripts."
+    relative_run_script_epilog = "Notes:\n  This command is intended to only be used within text file scripts."
 
     relative_run_script_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
         description=relative_run_script_description, epilog=relative_run_script_epilog
@@ -5671,7 +5671,7 @@ class Cmd(cmd.Cmd):
             raise TypeError(f'{func.__name__} does not have a declared return type, expected {data_type}')
         if signature.return_annotation != data_type:
             raise TypeError(
-                f'{func.__name__} has incompatible return type {signature.return_annotation}, expected ' f'{data_type}'
+                f'{func.__name__} has incompatible return type {signature.return_annotation}, expected {data_type}'
             )
 
     def register_precmd_hook(self, func: Callable[[plugin.PrecommandData], plugin.PrecommandData]) -> None:

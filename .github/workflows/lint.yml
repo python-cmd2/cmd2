@@ -2,7 +2,7 @@
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
 name: Lint
 
-on: [ push, pull_request ]
+on: [push, pull_request]
 
 permissions:
   contents: read
@@ -11,7 +11,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # https://github.com/actions/checkout
+      - uses: actions/checkout@v4 # https://github.com/actions/checkout
         with:
           # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
           # Set fetch-depth: 0 to fetch all history for all branches and tags.

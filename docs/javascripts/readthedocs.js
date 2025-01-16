@@ -23,7 +23,7 @@ ${config.versions.active
 <a href="${version.urls.documentation}" class="md-version__link">
     ${version.slug}
 </a>
-        </li>`
+        </li>`,
   )
   .join("\n")}
 </ul>

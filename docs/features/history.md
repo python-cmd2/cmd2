@@ -99,11 +99,11 @@ If your regular expression contains any characters that `argparse` finds interes
 
 This all sounds great, but doesn't it seem like a bit of overkill to have all these ways to select commands if all we can do is display them? Turns out, displaying history commands is just the beginning. The history command can perform many other actions:
 
--   running previously entered commands
--   saving previously entered commands to a text file
--   opening previously entered commands in your favorite text editor
--   running previously entered commands, saving the commands and their output to a text file
--   clearing the history of entered commands
+- running previously entered commands
+- saving previously entered commands to a text file
+- opening previously entered commands in your favorite text editor
+- running previously entered commands, saving the commands and their output to a text file
+- clearing the history of entered commands
 
 Each of these actions is invoked using a command line option. The `-r` or `--run` option runs one or more previously entered commands. To run command number 1:
 

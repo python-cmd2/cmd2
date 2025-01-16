@@ -18,20 +18,20 @@ This convenient blog post will show you [How to "Dockerize" Your Python Applicat
 
 For developers wishing to package a `cmd2` application into a single binary image or compressed file, we can recommend all of the following based on personal and professional experience:
 
--   [PyInstaller](https://www.pyinstaller.org)
-    -   Freeze (package) Python programs into stand-alone executables
-    -   PyInstaller bundles a Python application and all its dependencies into a single package
-    -   The user can run the packaged app without installing a Python interpreter or any modules
--   [Nuitka](https://nuitka.net)
-    -   Nuitka is a Python compiler written in Python
-    -   You feed it your Python app, it does a lot of clever things, and spits out an executable or extension module
-    -   This can be particularly convenient if you wish to obfuscate the Python source code behind your application
--   [Conda Constructor](https://github.com/conda/constructor)
-    -   Allows you to create a custom Python distro based on [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
--   [PyOxidizer](https://github.com/indygreg/PyOxidizer)
-    -   PyOxidizer is a utility for producing binaries that embed Python
-    -   PyOxidizer is capable of producing a single file executable - with a copy of Python and all its dependencies statically linked and all resources embedded in the executable
-    -   You can copy a single executable file to another machine and run a Python application contained within. It just works.
+- [PyInstaller](https://www.pyinstaller.org)
+    - Freeze (package) Python programs into stand-alone executables
+    - PyInstaller bundles a Python application and all its dependencies into a single package
+    - The user can run the packaged app without installing a Python interpreter or any modules
+- [Nuitka](https://nuitka.net)
+    - Nuitka is a Python compiler written in Python
+    - You feed it your Python app, it does a lot of clever things, and spits out an executable or extension module
+    - This can be particularly convenient if you wish to obfuscate the Python source code behind your application
+- [Conda Constructor](https://github.com/conda/constructor)
+    - Allows you to create a custom Python distro based on [Miniconda](https://docs.conda.io/en/latest/miniconda.html)
+- [PyOxidizer](https://github.com/indygreg/PyOxidizer)
+    - PyOxidizer is a utility for producing binaries that embed Python
+    - PyOxidizer is capable of producing a single file executable - with a copy of Python and all its dependencies statically linked and all resources embedded in the executable
+    - You can copy a single executable file to another machine and run a Python application contained within. It just works.
 
 !!! warning
 

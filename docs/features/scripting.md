@@ -10,9 +10,9 @@ A command script contains a sequence of commands typed at the the prompt of a `c
 
 Command scripts can be created in several ways:
 
--   creating a text file using any method of your choice
--   using the built-in [edit](./builtin_commands.md#edit) command to create or edit an existing text file
--   saving previously entered commands to a script file using [history -s](./history.md#for-users)
+- creating a text file using any method of your choice
+- using the built-in [edit](./builtin_commands.md#edit) command to create or edit an existing text file
+- saving previously entered commands to a script file using [history -s](./history.md#for-users)
 
 If you create create a text file from scratch, just include one command per line, exactly as you would type it inside a `cmd2` application.
 
@@ -59,8 +59,8 @@ app(‘command args’)
 
 where:
 
--   `app` is a configurable name which can be changed by setting the `cmd2.Cmd.py_bridge_name` attribute
--   `command` and `args` are entered exactly like they would be entered by a user of your application.
+- `app` is a configurable name which can be changed by setting the `cmd2.Cmd.py_bridge_name` attribute
+- `command` and `args` are entered exactly like they would be entered by a user of your application.
 
 Using fstrings tends to be the most straight forward and easily readable way to provide parameters.:
 
