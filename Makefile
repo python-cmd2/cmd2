@@ -40,7 +40,7 @@ clean-build: ## Clean build artifacts
 .PHONY: tag
 tag: ## Add a Git tag and push it to origin with syntax: make tag TAG=tag_name
 	@echo "🚀 Creating git tag: ${TAG}"
-	@git tag -a ${TAG}
+	@git tag -a ${TAG} -m ""
 	@echo "🚀 Pushing tag to origin: ${TAG}"
 	@git push origin ${TAG}
 
