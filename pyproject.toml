@@ -63,6 +63,7 @@ docs = [
     "setuptools>=64",
     "setuptools_scm>=8",
 ]
+plugins = ["cmd2-ext-test"]
 test = [
     "codecov>=2",
     "coverage>=7",
@@ -288,7 +289,7 @@ packages = ["cmd2"]
 [tool.setuptools_scm]
 
 [tool.uv]
-default-groups = ["dev"]
+default-groups = ["dev", "plugins"]
 
 [tool.uv.sources]
 cmd2-ext-test = { path = "plugins/ext_test", editable = true }
