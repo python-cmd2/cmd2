@@ -88,7 +88,7 @@ $ pip freeze | grep pyperclip
 
 If your versions are lower than the prerequisite versions, you should update.
 
-If you do not already have Python installed on your machine, we recommend using [uv](https://github.com/astral-sh/uv)  
+If you do not already have Python installed on your machine, we recommend using [uv](https://github.com/astral-sh/uv)
 for all of your Python needs because it is extremely fast, meets all Python installation and packaging needs, and works
 on all platforms (Windows, Mac, and Linux). You can install `uv` using instructions at the link above.
 
@@ -221,7 +221,13 @@ To create a virtual environment and install everything needed for `cmd2` develop
 from a GitHub checkout:
 
 ```sh
-uv venv
+make install
+```
+
+To install the recommended Git pre-commit hooks for auto-formatting locally, do the following:
+
+```sh
+uv run pre-commit run -a
 ```
 
 To create a new virtualenv, using a specific version of Python you have installed, use the
