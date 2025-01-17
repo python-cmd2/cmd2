@@ -27,7 +27,7 @@ setuptools-scm = "*"
 mkdocs-include-markdown-plugin = "*"
 mkdocs-macros-plugin = "*"
 mkdocs-material = "*"
-mkdocstrings[python] = "*"
+mkdocstrings= {version = "*", extras = ["python"]}
 twine = ">=1.11"
 
 [pipenv]
