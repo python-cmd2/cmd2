@@ -19,6 +19,14 @@ test: ## Test the code with pytest.
 	@uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
 	@uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests_isolated
 
+.PHONY: docs-test
+docs-test: ## Test if documentation can be built without warnings or errors
+	@uv run mkdocs build -s
+
+.PHONY: docs
+docs: ## Build and serve the documentation
+	@uv run mkdocs serve
+
 .PHONY: build
 build: clean-build ## Build wheel file
 	@echo "🚀 Creating wheel file"
@@ -29,23 +37,27 @@ clean-build: ## Clean build artifacts
 	@echo "🚀 Removing build artifacts"
 	@uv run python -c "import shutil; import os; shutil.rmtree('dist') if os.path.exists('dist') else None"
 
-.PHONY: publish
-publish: ## Publish a release to PyPI.
+.PHONY: tag
+tag: ## Add a Git tag and push it to origin with syntax: make tag TAG=tag_name
+	@echo "🚀 Creating git tag: ${TAG}"
+	@git tag -a ${TAG}
+	@echo "🚀 Pushing tag to origin: ${TAG}"
+	@git push origin ${TAG}
+
+.PHONY: validate-tag
+validate-tag: ## Check to make sure that a tag exists for the current HEAD and it looks like a valid version number
+	@echo "🚀 Validating version tag"
+	@uv run inv validatetag
+
+.PHONY: publish-test
+publish-test: validatetag build ## Test publishing a release to PyPI.
 	@echo "🚀 Publishing: Dry run."
-	@uvx --from build pyproject-build --installer uv
+	@uvx twine upload --repository testpypi dist/*
+
+.PHONY: publish
+publish: validatetag build ## Publish a release to PyPI.
 	@echo "🚀 Publishing."
 	@uvx twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
-
-.PHONY: build-and-publish
-build-and-publish: build publish ## Build and publish.
-
-.PHONY: docs-test
-docs-test: ## Test if documentation can be built without warnings or errors
-	@uv run mkdocs build -s
-
-.PHONY: docs
-docs: ## Build and serve the documentation
-	@uv run mkdocs serve
 
 .PHONY: help
 help:
