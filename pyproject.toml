@@ -289,7 +289,7 @@ packages = ["cmd2"]
 [tool.setuptools_scm]
 
 [tool.uv]
-default-groups = ["dev", "plugins"]
+default-groups = ["build", "dev", "plugins"]
 
 [tool.uv.sources]
 cmd2-ext-test = { path = "plugins/ext_test", editable = true }

@@ -57,7 +57,7 @@ publish-test: validate-tag build ## Test publishing a release to PyPI.
 .PHONY: publish
 publish: validate-tag build ## Publish a release to PyPI.
 	@echo "🚀 Publishing."
-	@uvx twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
+	@uvx twine upload dist/*
 
 .PHONY: help
 help:
