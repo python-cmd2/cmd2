@@ -50,12 +50,12 @@ validate-tag: ## Check to make sure that a tag exists for the current HEAD and i
 	@uv run inv validatetag
 
 .PHONY: publish-test
-publish-test: validatetag build ## Test publishing a release to PyPI.
+publish-test: validate-tag build ## Test publishing a release to PyPI.
 	@echo "🚀 Publishing: Dry run."
 	@uvx twine upload --repository testpypi dist/*
 
 .PHONY: publish
-publish: validatetag build ## Publish a release to PyPI.
+publish: validate-tag build ## Publish a release to PyPI.
 	@echo "🚀 Publishing."
 	@uvx twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
 
