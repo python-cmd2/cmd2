@@ -20,18 +20,14 @@ jobs:
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          allow-prereleases: true
 
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --dev
+
+      - name: Install the project
+        run: make install
 
       - name: Run tests
-        run: uv run inv pytest --junit --no-pty --base
-
-      - name: Run isolated tests
-        run: uv run inv pytest --junit --no-pty --isolated
+        run: make test
