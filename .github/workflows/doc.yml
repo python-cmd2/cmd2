@@ -26,6 +26,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --docs
+        run: uv sync --group docs
       - name: MkDocs documentation build
         run: uv run mkdocs build -s

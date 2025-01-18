@@ -26,8 +26,8 @@ jobs:
       - name: Install the project
         run: uv sync --dev
 
-      - name: Install the project
-        run: make install
-
       - name: Run tests
-        run: make test
+        run: uv run inv pytest --junit --no-pty --base
+
+      - name: Run isolated tests
+        run: uv run inv pytest --junit --no-pty --isolated
