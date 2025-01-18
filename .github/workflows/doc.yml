@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.12"]
+        python-version: ["3.13"]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -21,11 +21,11 @@ jobs:
           # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
           # Set fetch-depth: 0 to fetch all history for all branches and tags.
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
-      - name: Set up Python
-        uses: actions/setup-python@v5 # https://github.com/actions/setup-python
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install python prerequisites
-        run: pip install -U --user pip setuptools setuptools-scm griffe_typingdoc mkdocs-include-markdown-plugin mkdocs-macros-plugin mkdocs-material mkdocstrings[python] . plugins/ext_test
+      - name: Install the project
+        run: uv sync --group docs
       - name: MkDocs documentation build
-        run: mkdocs build
+        run: uv run mkdocs build -s

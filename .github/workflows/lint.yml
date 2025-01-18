@@ -16,5 +16,5 @@ jobs:
           # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
           # Set fetch-depth: 0 to fetch all history for all branches and tags.
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
-      - run: pip install --user ruff
+      - uses: astral-sh/ruff-action@v3
       - run: ruff check --output-format=github .
