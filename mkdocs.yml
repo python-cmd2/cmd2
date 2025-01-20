@@ -57,6 +57,7 @@ theme:
 # Plugins
 plugins:
   - search
+  - git-revision-date-localized
   - include-markdown:
       preserve_includer_indent: true
       dedent: true
