@@ -1,3 +1,8 @@
+## 2.5.10 (January 25, 2025)
+
+- Bug Fixes
+    - Fixed docstring style for MkDocs API documentation so parameters are displayed properly.
+
 ## 2.5.9 (January 17, 2025)
 
 - Bug Fixes
