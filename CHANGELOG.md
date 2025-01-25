@@ -1,3 +1,8 @@
+## 2.5.11 (January 25, 2025)
+
+- Bug Fixes
+    - Fixed duplicated parameter tables in API documentation.
+
 ## 2.5.10 (January 25, 2025)
 
 - Bug Fixes

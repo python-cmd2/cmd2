@@ -60,7 +60,7 @@ This will also install the required 3rd-party dependencies.
 
 !!! warning
 
-    Versions of `cmd2` before 0.8.9 should be considered to be of unstable "beta" quality and should not be relied upon for production use. If you cannot get a version >= 0.8.9 from your OS repository, then we recommend installing from either pip or GitHub - see [Pip Install](installation.md#pip_install) or [Install from GitHub](installation.md#github).
+    Versions of `cmd2` before 1.0.0 should be considered to be of unstable "beta" quality and should not be relied upon for production use. If you cannot get a version >= 0.8.9 from your OS repository, then we recommend installing from either pip or GitHub - see [Pip Install](installation.md#pip_install) or [Install from GitHub](installation.md#github).
 
 ## Upgrading cmd2
 
