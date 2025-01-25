@@ -72,8 +72,6 @@ plugins:
       handlers:
         python:
           options:
-            extensions:
-              - griffe_typingdoc
             show_root_heading: true
             show_if_no_docstring: true
             preload_modules:
