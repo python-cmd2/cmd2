@@ -1134,7 +1134,7 @@ class Cmd(cmd.Cmd):
         Convenience method for removing a settable parameter from ``self.settables``
 
         :param name: name of the settable being removed
-        :raises: KeyError if the Settable matches this name
+        :raises KeyError: if the Settable matches this name
         """
         try:
             del self._settables[name]
@@ -2701,8 +2701,8 @@ class Cmd(cmd.Cmd):
                                        This is used to assist in combining multiline readline history entries and is only
                                        populated by cmd2. Defaults to None.
         :return: the completed Statement
-        :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
-        :raises: EmptyStatement when the resulting Statement is blank
+        :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
+        :raises EmptyStatement: when the resulting Statement is blank
         """
 
         def combine_rl_history(statement: Statement) -> None:
@@ -2788,8 +2788,8 @@ class Cmd(cmd.Cmd):
                                        This is used to assist in combining multiline readline history entries and is only
                                        populated by cmd2. Defaults to None.
         :return: parsed command line as a Statement
-        :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
-        :raises: EmptyStatement when the resulting Statement is blank
+        :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
+        :raises EmptyStatement: when the resulting Statement is blank
         """
         used_macros = []
         orig_line = None
@@ -2879,7 +2879,7 @@ class Cmd(cmd.Cmd):
 
         :param statement: a parsed statement from the user
         :return: A bool telling if an error occurred and a utils.RedirectionSavedState object
-        :raises: RedirectionError if an error occurs trying to pipe or redirect
+        :raises RedirectionError: if an error occurs trying to pipe or redirect
         """
         import io
         import subprocess
@@ -3135,7 +3135,7 @@ class Cmd(cmd.Cmd):
         :param parser: an argument parser which supports the tab completion of multiple arguments
 
         :return: the line read from stdin with all trailing new lines removed
-        :raises: any exceptions raised by input() and stdin.readline()
+        :raises Exception: any exceptions raised by input() and stdin.readline()
         """
         readline_configured = False
         saved_completer: Optional[CompleterFunc] = None
@@ -3260,7 +3260,7 @@ class Cmd(cmd.Cmd):
 
         :param prompt: prompt to display to user
         :return: command line text of 'eof' if an EOFError was caught
-        :raises: whatever exceptions are raised by input() except for EOFError
+        :raises Exception: whatever exceptions are raised by input() except for EOFError
         """
         try:
             # Wrap in try since terminal_lock may not be locked
@@ -5080,7 +5080,7 @@ class Cmd(cmd.Cmd):
         Run a text editor and optionally open a file with it
 
         :param file_path: optional path of the file to edit. Defaults to None.
-        :raises: EnvironmentError if self.editor is not set
+        :raises EnvironmentError: if self.editor is not set
         """
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
@@ -5515,9 +5515,9 @@ class Cmd(cmd.Cmd):
         """
         Report when a disabled command has been run or had help called on it
 
-        :param args: not used
+        :param _args: not used
         :param message_to_print: the message reporting that the command is disabled
-        :param kwargs: not used
+        :param _kwargs: not used
         """
         # Set apply_style to False so message_to_print's style is not overridden
         self.perror(message_to_print, apply_style=False)

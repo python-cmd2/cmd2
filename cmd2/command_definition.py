@@ -114,7 +114,7 @@ class CommandSet(object):
         Override this property if you need to change its return type to a
         child class of Cmd.
 
-        :raises: CommandSetRegistrationError if CommandSet is not registered.
+        :raises CommandSetRegistrationError: if CommandSet is not registered.
         """
         if self.__cmd_internal is None:
             raise CommandSetRegistrationError('This CommandSet is not registered')
@@ -127,7 +127,7 @@ class CommandSet(object):
         requiring access to the Cmd object (e.g. configure commands and their parsers based on CLI state data).
 
         :param cmd: The cmd2 main application
-        :raises: CommandSetRegistrationError if CommandSet is already registered.
+        :raises CommandSetRegistrationError: if CommandSet is already registered.
         """
         if self.__cmd_internal is None:
             self.__cmd_internal = cmd
@@ -185,7 +185,7 @@ class CommandSet(object):
         Convenience method for removing a settable parameter from the CommandSet
 
         :param name: name of the settable being removed
-        :raises: KeyError if the Settable matches this name
+        :raises KeyError: if the Settable matches this name
         """
         try:
             del self._settables[name]

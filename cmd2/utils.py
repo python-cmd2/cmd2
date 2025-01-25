@@ -101,7 +101,7 @@ def to_bool(val: Any) -> bool:
 
     :param val: value being converted
     :return: boolean value expressed in the passed in value
-    :raises: ValueError if the string does not contain a value corresponding to a boolean value
+    :raises ValueError: if the string does not contain a value corresponding to a boolean value
     """
     if isinstance(val, str):
         if val.capitalize() == str(True):
@@ -209,7 +209,7 @@ def is_text_file(file_path: str) -> bool:
 
     :param file_path: path to the file being checked
     :return: True if the file is a non-empty text file, otherwise False
-    :raises OSError if file can't be read
+    :raises OSError: if file can't be read
     """
     import codecs
 
@@ -858,9 +858,9 @@ def align_text(
     :param truncate: if True, then each line will be shortened to fit within the display width. The truncated
                      portions are replaced by a '…' character. Defaults to False.
     :return: aligned text
-    :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-    :raises: ValueError if text or fill_char contains an unprintable character
-    :raises: ValueError if width is less than 1
+    :raises TypeError: if fill_char is more than one character (not including ANSI style sequences)
+    :raises ValueError: if text or fill_char contains an unprintable character
+    :raises ValueError: if width is less than 1
     """
     import io
     import shutil
@@ -982,9 +982,9 @@ def align_left(
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: left-aligned text
-    :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-    :raises: ValueError if text or fill_char contains an unprintable character
-    :raises: ValueError if width is less than 1
+    :raises TypeError: if fill_char is more than one character (not including ANSI style sequences)
+    :raises ValueError: if text or fill_char contains an unprintable character
+    :raises ValueError: if width is less than 1
     """
     return align_text(text, TextAlignment.LEFT, fill_char=fill_char, width=width, tab_width=tab_width, truncate=truncate)
 
@@ -1005,9 +1005,9 @@ def align_center(
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: centered text
-    :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-    :raises: ValueError if text or fill_char contains an unprintable character
-    :raises: ValueError if width is less than 1
+    :raises TypeError: if fill_char is more than one character (not including ANSI style sequences)
+    :raises ValueError: if text or fill_char contains an unprintable character
+    :raises ValueError: if width is less than 1
     """
     return align_text(text, TextAlignment.CENTER, fill_char=fill_char, width=width, tab_width=tab_width, truncate=truncate)
 
@@ -1028,9 +1028,9 @@ def align_right(
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: right-aligned text
-    :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-    :raises: ValueError if text or fill_char contains an unprintable character
-    :raises: ValueError if width is less than 1
+    :raises TypeError: if fill_char is more than one character (not including ANSI style sequences)
+    :raises ValueError: if text or fill_char contains an unprintable character
+    :raises ValueError: if width is less than 1
     """
     return align_text(text, TextAlignment.RIGHT, fill_char=fill_char, width=width, tab_width=tab_width, truncate=truncate)
 
@@ -1053,8 +1053,8 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     :param max_width: the maximum display width the resulting string is allowed to have
     :param tab_width: any tabs in the text will be replaced with this many spaces
     :return: line that has a display width less than or equal to width
-    :raises: ValueError if text contains an unprintable character like a newline
-    :raises: ValueError if max_width is less than 1
+    :raises ValueError: if text contains an unprintable character like a newline
+    :raises ValueError: if max_width is less than 1
     """
     import io
 
