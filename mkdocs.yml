@@ -86,6 +86,7 @@ plugins:
             filters:
               - "!^_"
             merge_init_into_class: true
+            docstring_style: sphinx
             docstring_section_style: spacy
             signature_crossrefs: true
             show_symbol_type_heading: true

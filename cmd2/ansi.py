@@ -165,7 +165,7 @@ def clear_screen(clear_type: int = 2) -> str:
                        2 - clear entire screen
                        3 - clear entire screen and delete all lines saved in the scrollback buffer
     :return: the clear screen string
-    :raises: ValueError if clear_type is not a valid value
+    :raises ValueError: if clear_type is not a valid value
     """
     if 0 <= clear_type <= 3:
         return f"{CSI}{clear_type}J"
@@ -182,7 +182,7 @@ def clear_line(clear_type: int = 2) -> str:
                        1 - clear from cursor to beginning of the line
                        2 - clear entire line
     :return: the clear line string
-    :raises: ValueError if clear_type is not a valid value
+    :raises ValueError: if clear_type is not a valid value
     """
     if 0 <= clear_type <= 2:
         return f"{CSI}{clear_type}K"
@@ -915,7 +915,7 @@ class RgbFg(FgColor):
         :param r: integer from 0-255 for the red component of the color
         :param g: integer from 0-255 for the green component of the color
         :param b: integer from 0-255 for the blue component of the color
-        :raises: ValueError if r, g, or b is not in the range 0-255
+        :raises ValueError: if r, g, or b is not in the range 0-255
         """
         if any(c < 0 or c > 255 for c in [r, g, b]):
             raise ValueError("RGB values must be integers in the range of 0 to 255")
@@ -944,7 +944,7 @@ class RgbBg(BgColor):
         :param r: integer from 0-255 for the red component of the color
         :param g: integer from 0-255 for the green component of the color
         :param b: integer from 0-255 for the blue component of the color
-        :raises: ValueError if r, g, or b is not in the range 0-255
+        :raises ValueError: if r, g, or b is not in the range 0-255
         """
         if any(c < 0 or c > 255 for c in [r, g, b]):
             raise ValueError("RGB values must be integers in the range of 0 to 255")
@@ -988,8 +988,8 @@ def style(
     :param overline: apply the overline style if True. Defaults to False.
     :param strikethrough: apply the strikethrough style if True. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
-    :raises: TypeError if fg isn't None or a subclass of FgColor
-    :raises: TypeError if bg isn't None or a subclass of BgColor
+    :raises TypeError: if fg isn't None or a subclass of FgColor
+    :raises TypeError: if bg isn't None or a subclass of BgColor
     :return: the stylized string
     """
     # List of strings that add style
