@@ -1361,7 +1361,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # determine help from format above
         return formatter.format_help() + '\n'
 
-    def _print_message(self, message: str, file: Optional[IO[str]] = None) -> None:
+    def _print_message(self, message: str, file: Optional[IO[str]] = None) -> None:  # type: ignore[override]
         # Override _print_message to use style_aware_write() since we use ANSI escape characters to support color
         if message:
             if file is None:
