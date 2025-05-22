@@ -1069,8 +1069,8 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             # End cmd2 customization
 
             # build full usage string
-            format = self._format_actions_usage
-            action_usage = format(required_options + optionals + positionals, groups)  # type: ignore[arg-type]
+            format_actions = self._format_actions_usage
+            action_usage = format_actions(required_options + optionals + positionals, groups)  # type: ignore[arg-type]
             usage = ' '.join([s for s in [prog, action_usage] if s])
 
             # wrap the usage parts if it's too long
@@ -1080,9 +1080,9 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
                 # break usage into wrappable parts
                 part_regexp = r'\(.*?\)+|\[.*?\]+|\S+'
-                req_usage = format(required_options, groups)  # type: ignore[arg-type]
-                opt_usage = format(optionals, groups)  # type: ignore[arg-type]
-                pos_usage = format(positionals, groups)  # type: ignore[arg-type]
+                req_usage = format_actions(required_options, groups)  # type: ignore[arg-type]
+                opt_usage = format_actions(optionals, groups)  # type: ignore[arg-type]
+                pos_usage = format_actions(positionals, groups)  # type: ignore[arg-type]
                 req_parts = re.findall(part_regexp, req_usage)
                 opt_parts = re.findall(part_regexp, opt_usage)
                 pos_parts = re.findall(part_regexp, pos_usage)
@@ -1199,13 +1199,13 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     ) -> Callable[[int], Tuple[str, ...]]:
         metavar = self._determine_metavar(action, default_metavar)
 
-        def format(tuple_size: int) -> Tuple[str, ...]:
+        def format_tuple(tuple_size: int) -> Tuple[str, ...]:
             if isinstance(metavar, tuple):
                 return metavar
             else:
                 return (metavar,) * tuple_size
 
-        return format
+        return format_tuple
 
     def _format_args(self, action: argparse.Action, default_metavar: Union[str, Tuple[str, ...]]) -> str:
         """Customized to handle ranged nargs and make other output less verbose"""

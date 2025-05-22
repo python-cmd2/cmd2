@@ -80,16 +80,16 @@ disallow_untyped_defs = true
 exclude = [
     "^.git/",
     "^.venv/",
-    "^build/", # .build directory
-    "^docs/", # docs directory
+    "^build/",          # .build directory
+    "^docs/",           # docs directory
     "^dist/",
-    "^examples/", # examples directory
-    "^plugins/*", # plugins directory
-    "^noxfile\\.py$", # nox config file
-    "setup\\.py$", # any files named setup.py
+    "^examples/",       # examples directory
+    "^plugins/*",       # plugins directory
+    "^noxfile\\.py$",   # nox config file
+    "setup\\.py$",      # any files named setup.py
     "^site/",
-    "^tasks\\.py$", # tasks.py invoke config file
-    "^tests/", # tests directory
+    "^tasks\\.py$",     # tasks.py invoke config file
+    "^tests/",          # tests directory
     "^tests_isolated/", # tests_isolated directory
 ]
 files = ['.']
@@ -156,7 +156,7 @@ output-format = "full"
 # McCabe complexity (`C901`) by default.
 select = [
     # https://docs.astral.sh/ruff/rules
-    # "A", # flake8-builtins (variables or arguments shadowing built-ins)
+    # "A",   # flake8-builtins (variables or arguments shadowing built-ins)
     "AIR", # Airflow specific warnings
     # "ANN",  # flake8-annotations (missing type annotations for arguments or return types)
     # "ARG", # flake8-unused-arguments (functions or methods with arguments that are never used)
@@ -175,15 +175,15 @@ select = [
     # "EM", # flake8-errmsg (warn about exceptions that use string literals that aren't assigned to a variable first)
     # "ERA",  # eradicate (warn about commented-out code)
     # "EXE", # flake8-executable (warn about files with a shebang present that aren't executable or vice versa)
-    "F",  # Pyflakes (a bunch of common warnings for things like unused imports, imports shadowed by variables, etc)
-    "FA", # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
+    "F",    # Pyflakes (a bunch of common warnings for things like unused imports, imports shadowed by variables, etc)
+    "FA",   # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
     "FAST", # FastAPI specific warnings
     # "FBT",  # flake8-boolean-trap (force all boolean arguments passed to functions to be keyword arguments and not positional)
     # "FIX", # flake8-fixme (warn about lines containing FIXME, TODO, XXX, or HACK)
     "FLY", # flynt (automatically convert from old school string .format to f-strings)
     # "FURB", # refurb (A tool for refurbishing and modernizing Python codebases)
-    "G", # flake8-logging-format (warn about logging statements using outdated string formatting methods)
-    "I", # isort (sort all import statements in the order established by isort)
+    "G",   # flake8-logging-format (warn about logging statements using outdated string formatting methods)
+    "I",   # isort (sort all import statements in the order established by isort)
     "ICN", # flake8-import-conventions (force idiomatic import conventions for certain modules typically imported as something else)
     # "INP", # flake8-no-pep420 (warn about files in the implicit namespace - i.e. force creation of __init__.py files to make packages)
     "INT", # flake8-gettext (warnings that only apply when you are internationalizing your strings)
