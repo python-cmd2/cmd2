@@ -51,8 +51,10 @@ and an example app which uses the plugin:
 import cmd2
 import cmd2_myplugin
 
+
 class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
     """An class to show how to use a plugin"""
+
     def __init__(self, *args, **kwargs):
         # code placed here runs before cmd2.Cmd or
         # any plugins initialize
@@ -259,7 +261,7 @@ $ pip install -e .[dev]
 This command also installs `cmd2-myplugin` "in-place", so the package points to
 the source code instead of copying files to the python `site-packages` folder.
 
-All the dependencies now have been installed in the `cmd2-3.8`
+All the dependencies now have been installed in the `cmd2-3.9`
 virtualenv. If you want to work in other virtualenvs, you'll need to manually
 select it, and install again::
 

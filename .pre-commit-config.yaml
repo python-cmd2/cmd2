@@ -8,9 +8,11 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.9.3"
+    rev: "v0.11.10"
     hooks:
       - id: ruff-format
+        args: [--config=pyproject.toml]
+      - id: ruff-check
         args: [--config=pyproject.toml]
 
   - repo: https://github.com/pre-commit/mirrors-prettier
@@ -18,5 +20,5 @@ repos:
     hooks:
       - id: prettier
         additional_dependencies:
-          - prettier@3.4.2
-          - prettier-plugin-toml@2.0.1
+          - prettier@3.5.3
+          - prettier-plugin-toml@2.0.5
