@@ -211,10 +211,9 @@ class History(List[HistoryItem]):
         """
         if index == 0:
             raise IndexError('The first command in history is command 1.')
-        elif index < 0:
+        if index < 0:
             return self[index]
-        else:
-            return self[index - 1]
+        return self[index - 1]
 
     # This regular expression parses input for the span() method. There are five parts:
     #

@@ -106,13 +106,12 @@ def to_bool(val: Any) -> bool:
     if isinstance(val, str):
         if val.capitalize() == str(True):
             return True
-        elif val.capitalize() == str(False):
+        if val.capitalize() == str(False):
             return False
         raise ValueError("must be True or False (case-insensitive)")
-    elif isinstance(val, bool):
+    if isinstance(val, bool):
         return val
-    else:
-        return bool(val)
+    return bool(val)
 
 
 class Settable:
@@ -536,8 +535,7 @@ class StdSim:
         """StdSim only considered an interactive stream if `echo` is True and `inner_stream` is a tty."""
         if self.echo:
             return self.inner_stream.isatty()
-        else:
-            return False
+        return False
 
     @property
     def line_buffering(self) -> bool:
@@ -553,8 +551,7 @@ class StdSim:
     def __getattr__(self, item: str) -> Any:
         if item in self.__dict__:
             return self.__dict__[item]
-        else:
-            return getattr(self.inner_stream, item)
+        return getattr(self.inner_stream, item)
 
 
 class ByteBuf:

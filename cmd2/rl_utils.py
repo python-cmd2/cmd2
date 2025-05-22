@@ -187,11 +187,10 @@ def rl_get_point() -> int:  # pragma: no cover
     if rl_type == RlType.GNU:
         return ctypes.c_int.in_dll(readline_lib, "rl_point").value
 
-    elif rl_type == RlType.PYREADLINE:
+    if rl_type == RlType.PYREADLINE:
         return int(readline.rl.mode.l_buffer.point)
 
-    else:
-        return 0
+    return 0
 
 
 def rl_get_prompt() -> str:  # pragma: no cover
@@ -230,8 +229,7 @@ def rl_get_display_prompt() -> str:  # pragma: no cover
         else:
             prompt = encoded_prompt.decode(encoding='utf-8')
         return rl_unescape_prompt(prompt)
-    else:
-        return rl_get_prompt()
+    return rl_get_prompt()
 
 
 def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
@@ -278,8 +276,7 @@ def rl_escape_prompt(prompt: str) -> str:
 
         return result
 
-    else:
-        return prompt
+    return prompt
 
 
 def rl_unescape_prompt(prompt: str) -> str:
@@ -302,7 +299,7 @@ def rl_in_search_mode() -> bool:  # pragma: no cover
 
         readline_state = ctypes.c_int.in_dll(readline_lib, "rl_readline_state").value
         return bool(IN_SEARCH_MODE & readline_state)
-    elif rl_type == RlType.PYREADLINE:
+    if rl_type == RlType.PYREADLINE:
         from pyreadline3.modes.emacs import (  # type: ignore[import]
             EmacsMode,
         )
@@ -317,5 +314,4 @@ def rl_in_search_mode() -> bool:  # pragma: no cover
             readline.rl.mode._process_non_incremental_search_keyevent,
         )
         return readline.rl.mode.process_keyevent_queue[-1] in search_funcs
-    else:
-        return False
+    return False

@@ -195,8 +195,7 @@ def with_argument_list(
 
     if callable(func_arg):
         return arg_decorator(func_arg)
-    else:
-        return arg_decorator
+    return arg_decorator
 
 
 def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
@@ -245,7 +244,7 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
             break
 
         # Need to save required args so they can be prepended to the subcommand usage
-        elif action.required:
+        if action.required:
             req_args.append(action.dest)
 
 

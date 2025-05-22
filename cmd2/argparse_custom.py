@@ -477,7 +477,7 @@ def _action_set_choices_callable(self: argparse.Action, choices_callable: Choice
     if self.choices is not None:
         err_msg = "None of the following parameters can be used alongside a choices parameter:\nchoices_provider, completer"
         raise (TypeError(err_msg))
-    elif self.nargs == 0:
+    if self.nargs == 0:
         err_msg = (
             "None of the following parameters can be used on an action that takes no arguments:\nchoices_provider, completer"
         )
@@ -1155,24 +1155,22 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             (metavar,) = self._metavar_formatter(action, default)(1)
             return metavar
 
-        else:
-            parts: List[str] = []
+        parts: List[str] = []
 
-            # if the Optional doesn't take a value, format is:
-            #    -s, --long
-            if action.nargs == 0:
-                parts.extend(action.option_strings)
-                return ', '.join(parts)
+        # if the Optional doesn't take a value, format is:
+        #    -s, --long
+        if action.nargs == 0:
+            parts.extend(action.option_strings)
+            return ', '.join(parts)
 
-            # Begin cmd2 customization (less verbose)
-            # if the Optional takes a value, format is:
-            #    -s, --long ARGS
-            else:
-                default = self._get_default_metavar_for_optional(action)
-                args_string = self._format_args(action, default)
+        # Begin cmd2 customization (less verbose)
+        # if the Optional takes a value, format is:
+        #    -s, --long ARGS
+        default = self._get_default_metavar_for_optional(action)
+        args_string = self._format_args(action, default)
 
-                return ', '.join(action.option_strings) + ' ' + args_string
-            # End cmd2 customization
+        return ', '.join(action.option_strings) + ' ' + args_string
+        # End cmd2 customization
 
     def _determine_metavar(
         self,
@@ -1201,8 +1199,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         def format_tuple(tuple_size: int) -> Tuple[str, ...]:
             if isinstance(metavar, tuple):
                 return metavar
-            else:
-                return (metavar,) * tuple_size
+            return (metavar,) * tuple_size
 
         return format_tuple
 
@@ -1223,12 +1220,12 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
         # Make this output less verbose. Do not customize the output when metavar is a
         # tuple of strings. Allow argparse's formatter to handle that instead.
-        elif isinstance(metavar, str):
+        if isinstance(metavar, str):
             if action.nargs == ZERO_OR_MORE:
                 return '[%s [...]]' % metavar_formatter(1)
-            elif action.nargs == ONE_OR_MORE:
+            if action.nargs == ONE_OR_MORE:
                 return '%s [...]' % metavar_formatter(1)
-            elif isinstance(action.nargs, int) and action.nargs > 1:
+            if isinstance(action.nargs, int) and action.nargs > 1:
                 return '{}{{{}}}'.format('%s' % metavar_formatter(1), action.nargs)
 
         return super()._format_args(action, default_metavar)  # type: ignore[arg-type]

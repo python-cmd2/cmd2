@@ -162,25 +162,24 @@ class Cmd2TestCase(unittest.TestCase):
                 # no more slashes, add the rest of the string and bail
                 regex += re.escape(s[start:])
                 break
+            # there is a slash, add everything we have found so far
+            # add stuff before the first slash as plain text
+            regex += re.escape(s[start:first_slash_pos])
+            start = first_slash_pos + 1
+            # and go find the next one
+            (regex, second_slash_pos, start) = self._escaped_find(regex, s, start, True)
+            if second_slash_pos > 0:
+                # add everything between the slashes (but not the slashes)
+                # as a regular expression
+                regex += s[start:second_slash_pos]
+                # and change where we start looking for slashed on the
+                # turn through the loop
+                start = second_slash_pos + 1
             else:
-                # there is a slash, add everything we have found so far
-                # add stuff before the first slash as plain text
-                regex += re.escape(s[start:first_slash_pos])
-                start = first_slash_pos + 1
-                # and go find the next one
-                (regex, second_slash_pos, start) = self._escaped_find(regex, s, start, True)
-                if second_slash_pos > 0:
-                    # add everything between the slashes (but not the slashes)
-                    # as a regular expression
-                    regex += s[start:second_slash_pos]
-                    # and change where we start looking for slashed on the
-                    # turn through the loop
-                    start = second_slash_pos + 1
-                else:
-                    # No closing slash, we have to add the first slash,
-                    # and the rest of the text
-                    regex += re.escape(s[start - 1 :])
-                    break
+                # No closing slash, we have to add the first slash,
+                # and the rest of the text
+                regex += re.escape(s[start - 1 :])
+                break
         return regex
 
     @staticmethod
@@ -200,12 +199,12 @@ class Cmd2TestCase(unittest.TestCase):
             if pos == -1:
                 # no match, return to caller
                 break
-            elif pos == 0:
+            if pos == 0:
                 # slash at the beginning of the string, so it can't be
                 # escaped. We found it.
                 break
             # check if the slash is preceded by a backslash
-            elif s[pos - 1 : pos] == '\\':
+            if s[pos - 1 : pos] == '\\':
                 # it is.
                 if in_regex:
                     # add everything up to the backslash as a

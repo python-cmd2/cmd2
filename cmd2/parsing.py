@@ -636,8 +636,7 @@ class StatementParser:
 
         if preserve_quotes:
             return to_parse, to_parse.arg_list
-        else:
-            return to_parse, to_parse.argv[1:]
+        return to_parse, to_parse.argv[1:]
 
     def _expand(self, line: str) -> str:
         """Expand aliases and shortcuts"""

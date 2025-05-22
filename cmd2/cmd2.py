@@ -1728,12 +1728,11 @@ class Cmd(cmd.Cmd):
                     return complete_users()
 
                 # Otherwise expand the user dir
-                else:
-                    search_str = os.path.expanduser(search_str)
+                search_str = os.path.expanduser(search_str)
 
-                    # Get what we need to restore the original tilde path later
-                    orig_tilde_path = text[:sep_index]
-                    expanded_tilde_path = os.path.expanduser(orig_tilde_path)
+                # Get what we need to restore the original tilde path later
+                orig_tilde_path = text[:sep_index]
+                expanded_tilde_path = os.path.expanduser(orig_tilde_path)
 
             # If the search text does not have a directory, then use the cwd
             elif not os.path.dirname(text):
@@ -1804,10 +1803,9 @@ class Cmd(cmd.Cmd):
             return utils.get_exes_in_path(text)
 
         # Otherwise look for executables in the given path
-        else:
-            return self.path_complete(
-                text, line, begidx, endidx, path_filter=lambda path: os.path.isdir(path) or os.access(path, os.X_OK)
-            )
+        return self.path_complete(
+            text, line, begidx, endidx, path_filter=lambda path: os.path.isdir(path) or os.access(path, os.X_OK)
+        )
 
     def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: CompleterFunc) -> List[str]:
         """Called by complete() as the first tab completion function for all commands
@@ -1878,12 +1876,12 @@ class Cmd(cmd.Cmd):
             if do_shell_completion:
                 return self.shell_cmd_complete(text, line, begidx, endidx)
 
-            elif do_path_completion:
+            if do_path_completion:
                 return self.path_complete(text, line, begidx, endidx)
 
             # If there were redirection strings anywhere on the command line, then we
             # are no longer tab completing for the current command
-            elif has_redirection:
+            if has_redirection:
                 return []
 
         # Call the command's completer function
@@ -2771,9 +2769,8 @@ class Cmd(cmd.Cmd):
 
         if not statement.command:
             raise EmptyStatement
-        else:
-            # If necessary, update history with completed multiline command.
-            combine_rl_history(statement)
+        # If necessary, update history with completed multiline command.
+        combine_rl_history(statement)
 
         return statement
 
@@ -2940,10 +2937,9 @@ class Cmd(cmd.Cmd):
                 subproc_stdin.close()
                 new_stdout.close()
                 raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
-            else:
-                redir_saved_state.redirecting = True  # type: ignore[unreachable]
-                cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
-                sys.stdout = self.stdout = new_stdout
+            redir_saved_state.redirecting = True  # type: ignore[unreachable]
+            cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
+            sys.stdout = self.stdout = new_stdout
 
         elif statement.output:
             if statement.output_to:
@@ -3080,14 +3076,13 @@ class Cmd(cmd.Cmd):
                 self.history.append(statement)
 
             return self.do_shell(statement.command_and_args)
-        else:
-            err_msg = self.default_error.format(statement.command)
-            if self.suggest_similar_command and (suggested_command := self._suggest_similar_command(statement.command)):
-                err_msg += f"\n{self.default_suggestion_message.format(suggested_command)}"
+        err_msg = self.default_error.format(statement.command)
+        if self.suggest_similar_command and (suggested_command := self._suggest_similar_command(statement.command)):
+            err_msg += f"\n{self.default_suggestion_message.format(suggested_command)}"
 
-            # Set apply_style to False so styles for default_error and default_suggestion_message are not overridden
-            self.perror(err_msg, apply_style=False)
-            return None
+        # Set apply_style to False so styles for default_error and default_suggestion_message are not overridden
+        self.perror(err_msg, apply_style=False)
+        return None
 
     def _suggest_similar_command(self, command: str) -> Optional[str]:
         return suggest_similar(command, self.get_visible_commands())
@@ -5092,8 +5087,7 @@ class Cmd(cmd.Cmd):
         """Accessor to get the current script directory from the _script_dir LIFO queue."""
         if self._script_dir:
             return self._script_dir[-1]
-        else:
-            return None
+        return None
 
     run_script_description = (
         "Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
@@ -5748,5 +5742,4 @@ class Cmd(cmd.Cmd):
                     # Case 3: There exists exactly 1 CommandSet that is a sub-class match of the function's CommandSet
                     func_self = candidate_sets[0]
             return func_self
-        else:
-            return self
+        return self

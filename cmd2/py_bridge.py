@@ -78,8 +78,7 @@ class CommandResult(NamedTuple):
             return bool(self.data)
 
         # Otherwise check if stderr was filled out
-        else:
-            return not self.stderr
+        return not self.stderr
 
 
 class PyBridge:

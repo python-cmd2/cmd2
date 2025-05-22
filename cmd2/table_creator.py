@@ -98,8 +98,7 @@ class Column:
 
         if width is not None and width < 1:
             raise ValueError("Column width cannot be less than 1")
-        else:
-            self.width: int = width if width is not None else -1
+        self.width: int = width if width is not None else -1
 
         self.header_horiz_align = header_horiz_align
         self.header_vert_align = header_vert_align
@@ -1100,10 +1099,9 @@ class AlternatingTable(BorderedTable):
         """
         if self.row_num % 2 == 0 and self.even_bg is not None:
             return ansi.style(value, bg=self.even_bg)
-        elif self.row_num % 2 != 0 and self.odd_bg is not None:
+        if self.row_num % 2 != 0 and self.odd_bg is not None:
             return ansi.style(value, bg=self.odd_bg)
-        else:
-            return str(value)
+        return str(value)
 
     def generate_data_row(self, row_data: Sequence[Any]) -> str:
         """
