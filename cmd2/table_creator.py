@@ -21,7 +21,6 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
-    Union,
 )
 
 from wcwidth import (  # type: ignore[import]
@@ -69,7 +68,7 @@ class Column:
         data_horiz_align: HorizontalAlignment = HorizontalAlignment.LEFT,
         data_vert_align: VerticalAlignment = VerticalAlignment.TOP,
         style_data_text: bool = True,
-        max_data_lines: Union[int, float] = constants.INFINITY,
+        max_data_lines: float = constants.INFINITY,
     ) -> None:
         """
         Column initializer
@@ -156,7 +155,7 @@ class TableCreator:
                 col.width = max(1, ansi.widest_line(col.header))
 
     @staticmethod
-    def _wrap_long_word(word: str, max_width: int, max_lines: Union[int, float], is_last_word: bool) -> Tuple[str, int, int]:
+    def _wrap_long_word(word: str, max_width: int, max_lines: float, is_last_word: bool) -> Tuple[str, int, int]:
         """
         Used by _wrap_text() to wrap a long word over multiple lines
 
@@ -220,7 +219,7 @@ class TableCreator:
         return wrapped_buf.getvalue(), total_lines, cur_line_width
 
     @staticmethod
-    def _wrap_text(text: str, max_width: int, max_lines: Union[int, float]) -> str:
+    def _wrap_text(text: str, max_width: int, max_lines: float) -> str:
         """
         Wrap text into lines with a display width no longer than max_width. This function breaks words on whitespace
         boundaries. If a word is longer than the space remaining on a line, then it will start on a new line.

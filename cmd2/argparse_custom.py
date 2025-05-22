@@ -264,7 +264,7 @@ if TYPE_CHECKING:  # pragma: no cover
     )
 
 
-def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
+def generate_range_error(range_min: int, range_max: float) -> str:
     """Generate an error message when the the number of arguments provided is not within the expected range"""
     err_str = "expected "
 

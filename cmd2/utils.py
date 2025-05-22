@@ -709,7 +709,7 @@ class ContextFlag:
     def __enter__(self) -> None:
         self.__count += 1
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         self.__count -= 1
         if self.__count < 0:
             raise ValueError("count has gone below 0")
