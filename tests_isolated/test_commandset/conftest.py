@@ -191,7 +191,7 @@ def command_sets_app():
     return app
 
 
-@fixture()
+@fixture
 def command_sets_manual():
     app = WithCommandSets(auto_load_commands=False)
     return app
