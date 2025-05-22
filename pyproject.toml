@@ -195,7 +195,7 @@ select = [
     # "PERF", # Perflint (warn about performance issues)
     # "PGH", # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
     # "PIE", # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
-    # "PLC", # Pylint Conventions
+    "PLC", # Pylint Conventions
     "PLE", # Pylint Errors
     # "PLR", # Pylint Refactoring suggestions
     # "PLW", # Pylint Warnings
@@ -248,6 +248,10 @@ per-file-ignores."examples/override_parser.py" = [
 
 per-file-ignores."examples/scripts/*.py" = [
     "F821", # Undefined name `app`
+]
+
+per-file-ignores."examples/unicode_commands.py" = [
+    "PLC2401", # Allow non-ASCII characters in function names
 ]
 
 per-file-ignores."tests/pyscript/*.py" = [
