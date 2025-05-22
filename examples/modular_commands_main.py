@@ -18,7 +18,7 @@ from modular_commands.commandset_basic import (  # noqa: F401
 from modular_commands.commandset_complex import (  # noqa: F401
     CommandSetA,
 )
-from modular_commands.commandset_custominit import (  # noqa: F401
+from modular_commands.commandset_custominit import (
     CustomInitCommandSet,
 )
 

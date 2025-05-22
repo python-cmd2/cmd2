@@ -340,7 +340,7 @@ class StatementParser:
         valid = False
 
         if not isinstance(word, str):
-            return False, f'must be a string. Received {str(type(word))} instead'  # type: ignore[unreachable]
+            return False, f'must be a string. Received {type(word)!s} instead'  # type: ignore[unreachable]
 
         if not word:
             return False, 'cannot be an empty string'

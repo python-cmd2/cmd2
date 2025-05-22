@@ -944,7 +944,7 @@ class Cmd(cmd.Cmd):
 
             subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
             if not subcommand_valid:
-                raise CommandSetRegistrationError(f'Subcommand {str(subcommand_name)} is not valid: {errmsg}')
+                raise CommandSetRegistrationError(f'Subcommand {subcommand_name!s} is not valid: {errmsg}')
 
             command_tokens = full_command_name.split()
             command_name = command_tokens[0]
@@ -957,13 +957,11 @@ class Cmd(cmd.Cmd):
                 command_func = self.cmd_func(command_name)
 
             if command_func is None:
-                raise CommandSetRegistrationError(
-                    f"Could not find command '{command_name}' needed by subcommand: {str(method)}"
-                )
+                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method!s}")
             command_parser = self._command_parsers.get(command_func)
             if command_parser is None:
                 raise CommandSetRegistrationError(
-                    f"Could not find argparser for command '{command_name}' needed by subcommand: {str(method)}"
+                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method!s}"
                 )
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
@@ -1059,15 +1057,13 @@ class Cmd(cmd.Cmd):
             if command_func is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
-                raise CommandSetRegistrationError(
-                    f"Could not find command '{command_name}' needed by subcommand: {str(method)}"
-                )
+                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method!s}")
             command_parser = self._command_parsers.get(command_func)
             if command_parser is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
                 raise CommandSetRegistrationError(
-                    f"Could not find argparser for command '{command_name}' needed by subcommand: {str(method)}"
+                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method!s}"
                 )
 
             for action in command_parser._actions:
