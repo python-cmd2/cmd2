@@ -187,7 +187,7 @@ select = [
     "ICN",  # flake8-import-conventions (force idiomatic import conventions for certain modules typically imported as something else)
     # "INP", # flake8-no-pep420 (warn about files in the implicit namespace - i.e. force creation of __init__.py files to make packages)
     "INT", # flake8-gettext (warnings that only apply when you are internationalizing your strings)
-    # "ISC", # flake8-implicit-str-concat (warnings related to implicit vs explicit string concatenation)
+    "ISC", # flake8-implicit-str-concat (warnings related to implicit vs explicit string concatenation)
     # "LOG", # flake8-logging (warn about potential logger issues, but very pedantic)
     # "N", # pep8-naming (force idiomatic naming for classes, functions/methods, and variables/arguments)
     "NPY", # NumPy specific rules
