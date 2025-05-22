@@ -174,7 +174,7 @@ select = [
     "E",   # pycodestyle errors (warn about major stylistic issues like mixing spaces and tabs)
     # "EM", # flake8-errmsg (warn about exceptions that use string literals that aren't assigned to a variable first)
     # "ERA",  # eradicate (warn about commented-out code)
-    # "EXE", # flake8-executable (warn about files with a shebang present that aren't executable or vice versa)
+    "EXE",  # flake8-executable (warn about files with a shebang present that aren't executable or vice versa)
     "F",    # Pyflakes (a bunch of common warnings for things like unused imports, imports shadowed by variables, etc)
     "FA",   # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
     "FAST", # FastAPI specific warnings
