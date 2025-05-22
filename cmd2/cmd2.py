@@ -1944,8 +1944,7 @@ class Cmd(cmd.Cmd):
 
                     for cur_match in matches_to_display:
                         cur_length = ansi.style_aware_wcswidth(cur_match)
-                        if cur_length > longest_match_length:
-                            longest_match_length = cur_length
+                        longest_match_length = max(longest_match_length, cur_length)
                 else:
                     matches_to_display = matches
 
@@ -2106,12 +2105,11 @@ class Cmd(cmd.Cmd):
                         completer_func = self.completedefault  # type: ignore[assignment]
 
             # Not a recognized macro or command
+            # Check if this command should be run as a shell command
+            elif self.default_to_shell and command in utils.get_exes_in_path(command):
+                completer_func = self.path_complete
             else:
-                # Check if this command should be run as a shell command
-                if self.default_to_shell and command in utils.get_exes_in_path(command):
-                    completer_func = self.path_complete
-                else:
-                    completer_func = self.completedefault  # type: ignore[assignment]
+                completer_func = self.completedefault  # type: ignore[assignment]
 
         # Otherwise we are completing the command token or performing custom completion
         else:
@@ -3232,25 +3230,24 @@ class Cmd(cmd.Cmd):
                     sys.stdout.write(f'{prompt}{line}\n')
 
         # Otherwise read from self.stdin
+        elif self.stdin.isatty():
+            # on a tty, print the prompt first, then read the line
+            self.poutput(prompt, end='')
+            self.stdout.flush()
+            line = self.stdin.readline()
+            if len(line) == 0:
+                line = 'eof'
         else:
-            if self.stdin.isatty():
-                # on a tty, print the prompt first, then read the line
-                self.poutput(prompt, end='')
-                self.stdout.flush()
-                line = self.stdin.readline()
-                if len(line) == 0:
-                    line = 'eof'
+            # we are reading from a pipe, read the line to see if there is
+            # anything there, if so, then decide whether to print the
+            # prompt or not
+            line = self.stdin.readline()
+            if len(line):
+                # we read something, output the prompt and the something
+                if self.echo:
+                    self.poutput(f'{prompt}{line}')
             else:
-                # we are reading from a pipe, read the line to see if there is
-                # anything there, if so, then decide whether to print the
-                # prompt or not
-                line = self.stdin.readline()
-                if len(line):
-                    # we read something, output the prompt and the something
-                    if self.echo:
-                        self.poutput(f'{prompt}{line}')
-                else:
-                    line = 'eof'
+                line = 'eof'
 
         return line.rstrip('\r\n')
 
@@ -3660,8 +3657,7 @@ class Cmd(cmd.Cmd):
                     return
 
                 arg_nums.add(cur_num)
-                if cur_num > max_arg_num:
-                    max_arg_num = cur_num
+                max_arg_num = max(max_arg_num, cur_num)
 
                 arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=False))
 

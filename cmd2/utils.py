@@ -1168,11 +1168,10 @@ def categorize(func: Union[Callable[..., Any], Iterable[Callable[..., Any]]], ca
     if isinstance(func, Iterable):
         for item in func:
             setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
+    elif inspect.ismethod(func):
+        setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)  # type: ignore[attr-defined]
     else:
-        if inspect.ismethod(func):
-            setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)  # type: ignore[attr-defined]
-        else:
-            setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
+        setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
 
 
 def get_defining_class(meth: Callable[..., Any]) -> Optional[Type[Any]]:

@@ -400,13 +400,12 @@ class ChoicesCallable:
                 raise ValueError(
                     'With is_completer set to true, to_call must be either CompleterFunc, CompleterFuncWithTokens'
                 )
-        else:
-            if not isinstance(to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
-                # runtime checking of Protocols do not currently check the parameters of a function.
-                raise ValueError(
-                    'With is_completer set to false, to_call must be either: '
-                    'ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens'
-                )
+        elif not isinstance(to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
+            # runtime checking of Protocols do not currently check the parameters of a function.
+            raise ValueError(
+                'With is_completer set to false, to_call must be either: '
+                'ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens'
+            )
         self.to_call = to_call
 
     @property

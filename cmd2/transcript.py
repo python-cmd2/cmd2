@@ -204,28 +204,27 @@ class Cmd2TestCase(unittest.TestCase):
                 # slash at the beginning of the string, so it can't be
                 # escaped. We found it.
                 break
-            else:
-                # check if the slash is preceded by a backslash
-                if s[pos - 1 : pos] == '\\':
-                    # it is.
-                    if in_regex:
-                        # add everything up to the backslash as a
-                        # regular expression
-                        regex += s[start : pos - 1]
-                        # skip the backslash, and add the slash
-                        regex += s[pos]
-                    else:
-                        # add everything up to the backslash as escaped
-                        # plain text
-                        regex += re.escape(s[start : pos - 1])
-                        # and then add the slash as escaped
-                        # plain text
-                        regex += re.escape(s[pos])
-                    # update start to show we have handled everything
-                    # before it
-                    start = pos + 1
-                    # and continue to look
+            # check if the slash is preceded by a backslash
+            elif s[pos - 1 : pos] == '\\':
+                # it is.
+                if in_regex:
+                    # add everything up to the backslash as a
+                    # regular expression
+                    regex += s[start : pos - 1]
+                    # skip the backslash, and add the slash
+                    regex += s[pos]
                 else:
-                    # slash is not escaped, this is what we are looking for
-                    break
+                    # add everything up to the backslash as escaped
+                    # plain text
+                    regex += re.escape(s[start : pos - 1])
+                    # and then add the slash as escaped
+                    # plain text
+                    regex += re.escape(s[pos])
+                # update start to show we have handled everything
+                # before it
+                start = pos + 1
+                # and continue to look
+            else:
+                # slash is not escaped, this is what we are looking for
+                break
         return regex, pos, start
