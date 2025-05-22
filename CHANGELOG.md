@@ -3,7 +3,7 @@
 - Breaking Change
     - `cmd2` 2.6 supports Python 3.9+ (removed support for Python 3.8)
 - Enhancements
-    - Add testing support for Python 3.14
+    - Add support for Python 3.14
 
 ## 2.5.11 (January 25, 2025)
 
