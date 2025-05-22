@@ -2562,7 +2562,7 @@ class Cmd(cmd.Cmd):
 
                     redir_saved_state = self._redirect_output(statement)
 
-                timestart = datetime.datetime.now()
+                timestart = datetime.datetime.now(tz=datetime.timezone.utc)
 
                 # precommand hooks
                 precmd_data = plugin.PrecommandData(statement)
@@ -2588,7 +2588,7 @@ class Cmd(cmd.Cmd):
                 stop = self.postcmd(stop, statement)
 
                 if self.timing:
-                    self.pfeedback(f'Elapsed: {datetime.datetime.now() - timestart}')
+                    self.pfeedback(f'Elapsed: {datetime.datetime.now(tz=datetime.timezone.utc) - timestart}')
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
