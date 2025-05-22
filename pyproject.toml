@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python"
 authors = [{ name = "cmd2 Contributors" }]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 keywords = ["CLI", "cmd", "command", "interactive", "prompt", "Python"]
 license = { file = "LICENSE" }
 classifiers = [
@@ -19,12 +19,12 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
@@ -80,16 +80,16 @@ disallow_untyped_defs = true
 exclude = [
     "^.git/",
     "^.venv/",
-    "^build/",          # .build directory
-    "^docs/",           # docs directory
+    "^build/", # .build directory
+    "^docs/", # docs directory
     "^dist/",
-    "^examples/",       # examples directory
-    "^plugins/*",       # plugins directory
-    "^noxfile\\.py$",   # nox config file
-    "setup\\.py$",      # any files named setup.py
+    "^examples/", # examples directory
+    "^plugins/*", # plugins directory
+    "^noxfile\\.py$", # nox config file
+    "setup\\.py$", # any files named setup.py
     "^site/",
-    "^tasks\\.py$",     # tasks.py invoke config file
-    "^tests/",          # tests directory
+    "^tasks\\.py$", # tasks.py invoke config file
+    "^tests/", # tests directory
     "^tests_isolated/", # tests_isolated directory
 ]
 files = ['.']
@@ -155,75 +155,73 @@ output-format = "full"
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
 select = [
-    # https://beta.ruff.rs/docs/rules
-    #    "A", # flake8-builtins
-    #    "ANN",  # flake8-annotations
-    #    "ARG", # flake8-unused-arguments
-    "ASYNC", # flake8-async
-    #    "B", # flake8-bugbear
-    #    "BLE", # flake8-blind-except
-    #    "C4", # flake8-comprehensions
-    "C90", # McCabe cyclomatic complexity
-    #    "COM",  # flake8-commas
-    #    "D",    # pydocstyle
-    "DJ", # flake8-django
-    #    "DTZ", # flake8-datetimez
-    "E", # pycodestyle
-    #    "EM", # flake8-errmsg
-    #    "ERA",  # eradicate
-    #    "EXE", # flake8-executable
-    "F",  # Pyflakes
-    "FA", # flake8-future-annotations
-    #    "FBT",  # flake8-boolean-trap
-    "G", # flake8-logging-format
-    #    "I", # isort
-    "ICN", # flake8-import-conventions
-    #    "INP", # flake8-no-pep420
-    "INT", # flake8-gettext
-    #    "ISC", # flake8-implicit-str-concat
-    #    "N", # pep8-naming
-    "NPY", # NumPy-specific rules
-    "PD",  # pandas-vet
-    #    "PGH", # pygrep-hooks
-    #    "PIE", # flake8-pie
-    #    "PL", # Pylint
-    #    "PT", # flake8-pytest-style
-    #    "PTH",  # flake8-use-pathlib
-    #    "PYI", # flake8-pyi
-    #    "RET",  # flake8-return
-    "RSE", # flake8-raise
-    #    "Q",    # flake8-quotes
-    #    "RUF", # Ruff-specific rules
-    #    "S", # flake8-bandit
-    #    "SIM", # flake8-simplify
-    #    "SLF", # flake8-self
-    #    "T10", # flake8-debugger
-    #    "T20",  # flake8-print
-    #    "TCH",  # flake8-type-checking
-    #    "TD", # flake8-todos
-    #    "TID", # flake8-tidy-imports
-    #    "TRY",  # tryceratops
-    #    "UP", # pyupgrade
-    #    "W", # pycodestyle
-    #    "YTT", # flake8-2020
+    # https://docs.astral.sh/ruff/rules
+    # "A", # flake8-builtins (variables or arguments shadowing built-ins)
+    "AIR", # Airflow specific warnings
+    # "ANN",  # flake8-annotations (missing type annotations for arguments or return types)
+    # "ARG", # flake8-unused-arguments (functions or methods with arguments that are never used)
+    "ASYNC", # flake8-async (async await bugs)
+    # "B", # flake8-bugbear (various likely bugs and design issues)
+    # "BLE", # flake8-blind-except (force more specific exception types than just Exception)
+    # "C4", # flake8-comprehensions (warn about things that could be written as a comprehensions but aren't)
+    "C90", # McCabe cyclomatic complexity (warn about functions that are too complex)
+    # "COM",  # flake8-commas (forces commas at the end of every type of iterable/container
+    # "CPY", # flake8-copyright (warn about missing copyright notice at top of file - currently in preview)
+    # "D",    # pydocstyle (warn about things like missing docstrings)
+    # "DOC", # pydoclint (docstring warnings - currently in preview)
+    "DJ", # flake8-django (Django-specific warnings)
+    # "DTZ", # flake8-datetimez (warn about datetime calls where no timezone is specified)
+    "E", # pycodestyle errors (warn about major stylistic issues like mixing spaces and tabs)
+    # "EM", # flake8-errmsg (warn about exceptions that use string literals that aren't assigned to a variable first)
+    # "ERA",  # eradicate (warn about commented-out code)
+    # "EXE", # flake8-executable (warn about files with a shebang present that aren't executable or vice versa)
+    "F",  # Pyflakes (a bunch of common warnings for things like unused imports, imports shadowed by variables, etc)
+    "FA", # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
+    "FAST", # FastAPI specific warnings
+    # "FBT",  # flake8-boolean-trap (force all boolean arguments passed to functions to be keyword arguments and not positional)
+    # "FIX", # flake8-fixme (warn about lines containing FIXME, TODO, XXX, or HACK)
+    "FLY", # flynt (automatically convert from old school string .format to f-strings)
+    # "FURB", # refurb (A tool for refurbishing and modernizing Python codebases)
+    "G", # flake8-logging-format (warn about logging statements using outdated string formatting methods)
+    "I", # isort (sort all import statements in the order established by isort)
+    "ICN", # flake8-import-conventions (force idiomatic import conventions for certain modules typically imported as something else)
+    # "INP", # flake8-no-pep420 (warn about files in the implicit namespace - i.e. force creation of __init__.py files to make packages)
+    "INT", # flake8-gettext (warnings that only apply when you are internationalizing your strings)
+    # "ISC", # flake8-implicit-str-concat (warnings related to implicit vs explicit string concatenation)
+    # "LOG", # flake8-logging (warn about potential logger issues, but very pedantic)
+    # "N", # pep8-naming (force idiomatic naming for classes, functions/methods, and variables/arguments)
+    "NPY", # NumPy specific rules
+    "PD",  # pandas-vet (Pandas specific rules)
+    # "PERF", # Perflint (warn about performance issues)
+    # "PGH", # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
+    # "PIE", # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
+    # "PLC", # Pylint Conventions
+    "PLE", # Pylint Errors
+    # "PLR", # Pylint Refactoring suggestions
+    # "PLW", # Pylint Warnings
+    # "PT", # flake8-pytest-style (warnings about unit test best practices)
+    # "PTH",  # flake8-use-pathlib (force use of pathlib instead of os.path)
+    # "PYI", # flake8-pyi (warnings related to type hint best practices)
+    # "Q",    # flake8-quotes (force double quotes)
+    # "RET",  # flake8-return (various warnings related to implicit vs explicit return statements)
+    "RSE", # flake8-raise (warn about unnecessary parentheses on raised exceptions)
+    # "RUF", # Ruff-specific rules (miscellaneous grab bag of lint checks specific to Ruff)
+    # "S", # flake8-bandit (security oriented checks, but extremely pedantic - do not attempt to apply to unit test files)
+    # "SIM", # flake8-simplify (rules to attempt to simplify code)
+    # "SLF", # flake8-self (warn when protected members are accessed outside of a class or file)
+    # "SLOT", # flake8-slots (warn about subclasses that should define __slots__)
+    "T10", # flake8-debugger (check for pdb traces left in Python code)
+    # "T20",  # flake8-print (warn about use of `print` or `pprint` - force use of loggers)
+    # "TC",  # flake8-type-checking (type checking warnings)
+    # "TD", # flake8-todos (force all TODOs to include an author and issue link)
+    "TID", # flake8-tidy-imports (extra import rules to check)
+    # "TRY",  # tryceratops (warnings related to exceptions and try/except)
+    # "UP", # pyupgrade (A tool (and pre-commit hook) to automatically upgrade syntax for newer versions of the language)
+    "W", # pycodestyle warnings (warn about minor stylistic issues)
+    # "YTT", # flake8-2020 (checks for misuse of sys.version or sys.version_info)
 ]
 ignore = [
-    # `ruff rule S101` for a description of that rule
-    "B904",    # Within an `except` clause, raise exceptions with `raise ... from err` -- FIX ME
-    "B905",    # `zip()` without an explicit `strict=` parameter -- FIX ME
-    "E501",    # Line too long
-    "EM101",   # Exception must not use a string literal, assign to variable first
-    "EXE001",  # Shebang is present but file is not executable -- DO NOT FIX
-    "G004",    # Logging statement uses f-string
-    "PLC1901", # `{}` can be simplified to `{}` as an empty string is falsey
-    "PLW060",  # Using global for `{name}` but no assignment is done -- DO NOT FIX
-    "PLW2901", # PLW2901: Redefined loop variable -- FIX ME
-    "PT011",   # `pytest.raises(Exception)` is too broad, set the `match` parameter or use a more specific exception
-    "PT018",   # Assertion should be broken down into multiple parts
-    "S101",    # Use of `assert` detected -- DO NOT FIX
-    "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes -- FIX ME
-    "SLF001",  # Private member accessed: `_Iterator` -- FIX ME
-    "UP038",   # Use `X | Y` in `{}` call instead of `(X, Y)` -- DO NOT FIX
+    # `uv run ruff rule E501` for a description of that rule
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.

@@ -48,7 +48,7 @@ The tables below list all prerequisites along with the minimum required version 
 
 | Prerequisite                                        | Minimum Version |
 | --------------------------------------------------- | --------------- |
-| [python](https://www.python.org/downloads/)         | `3.8`           |
+| [python](https://www.python.org/downloads/)         | `3.9`           |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.8.2`         |
 | [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.2.12`        |
 

@@ -1,3 +1,10 @@
+## 2.6.0 (May TBD, 2025)
+
+- Breaking Change
+    - `cmd2` 2.6 supports Python 3.9+ (removed support for Python 3.8)
+- Enhancements
+    - Add support for Python 3.14
+
 ## 2.5.11 (January 25, 2025)
 
 - Bug Fixes
@@ -67,7 +74,8 @@
     - Multiline commands are no longer fragmented in up-arrow history.
     - Fixed bug where `async_alert()` overwrites readline's incremental and non-incremental search prompts.
         - This fix introduces behavior where an updated prompt won't display after an aborted search
-          until a user presses Enter. See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
+          until a user presses Enter.
+          See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
           example for how to handle this case using `Cmd.need_prompt_refresh()` and `Cmd.async_refresh_prompt()`.
 - Enhancements
     - Removed dependency on `attrs` and replaced with [dataclasses](https://docs.python.org/3/library/dataclasses.html)
@@ -263,7 +271,8 @@
       and just opens an interactive Python shell.
     - Changed default behavior of `runcmds_plus_hooks()` to not stop when Ctrl-C is pressed and instead
       run the next command in its list.
-    - Removed `cmd2.Cmd.quit_on_sigint` flag, which when `True`, quit the application when Ctrl-C was pressed at the prompt.
+    - Removed `cmd2.Cmd.quit_on_sigint` flag, which when `True`, quit the application when Ctrl-C was pressed at the
+      prompt.
     - The history bug fix resulted in structure changes to the classes in `cmd2.history`. Therefore, persistent history
       files created with versions older than 2.0.0 are not compatible.
 - Enhancements
@@ -496,7 +505,8 @@
 - Enhancements
     - The documentation at [cmd2.rftd.io](https://cmd2.readthedocs.io) received a major overhaul
 - Other
-    - Moved [categorize](https://cmd2.readthedocs.io/en/latest/api/utils.html#miscellaneous) utility function from **decorators** module to **utils** module
+    - Moved [categorize](https://cmd2.readthedocs.io/en/latest/api/utils.html#miscellaneous) utility function from \*
+      \*decorators** module to **utils\*\* module
 - Notes
     - Now that the 1.0 release is out, `cmd2` intends to follow [Semantic Versioning](https://semver.org)
 
@@ -640,7 +650,8 @@
 ## 0.9.19 (October 14, 2019)
 
 - Bug Fixes
-    - Fixed `ValueError` exception which could occur when an old format persistent history file is loaded with new `cmd2`
+    - Fixed `ValueError` exception which could occur when an old format persistent history file is loaded with new
+      `cmd2`
 - Enhancements
     - Improved displaying multiline CompletionErrors by indenting all lines
 
@@ -650,7 +661,8 @@
     - Fixed bug introduced in 0.9.17 where help functions for hidden and disabled commands were not being filtered
       out as help topics
 - Enhancements
-    - `AutoCompleter` now handles argparse's mutually exclusive groups. It will not tab complete flag names or positionals
+    - `AutoCompleter` now handles argparse's mutually exclusive groups. It will not tab complete flag names or
+      positionals
       for already completed groups. It also will print an error if you try tab completing a flag's value if the flag
       belongs to a completed group.
     - `AutoCompleter` now uses the passed-in parser's help formatter to generate hint text. This gives help and
@@ -699,7 +711,8 @@
     - Fixed issue where completer function of disabled command would still run
 - Enhancements
     - Greatly simplified using argparse-based tab completion. The new interface is a complete overhaul that breaks
-      the previous way of specifying completion and choices functions. See header of [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
+      the previous way of specifying completion and choices functions. See header
+      of [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
       for more information.
     - Enabled tab completion on multiline commands
 - **Renamed Commands Notice**
@@ -711,8 +724,10 @@
         - Lots of end users were confused particularly about what exactly `load` should be loading
 - Breaking Changes
     - Restored `cmd2.Cmd.statement_parser` to be a public attribute (no underscore)
-        - Since it can be useful for creating [post-parsing hooks](https://cmd2.readthedocs.io/en/latest/features/hooks.html#postparsing-hooks)
-    - Completely overhauled the interface for adding tab completion to argparse arguments. See enhancements for more details.
+        - Since it can be useful for
+          creating [post-parsing hooks](https://cmd2.readthedocs.io/en/latest/features/hooks.html#postparsing-hooks)
+    - Completely overhauled the interface for adding tab completion to argparse arguments. See enhancements for more
+      details.
     - `ACArgumentParser` is now called `Cmd2ArgumentParser`
     - Moved `basic_complete` to utils.py
     - Made optional arguments on the following completer methods keyword-only:
@@ -742,7 +757,8 @@
       to determine if ANSI escape sequences should be stripped when not writing to a tty. See documentation for more
       information on the `allow_ansi` setting.
 - Breaking Changes
-    - Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019 and is no longer supported by `cmd2`
+    - Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019 and is no longer
+      supported by `cmd2`
         - If you need to use Python 3.4, you should pin your requirements to use `cmd2` 0.9.13
     - Made lots of changes to minimize the public API of the `cmd2.Cmd` class
         - Attributes and methods we do not intend to be public now all begin with an underscore
@@ -752,7 +768,9 @@
         - `pexcept` - print Exception message to sys.stderr. If debug is true, print exception traceback if one exists
     - Signature of `poutput` and `perror` significantly changed
         - Removed color parameters `color`, `err_color`, and `war_color` from `poutput` and `perror`
-            - See the docstrings of these methods or the [cmd2 docs](https://cmd2.readthedocs.io/en/latest/features/generating_output.html) for more info on applying styles to output messages
+            - See the docstrings of these methods or
+              the [cmd2 docs](https://cmd2.readthedocs.io/en/latest/features/generating_output.html) for more info on
+              applying styles to output messages
         - `end` argument is now keyword-only and cannot be specified positionally
         - `traceback_war` no longer exists as an argument since it isn't needed now that `perror` and `pexcept` exist
     - Moved `cmd2.Cmd.colors` to ansi.py and renamed it to `allow_ansi`. This is now an application-wide setting.
@@ -832,7 +850,8 @@
 - Bug Fixes
     - Fixed a bug in how redirection and piping worked inside `py` or `pyscript` commands
     - Fixed bug in `async_alert` where it didn't account for prompts that contained newline characters
-    - Fixed path completion case when CWD is just a slash. Relative path matches were incorrectly prepended with a slash.
+    - Fixed path completion case when CWD is just a slash. Relative path matches were incorrectly prepended with a
+      slash.
 - Enhancements
     - Added ability to include command name placeholders in the message printed when trying to run a disabled command.
         - See docstring for `disable_command()` or `disable_category()` for more details.
@@ -850,7 +869,8 @@
     - The following commands now write to stderr instead of stdout when printing an error. This will make catching
       errors easier in pyscript.
       _ `do_help()` - when no help information can be found
-      _ `default()` - in all cases since this is called when an invalid command name is run \* `_report_disabled_command_usage()` - in all cases since this is called when a disabled command is run
+      _ `default()` - in all cases since this is called when an invalid command name is run \*
+      `_report_disabled_command_usage()` - in all cases since this is called when a disabled command is run
     - Removed \*\*\* from beginning of error messages printed by `do_help()` and `default()`
     - Significantly refactored `cmd.Cmd` class so that all class attributes got converted to instance attributes, also:
         - Added `allow_redirection`, `terminators`, `multiline_commands`, and `shortcuts` as optional arguments
@@ -980,7 +1000,8 @@
     - The **set** command now tab completes settable parameter names
     - Added `async_alert`, `async_update_prompt`, and `set_window_title` functions
         - These allow you to provide feedback to the user in an asynchronous fashion, meaning alerts can
-          display when the user is still entering text at the prompt. See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
+          display when the user is still entering text at the prompt.
+          See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
           for an example.
     - Cross-platform colored output support
         - `colorama` gets initialized properly in `Cmd.__init()`
@@ -996,7 +1017,8 @@
     - Deprecated the built-in `cmd2` support for colors including `Cmd.colorize()` and `Cmd._colorcodes`
 - Deletions (potentially breaking changes)
     - The `preparse`, `postparsing_precmd`, and `postparsing_postcmd` methods _deprecated_ in the previous release
-      have been deleted \* The new application lifecycle hook system allows for registration of callbacks to be called at various points
+      have been deleted \* The new application lifecycle hook system allows for registration of callbacks to be called
+      at various points
       in the lifecycle and is more powerful and flexible than the previous system
     - `alias` is now a command with subcommands to create, list, and delete aliases. Therefore its syntax
       has changed. All current alias commands in startup scripts or transcripts will break with this release.
@@ -1012,7 +1034,8 @@
       framework, see `docs/hooks.rst` for details.
     - New dependency on `attrs` third party module
     - Added `matches_sorted` member to support custom sorting of tab completion matches
-    - Added [tab_autocomp_dynamic.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocomp_dynamic.py) example
+    - Added [tab_autocomp_dynamic.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocomp_dynamic.py)
+      example
         - Demonstrates updating the argparse object during init instead of during class construction
 - Deprecations
     - Deprecated the following hook methods, see `hooks.rst` for full details:
@@ -1051,8 +1074,10 @@
     - Added `chop` argument to `cmd2.Cmd.ppaged()` method for displaying output using a pager
         - If `chop` is `False`, then `self.pager` is used as the pager
         - Otherwise `self.pager_chop` is used as the pager
-    - Greatly improved the [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py) example
-        - Now uses the new [tableformatter](https://github.com/python-tableformatter/tableformatter) module which looks better than `tabulate`
+    - Greatly improved the [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py)
+      example
+        - Now uses the new [tableformatter](https://github.com/python-tableformatter/tableformatter) module which looks
+          better than `tabulate`
 - Deprecations
     - The `CmdResult` helper class is _deprecated_ and replaced by the improved `CommandResult` class
         - `CommandResult` has the following attributes: **stdout**, **stderr**, and **data**
@@ -1075,32 +1100,46 @@
 ## 0.9.0 (May 28, 2018)
 
 - Bug Fixes
-    - If self.default_to_shell is true, then redirection and piping are now properly passed to the shell. Previously it was truncated.
+    - If self.default_to_shell is true, then redirection and piping are now properly passed to the shell. Previously it
+      was truncated.
     - Submenus now call all hooks, it used to just call precmd and postcmd.
 - Enhancements
     - Automatic completion of `argparse` arguments via `cmd2.argparse_completer.AutoCompleter`
-        - See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for a demonstration of how to use this feature
+        - See
+          the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py)
+          example for a demonstration of how to use this feature
     - `cmd2` no longer depends on the `six` module
     - `cmd2` is now a multi-file Python package instead of a single-file module
     - New pyscript approach that provides a pythonic interface to commands in the cmd2 application.
     - Switch command parsing from pyparsing to custom code which utilizes shlex.
-        - The object passed to do*\* methods has changed. It no longer is the pyparsing object, it's a new Statement object, which is a subclass of `str`. The statement object has many attributes which give you access to various components of the parsed input. If you were using anything but the string in your do*\* methods, this change will require you to update your code.
+        - The object passed to do*\* methods has changed. It no longer is the pyparsing object, it's a new Statement
+          object, which is a subclass of `str`. The statement object has many attributes which give you access to
+          various components of the parsed input. If you were using anything but the string in your do*\* methods, this
+          change will require you to update your code.
         - `commentGrammars` is no longer supported or available. Comments are C-style or python style.
         - Input redirection no longer supported. Use the load command instead.
         - `multilineCommand` attribute is `now multiline_command`
-        - `identchars` is now ignored. The standardlibrary cmd uses those characters to split the first "word" of the input, but cmd2 hasn't used those for a while, and the new parsing logic parses on whitespace, which has the added benefit of full unicode support, unlike cmd or prior versions of cmd2.
-        - `set_posix_shlex` function and `POSIX_SHLEX` variable have been removed. Parsing behavior is now always the more forgiving `posix=false`.
-        - `set_strip_quotes` function and `STRIP_QUOTES_FOR_NON_POSIX` have been removed. Quotes are stripped from arguments when presented as a list (a la `sys.argv`), and present when arguments are presented as a string (like the string passed to do\_\*).
+        - `identchars` is now ignored. The standardlibrary cmd uses those characters to split the first "word" of the
+          input, but cmd2 hasn't used those for a while, and the new parsing logic parses on whitespace, which has the
+          added benefit of full unicode support, unlike cmd or prior versions of cmd2.
+        - `set_posix_shlex` function and `POSIX_SHLEX` variable have been removed. Parsing behavior is now always the
+          more forgiving `posix=false`.
+        - `set_strip_quotes` function and `STRIP_QUOTES_FOR_NON_POSIX` have been removed. Quotes are stripped from
+          arguments when presented as a list (a la `sys.argv`), and present when arguments are presented as a string (
+          like the string passed to do\_\*).
 - Changes
     - `strip_ansi()` and `strip_quotes()` functions have moved to new utils module
     - Several constants moved to new constants module
-    - Submenu support has been moved to a new [cmd2-submenu](https://github.com/python-cmd2/cmd2-submenu) plugin. If you use submenus, you will need to update your dependencies and modify your imports.
+    - Submenu support has been moved to a new [cmd2-submenu](https://github.com/python-cmd2/cmd2-submenu) plugin. If you
+      use submenus, you will need to update your dependencies and modify your imports.
 - Deletions (potentially breaking changes)
     - Deleted all `optparse` code which had previously been deprecated in release 0.8.0
         - The `options` decorator no longer exists
         - All `cmd2` code should be ported to use the new `argparse`-based decorators
-        - See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
-        - Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
+        - See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the
+          documentation for more information on these decorators
+        - Alternatively, see
+          the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
     - Deleted `cmd_with_subs_completer`, `get_subcommands`, and `get_subcommand_completer`
         - Replaced by default AutoCompleter implementation for all commands using argparse
     - Deleted support for old method of calling application commands with `cmd()` and `self`
@@ -1117,7 +1156,8 @@
 - Bug Fixes
     - Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing
     - Fixed issue where completion display function was overwritten when a submenu quits
-    - Fixed `AttributeError` on Windows when running a `select` command cause by **pyreadline** not implementing `remove_history_item`
+    - Fixed `AttributeError` on Windows when running a `select` command cause by **pyreadline** not implementing
+      `remove_history_item`
 - Enhancements
     - Added warning about **libedit** variant of **readline** not being supported on macOS
     - Added tab completion of alias names in value field of **alias** command
@@ -1129,14 +1169,18 @@
 
 - Bug Fixes
 
-    - Fixed a bug with all argument decorators where the wrapped function wasn't returning a value and thus couldn't cause the cmd2 app to quit
+    - Fixed a bug with all argument decorators where the wrapped function wasn't returning a value and thus couldn't
+      cause the cmd2 app to quit
 
 - Enhancements
 
     - Added support for verbose help with -v where it lists a brief summary of what each command does
     - Added support for categorizing commands into groups within the help menu
-        - See the [Grouping Commands](http://cmd2.readthedocs.io/en/latest/argument_processing.html?highlight=verbose#grouping-commands) section of the docs for more info
-        - See [help_categories.py](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py) for an example
+        - See
+          the [Grouping Commands](http://cmd2.readthedocs.io/en/latest/argument_processing.html?highlight=verbose#grouping-commands)
+          section of the docs for more info
+        - See [help_categories.py](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py) for an
+          example
     - Tab completion of paths now supports ~user user path expansion
     - Simplified implementation of various tab completion functions so they no longer require `ctypes`
     - Expanded documentation of `display_matches` list to clarify its purpose. See cmd2.py for this documentation.
@@ -1165,20 +1209,26 @@
     - Tab completion has been overhauled and now supports completion of strings with quotes and spaces.
     - Tab completion will automatically add an opening quote if a string with a space is completed.
     - Added `delimiter_complete` function for tab completing delimited strings
-    - Added more control over tab completion behavior including the following flags. The use of these flags is documented in cmd2.py
+    - Added more control over tab completion behavior including the following flags. The use of these flags is
+      documented in cmd2.py
         - `allow_appended_space`
         - `allow_closing_quote`
-    - Due to the tab completion changes, non-Windows platforms now depend on [wcwidth](https://pypi.python.org/pypi/wcwidth).
+    - Due to the tab completion changes, non-Windows platforms now depend
+      on [wcwidth](https://pypi.python.org/pypi/wcwidth).
     - An alias name can now match a command name.
     - An alias can now resolve to another alias.
 
 - Attribute Changes (Breaks backward compatibility)
-    - `exclude_from_help` is now called `hidden_commands` since these commands are hidden from things other than help, including tab completion
-        - This list also no longer takes the function names of commands (`do_history`), but instead uses the command names themselves (`history`)
+    - `exclude_from_help` is now called `hidden_commands` since these commands are hidden from things other than help,
+      including tab completion
+        - This list also no longer takes the function names of commands (`do_history`), but instead uses the command
+          names themselves (`history`)
     - `excludeFromHistory` is now called `exclude_from_history`
-    - `cmd_with_subs_completer()` no longer takes an argument called `base`. Adding tab completion to subcommands has been simplified to declaring it in the
+    - `cmd_with_subs_completer()` no longer takes an argument called `base`. Adding tab completion to subcommands has
+      been simplified to declaring it in the
       subcommand parser's default settings. This easily allows arbitrary completers like path_complete to be used.
-      See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use
+      See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of
+      how to use
       tab completion in subcommands. In addition, the docstring for `cmd_with_subs_completer()` offers more details.
 
 ## 0.8.2 (March 21, 2018)
@@ -1189,12 +1239,15 @@
     - Fixed a bug where the `AddSubmenu` decorator didn't work with a default value for `shared_attributes`
     - Added a check to `ppaged()` to only use a pager when running in a real fully functional terminal
 - Enhancements
-    - Added [quit_on_sigint](http://cmd2.readthedocs.io/en/latest/settingchanges.html#quit-on-sigint) attribute to enable canceling current line instead of quitting when Ctrl+C is typed
+    - Added [quit_on_sigint](http://cmd2.readthedocs.io/en/latest/settingchanges.html#quit-on-sigint) attribute to
+      enable canceling current line instead of quitting when Ctrl+C is typed
     - Added possibility of having readline history preservation in a SubMenu
-    - Added [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py) example to demonstrate how to display tabular data
+    - Added [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py) example to
+      demonstrate how to display tabular data
     - Added command aliasing with `alias` and `unalias` commands
     - Added the ability to load an initialization script at startup
-        - See [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py) for an example
+        - See [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py) for an
+          example
     - Added a default SIGINT handler which terminates any open pipe subprocesses and re-raises a KeyboardInterrupt
     - For macOS, will load the `gnureadline` module if available and `readline` if not
 
@@ -1207,10 +1260,14 @@
     - Fixed outdated [remove_unused.py](https://github.com/python-cmd2/cmd2/blob/master/examples/remove_unused.py)
 - Enhancements
     - Added support for sub-menus.
-        - See [submenus.py](https://github.com/python-cmd2/cmd2/blob/master/examples/submenus.py) for an example of how to use it
+        - See [submenus.py](https://github.com/python-cmd2/cmd2/blob/master/examples/submenus.py) for an example of how
+          to use it
     - Added option for persistent readline history
-        - See [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/master/examples/persistent_history.py) for an example
-        - See the [Searchable command history](http://cmd2.readthedocs.io/en/latest/freefeatures.html#searchable-command-history) section of the documentation for more info
+        - See [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/master/examples/persistent_history.py)
+          for an example
+        - See
+          the [Searchable command history](http://cmd2.readthedocs.io/en/latest/freefeatures.html#searchable-command-history)
+          section of the documentation for more info
     - Improved PyPI packaging by including unit tests and examples in the tarball
     - Improved documentation to make it more obvious that **poutput()** should be used instead of **print()**
     - `exclude_from_help` and `excludeFromHistory` are now instance instead of class attributes
@@ -1237,11 +1294,15 @@
             - **do\_\*** commands get a single argument which is the output of argparse.parse_args()
         - **with_argparser_and_unknown_args** decorator for argparse-based argument parsing, but allows unknown args
             - **do\_\*** commands get two arguments, the output of argparse.parse_known_args()
-    - See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
-        - Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
+    - See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the
+      documentation for more information on these decorators
+        - Alternatively, see
+          the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
           and [arg_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) examples
-    - Added support for Argparse subcommands when using the **with_argument_parser** or **with_argparser_and_unknown_args** decorators
-        - See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use subcommands
+    - Added support for Argparse subcommands when using the **with_argument_parser** or \*
+      \*with_argparser_and_unknown_args\*\* decorators
+        - See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example
+          of how to use subcommands
         - Tab completion of subcommand names is automatically supported
     - The **\_\_relative_load** command is now hidden from the help menu by default
         - This command is not intended to be called from the command line, only from within scripts
@@ -1250,12 +1311,14 @@
     - The **history** command can now automatically generate a transcript file for regression testing
         - This makes creating regression tests for your `cmd2` application trivial
 - Commands Removed
-    - The **cmdenvironment** has been removed and its functionality incorporated into the **-a/--all** argument to **set**
+    - The **cmdenvironment** has been removed and its functionality incorporated into the **-a/--all** argument to **set
+      **
     - The **show** command has been removed. Its functionality has always existing within **set** and continues to do so
     - The **save** command has been removed. The capability to save commands is now part of the **history** command.
     - The **run** command has been removed. The capability to run prior commands is now part of the **history** command.
 - Other changes
-    - The **edit** command no longer allows you to edit prior commands. The capability to edit prior commands is now part of the **history** command. The **edit** command still allows you to edit arbitrary files.
+    - The **edit** command no longer allows you to edit prior commands. The capability to edit prior commands is now
+      part of the **history** command. The **edit** command still allows you to edit arbitrary files.
     - the **autorun_on_edit** setting has been removed.
     - For Python 3.4 and earlier, `cmd2` now has an additional dependency on the `contextlib2` module
 - Deprecations
@@ -1362,7 +1425,8 @@
     - Improved tab completion of file system paths, command names, and shell commands
         - Thanks to Kevin Van Brunt for all of the help with debugging and testing this
     - Changed default value of USE_ARG_LIST to True - this affects the beavhior of all **@options** commands
-        - **WARNING**: This breaks backwards compatibility, to restore backwards compatibility, add this to the \***\*init**()\*\* method in your custom class derived from cmd2.Cmd:
+        - **WARNING**: This breaks backwards compatibility, to restore backwards compatibility, add this to the \*\*
+          \*\*init\*\*()\*\* method in your custom class derived from cmd2.Cmd:
             - cmd2.set_use_arg_list(False)
         - This change improves argument parsing for all new applications
     - Refactored code to encapsulate most of the pyparsing logic into a ParserManager class
@@ -1412,11 +1476,13 @@
 
 ## 0.6.6.1 (August 14, 2013)
 
-- No changes to code trunk. Generated sdist from Python 2.7 to avoid 2to3 changes being applied to source. (Issue https://bitbucket.org/catherinedevlin/cmd2/issue/6/packaging-bug)
+- No changes to code trunk. Generated sdist from Python 2.7 to avoid 2to3 changes being applied to source. (
+  Issue https://bitbucket.org/catherinedevlin/cmd2/issue/6/packaging-bug)
 
 ## 0.6.6 (August 6, 2013)
 
-- Added fix by bitbucket.org/desaintmartin to silence the editor check. bitbucket.org/catherinedevlin/cmd2/issue/1/silent-editor-check
+- Added fix by bitbucket.org/desaintmartin to silence the editor check.
+  bitbucket.org/catherinedevlin/cmd2/issue/1/silent-editor-check
 
 ## 0.6.5.1 (March 18, 2013)
 
