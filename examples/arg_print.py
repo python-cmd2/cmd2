@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """A simple example demonstrating the following:
     1) How arguments and options get parsed and passed to commands
     2) How to change what syntax gets parsed as a comment and stripped from the arguments
@@ -24,20 +23,20 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
 
     def do_aprint(self, statement):
         """Print the argument string this basic command is called with."""
-        self.poutput('aprint was called with argument: {!r}'.format(statement))
-        self.poutput('statement.raw = {!r}'.format(statement.raw))
-        self.poutput('statement.argv = {!r}'.format(statement.argv))
-        self.poutput('statement.command = {!r}'.format(statement.command))
+        self.poutput(f'aprint was called with argument: {statement!r}')
+        self.poutput(f'statement.raw = {statement.raw!r}')
+        self.poutput(f'statement.argv = {statement.argv!r}')
+        self.poutput(f'statement.command = {statement.command!r}')
 
     @cmd2.with_argument_list
     def do_lprint(self, arglist):
         """Print the argument list this basic command is called with."""
-        self.poutput('lprint was called with the following list of arguments: {!r}'.format(arglist))
+        self.poutput(f'lprint was called with the following list of arguments: {arglist!r}')
 
     @cmd2.with_argument_list(preserve_quotes=True)
     def do_rprint(self, arglist):
         """Print the argument list this basic command is called with (with quotes preserved)."""
-        self.poutput('rprint was called with the following list of arguments: {!r}'.format(arglist))
+        self.poutput(f'rprint was called with the following list of arguments: {arglist!r}')
 
     oprint_parser = cmd2.Cmd2ArgumentParser()
     oprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
@@ -48,7 +47,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     @cmd2.with_argparser(oprint_parser)
     def do_oprint(self, args):
         """Print the options and argument list this options command was called with."""
-        self.poutput('oprint was called with the following\n\toptions: {!r}'.format(args))
+        self.poutput(f'oprint was called with the following\n\toptions: {args!r}')
 
     pprint_parser = cmd2.Cmd2ArgumentParser()
     pprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
@@ -58,7 +57,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     @cmd2.with_argparser(pprint_parser, with_unknown_args=True)
     def do_pprint(self, args, unknown):
         """Print the options and argument list this options command was called with."""
-        self.poutput('oprint was called with the following\n\toptions: {!r}\n\targuments: {}'.format(args, unknown))
+        self.poutput(f'oprint was called with the following\n\toptions: {args!r}\n\targuments: {unknown}')
 
 
 if __name__ == '__main__':

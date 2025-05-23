@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """This example demonstrates how to enable persistent readline history in your cmd2 application.
 
 This will allow end users of your cmd2-based application to use the arrow keys and Ctrl+r in a manner which persists

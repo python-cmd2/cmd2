@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """
 A sample cmd application that shows how to trivially migrate a cmd application to use cmd2.
 """

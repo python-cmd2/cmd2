@@ -1,4 +1,3 @@
-# coding=utf-8
 """Custom exceptions for cmd2"""
 
 from typing import (

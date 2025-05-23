@@ -1,4 +1,3 @@
-# coding=utf-8
 """
 Imports the proper Readline for the platform and provides utility functions for it
 """

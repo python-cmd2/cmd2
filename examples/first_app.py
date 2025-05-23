@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """
 A simple application using cmd2 which demonstrates 8 key features:
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# coding=utf-8
 """A simple example demonstrating the following:
 1) How to add a command
 2) How to add help for that command

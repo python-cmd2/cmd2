@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """
 A sample application for cmd2 demonstrating customized environment parameters
 """
@@ -22,7 +21,7 @@ class EnvironmentApp(cmd2.Cmd):
     def do_sunbathe(self, arg):
         """Attempt to sunbathe."""
         if self.degrees_c < 20:
-            result = "It's {} C - are you a penguin?".format(self.degrees_c)
+            result = f"It's {self.degrees_c} C - are you a penguin?"
         elif not self.sunny:
             result = 'Too dim.'
         else:

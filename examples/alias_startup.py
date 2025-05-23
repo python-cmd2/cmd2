@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """A simple example demonstrating the following:
 1) How to add custom command aliases using the alias command
 2) How to run an initialization script at startup

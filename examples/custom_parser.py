@@ -1,4 +1,3 @@
-# coding=utf-8
 """
 Defines the CustomParser used with override_parser.py example
 """
@@ -35,7 +34,7 @@ class CustomParser(Cmd2ArgumentParser):
 
         # Format errors with style_warning()
         formatted_message = ansi.style_warning(formatted_message)
-        self.exit(2, '{}\n\n'.format(formatted_message))
+        self.exit(2, f'{formatted_message}\n\n')
 
 
 # Now set the default parser for a cmd2 app
