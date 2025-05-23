@@ -1,5 +1,4 @@
 #
-# coding=utf-8
 
 import cmd2_myplugin
 

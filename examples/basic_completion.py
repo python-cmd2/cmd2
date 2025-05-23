@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """
 A simple example demonstrating how to enable tab completion by assigning a completer function to do_* commands.
 This also demonstrates capabilities of the following completer features included with cmd2:
@@ -14,9 +13,6 @@ argparse-based completion. For an example integrating tab completion with argpar
 """
 
 import functools
-from typing import (
-    List,
-)
 
 import cmd2
 
@@ -44,9 +40,9 @@ class BasicCompletion(cmd2.Cmd):
         -s, --sport [completes sports]
         -p, --path [completes local file system paths]
         """
-        self.poutput("Args: {}".format(statement.args))
+        self.poutput(f"Args: {statement.args}")
 
-    def complete_flag_based(self, text, line, begidx, endidx) -> List[str]:
+    def complete_flag_based(self, text, line, begidx, endidx) -> list[str]:
         """Completion function for do_flag_based"""
         flag_dict = {
             # Tab complete food items after -f and --food flags in command line
@@ -64,9 +60,9 @@ class BasicCompletion(cmd2.Cmd):
 
     def do_index_based(self, statement: cmd2.Statement):
         """Tab completes first 3 arguments using index_based_complete"""
-        self.poutput("Args: {}".format(statement.args))
+        self.poutput(f"Args: {statement.args}")
 
-    def complete_index_based(self, text, line, begidx, endidx) -> List[str]:
+    def complete_index_based(self, text, line, begidx, endidx) -> list[str]:
         """Completion function for do_index_based"""
         index_dict = {
             1: food_item_strs,  # Tab complete food items at index 1 in command line
@@ -78,16 +74,16 @@ class BasicCompletion(cmd2.Cmd):
 
     def do_delimiter_complete(self, statement: cmd2.Statement):
         """Tab completes files from a list using delimiter_complete"""
-        self.poutput("Args: {}".format(statement.args))
+        self.poutput(f"Args: {statement.args}")
 
     # Use a partialmethod to set arguments to delimiter_complete
     complete_delimiter_complete = functools.partialmethod(cmd2.Cmd.delimiter_complete, match_against=file_strs, delimiter='/')
 
     def do_raise_error(self, statement: cmd2.Statement):
         """Demonstrates effect of raising CompletionError"""
-        self.poutput("Args: {}".format(statement.args))
+        self.poutput(f"Args: {statement.args}")
 
-    def complete_raise_error(self, text, line, begidx, endidx) -> List[str]:
+    def complete_raise_error(self, text, line, begidx, endidx) -> list[str]:
         """
         CompletionErrors can be raised if an error occurs while tab completing.
 

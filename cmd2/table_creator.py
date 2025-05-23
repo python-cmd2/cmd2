@@ -1,4 +1,3 @@
-# coding=utf-8
 """
 cmd2 table creation API
 This API is built upon two core classes: Column and TableCreator
@@ -11,16 +10,13 @@ import io
 from collections import (
     deque,
 )
+from collections.abc import Sequence
 from enum import (
     Enum,
 )
 from typing import (
     Any,
-    Deque,
-    List,
     Optional,
-    Sequence,
-    Tuple,
 )
 
 from wcwidth import (  # type: ignore[import]
@@ -154,7 +150,7 @@ class TableCreator:
                 col.width = max(1, ansi.widest_line(col.header))
 
     @staticmethod
-    def _wrap_long_word(word: str, max_width: int, max_lines: float, is_last_word: bool) -> Tuple[str, int, int]:
+    def _wrap_long_word(word: str, max_width: int, max_lines: float, is_last_word: bool) -> tuple[str, int, int]:
         """
         Used by _wrap_text() to wrap a long word over multiple lines
 
@@ -380,7 +376,7 @@ class TableCreator:
 
         return wrapped_buf.getvalue()
 
-    def _generate_cell_lines(self, cell_data: Any, is_header: bool, col: Column, fill_char: str) -> Tuple[Deque[str], int]:
+    def _generate_cell_lines(self, cell_data: Any, is_header: bool, col: Column, fill_char: str) -> tuple[deque[str], int]:
         """
         Generate the lines of a table cell
 
@@ -452,7 +448,7 @@ class TableCreator:
 
             def __init__(self) -> None:
                 # Data in this cell split into individual lines
-                self.lines: Deque[str] = deque()
+                self.lines: deque[str] = deque()
 
                 # Display width of this cell
                 self.width = 0
@@ -652,7 +648,7 @@ class SimpleTable(TableCreator):
         inter_cell = self.apply_header_bg(self.column_spacing * SPACE)
 
         # Apply background color to header text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for col in self.cols:
             if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
@@ -692,7 +688,7 @@ class SimpleTable(TableCreator):
         inter_cell = self.apply_data_bg(self.column_spacing * SPACE)
 
         # Apply background color to data text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for index, col in enumerate(self.cols):
             if col.style_data_text:
                 to_display.append(self.apply_data_bg(row_data[index]))
@@ -947,7 +943,7 @@ class BorderedTable(TableCreator):
         post_line = self.apply_header_bg(self.padding * SPACE) + self.apply_border_color('║')
 
         # Apply background color to header text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for col in self.cols:
             if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
@@ -991,7 +987,7 @@ class BorderedTable(TableCreator):
         post_line = self.apply_data_bg(self.padding * SPACE) + self.apply_border_color('║')
 
         # Apply background color to data text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for index, col in enumerate(self.cols):
             if col.style_data_text:
                 to_display.append(self.apply_data_bg(row_data[index]))

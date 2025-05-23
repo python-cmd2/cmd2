@@ -1,4 +1,3 @@
-# coding=utf-8
 """
 This module provides basic ability to copy from and paste to the clipboard/pastebuffer.
 """

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """
 A sample application for cmd2 demonstrating how to use hooks.
 
@@ -10,9 +9,6 @@ follow a command without any intervening whitespace.
 """
 
 import re
-from typing import (
-    List,
-)
 
 import cmd2
 
@@ -102,7 +98,7 @@ class CmdLineApp(cmd2.Cmd):
         return data
 
     @cmd2.with_argument_list
-    def do_list(self, arglist: List[str]) -> None:
+    def do_list(self, arglist: list[str]) -> None:
         """Generate a list of 10 numbers."""
         if arglist:
             first = arglist[0]

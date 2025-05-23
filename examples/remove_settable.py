@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """
 A sample application for cmd2 demonstrating how to remove one of the built-in runtime settable parameters.
 """

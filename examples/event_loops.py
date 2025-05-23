@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """A sample application for integrating cmd2 with external event loops.
 
 This is an example of how to use cmd2 in a way so that cmd2 doesn't own the inner event loop of your application.

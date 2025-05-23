@@ -1,11 +1,10 @@
 #
-# coding=utf-8
 """An example cmd2 plugin"""
 
 import functools
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
-    Callable,
 )
 
 import cmd2

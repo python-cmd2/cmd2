@@ -1,4 +1,3 @@
-# coding=utf-8
 """
 Simple example demonstrating basic CommandSet usage.
 """

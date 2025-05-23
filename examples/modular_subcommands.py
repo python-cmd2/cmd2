@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# coding=utf-8
 """A simple example demonstrating modular subcommand loading through CommandSets
 
 In this example, there are loadable CommandSets defined. Each CommandSet has 1 subcommand defined that will be

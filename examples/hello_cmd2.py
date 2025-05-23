@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """
 This is intended to be a completely bare-bones cmd2 application suitable for rapid testing and debugging.
 """

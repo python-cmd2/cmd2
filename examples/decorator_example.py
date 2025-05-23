@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """A sample application showing how to use cmd2's argparse decorators to
 process command line arguments for your application.
 
@@ -12,9 +11,6 @@ verifying that the output produced matches the transcript.
 """
 
 import argparse
-from typing import (
-    List,
-)
 
 import cmd2
 
@@ -71,12 +67,12 @@ class CmdLineApp(cmd2.Cmd):
         # The Namespace always includes the Statement object created when parsing the command line
         statement = args.cmd2_statement.get()
 
-        self.poutput("The command line you ran was: {}".format(statement.command_and_args))
+        self.poutput(f"The command line you ran was: {statement.command_and_args}")
         self.poutput("It generated this tag:")
         self.poutput('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
 
     @cmd2.with_argument_list
-    def do_tagg(self, arglist: List[str]):
+    def do_tagg(self, arglist: list[str]):
         """version of creating an html tag using arglist instead of argparser"""
         if len(arglist) >= 2:
             tag = arglist[0]
