@@ -214,8 +214,7 @@ class Statement(str):  # type: ignore[override]
         """
         if self.command:
             rtn = [utils.strip_quotes(self.command)]
-            for cur_token in self.arg_list:
-                rtn.append(utils.strip_quotes(cur_token))
+            rtn.extend(utils.strip_quotes(cur_token) for cur_token in self.arg_list)
         else:
             rtn = []
 

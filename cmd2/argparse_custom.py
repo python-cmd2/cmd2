@@ -812,10 +812,7 @@ def _add_argument_wrapper(
         kwargs['nargs'] = nargs_adjusted
 
     # Extract registered custom keyword arguments
-    custom_attribs: dict[str, Any] = {}
-    for keyword, value in kwargs.items():
-        if keyword in CUSTOM_ACTION_ATTRIBS:
-            custom_attribs[keyword] = value
+    custom_attribs = {keyword: value for keyword, value in kwargs.items() if keyword in CUSTOM_ACTION_ATTRIBS}
     for keyword in custom_attribs:
         del kwargs[keyword]
 

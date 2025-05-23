@@ -21,6 +21,10 @@ format: ## Perform ruff formatting
 lint: ## Perform ruff linting
 	@uv run ruff check --fix
 
+.PHONY: typecheck
+typecheck: ## Perform type checking
+	@uv run mypy
+
 .PHONY: test
 test: ## Test the code with pytest.
 	@echo "🚀 Testing code: Running pytest"

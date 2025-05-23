@@ -190,9 +190,9 @@ select = [
     "ISC", # flake8-implicit-str-concat (warnings related to implicit vs explicit string concatenation)
     "LOG", # flake8-logging (warn about potential logger issues, but very pedantic)
     # "N", # pep8-naming (force idiomatic naming for classes, functions/methods, and variables/arguments)
-    "NPY", # NumPy specific rules
-    "PD",  # pandas-vet (Pandas specific rules)
-    # "PERF", # Perflint (warn about performance issues)
+    "NPY",  # NumPy specific rules
+    "PD",   # pandas-vet (Pandas specific rules)
+    "PERF", # Perflint (warn about performance issues)
     # "PGH", # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
     # "PIE", # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
     "PLC", # Pylint Conventions
