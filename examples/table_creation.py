@@ -74,7 +74,7 @@ def basic_tables():
     """Demonstrates basic examples of the table classes"""
 
     # Table data which demonstrates handling of wrapping and text styles
-    data_list: list[list[Any]] = list()
+    data_list: list[list[Any]] = []
     data_list.append(["Billy Smith", "123 Sesame St.\nFake Town, USA 33445", DollarFormatter(100333.03)])
     data_list.append(
         [
@@ -94,7 +94,7 @@ def basic_tables():
     data_list.append(["John Jones", "9235 Highway 32\n" + green("Greenville") + ", SC 29604", DollarFormatter(82987.71)])
 
     # Table Columns (width does not account for any borders or padding which may be added)
-    columns: list[Column] = list()
+    columns: list[Column] = []
     columns.append(Column("Name", width=20))
     columns.append(Column("Address", width=38))
     columns.append(
@@ -157,7 +157,7 @@ def nested_tables():
 
     # Define table which presents Author data fields vertically with no header.
     # This will be nested in the parent table's first column.
-    author_columns: list[Column] = list()
+    author_columns: list[Column] = []
     author_columns.append(Column("", width=14))
     author_columns.append(Column("", width=20))
 
@@ -172,7 +172,7 @@ def nested_tables():
 
     # Define AlternatingTable for books checked out by people in the first table.
     # This will be nested in the parent table's second column.
-    books_columns: list[Column] = list()
+    books_columns: list[Column] = []
     books_columns.append(Column(ansi.style("Title", bold=True), width=25))
     books_columns.append(
         Column(
@@ -194,7 +194,7 @@ def nested_tables():
 
     # Define BorderedTable for relatives of the author
     # This will be nested in the parent table's third column.
-    relative_columns: list[Column] = list()
+    relative_columns: list[Column] = []
     relative_columns.append(Column(ansi.style("Name", bold=True), width=25))
     relative_columns.append(Column(ansi.style("Relationship", bold=True), width=12))
 
@@ -218,7 +218,7 @@ def nested_tables():
     )
 
     # Define parent AlternatingTable which contains Author and Book tables
-    parent_tbl_columns: list[Column] = list()
+    parent_tbl_columns: list[Column] = []
 
     # All of the nested tables already have background colors. Set style_data_text
     # to False so the parent AlternatingTable does not apply background color to them.

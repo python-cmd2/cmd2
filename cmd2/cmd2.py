@@ -411,7 +411,7 @@ class Cmd(cmd.Cmd):
         self.max_completion_items = 50
 
         # A dictionary mapping settable names to their Settable instance
-        self._settables: dict[str, Settable] = dict()
+        self._settables: dict[str, Settable] = {}
         self._always_prefix_settables: bool = False
 
         # CommandSet containers
@@ -438,7 +438,7 @@ class Cmd(cmd.Cmd):
         self.exclude_from_history = ['eof', 'history']
 
         # Dictionary of macro names and their values
-        self.macros: dict[str, Macro] = dict()
+        self.macros: dict[str, Macro] = {}
 
         # Keeps track of typed command history in the Python shell
         self._py_history: list[str] = []
@@ -447,7 +447,7 @@ class Cmd(cmd.Cmd):
         self.py_bridge_name = 'app'
 
         # Defines app-specific variables/functions available in Python shells and pyscripts
-        self.py_locals: dict[str, Any] = dict()
+        self.py_locals: dict[str, Any] = {}
 
         # True if running inside a Python shell or pyscript, False otherwise
         self._in_py = False
@@ -546,7 +546,7 @@ class Cmd(cmd.Cmd):
         # Commands that have been disabled from use. This is to support commands that are only available
         # during specific states of the application. This dictionary's keys are the command names and its
         # values are DisabledCommand objects.
-        self.disabled_commands: dict[str, DisabledCommand] = dict()
+        self.disabled_commands: dict[str, DisabledCommand] = {}
 
         # If any command has been categorized, then all other commands that haven't been categorized
         # will display under this section in the help output.
@@ -2889,7 +2889,7 @@ class Cmd(cmd.Cmd):
             # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
             # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
             # processes close in the right order (most recent first).
-            kwargs: dict[str, Any] = dict()
+            kwargs: dict[str, Any] = {}
             if sys.platform == 'win32':
                 kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
             else:
@@ -4238,7 +4238,7 @@ class Cmd(cmd.Cmd):
         import signal
         import subprocess
 
-        kwargs: dict[str, Any] = dict()
+        kwargs: dict[str, Any] = {}
 
         # Set OS-specific parameters
         if sys.platform.startswith('win'):

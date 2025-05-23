@@ -163,7 +163,7 @@ select = [
     "ASYNC", # flake8-async (async await bugs)
     # "B", # flake8-bugbear (various likely bugs and design issues)
     # "BLE", # flake8-blind-except (force more specific exception types than just Exception)
-    # "C4", # flake8-comprehensions (warn about things that could be written as a comprehensions but aren't)
+    "C4",  # flake8-comprehensions (warn about things that could be written as a comprehensions but aren't)
     "C90", # McCabe cyclomatic complexity (warn about functions that are too complex)
     # "COM",  # flake8-commas (forces commas at the end of every type of iterable/container
     # "CPY", # flake8-copyright (warn about missing copyright notice at top of file - currently in preview)

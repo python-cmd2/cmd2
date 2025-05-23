@@ -1031,15 +1031,15 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
         # if usage is specified, use that
         if usage is not None:
-            usage %= dict(prog=self._prog)
+            usage %= {"prog": self._prog}
 
         # if no optionals or positionals are available, usage is just prog
         elif not actions:
-            usage = '%(prog)s' % dict(prog=self._prog)
+            usage = '%(prog)s' % {"prog": self._prog}
 
         # if optionals and positionals are available, calculate usage
         else:
-            prog = '%(prog)s' % dict(prog=self._prog)
+            prog = '%(prog)s' % {"prog": self._prog}
 
             # split optionals from positionals
             optionals = []

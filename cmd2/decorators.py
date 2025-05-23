@@ -437,7 +437,7 @@ def as_subcommand_to(
         setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
 
         # Keyword arguments for subparsers.add_parser()
-        add_parser_kwargs: dict[str, Any] = dict()
+        add_parser_kwargs: dict[str, Any] = {}
         if help is not None:
             add_parser_kwargs['help'] = help
         if aliases:

@@ -476,7 +476,7 @@ class TableCreator:
         total_lines = 0
 
         # Generate the cells for this row
-        cells = list()
+        cells = []
 
         for col_index, col in enumerate(self.cols):
             cell = Cell()

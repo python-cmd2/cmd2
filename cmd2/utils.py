@@ -757,7 +757,7 @@ def _remove_overridden_styles(styles_to_parse: list[str]) -> list[str]:
 
         def __init__(self) -> None:
             # Contains styles still in effect, keyed by their index in styles_to_parse
-            self.style_dict: dict[int, str] = dict()
+            self.style_dict: dict[int, str] = {}
 
             # Indexes into style_dict
             self.reset_all: Optional[int] = None
