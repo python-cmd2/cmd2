@@ -1261,7 +1261,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                                   behavior on this parser. If this is None or not present, then cmd2 will use
                                   argparse_completer.DEFAULT_AP_COMPLETER when tab completing this parser's arguments
         """
-        if sys.version_info[1] >= 14:
+        if sys.version_info >= (3, 14):
             # Python >= 3.14 so pass new arguments to parent argparse.ArgumentParser class
             super(Cmd2ArgumentParser, self).__init__(
                 prog=prog,
