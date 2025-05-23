@@ -115,7 +115,7 @@ class PyBridge:
             echo = self.cmd_echo
 
         # This will be used to capture _cmd2_app.stdout and sys.stdout
-        copy_cmd_stdout = StdSim(cast('Union[TextIO, StdSim]', self._cmd2_app.stdout), echo=echo)
+        copy_cmd_stdout = StdSim(cast(Union[TextIO, StdSim], self._cmd2_app.stdout), echo=echo)
 
         # Pause the storing of stdout until onecmd_plus_hooks enables it
         copy_cmd_stdout.pause_storage = True
@@ -127,9 +127,9 @@ class PyBridge:
 
         stop = False
         try:
-            self._cmd2_app.stdout = cast('TextIO', copy_cmd_stdout)
-            with redirect_stdout(cast('IO[str]', copy_cmd_stdout)):
-                with redirect_stderr(cast('IO[str]', copy_stderr)):
+            self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
+            with redirect_stdout(cast(IO[str], copy_cmd_stdout)):
+                with redirect_stderr(cast(IO[str], copy_stderr)):
                     stop = self._cmd2_app.onecmd_plus_hooks(
                         command,
                         add_to_history=self._add_to_history,
@@ -137,7 +137,7 @@ class PyBridge:
                     )
         finally:
             with self._cmd2_app.sigint_protection:
-                self._cmd2_app.stdout = cast('IO[str]', copy_cmd_stdout.inner_stream)
+                self._cmd2_app.stdout = cast(IO[str], copy_cmd_stdout.inner_stream)
                 self.stop = stop or self.stop
 
         # Save the result

@@ -159,7 +159,7 @@ class Settable:
                 return ['true', 'false']
 
             val_type = to_bool
-            choices_provider = cast('ChoicesProviderFunc', get_bool_choices)
+            choices_provider = cast(ChoicesProviderFunc, get_bool_choices)
 
         self.name = name
         self.val_type = val_type
@@ -1189,7 +1189,7 @@ def get_defining_class(meth: Callable[..., Any]) -> Optional[type[Any]]:
         cls = getattr(inspect.getmodule(meth), meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
         if isinstance(cls, type):
             return cls
-    return cast('type', getattr(meth, '__objclass__', None))  # handle special descriptor objects
+    return cast(type, getattr(meth, '__objclass__', None))  # handle special descriptor objects
 
 
 class CompletionMode(Enum):
