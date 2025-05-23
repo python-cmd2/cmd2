@@ -51,7 +51,7 @@ class Cmd2TestCase(unittest.TestCase):
 
             # Trap stdout
             self._orig_stdout = self.cmdapp.stdout
-            self.cmdapp.stdout = cast(TextIO, utils.StdSim(cast(TextIO, self.cmdapp.stdout)))
+            self.cmdapp.stdout = cast('TextIO', utils.StdSim(cast('TextIO', self.cmdapp.stdout)))
 
     def tearDown(self) -> None:
         if self.cmdapp:
@@ -66,7 +66,7 @@ class Cmd2TestCase(unittest.TestCase):
 
     def _fetchTranscripts(self) -> None:
         self.transcripts = {}
-        testfiles = cast(List[str], getattr(self.cmdapp, 'testfiles', []))
+        testfiles = cast('List[str]', getattr(self.cmdapp, 'testfiles', []))
         for fname in testfiles:
             tfile = open(fname)
             self.transcripts[fname] = iter(tfile.readlines())

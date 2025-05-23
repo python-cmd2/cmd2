@@ -106,7 +106,7 @@ def style_aware_wcswidth(text: str) -> int:
              then this function returns -1. Replace tabs with spaces before calling this.
     """
     # Strip ANSI style sequences since they cause wcswidth to return -1
-    return cast(int, wcswidth(strip_style(text)))
+    return cast('int', wcswidth(strip_style(text)))
 
 
 def widest_line(text: str) -> int:

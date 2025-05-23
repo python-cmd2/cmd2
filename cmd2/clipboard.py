@@ -13,7 +13,7 @@ def get_paste_buffer() -> str:
 
     :return: contents of the clipboard
     """
-    pb_str = typing.cast(str, pyperclip.paste())
+    pb_str = typing.cast("str", pyperclip.paste())
     return pb_str
 
 
