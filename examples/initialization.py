@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# coding=utf-8
 """A simple example cmd2 application demonstrating the following:
  1) Colorizing/stylizing output
  2) Using multiline commands

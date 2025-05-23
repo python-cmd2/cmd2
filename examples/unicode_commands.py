@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """A simple example demonstrating support for unicode command names."""
 
 import math
@@ -15,7 +16,7 @@ class UnicodeApp(cmd2.Cmd):
 
     def do_𝛑print(self, _):
         """This command prints 𝛑 to 5 decimal places."""
-        self.poutput(f"𝛑 = {math.pi:.6}")
+        self.poutput("𝛑 = {0:.6}".format(math.pi))
 
     def do_你好(self, arg):
         """This command says hello in Chinese (Mandarin)."""

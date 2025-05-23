@@ -1,4 +1,5 @@
 #
+# -*- coding: utf-8 -*-
 """Machinery for running and validating transcripts.
 
 If the user wants to run a transcript (see docs/transcript.rst),
@@ -11,11 +12,13 @@ class is used in cmd2.py::run_transcript_tests()
 
 import re
 import unittest
-from collections.abc import Iterator
 from typing import (
     TYPE_CHECKING,
+    Iterator,
+    List,
     Optional,
     TextIO,
+    Tuple,
     cast,
 )
 
@@ -63,7 +66,7 @@ class Cmd2TestCase(unittest.TestCase):
 
     def _fetchTranscripts(self) -> None:
         self.transcripts = {}
-        testfiles = cast('list[str]', getattr(self.cmdapp, 'testfiles', []))
+        testfiles = cast('List[str]', getattr(self.cmdapp, 'testfiles', []))
         for fname in testfiles:
             tfile = open(fname)
             self.transcripts[fname] = iter(tfile.readlines())
@@ -180,7 +183,7 @@ class Cmd2TestCase(unittest.TestCase):
         return regex
 
     @staticmethod
-    def _escaped_find(regex: str, s: str, start: int, in_regex: bool) -> tuple[str, int, int]:
+    def _escaped_find(regex: str, s: str, start: int, in_regex: bool) -> Tuple[str, int, int]:
         """Find the next slash in {s} after {start} that is not preceded by a backslash.
 
         If we find an escaped slash, add everything up to and including it to regex,

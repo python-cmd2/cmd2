@@ -1,3 +1,4 @@
+# coding=utf-8
 """Shared utility functions"""
 
 import argparse
@@ -12,7 +13,6 @@ import subprocess
 import sys
 import threading
 import unicodedata
-from collections.abc import Callable, Iterable
 from difflib import (
     SequenceMatcher,
 )
@@ -22,8 +22,13 @@ from enum import (
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
     Optional,
     TextIO,
+    Type,
     TypeVar,
     Union,
     cast,
@@ -115,7 +120,7 @@ class Settable:
     def __init__(
         self,
         name: str,
-        val_type: Union[type[Any], Callable[[Any], Any]],
+        val_type: Union[Type[Any], Callable[[Any], Any]],
         description: str,
         settable_object: object,
         *,
@@ -154,7 +159,7 @@ class Settable:
         """
         if val_type is bool:
 
-            def get_bool_choices(_) -> list[str]:  # type: ignore[no-untyped-def]
+            def get_bool_choices(_) -> List[str]:  # type: ignore[no-untyped-def]
                 """Used to tab complete lowercase boolean values"""
                 return ['true', 'false']
 
@@ -225,7 +230,7 @@ def is_text_file(file_path: str) -> bool:
     return valid_text_file
 
 
-def remove_duplicates(list_to_prune: list[_T]) -> list[_T]:
+def remove_duplicates(list_to_prune: List[_T]) -> List[_T]:
     """Removes duplicates from a list while preserving order of the items.
 
     :param list_to_prune: the list being pruned of duplicates
@@ -247,7 +252,7 @@ def norm_fold(astr: str) -> str:
     return unicodedata.normalize('NFC', astr).casefold()
 
 
-def alphabetical_sort(list_to_sort: Iterable[str]) -> list[str]:
+def alphabetical_sort(list_to_sort: Iterable[str]) -> List[str]:
     """Sorts a list of strings alphabetically.
 
     For example: ['a1', 'A11', 'A2', 'a22', 'a3']
@@ -274,7 +279,7 @@ def try_int_or_force_to_lower_case(input_str: str) -> Union[int, str]:
         return norm_fold(input_str)
 
 
-def natural_keys(input_str: str) -> list[Union[int, str]]:
+def natural_keys(input_str: str) -> List[Union[int, str]]:
     """
     Converts a string into a list of integers and strings to support natural sorting (see natural_sort).
 
@@ -285,7 +290,7 @@ def natural_keys(input_str: str) -> list[Union[int, str]]:
     return [try_int_or_force_to_lower_case(substr) for substr in re.split(r'(\d+)', input_str)]
 
 
-def natural_sort(list_to_sort: Iterable[str]) -> list[str]:
+def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
     """
     Sorts a list of strings case insensitively as well as numerically.
 
@@ -301,7 +306,7 @@ def natural_sort(list_to_sort: Iterable[str]) -> list[str]:
     return sorted(list_to_sort, key=natural_keys)
 
 
-def quote_specific_tokens(tokens: list[str], tokens_to_quote: list[str]) -> None:
+def quote_specific_tokens(tokens: List[str], tokens_to_quote: List[str]) -> None:
     """
     Quote specific tokens in a list
 
@@ -313,7 +318,7 @@ def quote_specific_tokens(tokens: list[str], tokens_to_quote: list[str]) -> None
             tokens[i] = quote_string(token)
 
 
-def unquote_specific_tokens(tokens: list[str], tokens_to_unquote: list[str]) -> None:
+def unquote_specific_tokens(tokens: List[str], tokens_to_unquote: List[str]) -> None:
     """
     Unquote specific tokens in a list
 
@@ -347,7 +352,7 @@ def expand_user(token: str) -> str:
     return token
 
 
-def expand_user_in_tokens(tokens: list[str]) -> None:
+def expand_user_in_tokens(tokens: List[str]) -> None:
     """
     Call expand_user() on all tokens in a list of strings
     :param tokens: tokens to expand
@@ -389,7 +394,7 @@ def find_editor() -> Optional[str]:
     return editor
 
 
-def files_from_glob_pattern(pattern: str, access: int = os.F_OK) -> list[str]:
+def files_from_glob_pattern(pattern: str, access: int = os.F_OK) -> List[str]:
     """Return a list of file paths based on a glob pattern.
 
     Only files are returned, not directories, and optionally only files for which the user has a specified access to.
@@ -401,7 +406,7 @@ def files_from_glob_pattern(pattern: str, access: int = os.F_OK) -> list[str]:
     return [f for f in glob.glob(pattern) if os.path.isfile(f) and os.access(f, access)]
 
 
-def files_from_glob_patterns(patterns: list[str], access: int = os.F_OK) -> list[str]:
+def files_from_glob_patterns(patterns: List[str], access: int = os.F_OK) -> List[str]:
     """Return a list of file paths based on a list of glob patterns.
 
     Only files are returned, not directories, and optionally only files for which the user has a specified access to.
@@ -417,7 +422,7 @@ def files_from_glob_patterns(patterns: list[str], access: int = os.F_OK) -> list
     return files
 
 
-def get_exes_in_path(starts_with: str) -> list[str]:
+def get_exes_in_path(starts_with: str) -> List[str]:
     """Returns names of executables in a user's path
 
     :param starts_with: what the exes should start with. leave blank for all exes in path.
@@ -736,7 +741,7 @@ class RedirectionSavedState:
         self.saved_redirecting = saved_redirecting
 
 
-def _remove_overridden_styles(styles_to_parse: list[str]) -> list[str]:
+def _remove_overridden_styles(styles_to_parse: List[str]) -> List[str]:
     """
     Utility function for align_text() / truncate_line() which filters a style list down
     to only those which would still be in effect if all were processed in order.
@@ -757,7 +762,7 @@ def _remove_overridden_styles(styles_to_parse: list[str]) -> list[str]:
 
         def __init__(self) -> None:
             # Contains styles still in effect, keyed by their index in styles_to_parse
-            self.style_dict: dict[int, str] = dict()
+            self.style_dict: Dict[int, str] = dict()
 
             # Indexes into style_dict
             self.reset_all: Optional[int] = None
@@ -895,7 +900,7 @@ def align_text(
     # ANSI style sequences that may affect subsequent lines will be cancelled by the fill_char's style.
     # To avoid this, we save styles which are still in effect so we can restore them when beginning the next line.
     # This also allows lines to be used independently and still have their style. TableCreator does this.
-    previous_styles: list[str] = []
+    previous_styles: List[str] = []
 
     for index, line in enumerate(lines):
         if index > 0:
@@ -1106,7 +1111,7 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     return truncated_buf.getvalue()
 
 
-def get_styles_dict(text: str) -> dict[int, str]:
+def get_styles_dict(text: str) -> Dict[int, str]:
     """
     Return an OrderedDict containing all ANSI style sequences found in a string
 
@@ -1166,7 +1171,7 @@ def categorize(func: Union[Callable[..., Any], Iterable[Callable[..., Any]]], ca
         setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
 
 
-def get_defining_class(meth: Callable[..., Any]) -> Optional[type[Any]]:
+def get_defining_class(meth: Callable[..., Any]) -> Optional[Type[Any]]:
     """
     Attempts to resolve the class that defined a method.
 

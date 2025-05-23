@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """A simple example demonstrating how to remove unused commands.
 
 Commands can be removed from  help menu and tab completion by appending their command name to the hidden_commands list.

@@ -1,11 +1,15 @@
+# coding=utf-8
 """
 Supports the definition of commands in separate classes to be composed into cmd2.Cmd
 """
 
-from collections.abc import Callable, Mapping
 from typing import (
     TYPE_CHECKING,
+    Callable,
+    Dict,
+    Mapping,
     Optional,
+    Type,
     TypeVar,
 )
 
@@ -27,7 +31,7 @@ if TYPE_CHECKING:  # pragma: no cover
 #: Further refinements are needed to define the input parameters
 CommandFunc = Callable[..., Optional[bool]]
 
-CommandSetType = TypeVar('CommandSetType', bound=type['CommandSet'])
+CommandSetType = TypeVar('CommandSetType', bound=Type['CommandSet'])
 
 
 def with_default_category(category: str, *, heritable: bool = True) -> Callable[[CommandSetType], CommandSetType]:
@@ -81,7 +85,7 @@ def with_default_category(category: str, *, heritable: bool = True) -> Callable[
     return decorate_class
 
 
-class CommandSet:
+class CommandSet(object):
     """
     Base class for defining sets of commands to load in cmd2.
 
@@ -96,7 +100,7 @@ class CommandSet:
         # accessed by child classes using the self._cmd property.
         self.__cmd_internal: Optional[cmd2.Cmd] = None
 
-        self._settables: dict[str, Settable] = {}
+        self._settables: Dict[str, Settable] = {}
         self._settable_prefix = self.__class__.__name__
 
     @property

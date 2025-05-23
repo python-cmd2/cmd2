@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Cmd2 unit/functional testing
 """
@@ -9,6 +10,7 @@ from contextlib import (
     redirect_stdout,
 )
 from typing import (
+    List,
     Optional,
     Union,
 )
@@ -30,7 +32,7 @@ from cmd2.utils import (
 
 
 def verify_help_text(
-    cmd2_app: cmd2.Cmd, help_output: Union[str, list[str]], verbose_strings: Optional[list[str]] = None
+    cmd2_app: cmd2.Cmd, help_output: Union[str, List[str]], verbose_strings: Optional[List[str]] = None
 ) -> None:
     """This function verifies that all expected commands are present in the help text.
 
@@ -193,7 +195,7 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Opti
                 return app.complete(text, 0)
 
 
-def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
+def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
     if not subcmd_names:
         return action
     cur_subcmd = subcmd_names.pop(0)

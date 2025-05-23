@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
 This example is adapted from the pirate8.py example created by Catherine Devlin and
 presented as part of her PyCon 2010 talk.
@@ -45,7 +46,7 @@ class Pirate(cmd2.Cmd):
     def postcmd(self, stop, line):
         """Runs right before a command is about to return."""
         if self.gold != self.initial_gold:
-            self.poutput(f'Now we gots {self.gold} doubloons')
+            self.poutput('Now we gots {0} doubloons'.format(self.gold))
         if self.gold < 0:
             self.poutput("Off to debtorrr's prison.")
             self.exit_code = 1
@@ -64,7 +65,7 @@ class Pirate(cmd2.Cmd):
             self.gold -= int(arg)
         except ValueError:
             if arg:
-                self.poutput(f'''What's "{arg}"?  I'll take rrrum.''')
+                self.poutput('''What's "{0}"?  I'll take rrrum.'''.format(arg))
             self.gold -= 1
 
     def do_quit(self, arg):
@@ -87,7 +88,7 @@ class Pirate(cmd2.Cmd):
         chant = ['yo'] + ['ho'] * args.ho
         separator = ', ' if args.commas else ' '
         chant = separator.join(chant)
-        self.poutput(f'{chant} and a bottle of {args.beverage}')
+        self.poutput('{0} and a bottle of {1}'.format(chant, args.beverage))
 
 
 if __name__ == '__main__':
@@ -96,5 +97,5 @@ if __name__ == '__main__':
     # Create an instance of the Pirate derived class and enter the REPL with cmdloop().
     pirate = Pirate()
     sys_exit_code = pirate.cmdloop()
-    print(f'Exiting with code: {sys_exit_code!r}')
+    print('Exiting with code: {!r}'.format(sys_exit_code))
     sys.exit(sys_exit_code)

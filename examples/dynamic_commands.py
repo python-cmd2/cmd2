@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# coding=utf-8
 """A simple example demonstrating how do_* commands can be created in a loop."""
 
 import functools
@@ -40,7 +41,7 @@ class CommandsInLoop(cmd2.Cmd):
 
     def text_help(self, *, text: str):
         """Deal with printing help for the dynamically added commands."""
-        self.poutput(f"Simulate sending {text!r} to a server and printing the response")
+        self.poutput("Simulate sending {!r} to a server and printing the response".format(text))
 
 
 if __name__ == '__main__':

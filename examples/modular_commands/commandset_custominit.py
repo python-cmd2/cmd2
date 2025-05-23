@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 A simple example demonstrating a loadable command set
 """

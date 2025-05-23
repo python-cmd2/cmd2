@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 History management classes
 """
@@ -7,12 +8,15 @@ import re
 from collections import (
     OrderedDict,
 )
-from collections.abc import Callable, Iterable
 from dataclasses import (
     dataclass,
 )
 from typing import (
     Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
     Optional,
     Union,
     overload,
@@ -128,12 +132,12 @@ class HistoryItem:
 
         return ret_str
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Utility method to convert this HistoryItem into a dictionary for use in persistent JSON history files"""
         return {HistoryItem._statement_field: self.statement.to_dict()}
 
     @staticmethod
-    def from_dict(source_dict: dict[str, Any]) -> 'HistoryItem':
+    def from_dict(source_dict: Dict[str, Any]) -> 'HistoryItem':
         """
         Utility method to restore a HistoryItem from a dictionary
 
@@ -145,7 +149,7 @@ class HistoryItem:
         return HistoryItem(Statement.from_dict(statement_dict))
 
 
-class History(list[HistoryItem]):
+class History(List[HistoryItem]):
     """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods
     for searching and managing the list.
 

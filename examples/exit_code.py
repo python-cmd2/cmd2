@@ -1,5 +1,10 @@
 #!/usr/bin/env python
+# coding=utf-8
 """A simple example demonstrating the following how to emit a non-zero exit code in your cmd2 application."""
+
+from typing import (
+    List,
+)
 
 import cmd2
 
@@ -11,7 +16,7 @@ class ReplWithExitCode(cmd2.Cmd):
         super().__init__()
 
     @cmd2.with_argument_list
-    def do_exit(self, arg_list: list[str]) -> bool:
+    def do_exit(self, arg_list: List[str]) -> bool:
         """Exit the application with an optional exit code.
 
         Usage:  exit [exit_code]
@@ -22,7 +27,7 @@ class ReplWithExitCode(cmd2.Cmd):
             try:
                 self.exit_code = int(arg_list[0])
             except ValueError:
-                self.perror(f"{arg_list[0]} isn't a valid integer exit code")
+                self.perror("{} isn't a valid integer exit code".format(arg_list[0]))
                 self.exit_code = 1
 
         return True
@@ -33,5 +38,5 @@ if __name__ == '__main__':
 
     app = ReplWithExitCode()
     sys_exit_code = app.cmdloop()
-    app.poutput(f'{sys.argv[0]!r} exiting with code: {sys_exit_code}')
+    app.poutput('{!r} exiting with code: {}'.format(sys.argv[0], sys_exit_code))
     sys.exit(sys_exit_code)

@@ -1,4 +1,5 @@
 #
+# coding=utf-8
 """Classes for the cmd2 plugin system"""
 
 from dataclasses import (

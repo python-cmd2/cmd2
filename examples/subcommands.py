@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# coding=utf-8
 """A simple example demonstrating how to use Argparse to support subcommands.
 
 
@@ -81,7 +82,7 @@ class SubcommandsExample(cmd2.Cmd):
 
     def base_sport(self, args):
         """sport subcommand of base command"""
-        self.poutput(f'Sport is {args.sport}')
+        self.poutput('Sport is {}'.format(args.sport))
 
     # Set handler functions for the subcommands
     parser_foo.set_defaults(func=base_foo)

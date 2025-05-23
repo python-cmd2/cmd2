@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Bridges calls made inside of a Python environment to the Cmd2 host app
 while maintaining a reasonable degree of isolation between the two.
@@ -12,6 +13,7 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
+    List,
     NamedTuple,
     Optional,
     TextIO,
@@ -96,9 +98,9 @@ class PyBridge:
         # Tells if any of the commands run via __call__ returned True for stop
         self.stop = False
 
-    def __dir__(self) -> list[str]:
+    def __dir__(self) -> List[str]:
         """Return a custom set of attribute names"""
-        attributes: list[str] = []
+        attributes: List[str] = []
         attributes.insert(0, 'cmd_echo')
         return attributes
 

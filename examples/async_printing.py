@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
 A simple example demonstrating an application that asynchronously prints alerts, updates the prompt
 and changes the window title
@@ -7,6 +8,9 @@ and changes the window title
 import random
 import threading
 import time
+from typing import (
+    List,
+)
 
 import cmd2
 from cmd2 import (
@@ -85,7 +89,7 @@ class AlerterApp(cmd2.Cmd):
         else:
             print("The alert thread is already stopped")
 
-    def _get_alerts(self) -> list[str]:
+    def _get_alerts(self) -> List[str]:
         """
         Reports alerts
         :return: the list of alerts
@@ -110,7 +114,7 @@ class AlerterApp(cmd2.Cmd):
 
             for i in range(0, rand_num):
                 self._alert_count += 1
-                alerts.append(f"Alert {self._alert_count}")
+                alerts.append("Alert {}".format(self._alert_count))
 
             self._next_alert_time = 0
 
@@ -183,7 +187,7 @@ class AlerterApp(cmd2.Cmd):
                 if alert_str:
                     # new_prompt is an optional parameter to async_alert()
                     self.async_alert(alert_str, new_prompt)
-                    new_title = f"Alerts Printed: {self._alert_count}"
+                    new_title = "Alerts Printed: {}".format(self._alert_count)
                     self.set_window_title(new_title)
 
                 # Otherwise check if the prompt needs to be updated or refreshed

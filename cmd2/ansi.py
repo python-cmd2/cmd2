@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Support for ANSI escape sequences which are used for things like applying style to text,
 setting the window title, and asynchronous alerts.
@@ -11,6 +12,7 @@ from enum import (
 from typing import (
     IO,
     Any,
+    List,
     Optional,
     cast,
 )
@@ -991,10 +993,10 @@ def style(
     :return: the stylized string
     """
     # List of strings that add style
-    additions: list[AnsiSequence] = []
+    additions: List[AnsiSequence] = []
 
     # List of strings that remove style
-    removals: list[AnsiSequence] = []
+    removals: List[AnsiSequence] = []
 
     # Process the style settings
     if fg is not None:

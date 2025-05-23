@@ -1,12 +1,14 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
 A complex example demonstrating a variety of methods to load CommandSets using a mix of command decorators
 with examples of how to integrate tab completion with argparse-based commands.
 """
 
 import argparse
-from collections.abc import Iterable
 from typing import (
+    Iterable,
+    List,
     Optional,
 )
 
@@ -33,7 +35,7 @@ class WithCommandSets(Cmd):
         super().__init__(command_sets=command_sets)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
-    def choices_provider(self) -> list[str]:
+    def choices_provider(self) -> List[str]:
         """A choices provider is useful when the choice list is based on instance data of your application"""
         return self.sport_item_strs
 

@@ -1,16 +1,20 @@
 #
+# -*- coding: utf-8 -*-
 """Statement parsing classes for cmd2"""
 
 import re
 import shlex
-from collections.abc import Iterable
 from dataclasses import (
     dataclass,
     field,
 )
 from typing import (
     Any,
+    Dict,
+    Iterable,
+    List,
     Optional,
+    Tuple,
     Union,
 )
 
@@ -23,7 +27,7 @@ from .exceptions import (
 )
 
 
-def shlex_split(str_to_split: str) -> list[str]:
+def shlex_split(str_to_split: str) -> List[str]:
     """
     A wrapper around shlex.split() that uses cmd2's preferred arguments.
     This allows other classes to easily call split() the same way StatementParser does.
@@ -81,7 +85,7 @@ class Macro:
     minimum_arg_count: int
 
     # Used to fill in argument placeholders in the macro
-    arg_list: list[MacroArg] = field(default_factory=list)
+    arg_list: List[MacroArg] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -125,7 +129,7 @@ class Statement(str):  # type: ignore[override]
     command: str = ''
 
     # list of arguments to the command, not including any output redirection or terminators; quoted args remain quoted
-    arg_list: list[str] = field(default_factory=list)
+    arg_list: List[str] = field(default_factory=list)
 
     # if the command is a multiline command, the name of the command, otherwise empty
     multiline_command: str = ''
@@ -202,7 +206,7 @@ class Statement(str):  # type: ignore[override]
         return self.command_and_args + self.post_command
 
     @property
-    def argv(self) -> list[str]:
+    def argv(self) -> List[str]:
         """a list of arguments a-la ``sys.argv``.
 
         The first element of the list is the command after shortcut and macro
@@ -221,12 +225,12 @@ class Statement(str):  # type: ignore[override]
 
         return rtn
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Utility method to convert this Statement into a dictionary for use in persistent JSON history files"""
         return self.__dict__.copy()
 
     @staticmethod
-    def from_dict(source_dict: dict[str, Any]) -> 'Statement':
+    def from_dict(source_dict: Dict[str, Any]) -> 'Statement':
         """
         Utility method to restore a Statement from a dictionary
 
@@ -254,8 +258,8 @@ class StatementParser:
         self,
         terminators: Optional[Iterable[str]] = None,
         multiline_commands: Optional[Iterable[str]] = None,
-        aliases: Optional[dict[str, str]] = None,
-        shortcuts: Optional[dict[str, str]] = None,
+        aliases: Optional[Dict[str, str]] = None,
+        shortcuts: Optional[Dict[str, str]] = None,
     ) -> None:
         """Initialize an instance of StatementParser.
 
@@ -267,13 +271,13 @@ class StatementParser:
         :param aliases: dictionary containing aliases
         :param shortcuts: dictionary containing shortcuts
         """
-        self.terminators: tuple[str, ...]
+        self.terminators: Tuple[str, ...]
         if terminators is None:
             self.terminators = (constants.MULTILINE_TERMINATOR,)
         else:
             self.terminators = tuple(terminators)
-        self.multiline_commands: tuple[str, ...] = tuple(multiline_commands) if multiline_commands is not None else ()
-        self.aliases: dict[str, str] = aliases if aliases is not None else {}
+        self.multiline_commands: Tuple[str, ...] = tuple(multiline_commands) if multiline_commands is not None else ()
+        self.aliases: Dict[str, str] = aliases if aliases is not None else {}
 
         if shortcuts is None:
             shortcuts = constants.DEFAULT_SHORTCUTS
@@ -314,7 +318,7 @@ class StatementParser:
         expr = rf'\A\s*(\S*?)({second_group})'
         self._command_pattern = re.compile(expr)
 
-    def is_valid_command(self, word: str, *, is_subcommand: bool = False) -> tuple[bool, str]:
+    def is_valid_command(self, word: str, *, is_subcommand: bool = False) -> Tuple[bool, str]:
         """Determine whether a word is a valid name for a command.
 
         Commands cannot include redirection characters, whitespace,
@@ -365,7 +369,7 @@ class StatementParser:
                 errmsg = ''
         return valid, errmsg
 
-    def tokenize(self, line: str) -> list[str]:
+    def tokenize(self, line: str) -> List[str]:
         """
         Lex a string into a list of tokens. Shortcuts and aliases are expanded and
         comments are removed.
@@ -603,7 +607,7 @@ class StatementParser:
 
     def get_command_arg_list(
         self, command_name: str, to_parse: Union[Statement, str], preserve_quotes: bool
-    ) -> tuple[Statement, list[str]]:
+    ) -> Tuple[Statement, List[str]]:
         """
         Convenience method used by the argument parsing decorators.
 
@@ -671,7 +675,7 @@ class StatementParser:
         return line
 
     @staticmethod
-    def _command_and_args(tokens: list[str]) -> tuple[str, str]:
+    def _command_and_args(tokens: List[str]) -> Tuple[str, str]:
         """Given a list of tokens, return a tuple of the command
         and the args as a string.
         """
@@ -686,7 +690,7 @@ class StatementParser:
 
         return command, args
 
-    def split_on_punctuation(self, tokens: list[str]) -> list[str]:
+    def split_on_punctuation(self, tokens: List[str]) -> List[str]:
         """Further splits tokens from a command line using punctuation characters.
 
         Punctuation characters are treated as word breaks when they are in
@@ -696,7 +700,7 @@ class StatementParser:
         :param tokens: the tokens as parsed by shlex
         :return: a new list of tokens, further split using punctuation
         """
-        punctuation: list[str] = []
+        punctuation: List[str] = []
         punctuation.extend(self.terminators)
         punctuation.extend(constants.REDIRECTION_CHARS)
 

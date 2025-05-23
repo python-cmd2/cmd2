@@ -1,4 +1,5 @@
 #
+# -*- coding: utf-8 -*-
 """Development related tasks to be run with 'invoke'"""
 
 import os
@@ -19,7 +20,7 @@ def rmrf(items, verbose=True):
 
     for item in items:
         if verbose:
-            print(f"Removing {item}")
+            print("Removing {}".format(item))
         shutil.rmtree(item, ignore_errors=True)
         # rmtree doesn't remove bare files
         try:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """A sample application for how Python scripting can provide conditional
 control flow of a cmd2 application.
 
