@@ -222,6 +222,7 @@ select = [
 ]
 ignore = [
     # `uv run ruff rule E501` for a description of that rule
+    "TC006", # Add quotes to type expression in typing.cast() (not needed except for forward references)
     "UP007", # Use X | Y for type annotations (requires Python 3.10+)
     "UP017", # Use datetime.UTC alias (requires Python 3.11+)
 ]

@@ -447,7 +447,7 @@ def _action_get_choices_callable(self: argparse.Action) -> Optional[ChoicesCalla
     :param self: argparse Action being queried
     :return: A ChoicesCallable instance or None if attribute does not exist
     """
-    return cast("Optional[ChoicesCallable]", getattr(self, ATTR_CHOICES_CALLABLE, None))
+    return cast(Optional[ChoicesCallable], getattr(self, ATTR_CHOICES_CALLABLE, None))
 
 
 setattr(argparse.Action, 'get_choices_callable', _action_get_choices_callable)
@@ -537,7 +537,7 @@ def _action_get_descriptive_header(self: argparse.Action) -> Optional[str]:
     :param self: argparse Action being queried
     :return: The value of descriptive_header or None if attribute does not exist
     """
-    return cast("Optional[str]", getattr(self, ATTR_DESCRIPTIVE_HEADER, None))
+    return cast(Optional[str], getattr(self, ATTR_DESCRIPTIVE_HEADER, None))
 
 
 setattr(argparse.Action, 'get_descriptive_header', _action_get_descriptive_header)
@@ -574,7 +574,7 @@ def _action_get_nargs_range(self: argparse.Action) -> Optional[tuple[int, Union[
     :param self: argparse Action being queried
     :return: The value of nargs_range or None if attribute does not exist
     """
-    return cast("Optional[tuple[int, Union[int, float]]]", getattr(self, ATTR_NARGS_RANGE, None))
+    return cast(Optional[tuple[int, Union[int, float]]], getattr(self, ATTR_NARGS_RANGE, None))
 
 
 setattr(argparse.Action, 'get_nargs_range', _action_get_nargs_range)
@@ -611,7 +611,7 @@ def _action_get_suppress_tab_hint(self: argparse.Action) -> bool:
     :param self: argparse Action being queried
     :return: The value of suppress_tab_hint or False if attribute does not exist
     """
-    return cast("bool", getattr(self, ATTR_SUPPRESS_TAB_HINT, False))
+    return cast(bool, getattr(self, ATTR_SUPPRESS_TAB_HINT, False))
 
 
 setattr(argparse.Action, 'get_suppress_tab_hint', _action_get_suppress_tab_hint)
@@ -921,7 +921,7 @@ def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Opti
     :param self: ArgumentParser being queried
     :return: An ArgparseCompleter-based class or None if attribute does not exist
     """
-    return cast("Optional[type[ArgparseCompleter]]", getattr(self, ATTR_AP_COMPLETER_TYPE, None))
+    return cast(Optional[type['ArgparseCompleter']], getattr(self, ATTR_AP_COMPLETER_TYPE, None))
 
 
 setattr(argparse.ArgumentParser, 'get_ap_completer_type', _ArgumentParser_get_ap_completer_type)

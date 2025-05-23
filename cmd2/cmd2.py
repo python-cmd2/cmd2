@@ -175,7 +175,7 @@ else:
         )
 
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-        orig_rl_basic_quotes = cast("bytes", ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
+        orig_rl_basic_quotes = cast(bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
 
 
 class _SavedReadlineSettings:
@@ -707,7 +707,7 @@ class Cmd(cmd.Cmd):
 
         cmdset.on_register(self)
         methods = cast(
-            "list[tuple[str, Callable[..., Any]]]",
+            list[tuple[str, Callable[..., Any]]],
             inspect.getmembers(
                 cmdset,
                 predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
@@ -970,7 +970,7 @@ class Cmd(cmd.Cmd):
 
             target_parser = find_subcommand(command_parser, subcommand_names)
 
-            subcmd_parser = cast("argparse.ArgumentParser", self._build_parser(cmdset, subcmd_parser_builder))
+            subcmd_parser = cast(argparse.ArgumentParser, self._build_parser(cmdset, subcmd_parser_builder))
             from .decorators import (
                 _set_parser_prog,
             )
@@ -1153,7 +1153,7 @@ class Cmd(cmd.Cmd):
                 'Allow ANSI text style sequences in output (valid values: '
                 f'{ansi.AllowStyle.ALWAYS}, {ansi.AllowStyle.NEVER}, {ansi.AllowStyle.TERMINAL})',
                 self,
-                choices_provider=cast("ChoicesProviderFunc", get_allow_style_choices),
+                choices_provider=cast(ChoicesProviderFunc, get_allow_style_choices),
             )
         )
 
@@ -1945,7 +1945,7 @@ class Cmd(cmd.Cmd):
 
                 # rl_display_match_list() expects matches to be in argv format where
                 # substitution is the first element, followed by the matches, and then a NULL.
-                strings_array = cast("list[Optional[bytes]]", (ctypes.c_char_p * (1 + len(encoded_matches) + 1))())
+                strings_array = cast(list[Optional[bytes]], (ctypes.c_char_p * (1 + len(encoded_matches) + 1))())
 
                 # Copy in the encoded strings and add a NULL to the end
                 strings_array[0] = encoded_substitution
@@ -2868,7 +2868,7 @@ class Cmd(cmd.Cmd):
 
         # Initialize the redirection saved state
         redir_saved_state = utils.RedirectionSavedState(
-            cast("TextIO", self.stdout), sys.stdout, self._cur_pipe_proc_reader, self._redirecting
+            cast(TextIO, self.stdout), sys.stdout, self._cur_pipe_proc_reader, self._redirecting
         )
 
         # The ProcReader for this command
@@ -2884,7 +2884,7 @@ class Cmd(cmd.Cmd):
 
             # Open each side of the pipe
             subproc_stdin = open(read_fd)
-            new_stdout: TextIO = cast("TextIO", open(write_fd, 'w'))
+            new_stdout: TextIO = cast(TextIO, open(write_fd, 'w'))
 
             # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
             # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
@@ -2925,7 +2925,7 @@ class Cmd(cmd.Cmd):
                 new_stdout.close()
                 raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
             redir_saved_state.redirecting = True  # type: ignore[unreachable]
-            cmd_pipe_proc_reader = utils.ProcReader(proc, cast("TextIO", self.stdout), sys.stderr)
+            cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
             sys.stdout = self.stdout = new_stdout
 
         elif statement.output:
@@ -2935,7 +2935,7 @@ class Cmd(cmd.Cmd):
                 mode = 'a' if statement.output == constants.REDIRECTION_APPEND else 'w'
                 try:
                     # Use line buffering
-                    new_stdout = cast("TextIO", open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))
+                    new_stdout = cast(TextIO, open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))
                 except OSError as ex:
                     raise RedirectionError(f'Failed to redirect because: {ex}')
 
@@ -2956,7 +2956,7 @@ class Cmd(cmd.Cmd):
                 # no point opening up the temporary file
                 current_paste_buffer = get_paste_buffer()
                 # create a temporary file to store output
-                new_stdout = cast("TextIO", tempfile.TemporaryFile(mode="w+"))
+                new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))
                 redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
 
@@ -2989,8 +2989,8 @@ class Cmd(cmd.Cmd):
                 pass
 
             # Restore the stdout values
-            self.stdout = cast("TextIO", saved_redir_state.saved_self_stdout)
-            sys.stdout = cast("TextIO", saved_redir_state.saved_sys_stdout)
+            self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+            sys.stdout = cast(TextIO, saved_redir_state.saved_sys_stdout)
 
             # Check if we need to wait for the process being piped to
             if self._cur_pipe_proc_reader is not None:
@@ -3016,7 +3016,7 @@ class Cmd(cmd.Cmd):
         """
         func_name = constants.COMMAND_FUNC_PREFIX + command
         func = getattr(self, func_name, None)
-        return cast("CommandFunc", func) if callable(func) else None
+        return cast(CommandFunc, func) if callable(func) else None
 
     def onecmd(self, statement: Union[Statement, str], *, add_to_history: bool = True) -> bool:
         """This executes the actual do_* method for a command.
@@ -3276,7 +3276,7 @@ class Cmd(cmd.Cmd):
                 # We don't want this behavior since cmd2 only adds a closing quote when self.allow_closing_quote is True.
                 # To fix this behavior, set readline's rl_basic_quote_characters to NULL. We don't need to worry about setting
                 # rl_completion_suppress_quote since we never declared rl_completer_quote_characters.
-                readline_settings.basic_quotes = cast("bytes", ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
+                readline_settings.basic_quotes = cast(bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
                 rl_basic_quote_characters.value = None
 
             readline_settings.completer = readline.get_completer()
@@ -3941,7 +3941,7 @@ class Cmd(cmd.Cmd):
         cmds_undoc: list[str] = []
         cmds_cats: dict[str, list[str]] = {}
         for command in visible_commands:
-            func = cast("CommandFunc", self.cmd_func(command))
+            func = cast(CommandFunc, self.cmd_func(command))
             has_help_func = False
             has_parser = func in self._command_parsers
 
@@ -4011,7 +4011,7 @@ class Cmd(cmd.Cmd):
                             stdout_orig = self.stdout
                             try:
                                 # redirect our internal stdout
-                                self.stdout = cast("TextIO", result)
+                                self.stdout = cast(TextIO, result)
                                 help_func()
                             finally:
                                 # restore internal stdout
@@ -4078,7 +4078,7 @@ class Cmd(cmd.Cmd):
                                 the text advertised to the user"""
         local_opts: Union[list[str], list[tuple[Any, Optional[str]]]]
         if isinstance(opts, str):
-            local_opts = cast("list[tuple[Any, Optional[str]]]", list(zip(opts.split(), opts.split())))
+            local_opts = cast(list[tuple[Any, Optional[str]]], list(zip(opts.split(), opts.split())))
         else:
             local_opts = opts
         fulloptions: list[tuple[Any, Optional[str]]] = []
@@ -4278,7 +4278,7 @@ class Cmd(cmd.Cmd):
                 **kwargs,
             )
 
-            proc_reader = utils.ProcReader(proc, cast("TextIO", self.stdout), sys.stderr)  # type: ignore[arg-type]
+            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)  # type: ignore[arg-type]
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
@@ -4337,7 +4337,7 @@ class Cmd(cmd.Cmd):
                 # rlcompleter relies on the default settings of the Python readline module
                 if rl_type == RlType.GNU:
                     cmd2_env.readline_settings.basic_quotes = cast(
-                        "bytes", ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                        bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
                     )
                     rl_basic_quote_characters.value = orig_rl_basic_quotes
 
@@ -4986,8 +4986,8 @@ class Cmd(cmd.Cmd):
                 transcript += command
 
                 # Use a StdSim object to capture output
-                stdsim = utils.StdSim(cast("TextIO", self.stdout))
-                self.stdout = cast("TextIO", stdsim)
+                stdsim = utils.StdSim(cast(TextIO, self.stdout))
+                self.stdout = cast(TextIO, stdsim)
 
                 # then run the command and let the output go into our buffer
                 try:
@@ -5012,7 +5012,7 @@ class Cmd(cmd.Cmd):
             with self.sigint_protection:
                 # Restore altered attributes to their original state
                 self.echo = saved_echo
-                self.stdout = cast("TextIO", saved_stdout)
+                self.stdout = cast(TextIO, saved_stdout)
 
         # Check if all commands ran
         if commands_run < len(history):
@@ -5226,7 +5226,7 @@ class Cmd(cmd.Cmd):
         setattr(self.__class__, 'testfiles', transcripts_expanded)
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
-        stream = cast("TextIO", utils.StdSim(sys.stderr))
+        stream = cast(TextIO, utils.StdSim(sys.stderr))
         runner = unittest.TextTestRunner(stream=stream)
         start_time = time.time()
         test_results = runner.run(testcase)
@@ -5615,7 +5615,7 @@ class Cmd(cmd.Cmd):
     @classmethod
     def _validate_postparsing_callable(cls, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Check parameter and return types for postparsing hooks"""
-        cls._validate_callable_param_count(cast("Callable[..., Any]", func), 1)
+        cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
         signature = inspect.signature(func)
         _, param = list(signature.parameters.items())[0]
         if param.annotation != plugin.PostparsingData:
@@ -5637,7 +5637,7 @@ class Cmd(cmd.Cmd):
         """Check parameter and return types for pre and post command hooks."""
         signature = inspect.signature(func)
         # validate that the callable has the right number of parameters
-        cls._validate_callable_param_count(cast("Callable[..., Any]", func), 1)
+        cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
         # validate the parameter has the right annotation
         paramname = list(signature.parameters.keys())[0]
         param = signature.parameters[paramname]
