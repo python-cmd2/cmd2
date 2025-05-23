@@ -222,9 +222,22 @@ select = [
 ]
 ignore = [
     # `uv run ruff rule E501` for a description of that rule
-    "TC006", # Add quotes to type expression in typing.cast() (not needed except for forward references)
-    "UP007", # Use X | Y for type annotations (requires Python 3.10+)
-    "UP017", # Use datetime.UTC alias (requires Python 3.11+)
+    "COM812", # Conflicts with ruff format (see https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules)
+    "COM819", # Conflicts with ruff format
+    "D206",   # Conflicts with ruff format
+    "D300",   # Conflicts with ruff format
+    "E111",   # Conflicts with ruff format
+    "E114",   # Conflicts with ruff format
+    "E117",   # Conflicts with ruff format
+    "ISC002", # Conflicts with ruff format
+    "Q000",   # Conflicts with ruff format
+    "Q001",   # Conflicts with ruff format
+    "Q002",   # Conflicts with ruff format
+    "Q003",   # Conflicts with ruff format
+    "TC006",  # Add quotes to type expression in typing.cast() (not needed except for forward references)
+    "UP007",  # Use X | Y for type annotations (requires Python 3.10+)
+    "UP017",  # Use datetime.UTC alias (requires Python 3.11+)
+    "W191",   # Conflicts with ruff format
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
