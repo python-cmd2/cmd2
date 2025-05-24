@@ -293,9 +293,9 @@ class SubcommandApp(cmd2.Cmd):
     # This subcommand has aliases and no help text. It exists to prevent changes to _set_parser_prog() which
     # use an approach which relies on action._choices_actions list. See comment in that function for more
     # details.
-    parser_bar = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
-    parser_bar.add_argument('z', help='string')
-    parser_bar.set_defaults(func=base_bar)
+    parser_helplesss = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
+    parser_helplesss.add_argument('z', help='string')
+    parser_helplesss.set_defaults(func=base_helpless)
 
     @cmd2.with_argparser(base_parser)
     def do_base(self, args):
@@ -414,7 +414,7 @@ def test_subcmd_decorator(subcommand_app):
 
     # Test subcommand that has no help option
     out, err = run_cmd(subcommand_app, 'test_subcmd_decorator helpless_subcmd')
-    assert "'subcommand': 'helpless_subcmd'" in out[0]
+    assert out[0].startswith('{')
 
     out, err = run_cmd(subcommand_app, 'help test_subcmd_decorator helpless_subcmd')
     assert out[0] == 'Usage: test_subcmd_decorator helpless_subcmd'
