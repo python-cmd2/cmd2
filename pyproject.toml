@@ -254,14 +254,6 @@ per-file-ignores."cmd2/__init__.py" = [
     "F401", # Unused import
 ]
 
-per-file-ignores."cmd2/cmd2.py" = [
-    "PYI024", # Use `typing.NamedTuple` instead of `collections.namedtuple`
-]
-
-per-file-ignores."docs/conf.py" = [
-    "F401", # Unused import
-]
-
 per-file-ignores."examples/override_parser.py" = [
     "E402", # Module level import not at top of file
 ]

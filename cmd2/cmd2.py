@@ -199,7 +199,7 @@ class _SavedCmd2Env:
 
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
-DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function', 'completer_function'])
+DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function', 'completer_function'])  # noqa: PYI024
 
 
 if TYPE_CHECKING:  # pragma: no cover
