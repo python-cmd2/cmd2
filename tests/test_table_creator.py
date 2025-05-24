@@ -230,7 +230,7 @@ def test_wrap_long_word():
                       'Name        Col 2     ')
 
     # Test data row
-    row_data = list()
+    row_data = []
 
     # Long word should start on the first line (style should not affect width)
     row_data.append(ansi.style("LongerThan10", fg=Fg.GREEN))
@@ -267,7 +267,7 @@ def test_wrap_long_word_max_data_lines():
     columns = [column_1, column_2, column_3, column_4]
     tc = TableCreator(columns)
 
-    row_data = list()
+    row_data = []
 
     # This long word will exactly fit the last line and it's the final word in the text. No ellipsis should appear.
     row_data.append("LongerThan10FitsLast")
@@ -341,7 +341,7 @@ def test_simple_table_creation():
     column_1 = Column("Col 1", width=16)
     column_2 = Column("Col 2", width=16)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -495,7 +495,7 @@ def test_simple_table_width():
     column_1 = Column("Col 1", width=16)
     column_2 = Column("Col 2", width=16)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -518,7 +518,7 @@ def test_bordered_table_creation():
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -637,7 +637,7 @@ def test_bordered_table_width():
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -660,7 +660,7 @@ def test_alternating_table_creation():
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 

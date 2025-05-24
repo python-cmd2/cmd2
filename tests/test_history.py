@@ -668,7 +668,7 @@ def test_history_output_file():
     run_cmd(app, 'history -o "{}"'.format(fname))
     assert app.last_result is True
 
-    expected = normalize('\n'.join(['help', 'shortcuts', 'help history', 'alias create my_alias history;']))
+    expected = normalize('help\nshortcuts\nhelp history\nalias create my_alias history;')
     with open(fname) as f:
         content = normalize(f.read())
     assert content == expected

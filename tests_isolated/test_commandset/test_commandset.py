@@ -1100,10 +1100,10 @@ def test_commandset_settables():
 
     # verify the settable shows up
     out, err = run_cmd(app, 'set')
-    any(['arbitrary_value' in line and '5' in line for line in out])
+    any('arbitrary_value' in line and '5' in line for line in out)
 
     out, err = run_cmd(app, 'set arbitrary_value')
-    any(['arbitrary_value' in line and '5' in line for line in out])
+    any('arbitrary_value' in line and '5' in line for line in out)
 
     # change the value and verify the value changed
     out, err = run_cmd(app, 'set arbitrary_value 10')
@@ -1113,7 +1113,7 @@ now: 10
 """
     assert out == normalize(expected)
     out, err = run_cmd(app, 'set arbitrary_value')
-    any(['arbitrary_value' in line and '10' in line for line in out])
+    any('arbitrary_value' in line and '10' in line for line in out)
 
     # can't add to cmd2 now because commandset already has this settable
     with pytest.raises(KeyError):
@@ -1172,10 +1172,10 @@ Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
     assert 'some.arbitrary_value' in app.settables.keys()
 
     out, err = run_cmd(app, 'set')
-    any(['some.arbitrary_value' in line and '5' in line for line in out])
+    any('some.arbitrary_value' in line and '5' in line for line in out)
 
     out, err = run_cmd(app, 'set some.arbitrary_value')
-    any(['some.arbitrary_value' in line and '5' in line for line in out])
+    any('some.arbitrary_value' in line and '5' in line for line in out)
 
     # verify registering a commandset with duplicate prefix and settable names fails
     with pytest.raises(CommandSetRegistrationError):

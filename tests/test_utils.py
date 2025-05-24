@@ -272,7 +272,7 @@ def pr_none():
 
     # Start a long running process so we have time to run tests on it before it finishes
     # Put the new process into a separate group so its signal are isolated from ours
-    kwargs = dict()
+    kwargs = {}
     if sys.platform.startswith('win'):
         command = 'timeout -t 5 /nobreak'
         kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
