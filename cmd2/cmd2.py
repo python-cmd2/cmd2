@@ -4224,7 +4224,7 @@ class Cmd(cmd.Cmd):
                 kwargs['executable'] = shell
 
         # Create a list of arguments to shell
-        tokens = [args.command] + args.command_args
+        tokens = [args.command, *args.command_args]
 
         # Expand ~ where needed
         utils.expand_user_in_tokens(tokens)
@@ -4530,7 +4530,7 @@ class Cmd(cmd.Cmd):
 
         try:
             # Overwrite sys.argv to allow the script to take command line arguments
-            sys.argv = [args.script_path] + args.script_arguments
+            sys.argv = [args.script_path, *args.script_arguments]
 
             # self.last_resort will be set by _run_python()
             py_return = self._run_python(pyscript=args.script_path)
@@ -5562,7 +5562,7 @@ class Cmd(cmd.Cmd):
         """Check parameter and return types for postparsing hooks"""
         cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
         signature = inspect.signature(func)
-        _, param = list(signature.parameters.items())[0]
+        _, param = next(iter(signature.parameters.items()))
         if param.annotation != plugin.PostparsingData:
             raise TypeError(f"{func.__name__} must have one parameter declared with type 'cmd2.plugin.PostparsingData'")
         if signature.return_annotation != plugin.PostparsingData:
@@ -5584,7 +5584,7 @@ class Cmd(cmd.Cmd):
         # validate that the callable has the right number of parameters
         cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
         # validate the parameter has the right annotation
-        paramname = list(signature.parameters.keys())[0]
+        paramname = next(iter(signature.parameters.keys()))
         param = signature.parameters[paramname]
         if param.annotation != data_type:
             raise TypeError(f'argument 1 of {func.__name__} has incompatible type {param.annotation}, expected {data_type}')
@@ -5613,7 +5613,7 @@ class Cmd(cmd.Cmd):
         """Check parameter and return types for command finalization hooks."""
         cls._validate_callable_param_count(func, 1)
         signature = inspect.signature(func)
-        _, param = list(signature.parameters.items())[0]
+        _, param = next(iter(signature.parameters.items()))
         if param.annotation != plugin.CommandFinalizationData:
             raise TypeError(f"{func.__name__} must have one parameter declared with type {plugin.CommandFinalizationData}")
         if signature.return_annotation != plugin.CommandFinalizationData:

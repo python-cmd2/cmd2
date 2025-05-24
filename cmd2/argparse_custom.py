@@ -1078,14 +1078,14 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                     indent = ' ' * (len(prefix) + len(prog) + 1)
                     # Begin cmd2 customization
                     if req_parts:
-                        lines = get_lines([prog] + req_parts, indent, prefix)
+                        lines = get_lines([prog, *req_parts], indent, prefix)
                         lines.extend(get_lines(opt_parts, indent))
                         lines.extend(get_lines(pos_parts, indent))
                     elif opt_parts:
-                        lines = get_lines([prog] + opt_parts, indent, prefix)
+                        lines = get_lines([prog, *opt_parts], indent, prefix)
                         lines.extend(get_lines(pos_parts, indent))
                     elif pos_parts:
-                        lines = get_lines([prog] + pos_parts, indent, prefix)
+                        lines = get_lines([prog, *pos_parts], indent, prefix)
                     else:
                         lines = [prog]
                     # End cmd2 customization
@@ -1102,7 +1102,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                         lines.extend(get_lines(opt_parts, indent))
                         lines.extend(get_lines(pos_parts, indent))
                     # End cmd2 customization
-                    lines = [prog] + lines
+                    lines = [prog, *lines]
 
                 # join lines into usage
                 usage = '\n'.join(lines)
