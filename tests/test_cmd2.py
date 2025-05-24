@@ -1796,7 +1796,7 @@ def test_commandresult_falsy(commandresult_app):
 def test_is_text_file_bad_input(base_app):
     # Test with a non-existent file
     with pytest.raises(FileNotFoundError):
-        utils.is_text_file('does_not_exist.txt')
+        utils.is_text_file('./does_not_exist.txt')
 
     # Test with a directory
     with pytest.raises(IsADirectoryError):
