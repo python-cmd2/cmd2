@@ -50,6 +50,7 @@ from collections import (
 from collections.abc import Callable, Iterable, Mapping
 from contextlib import (
     redirect_stdout,
+    suppress,
 )
 from types import (
     FrameType,
@@ -689,13 +690,13 @@ class Cmd(cmd.Cmd):
         if self.always_prefix_settables:
             if not cmdset.settable_prefix.strip():
                 raise CommandSetRegistrationError('CommandSet settable prefix must not be empty')
-            for key in cmdset.settables.keys():
+            for key in cmdset.settables:
                 prefixed_name = f'{cmdset.settable_prefix}.{key}'
                 if prefixed_name in all_settables:
                     raise CommandSetRegistrationError(f'Duplicate settable: {key}')
 
         else:
-            for key in cmdset.settables.keys():
+            for key in cmdset.settables:
                 if key in all_settables:
                     raise CommandSetRegistrationError(f'Duplicate settable {key} is already registered')
 
@@ -1098,7 +1099,7 @@ class Cmd(cmd.Cmd):
         :param settable: Settable object being added
         """
         if not self.always_prefix_settables:
-            if settable.name in self.settables.keys() and settable.name not in self._settables.keys():
+            if settable.name in self.settables and settable.name not in self._settables:
                 raise KeyError(f'Duplicate settable: {settable.name}')
         self._settables[settable.name] = settable
 
@@ -1594,10 +1595,7 @@ class Cmd(cmd.Cmd):
 
         # Check if token is at an index in the dictionary
         match_against: Optional[Union[Iterable[str], CompleterFunc]]
-        if index in index_dict:
-            match_against = index_dict[index]
-        else:
-            match_against = all_else
+        match_against = index_dict.get(index, all_else)
 
         # Perform tab completion using a Iterable
         if isinstance(match_against, Iterable):
@@ -1739,10 +1737,7 @@ class Cmd(cmd.Cmd):
 
             # Remove cwd if it was added to match the text readline expects
             if cwd_added:
-                if cwd == os.path.sep:
-                    to_replace = cwd
-                else:
-                    to_replace = cwd + os.path.sep
+                to_replace = cwd if cwd == os.path.sep else cwd + os.path.sep
                 matches = [cur_path.replace(to_replace, '', 1) for cur_path in matches]
 
             # Restore the tilde string if we expanded one to match the text readline expects
@@ -1962,10 +1957,7 @@ class Cmd(cmd.Cmd):
             # Otherwise use pyreadline3's formatter
             else:
                 # Check if we should show display_matches
-                if self.display_matches:
-                    matches_to_display = self.display_matches
-                else:
-                    matches_to_display = matches
+                matches_to_display = self.display_matches if self.display_matches else matches
 
                 # Add padding for visual appeal
                 matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
@@ -2154,10 +2146,7 @@ class Cmd(cmd.Cmd):
 
                 if add_quote:
                     # Figure out what kind of quote to add and save it as the unclosed_quote
-                    if any('"' in match for match in self.completion_matches):
-                        completion_token_quote = "'"
-                    else:
-                        completion_token_quote = '"'
+                    completion_token_quote = "'" if any('"' in match for match in self.completion_matches) else '"'
 
                     self.completion_matches = [completion_token_quote + match for match in self.completion_matches]
 
@@ -2762,7 +2751,7 @@ class Cmd(cmd.Cmd):
                 orig_rl_history_length = None
 
             # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
-            if statement.command in self.macros.keys() and statement.command not in used_macros:
+            if statement.command in self.macros and statement.command not in used_macros:
                 used_macros.append(statement.command)
                 resolve_result = self._resolve_macro(statement)
                 if resolve_result is None:
@@ -2795,7 +2784,7 @@ class Cmd(cmd.Cmd):
         :param statement: the parsed statement from the command line
         :return: the resolved macro or None on error
         """
-        if statement.command not in self.macros.keys():
+        if statement.command not in self.macros:
             raise KeyError(f"{statement.command} is not a macro")
 
         macro = self.macros[statement.command]
@@ -2886,10 +2875,8 @@ class Cmd(cmd.Cmd):
             # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
             # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
             # if the pipe process is still running.
-            try:
+            with suppress(subprocess.TimeoutExpired):
                 proc.wait(0.2)
-            except subprocess.TimeoutExpired:
-                pass
 
             # Check if the pipe process already exited
             if proc.returncode is not None:
@@ -3462,10 +3449,7 @@ class Cmd(cmd.Cmd):
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
 
-        if args.names:
-            to_list = utils.remove_duplicates(args.names)
-        else:
-            to_list = sorted(self.aliases, key=self.default_sort_key)
+        to_list = utils.remove_duplicates(args.names) if args.names else sorted(self.aliases, key=self.default_sort_key)
 
         not_found: list[str] = []
         for name in to_list:
@@ -3697,10 +3681,7 @@ class Cmd(cmd.Cmd):
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
 
-        if args.names:
-            to_list = utils.remove_duplicates(args.names)
-        else:
-            to_list = sorted(self.macros, key=self.default_sort_key)
+        to_list = utils.remove_duplicates(args.names) if args.names else sorted(self.macros, key=self.default_sort_key)
 
         not_found: list[str] = []
         for name in to_list:
@@ -3865,10 +3846,7 @@ class Cmd(cmd.Cmd):
             texts = []
             for col in range(ncols):
                 i = row + nrows * col
-                if i >= size:
-                    x = ""
-                else:
-                    x = str_list[i]
+                x = "" if i >= size else str_list[i]
                 texts.append(x)
             while texts and not texts[-1]:
                 del texts[-1]
@@ -4267,10 +4245,8 @@ class Cmd(cmd.Cmd):
         # Delete any prompts that have been set
         attributes = ['ps1', 'ps2', 'ps3']
         for cur_attr in attributes:
-            try:
+            with suppress(KeyError):
                 del sys.__dict__[cur_attr]
-            except KeyError:
-                pass
 
         # Reset functions
         sys.displayhook = sys.__displayhook__
@@ -4982,10 +4958,7 @@ class Cmd(cmd.Cmd):
             self.perror(f"Error saving transcript file '{transcript_path}': {ex}")
         else:
             # and let the user know what we did
-            if commands_run == 1:
-                plural = 'command and its output'
-            else:
-                plural = 'commands and their outputs'
+            plural = 'command and its output' if commands_run == 1 else 'commands and their outputs'
             self.pfeedback(f"{commands_run} {plural} saved to transcript file '{transcript_path}'")
             self.last_result = True
 

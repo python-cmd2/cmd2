@@ -58,10 +58,7 @@ def is_quoted(arg: str) -> bool:
 
 def quote_string(arg: str) -> str:
     """Quote a string."""
-    if '"' in arg:
-        quote = "'"
-    else:
-        quote = '"'
+    quote = "'" if '"' in arg else '"'
 
     return quote + arg + quote
 
@@ -360,10 +357,7 @@ def find_editor() -> Optional[str]:
 
         # Get a list of every directory in the PATH environment variable and ignore symbolic links
         env_path = os.getenv('PATH')
-        if env_path is None:
-            paths = []
-        else:
-            paths = [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
+        paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
 
         for possible_editor, path in itertools.product(editors, paths):
             editor_path = os.path.join(path, possible_editor)
@@ -422,10 +416,7 @@ def get_exes_in_path(starts_with: str) -> list[str]:
 
     # Get a list of every directory in the PATH environment variable and ignore symbolic links
     env_path = os.getenv('PATH')
-    if env_path is None:
-        paths = []
-    else:
-        paths = [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
+    paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
 
     # Use a set to store exe names since there can be duplicates
     exes_set = set()
@@ -558,9 +549,8 @@ class ByteBuf:
             # and the bytes being written contain a new line character. This is helpful when StdSim
             # is being used to capture output of a shell command because it causes the output to print
             # to the screen more often than if we waited for the stream to flush its buffer.
-            if self.std_sim_instance.line_buffering:
-                if any(newline in b for newline in ByteBuf.NEWLINES):
-                    self.std_sim_instance.flush()
+            if self.std_sim_instance.line_buffering and any(newline in b for newline in ByteBuf.NEWLINES):
+                self.std_sim_instance.flush()
 
 
 class ProcReader:
@@ -862,10 +852,7 @@ def align_text(
     # fill characters. Instead of repeating the style characters for each fill character, we'll wrap each sequence.
     fill_char_style_begin, fill_char_style_end = fill_char.split(stripped_fill_char)
 
-    if text:
-        lines = text.splitlines()
-    else:
-        lines = ['']
+    lines = text.splitlines() if text else ['']
 
     text_buf = io.StringIO()
 

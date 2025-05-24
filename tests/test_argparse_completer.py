@@ -1028,14 +1028,7 @@ def test_autocomp_hint_no_help_text(ac_app, capsys) -> None:
     out, err = capsys.readouterr()
 
     assert first_match is None
-    assert (
-        not out
-        == '''
-Hint:
-  NO_HELP_POS
-
-'''
-    )
+    assert out != '''\nHint:\n  NO_HELP_POS\n\n'''
 
 
 @pytest.mark.parametrize(

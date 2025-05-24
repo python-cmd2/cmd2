@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion."""
 
+import contextlib
+
 import cmd2
 
 EXAMPLE_COMMANDS = "Example Commands"
@@ -16,10 +18,8 @@ class ReadInputApp(cmd2.Cmd):
     def do_basic(self, _) -> None:
         """Call read_input with no history or tab completion."""
         self.poutput("Tab completion and up-arrow history is off")
-        try:
+        with contextlib.suppress(EOFError):
             self.read_input("> ")
-        except EOFError:
-            pass
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_basic_with_history(self, _) -> None:
@@ -36,10 +36,8 @@ class ReadInputApp(cmd2.Cmd):
     def do_commands(self, _) -> None:
         """Call read_input the same way cmd2 prompt does to read commands."""
         self.poutput("Tab completing and up-arrow history configured for commands")
-        try:
+        with contextlib.suppress(EOFError):
             self.read_input("> ", completion_mode=cmd2.CompletionMode.COMMANDS)
-        except EOFError:
-            pass
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_custom_choices(self, _) -> None:

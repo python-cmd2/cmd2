@@ -6,6 +6,7 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 
+import contextlib
 import os
 import pathlib
 import re
@@ -33,10 +34,8 @@ def rmrf(items, verbose=True) -> None:
             print(f"Removing {item}")
         shutil.rmtree(item, ignore_errors=True)
         # rmtree doesn't remove bare files
-        try:
+        with contextlib.suppress(FileNotFoundError):
             os.remove(item)
-        except FileNotFoundError:
-            pass
 
 
 # create namespaces

@@ -353,10 +353,9 @@ class StatementParser:
         errmsg += ', '.join([shlex.quote(x) for x in errchars])
 
         match = self._command_pattern.search(word)
-        if match:
-            if word == match.group(1):
-                valid = True
-                errmsg = ''
+        if match and word == match.group(1):
+            valid = True
+            errmsg = ''
         return valid, errmsg
 
     def tokenize(self, line: str) -> list[str]:
@@ -507,10 +506,7 @@ class StatementParser:
                 arg_list = tokens[1:]
 
         # set multiline
-        if command in self.multiline_commands:
-            multiline_command = command
-        else:
-            multiline_command = ''
+        multiline_command = command if command in self.multiline_commands else ''
 
         # build the statement
         return Statement(
@@ -580,10 +576,7 @@ class StatementParser:
                 args = ''
 
         # set multiline
-        if command in self.multiline_commands:
-            multiline_command = command
-        else:
-            multiline_command = ''
+        multiline_command = command if command in self.multiline_commands else ''
 
         # build the statement
         return Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)

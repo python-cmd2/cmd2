@@ -1087,9 +1087,9 @@ def test_commandset_settables() -> None:
     app.add_settable(Settable('always_prefix_settables', bool, 'Prefix settables', app))
     app._settables['str_value'] = Settable('str_value', str, 'String value', app)
 
-    assert 'arbitrary_value' in app.settables.keys()
-    assert 'always_prefix_settables' in app.settables.keys()
-    assert 'str_value' in app.settables.keys()
+    assert 'arbitrary_value' in app.settables
+    assert 'always_prefix_settables' in app.settables
+    assert 'str_value' in app.settables
 
     # verify the settable shows up
     out, err = run_cmd(app, 'set')
@@ -1160,12 +1160,12 @@ Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
     app.register_command_set(cmdset)
 
     # Verify the settable is back with the defined prefix.
-    assert 'addon.arbitrary_value' in app.settables.keys()
+    assert 'addon.arbitrary_value' in app.settables
 
     # rename the prefix and verify that the prefix changes everywhere
     cmdset._settable_prefix = 'some'
-    assert 'addon.arbitrary_value' not in app.settables.keys()
-    assert 'some.arbitrary_value' in app.settables.keys()
+    assert 'addon.arbitrary_value' not in app.settables
+    assert 'some.arbitrary_value' in app.settables
 
     out, err = run_cmd(app, 'set')
     any('some.arbitrary_value' in line and '5' in line for line in out)

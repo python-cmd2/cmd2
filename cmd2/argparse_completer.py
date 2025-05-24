@@ -88,9 +88,8 @@ def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
         return False
 
     # If it looks like a negative number, it is not a flag unless there are negative-number-like flags
-    if parser._negative_number_matcher.match(token):
-        if not parser._has_negative_number_optionals:
-            return False
+    if parser._negative_number_matcher.match(token) and not parser._has_negative_number_optionals:
+        return False
 
     # Flags can't have a space
     if ' ' in token:

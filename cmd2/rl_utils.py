@@ -187,17 +187,11 @@ def rl_get_prompt() -> str:  # pragma: no cover
     """Get Readline's prompt."""
     if rl_type == RlType.GNU:
         encoded_prompt = ctypes.c_char_p.in_dll(readline_lib, "rl_prompt").value
-        if encoded_prompt is None:
-            prompt = ''
-        else:
-            prompt = encoded_prompt.decode(encoding='utf-8')
+        prompt = '' if encoded_prompt is None else encoded_prompt.decode(encoding='utf-8')
 
     elif rl_type == RlType.PYREADLINE:
         prompt_data: Union[str, bytes] = readline.rl.prompt
-        if isinstance(prompt_data, bytes):
-            prompt = prompt_data.decode(encoding='utf-8')
-        else:
-            prompt = prompt_data
+        prompt = prompt_data.decode(encoding='utf-8') if isinstance(prompt_data, bytes) else prompt_data
 
     else:
         prompt = ''
@@ -213,10 +207,7 @@ def rl_get_display_prompt() -> str:  # pragma: no cover
     """
     if rl_type == RlType.GNU:
         encoded_prompt = ctypes.c_char_p.in_dll(readline_lib, "rl_display_prompt").value
-        if encoded_prompt is None:
-            prompt = ''
-        else:
-            prompt = encoded_prompt.decode(encoding='utf-8')
+        prompt = '' if encoded_prompt is None else encoded_prompt.decode(encoding='utf-8')
         return rl_unescape_prompt(prompt)
     return rl_get_prompt()
 

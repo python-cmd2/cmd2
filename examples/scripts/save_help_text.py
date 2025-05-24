@@ -36,10 +36,7 @@ def add_help_to_file(item: str, outfile: TextIO, is_command: bool) -> None:
     :param outfile: file being written to
     :param is_command: tells if the item is a command and not just a help topic.
     """
-    if is_command:
-        label = "COMMAND"
-    else:
-        label = "TOPIC"
+    label = "COMMAND" if is_command else "TOPIC"
 
     header = f'{ASTERISKS}\n{label}: {item}\n{ASTERISKS}\n'
     outfile.write(header)

@@ -441,9 +441,8 @@ def test_unittest_mock() -> None:
         CommandSetRegistrationError,
     )
 
-    with mock.patch.object(ArgparseApp, 'namespace_provider'):
-        with pytest.raises(CommandSetRegistrationError):
-            ArgparseApp()
+    with mock.patch.object(ArgparseApp, 'namespace_provider'), pytest.raises(CommandSetRegistrationError):
+        ArgparseApp()
 
     with mock.patch.object(ArgparseApp, 'namespace_provider', spec=True):
         ArgparseApp()

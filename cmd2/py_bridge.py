@@ -124,13 +124,12 @@ class PyBridge:
         stop = False
         try:
             self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
-            with redirect_stdout(cast(IO[str], copy_cmd_stdout)):
-                with redirect_stderr(cast(IO[str], copy_stderr)):
-                    stop = self._cmd2_app.onecmd_plus_hooks(
-                        command,
-                        add_to_history=self._add_to_history,
-                        py_bridge_call=True,
-                    )
+            with redirect_stdout(cast(IO[str], copy_cmd_stdout)), redirect_stderr(cast(IO[str], copy_stderr)):
+                stop = self._cmd2_app.onecmd_plus_hooks(
+                    command,
+                    add_to_history=self._add_to_history,
+                    py_bridge_call=True,
+                )
         finally:
             with self._cmd2_app.sigint_protection:
                 self._cmd2_app.stdout = cast(IO[str], copy_cmd_stdout.inner_stream)

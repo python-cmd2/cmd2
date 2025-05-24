@@ -156,11 +156,11 @@ class CommandSet:
         """
         if self.__cmd_internal is not None:
             if not self._cmd.always_prefix_settables:
-                if settable.name in self._cmd.settables.keys() and settable.name not in self._settables.keys():
+                if settable.name in self._cmd.settables and settable.name not in self._settables:
                     raise KeyError(f'Duplicate settable: {settable.name}')
             else:
                 prefixed_name = f'{self._settable_prefix}.{settable.name}'
-                if prefixed_name in self._cmd.settables.keys() and settable.name not in self._settables.keys():
+                if prefixed_name in self._cmd.settables and settable.name not in self._settables:
                     raise KeyError(f'Duplicate settable: {settable.name}')
         self._settables[settable.name] = settable
 

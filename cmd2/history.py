@@ -114,10 +114,7 @@ class HistoryItem:
             if raw != expanded_command:
                 ret_str += '\n' + self._ex_listformat.format(idx, expanded_command)
         else:
-            if expanded:
-                ret_str = self.expanded
-            else:
-                ret_str = single_line_format(self.statement).rstrip()
+            ret_str = self.expanded if expanded else single_line_format(self.statement).rstrip()
 
             # Display a numbered list if not writing to a script
             if not script:

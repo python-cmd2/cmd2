@@ -1056,10 +1056,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 def get_lines(parts: list[str], indent: str, prefix: Optional[str] = None) -> list[str]:
                     lines: list[str] = []
                     line: list[str] = []
-                    if prefix is not None:
-                        line_len = len(prefix) - 1
-                    else:
-                        line_len = len(indent) - 1
+                    line_len = len(prefix) - 1 if prefix is not None else len(indent) - 1
                     for part in parts:
                         if line_len + 1 + len(part) > text_width and line:
                             lines.append(indent + ' '.join(line))
@@ -1172,10 +1169,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         # Handle nargs specified as a range
         nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
-            if nargs_range[1] == constants.INFINITY:
-                range_str = f'{nargs_range[0]}+'
-            else:
-                range_str = f'{nargs_range[0]}..{nargs_range[1]}'
+            range_str = f'{nargs_range[0]}+' if nargs_range[1] == constants.INFINITY else f'{nargs_range[0]}..{nargs_range[1]}'
 
             return '{}{{{}}}'.format('%s' % metavar_formatter(1), range_str)
 

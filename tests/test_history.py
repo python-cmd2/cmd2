@@ -1,5 +1,6 @@
 """Test history functions of cmd2"""
 
+import contextlib
 import os
 import tempfile
 from unittest import (
@@ -879,10 +880,8 @@ def hist_file():
     os.close(fd)
     yield filename
     # teardown code
-    try:
+    with contextlib.suppress(FileNotFoundError):
         os.remove(filename)
-    except FileNotFoundError:
-        pass
 
 
 def test_history_file_is_directory(capsys) -> None:
