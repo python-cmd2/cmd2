@@ -1327,7 +1327,7 @@ class Cmd(cmd.Cmd):
                 with self.sigint_protection:
                     import subprocess
 
-                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE, stdout=self.stdout)
+                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE, stdout=self.stdout)  # noqa: S602
                     pipe_proc.communicate(final_msg.encode('utf-8', 'replace'))
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
@@ -2589,7 +2589,7 @@ class Cmd(cmd.Cmd):
                 # caused by certain binary characters having been printed to it.
                 import subprocess
 
-                proc = subprocess.Popen(['stty', 'sane'])
+                proc = subprocess.Popen(['stty', 'sane'])  # noqa: S603, S607
                 proc.communicate()
 
         data = plugin.CommandFinalizationData(stop, statement)
@@ -2862,7 +2862,7 @@ class Cmd(cmd.Cmd):
                     kwargs['executable'] = shell
 
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # type: ignore[call-overload]
+            proc = subprocess.Popen(  # type: ignore[call-overload]  # noqa: S602
                 statement.pipe_to,
                 stdin=subproc_stdin,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
@@ -4212,7 +4212,7 @@ class Cmd(cmd.Cmd):
         # still receive the SIGINT since it is in the same process group as us.
         with self.sigint_protection:
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # type: ignore[call-overload]
+            proc = subprocess.Popen(  # type: ignore[call-overload]  # noqa: S602
                 expanded_command,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
                 stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
@@ -4425,7 +4425,7 @@ class Cmd(cmd.Cmd):
             if py_code_to_run:
                 try:
                     interp.runcode(py_code_to_run)  # type: ignore[arg-type]
-                except BaseException:  # noqa: BLE001
+                except BaseException:  # noqa: BLE001, S110
                     # We don't care about any exception that happened in the Python code
                     pass
 
@@ -4448,7 +4448,7 @@ class Cmd(cmd.Cmd):
                     # Since quit() or exit() raise an EmbeddedConsoleExit, interact() exits before printing
                     # the exitmsg. Therefore, we will not provide it one and print it manually later.
                     interp.interact(banner=banner, exitmsg='')
-                except BaseException:  # noqa: BLE001
+                except BaseException:  # noqa: BLE001, S110
                     # We don't care about any exception that happened in the interactive console
                     pass
                 finally:

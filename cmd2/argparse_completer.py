@@ -292,14 +292,14 @@ class ArgparseCompleter:
 
             # If we're in a flag REMAINDER arg, force all future tokens to go to that until a double dash is hit
             if flag_arg_state is not None and flag_arg_state.is_remainder:
-                if token == '--':
+                if token == '--':  # noqa: S105
                     flag_arg_state = None
                 else:
                     consume_argument(flag_arg_state)
                 continue
 
             # Handle '--' which tells argparse all remaining arguments are non-flags
-            if token == '--' and not skip_remaining_flags:
+            if token == '--' and not skip_remaining_flags:  # noqa: S105
                 # Check if there is an unfinished flag
                 if (
                     flag_arg_state is not None

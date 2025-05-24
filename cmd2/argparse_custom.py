@@ -1046,9 +1046,6 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 req_parts = re.findall(part_regexp, req_usage)
                 opt_parts = re.findall(part_regexp, opt_usage)
                 pos_parts = re.findall(part_regexp, pos_usage)
-                assert ' '.join(req_parts) == req_usage
-                assert ' '.join(opt_parts) == opt_usage
-                assert ' '.join(pos_parts) == pos_usage
 
                 # End cmd2 customization
 

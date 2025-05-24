@@ -108,9 +108,9 @@ class Cmd2TestCase(unittest.TestCase):
             # Read the expected result from transcript
             if ansi.strip_style(line).startswith(self.cmdapp.visible_prompt):
                 message = f'\nFile {fname}, line {line_num}\nCommand was:\n{command}\nExpected: (nothing)\nGot:\n{result}\n'
-                assert not result.strip(), message
+                assert not result.strip(), message  # noqa: S101
                 # If the command signaled the application to quit there should be no more commands
-                assert not stop, stop_msg
+                assert not stop, stop_msg  # noqa: S101
                 continue
             expected_parts = []
             while not ansi.strip_style(line).startswith(self.cmdapp.visible_prompt):
@@ -124,13 +124,13 @@ class Cmd2TestCase(unittest.TestCase):
 
             if stop:
                 # This should only be hit if the command that set stop to True had output text
-                assert finished, stop_msg
+                assert finished, stop_msg  # noqa: S101
 
             # transform the expected text into a valid regular expression
             expected = ''.join(expected_parts)
             expected = self._transform_transcript_expected(expected)
             message = f'\nFile {fname}, line {line_num}\nCommand was:\n{command}\nExpected:\n{expected}\nGot:\n{result}\n'
-            assert re.match(expected, result, re.MULTILINE | re.DOTALL), message
+            assert re.match(expected, result, re.MULTILINE | re.DOTALL), message  # noqa: S101
 
     def _transform_transcript_expected(self, s: str) -> str:
         r"""Parse the string with slashed regexes into a valid regex.

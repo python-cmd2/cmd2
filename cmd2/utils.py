@@ -627,7 +627,8 @@ class ProcReader:
             write_stream = self._stderr
 
         # The thread should have been started only if this stream was a pipe
-        assert read_stream is not None
+        if read_stream is None:
+            raise ValueError("read_stream is None")
 
         # Run until process completes
         while self._proc.poll() is None:
