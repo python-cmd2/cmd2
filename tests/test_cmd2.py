@@ -5,6 +5,7 @@ Cmd2 unit/functional testing
 import builtins
 import io
 import os
+import pathlib
 import signal
 import sys
 import tempfile
@@ -1795,8 +1796,11 @@ def test_commandresult_falsy(commandresult_app):
 
 def test_is_text_file_bad_input(base_app):
     # Test with a non-existent file
+    home_dir = pathlib.Path.home()
+    file_path = home_dir / 'does_not_exist'
+    file_str = f'{file_path}'
     with pytest.raises(FileNotFoundError):
-        utils.is_text_file('./does_not_exist.txt')
+        utils.is_text_file(file_str)
 
     # Test with a directory
     with pytest.raises(IsADirectoryError):
