@@ -660,11 +660,12 @@ class StatementParser:
             if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
                 shortcut_len = len(shortcut)
+                effective_expansion = expansion
                 if len(line) == shortcut_len or line[shortcut_len] != ' ':
-                    expansion += ' '
+                    effective_expansion += ' '
 
                 # Expand the shortcut
-                line = line.replace(shortcut, expansion, 1)
+                line = line.replace(shortcut, effective_expansion, 1)
                 break
         return line
 

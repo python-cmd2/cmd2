@@ -775,5 +775,5 @@ def set_default_ap_completer_type(completer_type: Type[ArgparseCompleter]) -> No
 
     :param completer_type: Type that is a subclass of ArgparseCompleter.
     """
-    global DEFAULT_AP_COMPLETER
+    global DEFAULT_AP_COMPLETER  # noqa: PLW0603
     DEFAULT_AP_COMPLETER = completer_type

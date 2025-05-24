@@ -90,8 +90,6 @@ class AlerterApp(cmd2.Cmd):
         Reports alerts
         :return: the list of alerts
         """
-        global ALERTS
-
         cur_time = time.monotonic()
         if cur_time < self._next_alert_time:
             return []
@@ -121,8 +119,6 @@ class AlerterApp(cmd2.Cmd):
         Combines alerts into one string that can be printed to the terminal
         :return: the alert string
         """
-        global ALERTS
-
         alert_str = ''
         alerts = self._get_alerts()
 

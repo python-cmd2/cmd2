@@ -1407,5 +1407,5 @@ def set_default_argument_parser_type(parser_type: type[argparse.ArgumentParser])
     Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
     you want to override the parser for cmd2's built-in commands. See examples/override_parser.py.
     """
-    global DEFAULT_ARGUMENT_PARSER
+    global DEFAULT_ARGUMENT_PARSER  # noqa: PLW0603
     DEFAULT_ARGUMENT_PARSER = parser_type

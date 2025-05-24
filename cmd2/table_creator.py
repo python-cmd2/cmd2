@@ -894,7 +894,6 @@ class BorderedTable(TableCreator):
         if self.column_borders:
             inter_cell += '┼'
         inter_cell += self.padding * '─'
-        inter_cell = inter_cell
 
         post_line = self.padding * '─' + '╢'
 

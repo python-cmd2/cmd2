@@ -87,7 +87,7 @@ def _parse_positionals(args: tuple[Any, ...]) -> tuple['cmd2.Cmd', Union[Stateme
 
         if isinstance(arg, (Cmd, CommandSet)) and len(args) > pos + 1:
             if isinstance(arg, CommandSet):
-                arg = arg._cmd
+                arg = arg._cmd  # noqa: PLW2901
             next_arg = args[pos + 1]
             if isinstance(next_arg, (Statement, str)):
                 return arg, args[pos + 1]

@@ -376,12 +376,14 @@ def find_editor() -> Optional[str]:
         else:
             paths = [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
 
-        for editor, path in itertools.product(editors, paths):
-            editor_path = os.path.join(path, editor)
+        for possible_editor, path in itertools.product(editors, paths):
+            editor_path = os.path.join(path, possible_editor)
             if os.path.isfile(editor_path) and os.access(editor_path, os.X_OK):
                 if sys.platform[:3] == 'win':
                     # Remove extension from Windows file names
-                    editor = os.path.splitext(editor)[0]
+                    editor = os.path.splitext(possible_editor)[0]
+                else:
+                    editor = possible_editor
                 break
         else:
             editor = None
@@ -902,7 +904,7 @@ def align_text(
             text_buf.write('\n')
 
         if truncate:
-            line = truncate_line(line, width)
+            line = truncate_line(line, width)  # noqa: PLW2901
 
         line_width = ansi.style_aware_wcswidth(line)
         if line_width == -1:

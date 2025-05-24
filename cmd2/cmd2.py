@@ -2653,7 +2653,7 @@ class Cmd(cmd.Cmd):
         """
         for line in cmds:
             if isinstance(line, HistoryItem):
-                line = line.raw
+                line = line.raw  # noqa: PLW2901
 
             if self.echo:
                 self.poutput(f'{self.prompt}{line}')
@@ -4974,7 +4974,7 @@ class Cmd(cmd.Cmd):
                 first = True
                 command = ''
                 if isinstance(history_item, HistoryItem):
-                    history_item = history_item.raw
+                    history_item = history_item.raw  # noqa: PLW2901
                 for line in history_item.splitlines():
                     if first:
                         command += f"{self.prompt}{line}\n"

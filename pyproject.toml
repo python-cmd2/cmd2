@@ -198,7 +198,7 @@ select = [
     "PLC",  # Pylint Conventions
     "PLE",  # Pylint Errors
     # "PLR", # Pylint Refactoring suggestions
-    # "PLW", # Pylint Warnings
+    "PLW", # Pylint Warnings
     # "PT", # flake8-pytest-style (warnings about unit test best practices)
     # "PTH",  # flake8-use-pathlib (force use of pathlib instead of os.path)
     "PYI", # flake8-pyi (warnings related to type hint best practices)
@@ -255,7 +255,8 @@ per-file-ignores."cmd2/__init__.py" = [
 ]
 
 per-file-ignores."examples/*.py" = [
-    "INP001", # Module is part of an implicit namespace
+    "INP001",  # Module is part of an implicit namespace
+    "PLW2901", # loop variable overwritten inside loop
 ]
 
 per-file-ignores."examples/override_parser.py" = [
@@ -278,9 +279,17 @@ per-file-ignores."tests/*.py" = [
     "E501", # Line too long
 ]
 
+per-file-ignores."tests/test_argparse.py" = [
+    "PLW2901", # loop variable overwritten inside loop
+]
+
 per-file-ignores."tests/pyscript/*.py" = [
     "F821",   # Undefined name `app`
     "INP001", # Module is part of an implicit namespace
+]
+
+per-file-ignores."tests_isolated/test_commandset/test_commandset.py" = [
+    "PLW0603", # Using the global statement to update {name} is discouraged
 ]
 
 
