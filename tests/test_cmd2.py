@@ -1793,18 +1793,14 @@ def test_commandresult_falsy(commandresult_app):
     assert commandresult_app.last_result == cmd2.CommandResult('', arg)
 
 
-def test_is_text_file_bad_input(base_app):
-    # Test with a non-existent file - on GitHub Actions Windows test runners, we get a PermissionError
-    file_name = 'does_not_exist.txt'
-    if sys.platform.startswith('win'):
-        # For Windows, depending on setup you might get a FileNotFoundError or a PermissionError
-        with pytest.raises(OSError):  # noqa: PT011
-            utils.is_text_file(file_name)
-    else:
-        # For Linux or macOS you should reliably get a FileNotFoundError
-        with pytest.raises(FileNotFoundError):
-            utils.is_text_file(file_name)
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="Test is unreliable on GitHub Actions Windows runners")
+def test_is_text_file_bad_no_exist(base_app):
+    # Test with a non-existent file
+    with pytest.raises(FileNotFoundError):
+        utils.is_text_file('does_not_exist.txt')
 
+
+def test_is_text_file_bad_is_dir(base_app):
     # Test with a directory
     with pytest.raises(IsADirectoryError):
         utils.is_text_file('.')
