@@ -1,48 +1,45 @@
-# coding=utf-8
-# flake8: noqa E302
-"""
-Unit testing for get_defining_class in cmd2/utils.py module.
-"""
+"""Unit testing for get_defining_class in cmd2/utils.py module."""
 
 import functools
 
 import cmd2.utils as cu
 
 
-class ParentClass(object):
-    def func_with_overrides(self):
+class ParentClass:
+    def func_with_overrides(self) -> None:
         pass
 
-    def parent_only_func(self, param1, param2):
+    def parent_only_func(self, param1, param2) -> None:
         pass
 
 
 class ChildClass(ParentClass):
-    def func_with_overrides(self):
-        super(ChildClass, self).func_with_overrides()
+    def func_with_overrides(self) -> None:
+        super().func_with_overrides()
 
-    def child_function(self):
+    def child_function(self) -> None:
         pass
 
-    def lambda1():
+    def lambda1() -> int:
         return 1
 
-    lambda2 = (lambda: lambda: 2)()
+    def lambda2() -> int:
+        return 2
 
     @classmethod
-    def class_method(cls):
+    def class_method(cls) -> None:
         pass
 
     @staticmethod
-    def static_meth():
+    def static_meth() -> None:
         pass
 
 
-def func_not_in_class():
+def func_not_in_class() -> None:
     pass
 
 
-def test_get_defining_class():
+def test_get_defining_class() -> None:
     parent_instance = ParentClass()
     child_instance = ChildClass()
 

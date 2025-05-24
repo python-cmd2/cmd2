@@ -1,20 +1,15 @@
-#
-# -*- coding: utf-8 -*-
-"""Statement parsing classes for cmd2"""
+"""Statement parsing classes for cmd2."""
 
 import re
 import shlex
+from collections.abc import Iterable
 from dataclasses import (
     dataclass,
     field,
 )
 from typing import (
     Any,
-    Dict,
-    Iterable,
-    List,
     Optional,
-    Tuple,
     Union,
 )
 
@@ -27,9 +22,8 @@ from .exceptions import (
 )
 
 
-def shlex_split(str_to_split: str) -> List[str]:
-    """
-    A wrapper around shlex.split() that uses cmd2's preferred arguments.
+def shlex_split(str_to_split: str) -> list[str]:
+    """A wrapper around shlex.split() that uses cmd2's preferred arguments.
     This allows other classes to easily call split() the same way StatementParser does.
 
     :param str_to_split: the string being split
@@ -40,10 +34,9 @@ def shlex_split(str_to_split: str) -> List[str]:
 
 @dataclass(frozen=True)
 class MacroArg:
-    """
-    Information used to replace or unescape arguments in a macro value when the macro is resolved
+    """Information used to replace or unescape arguments in a macro value when the macro is resolved
     Normal argument syntax:    {5}
-    Escaped argument syntax:  {{5}}
+    Escaped argument syntax:  {{5}}.
     """
 
     # The starting index of this argument in the macro value
@@ -73,7 +66,7 @@ class MacroArg:
 
 @dataclass(frozen=True)
 class Macro:
-    """Defines a cmd2 macro"""
+    """Defines a cmd2 macro."""
 
     # Name of the macro
     name: str
@@ -85,11 +78,11 @@ class Macro:
     minimum_arg_count: int
 
     # Used to fill in argument placeholders in the macro
-    arg_list: List[MacroArg] = field(default_factory=list)
+    arg_list: list[MacroArg] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
-class Statement(str):  # type: ignore[override]
+class Statement(str):  # type: ignore[override]  # noqa: SLOT000
     """String subclass with additional attributes to store the results of parsing.
 
     The ``cmd`` module in the standard library passes commands around as a
@@ -129,7 +122,7 @@ class Statement(str):  # type: ignore[override]
     command: str = ''
 
     # list of arguments to the command, not including any output redirection or terminators; quoted args remain quoted
-    arg_list: List[str] = field(default_factory=list)
+    arg_list: list[str] = field(default_factory=list)
 
     # if the command is a multiline command, the name of the command, otherwise empty
     multiline_command: str = ''
@@ -161,8 +154,7 @@ class Statement(str):  # type: ignore[override]
         NOTE:  @dataclass takes care of initializing other members in the __init__ it
         generates.
         """
-        stmt = super().__new__(cls, value)
-        return stmt
+        return super().__new__(cls, value)
 
     @property
     def command_and_args(self) -> str:
@@ -182,7 +174,7 @@ class Statement(str):  # type: ignore[override]
 
     @property
     def post_command(self) -> str:
-        """A string containing any ending terminator, suffix, and redirection chars"""
+        """A string containing any ending terminator, suffix, and redirection chars."""
         rtn = ''
         if self.terminator:
             rtn += self.terminator
@@ -202,12 +194,12 @@ class Statement(str):  # type: ignore[override]
 
     @property
     def expanded_command_line(self) -> str:
-        """Concatenate [command_and_args][cmd2.Statement.command_and_args] and [post_command][cmd2.Statement.post_command]"""
+        """Concatenate [command_and_args][cmd2.Statement.command_and_args] and [post_command][cmd2.Statement.post_command]."""
         return self.command_and_args + self.post_command
 
     @property
-    def argv(self) -> List[str]:
-        """a list of arguments a-la ``sys.argv``.
+    def argv(self) -> list[str]:
+        """A list of arguments a-la ``sys.argv``.
 
         The first element of the list is the command after shortcut and macro
         expansion. Subsequent elements of the list contain any additional
@@ -218,21 +210,19 @@ class Statement(str):  # type: ignore[override]
         """
         if self.command:
             rtn = [utils.strip_quotes(self.command)]
-            for cur_token in self.arg_list:
-                rtn.append(utils.strip_quotes(cur_token))
+            rtn.extend(utils.strip_quotes(cur_token) for cur_token in self.arg_list)
         else:
             rtn = []
 
         return rtn
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Utility method to convert this Statement into a dictionary for use in persistent JSON history files"""
+    def to_dict(self) -> dict[str, Any]:
+        """Utility method to convert this Statement into a dictionary for use in persistent JSON history files."""
         return self.__dict__.copy()
 
     @staticmethod
-    def from_dict(source_dict: Dict[str, Any]) -> 'Statement':
-        """
-        Utility method to restore a Statement from a dictionary
+    def from_dict(source_dict: dict[str, Any]) -> 'Statement':
+        """Utility method to restore a Statement from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
         :return: Statement object
@@ -258,8 +248,8 @@ class StatementParser:
         self,
         terminators: Optional[Iterable[str]] = None,
         multiline_commands: Optional[Iterable[str]] = None,
-        aliases: Optional[Dict[str, str]] = None,
-        shortcuts: Optional[Dict[str, str]] = None,
+        aliases: Optional[dict[str, str]] = None,
+        shortcuts: Optional[dict[str, str]] = None,
     ) -> None:
         """Initialize an instance of StatementParser.
 
@@ -271,13 +261,13 @@ class StatementParser:
         :param aliases: dictionary containing aliases
         :param shortcuts: dictionary containing shortcuts
         """
-        self.terminators: Tuple[str, ...]
+        self.terminators: tuple[str, ...]
         if terminators is None:
             self.terminators = (constants.MULTILINE_TERMINATOR,)
         else:
             self.terminators = tuple(terminators)
-        self.multiline_commands: Tuple[str, ...] = tuple(multiline_commands) if multiline_commands is not None else ()
-        self.aliases: Dict[str, str] = aliases if aliases is not None else {}
+        self.multiline_commands: tuple[str, ...] = tuple(multiline_commands) if multiline_commands is not None else ()
+        self.aliases: dict[str, str] = aliases if aliases is not None else {}
 
         if shortcuts is None:
             shortcuts = constants.DEFAULT_SHORTCUTS
@@ -318,7 +308,7 @@ class StatementParser:
         expr = rf'\A\s*(\S*?)({second_group})'
         self._command_pattern = re.compile(expr)
 
-    def is_valid_command(self, word: str, *, is_subcommand: bool = False) -> Tuple[bool, str]:
+    def is_valid_command(self, word: str, *, is_subcommand: bool = False) -> tuple[bool, str]:
         """Determine whether a word is a valid name for a command.
 
         Commands cannot include redirection characters, whitespace,
@@ -340,7 +330,7 @@ class StatementParser:
         valid = False
 
         if not isinstance(word, str):
-            return False, f'must be a string. Received {str(type(word))} instead'  # type: ignore[unreachable]
+            return False, f'must be a string. Received {type(word)!s} instead'  # type: ignore[unreachable]
 
         if not word:
             return False, 'cannot be an empty string'
@@ -363,22 +353,19 @@ class StatementParser:
         errmsg += ', '.join([shlex.quote(x) for x in errchars])
 
         match = self._command_pattern.search(word)
-        if match:
-            if word == match.group(1):
-                valid = True
-                errmsg = ''
+        if match and word == match.group(1):
+            valid = True
+            errmsg = ''
         return valid, errmsg
 
-    def tokenize(self, line: str) -> List[str]:
-        """
-        Lex a string into a list of tokens. Shortcuts and aliases are expanded and
+    def tokenize(self, line: str) -> list[str]:
+        """Lex a string into a list of tokens. Shortcuts and aliases are expanded and
         comments are removed.
 
         :param line: the command line being lexed
         :return: A list of tokens
         :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
         """
-
         # expand shortcuts and aliases
         line = self._expand(line)
 
@@ -393,12 +380,10 @@ class StatementParser:
             raise Cmd2ShlexError(ex)
 
         # custom lexing
-        tokens = self.split_on_punctuation(tokens)
-        return tokens
+        return self.split_on_punctuation(tokens)
 
     def parse(self, line: str) -> Statement:
-        """
-        Tokenize the input and parse it into a [cmd2.parsing.Statement][] object,
+        """Tokenize the input and parse it into a [cmd2.parsing.Statement][] object,
         stripping comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
 
@@ -406,7 +391,6 @@ class StatementParser:
         :return: a new [cmd2.parsing.Statement][] object
         :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
         """
-
         # handle the special case/hardcoded terminator of a blank line
         # we have to do this before we tokenize because tokenizing
         # destroys all unquoted whitespace in the input
@@ -522,13 +506,10 @@ class StatementParser:
                 arg_list = tokens[1:]
 
         # set multiline
-        if command in self.multiline_commands:
-            multiline_command = command
-        else:
-            multiline_command = ''
+        multiline_command = command if command in self.multiline_commands else ''
 
         # build the statement
-        statement = Statement(
+        return Statement(
             args,
             raw=line,
             command=command,
@@ -540,7 +521,6 @@ class StatementParser:
             output=output,
             output_to=output_to,
         )
-        return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
         """Partially parse input into a [cmd2.Statement][] object.
@@ -596,20 +576,15 @@ class StatementParser:
                 args = ''
 
         # set multiline
-        if command in self.multiline_commands:
-            multiline_command = command
-        else:
-            multiline_command = ''
+        multiline_command = command if command in self.multiline_commands else ''
 
         # build the statement
-        statement = Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)
-        return statement
+        return Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)
 
     def get_command_arg_list(
         self, command_name: str, to_parse: Union[Statement, str], preserve_quotes: bool
-    ) -> Tuple[Statement, List[str]]:
-        """
-        Convenience method used by the argument parsing decorators.
+    ) -> tuple[Statement, list[str]]:
+        """Convenience method used by the argument parsing decorators.
 
         Retrieves just the arguments being passed to their ``do_*`` methods as a list.
 
@@ -636,12 +611,10 @@ class StatementParser:
 
         if preserve_quotes:
             return to_parse, to_parse.arg_list
-        else:
-            return to_parse, to_parse.argv[1:]
+        return to_parse, to_parse.argv[1:]
 
     def _expand(self, line: str) -> str:
-        """Expand aliases and shortcuts"""
-
+        """Expand aliases and shortcuts."""
         # Make a copy of aliases so we can keep track of what aliases have been resolved to avoid an infinite loop
         remaining_aliases = list(self.aliases.keys())
         keep_expanding = bool(remaining_aliases)
@@ -667,16 +640,17 @@ class StatementParser:
             if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
                 shortcut_len = len(shortcut)
+                effective_expansion = expansion
                 if len(line) == shortcut_len or line[shortcut_len] != ' ':
-                    expansion += ' '
+                    effective_expansion += ' '
 
                 # Expand the shortcut
-                line = line.replace(shortcut, expansion, 1)
+                line = line.replace(shortcut, effective_expansion, 1)
                 break
         return line
 
     @staticmethod
-    def _command_and_args(tokens: List[str]) -> Tuple[str, str]:
+    def _command_and_args(tokens: list[str]) -> tuple[str, str]:
         """Given a list of tokens, return a tuple of the command
         and the args as a string.
         """
@@ -691,7 +665,7 @@ class StatementParser:
 
         return command, args
 
-    def split_on_punctuation(self, tokens: List[str]) -> List[str]:
+    def split_on_punctuation(self, tokens: list[str]) -> list[str]:
         """Further splits tokens from a command line using punctuation characters.
 
         Punctuation characters are treated as word breaks when they are in
@@ -701,7 +675,7 @@ class StatementParser:
         :param tokens: the tokens as parsed by shlex
         :return: a new list of tokens, further split using punctuation
         """
-        punctuation: List[str] = []
+        punctuation: list[str] = []
         punctuation.extend(self.terminators)
         punctuation.extend(constants.REDIRECTION_CHARS)
 

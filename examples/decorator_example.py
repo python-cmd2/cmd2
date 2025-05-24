@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """A sample application showing how to use cmd2's argparse decorators to
 process command line arguments for your application.
 
@@ -12,9 +11,6 @@ verifying that the output produced matches the transcript.
 """
 
 import argparse
-from typing import (
-    List,
-)
 
 import cmd2
 
@@ -22,7 +18,7 @@ import cmd2
 class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application."""
 
-    def __init__(self, ip_addr=None, port=None, transcript_files=None):
+    def __init__(self, ip_addr=None, port=None, transcript_files=None) -> None:
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'&': 'speak'})
         super().__init__(transcript_files=transcript_files, multiline_commands=['orate'], shortcuts=shortcuts)
@@ -36,7 +32,7 @@ class CmdLineApp(cmd2.Cmd):
         self._port = port
 
         # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
-        # self.default_to_shell = True
+        # self.default_to_shell = True  # noqa: ERA001
 
     speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
@@ -45,12 +41,12 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args: argparse.Namespace):
+    def do_speak(self, args: argparse.Namespace) -> None:
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
             if args.piglatin:
-                word = '%s%say' % (word[1:], word[0])
+                word = f'{word[1:]}{word[0]}ay'
             if args.shout:
                 word = word.upper()
             words.append(word)
@@ -66,18 +62,18 @@ class CmdLineApp(cmd2.Cmd):
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
     @cmd2.with_argparser(tag_parser)
-    def do_tag(self, args: argparse.Namespace):
-        """create an html tag"""
+    def do_tag(self, args: argparse.Namespace) -> None:
+        """Create an html tag."""
         # The Namespace always includes the Statement object created when parsing the command line
         statement = args.cmd2_statement.get()
 
-        self.poutput("The command line you ran was: {}".format(statement.command_and_args))
+        self.poutput(f"The command line you ran was: {statement.command_and_args}")
         self.poutput("It generated this tag:")
         self.poutput('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
 
     @cmd2.with_argument_list
-    def do_tagg(self, arglist: List[str]):
-        """version of creating an html tag using arglist instead of argparser"""
+    def do_tagg(self, arglist: list[str]) -> None:
+        """Version of creating an html tag using arglist instead of argparser."""
         if len(arglist) >= 2:
             tag = arglist[0]
             content = arglist[1:]

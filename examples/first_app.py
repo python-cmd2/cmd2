@@ -1,16 +1,14 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A simple application using cmd2 which demonstrates 8 key features:
+"""A simple application using cmd2 which demonstrates 8 key features:
 
-    * Settings
-    * Commands
-    * Argument Parsing
-    * Generating Output
-    * Help
-    * Shortcuts
-    * Multiline Commands
-    * History
+* Settings
+* Commands
+* Argument Parsing
+* Generating Output
+* Help
+* Shortcuts
+* Multiline Commands
+* History
 """
 
 import cmd2
@@ -19,7 +17,7 @@ import cmd2
 class FirstApp(cmd2.Cmd):
     """A simple cmd2 application."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({'&': 'speak'})
         super().__init__(multiline_commands=['orate'], shortcuts=shortcuts)
@@ -35,12 +33,12 @@ class FirstApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args):
+    def do_speak(self, args) -> None:
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
             if args.piglatin:
-                word = '%s%say' % (word[1:], word[0])
+                word = f'{word[1:]}{word[0]}ay'
             if args.shout:
                 word = word.upper()
             words.append(word)

@@ -1,6 +1,4 @@
-# coding=utf-8
-"""
-Bridges calls made inside of a Python environment to the Cmd2 host app
+"""Bridges calls made inside of a Python environment to the Cmd2 host app
 while maintaining a reasonable degree of isolation between the two.
 """
 
@@ -13,7 +11,6 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    List,
     NamedTuple,
     Optional,
     TextIO,
@@ -30,7 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class CommandResult(NamedTuple):
-    """Encapsulates the results from a cmd2 app command
+    """Encapsulates the results from a cmd2 app command.
 
     :stdout: str - output captured from stdout while this command is executing
     :stderr: str - output captured from stderr while this command is executing
@@ -71,20 +68,17 @@ class CommandResult(NamedTuple):
     data: Any = None
 
     def __bool__(self) -> bool:
-        """Returns True if the command succeeded, otherwise False"""
-
+        """Returns True if the command succeeded, otherwise False."""
         # If data was set, then use it to determine success
         if self.data is not None:
             return bool(self.data)
 
         # Otherwise check if stderr was filled out
-        else:
-            return not self.stderr
+        return not self.stderr
 
 
 class PyBridge:
-    """
-    Provides a Python API wrapper for application commands.
+    """Provides a Python API wrapper for application commands.
 
     :param cmd2_app: app being controlled by this PyBridge.
     :param add_to_history: If True, then add all commands run by this PyBridge to history.
@@ -99,19 +93,18 @@ class PyBridge:
         # Tells if any of the commands run via __call__ returned True for stop
         self.stop = False
 
-    def __dir__(self) -> List[str]:
-        """Return a custom set of attribute names"""
-        attributes: List[str] = []
+    def __dir__(self) -> list[str]:
+        """Return a custom set of attribute names."""
+        attributes: list[str] = []
         attributes.insert(0, 'cmd_echo')
         return attributes
 
     def __call__(self, command: str, *, echo: Optional[bool] = None) -> CommandResult:
-        """
-        Provide functionality to call application commands by calling PyBridge
+        """Provide functionality to call application commands by calling PyBridge
         ex: app('help')
         :param command: command line being run
         :param echo: If provided, this temporarily overrides the value of self.cmd_echo while the
-                     command runs. If True, output will be echoed to stdout/stderr. (Defaults to None)
+                     command runs. If True, output will be echoed to stdout/stderr. (Defaults to None).
 
         """
         if echo is None:
@@ -131,23 +124,21 @@ class PyBridge:
         stop = False
         try:
             self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
-            with redirect_stdout(cast(IO[str], copy_cmd_stdout)):
-                with redirect_stderr(cast(IO[str], copy_stderr)):
-                    stop = self._cmd2_app.onecmd_plus_hooks(
-                        command,
-                        add_to_history=self._add_to_history,
-                        py_bridge_call=True,
-                    )
+            with redirect_stdout(cast(IO[str], copy_cmd_stdout)), redirect_stderr(cast(IO[str], copy_stderr)):
+                stop = self._cmd2_app.onecmd_plus_hooks(
+                    command,
+                    add_to_history=self._add_to_history,
+                    py_bridge_call=True,
+                )
         finally:
             with self._cmd2_app.sigint_protection:
                 self._cmd2_app.stdout = cast(IO[str], copy_cmd_stdout.inner_stream)
                 self.stop = stop or self.stop
 
         # Save the result
-        result = CommandResult(
+        return CommandResult(
             stdout=copy_cmd_stdout.getvalue(),
             stderr=copy_stderr.getvalue(),
             stop=stop,
             data=self._cmd2_app.last_result,
         )
-        return result

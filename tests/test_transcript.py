@@ -1,14 +1,11 @@
-# coding=utf-8
-# flake8: noqa E302
-"""
-Cmd2 functional testing based on transcript
-"""
+"""Cmd2 functional testing based on transcript"""
 
 import os
 import random
 import re
 import sys
 import tempfile
+from typing import NoReturn
 from unittest import (
     mock,
 )
@@ -35,7 +32,7 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         self.maxrepeats = 3
 
         super().__init__(*args, multiline_commands=['orate'], **kwargs)
@@ -51,11 +48,11 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('-r', '--repeat', type=int, help="output [n] times")
 
     @cmd2.with_argparser(speak_parser, with_unknown_args=True)
-    def do_speak(self, opts, arg):
+    def do_speak(self, opts, arg) -> None:
         """Repeats what you tell me to."""
         arg = ' '.join(arg)
         if opts.piglatin:
-            arg = '%s%say' % (arg[1:], arg[0])
+            arg = f'{arg[1:]}{arg[0]}ay'
         if opts.shout:
             arg = arg.upper()
         repetitions = opts.repeat or 1
@@ -72,10 +69,9 @@ class CmdLineApp(cmd2.Cmd):
     mumble_parser.add_argument('-r', '--repeat', type=int, help="output [n] times")
 
     @cmd2.with_argparser(mumble_parser, with_unknown_args=True)
-    def do_mumble(self, opts, arg):
+    def do_mumble(self, opts, arg) -> None:
         """Mumbles what you tell me to."""
         repetitions = opts.repeat or 1
-        # arg = arg.split()
         for _ in range(min(repetitions, self.maxrepeats)):
             output = []
             if random.random() < 0.33:
@@ -88,15 +84,14 @@ class CmdLineApp(cmd2.Cmd):
                 output.append(random.choice(self.MUMBLE_LAST))
             self.poutput(' '.join(output))
 
-    def do_nothing(self, statement):
+    def do_nothing(self, statement) -> None:
         """Do nothing and output nothing"""
-        pass
 
-    def do_keyboard_interrupt(self, _):
+    def do_keyboard_interrupt(self, _) -> NoReturn:
         raise KeyboardInterrupt('Interrupting this command')
 
 
-def test_commands_at_invocation():
+def test_commands_at_invocation() -> None:
     testargs = ["prog", "say hello", "say Gracie", "quit"]
     expected = "This is an intro banner ...\nhello\nGracie\n"
     with mock.patch.object(sys, 'argv', testargs):
@@ -109,7 +104,7 @@ def test_commands_at_invocation():
 
 
 @pytest.mark.parametrize(
-    'filename,feedback_to_output',
+    ('filename', 'feedback_to_output'),
     [
         ('bol_eol.txt', False),
         ('characterclass.txt', False),
@@ -128,7 +123,7 @@ def test_commands_at_invocation():
         ('word_boundaries.txt', False),
     ],
 )
-def test_transcript(request, capsys, filename, feedback_to_output):
+def test_transcript(request, capsys, filename, feedback_to_output) -> None:
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
     transcript_file = os.path.join(test_dir, 'transcripts', filename)
@@ -155,7 +150,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     assert err.endswith(expected_end)
 
 
-def test_history_transcript():
+def test_history_transcript() -> None:
     app = CmdLineApp()
     app.stdout = StdSim(app.stdout)
     run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')
@@ -174,7 +169,7 @@ this is a \/multiline\/ command
     os.close(fd)
 
     # tell the history command to create a transcript
-    run_cmd(app, 'history -t "{}"'.format(history_fname))
+    run_cmd(app, f'history -t "{history_fname}"')
 
     # read in the transcript created by the history command
     with open(history_fname) as f:
@@ -183,7 +178,7 @@ this is a \/multiline\/ command
     assert xscript == expected
 
 
-def test_history_transcript_bad_path(mocker):
+def test_history_transcript_bad_path(mocker) -> None:
     app = CmdLineApp()
     app.stdout = StdSim(app.stdout)
     run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')
@@ -191,7 +186,7 @@ def test_history_transcript_bad_path(mocker):
 
     # Bad directory
     history_fname = '~/fakedir/this_does_not_exist.txt'
-    out, err = run_cmd(app, 'history -t "{}"'.format(history_fname))
+    out, err = run_cmd(app, f'history -t "{history_fname}"')
     assert "is not a directory" in err[0]
 
     # Cause os.open to fail and make sure error gets printed
@@ -199,11 +194,11 @@ def test_history_transcript_bad_path(mocker):
     mock_remove.side_effect = OSError
 
     history_fname = 'outfile.txt'
-    out, err = run_cmd(app, 'history -t "{}"'.format(history_fname))
+    out, err = run_cmd(app, f'history -t "{history_fname}"')
     assert "Error saving transcript file" in err[0]
 
 
-def test_run_script_record_transcript(base_app, request):
+def test_run_script_record_transcript(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
 
@@ -215,7 +210,7 @@ def test_run_script_record_transcript(base_app, request):
     os.close(fd)
 
     # Execute the run_script command with the -t option to generate a transcript
-    run_cmd(base_app, 'run_script {} -t {}'.format(filename, transcript_fname))
+    run_cmd(base_app, f'run_script {filename} -t {transcript_fname}')
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -228,7 +223,7 @@ def test_run_script_record_transcript(base_app, request):
     verify_help_text(base_app, xscript)
 
 
-def test_generate_transcript_stop(capsys):
+def test_generate_transcript_stop(capsys) -> None:
     # Verify transcript generation stops when a command returns True for stop
     app = CmdLineApp()
 
@@ -256,7 +251,7 @@ def test_generate_transcript_stop(capsys):
 
 
 @pytest.mark.parametrize(
-    'expected, transformed',
+    ('expected', 'transformed'),
     [
         # strings with zero or one slash or with escaped slashes means no regular
         # expression present, so the result should just be what re.escape returns.
@@ -279,7 +274,7 @@ def test_generate_transcript_stop(capsys):
         (r'lots /\/?/ more /.*/ stuff', re.escape('lots ') + '/?' + re.escape(' more ') + '.*' + re.escape(' stuff')),
     ],
 )
-def test_parse_transcript_expected(expected, transformed):
+def test_parse_transcript_expected(expected, transformed) -> None:
     app = CmdLineApp()
 
     class TestMyAppCase(transcript.Cmd2TestCase):
@@ -289,7 +284,7 @@ def test_parse_transcript_expected(expected, transformed):
     assert testcase._transform_transcript_expected(expected) == transformed
 
 
-def test_transcript_failure(request, capsys):
+def test_transcript_failure(request, capsys) -> None:
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
     transcript_file = os.path.join(test_dir, 'transcripts', 'failure.txt')
@@ -315,7 +310,7 @@ def test_transcript_failure(request, capsys):
     assert err.endswith(expected_end)
 
 
-def test_transcript_no_file(request, capsys):
+def test_transcript_no_file(request, capsys) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with
     # arguments equal to the py.test args
     testargs = ['prog', '-t']

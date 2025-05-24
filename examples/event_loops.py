@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding=utf-8
 """A sample application for integrating cmd2 with external event loops.
 
 This is an example of how to use cmd2 in a way so that cmd2 doesn't own the inner event loop of your application.
@@ -13,7 +12,7 @@ import cmd2
 class Cmd2EventBased(cmd2.Cmd):
     """Basic example of how to run cmd2 without it controlling the main loop."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     # ... your class code here ...

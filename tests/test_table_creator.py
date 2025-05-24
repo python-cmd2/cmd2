@@ -1,8 +1,4 @@
-# coding=utf-8
-# flake8: noqa E501
-"""
-Unit testing for cmd2/table_creator.py module
-"""
+"""Unit testing for cmd2/table_creator.py module"""
 
 import pytest
 
@@ -27,20 +23,18 @@ from cmd2.table_creator import (
 # fmt: off
 
 
-def test_column_creation():
+def test_column_creation() -> None:
     # Width less than 1
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Column width cannot be less than 1"):
         Column("Column 1", width=0)
-    assert "Column width cannot be less than 1" in str(excinfo.value)
 
     # Width specified
     c = Column("header", width=20)
     assert c.width == 20
 
     # max_data_lines less than 1
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Max data lines cannot be less than 1"):
         Column("Column 1", max_data_lines=0)
-    assert "Max data lines cannot be less than 1" in str(excinfo.value)
 
     # No width specified, blank label
     c = Column("")
@@ -86,7 +80,7 @@ def test_column_creation():
     assert c.style_data_text is False
 
 
-def test_column_alignment():
+def test_column_alignment() -> None:
     column_1 = Column(
         "Col 1",
         width=10,
@@ -141,7 +135,7 @@ def test_column_alignment():
     )
 
 
-def test_blank_last_line():
+def test_blank_last_line() -> None:
     """This tests that an empty line is inserted when the last data line is blank"""
     column_1 = Column("Col 1", width=10)
     tc = TableCreator([column_1])
@@ -160,7 +154,7 @@ def test_blank_last_line():
     assert row == '          '
 
 
-def test_wrap_text():
+def test_wrap_text() -> None:
     column_1 = Column("Col 1", width=10)
     tc = TableCreator([column_1])
 
@@ -182,7 +176,7 @@ def test_wrap_text():
                    ' last one ')
 
 
-def test_wrap_text_max_lines():
+def test_wrap_text_max_lines() -> None:
     column_1 = Column("Col 1", width=10, max_data_lines=2)
     tc = TableCreator([column_1])
 
@@ -217,7 +211,7 @@ def test_wrap_text_max_lines():
                    'last line…')
 
 
-def test_wrap_long_word():
+def test_wrap_long_word() -> None:
     # Make sure words wider than column start on own line and wrap
     column_1 = Column("LongColumnName", width=10)
     column_2 = Column("Col 2", width=10)
@@ -232,7 +226,7 @@ def test_wrap_long_word():
                       'Name        Col 2     ')
 
     # Test data row
-    row_data = list()
+    row_data = []
 
     # Long word should start on the first line (style should not affect width)
     row_data.append(ansi.style("LongerThan10", fg=Fg.GREEN))
@@ -260,7 +254,7 @@ def test_wrap_long_word():
     assert row == expected
 
 
-def test_wrap_long_word_max_data_lines():
+def test_wrap_long_word_max_data_lines() -> None:
     column_1 = Column("Col 1", width=10, max_data_lines=2)
     column_2 = Column("Col 2", width=10, max_data_lines=2)
     column_3 = Column("Col 3", width=10, max_data_lines=2)
@@ -269,7 +263,7 @@ def test_wrap_long_word_max_data_lines():
     columns = [column_1, column_2, column_3, column_4]
     tc = TableCreator(columns)
 
-    row_data = list()
+    row_data = []
 
     # This long word will exactly fit the last line and it's the final word in the text. No ellipsis should appear.
     row_data.append("LongerThan10FitsLast")
@@ -289,9 +283,8 @@ def test_wrap_long_word_max_data_lines():
                    '10FitsLast  10FitsLas…  10RunsOve…            ')
 
 
-def test_wrap_long_char_wider_than_max_width():
-    """
-    This tests case where a character is wider than max_width. This can happen if max_width
+def test_wrap_long_char_wider_than_max_width() -> None:
+    """This tests case where a character is wider than max_width. This can happen if max_width
     is 1 and the text contains wide characters (e.g. East Asian). Replace it with an ellipsis.
     """
     column_1 = Column("Col 1", width=1)
@@ -300,7 +293,7 @@ def test_wrap_long_char_wider_than_max_width():
     assert row == '…'
 
 
-def test_generate_row_exceptions():
+def test_generate_row_exceptions() -> None:
     column_1 = Column("Col 1")
     tc = TableCreator([column_1])
     row_data = ['fake']
@@ -313,18 +306,16 @@ def test_generate_row_exceptions():
     # Unprintable characters
     for arg in ['fill_char', 'pre_line', 'inter_cell', 'post_line']:
         kwargs = {arg: '\n'}
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match=f"{arg} contains an unprintable character"):
             tc.generate_row(row_data=row_data, is_header=False, **kwargs)
-        assert "{} contains an unprintable character".format(arg) in str(excinfo.value)
 
     # Data with too many columns
     row_data = ['Data 1', 'Extra Column']
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Length of row_data must match length of cols"):
         tc.generate_row(row_data=row_data, is_header=False)
-    assert "Length of row_data must match length of cols" in str(excinfo.value)
 
 
-def test_tabs():
+def test_tabs() -> None:
     column_1 = Column("Col\t1", width=20)
     column_2 = Column("Col 2")
     columns = [column_1, column_2]
@@ -334,16 +325,15 @@ def test_tabs():
     row = tc.generate_row(row_data, is_header=True, fill_char='\t', pre_line='\t', inter_cell='\t', post_line='\t')
     assert row == '  Col  1                Col 2  '
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Tab width cannot be less than 1" ):
         TableCreator([column_1, column_2], tab_width=0)
-    assert "Tab width cannot be less than 1" in str(excinfo.value)
 
 
-def test_simple_table_creation():
+def test_simple_table_creation() -> None:
     column_1 = Column("Col 1", width=16)
     column_2 = Column("Col 2", width=16)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -441,24 +431,20 @@ def test_simple_table_creation():
     )
 
     # Invalid column spacing
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Column spacing cannot be less than 0"):
         SimpleTable([column_1, column_2], column_spacing=-1)
-    assert "Column spacing cannot be less than 0" in str(excinfo.value)
 
     # Invalid divider character
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(TypeError, match="Divider character must be exactly one character long"):
         SimpleTable([column_1, column_2], divider_char='too long')
-    assert "Divider character must be exactly one character long" in str(excinfo.value)
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Divider character is an unprintable character"):
         SimpleTable([column_1, column_2], divider_char='\n')
-    assert "Divider character is an unprintable character" in str(excinfo.value)
 
     # Invalid row spacing
     st = SimpleTable([column_1, column_2])
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Row spacing cannot be less than 0"):
         st.generate_table(row_data, row_spacing=-1)
-    assert "Row spacing cannot be less than 0" in str(excinfo.value)
 
     # Test header and data colors
     st = SimpleTable([column_1, column_2], divider_char=None, header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
@@ -483,21 +469,20 @@ def test_simple_table_creation():
     )
 
 
-def test_simple_table_width():
+def test_simple_table_width() -> None:
     # Base width
     for num_cols in range(1, 10):
         assert SimpleTable.base_width(num_cols) == (num_cols - 1) * 2
 
     # Invalid num_cols value
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Column count cannot be less than 1"):
         SimpleTable.base_width(0)
-    assert "Column count cannot be less than 1" in str(excinfo.value)
 
     # Total width
     column_1 = Column("Col 1", width=16)
     column_2 = Column("Col 2", width=16)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -505,22 +490,21 @@ def test_simple_table_width():
     assert st.total_width() == 34
 
 
-def test_simple_generate_data_row_exceptions():
+def test_simple_generate_data_row_exceptions() -> None:
     column_1 = Column("Col 1")
     tc = SimpleTable([column_1])
 
     # Data with too many columns
     row_data = ['Data 1', 'Extra Column']
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Length of row_data must match length of cols"):
         tc.generate_data_row(row_data=row_data)
-    assert "Length of row_data must match length of cols" in str(excinfo.value)
 
 
-def test_bordered_table_creation():
+def test_bordered_table_creation() -> None:
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -575,9 +559,8 @@ def test_bordered_table_creation():
     )
 
     # Invalid padding
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Padding cannot be less than 0"):
         BorderedTable([column_1, column_2], padding=-1)
-    assert "Padding cannot be less than 0" in str(excinfo.value)
 
     # Test border, header, and data colors
     bt = BorderedTable([column_1, column_2], border_fg=Fg.LIGHT_YELLOW, border_bg=Bg.WHITE,
@@ -609,7 +592,7 @@ def test_bordered_table_creation():
     )
 
 
-def test_bordered_table_width():
+def test_bordered_table_width() -> None:
     # Default behavior (column_borders=True, padding=1)
     assert BorderedTable.base_width(1) == 4
     assert BorderedTable.base_width(2) == 7
@@ -631,15 +614,14 @@ def test_bordered_table_width():
     assert BorderedTable.base_width(3, padding=3) == 22
 
     # Invalid num_cols value
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Column count cannot be less than 1"):
         BorderedTable.base_width(0)
-    assert "Column count cannot be less than 1" in str(excinfo.value)
 
     # Total width
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -647,22 +629,21 @@ def test_bordered_table_width():
     assert bt.total_width() == 37
 
 
-def test_bordered_generate_data_row_exceptions():
+def test_bordered_generate_data_row_exceptions() -> None:
     column_1 = Column("Col 1")
     tc = BorderedTable([column_1])
 
     # Data with too many columns
     row_data = ['Data 1', 'Extra Column']
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Length of row_data must match length of cols"):
         tc.generate_data_row(row_data=row_data)
-    assert "Length of row_data must match length of cols" in str(excinfo.value)
 
 
-def test_alternating_table_creation():
+def test_alternating_table_creation() -> None:
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
 
-    row_data = list()
+    row_data = []
     row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
     row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
 
@@ -713,9 +694,8 @@ def test_alternating_table_creation():
     )
 
     # Invalid padding
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Padding cannot be less than 0"):
         AlternatingTable([column_1, column_2], padding=-1)
-    assert "Padding cannot be less than 0" in str(excinfo.value)
 
     # Test border, header, and data colors
     at = AlternatingTable([column_1, column_2], border_fg=Fg.LIGHT_YELLOW, border_bg=Bg.WHITE,

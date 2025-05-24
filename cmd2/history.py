@@ -1,22 +1,16 @@
-# coding=utf-8
-"""
-History management classes
-"""
+"""History management classes."""
 
 import json
 import re
 from collections import (
     OrderedDict,
 )
+from collections.abc import Callable, Iterable
 from dataclasses import (
     dataclass,
 )
 from typing import (
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
     Optional,
     Union,
     overload,
@@ -32,8 +26,7 @@ from .parsing import (
 
 
 def single_line_format(statement: Statement) -> str:
-    """
-    Format a command line to display on a single line.
+    """Format a command line to display on a single line.
 
     Spaces and newlines in quotes are preserved so those strings will span multiple lines.
 
@@ -71,7 +64,7 @@ def single_line_format(statement: Statement) -> str:
 
 @dataclass(frozen=True)
 class HistoryItem:
-    """Class used to represent one command in the history list"""
+    """Class used to represent one command in the history list."""
 
     _listformat = ' {:>4}  {}'
     _ex_listformat = ' {:>4}x {}'
@@ -82,7 +75,7 @@ class HistoryItem:
     statement: Statement
 
     def __str__(self) -> str:
-        """A convenient human-readable representation of the history item"""
+        """A convenient human-readable representation of the history item."""
         return self.statement.raw
 
     @property
@@ -96,7 +89,7 @@ class HistoryItem:
     @property
     def expanded(self) -> str:
         """Return the command as run which includes shortcuts and aliases resolved
-        plus any changes made in hooks
+        plus any changes made in hooks.
 
         Proxy property for ``self.statement.expanded_command_line``
         """
@@ -121,10 +114,7 @@ class HistoryItem:
             if raw != expanded_command:
                 ret_str += '\n' + self._ex_listformat.format(idx, expanded_command)
         else:
-            if expanded:
-                ret_str = self.expanded
-            else:
-                ret_str = single_line_format(self.statement).rstrip()
+            ret_str = self.expanded if expanded else single_line_format(self.statement).rstrip()
 
             # Display a numbered list if not writing to a script
             if not script:
@@ -132,14 +122,13 @@ class HistoryItem:
 
         return ret_str
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Utility method to convert this HistoryItem into a dictionary for use in persistent JSON history files"""
+    def to_dict(self) -> dict[str, Any]:
+        """Utility method to convert this HistoryItem into a dictionary for use in persistent JSON history files."""
         return {HistoryItem._statement_field: self.statement.to_dict()}
 
     @staticmethod
-    def from_dict(source_dict: Dict[str, Any]) -> 'HistoryItem':
-        """
-        Utility method to restore a HistoryItem from a dictionary
+    def from_dict(source_dict: dict[str, Any]) -> 'HistoryItem':
+        """Utility method to restore a HistoryItem from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
         :return: HistoryItem object
@@ -149,7 +138,7 @@ class HistoryItem:
         return HistoryItem(Statement.from_dict(statement_dict))
 
 
-class History(List[HistoryItem]):
+class History(list[HistoryItem]):
     """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods
     for searching and managing the list.
 
@@ -169,7 +158,7 @@ class History(List[HistoryItem]):
     _history_items_field = 'history_items'
 
     def __init__(self, seq: Iterable[HistoryItem] = ()) -> None:
-        super(History, self).__init__(seq)
+        super().__init__(seq)
         self.session_start_index = 0
 
     def start_session(self) -> None:
@@ -196,7 +185,7 @@ class History(List[HistoryItem]):
                     and added to the end of the list
         """
         history_item = HistoryItem(new) if isinstance(new, Statement) else new
-        super(History, self).append(history_item)
+        super().append(history_item)
 
     def clear(self) -> None:
         """Remove all items from the History list."""
@@ -211,10 +200,9 @@ class History(List[HistoryItem]):
         """
         if index == 0:
             raise IndexError('The first command in history is command 1.')
-        elif index < 0:
+        if index < 0:
             return self[index]
-        else:
-            return self[index - 1]
+        return self[index - 1]
 
     # This regular expression parses input for the span() method. There are five parts:
     #
@@ -243,7 +231,7 @@ class History(List[HistoryItem]):
     spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$')
 
     def span(self, span: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
-        """Return a slice of the History list
+        """Return a slice of the History list.
 
         :param span: string containing an index or a slice
         :param include_persisted: if True, then retrieve full results including from persisted history
@@ -292,7 +280,7 @@ class History(List[HistoryItem]):
         return self._build_result_dictionary(start, end)
 
     def str_search(self, search: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
-        """Find history items which contain a given string
+        """Find history items which contain a given string.
 
         :param search: the string to search for
         :param include_persisted: if True, then search full history including persisted history
@@ -301,7 +289,7 @@ class History(List[HistoryItem]):
         """
 
         def isin(history_item: HistoryItem) -> bool:
-            """filter function for string search of history"""
+            """Filter function for string search of history."""
             sloppy = utils.norm_fold(search)
             inraw = sloppy in utils.norm_fold(history_item.raw)
             inexpanded = sloppy in utils.norm_fold(history_item.expanded)
@@ -311,7 +299,7 @@ class History(List[HistoryItem]):
         return self._build_result_dictionary(start, len(self), isin)
 
     def regex_search(self, regex: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
-        """Find history items which match a given regular expression
+        """Find history items which match a given regular expression.
 
         :param regex: the regular expression to search for.
         :param include_persisted: if True, then search full history including persisted history
@@ -324,14 +312,14 @@ class History(List[HistoryItem]):
         finder = re.compile(regex, re.DOTALL | re.MULTILINE)
 
         def isin(hi: HistoryItem) -> bool:
-            """filter function for doing a regular expression search of history"""
+            """Filter function for doing a regular expression search of history."""
             return bool(finder.search(hi.raw) or finder.search(hi.expanded))
 
         start = 0 if include_persisted else self.session_start_index
         return self._build_result_dictionary(start, len(self), isin)
 
     def truncate(self, max_length: int) -> None:
-        """Truncate the length of the history, dropping the oldest items if necessary
+        """Truncate the length of the history, dropping the oldest items if necessary.
 
         :param max_length: the maximum length of the history, if negative, all history
                            items will be deleted
@@ -347,10 +335,9 @@ class History(List[HistoryItem]):
     def _build_result_dictionary(
         self, start: int, end: int, filter_func: Optional[Callable[[HistoryItem], bool]] = None
     ) -> 'OrderedDict[int, HistoryItem]':
-        """
-        Build history search results
+        """Build history search results
         :param start: start index to search from
-        :param end: end index to stop searching (exclusive)
+        :param end: end index to stop searching (exclusive).
         """
         results: OrderedDict[int, HistoryItem] = OrderedDict()
         for index in range(start, end):
@@ -359,7 +346,7 @@ class History(List[HistoryItem]):
         return results
 
     def to_json(self) -> str:
-        """Utility method to convert this History into a JSON string for use in persistent history files"""
+        """Utility method to convert this History into a JSON string for use in persistent history files."""
         json_dict = {
             History._history_version_field: History._history_version,
             History._history_items_field: [hi.to_dict() for hi in self],
@@ -368,8 +355,7 @@ class History(List[HistoryItem]):
 
     @staticmethod
     def from_json(history_json: str) -> 'History':
-        """
-        Utility method to restore History from a JSON string
+        """Utility method to restore History from a JSON string.
 
         :param history_json: history data as JSON string (generated using to_json())
         :return: History object

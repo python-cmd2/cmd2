@@ -1,5 +1,4 @@
-# coding=utf-8
-"""Shared utility functions"""
+"""Shared utility functions."""
 
 import argparse
 import collections
@@ -13,6 +12,7 @@ import subprocess
 import sys
 import threading
 import unicodedata
+from collections.abc import Callable, Iterable
 from difflib import (
     SequenceMatcher,
 )
@@ -22,13 +22,8 @@ from enum import (
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
     Optional,
     TextIO,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -53,8 +48,7 @@ _T = TypeVar('_T')
 
 
 def is_quoted(arg: str) -> bool:
-    """
-    Checks if a string is quoted
+    """Checks if a string is quoted.
 
     :param arg: the string being checked for quotes
     :return: True if a string is quoted
@@ -63,17 +57,14 @@ def is_quoted(arg: str) -> bool:
 
 
 def quote_string(arg: str) -> str:
-    """Quote a string"""
-    if '"' in arg:
-        quote = "'"
-    else:
-        quote = '"'
+    """Quote a string."""
+    quote = "'" if '"' in arg else '"'
 
     return quote + arg + quote
 
 
 def quote_string_if_needed(arg: str) -> str:
-    """Quote a string if it contains spaces and isn't already quoted"""
+    """Quote a string if it contains spaces and isn't already quoted."""
     if is_quoted(arg) or ' ' not in arg:
         return arg
 
@@ -106,22 +97,21 @@ def to_bool(val: Any) -> bool:
     if isinstance(val, str):
         if val.capitalize() == str(True):
             return True
-        elif val.capitalize() == str(False):
+        if val.capitalize() == str(False):
             return False
         raise ValueError("must be True or False (case-insensitive)")
-    elif isinstance(val, bool):
+    if isinstance(val, bool):
         return val
-    else:
-        return bool(val)
+    return bool(val)
 
 
 class Settable:
-    """Used to configure an attribute to be settable via the set command in the CLI"""
+    """Used to configure an attribute to be settable via the set command in the CLI."""
 
     def __init__(
         self,
         name: str,
-        val_type: Union[Type[Any], Callable[[Any], Any]],
+        val_type: Union[type[Any], Callable[[Any], Any]],
         description: str,
         settable_object: object,
         *,
@@ -131,8 +121,7 @@ class Settable:
         choices_provider: Optional[ChoicesProviderFunc] = None,
         completer: Optional[CompleterFunc] = None,
     ) -> None:
-        """
-        Settable Initializer
+        """Settable Initializer.
 
         :param name: name of the instance attribute being made settable
         :param val_type: callable used to cast the string value from the command line into its proper type and
@@ -160,8 +149,8 @@ class Settable:
         """
         if val_type is bool:
 
-            def get_bool_choices(_) -> List[str]:  # type: ignore[no-untyped-def]
-                """Used to tab complete lowercase boolean values"""
+            def get_bool_choices(_) -> list[str]:  # type: ignore[no-untyped-def]
+                """Used to tab complete lowercase boolean values."""
                 return ['true', 'false']
 
             val_type = to_bool
@@ -182,8 +171,7 @@ class Settable:
         return getattr(self.settable_obj, self.settable_attrib_name)
 
     def set_value(self, value: Any) -> None:
-        """
-        Set the settable attribute on the specified destination object.
+        """Set the settable attribute on the specified destination object.
 
         :param value: new value to set
         """
@@ -231,7 +219,7 @@ def is_text_file(file_path: str) -> bool:
     return valid_text_file
 
 
-def remove_duplicates(list_to_prune: List[_T]) -> List[_T]:
+def remove_duplicates(list_to_prune: list[_T]) -> list[_T]:
     """Removes duplicates from a list while preserving order of the items.
 
     :param list_to_prune: the list being pruned of duplicates
@@ -253,7 +241,7 @@ def norm_fold(astr: str) -> str:
     return unicodedata.normalize('NFC', astr).casefold()
 
 
-def alphabetical_sort(list_to_sort: Iterable[str]) -> List[str]:
+def alphabetical_sort(list_to_sort: Iterable[str]) -> list[str]:
     """Sorts a list of strings alphabetically.
 
     For example: ['a1', 'A11', 'A2', 'a22', 'a3']
@@ -269,10 +257,9 @@ def alphabetical_sort(list_to_sort: Iterable[str]) -> List[str]:
 
 
 def try_int_or_force_to_lower_case(input_str: str) -> Union[int, str]:
-    """
-    Tries to convert the passed-in string to an integer. If that fails, it converts it to lower case using norm_fold.
+    """Tries to convert the passed-in string to an integer. If that fails, it converts it to lower case using norm_fold.
     :param input_str: string to convert
-    :return: the string as an integer or a lower case version of the string
+    :return: the string as an integer or a lower case version of the string.
     """
     try:
         return int(input_str)
@@ -280,9 +267,8 @@ def try_int_or_force_to_lower_case(input_str: str) -> Union[int, str]:
         return norm_fold(input_str)
 
 
-def natural_keys(input_str: str) -> List[Union[int, str]]:
-    """
-    Converts a string into a list of integers and strings to support natural sorting (see natural_sort).
+def natural_keys(input_str: str) -> list[Union[int, str]]:
+    """Converts a string into a list of integers and strings to support natural sorting (see natural_sort).
 
     For example: natural_keys('abc123def') -> ['abc', '123', 'def']
     :param input_str: string to convert
@@ -291,9 +277,8 @@ def natural_keys(input_str: str) -> List[Union[int, str]]:
     return [try_int_or_force_to_lower_case(substr) for substr in re.split(r'(\d+)', input_str)]
 
 
-def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
-    """
-    Sorts a list of strings case insensitively as well as numerically.
+def natural_sort(list_to_sort: Iterable[str]) -> list[str]:
+    """Sorts a list of strings case insensitively as well as numerically.
 
     For example: ['a1', 'A2', 'a3', 'A11', 'a22']
 
@@ -307,9 +292,8 @@ def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
     return sorted(list_to_sort, key=natural_keys)
 
 
-def quote_specific_tokens(tokens: List[str], tokens_to_quote: List[str]) -> None:
-    """
-    Quote specific tokens in a list
+def quote_specific_tokens(tokens: list[str], tokens_to_quote: list[str]) -> None:
+    """Quote specific tokens in a list.
 
     :param tokens: token list being edited
     :param tokens_to_quote: the tokens, which if present in tokens, to quote
@@ -319,9 +303,8 @@ def quote_specific_tokens(tokens: List[str], tokens_to_quote: List[str]) -> None
             tokens[i] = quote_string(token)
 
 
-def unquote_specific_tokens(tokens: List[str], tokens_to_unquote: List[str]) -> None:
-    """
-    Unquote specific tokens in a list
+def unquote_specific_tokens(tokens: list[str], tokens_to_unquote: list[str]) -> None:
+    """Unquote specific tokens in a list.
 
     :param tokens: token list being edited
     :param tokens_to_unquote: the tokens, which if present in tokens, to unquote
@@ -333,9 +316,8 @@ def unquote_specific_tokens(tokens: List[str], tokens_to_unquote: List[str]) -> 
 
 
 def expand_user(token: str) -> str:
-    """
-    Wrap os.expanduser() to support expanding ~ in quoted strings
-    :param token: the string to expand
+    """Wrap os.expanduser() to support expanding ~ in quoted strings
+    :param token: the string to expand.
     """
     if token:
         if is_quoted(token):
@@ -353,20 +335,18 @@ def expand_user(token: str) -> str:
     return token
 
 
-def expand_user_in_tokens(tokens: List[str]) -> None:
-    """
-    Call expand_user() on all tokens in a list of strings
-    :param tokens: tokens to expand
+def expand_user_in_tokens(tokens: list[str]) -> None:
+    """Call expand_user() on all tokens in a list of strings
+    :param tokens: tokens to expand.
     """
     for index, _ in enumerate(tokens):
         tokens[index] = expand_user(tokens[index])
 
 
 def find_editor() -> Optional[str]:
-    """
-    Used to set cmd2.Cmd.DEFAULT_EDITOR. If EDITOR env variable is set, that will be used.
+    """Used to set cmd2.Cmd.DEFAULT_EDITOR. If EDITOR env variable is set, that will be used.
     Otherwise the function will look for a known editor in directories specified by PATH env variable.
-    :return: Default editor or None
+    :return: Default editor or None.
     """
     editor = os.environ.get('EDITOR')
     if not editor:
@@ -377,17 +357,16 @@ def find_editor() -> Optional[str]:
 
         # Get a list of every directory in the PATH environment variable and ignore symbolic links
         env_path = os.getenv('PATH')
-        if env_path is None:
-            paths = []
-        else:
-            paths = [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
+        paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
 
-        for editor, path in itertools.product(editors, paths):
-            editor_path = os.path.join(path, editor)
+        for possible_editor, path in itertools.product(editors, paths):
+            editor_path = os.path.join(path, possible_editor)
             if os.path.isfile(editor_path) and os.access(editor_path, os.X_OK):
                 if sys.platform[:3] == 'win':
                     # Remove extension from Windows file names
-                    editor = os.path.splitext(editor)[0]
+                    editor = os.path.splitext(possible_editor)[0]
+                else:
+                    editor = possible_editor
                 break
         else:
             editor = None
@@ -395,7 +374,7 @@ def find_editor() -> Optional[str]:
     return editor
 
 
-def files_from_glob_pattern(pattern: str, access: int = os.F_OK) -> List[str]:
+def files_from_glob_pattern(pattern: str, access: int = os.F_OK) -> list[str]:
     """Return a list of file paths based on a glob pattern.
 
     Only files are returned, not directories, and optionally only files for which the user has a specified access to.
@@ -407,7 +386,7 @@ def files_from_glob_pattern(pattern: str, access: int = os.F_OK) -> List[str]:
     return [f for f in glob.glob(pattern) if os.path.isfile(f) and os.access(f, access)]
 
 
-def files_from_glob_patterns(patterns: List[str], access: int = os.F_OK) -> List[str]:
+def files_from_glob_patterns(patterns: list[str], access: int = os.F_OK) -> list[str]:
     """Return a list of file paths based on a list of glob patterns.
 
     Only files are returned, not directories, and optionally only files for which the user has a specified access to.
@@ -423,8 +402,8 @@ def files_from_glob_patterns(patterns: List[str], access: int = os.F_OK) -> List
     return files
 
 
-def get_exes_in_path(starts_with: str) -> List[str]:
-    """Returns names of executables in a user's path
+def get_exes_in_path(starts_with: str) -> list[str]:
+    """Returns names of executables in a user's path.
 
     :param starts_with: what the exes should start with. leave blank for all exes in path.
     :return: a list of matching exe names
@@ -437,10 +416,7 @@ def get_exes_in_path(starts_with: str) -> List[str]:
 
     # Get a list of every directory in the PATH environment variable and ignore symbolic links
     env_path = os.getenv('PATH')
-    if env_path is None:
-        paths = []
-    else:
-        paths = [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
+    paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
 
     # Use a set to store exe names since there can be duplicates
     exes_set = set()
@@ -457,8 +433,7 @@ def get_exes_in_path(starts_with: str) -> List[str]:
 
 
 class StdSim:
-    """
-    Class to simulate behavior of sys.stdout or sys.stderr.
+    """Class to simulate behavior of sys.stdout or sys.stderr.
     Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
     """
 
@@ -470,8 +445,7 @@ class StdSim:
         encoding: str = 'utf-8',
         errors: str = 'replace',
     ) -> None:
-        """
-        StdSim Initializer
+        """StdSim Initializer.
 
         :param inner_stream: the wrapped stream. Should be a TextIO or StdSim instance.
         :param echo: if True, then all input will be echoed to inner_stream
@@ -486,8 +460,7 @@ class StdSim:
         self.buffer = ByteBuf(self)
 
     def write(self, s: str) -> None:
-        """
-        Add str to internal bytes buffer and if echo is True, echo contents to inner stream
+        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream.
 
         :param s: String to write to the stream
         """
@@ -500,16 +473,15 @@ class StdSim:
             self.inner_stream.write(s)
 
     def getvalue(self) -> str:
-        """Get the internal contents as a str"""
+        """Get the internal contents as a str."""
         return self.buffer.byte_buf.decode(encoding=self.encoding, errors=self.errors)
 
     def getbytes(self) -> bytes:
-        """Get the internal contents as bytes"""
+        """Get the internal contents as bytes."""
         return bytes(self.buffer.byte_buf)
 
     def read(self, size: Optional[int] = -1) -> str:
-        """
-        Read from the internal contents as a str and then clear them out
+        """Read from the internal contents as a str and then clear them out.
 
         :param size: Number of bytes to read from the stream
         """
@@ -523,26 +495,24 @@ class StdSim:
         return result
 
     def readbytes(self) -> bytes:
-        """Read from the internal contents as bytes and then clear them out"""
+        """Read from the internal contents as bytes and then clear them out."""
         result = self.getbytes()
         self.clear()
         return result
 
     def clear(self) -> None:
-        """Clear the internal contents"""
+        """Clear the internal contents."""
         self.buffer.byte_buf.clear()
 
     def isatty(self) -> bool:
         """StdSim only considered an interactive stream if `echo` is True and `inner_stream` is a tty."""
         if self.echo:
             return self.inner_stream.isatty()
-        else:
-            return False
+        return False
 
     @property
     def line_buffering(self) -> bool:
-        """
-        Handle when the inner stream doesn't have a line_buffering attribute which is the case
+        """Handle when the inner stream doesn't have a line_buffering attribute which is the case
         when running unit tests because pytest sets stdout to a pytest EncodedFile object.
         """
         try:
@@ -553,14 +523,11 @@ class StdSim:
     def __getattr__(self, item: str) -> Any:
         if item in self.__dict__:
             return self.__dict__[item]
-        else:
-            return getattr(self.inner_stream, item)
+        return getattr(self.inner_stream, item)
 
 
 class ByteBuf:
-    """
-    Used by StdSim to write binary data and stores the actual bytes written
-    """
+    """Used by StdSim to write binary data and stores the actual bytes written."""
 
     # Used to know when to flush the StdSim
     NEWLINES = [b'\n', b'\r']
@@ -582,23 +549,20 @@ class ByteBuf:
             # and the bytes being written contain a new line character. This is helpful when StdSim
             # is being used to capture output of a shell command because it causes the output to print
             # to the screen more often than if we waited for the stream to flush its buffer.
-            if self.std_sim_instance.line_buffering:
-                if any(newline in b for newline in ByteBuf.NEWLINES):
-                    self.std_sim_instance.flush()
+            if self.std_sim_instance.line_buffering and any(newline in b for newline in ByteBuf.NEWLINES):
+                self.std_sim_instance.flush()
 
 
 class ProcReader:
-    """
-    Used to capture stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
+    """Used to capture stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
     If neither are pipes, then the process will run normally and no output will be captured.
     """
 
     def __init__(self, proc: PopenTextIO, stdout: Union[StdSim, TextIO], stderr: Union[StdSim, TextIO]) -> None:
-        """
-        ProcReader initializer
+        """ProcReader initializer
         :param proc: the Popen process being read from
         :param stdout: the stream to write captured stdout
-        :param stderr: the stream to write captured stderr
+        :param stderr: the stream to write captured stderr.
         """
         self._proc = proc
         self._stdout = stdout
@@ -615,7 +579,7 @@ class ProcReader:
             self._err_thread.start()
 
     def send_sigint(self) -> None:
-        """Send a SIGINT to the process similar to if <Ctrl>+C were pressed"""
+        """Send a SIGINT to the process similar to if <Ctrl>+C were pressed."""
         import signal
 
         if sys.platform.startswith('win'):
@@ -632,11 +596,11 @@ class ProcReader:
                 return
 
     def terminate(self) -> None:
-        """Terminate the process"""
+        """Terminate the process."""
         self._proc.terminate()
 
     def wait(self) -> None:
-        """Wait for the process to finish"""
+        """Wait for the process to finish."""
         if self._out_thread.is_alive():
             self._out_thread.join()
         if self._err_thread.is_alive():
@@ -652,8 +616,7 @@ class ProcReader:
             self._write_bytes(self._stderr, err)
 
     def _reader_thread_func(self, read_stdout: bool) -> None:
-        """
-        Thread function that reads a stream from the process
+        """Thread function that reads a stream from the process
         :param read_stdout: if True, then this thread deals with stdout. Otherwise it deals with stderr.
         """
         if read_stdout:
@@ -664,7 +627,8 @@ class ProcReader:
             write_stream = self._stderr
 
         # The thread should have been started only if this stream was a pipe
-        assert read_stream is not None
+        if read_stream is None:
+            raise ValueError("read_stream is None")
 
         # Run until process completes
         while self._proc.poll() is None:
@@ -675,10 +639,9 @@ class ProcReader:
 
     @staticmethod
     def _write_bytes(stream: Union[StdSim, TextIO], to_write: Union[bytes, str]) -> None:
-        """
-        Write bytes to a stream
+        """Write bytes to a stream
         :param stream: the stream being written to
-        :param to_write: the bytes being written
+        :param to_write: the bytes being written.
         """
         if isinstance(to_write, str):
             to_write = to_write.encode()
@@ -709,14 +672,14 @@ class ContextFlag:
     def __enter__(self) -> None:
         self.__count += 1
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         self.__count -= 1
         if self.__count < 0:
             raise ValueError("count has gone below 0")
 
 
 class RedirectionSavedState:
-    """Created by each command to store information required to restore state after redirection"""
+    """Created by each command to store information required to restore state after redirection."""
 
     def __init__(
         self,
@@ -725,12 +688,11 @@ class RedirectionSavedState:
         pipe_proc_reader: Optional[ProcReader],
         saved_redirecting: bool,
     ) -> None:
-        """
-        RedirectionSavedState initializer
+        """RedirectionSavedState initializer
         :param self_stdout: saved value of Cmd.stdout
         :param sys_stdout: saved value of sys.stdout
         :param pipe_proc_reader: saved value of Cmd._cur_pipe_proc_reader
-        :param saved_redirecting: saved value of Cmd._redirecting
+        :param saved_redirecting: saved value of Cmd._redirecting.
         """
         # Tells if command is redirecting
         self.redirecting = False
@@ -744,9 +706,8 @@ class RedirectionSavedState:
         self.saved_redirecting = saved_redirecting
 
 
-def _remove_overridden_styles(styles_to_parse: List[str]) -> List[str]:
-    """
-    Utility function for align_text() / truncate_line() which filters a style list down
+def _remove_overridden_styles(styles_to_parse: list[str]) -> list[str]:
+    """Utility function for align_text() / truncate_line() which filters a style list down
     to only those which would still be in effect if all were processed in order.
 
     This is mainly used to reduce how many style strings are stored in memory when
@@ -761,11 +722,11 @@ def _remove_overridden_styles(styles_to_parse: List[str]) -> List[str]:
     )
 
     class StyleState:
-        """Keeps track of what text styles are enabled"""
+        """Keeps track of what text styles are enabled."""
 
         def __init__(self) -> None:
             # Contains styles still in effect, keyed by their index in styles_to_parse
-            self.style_dict: Dict[int, str] = dict()
+            self.style_dict: dict[int, str] = {}
 
             # Indexes into style_dict
             self.reset_all: Optional[int] = None
@@ -826,7 +787,7 @@ def _remove_overridden_styles(styles_to_parse: List[str]) -> List[str]:
 
 
 class TextAlignment(Enum):
-    """Horizontal text alignment"""
+    """Horizontal text alignment."""
 
     LEFT = 1
     CENTER = 2
@@ -842,8 +803,7 @@ def align_text(
     tab_width: int = 4,
     truncate: bool = False,
 ) -> str:
-    """
-    Align text for display within a given width. Supports characters with display widths greater than 1.
+    """Align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
     independently.
 
@@ -893,24 +853,21 @@ def align_text(
     # fill characters. Instead of repeating the style characters for each fill character, we'll wrap each sequence.
     fill_char_style_begin, fill_char_style_end = fill_char.split(stripped_fill_char)
 
-    if text:
-        lines = text.splitlines()
-    else:
-        lines = ['']
+    lines = text.splitlines() if text else ['']
 
     text_buf = io.StringIO()
 
     # ANSI style sequences that may affect subsequent lines will be cancelled by the fill_char's style.
     # To avoid this, we save styles which are still in effect so we can restore them when beginning the next line.
     # This also allows lines to be used independently and still have their style. TableCreator does this.
-    previous_styles: List[str] = []
+    previous_styles: list[str] = []
 
     for index, line in enumerate(lines):
         if index > 0:
             text_buf.write('\n')
 
         if truncate:
-            line = truncate_line(line, width)
+            line = truncate_line(line, width)  # noqa: PLW2901
 
         line_width = ansi.style_aware_wcswidth(line)
         if line_width == -1:
@@ -969,8 +926,7 @@ def align_text(
 def align_left(
     text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
 ) -> str:
-    """
-    Left align text for display within a given width. Supports characters with display widths greater than 1.
+    """Left align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
     independently.
 
@@ -992,8 +948,7 @@ def align_left(
 def align_center(
     text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
 ) -> str:
-    """
-    Center text for display within a given width. Supports characters with display widths greater than 1.
+    """Center text for display within a given width. Supports characters with display widths greater than 1.
     ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
     independently.
 
@@ -1015,8 +970,7 @@ def align_center(
 def align_right(
     text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
 ) -> str:
-    """
-    Right align text for display within a given width. Supports characters with display widths greater than 1.
+    """Right align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
     independently.
 
@@ -1036,8 +990,7 @@ def align_right(
 
 
 def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
-    """
-    Truncate a single line to fit within a given display width. Any portion of the string that is truncated
+    """Truncate a single line to fit within a given display width. Any portion of the string that is truncated
     is replaced by a '…' character. Supports characters with display widths greater than 1. ANSI style sequences
     do not count toward the display width.
 
@@ -1114,9 +1067,8 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     return truncated_buf.getvalue()
 
 
-def get_styles_dict(text: str) -> Dict[int, str]:
-    """
-    Return an OrderedDict containing all ANSI style sequences found in a string
+def get_styles_dict(text: str) -> dict[int, str]:
+    """Return an OrderedDict containing all ANSI style sequences found in a string.
 
     The structure of the dictionary is:
         key: index where sequences begins
@@ -1153,7 +1105,6 @@ def categorize(func: Union[Callable[..., Any], Iterable[Callable[..., Any]]], ca
     :param category: category to put it in
 
     Example:
-
     ```py
     import cmd2
     class MyApp(cmd2.Cmd):
@@ -1164,20 +1115,19 @@ def categorize(func: Union[Callable[..., Any], Iterable[Callable[..., Any]]], ca
     ```
 
     For an alternative approach to categorizing commands using a decorator, see [cmd2.decorators.with_category][]
+
     """
     if isinstance(func, Iterable):
         for item in func:
             setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
+    elif inspect.ismethod(func):
+        setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)  # type: ignore[attr-defined]
     else:
-        if inspect.ismethod(func):
-            setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)  # type: ignore[attr-defined]
-        else:
-            setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
+        setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
 
 
-def get_defining_class(meth: Callable[..., Any]) -> Optional[Type[Any]]:
-    """
-    Attempts to resolve the class that defined a method.
+def get_defining_class(meth: Callable[..., Any]) -> Optional[type[Any]]:
+    """Attempts to resolve the class that defined a method.
 
     Inspired by implementation published here:
         https://stackoverflow.com/a/25959545/1956611
@@ -1202,7 +1152,7 @@ def get_defining_class(meth: Callable[..., Any]) -> Optional[Type[Any]]:
 
 
 class CompletionMode(Enum):
-    """Enum for what type of tab completion to perform in cmd2.Cmd.read_input()"""
+    """Enum for what type of tab completion to perform in cmd2.Cmd.read_input()."""
 
     # Tab completion will be disabled during read_input() call
     # Use of custom up-arrow history supported
@@ -1220,11 +1170,10 @@ class CompletionMode(Enum):
 
 
 class CustomCompletionSettings:
-    """Used by cmd2.Cmd.complete() to tab complete strings other than command arguments"""
+    """Used by cmd2.Cmd.complete() to tab complete strings other than command arguments."""
 
     def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False) -> None:
-        """
-        Initializer
+        """Initializer.
 
         :param parser: arg parser defining format of string being tab completed
         :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
@@ -1238,8 +1187,7 @@ class CustomCompletionSettings:
 
 
 def strip_doc_annotations(doc: str) -> str:
-    """
-    Strip annotations from a docstring leaving only the text description
+    """Strip annotations from a docstring leaving only the text description.
 
     :param doc: documentation string
     """
@@ -1275,15 +1223,13 @@ MIN_SIMIL_TO_CONSIDER = 0.7
 def suggest_similar(
     requested_command: str, options: Iterable[str], similarity_function_to_use: Optional[Callable[[str, str], float]] = None
 ) -> Optional[str]:
-    """
-    Given a requested command and an iterable of possible options returns the most similar (if any is similar)
+    """Given a requested command and an iterable of possible options returns the most similar (if any is similar).
 
     :param requested_command: The command entered by the user
     :param options: The list of available commands to search for the most similar
     :param similarity_function_to_use: An optional callable to use to compare commands
     :return: The most similar command or None if no one is similar
     """
-
     proposed_command = None
     best_simil = MIN_SIMIL_TO_CONSIDER
     requested_command_to_compare = requested_command.lower()

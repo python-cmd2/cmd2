@@ -1,7 +1,4 @@
-# coding=utf-8
-"""
-Cmd2 unit/functional testing
-"""
+"""Cmd2 unit/functional testing"""
 
 import argparse
 import sys
@@ -10,7 +7,6 @@ from contextlib import (
     redirect_stdout,
 )
 from typing import (
-    List,
     Optional,
     Union,
 )
@@ -18,9 +14,7 @@ from unittest import (
     mock,
 )
 
-from pytest import (
-    fixture,
-)
+import pytest
 
 import cmd2
 from cmd2.rl_utils import (
@@ -32,7 +26,7 @@ from cmd2.utils import (
 
 
 def verify_help_text(
-    cmd2_app: cmd2.Cmd, help_output: Union[str, List[str]], verbose_strings: Optional[List[str]] = None
+    cmd2_app: cmd2.Cmd, help_output: Union[str, list[str]], verbose_strings: Optional[list[str]] = None
 ) -> None:
     """This function verifies that all expected commands are present in the help text.
 
@@ -40,10 +34,7 @@ def verify_help_text(
     :param help_output: output of help, either as a string or list of strings
     :param verbose_strings: optional list of verbose strings to search for
     """
-    if isinstance(help_output, str):
-        help_text = help_output
-    else:
-        help_text = ''.join(help_output)
+    help_text = help_output if isinstance(help_output, str) else ''.join(help_output)
     commands = cmd2_app.get_visible_commands()
     for command in commands:
         assert command in help_text
@@ -141,9 +132,8 @@ def run_cmd(app, cmd):
 
     try:
         app.stdout = copy_cmd_stdout
-        with redirect_stdout(copy_cmd_stdout):
-            with redirect_stderr(copy_stderr):
-                app.onecmd_plus_hooks(cmd)
+        with redirect_stdout(copy_cmd_stdout), redirect_stderr(copy_stderr):
+            app.onecmd_plus_hooks(cmd)
     finally:
         app.stdout = copy_cmd_stdout.inner_stream
         sys.stdout = saved_sysout
@@ -153,7 +143,7 @@ def run_cmd(app, cmd):
     return normalize(out), normalize(err)
 
 
-@fixture
+@pytest.fixture
 def base_app():
     return cmd2.Cmd(include_py=True, include_ipy=True)
 
@@ -163,8 +153,7 @@ odd_file_names = ['nothingweird', 'has   spaces', '"is_double_quoted"', "'is_sin
 
 
 def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Optional[str]:
-    """
-    This is a convenience function to test cmd2.complete() since
+    """This is a convenience function to test cmd2.complete() since
     in a unit test environment there is no actual console readline
     is monitoring. Therefore we use mock to provide readline data
     to complete().
@@ -189,13 +178,12 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Opti
         return endidx
 
     # Run the readline tab completion function with readline mocks in place
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                return app.complete(text, 0)
+    with mock.patch.object(readline, 'get_line_buffer', get_line), mock.patch.object(readline, 'get_begidx', get_begidx):
+        with mock.patch.object(readline, 'get_endidx', get_endidx):
+            return app.complete(text, 0)
 
 
-def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
+def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
     if not subcmd_names:
         return action
     cur_subcmd = subcmd_names.pop(0)

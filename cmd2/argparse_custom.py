@@ -1,6 +1,4 @@
-# coding=utf-8
-"""
-This module adds capabilities to argparse by patching a few of its functions.
+"""This module adds capabilities to argparse by patching a few of its functions.
 It also defines a parser class called Cmd2ArgumentParser which improves error
 and help output over normal argparse. All cmd2 code uses this parser and it is
 recommended that developers of cmd2-based apps either use it or write their own
@@ -230,6 +228,7 @@ from argparse import (
     ZERO_OR_MORE,
     ArgumentError,
 )
+from collections.abc import Callable, Iterable, Sequence
 from gettext import (
     gettext,
 )
@@ -237,17 +236,9 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
     NoReturn,
     Optional,
     Protocol,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
     Union,
     cast,
     runtime_checkable,
@@ -264,8 +255,8 @@ if TYPE_CHECKING:  # pragma: no cover
     )
 
 
-def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
-    """Generate an error message when the the number of arguments provided is not within the expected range"""
+def generate_range_error(range_min: int, range_max: float) -> str:
+    """Generate an error message when the the number of arguments provided is not within the expected range."""
     err_str = "expected "
 
     if range_max == constants.INFINITY:
@@ -283,19 +274,17 @@ def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
     return err_str
 
 
-class CompletionItem(str):
-    """
-    Completion item with descriptive text attached
+class CompletionItem(str):  # noqa: SLOT000
+    """Completion item with descriptive text attached.
 
     See header of this file for more information
     """
 
     def __new__(cls, value: object, *args: Any, **kwargs: Any) -> 'CompletionItem':
-        return super(CompletionItem, cls).__new__(cls, value)
+        return super().__new__(cls, value)
 
     def __init__(self, value: object, description: str = '', *args: Any) -> None:
-        """
-        CompletionItem Initializer
+        """CompletionItem Initializer.
 
         :param value: the value being tab completed
         :param description: description text to display
@@ -310,7 +299,7 @@ class CompletionItem(str):
 
     @property
     def orig_value(self) -> Any:
-        """Read-only property for _orig_value"""
+        """Read-only property for _orig_value."""
         return self._orig_value
 
 
@@ -321,20 +310,16 @@ class CompletionItem(str):
 
 @runtime_checkable
 class ChoicesProviderFuncBase(Protocol):
-    """
-    Function that returns a list of choices in support of tab completion
-    """
+    """Function that returns a list of choices in support of tab completion."""
 
-    def __call__(self) -> List[str]: ...  # pragma: no cover
+    def __call__(self) -> list[str]: ...  # pragma: no cover
 
 
 @runtime_checkable
 class ChoicesProviderFuncWithTokens(Protocol):
-    """
-    Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments.
-    """
+    """Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments."""
 
-    def __call__(self, *, arg_tokens: Dict[str, List[str]] = {}) -> List[str]: ...  # pragma: no cover
+    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]: ...  # pragma: no cover
 
 
 ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens]
@@ -342,9 +327,7 @@ ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithToke
 
 @runtime_checkable
 class CompleterFuncBase(Protocol):
-    """
-    Function to support tab completion with the provided state of the user prompt
-    """
+    """Function to support tab completion with the provided state of the user prompt."""
 
     def __call__(
         self,
@@ -352,13 +335,12 @@ class CompleterFuncBase(Protocol):
         line: str,
         begidx: int,
         endidx: int,
-    ) -> List[str]: ...  # pragma: no cover
+    ) -> list[str]: ...  # pragma: no cover
 
 
 @runtime_checkable
 class CompleterFuncWithTokens(Protocol):
-    """
-    Function to support tab completion with the provided state of the user prompt and accepts a dictionary of prior
+    """Function to support tab completion with the provided state of the user prompt and accepts a dictionary of prior
     arguments.
     """
 
@@ -369,16 +351,15 @@ class CompleterFuncWithTokens(Protocol):
         begidx: int,
         endidx: int,
         *,
-        arg_tokens: Dict[str, List[str]] = {},
-    ) -> List[str]: ...  # pragma: no cover
+        arg_tokens: dict[str, list[str]] = {},
+    ) -> list[str]: ...  # pragma: no cover
 
 
 CompleterFunc = Union[CompleterFuncBase, CompleterFuncWithTokens]
 
 
 class ChoicesCallable:
-    """
-    Enables using a callable as the choices provider for an argparse argument.
+    """Enables using a callable as the choices provider for an argparse argument.
     While argparse has the built-in choices attribute, it is limited to an iterable.
     """
 
@@ -387,11 +368,10 @@ class ChoicesCallable:
         is_completer: bool,
         to_call: Union[CompleterFunc, ChoicesProviderFunc],
     ) -> None:
-        """
-        Initializer
+        """Initializer
         :param is_completer: True if to_call is a tab completion routine which expects
                              the args: text, line, begidx, endidx
-        :param to_call: the callable object that will be called to provide choices for the argument
+        :param to_call: the callable object that will be called to provide choices for the argument.
         """
         self.is_completer = is_completer
         if is_completer:
@@ -400,13 +380,12 @@ class ChoicesCallable:
                 raise ValueError(
                     'With is_completer set to true, to_call must be either CompleterFunc, CompleterFuncWithTokens'
                 )
-        else:
-            if not isinstance(to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
-                # runtime checking of Protocols do not currently check the parameters of a function.
-                raise ValueError(
-                    'With is_completer set to false, to_call must be either: '
-                    'ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens'
-                )
+        elif not isinstance(to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
+            # runtime checking of Protocols do not currently check the parameters of a function.
+            raise ValueError(
+                'With is_completer set to false, to_call must be either: '
+                'ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens'
+            )
         self.to_call = to_call
 
     @property
@@ -446,8 +425,7 @@ ATTR_SUPPRESS_TAB_HINT = 'suppress_tab_hint'
 # Patch argparse.Action with accessors for choice_callable attribute
 ############################################################################################################
 def _action_get_choices_callable(self: argparse.Action) -> Optional[ChoicesCallable]:
-    """
-    Get the choices_callable attribute of an argparse Action.
+    """Get the choices_callable attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``get_choices_callable()`` to ``argparse.Action`` class.
 
@@ -463,8 +441,7 @@ setattr(argparse.Action, 'get_choices_callable', _action_get_choices_callable)
 
 
 def _action_set_choices_callable(self: argparse.Action, choices_callable: ChoicesCallable) -> None:
-    """
-    Set the choices_callable attribute of an argparse Action.
+    """Set the choices_callable attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``_set_choices_callable()`` to ``argparse.Action`` class.
 
@@ -478,7 +455,7 @@ def _action_set_choices_callable(self: argparse.Action, choices_callable: Choice
     if self.choices is not None:
         err_msg = "None of the following parameters can be used alongside a choices parameter:\nchoices_provider, completer"
         raise (TypeError(err_msg))
-    elif self.nargs == 0:
+    if self.nargs == 0:
         err_msg = (
             "None of the following parameters can be used on an action that takes no arguments:\nchoices_provider, completer"
         )
@@ -494,8 +471,7 @@ def _action_set_choices_provider(
     self: argparse.Action,
     choices_provider: ChoicesProviderFunc,
 ) -> None:
-    """
-    Set choices_provider of an argparse Action.
+    """Set choices_provider of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_choices_callable()`` to ``argparse.Action`` class.
 
@@ -515,8 +491,7 @@ def _action_set_completer(
     self: argparse.Action,
     completer: CompleterFunc,
 ) -> None:
-    """
-    Set completer of an argparse Action.
+    """Set completer of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_completer()`` to ``argparse.Action`` class.
 
@@ -536,8 +511,7 @@ setattr(argparse.Action, 'set_completer', _action_set_completer)
 # Patch argparse.Action with accessors for descriptive_header attribute
 ############################################################################################################
 def _action_get_descriptive_header(self: argparse.Action) -> Optional[str]:
-    """
-    Get the descriptive_header attribute of an argparse Action.
+    """Get the descriptive_header attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``get_descriptive_header()`` to ``argparse.Action`` class.
 
@@ -553,8 +527,7 @@ setattr(argparse.Action, 'get_descriptive_header', _action_get_descriptive_heade
 
 
 def _action_set_descriptive_header(self: argparse.Action, descriptive_header: Optional[str]) -> None:
-    """
-    Set the descriptive_header attribute of an argparse Action.
+    """Set the descriptive_header attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_descriptive_header()`` to ``argparse.Action`` class.
 
@@ -572,9 +545,8 @@ setattr(argparse.Action, 'set_descriptive_header', _action_set_descriptive_heade
 ############################################################################################################
 # Patch argparse.Action with accessors for nargs_range attribute
 ############################################################################################################
-def _action_get_nargs_range(self: argparse.Action) -> Optional[Tuple[int, Union[int, float]]]:
-    """
-    Get the nargs_range attribute of an argparse Action.
+def _action_get_nargs_range(self: argparse.Action) -> Optional[tuple[int, Union[int, float]]]:
+    """Get the nargs_range attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``get_nargs_range()`` to ``argparse.Action`` class.
 
@@ -583,15 +555,14 @@ def _action_get_nargs_range(self: argparse.Action) -> Optional[Tuple[int, Union[
     :param self: argparse Action being queried
     :return: The value of nargs_range or None if attribute does not exist
     """
-    return cast(Optional[Tuple[int, Union[int, float]]], getattr(self, ATTR_NARGS_RANGE, None))
+    return cast(Optional[tuple[int, Union[int, float]]], getattr(self, ATTR_NARGS_RANGE, None))
 
 
 setattr(argparse.Action, 'get_nargs_range', _action_get_nargs_range)
 
 
-def _action_set_nargs_range(self: argparse.Action, nargs_range: Optional[Tuple[int, Union[int, float]]]) -> None:
-    """
-    Set the nargs_range attribute of an argparse Action.
+def _action_set_nargs_range(self: argparse.Action, nargs_range: Optional[tuple[int, Union[int, float]]]) -> None:
+    """Set the nargs_range attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_nargs_range()`` to ``argparse.Action`` class.
 
@@ -610,8 +581,7 @@ setattr(argparse.Action, 'set_nargs_range', _action_set_nargs_range)
 # Patch argparse.Action with accessors for suppress_tab_hint attribute
 ############################################################################################################
 def _action_get_suppress_tab_hint(self: argparse.Action) -> bool:
-    """
-    Get the suppress_tab_hint attribute of an argparse Action.
+    """Get the suppress_tab_hint attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``get_suppress_tab_hint()`` to ``argparse.Action`` class.
 
@@ -627,8 +597,7 @@ setattr(argparse.Action, 'get_suppress_tab_hint', _action_get_suppress_tab_hint)
 
 
 def _action_set_suppress_tab_hint(self: argparse.Action, suppress_tab_hint: bool) -> None:
-    """
-    Set the suppress_tab_hint attribute of an argparse Action.
+    """Set the suppress_tab_hint attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_suppress_tab_hint()`` to ``argparse.Action`` class.
 
@@ -647,13 +616,12 @@ setattr(argparse.Action, 'set_suppress_tab_hint', _action_set_suppress_tab_hint)
 # Allow developers to add custom action attributes
 ############################################################################################################
 
-CUSTOM_ACTION_ATTRIBS: Set[str] = set()
+CUSTOM_ACTION_ATTRIBS: set[str] = set()
 _CUSTOM_ATTRIB_PFX = '_attr_'
 
 
-def register_argparse_argument_parameter(param_name: str, param_type: Optional[Type[Any]]) -> None:
-    """
-    Registers a custom argparse argument parameter.
+def register_argparse_argument_parameter(param_name: str, param_type: Optional[type[Any]]) -> None:
+    """Registers a custom argparse argument parameter.
 
     The registered name will then be a recognized keyword parameter to the parser's `add_argument()` function.
 
@@ -720,15 +688,14 @@ orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
-    nargs: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None] = None,
+    nargs: Union[int, str, tuple[int], tuple[int, int], tuple[int, float], None] = None,
     choices_provider: Optional[ChoicesProviderFunc] = None,
     completer: Optional[CompleterFunc] = None,
     suppress_tab_hint: bool = False,
     descriptive_header: Optional[str] = None,
     **kwargs: Any,
 ) -> argparse.Action:
-    """
-    Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
+    """Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2.
 
     # Args from original function
     :param self: instance of the _ActionsContainer being added to
@@ -771,7 +738,7 @@ def _add_argument_wrapper(
     nargs_range = None
 
     if nargs is not None:
-        nargs_adjusted: Union[int, str, Tuple[int], Tuple[int, int], Tuple[int, float], None]
+        nargs_adjusted: Union[int, str, tuple[int], tuple[int, int], tuple[int, float], None]
         # Check if nargs was given as a range
         if isinstance(nargs, tuple):
             # Handle 1-item tuple by setting max to INFINITY
@@ -821,10 +788,7 @@ def _add_argument_wrapper(
         kwargs['nargs'] = nargs_adjusted
 
     # Extract registered custom keyword arguments
-    custom_attribs: Dict[str, Any] = {}
-    for keyword, value in kwargs.items():
-        if keyword in CUSTOM_ACTION_ATTRIBS:
-            custom_attribs[keyword] = value
+    custom_attribs = {keyword: value for keyword, value in kwargs.items() if keyword in CUSTOM_ACTION_ATTRIBS}
     for keyword in custom_attribs:
         del kwargs[keyword]
 
@@ -919,9 +883,8 @@ setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 ATTR_AP_COMPLETER_TYPE = 'ap_completer_type'
 
 
-def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Optional[Type['ArgparseCompleter']]:
-    """
-    Get the ap_completer_type attribute of an argparse ArgumentParser.
+def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Optional[type['ArgparseCompleter']]:  # noqa: N802
+    """Get the ap_completer_type attribute of an argparse ArgumentParser.
 
     This function is added by cmd2 as a method called ``get_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
 
@@ -930,15 +893,14 @@ def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Opti
     :param self: ArgumentParser being queried
     :return: An ArgparseCompleter-based class or None if attribute does not exist
     """
-    return cast(Optional[Type['ArgparseCompleter']], getattr(self, ATTR_AP_COMPLETER_TYPE, None))
+    return cast(Optional[type['ArgparseCompleter']], getattr(self, ATTR_AP_COMPLETER_TYPE, None))
 
 
 setattr(argparse.ArgumentParser, 'get_ap_completer_type', _ArgumentParser_get_ap_completer_type)
 
 
-def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: Type['ArgparseCompleter']) -> None:
-    """
-    Set the ap_completer_type attribute of an argparse ArgumentParser.
+def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: type['ArgparseCompleter']) -> None:  # noqa: N802
+    """Set the ap_completer_type attribute of an argparse ArgumentParser.
 
     This function is added by cmd2 as a method called ``set_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
 
@@ -956,9 +918,8 @@ setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap
 ############################################################################################################
 # Patch ArgumentParser._check_value to support CompletionItems as choices
 ############################################################################################################
-def _ArgumentParser_check_value(self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:
-    """
-    Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
+def _ArgumentParser_check_value(self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:  # noqa: N802
+    """Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
     When evaluating choices, input is compared to CompletionItem.orig_value instead of the
     CompletionItem instance.
 
@@ -989,9 +950,8 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 ############################################################################################################
 
 
-def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore
-    """
-    Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
+def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore[type-arg]  # noqa: N802
+    """Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
 
     This function is added by cmd2 as a method called ``remove_parser()`` to ``argparse._SubParsersAction`` class.
 
@@ -1029,7 +989,7 @@ setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_pa
 
 
 class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
-    """Custom help formatter to configure ordering of help text"""
+    """Custom help formatter to configure ordering of help text."""
 
     def _format_usage(
         self,
@@ -1043,15 +1003,15 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
         # if usage is specified, use that
         if usage is not None:
-            usage %= dict(prog=self._prog)
+            usage %= {"prog": self._prog}
 
         # if no optionals or positionals are available, usage is just prog
         elif not actions:
-            usage = '%(prog)s' % dict(prog=self._prog)
+            usage = '%(prog)s' % {"prog": self._prog}
 
         # if optionals and positionals are available, calculate usage
         else:
-            prog = '%(prog)s' % dict(prog=self._prog)
+            prog = '%(prog)s' % {"prog": self._prog}
 
             # split optionals from positionals
             optionals = []
@@ -1069,8 +1029,8 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             # End cmd2 customization
 
             # build full usage string
-            format = self._format_actions_usage
-            action_usage = format(required_options + optionals + positionals, groups)  # type: ignore[arg-type]
+            format_actions = self._format_actions_usage
+            action_usage = format_actions(required_options + optionals + positionals, groups)  # type: ignore[arg-type]
             usage = ' '.join([s for s in [prog, action_usage] if s])
 
             # wrap the usage parts if it's too long
@@ -1080,26 +1040,20 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
                 # break usage into wrappable parts
                 part_regexp = r'\(.*?\)+|\[.*?\]+|\S+'
-                req_usage = format(required_options, groups)  # type: ignore[arg-type]
-                opt_usage = format(optionals, groups)  # type: ignore[arg-type]
-                pos_usage = format(positionals, groups)  # type: ignore[arg-type]
+                req_usage = format_actions(required_options, groups)  # type: ignore[arg-type]
+                opt_usage = format_actions(optionals, groups)  # type: ignore[arg-type]
+                pos_usage = format_actions(positionals, groups)  # type: ignore[arg-type]
                 req_parts = re.findall(part_regexp, req_usage)
                 opt_parts = re.findall(part_regexp, opt_usage)
                 pos_parts = re.findall(part_regexp, pos_usage)
-                assert ' '.join(req_parts) == req_usage
-                assert ' '.join(opt_parts) == opt_usage
-                assert ' '.join(pos_parts) == pos_usage
 
                 # End cmd2 customization
 
                 # helper for wrapping lines
-                def get_lines(parts: List[str], indent: str, prefix: Optional[str] = None) -> List[str]:
-                    lines: List[str] = []
-                    line: List[str] = []
-                    if prefix is not None:
-                        line_len = len(prefix) - 1
-                    else:
-                        line_len = len(indent) - 1
+                def get_lines(parts: list[str], indent: str, prefix: Optional[str] = None) -> list[str]:
+                    lines: list[str] = []
+                    line: list[str] = []
+                    line_len = len(prefix) - 1 if prefix is not None else len(indent) - 1
                     for part in parts:
                         if line_len + 1 + len(part) > text_width and line:
                             lines.append(indent + ' '.join(line))
@@ -1118,14 +1072,14 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                     indent = ' ' * (len(prefix) + len(prog) + 1)
                     # Begin cmd2 customization
                     if req_parts:
-                        lines = get_lines([prog] + req_parts, indent, prefix)
+                        lines = get_lines([prog, *req_parts], indent, prefix)
                         lines.extend(get_lines(opt_parts, indent))
                         lines.extend(get_lines(pos_parts, indent))
                     elif opt_parts:
-                        lines = get_lines([prog] + opt_parts, indent, prefix)
+                        lines = get_lines([prog, *opt_parts], indent, prefix)
                         lines.extend(get_lines(pos_parts, indent))
                     elif pos_parts:
-                        lines = get_lines([prog] + pos_parts, indent, prefix)
+                        lines = get_lines([prog, *pos_parts], indent, prefix)
                     else:
                         lines = [prog]
                     # End cmd2 customization
@@ -1142,7 +1096,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                         lines.extend(get_lines(opt_parts, indent))
                         lines.extend(get_lines(pos_parts, indent))
                     # End cmd2 customization
-                    lines = [prog] + lines
+                    lines = [prog, *lines]
 
                 # join lines into usage
                 usage = '\n'.join(lines)
@@ -1156,31 +1110,29 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             (metavar,) = self._metavar_formatter(action, default)(1)
             return metavar
 
-        else:
-            parts: List[str] = []
+        parts: list[str] = []
 
-            # if the Optional doesn't take a value, format is:
-            #    -s, --long
-            if action.nargs == 0:
-                parts.extend(action.option_strings)
-                return ', '.join(parts)
+        # if the Optional doesn't take a value, format is:
+        #    -s, --long
+        if action.nargs == 0:
+            parts.extend(action.option_strings)
+            return ', '.join(parts)
 
-            # Begin cmd2 customization (less verbose)
-            # if the Optional takes a value, format is:
-            #    -s, --long ARGS
-            else:
-                default = self._get_default_metavar_for_optional(action)
-                args_string = self._format_args(action, default)
+        # Begin cmd2 customization (less verbose)
+        # if the Optional takes a value, format is:
+        #    -s, --long ARGS
+        default = self._get_default_metavar_for_optional(action)
+        args_string = self._format_args(action, default)
 
-                return ', '.join(action.option_strings) + ' ' + args_string
-            # End cmd2 customization
+        return ', '.join(action.option_strings) + ' ' + args_string
+        # End cmd2 customization
 
     def _determine_metavar(
         self,
         action: argparse.Action,
-        default_metavar: Union[str, Tuple[str, ...]],
-    ) -> Union[str, Tuple[str, ...]]:
-        """Custom method to determine what to use as the metavar value of an action"""
+        default_metavar: Union[str, tuple[str, ...]],
+    ) -> Union[str, tuple[str, ...]]:
+        """Custom method to determine what to use as the metavar value of an action."""
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
@@ -1195,48 +1147,44 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     def _metavar_formatter(
         self,
         action: argparse.Action,
-        default_metavar: Union[str, Tuple[str, ...]],
-    ) -> Callable[[int], Tuple[str, ...]]:
+        default_metavar: Union[str, tuple[str, ...]],
+    ) -> Callable[[int], tuple[str, ...]]:
         metavar = self._determine_metavar(action, default_metavar)
 
-        def format(tuple_size: int) -> Tuple[str, ...]:
+        def format_tuple(tuple_size: int) -> tuple[str, ...]:
             if isinstance(metavar, tuple):
                 return metavar
-            else:
-                return (metavar,) * tuple_size
+            return (metavar,) * tuple_size
 
-        return format
+        return format_tuple
 
-    def _format_args(self, action: argparse.Action, default_metavar: Union[str, Tuple[str, ...]]) -> str:
-        """Customized to handle ranged nargs and make other output less verbose"""
+    def _format_args(self, action: argparse.Action, default_metavar: Union[str, tuple[str, ...]]) -> str:
+        """Customized to handle ranged nargs and make other output less verbose."""
         metavar = self._determine_metavar(action, default_metavar)
         metavar_formatter = self._metavar_formatter(action, default_metavar)
 
         # Handle nargs specified as a range
         nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
-            if nargs_range[1] == constants.INFINITY:
-                range_str = f'{nargs_range[0]}+'
-            else:
-                range_str = f'{nargs_range[0]}..{nargs_range[1]}'
+            range_str = f'{nargs_range[0]}+' if nargs_range[1] == constants.INFINITY else f'{nargs_range[0]}..{nargs_range[1]}'
 
             return '{}{{{}}}'.format('%s' % metavar_formatter(1), range_str)
 
         # Make this output less verbose. Do not customize the output when metavar is a
         # tuple of strings. Allow argparse's formatter to handle that instead.
-        elif isinstance(metavar, str):
+        if isinstance(metavar, str):
             if action.nargs == ZERO_OR_MORE:
                 return '[%s [...]]' % metavar_formatter(1)
-            elif action.nargs == ONE_OR_MORE:
+            if action.nargs == ONE_OR_MORE:
                 return '%s [...]' % metavar_formatter(1)
-            elif isinstance(action.nargs, int) and action.nargs > 1:
+            if isinstance(action.nargs, int) and action.nargs > 1:
                 return '{}{{{}}}'.format('%s' % metavar_formatter(1), action.nargs)
 
         return super()._format_args(action, default_metavar)  # type: ignore[arg-type]
 
 
 class Cmd2ArgumentParser(argparse.ArgumentParser):
-    """Custom ArgumentParser class that improves error and help output"""
+    """Custom ArgumentParser class that improves error and help output."""
 
     def __init__(
         self,
@@ -1245,7 +1193,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         description: Optional[str] = None,
         epilog: Optional[str] = None,
         parents: Sequence[argparse.ArgumentParser] = (),
-        formatter_class: Type[argparse.HelpFormatter] = Cmd2HelpFormatter,
+        formatter_class: type[argparse.HelpFormatter] = Cmd2HelpFormatter,
         prefix_chars: str = '-',
         fromfile_prefix_chars: Optional[str] = None,
         argument_default: Optional[str] = None,
@@ -1256,18 +1204,17 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         suggest_on_error: bool = False,
         color: bool = False,
         *,
-        ap_completer_type: Optional[Type['ArgparseCompleter']] = None,
+        ap_completer_type: Optional[type['ArgparseCompleter']] = None,
     ) -> None:
-        """
-        # Custom parameter added by cmd2
+        """# Custom parameter added by cmd2.
 
         :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom tab completion
                                   behavior on this parser. If this is None or not present, then cmd2 will use
                                   argparse_completer.DEFAULT_AP_COMPLETER when tab completing this parser's arguments
         """
-        if sys.version_info[1] >= 14:
+        if sys.version_info >= (3, 14):
             # Python >= 3.14 so pass new arguments to parent argparse.ArgumentParser class
-            super(Cmd2ArgumentParser, self).__init__(
+            super().__init__(
                 prog=prog,
                 usage=usage,
                 description=description,
@@ -1286,7 +1233,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             )
         else:
             # Python < 3.14, so don't pass new arguments to parent argparse.ArgumentParser class
-            super(Cmd2ArgumentParser, self).__init__(
+            super().__init__(
                 prog=prog,
                 usage=usage,
                 description=description,
@@ -1304,9 +1251,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
-    def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:  # type: ignore
-        """
-        Custom override. Sets a default title if one was not given.
+    def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:  # type: ignore[type-arg]
+        """Custom override. Sets a default title if one was not given.
 
         :param kwargs: additional keyword arguments
         :return: argparse Subparser Action
@@ -1317,7 +1263,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         return super().add_subparsers(**kwargs)
 
     def error(self, message: str) -> NoReturn:
-        """Custom override that applies custom formatting to the error message"""
+        """Custom override that applies custom formatting to the error message."""
         lines = message.split('\n')
         linum = 0
         formatted_message = ''
@@ -1333,7 +1279,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.exit(2, f'{formatted_message}\n\n')
 
     def format_help(self) -> str:
-        """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
+        """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters."""
         formatter = self._get_formatter()
 
         # usage
@@ -1395,8 +1341,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
 
 class Cmd2AttributeWrapper:
-    """
-    Wraps a cmd2-specific attribute added to an argparse Namespace.
+    """Wraps a cmd2-specific attribute added to an argparse Namespace.
     This makes it easy to know which attributes in a Namespace are
     arguments from a parser and which were added by cmd2.
     """
@@ -1405,22 +1350,21 @@ class Cmd2AttributeWrapper:
         self.__attribute = attribute
 
     def get(self) -> Any:
-        """Get the value of the attribute"""
+        """Get the value of the attribute."""
         return self.__attribute
 
     def set(self, new_val: Any) -> None:
-        """Set the value of the attribute"""
+        """Set the value of the attribute."""
         self.__attribute = new_val
 
 
 # The default ArgumentParser class for a cmd2 app
-DEFAULT_ARGUMENT_PARSER: Type[argparse.ArgumentParser] = Cmd2ArgumentParser
+DEFAULT_ARGUMENT_PARSER: type[argparse.ArgumentParser] = Cmd2ArgumentParser
 
 
-def set_default_argument_parser_type(parser_type: Type[argparse.ArgumentParser]) -> None:
-    """
-    Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
+def set_default_argument_parser_type(parser_type: type[argparse.ArgumentParser]) -> None:
+    """Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
     you want to override the parser for cmd2's built-in commands. See examples/override_parser.py.
     """
-    global DEFAULT_ARGUMENT_PARSER
+    global DEFAULT_ARGUMENT_PARSER  # noqa: PLW0603
     DEFAULT_ARGUMENT_PARSER = parser_type

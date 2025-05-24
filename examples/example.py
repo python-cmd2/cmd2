@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A sample application for cmd2.
+"""A sample application for cmd2.
 
 Thanks to cmd2's built-in transcript testing capability, it also serves as a
 test suite for example.py when used with the transcript_regex.txt transcript.
@@ -20,12 +18,12 @@ class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application."""
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
-    # default_to_shell = True
+    # default_to_shell = True  # noqa: ERA001
     MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']
 
-    def __init__(self):
+    def __init__(self) -> None:
         shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({'&': 'speak'})
         super().__init__(multiline_commands=['orate'], shortcuts=shortcuts)
@@ -41,12 +39,12 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args):
+    def do_speak(self, args) -> None:
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
             if args.piglatin:
-                word = '%s%say' % (word[1:], word[0])
+                word = f'{word[1:]}{word[0]}ay'
             if args.shout:
                 word = word.upper()
             words.append(word)
@@ -63,7 +61,7 @@ class CmdLineApp(cmd2.Cmd):
     mumble_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(mumble_parser)
-    def do_mumble(self, args):
+    def do_mumble(self, args) -> None:
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
         for _ in range(min(repetitions, self.maxrepeats)):

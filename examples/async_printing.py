@@ -1,16 +1,11 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A simple example demonstrating an application that asynchronously prints alerts, updates the prompt
-and changes the window title
+"""A simple example demonstrating an application that asynchronously prints alerts, updates the prompt
+and changes the window title.
 """
 
 import random
 import threading
 import time
-from typing import (
-    List,
-)
 
 import cmd2
 from cmd2 import (
@@ -33,10 +28,10 @@ ALERTS = [
 
 
 class AlerterApp(cmd2.Cmd):
-    """An app that shows off async_alert() and async_update_prompt()"""
+    """An app that shows off async_alert() and async_update_prompt()."""
 
     def __init__(self, *args, **kwargs) -> None:
-        """Initializer"""
+        """Initializer."""
         super().__init__(*args, **kwargs)
 
         self.prompt = "(APR)> "
@@ -52,7 +47,7 @@ class AlerterApp(cmd2.Cmd):
         self.register_postloop_hook(self._postloop_hook)
 
     def _preloop_hook(self) -> None:
-        """Start the alerter thread"""
+        """Start the alerter thread."""
         # This runs after cmdloop() acquires self.terminal_lock, which will be locked until the prompt appears.
         # Therefore this is the best place to start the alerter thread since there is no risk of it alerting
         # before the prompt is displayed. You can also start it via a command if its not something that should
@@ -63,8 +58,7 @@ class AlerterApp(cmd2.Cmd):
         self._alerter_thread.start()
 
     def _postloop_hook(self) -> None:
-        """Stops the alerter thread"""
-
+        """Stops the alerter thread."""
         # After this function returns, cmdloop() releases self.terminal_lock which could make the alerter
         # thread think the prompt is on screen. Therefore this is the best place to stop the alerter thread.
         # You can also stop it via a command. See do_stop_alerts().
@@ -72,8 +66,8 @@ class AlerterApp(cmd2.Cmd):
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
 
-    def do_start_alerts(self, _):
-        """Starts the alerter thread"""
+    def do_start_alerts(self, _) -> None:
+        """Starts the alerter thread."""
         if self._alerter_thread.is_alive():
             print("The alert thread is already started")
         else:
@@ -81,21 +75,18 @@ class AlerterApp(cmd2.Cmd):
             self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
             self._alerter_thread.start()
 
-    def do_stop_alerts(self, _):
-        """Stops the alerter thread"""
+    def do_stop_alerts(self, _) -> None:
+        """Stops the alerter thread."""
         self._stop_event.set()
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
         else:
             print("The alert thread is already stopped")
 
-    def _get_alerts(self) -> List[str]:
+    def _get_alerts(self) -> list[str]:
+        """Reports alerts
+        :return: the list of alerts.
         """
-        Reports alerts
-        :return: the list of alerts
-        """
-        global ALERTS
-
         cur_time = time.monotonic()
         if cur_time < self._next_alert_time:
             return []
@@ -112,21 +103,18 @@ class AlerterApp(cmd2.Cmd):
             if rand_num > 2:
                 return []
 
-            for i in range(0, rand_num):
+            for i in range(rand_num):
                 self._alert_count += 1
-                alerts.append("Alert {}".format(self._alert_count))
+                alerts.append(f"Alert {self._alert_count}")
 
             self._next_alert_time = 0
 
         return alerts
 
     def _generate_alert_str(self) -> str:
+        """Combines alerts into one string that can be printed to the terminal
+        :return: the alert string.
         """
-        Combines alerts into one string that can be printed to the terminal
-        :return: the alert string
-        """
-        global ALERTS
-
         alert_str = ''
         alerts = self._get_alerts()
 
@@ -146,9 +134,8 @@ class AlerterApp(cmd2.Cmd):
         return alert_str
 
     def _generate_colored_prompt(self) -> str:
-        """
-        Randomly generates a colored prompt
-        :return: the new prompt
+        """Randomly generates a colored prompt
+        :return: the new prompt.
         """
         rand_num = random.randint(1, 20)
 
@@ -168,8 +155,7 @@ class AlerterApp(cmd2.Cmd):
         return style(self.visible_prompt, fg=status_color)
 
     def _alerter_thread_func(self) -> None:
-        """Prints alerts and updates the prompt any time the prompt is showing"""
-
+        """Prints alerts and updates the prompt any time the prompt is showing."""
         self._alert_count = 0
         self._next_alert_time = 0
 
@@ -187,7 +173,7 @@ class AlerterApp(cmd2.Cmd):
                 if alert_str:
                     # new_prompt is an optional parameter to async_alert()
                     self.async_alert(alert_str, new_prompt)
-                    new_title = "Alerts Printed: {}".format(self._alert_count)
+                    new_title = f"Alerts Printed: {self._alert_count}"
                     self.set_window_title(new_title)
 
                 # Otherwise check if the prompt needs to be updated or refreshed

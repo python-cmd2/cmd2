@@ -1,14 +1,7 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A simple example demonstrating how to integrate tab completion with argparse-based commands.
-"""
+"""A simple example demonstrating how to integrate tab completion with argparse-based commands."""
 
 import argparse
-from typing import (
-    Dict,
-    List,
-)
 
 from cmd2 import (
     Cmd,
@@ -24,17 +17,16 @@ food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
 
 
 class ArgparseCompletion(Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
-    def choices_provider(self) -> List[str]:
-        """A choices provider is useful when the choice list is based on instance data of your application"""
+    def choices_provider(self) -> list[str]:
+        """A choices provider is useful when the choice list is based on instance data of your application."""
         return self.sport_item_strs
 
-    def choices_completion_error(self) -> List[str]:
-        """
-        CompletionErrors can be raised if an error occurs while tab completing.
+    def choices_completion_error(self) -> list[str]:
+        """CompletionErrors can be raised if an error occurs while tab completing.
 
         Example use cases
             - Reading a database to retrieve a tab completion data set failed
@@ -44,16 +36,15 @@ class ArgparseCompletion(Cmd):
             return self.sport_item_strs
         raise CompletionError("debug must be true")
 
-    def choices_completion_item(self) -> List[CompletionItem]:
+    def choices_completion_item(self) -> list[CompletionItem]:
         """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
         fancy_item = "These things can\ncontain newlines and\n"
         fancy_item += ansi.style("styled text!!", fg=ansi.Fg.LIGHT_YELLOW, underline=True)
         items = {1: "My item", 2: "Another item", 3: "Yet another item", 4: fancy_item}
         return [CompletionItem(item_id, description) for item_id, description in items.items()]
 
-    def choices_arg_tokens(self, arg_tokens: Dict[str, List[str]]) -> List[str]:
-        """
-        If a choices or completer function/method takes a value called arg_tokens, then it will be
+    def choices_arg_tokens(self, arg_tokens: dict[str, list[str]]) -> list[str]:
+        """If a choices or completer function/method takes a value called arg_tokens, then it will be
         passed a dictionary that maps the command line tokens up through the one being completed
         to their argparse argument name.  All values of the arg_tokens dictionary are lists, even if
         a particular argument expects only 1 token.
@@ -106,7 +97,7 @@ class ArgparseCompletion(Cmd):
 
     @with_argparser(example_parser)
     def do_example(self, _: argparse.Namespace) -> None:
-        """The example command"""
+        """The example command."""
         self.poutput("I do nothing")
 
 

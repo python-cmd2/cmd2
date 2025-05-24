@@ -1,47 +1,34 @@
-# coding=utf-8
-"""Custom exceptions for cmd2"""
+"""Custom exceptions for cmd2."""
 
-from typing import (
-    Any,
-)
+from typing import Any
 
 ############################################################################################################
 # The following exceptions are part of the public API
 ############################################################################################################
 
 
-class SkipPostcommandHooks(Exception):
-    """
-    Custom exception class for when a command has a failure bad enough to skip post command
+class SkipPostcommandHooks(Exception):  # noqa: N818
+    """Custom exception class for when a command has a failure bad enough to skip post command
     hooks, but not bad enough to print the exception to the user.
     """
 
-    pass
-
 
 class Cmd2ArgparseError(SkipPostcommandHooks):
-    """
-    A ``SkipPostcommandHooks`` exception for when a command fails to parse its arguments.
+    """A ``SkipPostcommandHooks`` exception for when a command fails to parse its arguments.
     Normally argparse raises a SystemExit exception in these cases. To avoid stopping the command
     loop, catch the SystemExit and raise this instead. If you still need to run post command hooks
     after parsing fails, just return instead of raising an exception.
     """
 
-    pass
-
 
 class CommandSetRegistrationError(Exception):
-    """
-    Exception that can be thrown when an error occurs while a CommandSet is being added or removed
+    """Exception that can be thrown when an error occurs while a CommandSet is being added or removed
     from a cmd2 application.
     """
 
-    pass
-
 
 class CompletionError(Exception):
-    """
-    Raised during tab completion operations to report any sort of error you want printed. This can also be used
+    """Raised during tab completion operations to report any sort of error you want printed. This can also be used
     just to display a message, even if it's not an error. For instance, ArgparseCompleter raises CompletionErrors
     to display tab completion hints and sets apply_style to False so hints aren't colored like error text.
 
@@ -53,8 +40,7 @@ class CompletionError(Exception):
     """
 
     def __init__(self, *args: Any, apply_style: bool = True) -> None:
-        """
-        Initializer for CompletionError
+        """Initializer for CompletionError
         :param apply_style: If True, then ansi.style_error will be applied to the message text when printed.
                             Set to False in cases where the message text already has the desired style.
                             Defaults to True.
@@ -64,16 +50,14 @@ class CompletionError(Exception):
         super().__init__(*args)
 
 
-class PassThroughException(Exception):
-    """
-    Normally all unhandled exceptions raised during commands get printed to the user.
+class PassThroughException(Exception):  # noqa: N818
+    """Normally all unhandled exceptions raised during commands get printed to the user.
     This class is used to wrap an exception that should be raised instead of printed.
     """
 
     def __init__(self, *args: Any, wrapped_ex: BaseException) -> None:
-        """
-        Initializer for PassThroughException
-        :param wrapped_ex: the exception that will be raised
+        """Initializer for PassThroughException
+        :param wrapped_ex: the exception that will be raised.
         """
         self.wrapped_ex = wrapped_ex
         super().__init__(*args)
@@ -85,24 +69,16 @@ class PassThroughException(Exception):
 
 
 class Cmd2ShlexError(Exception):
-    """Raised when shlex fails to parse a command line string in StatementParser"""
-
-    pass
+    """Raised when shlex fails to parse a command line string in StatementParser."""
 
 
 class EmbeddedConsoleExit(SystemExit):
     """Custom exception class for use with the py command."""
 
-    pass
 
-
-class EmptyStatement(Exception):
+class EmptyStatement(Exception):  # noqa: N818
     """Custom exception class for handling behavior when the user just presses <Enter>."""
-
-    pass
 
 
 class RedirectionError(Exception):
-    """Custom exception class for when redirecting or piping output fails"""
-
-    pass
+    """Custom exception class for when redirecting or piping output fails."""

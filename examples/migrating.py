@@ -1,10 +1,7 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A sample cmd application that shows how to trivially migrate a cmd application to use cmd2.
-"""
+"""A sample cmd application that shows how to trivially migrate a cmd application to use cmd2."""
 
-# import cmd2 as cmd
+# import cmd2 as cmd  # noqa: ERA001
 import cmd  # Comment this line and uncomment the one above to migrate to cmd2
 import random
 
@@ -16,20 +13,20 @@ class CmdLineApp(cmd.Cmd):
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']
 
-    def do_exit(self, line):
-        """Exit the application"""
+    def do_exit(self, line) -> bool:
+        """Exit the application."""
         return True
 
-    do_EOF = do_exit
+    do_EOF = do_exit  # noqa: N815
     do_quit = do_exit
 
-    def do_speak(self, line):
+    def do_speak(self, line) -> None:
         """Repeats what you tell me to."""
         print(line, file=self.stdout)
 
     do_say = do_speak
 
-    def do_mumble(self, line):
+    def do_mumble(self, line) -> None:
         """Mumbles what you tell me to."""
         words = line.split(' ')
         output = []

@@ -1,6 +1,4 @@
-# coding=utf-8
-"""
-cmd2 table creation API
+"""cmd2 table creation API
 This API is built upon two core classes: Column and TableCreator
 The general use case is to inherit from TableCreator to create a table class with custom formatting options.
 There are already implemented and ready-to-use examples of this below TableCreator's code.
@@ -11,17 +9,13 @@ import io
 from collections import (
     deque,
 )
+from collections.abc import Sequence
 from enum import (
     Enum,
 )
 from typing import (
     Any,
-    Deque,
-    List,
     Optional,
-    Sequence,
-    Tuple,
-    Union,
 )
 
 from wcwidth import (  # type: ignore[import]
@@ -40,7 +34,7 @@ SPACE = ' '
 
 
 class HorizontalAlignment(Enum):
-    """Horizontal alignment of text in a cell"""
+    """Horizontal alignment of text in a cell."""
 
     LEFT = 1
     CENTER = 2
@@ -48,7 +42,7 @@ class HorizontalAlignment(Enum):
 
 
 class VerticalAlignment(Enum):
-    """Vertical alignment of text in a cell"""
+    """Vertical alignment of text in a cell."""
 
     TOP = 1
     MIDDLE = 2
@@ -56,7 +50,7 @@ class VerticalAlignment(Enum):
 
 
 class Column:
-    """Table column configuration"""
+    """Table column configuration."""
 
     def __init__(
         self,
@@ -69,10 +63,9 @@ class Column:
         data_horiz_align: HorizontalAlignment = HorizontalAlignment.LEFT,
         data_vert_align: VerticalAlignment = VerticalAlignment.TOP,
         style_data_text: bool = True,
-        max_data_lines: Union[int, float] = constants.INFINITY,
+        max_data_lines: float = constants.INFINITY,
     ) -> None:
-        """
-        Column initializer
+        """Column initializer.
 
         :param header: label for column header
         :param width: display width of column. This does not account for any borders or padding which
@@ -99,8 +92,7 @@ class Column:
 
         if width is not None and width < 1:
             raise ValueError("Column width cannot be less than 1")
-        else:
-            self.width: int = width if width is not None else -1
+        self.width: int = width if width is not None else -1
 
         self.header_horiz_align = header_horiz_align
         self.header_vert_align = header_vert_align
@@ -117,8 +109,7 @@ class Column:
 
 
 class TableCreator:
-    """
-    Base table creation class. This class handles ANSI style sequences and characters with display widths greater than 1
+    """Base table creation class. This class handles ANSI style sequences and characters with display widths greater than 1
     when performing width calculations. It was designed with the ability to build tables one row at a time. This helps
     when you have large data sets that you don't want to hold in memory or when you receive portions of the data set
     incrementally.
@@ -132,8 +123,7 @@ class TableCreator:
     """
 
     def __init__(self, cols: Sequence[Column], *, tab_width: int = 4) -> None:
-        """
-        TableCreator initializer
+        """TableCreator initializer.
 
         :param cols: column definitions for this table
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
@@ -156,9 +146,8 @@ class TableCreator:
                 col.width = max(1, ansi.widest_line(col.header))
 
     @staticmethod
-    def _wrap_long_word(word: str, max_width: int, max_lines: Union[int, float], is_last_word: bool) -> Tuple[str, int, int]:
-        """
-        Used by _wrap_text() to wrap a long word over multiple lines
+    def _wrap_long_word(word: str, max_width: int, max_lines: float, is_last_word: bool) -> tuple[str, int, int]:
+        """Used by _wrap_text() to wrap a long word over multiple lines.
 
         :param word: word being wrapped
         :param max_width: maximum display width of a line
@@ -220,9 +209,8 @@ class TableCreator:
         return wrapped_buf.getvalue(), total_lines, cur_line_width
 
     @staticmethod
-    def _wrap_text(text: str, max_width: int, max_lines: Union[int, float]) -> str:
-        """
-        Wrap text into lines with a display width no longer than max_width. This function breaks words on whitespace
+    def _wrap_text(text: str, max_width: int, max_lines: float) -> str:
+        """Wrap text into lines with a display width no longer than max_width. This function breaks words on whitespace
         boundaries. If a word is longer than the space remaining on a line, then it will start on a new line.
         ANSI escape sequences do not count toward the width of a line.
 
@@ -231,14 +219,12 @@ class TableCreator:
         :param max_lines: maximum lines to wrap before ending the last line displayed with an ellipsis
         :return: wrapped text
         """
-
         # MyPy Issue #7057 documents regression requiring nonlocals to be defined earlier
         cur_line_width = 0
         total_lines = 0
 
         def add_word(word_to_add: str, is_last_word: bool) -> None:
-            """
-            Called from loop to add a word to the wrapped text
+            """Called from loop to add a word to the wrapped text.
 
             :param word_to_add: the word being added
             :param is_last_word: True if this is the last word of the total text being wrapped
@@ -382,9 +368,8 @@ class TableCreator:
 
         return wrapped_buf.getvalue()
 
-    def _generate_cell_lines(self, cell_data: Any, is_header: bool, col: Column, fill_char: str) -> Tuple[Deque[str], int]:
-        """
-        Generate the lines of a table cell
+    def _generate_cell_lines(self, cell_data: Any, is_header: bool, col: Column, fill_char: str) -> tuple[deque[str], int]:
+        """Generate the lines of a table cell.
 
         :param cell_data: data to be included in cell
         :param is_header: True if writing a header cell, otherwise writing a data cell. This determines whether to
@@ -428,8 +413,7 @@ class TableCreator:
         inter_cell: str = (2 * SPACE),
         post_line: str = EMPTY,
     ) -> str:
-        """
-        Generate a header or data table row
+        """Generate a header or data table row.
 
         :param row_data: data with an entry for each column in the row
         :param is_header: True if writing a header cell, otherwise writing a data cell. This determines whether to
@@ -450,11 +434,11 @@ class TableCreator:
         """
 
         class Cell:
-            """Inner class which represents a table cell"""
+            """Inner class which represents a table cell."""
 
             def __init__(self) -> None:
                 # Data in this cell split into individual lines
-                self.lines: Deque[str] = deque()
+                self.lines: deque[str] = deque()
 
                 # Display width of this cell
                 self.width = 0
@@ -482,7 +466,7 @@ class TableCreator:
         total_lines = 0
 
         # Generate the cells for this row
-        cells = list()
+        cells = []
 
         for col_index, col in enumerate(self.cols):
             cell = Cell()
@@ -544,8 +528,7 @@ class TableCreator:
 # of tables. They can be used as-is or serve as inspiration for other custom table classes.
 ############################################################################################################
 class SimpleTable(TableCreator):
-    """
-    Implementation of TableCreator which generates a borderless table with an optional divider row after the header.
+    """Implementation of TableCreator which generates a borderless table with an optional divider row after the header.
     This class can be used to create the whole table at once or one row at a time.
     """
 
@@ -559,8 +542,7 @@ class SimpleTable(TableCreator):
         header_bg: Optional[ansi.BgColor] = None,
         data_bg: Optional[ansi.BgColor] = None,
     ) -> None:
-        """
-        SimpleTable initializer
+        """SimpleTable initializer.
 
         :param cols: column definitions for this table
         :param column_spacing: how many spaces to place between columns. Defaults to 2.
@@ -598,20 +580,18 @@ class SimpleTable(TableCreator):
         self.data_bg = data_bg
 
     def apply_header_bg(self, value: Any) -> str:
-        """
-        If defined, apply the header background color to header text
+        """If defined, apply the header background color to header text
         :param value: object whose text is to be colored
-        :return: formatted text
+        :return: formatted text.
         """
         if self.header_bg is None:
             return str(value)
         return ansi.style(value, bg=self.header_bg)
 
     def apply_data_bg(self, value: Any) -> str:
-        """
-        If defined, apply the data background color to data text
+        """If defined, apply the data background color to data text
         :param value: object whose text is to be colored
-        :return: formatted data string
+        :return: formatted data string.
         """
         if self.data_bg is None:
             return str(value)
@@ -619,8 +599,7 @@ class SimpleTable(TableCreator):
 
     @classmethod
     def base_width(cls, num_cols: int, *, column_spacing: int = 2) -> int:
-        """
-        Utility method to calculate the display width required for a table before data is added to it.
+        """Utility method to calculate the display width required for a table before data is added to it.
         This is useful when determining how wide to make your columns to have a table be a specific width.
 
         :param num_cols: how many columns the table will have
@@ -641,20 +620,20 @@ class SimpleTable(TableCreator):
         return ansi.style_aware_wcswidth(data_row) - data_width
 
     def total_width(self) -> int:
-        """Calculate the total display width of this table"""
+        """Calculate the total display width of this table."""
         base_width = self.base_width(len(self.cols), column_spacing=self.column_spacing)
         data_width = sum(col.width for col in self.cols)
         return base_width + data_width
 
     def generate_header(self) -> str:
-        """Generate table header with an optional divider row"""
+        """Generate table header with an optional divider row."""
         header_buf = io.StringIO()
 
         fill_char = self.apply_header_bg(SPACE)
         inter_cell = self.apply_header_bg(self.column_spacing * SPACE)
 
         # Apply background color to header text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for col in self.cols:
             if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
@@ -673,15 +652,14 @@ class SimpleTable(TableCreator):
         return header_buf.getvalue()
 
     def generate_divider(self) -> str:
-        """Generate divider row"""
+        """Generate divider row."""
         if self.divider_char is None:
             return ''
 
         return utils.align_left('', fill_char=self.divider_char, width=self.total_width())
 
     def generate_data_row(self, row_data: Sequence[Any]) -> str:
-        """
-        Generate a data row
+        """Generate a data row.
 
         :param row_data: data with an entry for each column in the row
         :return: data row string
@@ -694,7 +672,7 @@ class SimpleTable(TableCreator):
         inter_cell = self.apply_data_bg(self.column_spacing * SPACE)
 
         # Apply background color to data text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for index, col in enumerate(self.cols):
             if col.style_data_text:
                 to_display.append(self.apply_data_bg(row_data[index]))
@@ -704,8 +682,7 @@ class SimpleTable(TableCreator):
         return self.generate_row(to_display, is_header=False, fill_char=fill_char, inter_cell=inter_cell)
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True, row_spacing: int = 1) -> str:
-        """
-        Generate a table from a data set
+        """Generate a table from a data set.
 
         :param table_data: Data with an entry for each data row of the table. Each entry should have data for
                            each column in the row.
@@ -740,8 +717,7 @@ class SimpleTable(TableCreator):
 
 
 class BorderedTable(TableCreator):
-    """
-    Implementation of TableCreator which generates a table with borders around the table and between rows. Borders
+    """Implementation of TableCreator which generates a table with borders around the table and between rows. Borders
     between columns can also be toggled. This class can be used to create the whole table at once or one row at a time.
     """
 
@@ -757,8 +733,7 @@ class BorderedTable(TableCreator):
         header_bg: Optional[ansi.BgColor] = None,
         data_bg: Optional[ansi.BgColor] = None,
     ) -> None:
-        """
-        BorderedTable initializer
+        """BorderedTable initializer.
 
         :param cols: column definitions for this table
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
@@ -788,30 +763,27 @@ class BorderedTable(TableCreator):
         self.data_bg = data_bg
 
     def apply_border_color(self, value: Any) -> str:
-        """
-        If defined, apply the border foreground and background colors
+        """If defined, apply the border foreground and background colors
         :param value: object whose text is to be colored
-        :return: formatted text
+        :return: formatted text.
         """
         if self.border_fg is None and self.border_bg is None:
             return str(value)
         return ansi.style(value, fg=self.border_fg, bg=self.border_bg)
 
     def apply_header_bg(self, value: Any) -> str:
-        """
-        If defined, apply the header background color to header text
+        """If defined, apply the header background color to header text
         :param value: object whose text is to be colored
-        :return: formatted text
+        :return: formatted text.
         """
         if self.header_bg is None:
             return str(value)
         return ansi.style(value, bg=self.header_bg)
 
     def apply_data_bg(self, value: Any) -> str:
-        """
-        If defined, apply the data background color to data text
+        """If defined, apply the data background color to data text
         :param value: object whose text is to be colored
-        :return: formatted data string
+        :return: formatted data string.
         """
         if self.data_bg is None:
             return str(value)
@@ -819,8 +791,7 @@ class BorderedTable(TableCreator):
 
     @classmethod
     def base_width(cls, num_cols: int, *, column_borders: bool = True, padding: int = 1) -> int:
-        """
-        Utility method to calculate the display width required for a table before data is added to it.
+        """Utility method to calculate the display width required for a table before data is added to it.
         This is useful when determining how wide to make your columns to have a table be a specific width.
 
         :param num_cols: how many columns the table will have
@@ -841,13 +812,13 @@ class BorderedTable(TableCreator):
         return ansi.style_aware_wcswidth(data_row) - data_width
 
     def total_width(self) -> int:
-        """Calculate the total display width of this table"""
+        """Calculate the total display width of this table."""
         base_width = self.base_width(len(self.cols), column_borders=self.column_borders, padding=self.padding)
         data_width = sum(col.width for col in self.cols)
         return base_width + data_width
 
     def generate_table_top_border(self) -> str:
-        """Generate a border which appears at the top of the header and data section"""
+        """Generate a border which appears at the top of the header and data section."""
         fill_char = '═'
 
         pre_line = '╔' + self.padding * '═'
@@ -869,7 +840,7 @@ class BorderedTable(TableCreator):
         )
 
     def generate_header_bottom_border(self) -> str:
-        """Generate a border which appears at the bottom of the header"""
+        """Generate a border which appears at the bottom of the header."""
         fill_char = '═'
 
         pre_line = '╠' + self.padding * '═'
@@ -891,7 +862,7 @@ class BorderedTable(TableCreator):
         )
 
     def generate_row_bottom_border(self) -> str:
-        """Generate a border which appears at the bottom of rows"""
+        """Generate a border which appears at the bottom of rows."""
         fill_char = '─'
 
         pre_line = '╟' + self.padding * '─'
@@ -900,7 +871,6 @@ class BorderedTable(TableCreator):
         if self.column_borders:
             inter_cell += '┼'
         inter_cell += self.padding * '─'
-        inter_cell = inter_cell
 
         post_line = self.padding * '─' + '╢'
 
@@ -914,7 +884,7 @@ class BorderedTable(TableCreator):
         )
 
     def generate_table_bottom_border(self) -> str:
-        """Generate a border which appears at the bottom of the table"""
+        """Generate a border which appears at the bottom of the table."""
         fill_char = '═'
 
         pre_line = '╚' + self.padding * '═'
@@ -936,7 +906,7 @@ class BorderedTable(TableCreator):
         )
 
     def generate_header(self) -> str:
-        """Generate table header"""
+        """Generate table header."""
         fill_char = self.apply_header_bg(SPACE)
 
         pre_line = self.apply_border_color('║') + self.apply_header_bg(self.padding * SPACE)
@@ -949,7 +919,7 @@ class BorderedTable(TableCreator):
         post_line = self.apply_header_bg(self.padding * SPACE) + self.apply_border_color('║')
 
         # Apply background color to header text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for col in self.cols:
             if col.style_header_text:
                 to_display.append(self.apply_header_bg(col.header))
@@ -971,8 +941,7 @@ class BorderedTable(TableCreator):
         return header_buf.getvalue()
 
     def generate_data_row(self, row_data: Sequence[Any]) -> str:
-        """
-        Generate a data row
+        """Generate a data row.
 
         :param row_data: data with an entry for each column in the row
         :return: data row string
@@ -993,7 +962,7 @@ class BorderedTable(TableCreator):
         post_line = self.apply_data_bg(self.padding * SPACE) + self.apply_border_color('║')
 
         # Apply background color to data text in Columns which allow it
-        to_display: List[Any] = []
+        to_display: list[Any] = []
         for index, col in enumerate(self.cols):
             if col.style_data_text:
                 to_display.append(self.apply_data_bg(row_data[index]))
@@ -1005,8 +974,7 @@ class BorderedTable(TableCreator):
         )
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True) -> str:
-        """
-        Generate a table from a data set
+        """Generate a table from a data set.
 
         :param table_data: Data with an entry for each data row of the table. Each entry should have data for
                            each column in the row.
@@ -1038,8 +1006,7 @@ class BorderedTable(TableCreator):
 
 
 class AlternatingTable(BorderedTable):
-    """
-    Implementation of BorderedTable which uses background colors to distinguish between rows instead of row border
+    """Implementation of BorderedTable which uses background colors to distinguish between rows instead of row border
     lines. This class can be used to create the whole table at once or one row at a time.
 
     To nest an AlternatingTable within another AlternatingTable, set style_data_text to False on the Column
@@ -1060,8 +1027,7 @@ class AlternatingTable(BorderedTable):
         odd_bg: Optional[ansi.BgColor] = None,
         even_bg: Optional[ansi.BgColor] = ansi.Bg.DARK_GRAY,
     ) -> None:
-        """
-        AlternatingTable initializer
+        """AlternatingTable initializer.
 
         Note: Specify background colors using subclasses of BgColor (e.g. Bg, EightBitBg, RgbBg)
 
@@ -1094,21 +1060,18 @@ class AlternatingTable(BorderedTable):
         self.even_bg = even_bg
 
     def apply_data_bg(self, value: Any) -> str:
-        """
-        Apply background color to data text based on what row is being generated and whether a color has been defined
+        """Apply background color to data text based on what row is being generated and whether a color has been defined
         :param value: object whose text is to be colored
-        :return: formatted data string
+        :return: formatted data string.
         """
         if self.row_num % 2 == 0 and self.even_bg is not None:
             return ansi.style(value, bg=self.even_bg)
-        elif self.row_num % 2 != 0 and self.odd_bg is not None:
+        if self.row_num % 2 != 0 and self.odd_bg is not None:
             return ansi.style(value, bg=self.odd_bg)
-        else:
-            return str(value)
+        return str(value)
 
     def generate_data_row(self, row_data: Sequence[Any]) -> str:
-        """
-        Generate a data row
+        """Generate a data row.
 
         :param row_data: data with an entry for each column in the row
         :return: data row string
@@ -1118,8 +1081,7 @@ class AlternatingTable(BorderedTable):
         return row
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True) -> str:
-        """
-        Generate a table from a data set
+        """Generate a table from a data set.
 
         :param table_data: Data with an entry for each data row of the table. Each entry should have data for
                            each column in the row.

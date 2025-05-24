@@ -1,7 +1,4 @@
-# coding=utf-8
-# flake8: noqa E302
-"""
-Unit/functional testing for readline tab completion functions in the cmd2.py module.
+"""Unit/functional testing for readline tab completion functions in the cmd2.py module.
 
 These are primarily tests related to readline completer functions which handle tab completion of cmd2/cmd commands,
 file system paths, and shell commands.
@@ -10,6 +7,7 @@ file system paths, and shell commands.
 import enum
 import os
 import sys
+from typing import NoReturn
 from unittest import (
     mock,
 )
@@ -59,11 +57,9 @@ index_dict = {
 
 
 class CompletionsExample(cmd2.Cmd):
-    """
-    Example cmd2 application used to exercise tab completion tests
-    """
+    """Example cmd2 application used to exercise tab completion tests"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         cmd2.Cmd.__init__(self, multiline_commands=['test_multiline'])
         self.foo = 'bar'
         self.add_settable(
@@ -76,47 +72,45 @@ class CompletionsExample(cmd2.Cmd):
             )
         )
 
-    def do_test_basic(self, args):
+    def do_test_basic(self, args) -> None:
         pass
 
     def complete_test_basic(self, text, line, begidx, endidx):
         return self.basic_complete(text, line, begidx, endidx, food_item_strs)
 
-    def do_test_delimited(self, args):
+    def do_test_delimited(self, args) -> None:
         pass
 
     def complete_test_delimited(self, text, line, begidx, endidx):
         return self.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
 
-    def do_test_sort_key(self, args):
+    def do_test_sort_key(self, args) -> None:
         pass
 
     def complete_test_sort_key(self, text, line, begidx, endidx):
         num_strs = ['2', '11', '1']
         return self.basic_complete(text, line, begidx, endidx, num_strs)
 
-    def do_test_raise_exception(self, args):
+    def do_test_raise_exception(self, args) -> None:
         pass
 
-    def complete_test_raise_exception(self, text, line, begidx, endidx):
+    def complete_test_raise_exception(self, text, line, begidx, endidx) -> NoReturn:
         raise IndexError("You are out of bounds!!")
 
-    def do_test_multiline(self, args):
+    def do_test_multiline(self, args) -> None:
         pass
 
     def complete_test_multiline(self, text, line, begidx, endidx):
         return self.basic_complete(text, line, begidx, endidx, sport_item_strs)
 
-    def do_test_no_completer(self, args):
+    def do_test_no_completer(self, args) -> None:
         """Completing this should result in completedefault() being called"""
-        pass
 
     def complete_foo_val(self, text, line, begidx, endidx, arg_tokens):
         """Supports unit testing cmd2.Cmd2.complete_set_val to confirm it passes all tokens in the set command"""
         if 'param' in arg_tokens:
             return ["SUCCESS"]
-        else:
-            return ["FAIL"]
+        return ["FAIL"]
 
     def completedefault(self, *ignored):
         """Method called to complete an input line when no command-specific
@@ -128,11 +122,10 @@ class CompletionsExample(cmd2.Cmd):
 
 @pytest.fixture
 def cmd2_app():
-    c = CompletionsExample()
-    return c
+    return CompletionsExample()
 
 
-def test_cmd2_command_completion_single(cmd2_app):
+def test_cmd2_command_completion_single(cmd2_app) -> None:
     text = 'he'
     line = text
     endidx = len(line)
@@ -140,42 +133,45 @@ def test_cmd2_command_completion_single(cmd2_app):
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
 
 
-def test_complete_command_single(cmd2_app):
+def test_complete_command_single(cmd2_app) -> None:
     text = 'he'
     line = text
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == ['help ']
+    assert first_match is not None
+    assert cmd2_app.completion_matches == ['help ']
 
 
-def test_complete_empty_arg(cmd2_app):
+def test_complete_empty_arg(cmd2_app) -> None:
     text = ''
-    line = 'help {}'.format(text)
+    line = f'help {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = sorted(cmd2_app.get_visible_commands(), key=cmd2_app.default_sort_key)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
-def test_complete_bogus_command(cmd2_app):
+def test_complete_bogus_command(cmd2_app) -> None:
     text = ''
-    line = 'fizbuzz {}'.format(text)
+    line = f'fizbuzz {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = ['default ']
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
-def test_complete_exception(cmd2_app, capsys):
+def test_complete_exception(cmd2_app, capsys) -> None:
     text = ''
-    line = 'test_raise_exception {}'.format(text)
+    line = f'test_raise_exception {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -186,7 +182,7 @@ def test_complete_exception(cmd2_app, capsys):
     assert "IndexError" in err
 
 
-def test_complete_macro(base_app, request):
+def test_complete_macro(base_app, request) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake run_pyscript {1}')
     assert out == normalize("Macro 'fake' created")
@@ -195,19 +191,20 @@ def test_complete_macro(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 's')
-    line = 'fake {}'.format(text)
+    line = f'fake {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
     first_match = complete_tester(text, line, begidx, endidx, base_app)
-    assert first_match is not None and base_app.completion_matches == expected
+    assert first_match is not None
+    assert base_app.completion_matches == expected
 
 
-def test_default_sort_key(cmd2_app):
+def test_default_sort_key(cmd2_app) -> None:
     text = ''
-    line = 'test_sort_key {}'.format(text)
+    line = f'test_sort_key {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -215,16 +212,18 @@ def test_default_sort_key(cmd2_app):
     cmd2_app.default_sort_key = cmd2.Cmd.ALPHABETICAL_SORT_KEY
     expected = ['1', '11', '2']
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
     # Now switch to natural sorting
     cmd2_app.default_sort_key = cmd2.Cmd.NATURAL_SORT_KEY
     expected = ['1', '2', '11']
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
-def test_cmd2_command_completion_multiple(cmd2_app):
+def test_cmd2_command_completion_multiple(cmd2_app) -> None:
     text = 'h'
     line = text
     endidx = len(line)
@@ -232,7 +231,7 @@ def test_cmd2_command_completion_multiple(cmd2_app):
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help', 'history']
 
 
-def test_cmd2_command_completion_nomatch(cmd2_app):
+def test_cmd2_command_completion_nomatch(cmd2_app) -> None:
     text = 'fakecommand'
     line = text
     endidx = len(line)
@@ -240,31 +239,33 @@ def test_cmd2_command_completion_nomatch(cmd2_app):
     assert cmd2_app.completenames(text, line, begidx, endidx) == []
 
 
-def test_cmd2_help_completion_single(cmd2_app):
+def test_cmd2_help_completion_single(cmd2_app) -> None:
     text = 'he'
-    line = 'help {}'.format(text)
+    line = f'help {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
     # It is at end of line, so extra space is present
-    assert first_match is not None and cmd2_app.completion_matches == ['help ']
+    assert first_match is not None
+    assert cmd2_app.completion_matches == ['help ']
 
 
-def test_cmd2_help_completion_multiple(cmd2_app):
+def test_cmd2_help_completion_multiple(cmd2_app) -> None:
     text = 'h'
-    line = 'help {}'.format(text)
+    line = f'help {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == ['help', 'history']
+    assert first_match is not None
+    assert cmd2_app.completion_matches == ['help', 'history']
 
 
-def test_cmd2_help_completion_nomatch(cmd2_app):
+def test_cmd2_help_completion_nomatch(cmd2_app) -> None:
     text = 'fakecommand'
-    line = 'help {}'.format(text)
+    line = f'help {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -272,7 +273,7 @@ def test_cmd2_help_completion_nomatch(cmd2_app):
     assert first_match is None
 
 
-def test_set_allow_style_completion(cmd2_app):
+def test_set_allow_style_completion(cmd2_app) -> None:
     """Confirm that completing allow_style presents AllowStyle strings"""
     text = ''
     line = 'set allow_style'
@@ -286,7 +287,7 @@ def test_set_allow_style_completion(cmd2_app):
     assert cmd2_app.completion_matches == sorted(expected, key=cmd2_app.default_sort_key)
 
 
-def test_set_bool_completion(cmd2_app):
+def test_set_bool_completion(cmd2_app) -> None:
     """Confirm that completing a boolean Settable presents true and false strings"""
     text = ''
     line = 'set debug'
@@ -300,7 +301,7 @@ def test_set_bool_completion(cmd2_app):
     assert cmd2_app.completion_matches == sorted(expected, key=cmd2_app.default_sort_key)
 
 
-def test_shell_command_completion_shortcut(cmd2_app):
+def test_shell_command_completion_shortcut(cmd2_app) -> None:
     # Made sure ! runs a shell command and all matches start with ! since there
     # isn't a space between ! and the shell command. Display matches won't
     # begin with the !.
@@ -318,16 +319,18 @@ def test_shell_command_completion_shortcut(cmd2_app):
     begidx = 0
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == expected and cmd2_app.display_matches == expected_display
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
+    assert cmd2_app.display_matches == expected_display
 
 
-def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
+def test_shell_command_completion_doesnt_match_wildcards(cmd2_app) -> None:
     if sys.platform == "win32":
         text = 'c*'
     else:
         text = 'e*'
 
-    line = 'shell {}'.format(text)
+    line = f'shell {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -335,7 +338,7 @@ def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
     assert first_match is None
 
 
-def test_shell_command_completion_multiple(cmd2_app):
+def test_shell_command_completion_multiple(cmd2_app) -> None:
     if sys.platform == "win32":
         text = 'c'
         expected = 'calc.exe'
@@ -343,17 +346,18 @@ def test_shell_command_completion_multiple(cmd2_app):
         text = 'l'
         expected = 'ls'
 
-    line = 'shell {}'.format(text)
+    line = f'shell {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and expected in cmd2_app.completion_matches
+    assert first_match is not None
+    assert expected in cmd2_app.completion_matches
 
 
-def test_shell_command_completion_nomatch(cmd2_app):
+def test_shell_command_completion_nomatch(cmd2_app) -> None:
     text = 'zzzz'
-    line = 'shell {}'.format(text)
+    line = f'shell {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -361,9 +365,9 @@ def test_shell_command_completion_nomatch(cmd2_app):
     assert first_match is None
 
 
-def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app):
+def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app) -> None:
     text = ''
-    line = 'shell {}'.format(text)
+    line = f'shell {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -371,24 +375,25 @@ def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app):
     assert first_match is None
 
 
-def test_shell_command_completion_does_path_completion_when_after_command(cmd2_app, request):
+def test_shell_command_completion_does_path_completion_when_after_command(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'conftest')
-    line = 'shell cat {}'.format(text)
+    line = f'shell cat {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == [text + '.py ']
+    assert first_match is not None
+    assert cmd2_app.completion_matches == [text + '.py ']
 
 
-def test_shell_command_complete_in_path(cmd2_app, request):
+def test_shell_command_complete_in_path(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 's')
-    line = 'shell {}'.format(text)
+    line = f'shell {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -397,14 +402,15 @@ def test_shell_command_complete_in_path(cmd2_app, request):
     # we expect to see the scripts dir among the results
     expected = os.path.join(test_dir, 'scripts' + os.path.sep)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and expected in cmd2_app.completion_matches
+    assert first_match is not None
+    assert expected in cmd2_app.completion_matches
 
 
-def test_path_completion_single_end(cmd2_app, request):
+def test_path_completion_single_end(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'conftest')
-    line = 'shell cat {}'.format(text)
+    line = f'shell cat {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -412,11 +418,11 @@ def test_path_completion_single_end(cmd2_app, request):
     assert cmd2_app.path_complete(text, line, begidx, endidx) == [text + '.py']
 
 
-def test_path_completion_multiple(cmd2_app, request):
+def test_path_completion_multiple(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 's')
-    line = 'shell cat {}'.format(text)
+    line = f'shell cat {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -426,11 +432,11 @@ def test_path_completion_multiple(cmd2_app, request):
     assert matches == expected
 
 
-def test_path_completion_nomatch(cmd2_app, request):
+def test_path_completion_nomatch(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'fakepath')
-    line = 'shell cat {}'.format(text)
+    line = f'shell cat {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -438,7 +444,7 @@ def test_path_completion_nomatch(cmd2_app, request):
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
 
-def test_default_to_shell_completion(cmd2_app, request):
+def test_default_to_shell_completion(cmd2_app, request) -> None:
     cmd2_app.default_to_shell = True
     test_dir = os.path.dirname(request.module.__file__)
 
@@ -451,26 +457,27 @@ def test_default_to_shell_completion(cmd2_app, request):
 
     # Make sure the command is on the testing system
     assert command in utils.get_exes_in_path(command)
-    line = '{} {}'.format(command, text)
+    line = f'{command} {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == [text + '.py ']
+    assert first_match is not None
+    assert cmd2_app.completion_matches == [text + '.py ']
 
 
-def test_path_completion_no_text(cmd2_app):
+def test_path_completion_no_text(cmd2_app) -> None:
     # Run path complete with no search text which should show what's in cwd
     text = ''
-    line = 'shell ls {}'.format(text)
+    line = f'shell ls {text}'
     endidx = len(line)
     begidx = endidx - len(text)
     completions_no_text = cmd2_app.path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
     text = os.getcwd() + os.path.sep
-    line = 'shell ls {}'.format(text)
+    line = f'shell ls {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -482,17 +489,17 @@ def test_path_completion_no_text(cmd2_app):
     assert completions_cwd
 
 
-def test_path_completion_no_path(cmd2_app):
+def test_path_completion_no_path(cmd2_app) -> None:
     # Run path complete with search text that isn't preceded by a path. This should use CWD as the path.
     text = 'p'
-    line = 'shell ls {}'.format(text)
+    line = f'shell ls {text}'
     endidx = len(line)
     begidx = endidx - len(text)
     completions_no_text = cmd2_app.path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
     text = os.getcwd() + os.path.sep + text
-    line = 'shell ls {}'.format(text)
+    line = f'shell ls {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -505,13 +512,13 @@ def test_path_completion_no_path(cmd2_app):
 
 
 @pytest.mark.skipif(sys.platform == 'win32', reason="this only applies on systems where the root directory is a slash")
-def test_path_completion_cwd_is_root_dir(cmd2_app):
+def test_path_completion_cwd_is_root_dir(cmd2_app) -> None:
     # Change our CWD to root dir
     cwd = os.getcwd()
     os.chdir(os.path.sep)
 
     text = ''
-    line = 'shell ls {}'.format(text)
+    line = f'shell ls {text}'
     endidx = len(line)
     begidx = endidx - len(text)
     completions = cmd2_app.path_complete(text, line, begidx, endidx)
@@ -523,11 +530,11 @@ def test_path_completion_cwd_is_root_dir(cmd2_app):
     os.chdir(cwd)
 
 
-def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
+def test_path_completion_doesnt_match_wildcards(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c*')
-    line = 'shell cat {}'.format(text)
+    line = f'shell cat {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -536,13 +543,13 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
 
-def test_path_completion_complete_user(cmd2_app):
+def test_path_completion_complete_user(cmd2_app) -> None:
     import getpass
 
     user = getpass.getuser()
 
-    text = '~{}'.format(user)
-    line = 'shell fake {}'.format(text)
+    text = f'~{user}'
+    line = f'shell fake {text}'
     endidx = len(line)
     begidx = endidx - len(text)
     completions = cmd2_app.path_complete(text, line, begidx, endidx)
@@ -551,7 +558,7 @@ def test_path_completion_complete_user(cmd2_app):
     assert expected in completions
 
 
-def test_path_completion_user_path_expansion(cmd2_app):
+def test_path_completion_user_path_expansion(cmd2_app) -> None:
     # Run path with a tilde and a slash
     if sys.platform.startswith('win'):
         cmd = 'dir'
@@ -559,15 +566,15 @@ def test_path_completion_user_path_expansion(cmd2_app):
         cmd = 'ls'
 
     # Use a ~ which will be expanded into the user's home directory
-    text = '~{}'.format(os.path.sep)
-    line = 'shell {} {}'.format(cmd, text)
+    text = f'~{os.path.sep}'
+    line = f'shell {cmd} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde_slash = [match.replace(text, '', 1) for match in cmd2_app.path_complete(text, line, begidx, endidx)]
 
     # Run path complete on the user's home directory
     text = os.path.expanduser('~') + os.path.sep
-    line = 'shell {} {}'.format(cmd, text)
+    line = f'shell {cmd} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
     completions_home = [match.replace(text, '', 1) for match in cmd2_app.path_complete(text, line, begidx, endidx)]
@@ -575,11 +582,11 @@ def test_path_completion_user_path_expansion(cmd2_app):
     assert completions_tilde_slash == completions_home
 
 
-def test_path_completion_directories_only(cmd2_app, request):
+def test_path_completion_directories_only(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 's')
-    line = 'shell cat {}'.format(text)
+    line = f'shell cat {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -589,18 +596,18 @@ def test_path_completion_directories_only(cmd2_app, request):
     assert cmd2_app.path_complete(text, line, begidx, endidx, path_filter=os.path.isdir) == expected
 
 
-def test_basic_completion_single(cmd2_app):
+def test_basic_completion_single(cmd2_app) -> None:
     text = 'Pi'
-    line = 'list_food -f {}'.format(text)
+    line = f'list_food -f {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
 
-def test_basic_completion_multiple(cmd2_app):
+def test_basic_completion_multiple(cmd2_app) -> None:
     text = ''
-    line = 'list_food -f {}'.format(text)
+    line = f'list_food -f {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -608,18 +615,18 @@ def test_basic_completion_multiple(cmd2_app):
     assert matches == sorted(food_item_strs)
 
 
-def test_basic_completion_nomatch(cmd2_app):
+def test_basic_completion_nomatch(cmd2_app) -> None:
     text = 'q'
-    line = 'list_food -f {}'.format(text)
+    line = f'list_food -f {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
 
-def test_delimiter_completion(cmd2_app):
+def test_delimiter_completion(cmd2_app) -> None:
     text = '/home/'
-    line = 'run_script {}'.format(text)
+    line = f'run_script {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -632,18 +639,18 @@ def test_delimiter_completion(cmd2_app):
     assert display_list == ['other user', 'user']
 
 
-def test_flag_based_completion_single(cmd2_app):
+def test_flag_based_completion_single(cmd2_app) -> None:
     text = 'Pi'
-    line = 'list_food -f {}'.format(text)
+    line = f'list_food -f {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     assert cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
 
 
-def test_flag_based_completion_multiple(cmd2_app):
+def test_flag_based_completion_multiple(cmd2_app) -> None:
     text = ''
-    line = 'list_food -f {}'.format(text)
+    line = f'list_food -f {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -651,20 +658,20 @@ def test_flag_based_completion_multiple(cmd2_app):
     assert matches == sorted(food_item_strs)
 
 
-def test_flag_based_completion_nomatch(cmd2_app):
+def test_flag_based_completion_nomatch(cmd2_app) -> None:
     text = 'q'
-    line = 'list_food -f {}'.format(text)
+    line = f'list_food -f {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     assert cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict) == []
 
 
-def test_flag_based_default_completer(cmd2_app, request):
+def test_flag_based_default_completer(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c')
-    line = 'list_food {}'.format(text)
+    line = f'list_food {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -674,11 +681,11 @@ def test_flag_based_default_completer(cmd2_app, request):
     ]
 
 
-def test_flag_based_callable_completer(cmd2_app, request):
+def test_flag_based_callable_completer(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c')
-    line = 'list_food -o {}'.format(text)
+    line = f'list_food -o {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -687,18 +694,18 @@ def test_flag_based_callable_completer(cmd2_app, request):
     assert cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict) == [text + 'onftest.py']
 
 
-def test_index_based_completion_single(cmd2_app):
+def test_index_based_completion_single(cmd2_app) -> None:
     text = 'Foo'
-    line = 'command Pizza {}'.format(text)
+    line = f'command Pizza {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == ['Football']
 
 
-def test_index_based_completion_multiple(cmd2_app):
+def test_index_based_completion_multiple(cmd2_app) -> None:
     text = ''
-    line = 'command Pizza {}'.format(text)
+    line = f'command Pizza {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -706,19 +713,19 @@ def test_index_based_completion_multiple(cmd2_app):
     assert matches == sorted(sport_item_strs)
 
 
-def test_index_based_completion_nomatch(cmd2_app):
+def test_index_based_completion_nomatch(cmd2_app) -> None:
     text = 'q'
-    line = 'command {}'.format(text)
+    line = f'command {text}'
     endidx = len(line)
     begidx = endidx - len(text)
     assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == []
 
 
-def test_index_based_default_completer(cmd2_app, request):
+def test_index_based_default_completer(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c')
-    line = 'command Pizza Bat Computer {}'.format(text)
+    line = f'command Pizza Bat Computer {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -728,11 +735,11 @@ def test_index_based_default_completer(cmd2_app, request):
     ]
 
 
-def test_index_based_callable_completer(cmd2_app, request):
+def test_index_based_callable_completer(cmd2_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c')
-    line = 'command Pizza Bat {}'.format(text)
+    line = f'command Pizza Bat {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -741,9 +748,9 @@ def test_index_based_callable_completer(cmd2_app, request):
     assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == [text + 'onftest.py']
 
 
-def test_tokens_for_completion_quoted(cmd2_app):
+def test_tokens_for_completion_quoted(cmd2_app) -> None:
     text = 'Pi'
-    line = 'list_food "{}"'.format(text)
+    line = f'list_food "{text}"'
     endidx = len(line)
     begidx = endidx
 
@@ -755,9 +762,9 @@ def test_tokens_for_completion_quoted(cmd2_app):
     assert expected_raw_tokens == raw_tokens
 
 
-def test_tokens_for_completion_unclosed_quote(cmd2_app):
+def test_tokens_for_completion_unclosed_quote(cmd2_app) -> None:
     text = 'Pi'
-    line = 'list_food "{}'.format(text)
+    line = f'list_food "{text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -769,10 +776,10 @@ def test_tokens_for_completion_unclosed_quote(cmd2_app):
     assert expected_raw_tokens == raw_tokens
 
 
-def test_tokens_for_completion_punctuation(cmd2_app):
+def test_tokens_for_completion_punctuation(cmd2_app) -> None:
     """Test that redirectors and terminators are word delimiters"""
     text = 'file'
-    line = 'command | < ;>>{}'.format(text)
+    line = f'command | < ;>>{text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -784,10 +791,10 @@ def test_tokens_for_completion_punctuation(cmd2_app):
     assert expected_raw_tokens == raw_tokens
 
 
-def test_tokens_for_completion_quoted_punctuation(cmd2_app):
+def test_tokens_for_completion_quoted_punctuation(cmd2_app) -> None:
     """Test that quoted punctuation characters are not word delimiters"""
     text = '>file'
-    line = 'command "{}'.format(text)
+    line = f'command "{text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -799,75 +806,81 @@ def test_tokens_for_completion_quoted_punctuation(cmd2_app):
     assert expected_raw_tokens == raw_tokens
 
 
-def test_add_opening_quote_basic_no_text(cmd2_app):
+def test_add_opening_quote_basic_no_text(cmd2_app) -> None:
     text = ''
-    line = 'test_basic {}'.format(text)
+    line = f'test_basic {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     # The whole list will be returned with no opening quotes added
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == sorted(food_item_strs, key=cmd2_app.default_sort_key)
+    assert first_match is not None
+    assert cmd2_app.completion_matches == sorted(food_item_strs, key=cmd2_app.default_sort_key)
 
 
-def test_add_opening_quote_basic_nothing_added(cmd2_app):
+def test_add_opening_quote_basic_nothing_added(cmd2_app) -> None:
     text = 'P'
-    line = 'test_basic {}'.format(text)
+    line = f'test_basic {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == ['Pizza', 'Potato']
+    assert first_match is not None
+    assert cmd2_app.completion_matches == ['Pizza', 'Potato']
 
 
-def test_add_opening_quote_basic_quote_added(cmd2_app):
+def test_add_opening_quote_basic_quote_added(cmd2_app) -> None:
     text = 'Ha'
-    line = 'test_basic {}'.format(text)
+    line = f'test_basic {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = sorted(['"Ham', '"Ham Sandwich'], key=cmd2_app.default_sort_key)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
-def test_add_opening_quote_basic_single_quote_added(cmd2_app):
+def test_add_opening_quote_basic_single_quote_added(cmd2_app) -> None:
     text = 'Ch'
-    line = 'test_basic {}'.format(text)
+    line = f'test_basic {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = ["'Cheese \"Pizza\"' "]
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
-def test_add_opening_quote_basic_text_is_common_prefix(cmd2_app):
+def test_add_opening_quote_basic_text_is_common_prefix(cmd2_app) -> None:
     # This tests when the text entered is the same as the common prefix of the matches
     text = 'Ham'
-    line = 'test_basic {}'.format(text)
+    line = f'test_basic {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = sorted(['"Ham', '"Ham Sandwich'], key=cmd2_app.default_sort_key)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
-def test_add_opening_quote_delimited_no_text(cmd2_app):
+def test_add_opening_quote_delimited_no_text(cmd2_app) -> None:
     text = ''
-    line = 'test_delimited {}'.format(text)
+    line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     # The whole list will be returned with no opening quotes added
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == sorted(delimited_strs, key=cmd2_app.default_sort_key)
+    assert first_match is not None
+    assert cmd2_app.completion_matches == sorted(delimited_strs, key=cmd2_app.default_sort_key)
 
 
-def test_add_opening_quote_delimited_nothing_added(cmd2_app):
+def test_add_opening_quote_delimited_nothing_added(cmd2_app) -> None:
     text = '/ho'
-    line = 'test_delimited {}'.format(text)
+    line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -875,16 +888,14 @@ def test_add_opening_quote_delimited_nothing_added(cmd2_app):
     expected_display = sorted(['other user', 'user'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert (
-        first_match is not None
-        and cmd2_app.completion_matches == expected_matches
-        and cmd2_app.display_matches == expected_display
-    )
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected_matches
+    assert cmd2_app.display_matches == expected_display
 
 
-def test_add_opening_quote_delimited_quote_added(cmd2_app):
+def test_add_opening_quote_delimited_quote_added(cmd2_app) -> None:
     text = '/home/user/fi'
-    line = 'test_delimited {}'.format(text)
+    line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -892,17 +903,15 @@ def test_add_opening_quote_delimited_quote_added(cmd2_app):
     expected_display = sorted(['file.txt', 'file space.txt'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert (
-        first_match is not None
-        and os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix
-        and cmd2_app.display_matches == expected_display
-    )
+    assert first_match is not None
+    assert os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix
+    assert cmd2_app.display_matches == expected_display
 
 
-def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
+def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app) -> None:
     # This tests when the text entered is the same as the common prefix of the matches
     text = '/home/user/file'
-    line = 'test_delimited {}'.format(text)
+    line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -910,17 +919,15 @@ def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
     expected_display = sorted(['file.txt', 'file space.txt'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert (
-        first_match is not None
-        and os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix
-        and cmd2_app.display_matches == expected_display
-    )
+    assert first_match is not None
+    assert os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix
+    assert cmd2_app.display_matches == expected_display
 
 
-def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
+def test_add_opening_quote_delimited_space_in_prefix(cmd2_app) -> None:
     # This test when a space appears before the part of the string that is the display match
     text = '/home/oth'
-    line = 'test_delimited {}'.format(text)
+    line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -928,60 +935,62 @@ def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
     expected_display = ['maps', 'tests']
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert (
-        first_match is not None
-        and os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix
-        and cmd2_app.display_matches == expected_display
-    )
+    assert first_match is not None
+    assert os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix
+    assert cmd2_app.display_matches == expected_display
 
 
-def test_no_completer(cmd2_app):
+def test_no_completer(cmd2_app) -> None:
     text = ''
-    line = 'test_no_completer {}'.format(text)
+    line = f'test_no_completer {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = ['default ']
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
-def test_wordbreak_in_command(cmd2_app):
+def test_wordbreak_in_command(cmd2_app) -> None:
     text = ''
-    line = '"{}'.format(text)
+    line = f'"{text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is None and not cmd2_app.completion_matches
+    assert first_match is None
+    assert not cmd2_app.completion_matches
 
 
-def test_complete_multiline_on_single_line(cmd2_app):
+def test_complete_multiline_on_single_line(cmd2_app) -> None:
     text = ''
-    line = 'test_multiline {}'.format(text)
+    line = f'test_multiline {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = sorted(sport_item_strs, key=cmd2_app.default_sort_key)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
-def test_complete_multiline_on_multiple_lines(cmd2_app):
+def test_complete_multiline_on_multiple_lines(cmd2_app) -> None:
     # Set the same variables _complete_statement() sets when a user is entering data at a continuation prompt
     cmd2_app._at_continuation_prompt = True
     cmd2_app._multiline_in_progress = "test_multiline\n"
 
     text = 'Ba'
-    line = '{}'.format(text)
+    line = f'{text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     expected = sorted(['Bat', 'Basket', 'Basketball'], key=cmd2_app.default_sort_key)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert first_match is not None
+    assert cmd2_app.completion_matches == expected
 
 
 # Used by redirect_complete tests
@@ -993,7 +1002,7 @@ class RedirCompType(enum.Enum):
 
 
 @pytest.mark.parametrize(
-    'line, comp_type',
+    ('line', 'comp_type'),
     [
         ('fake', RedirCompType.DEFAULT),
         ('fake arg', RedirCompType.DEFAULT),
@@ -1019,7 +1028,7 @@ class RedirCompType(enum.Enum):
         ('fake > file >>', RedirCompType.NONE),
     ],
 )
-def test_redirect_complete(cmd2_app, monkeypatch, line, comp_type):
+def test_redirect_complete(cmd2_app, monkeypatch, line, comp_type) -> None:
     # Test both cases of allow_redirection
     cmd2_app.allow_redirection = True
     for count in range(2):
@@ -1032,7 +1041,7 @@ def test_redirect_complete(cmd2_app, monkeypatch, line, comp_type):
         default_complete_mock = mock.MagicMock(name='fake_completer')
 
         text = ''
-        line = '{} {}'.format(line, text)
+        line = f'{line} {text}'
         endidx = len(line)
         begidx = endidx - len(text)
 
@@ -1055,9 +1064,9 @@ def test_redirect_complete(cmd2_app, monkeypatch, line, comp_type):
             comp_type = RedirCompType.NONE
 
 
-def test_complete_set_value(cmd2_app):
+def test_complete_set_value(cmd2_app) -> None:
     text = ''
-    line = 'set foo {}'.format(text)
+    line = f'set foo {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1066,9 +1075,9 @@ def test_complete_set_value(cmd2_app):
     assert cmd2_app.completion_hint == "Hint:\n  value  a settable param\n"
 
 
-def test_complete_set_value_invalid_settable(cmd2_app, capsys):
+def test_complete_set_value_invalid_settable(cmd2_app, capsys) -> None:
     text = ''
-    line = 'set fake {}'.format(text)
+    line = f'set fake {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1086,31 +1095,33 @@ def sc_app():
     return c
 
 
-def test_cmd2_subcommand_completion_single_end(sc_app):
+def test_cmd2_subcommand_completion_single_end(sc_app) -> None:
     text = 'f'
-    line = 'base {}'.format(text)
+    line = f'base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
 
     # It is at end of line, so extra space is present
-    assert first_match is not None and sc_app.completion_matches == ['foo ']
+    assert first_match is not None
+    assert sc_app.completion_matches == ['foo ']
 
 
-def test_cmd2_subcommand_completion_multiple(sc_app):
+def test_cmd2_subcommand_completion_multiple(sc_app) -> None:
     text = ''
-    line = 'base {}'.format(text)
+    line = f'base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
-    assert first_match is not None and sc_app.completion_matches == ['bar', 'foo', 'sport']
+    assert first_match is not None
+    assert sc_app.completion_matches == ['bar', 'foo', 'sport']
 
 
-def test_cmd2_subcommand_completion_nomatch(sc_app):
+def test_cmd2_subcommand_completion_nomatch(sc_app) -> None:
     text = 'z'
-    line = 'base {}'.format(text)
+    line = f'base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1118,31 +1129,33 @@ def test_cmd2_subcommand_completion_nomatch(sc_app):
     assert first_match is None
 
 
-def test_help_subcommand_completion_single(sc_app):
+def test_help_subcommand_completion_single(sc_app) -> None:
     text = 'base'
-    line = 'help {}'.format(text)
+    line = f'help {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
 
     # It is at end of line, so extra space is present
-    assert first_match is not None and sc_app.completion_matches == ['base ']
+    assert first_match is not None
+    assert sc_app.completion_matches == ['base ']
 
 
-def test_help_subcommand_completion_multiple(sc_app):
+def test_help_subcommand_completion_multiple(sc_app) -> None:
     text = ''
-    line = 'help base {}'.format(text)
+    line = f'help base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
-    assert first_match is not None and sc_app.completion_matches == ['bar', 'foo', 'sport']
+    assert first_match is not None
+    assert sc_app.completion_matches == ['bar', 'foo', 'sport']
 
 
-def test_help_subcommand_completion_nomatch(sc_app):
+def test_help_subcommand_completion_nomatch(sc_app) -> None:
     text = 'z'
-    line = 'help base {}'.format(text)
+    line = f'help base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1150,24 +1163,25 @@ def test_help_subcommand_completion_nomatch(sc_app):
     assert first_match is None
 
 
-def test_subcommand_tab_completion(sc_app):
+def test_subcommand_tab_completion(sc_app) -> None:
     # This makes sure the correct completer for the sport subcommand is called
     text = 'Foot'
-    line = 'base sport {}'.format(text)
+    line = f'base sport {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
 
     # It is at end of line, so extra space is present
-    assert first_match is not None and sc_app.completion_matches == ['Football ']
+    assert first_match is not None
+    assert sc_app.completion_matches == ['Football ']
 
 
-def test_subcommand_tab_completion_with_no_completer(sc_app):
+def test_subcommand_tab_completion_with_no_completer(sc_app) -> None:
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
     text = 'Foot'
-    line = 'base foo {}'.format(text)
+    line = f'base foo {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1175,41 +1189,42 @@ def test_subcommand_tab_completion_with_no_completer(sc_app):
     assert first_match is None
 
 
-def test_subcommand_tab_completion_space_in_text(sc_app):
+def test_subcommand_tab_completion_space_in_text(sc_app) -> None:
     text = 'B'
-    line = 'base sport "Space {}'.format(text)
+    line = f'base sport "Space {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
 
-    assert first_match is not None and sc_app.completion_matches == ['Ball" '] and sc_app.display_matches == ['Space Ball']
+    assert first_match is not None
+    assert sc_app.completion_matches == ['Ball" ']
+    assert sc_app.display_matches == ['Space Ball']
 
 
 ####################################################
 
 
 class SubcommandsWithUnknownExample(cmd2.Cmd):
-    """
-    Example cmd2 application where we a base command which has a couple subcommands
+    """Example cmd2 application where we a base command which has a couple subcommands
     and the "sport" subcommand has tab completion enabled.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         cmd2.Cmd.__init__(self)
 
     # subcommand functions for the base command
-    def base_foo(self, args):
-        """foo subcommand of base command"""
+    def base_foo(self, args) -> None:
+        """Foo subcommand of base command"""
         self.poutput(args.x * args.y)
 
-    def base_bar(self, args):
-        """bar subcommand of base command"""
-        self.poutput('((%s))' % args.z)
+    def base_bar(self, args) -> None:
+        """Bar subcommand of base command"""
+        self.poutput(f'(({args.z}))')
 
-    def base_sport(self, args):
-        """sport subcommand of base command"""
-        self.poutput('Sport is {}'.format(args.sport))
+    def base_sport(self, args) -> None:
+        """Sport subcommand of base command"""
+        self.poutput(f'Sport is {args.sport}')
 
     # create the top-level parser for the base command
     base_parser = cmd2.Cmd2ArgumentParser()
@@ -1231,7 +1246,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
     sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport', choices=sport_item_strs)
 
     @cmd2.with_argparser(base_parser, with_unknown_args=True)
-    def do_base(self, args):
+    def do_base(self, args) -> None:
         """Base command help"""
         func = getattr(args, 'func', None)
         if func is not None:
@@ -1245,37 +1260,38 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
 @pytest.fixture
 def scu_app():
     """Declare test fixture for with_argparser decorator"""
-    app = SubcommandsWithUnknownExample()
-    return app
+    return SubcommandsWithUnknownExample()
 
 
-def test_subcmd_with_unknown_completion_single_end(scu_app):
+def test_subcmd_with_unknown_completion_single_end(scu_app) -> None:
     text = 'f'
-    line = 'base {}'.format(text)
+    line = f'base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
 
-    print('first_match: {}'.format(first_match))
+    print(f'first_match: {first_match}')
 
     # It is at end of line, so extra space is present
-    assert first_match is not None and scu_app.completion_matches == ['foo ']
+    assert first_match is not None
+    assert scu_app.completion_matches == ['foo ']
 
 
-def test_subcmd_with_unknown_completion_multiple(scu_app):
+def test_subcmd_with_unknown_completion_multiple(scu_app) -> None:
     text = ''
-    line = 'base {}'.format(text)
+    line = f'base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
-    assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
+    assert first_match is not None
+    assert scu_app.completion_matches == ['bar', 'foo', 'sport']
 
 
-def test_subcmd_with_unknown_completion_nomatch(scu_app):
+def test_subcmd_with_unknown_completion_nomatch(scu_app) -> None:
     text = 'z'
-    line = 'base {}'.format(text)
+    line = f'base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1283,51 +1299,55 @@ def test_subcmd_with_unknown_completion_nomatch(scu_app):
     assert first_match is None
 
 
-def test_help_subcommand_completion_single_scu(scu_app):
+def test_help_subcommand_completion_single_scu(scu_app) -> None:
     text = 'base'
-    line = 'help {}'.format(text)
+    line = f'help {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
 
     # It is at end of line, so extra space is present
-    assert first_match is not None and scu_app.completion_matches == ['base ']
+    assert first_match is not None
+    assert scu_app.completion_matches == ['base ']
 
 
-def test_help_subcommand_completion_multiple_scu(scu_app):
+def test_help_subcommand_completion_multiple_scu(scu_app) -> None:
     text = ''
-    line = 'help base {}'.format(text)
+    line = f'help base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
-    assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
+    assert first_match is not None
+    assert scu_app.completion_matches == ['bar', 'foo', 'sport']
 
 
-def test_help_subcommand_completion_with_flags_before_command(scu_app):
+def test_help_subcommand_completion_with_flags_before_command(scu_app) -> None:
     text = ''
-    line = 'help -h -v base {}'.format(text)
+    line = f'help -h -v base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
-    assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
+    assert first_match is not None
+    assert scu_app.completion_matches == ['bar', 'foo', 'sport']
 
 
-def test_complete_help_subcommands_with_blank_command(scu_app):
+def test_complete_help_subcommands_with_blank_command(scu_app) -> None:
     text = ''
-    line = 'help "" {}'.format(text)
+    line = f'help "" {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
-    assert first_match is None and not scu_app.completion_matches
+    assert first_match is None
+    assert not scu_app.completion_matches
 
 
-def test_help_subcommand_completion_nomatch_scu(scu_app):
+def test_help_subcommand_completion_nomatch_scu(scu_app) -> None:
     text = 'z'
-    line = 'help base {}'.format(text)
+    line = f'help base {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1335,24 +1355,25 @@ def test_help_subcommand_completion_nomatch_scu(scu_app):
     assert first_match is None
 
 
-def test_subcommand_tab_completion_scu(scu_app):
+def test_subcommand_tab_completion_scu(scu_app) -> None:
     # This makes sure the correct completer for the sport subcommand is called
     text = 'Foot'
-    line = 'base sport {}'.format(text)
+    line = f'base sport {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
 
     # It is at end of line, so extra space is present
-    assert first_match is not None and scu_app.completion_matches == ['Football ']
+    assert first_match is not None
+    assert scu_app.completion_matches == ['Football ']
 
 
-def test_subcommand_tab_completion_with_no_completer_scu(scu_app):
+def test_subcommand_tab_completion_with_no_completer_scu(scu_app) -> None:
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
     text = 'Foot'
-    line = 'base foo {}'.format(text)
+    line = f'base foo {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1360,12 +1381,14 @@ def test_subcommand_tab_completion_with_no_completer_scu(scu_app):
     assert first_match is None
 
 
-def test_subcommand_tab_completion_space_in_text_scu(scu_app):
+def test_subcommand_tab_completion_space_in_text_scu(scu_app) -> None:
     text = 'B'
-    line = 'base sport "Space {}'.format(text)
+    line = f'base sport "Space {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
 
-    assert first_match is not None and scu_app.completion_matches == ['Ball" '] and scu_app.display_matches == ['Space Ball']
+    assert first_match is not None
+    assert scu_app.completion_matches == ['Ball" ']
+    assert scu_app.display_matches == ['Space Ball']

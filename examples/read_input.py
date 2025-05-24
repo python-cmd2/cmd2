@@ -1,12 +1,7 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion
-"""
+"""A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion."""
 
-from typing import (
-    List,
-)
+import contextlib
 
 import cmd2
 
@@ -21,16 +16,14 @@ class ReadInputApp(cmd2.Cmd):
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_basic(self, _) -> None:
-        """Call read_input with no history or tab completion"""
+        """Call read_input with no history or tab completion."""
         self.poutput("Tab completion and up-arrow history is off")
-        try:
+        with contextlib.suppress(EOFError):
             self.read_input("> ")
-        except EOFError:
-            pass
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_basic_with_history(self, _) -> None:
-        """Call read_input with custom history and no tab completion"""
+        """Call read_input with custom history and no tab completion."""
         self.poutput("Tab completion is off but using custom history")
         try:
             input_str = self.read_input("> ", history=self.custom_history)
@@ -41,16 +34,14 @@ class ReadInputApp(cmd2.Cmd):
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_commands(self, _) -> None:
-        """Call read_input the same way cmd2 prompt does to read commands"""
+        """Call read_input the same way cmd2 prompt does to read commands."""
         self.poutput("Tab completing and up-arrow history configured for commands")
-        try:
+        with contextlib.suppress(EOFError):
             self.read_input("> ", completion_mode=cmd2.CompletionMode.COMMANDS)
-        except EOFError:
-            pass
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_custom_choices(self, _) -> None:
-        """Call read_input to use custom history and choices"""
+        """Call read_input to use custom history and choices."""
         self.poutput("Tab completing with static choices list and using custom history")
         try:
             input_str = self.read_input(
@@ -64,13 +55,13 @@ class ReadInputApp(cmd2.Cmd):
         else:
             self.custom_history.append(input_str)
 
-    def choices_provider(self) -> List[str]:
-        """Example choices provider function"""
+    def choices_provider(self) -> list[str]:
+        """Example choices provider function."""
         return ["from_provider_1", "from_provider_2", "from_provider_3"]
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_custom_choices_provider(self, _) -> None:
-        """Call read_input to use custom history and choices provider function"""
+        """Call read_input to use custom history and choices provider function."""
         self.poutput("Tab completing with choices from provider function and using custom history")
         try:
             input_str = self.read_input(
@@ -86,7 +77,7 @@ class ReadInputApp(cmd2.Cmd):
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_custom_completer(self, _) -> None:
-        """Call read_input to use custom history and completer function"""
+        """Call read_input to use custom history and completer function."""
         self.poutput("Tab completing paths and using custom history")
         try:
             input_str = self.read_input(
@@ -98,7 +89,7 @@ class ReadInputApp(cmd2.Cmd):
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_custom_parser(self, _) -> None:
-        """Call read_input to use a custom history and an argument parser"""
+        """Call read_input to use a custom history and an argument parser."""
         parser = cmd2.Cmd2ArgumentParser(prog='', description="An example parser")
         parser.add_argument('-o', '--option', help="an optional arg")
         parser.add_argument('arg_1', help="a choice for this arg", metavar='arg_1', choices=['my_choice', 'your_choice'])

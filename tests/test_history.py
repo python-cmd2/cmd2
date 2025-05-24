@@ -1,9 +1,6 @@
-# coding=utf-8
-# flake8: noqa E302
-"""
-Test history functions of cmd2
-"""
+"""Test history functions of cmd2"""
 
+import contextlib
 import os
 import tempfile
 from unittest import (
@@ -34,7 +31,7 @@ def verify_hi_last_result(app: cmd2.Cmd, expected_length: int) -> None:
 #
 # readline tests
 #
-def test_readline_remove_history_item():
+def test_readline_remove_history_item() -> None:
     from cmd2.rl_utils import (
         readline,
     )
@@ -60,7 +57,7 @@ def hist():
         Statement,
     )
 
-    h = History(
+    return History(
         [
             HistoryItem(Statement('', raw='first')),
             HistoryItem(Statement('', raw='second')),
@@ -68,7 +65,6 @@ def hist():
             HistoryItem(Statement('', raw='fourth')),
         ]
     )
-    return h
 
 
 # Represents the hist fixture's JSON
@@ -161,7 +157,7 @@ def persisted_hist():
     return h
 
 
-def test_history_class_span(hist):
+def test_history_class_span(hist) -> None:
     span = hist.span('2..')
     assert len(span) == 3
     assert span[2].statement.raw == 'second'
@@ -227,12 +223,13 @@ def test_history_class_span(hist):
     assert span[3].statement.raw == 'third'
 
     value_errors = ['fred', 'fred:joe', '2', '-2', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    expected_err = "History indices must be positive or negative integers, and may not be zero."
     for tryit in value_errors:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=expected_err):
             hist.span(tryit)
 
 
-def test_persisted_history_span(persisted_hist):
+def test_persisted_history_span(persisted_hist) -> None:
     span = persisted_hist.span('2..')
     assert len(span) == 5
     assert span[2].statement.raw == 'second'
@@ -277,12 +274,13 @@ def test_persisted_history_span(persisted_hist):
     assert span[5].statement.raw == 'fifth'
 
     value_errors = ['fred', 'fred:joe', '2', '-2', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    expected_err = "History indices must be positive or negative integers, and may not be zero."
     for tryit in value_errors:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=expected_err):
             persisted_hist.span(tryit)
 
 
-def test_history_class_get(hist):
+def test_history_class_get(hist) -> None:
     assert hist.get(1).statement.raw == 'first'
     assert hist.get(3).statement.raw == 'third'
     assert hist.get(-2) == hist[-2]
@@ -295,7 +293,7 @@ def test_history_class_get(hist):
         hist.get(5)
 
 
-def test_history_str_search(hist):
+def test_history_str_search(hist) -> None:
     items = hist.str_search('ir')
     assert len(items) == 2
     assert items[1].statement.raw == 'first'
@@ -306,7 +304,7 @@ def test_history_str_search(hist):
     assert items[4].statement.raw == 'fourth'
 
 
-def test_history_regex_search(hist):
+def test_history_regex_search(hist) -> None:
     items = hist.regex_search('/i.*d/')
     assert len(items) == 1
     assert items[3].statement.raw == 'third'
@@ -316,28 +314,28 @@ def test_history_regex_search(hist):
     assert items[2].statement.raw == 'second'
 
 
-def test_history_max_length_zero(hist):
+def test_history_max_length_zero(hist) -> None:
     hist.truncate(0)
     assert len(hist) == 0
 
 
-def test_history_max_length_negative(hist):
+def test_history_max_length_negative(hist) -> None:
     hist.truncate(-1)
     assert len(hist) == 0
 
 
-def test_history_max_length(hist):
+def test_history_max_length(hist) -> None:
     hist.truncate(2)
     assert len(hist) == 2
     assert hist.get(1).statement.raw == 'third'
     assert hist.get(2).statement.raw == 'fourth'
 
 
-def test_history_to_json(hist):
+def test_history_to_json(hist) -> None:
     assert hist_json == hist.to_json()
 
 
-def test_history_from_json(hist):
+def test_history_from_json(hist) -> None:
     import json
 
     from cmd2.history import (
@@ -360,7 +358,8 @@ def test_history_from_json(hist):
     invalid_ver_json = hist.to_json()
     History._history_version = backed_up_ver
 
-    with pytest.raises(ValueError):
+    expected_err = "Unsupported history file version: BAD_VERSION. This application uses version 1.0.0."
+    with pytest.raises(ValueError, match=expected_err):
         hist.from_json(invalid_ver_json)
 
 
@@ -382,8 +381,7 @@ def histitem():
         command='help',
         arg_list=['history'],
     )
-    histitem = HistoryItem(statement)
-    return histitem
+    return HistoryItem(statement)
 
 
 @pytest.fixture
@@ -392,7 +390,7 @@ def parser():
         StatementParser,
     )
 
-    parser = StatementParser(
+    return StatementParser(
         terminators=[';', '&'],
         multiline_commands=['multiline'],
         aliases={
@@ -404,10 +402,9 @@ def parser():
         },
         shortcuts={'?': 'help', '!': 'shell'},
     )
-    return parser
 
 
-def test_multiline_histitem(parser):
+def test_multiline_histitem(parser) -> None:
     from cmd2.history import (
         History,
     )
@@ -423,7 +420,7 @@ def test_multiline_histitem(parser):
     assert pr_lines[0].endswith('multiline foo bar')
 
 
-def test_multiline_with_quotes_histitem(parser):
+def test_multiline_with_quotes_histitem(parser) -> None:
     # Test that spaces and newlines in quotes are preserved
     from cmd2.history import (
         History,
@@ -444,7 +441,7 @@ def test_multiline_with_quotes_histitem(parser):
     assert pr_lines[2] == ' " in quotes.;'
 
 
-def test_multiline_histitem_verbose(parser):
+def test_multiline_histitem_verbose(parser) -> None:
     from cmd2.history import (
         History,
     )
@@ -461,7 +458,7 @@ def test_multiline_histitem_verbose(parser):
     assert pr_lines[1] == 'bar'
 
 
-def test_single_line_format_blank(parser):
+def test_single_line_format_blank(parser) -> None:
     from cmd2.history import (
         single_line_format,
     )
@@ -471,7 +468,7 @@ def test_single_line_format_blank(parser):
     assert single_line_format(statement) == line
 
 
-def test_history_item_instantiate():
+def test_history_item_instantiate() -> None:
     from cmd2.history import (
         HistoryItem,
     )
@@ -489,7 +486,7 @@ def test_history_item_instantiate():
         _ = HistoryItem()
 
 
-def test_history_item_properties(histitem):
+def test_history_item_properties(histitem) -> None:
     assert histitem.raw == 'help history'
     assert histitem.expanded == 'help history'
     assert str(histitem) == 'help history'
@@ -498,7 +495,7 @@ def test_history_item_properties(histitem):
 #
 # test history command
 #
-def test_base_history(base_app):
+def test_base_history(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     out, err = run_cmd(base_app, 'history')
@@ -529,7 +526,7 @@ def test_base_history(base_app):
     verify_hi_last_result(base_app, 1)
 
 
-def test_history_script_format(base_app):
+def test_history_script_format(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     out, err = run_cmd(base_app, 'history -s')
@@ -543,7 +540,7 @@ shortcuts
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_with_string_argument(base_app):
+def test_history_with_string_argument(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     run_cmd(base_app, 'help history')
@@ -558,7 +555,7 @@ def test_history_with_string_argument(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_expanded_with_string_argument(base_app):
+def test_history_expanded_with_string_argument(base_app) -> None:
     run_cmd(base_app, 'alias create sc shortcuts')
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help history')
@@ -575,7 +572,7 @@ def test_history_expanded_with_string_argument(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_expanded_with_regex_argument(base_app):
+def test_history_expanded_with_regex_argument(base_app) -> None:
     run_cmd(base_app, 'alias create sc shortcuts')
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help history')
@@ -592,7 +589,7 @@ def test_history_expanded_with_regex_argument(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_with_integer_argument(base_app):
+def test_history_with_integer_argument(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     out, err = run_cmd(base_app, 'history 1')
@@ -605,7 +602,7 @@ def test_history_with_integer_argument(base_app):
     verify_hi_last_result(base_app, 1)
 
 
-def test_history_with_integer_span(base_app):
+def test_history_with_integer_span(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     run_cmd(base_app, 'help history')
@@ -620,7 +617,7 @@ def test_history_with_integer_span(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_with_span_start(base_app):
+def test_history_with_span_start(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     run_cmd(base_app, 'help history')
@@ -635,7 +632,7 @@ def test_history_with_span_start(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_with_span_end(base_app):
+def test_history_with_span_end(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     run_cmd(base_app, 'help history')
@@ -650,15 +647,16 @@ def test_history_with_span_end(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_with_span_index_error(base_app):
+def test_history_with_span_index_error(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help history')
     run_cmd(base_app, '!ls -hal :')
-    with pytest.raises(ValueError):
+    expected_err = "History indices must be positive or negative integers, and may not be zero."
+    with pytest.raises(ValueError, match=expected_err):
         base_app.onecmd('history "hal :"')
 
 
-def test_history_output_file():
+def test_history_output_file() -> None:
     app = cmd2.Cmd(multiline_commands=['alias'])
     run_cmd(app, 'help')
     run_cmd(app, 'shortcuts')
@@ -667,29 +665,29 @@ def test_history_output_file():
 
     fd, fname = tempfile.mkstemp(prefix='', suffix='.txt')
     os.close(fd)
-    run_cmd(app, 'history -o "{}"'.format(fname))
+    run_cmd(app, f'history -o "{fname}"')
     assert app.last_result is True
 
-    expected = normalize('\n'.join(['help', 'shortcuts', 'help history', 'alias create my_alias history;']))
+    expected = normalize('help\nshortcuts\nhelp history\nalias create my_alias history;')
     with open(fname) as f:
         content = normalize(f.read())
     assert content == expected
 
 
-def test_history_bad_output_file(base_app):
+def test_history_bad_output_file(base_app) -> None:
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     run_cmd(base_app, 'help history')
 
     fname = os.path.join(os.path.sep, "fake", "fake", "fake")
-    out, err = run_cmd(base_app, 'history -o "{}"'.format(fname))
+    out, err = run_cmd(base_app, f'history -o "{fname}"')
 
     assert not out
     assert "Error saving" in err[0]
     assert base_app.last_result is False
 
 
-def test_history_edit(monkeypatch):
+def test_history_edit(monkeypatch) -> None:
     app = cmd2.Cmd(multiline_commands=['alias'])
 
     # Set a fake editor just to make sure we have one.  We aren't really
@@ -715,7 +713,7 @@ def test_history_edit(monkeypatch):
     run_script_mock.assert_called_once()
 
 
-def test_history_run_all_commands(base_app):
+def test_history_run_all_commands(base_app) -> None:
     # make sure we refuse to run all commands as a default
     run_cmd(base_app, 'shortcuts')
     out, err = run_cmd(base_app, 'history -r')
@@ -725,14 +723,14 @@ def test_history_run_all_commands(base_app):
     assert base_app.last_result is False
 
 
-def test_history_run_one_command(base_app):
+def test_history_run_one_command(base_app) -> None:
     out1, err1 = run_cmd(base_app, 'help')
     out2, err2 = run_cmd(base_app, 'history -r 1')
     assert out1 == out2
     assert base_app.last_result is True
 
 
-def test_history_clear(mocker, hist_file):
+def test_history_clear(mocker, hist_file) -> None:
     # Add commands to history
     app = cmd2.Cmd(persistent_history_file=hist_file)
     run_cmd(app, 'help')
@@ -767,7 +765,7 @@ def test_history_clear(mocker, hist_file):
     assert app.last_result is False
 
 
-def test_history_verbose_with_other_options(base_app):
+def test_history_verbose_with_other_options(base_app) -> None:
     # make sure -v shows a usage error if any other options are present
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c', '-x']
     for opt in options_to_test:
@@ -778,7 +776,7 @@ def test_history_verbose_with_other_options(base_app):
         assert base_app.last_result is False
 
 
-def test_history_verbose(base_app):
+def test_history_verbose(base_app) -> None:
     # validate function of -v option
     run_cmd(base_app, 'alias create s shortcuts')
     run_cmd(base_app, 's')
@@ -795,7 +793,7 @@ def test_history_verbose(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_script_with_invalid_options(base_app):
+def test_history_script_with_invalid_options(base_app) -> None:
     # make sure -s shows a usage error if -c, -r, -e, -o, or -t are present
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
     for opt in options_to_test:
@@ -806,7 +804,7 @@ def test_history_script_with_invalid_options(base_app):
         assert base_app.last_result is False
 
 
-def test_history_script(base_app):
+def test_history_script(base_app) -> None:
     cmds = ['alias create s shortcuts', 's']
     for cmd in cmds:
         run_cmd(base_app, cmd)
@@ -815,7 +813,7 @@ def test_history_script(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_expanded_with_invalid_options(base_app):
+def test_history_expanded_with_invalid_options(base_app) -> None:
     # make sure -x shows a usage error if -c, -r, -e, -o, or -t are present
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
     for opt in options_to_test:
@@ -826,7 +824,7 @@ def test_history_expanded_with_invalid_options(base_app):
         assert base_app.last_result is False
 
 
-def test_history_expanded(base_app):
+def test_history_expanded(base_app) -> None:
     # validate function of -x option
     cmds = ['alias create s shortcuts', 's']
     for cmd in cmds:
@@ -837,7 +835,7 @@ def test_history_expanded(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_history_script_expanded(base_app):
+def test_history_script_expanded(base_app) -> None:
     # validate function of -s -x options together
     cmds = ['alias create s shortcuts', 's']
     for cmd in cmds:
@@ -848,12 +846,12 @@ def test_history_script_expanded(base_app):
     verify_hi_last_result(base_app, 2)
 
 
-def test_base_help_history(base_app):
+def test_base_help_history(base_app) -> None:
     out, err = run_cmd(base_app, 'help history')
     assert out == normalize(HELP_HISTORY)
 
 
-def test_exclude_from_history(base_app):
+def test_exclude_from_history(base_app) -> None:
     # Run history command
     run_cmd(base_app, 'history')
     verify_hi_last_result(base_app, 0)
@@ -882,13 +880,11 @@ def hist_file():
     os.close(fd)
     yield filename
     # teardown code
-    try:
+    with contextlib.suppress(FileNotFoundError):
         os.remove(filename)
-    except FileNotFoundError:
-        pass
 
 
-def test_history_file_is_directory(capsys):
+def test_history_file_is_directory(capsys) -> None:
     with tempfile.TemporaryDirectory() as test_dir:
         # Create a new cmd2 app
         cmd2.Cmd(persistent_history_file=test_dir)
@@ -896,7 +892,7 @@ def test_history_file_is_directory(capsys):
         assert 'is a directory' in err
 
 
-def test_history_can_create_directory(mocker):
+def test_history_can_create_directory(mocker) -> None:
     # Mock out atexit.register so the persistent file doesn't written when this function
     # exists because we will be deleting the directory it needs to go to.
     mocker.patch('atexit.register')
@@ -918,7 +914,7 @@ def test_history_can_create_directory(mocker):
     os.rmdir(hist_file_dir)
 
 
-def test_history_cannot_create_directory(mocker, capsys):
+def test_history_cannot_create_directory(mocker, capsys) -> None:
     mock_open = mocker.patch('os.makedirs')
     mock_open.side_effect = OSError
 
@@ -928,7 +924,7 @@ def test_history_cannot_create_directory(mocker, capsys):
     assert 'Error creating persistent history file directory' in err
 
 
-def test_history_file_permission_error(mocker, capsys):
+def test_history_file_permission_error(mocker, capsys) -> None:
     mock_open = mocker.patch('builtins.open')
     mock_open.side_effect = PermissionError
 
@@ -938,7 +934,7 @@ def test_history_file_permission_error(mocker, capsys):
     assert 'Cannot read persistent history file' in err
 
 
-def test_history_file_bad_compression(mocker, capsys):
+def test_history_file_bad_compression(mocker, capsys) -> None:
     history_file = '/tmp/doesntmatter'
     with open(history_file, "wb") as f:
         f.write(b"THIS IS NOT COMPRESSED DATA")
@@ -949,7 +945,7 @@ def test_history_file_bad_compression(mocker, capsys):
     assert 'Error decompressing persistent history data' in err
 
 
-def test_history_file_bad_json(mocker, capsys):
+def test_history_file_bad_json(mocker, capsys) -> None:
     import lzma
 
     data = b"THIS IS NOT JSON"
@@ -965,7 +961,7 @@ def test_history_file_bad_json(mocker, capsys):
     assert 'Error processing persistent history data' in err
 
 
-def test_history_populates_readline(hist_file):
+def test_history_populates_readline(hist_file) -> None:
     # - create a cmd2 with persistent history
     app = cmd2.Cmd(persistent_history_file=hist_file)
     run_cmd(app, 'help')
@@ -1002,7 +998,7 @@ def test_history_populates_readline(hist_file):
 # we assume that the atexit module will call this method
 # properly
 #
-def test_persist_history_ensure_no_error_if_no_histfile(base_app, capsys):
+def test_persist_history_ensure_no_error_if_no_histfile(base_app, capsys) -> None:
     # make sure if there is no persistent history file and someone
     # calls the private method call that we don't get an error
     base_app._persist_history()
@@ -1011,7 +1007,7 @@ def test_persist_history_ensure_no_error_if_no_histfile(base_app, capsys):
     assert not err
 
 
-def test_persist_history_permission_error(hist_file, mocker, capsys):
+def test_persist_history_permission_error(hist_file, mocker, capsys) -> None:
     app = cmd2.Cmd(persistent_history_file=hist_file)
     run_cmd(app, 'help')
     mock_open = mocker.patch('builtins.open')

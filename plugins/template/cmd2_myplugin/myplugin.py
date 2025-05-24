@@ -1,12 +1,8 @@
-#
-# coding=utf-8
-"""An example cmd2 plugin"""
+"""An example cmd2 plugin."""
 
 import functools
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-)
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import cmd2
 
@@ -17,10 +13,10 @@ else:
 
 
 def empty_decorator(func: Callable) -> Callable:
-    """An empty decorator for myplugin"""
+    """An empty decorator for myplugin."""
 
     @functools.wraps(func)
-    def _empty_decorator(self, *args, **kwargs):
+    def _empty_decorator(self, *args, **kwargs) -> None:
         self.poutput("in the empty decorator")
         func(self, *args, **kwargs)
 
@@ -29,7 +25,7 @@ def empty_decorator(func: Callable) -> Callable:
 
 
 class MyPluginMixin(_Base):
-    """A mixin class which adds a 'say' command to a cmd2 subclass
+    """A mixin class which adds a 'say' command to a cmd2 subclass.
 
     The order in which you add the mixin matters. Say you want to
     use this mixin in a class called MyApp.
@@ -40,7 +36,7 @@ class MyPluginMixin(_Base):
             super().__init__(*args, **kwargs)
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         # code placed here runs before cmd2 initializes
         super().__init__(*args, **kwargs)
         # code placed here runs after cmd2 initializes
@@ -49,21 +45,21 @@ class MyPluginMixin(_Base):
         self.register_postloop_hook(self.cmd2_myplugin_postloop_hook)
         self.register_postparsing_hook(self.cmd2_myplugin_postparsing_hook)
 
-    def do_say(self, statement):
-        """Simple say command"""
+    def do_say(self, statement) -> None:
+        """Simple say command."""
         self.poutput(statement)
 
     #
     # define hooks as functions, not methods
     def cmd2_myplugin_preloop_hook(self) -> None:
-        """Method to be called before the command loop begins"""
+        """Method to be called before the command loop begins."""
         self.poutput("preloop hook")
 
     def cmd2_myplugin_postloop_hook(self) -> None:
-        """Method to be called after the command loop finishes"""
+        """Method to be called after the command loop finishes."""
         self.poutput("postloop hook")
 
     def cmd2_myplugin_postparsing_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-        """Method to be called after parsing user input, but before running the command"""
+        """Method to be called after parsing user input, but before running the command."""
         self.poutput('in postparsing hook')
         return data

@@ -1,8 +1,4 @@
-# coding=utf-8
-# flake8: noqa E302
-"""
-reproduces test_argparse.py except with SubCommands
-"""
+"""reproduces test_argparse.py except with SubCommands"""
 
 import pytest
 
@@ -17,21 +13,21 @@ from .conftest import (
 class SubcommandSet(cmd2.CommandSet):
     """Example cmd2 application where we a base command which has a couple subcommands."""
 
-    def __init__(self, dummy):
-        super(SubcommandSet, self).__init__()
+    def __init__(self, dummy) -> None:
+        super().__init__()
 
     # subcommand functions for the base command
-    def base_foo(self, args):
-        """foo subcommand of base command"""
+    def base_foo(self, args) -> None:
+        """Foo subcommand of base command"""
         self._cmd.poutput(args.x * args.y)
 
-    def base_bar(self, args):
-        """bar subcommand of base command"""
-        self._cmd.poutput('((%s))' % args.z)
+    def base_bar(self, args) -> None:
+        """Bar subcommand of base command"""
+        self._cmd.poutput(f'(({args.z}))')
 
-    def base_helpless(self, args):
-        """helpless subcommand of base command"""
-        self._cmd.poutput('((%s))' % args.z)
+    def base_helpless(self, args) -> None:
+        """Helpless subcommand of base command"""
+        self._cmd.poutput(f'(({args.z}))')
 
     # create the top-level parser for the base command
     base_parser = cmd2.Cmd2ArgumentParser()
@@ -52,12 +48,12 @@ class SubcommandSet(cmd2.CommandSet):
     # This subcommand has aliases and no help text. It exists to prevent changes to _set_parser_prog() which
     # use an approach which relies on action._choices_actions list. See comment in that function for more
     # details.
-    parser_bar = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
-    parser_bar.add_argument('z', help='string')
-    parser_bar.set_defaults(func=base_bar)
+    parser_helpless = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
+    parser_helpless.add_argument('z', help='string')
+    parser_helpless.set_defaults(func=base_bar)
 
     @cmd2.with_argparser(base_parser)
-    def do_base(self, args):
+    def do_base(self, args) -> None:
         """Base command help"""
         # Call whatever subcommand function was selected
         func = getattr(args, 'func')
@@ -66,34 +62,33 @@ class SubcommandSet(cmd2.CommandSet):
 
 @pytest.fixture
 def subcommand_app():
-    app = WithCommandSets(auto_load_commands=False, command_sets=[SubcommandSet(1)])
-    return app
+    return WithCommandSets(auto_load_commands=False, command_sets=[SubcommandSet(1)])
 
 
-def test_subcommand_foo(subcommand_app):
+def test_subcommand_foo(subcommand_app) -> None:
     out, err = run_cmd(subcommand_app, 'base foo -x2 5.0')
     assert out == ['10.0']
 
 
-def test_subcommand_bar(subcommand_app):
+def test_subcommand_bar(subcommand_app) -> None:
     out, err = run_cmd(subcommand_app, 'base bar baz')
     assert out == ['((baz))']
 
 
-def test_subcommand_invalid(subcommand_app):
+def test_subcommand_invalid(subcommand_app) -> None:
     out, err = run_cmd(subcommand_app, 'base baz')
     assert err[0].startswith('Usage: base')
     assert err[1].startswith("Error: argument SUBCOMMAND: invalid choice: 'baz'")
 
 
-def test_subcommand_base_help(subcommand_app):
+def test_subcommand_base_help(subcommand_app) -> None:
     out, err = run_cmd(subcommand_app, 'help base')
     assert out[0].startswith('Usage: base')
     assert out[1] == ''
     assert out[2] == 'Base command help'
 
 
-def test_subcommand_help(subcommand_app):
+def test_subcommand_help(subcommand_app) -> None:
     # foo has no aliases
     out, err = run_cmd(subcommand_app, 'help base foo')
     assert out[0].startswith('Usage: base foo')
@@ -133,6 +128,6 @@ def test_subcommand_help(subcommand_app):
     assert out[2] == 'positional arguments:'
 
 
-def test_subcommand_invalid_help(subcommand_app):
+def test_subcommand_invalid_help(subcommand_app) -> None:
     out, err = run_cmd(subcommand_app, 'help base baz')
     assert out[0].startswith('Usage: base')
