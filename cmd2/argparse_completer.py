@@ -60,13 +60,13 @@ def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) ->
     suppress_hint = arg_action.get_suppress_tab_hint()  # type: ignore[attr-defined]
     if suppress_hint or arg_action.help == argparse.SUPPRESS:
         return ''
-    else:
-        # Use the parser's help formatter to display just this action's help text
-        formatter = parser._get_formatter()
-        formatter.start_section("Hint")
-        formatter.add_argument(arg_action)
-        formatter.end_section()
-        return formatter.format_help()
+
+    # Use the parser's help formatter to display just this action's help text
+    formatter = parser._get_formatter()
+    formatter.start_section("Hint")
+    formatter.add_argument(arg_action)
+    formatter.end_section()
+    return formatter.format_help()
 
 
 def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
@@ -274,7 +274,7 @@ class ArgparseCompleter:
                     for group_action in group._group_actions:
                         if group_action == arg_action:
                             continue
-                        elif group_action in self._flag_to_action.values():
+                        if group_action in self._flag_to_action.values():
                             matched_flags.extend(group_action.option_strings)
                         elif group_action in remaining_positionals:
                             remaining_positionals.remove(group_action)
@@ -292,7 +292,7 @@ class ArgparseCompleter:
                 continue
 
             # If we're in a flag REMAINDER arg, force all future tokens to go to that until a double dash is hit
-            elif flag_arg_state is not None and flag_arg_state.is_remainder:
+            if flag_arg_state is not None and flag_arg_state.is_remainder:
                 if token == '--':
                     flag_arg_state = None
                 else:
@@ -300,7 +300,7 @@ class ArgparseCompleter:
                 continue
 
             # Handle '--' which tells argparse all remaining arguments are non-flags
-            elif token == '--' and not skip_remaining_flags:
+            if token == '--' and not skip_remaining_flags:
                 # Check if there is an unfinished flag
                 if (
                     flag_arg_state is not None
@@ -310,10 +310,9 @@ class ArgparseCompleter:
                     raise _UnfinishedFlagError(flag_arg_state)
 
                 # Otherwise end the current flag
-                else:
-                    flag_arg_state = None
-                    skip_remaining_flags = True
-                    continue
+                flag_arg_state = None
+                skip_remaining_flags = True
+                continue
 
             # Check the format of the current token to see if it can be an argument's value
             if _looks_like_flag(token, self._parser) and not skip_remaining_flags:
@@ -393,13 +392,11 @@ class ArgparseCompleter:
                                 return completer.complete(
                                     text, line, begidx, endidx, tokens[token_index + 1 :], cmd_set=cmd_set
                                 )
-                            else:
-                                # Invalid subcommand entered, so no way to complete remaining tokens
-                                return []
+                            # Invalid subcommand entered, so no way to complete remaining tokens
+                            return []
 
                         # Otherwise keep track of the argument
-                        else:
-                            pos_arg_state = _ArgumentState(action)
+                        pos_arg_state = _ArgumentState(action)
 
                 # Check if we have a positional to consume this token
                 if pos_arg_state is not None:
@@ -452,7 +449,7 @@ class ArgparseCompleter:
                 return completion_results
 
             # Otherwise, print a hint if the flag isn't finished or text isn't possibly the start of a flag
-            elif (
+            if (
                 (isinstance(flag_arg_state.min, int) and flag_arg_state.count < flag_arg_state.min)
                 or not _single_prefix_char(text, self._parser)
                 or skip_remaining_flags
@@ -478,7 +475,7 @@ class ArgparseCompleter:
                 return completion_results
 
             # Otherwise, print a hint if text isn't possibly the start of a flag
-            elif not _single_prefix_char(text, self._parser) or skip_remaining_flags:
+            if not _single_prefix_char(text, self._parser) or skip_remaining_flags:
                 raise _NoResultsError(self._parser, pos_arg_state.action)
 
         # If we aren't skipping remaining flags, then complete flag names if either is True:
@@ -620,11 +617,10 @@ class ArgparseCompleter:
 
                     completer = completer_type(parser, self._cmd2_app)
                     return completer.complete_subcommand_help(text, line, begidx, endidx, tokens[token_index + 1 :])
-                elif token_index == len(tokens) - 1:
+                if token_index == len(tokens) - 1:
                     # Since this is the last token, we will attempt to complete it
                     return self._cmd2_app.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
-                else:
-                    break
+                break
         return []
 
     def format_help(self, tokens: list[str]) -> str:
@@ -642,8 +638,7 @@ class ArgparseCompleter:
 
                     completer = completer_type(parser, self._cmd2_app)
                     return completer.format_help(tokens[token_index + 1 :])
-                else:
-                    break
+                break
         return self._parser.format_help()
 
     def _complete_arg(

@@ -110,8 +110,7 @@ class CompletionsExample(cmd2.Cmd):
         """Supports unit testing cmd2.Cmd2.complete_set_val to confirm it passes all tokens in the set command"""
         if 'param' in arg_tokens:
             return ["SUCCESS"]
-        else:
-            return ["FAIL"]
+        return ["FAIL"]
 
     def completedefault(self, *ignored):
         """Method called to complete an input line when no command-specific
