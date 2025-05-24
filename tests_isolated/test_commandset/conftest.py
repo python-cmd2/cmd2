@@ -15,11 +15,9 @@ from unittest import (
     mock,
 )
 
+import pytest
 from cmd2_ext_test import (
     ExternalTestMixin,
-)
-from pytest import (
-    fixture,
 )
 
 import cmd2
@@ -134,7 +132,7 @@ def run_cmd(app, cmd):
     return normalize(out), normalize(err)
 
 
-@fixture
+@pytest.fixture
 def base_app():
     return cmd2.Cmd()
 
@@ -183,13 +181,13 @@ class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
         super(WithCommandSets, self).__init__(*args, **kwargs)
 
 
-@fixture
+@pytest.fixture
 def command_sets_app():
     app = WithCommandSets()
     return app
 
 
-@fixture
+@pytest.fixture
 def command_sets_manual():
     app = WithCommandSets(auto_load_commands=False)
     return app

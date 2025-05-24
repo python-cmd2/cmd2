@@ -1149,7 +1149,10 @@ Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
     cmdset_nopfx = WithSettablesNoPrefix()
     app.register_command_set(cmdset_nopfx)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError,
+        match="Cannot force settable prefixes. CommandSet WithSettablesNoPrefix does not have a settable prefix defined.",
+    ):
         app.always_prefix_settables = True
 
     app.unregister_command_set(cmdset_nopfx)

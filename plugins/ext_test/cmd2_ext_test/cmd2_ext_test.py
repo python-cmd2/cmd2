@@ -39,7 +39,8 @@ class ExternalTestMixin(_Base):
         :param echo: Flag whether the command's output should be echoed to stdout/stderr
         :return: A CommandResult object that captures stdout, stderr, and the command's result object
         """
-        assert isinstance(self, cmd2.Cmd) and isinstance(self, ExternalTestMixin)
+        assert isinstance(self, cmd2.Cmd)
+        assert isinstance(self, ExternalTestMixin)
         try:
             self._in_py = True
 

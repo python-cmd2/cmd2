@@ -949,9 +949,9 @@ def test_cmdfinalization_hook_passthrough_exception():
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_passthrough_exception)
 
-    with pytest.raises(OSError) as excinfo:
+    expected_err = "Pass me up"
+    with pytest.raises(OSError, match=expected_err):
         app.onecmd_plus_hooks('say hello')
-    assert 'Pass me up' in str(excinfo.value)
     assert app.called_cmdfinalization == 1
 
 

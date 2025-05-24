@@ -329,7 +329,7 @@ def test_context_flag_bool(context_flag):
 
 
 def test_context_flag_exit_err(context_flag):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="count has gone below 0"):
         context_flag.__exit__()
 
 
@@ -423,14 +423,14 @@ def test_truncate_line_already_fits():
 def test_truncate_line_with_newline():
     line = 'fo\no'
     max_width = 2
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="text contains an unprintable character"):
         cu.truncate_line(line, max_width)
 
 
 def test_truncate_line_width_is_too_small():
     line = 'foo'
     max_width = 0
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="max_width must be at least 1"):
         cu.truncate_line(line, max_width)
 
 
@@ -548,7 +548,7 @@ def test_align_text_width_is_too_small():
     text = 'foo'
     fill_char = '-'
     width = 0
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="width must be at least 1"):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 
@@ -564,7 +564,7 @@ def test_align_text_fill_char_is_newline():
     text = 'foo'
     fill_char = '\n'
     width = 5
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Fill character is an unprintable character"):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 
@@ -613,7 +613,7 @@ def test_align_text_has_unprintable():
     text = 'foo\x02'
     fill_char = '-'
     width = 5
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Text to align contains an unprintable character"):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 
@@ -830,7 +830,7 @@ def test_to_bool_str_false():
 
 
 def test_to_bool_str_invalid():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         cu.to_bool('other')
 
 

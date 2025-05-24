@@ -622,15 +622,16 @@ def test_passthrough_exception_in_command(base_app):
     """Test raising a PassThroughException in a command"""
     import types
 
+    expected_err = "Pass me up"
+
     def do_passthrough(self, _):
-        wrapped_ex = OSError("Pass me up")
+        wrapped_ex = OSError(expected_err)
         raise exceptions.PassThroughException(wrapped_ex=wrapped_ex)
 
     setattr(base_app, 'do_passthrough', types.MethodType(do_passthrough, base_app))
 
-    with pytest.raises(OSError) as excinfo:
+    with pytest.raises(OSError, match=expected_err):
         base_app.onecmd_plus_hooks('passthrough')
-    assert 'Pass me up' in str(excinfo.value)
 
 
 def test_output_redirection(base_app):
@@ -1033,7 +1034,7 @@ def test_cmdloop_without_rawinput():
 
     expected = app.intro + '\n'
 
-    with pytest.raises(OSError):
+    with pytest.raises(OSError):  # noqa: PT011
         app.cmdloop()
     out = app.stdout.getvalue()
     assert out == expected
@@ -1794,11 +1795,11 @@ def test_commandresult_falsy(commandresult_app):
 
 def test_is_text_file_bad_input(base_app):
     # Test with a non-existent file
-    with pytest.raises(OSError):
+    with pytest.raises(FileNotFoundError):
         utils.is_text_file('does_not_exist.txt')
 
     # Test with a directory
-    with pytest.raises(OSError):
+    with pytest.raises(IsADirectoryError):
         utils.is_text_file('.')
 
 

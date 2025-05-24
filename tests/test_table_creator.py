@@ -27,18 +27,16 @@ from cmd2.table_creator import (
 
 def test_column_creation():
     # Width less than 1
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Column width cannot be less than 1"):
         Column("Column 1", width=0)
-    assert "Column width cannot be less than 1" in str(excinfo.value)
 
     # Width specified
     c = Column("header", width=20)
     assert c.width == 20
 
     # max_data_lines less than 1
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Max data lines cannot be less than 1"):
         Column("Column 1", max_data_lines=0)
-    assert "Max data lines cannot be less than 1" in str(excinfo.value)
 
     # No width specified, blank label
     c = Column("")
@@ -311,15 +309,13 @@ def test_generate_row_exceptions():
     # Unprintable characters
     for arg in ['fill_char', 'pre_line', 'inter_cell', 'post_line']:
         kwargs = {arg: '\n'}
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match=f"{arg} contains an unprintable character"):
             tc.generate_row(row_data=row_data, is_header=False, **kwargs)
-        assert "{} contains an unprintable character".format(arg) in str(excinfo.value)
 
     # Data with too many columns
     row_data = ['Data 1', 'Extra Column']
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Length of row_data must match length of cols"):
         tc.generate_row(row_data=row_data, is_header=False)
-    assert "Length of row_data must match length of cols" in str(excinfo.value)
 
 
 def test_tabs():
@@ -332,9 +328,8 @@ def test_tabs():
     row = tc.generate_row(row_data, is_header=True, fill_char='\t', pre_line='\t', inter_cell='\t', post_line='\t')
     assert row == '  Col  1                Col 2  '
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Tab width cannot be less than 1" ):
         TableCreator([column_1, column_2], tab_width=0)
-    assert "Tab width cannot be less than 1" in str(excinfo.value)
 
 
 def test_simple_table_creation():
@@ -439,24 +434,20 @@ def test_simple_table_creation():
     )
 
     # Invalid column spacing
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Column spacing cannot be less than 0"):
         SimpleTable([column_1, column_2], column_spacing=-1)
-    assert "Column spacing cannot be less than 0" in str(excinfo.value)
 
     # Invalid divider character
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(TypeError, match="Divider character must be exactly one character long"):
         SimpleTable([column_1, column_2], divider_char='too long')
-    assert "Divider character must be exactly one character long" in str(excinfo.value)
 
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Divider character is an unprintable character"):
         SimpleTable([column_1, column_2], divider_char='\n')
-    assert "Divider character is an unprintable character" in str(excinfo.value)
 
     # Invalid row spacing
     st = SimpleTable([column_1, column_2])
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Row spacing cannot be less than 0"):
         st.generate_table(row_data, row_spacing=-1)
-    assert "Row spacing cannot be less than 0" in str(excinfo.value)
 
     # Test header and data colors
     st = SimpleTable([column_1, column_2], divider_char=None, header_bg=Bg.GREEN, data_bg=Bg.LIGHT_BLUE)
@@ -487,9 +478,8 @@ def test_simple_table_width():
         assert SimpleTable.base_width(num_cols) == (num_cols - 1) * 2
 
     # Invalid num_cols value
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Column count cannot be less than 1"):
         SimpleTable.base_width(0)
-    assert "Column count cannot be less than 1" in str(excinfo.value)
 
     # Total width
     column_1 = Column("Col 1", width=16)
@@ -509,9 +499,8 @@ def test_simple_generate_data_row_exceptions():
 
     # Data with too many columns
     row_data = ['Data 1', 'Extra Column']
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Length of row_data must match length of cols"):
         tc.generate_data_row(row_data=row_data)
-    assert "Length of row_data must match length of cols" in str(excinfo.value)
 
 
 def test_bordered_table_creation():
@@ -573,9 +562,8 @@ def test_bordered_table_creation():
     )
 
     # Invalid padding
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Padding cannot be less than 0"):
         BorderedTable([column_1, column_2], padding=-1)
-    assert "Padding cannot be less than 0" in str(excinfo.value)
 
     # Test border, header, and data colors
     bt = BorderedTable([column_1, column_2], border_fg=Fg.LIGHT_YELLOW, border_bg=Bg.WHITE,
@@ -629,9 +617,8 @@ def test_bordered_table_width():
     assert BorderedTable.base_width(3, padding=3) == 22
 
     # Invalid num_cols value
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Column count cannot be less than 1"):
         BorderedTable.base_width(0)
-    assert "Column count cannot be less than 1" in str(excinfo.value)
 
     # Total width
     column_1 = Column("Col 1", width=15)
@@ -651,9 +638,8 @@ def test_bordered_generate_data_row_exceptions():
 
     # Data with too many columns
     row_data = ['Data 1', 'Extra Column']
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Length of row_data must match length of cols"):
         tc.generate_data_row(row_data=row_data)
-    assert "Length of row_data must match length of cols" in str(excinfo.value)
 
 
 def test_alternating_table_creation():
@@ -711,9 +697,8 @@ def test_alternating_table_creation():
     )
 
     # Invalid padding
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(ValueError, match="Padding cannot be less than 0"):
         AlternatingTable([column_1, column_2], padding=-1)
-    assert "Padding cannot be less than 0" in str(excinfo.value)
 
     # Test border, header, and data colors
     at = AlternatingTable([column_1, column_2], border_fg=Fg.LIGHT_YELLOW, border_bg=Bg.WHITE,

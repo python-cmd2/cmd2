@@ -225,8 +225,9 @@ def test_history_class_span(hist):
     assert span[3].statement.raw == 'third'
 
     value_errors = ['fred', 'fred:joe', '2', '-2', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    expected_err = "History indices must be positive or negative integers, and may not be zero."
     for tryit in value_errors:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=expected_err):
             hist.span(tryit)
 
 
@@ -275,8 +276,9 @@ def test_persisted_history_span(persisted_hist):
     assert span[5].statement.raw == 'fifth'
 
     value_errors = ['fred', 'fred:joe', '2', '-2', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    expected_err = "History indices must be positive or negative integers, and may not be zero."
     for tryit in value_errors:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=expected_err):
             persisted_hist.span(tryit)
 
 
@@ -358,7 +360,8 @@ def test_history_from_json(hist):
     invalid_ver_json = hist.to_json()
     History._history_version = backed_up_ver
 
-    with pytest.raises(ValueError):
+    expected_err = "Unsupported history file version: BAD_VERSION. This application uses version 1.0.0."
+    with pytest.raises(ValueError, match=expected_err):
         hist.from_json(invalid_ver_json)
 
 
@@ -652,7 +655,8 @@ def test_history_with_span_index_error(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help history')
     run_cmd(base_app, '!ls -hal :')
-    with pytest.raises(ValueError):
+    expected_err = "History indices must be positive or negative integers, and may not be zero."
+    with pytest.raises(ValueError, match=expected_err):
         base_app.onecmd('history "hal :"')
 
 
