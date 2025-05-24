@@ -73,7 +73,7 @@ def pytest(context, junit=False, pty=True, base=False, isolated=False):
             for root, dirnames, _ in os.walk(str(TASK_ROOT / 'tests_isolated')):
                 for dir_name in dirnames:
                     if dir_name.startswith('test_'):
-                        context.run(command_str + ' tests_isolated/' + dir)
+                        context.run(command_str + ' tests_isolated/' + dir_name)
 
 
 namespace.add_task(pytest)
