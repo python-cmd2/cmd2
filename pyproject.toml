@@ -156,7 +156,7 @@ output-format = "full"
 # McCabe complexity (`C901`) by default.
 select = [
     # https://docs.astral.sh/ruff/rules
-    # "A",   # flake8-builtins (variables or arguments shadowing built-ins)
+    "A",   # flake8-builtins (variables or arguments shadowing built-ins)
     "AIR", # Airflow specific warnings
     # "ANN",  # flake8-annotations (missing type annotations for arguments or return types)
     # "ARG", # flake8-unused-arguments (functions or methods with arguments that are never used)
@@ -256,6 +256,10 @@ per-file-ignores."cmd2/__init__.py" = [
 
 per-file-ignores."cmd2/cmd2.py" = [
     "PYI024", # Use `typing.NamedTuple` instead of `collections.namedtuple`
+]
+
+per-file-ignores."cmd2/decorators.py" = [
+    "A002", # `as_subcommand_to` function argument `help` is shadowing a Python builtin
 ]
 
 per-file-ignores."docs/conf.py" = [
