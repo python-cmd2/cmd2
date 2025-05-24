@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14-dev"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4 # https://github.com/actions/checkout
@@ -19,7 +19,7 @@ jobs:
           # Set fetch-depth: 0 to fetch all history for all branches and tags.
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5

@@ -1343,6 +1343,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         conflict_handler: str = 'error',
         add_help: bool = True,
         allow_abbrev: bool = True,
+        exit_on_error: bool = True,
+        suggest_on_error: bool = False,
+        color: bool = False,
         *,
         ap_completer_type: Optional[Type['ArgparseCompleter']] = None,
     ) -> None:
@@ -1353,20 +1356,42 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                                   behavior on this parser. If this is None or not present, then cmd2 will use
                                   argparse_completer.DEFAULT_AP_COMPLETER when tab completing this parser's arguments
         """
-        super(Cmd2ArgumentParser, self).__init__(
-            prog=prog,
-            usage=usage,
-            description=description,  # type: ignore[arg-type]
-            epilog=epilog,  # type: ignore[arg-type]
-            parents=parents if parents else [],
-            formatter_class=formatter_class,
-            prefix_chars=prefix_chars,
-            fromfile_prefix_chars=fromfile_prefix_chars,
-            argument_default=argument_default,
-            conflict_handler=conflict_handler,
-            add_help=add_help,
-            allow_abbrev=allow_abbrev,
-        )
+        if sys.version_info[1] >= 14:
+            # Python >= 3.14 so pass new arguments to parent argparse.ArgumentParser class
+            super(Cmd2ArgumentParser, self).__init__(
+                prog=prog,
+                usage=usage,
+                description=description,  # type: ignore[arg-type]
+                epilog=epilog,  # type: ignore[arg-type]
+                parents=parents if parents else [],
+                formatter_class=formatter_class,
+                prefix_chars=prefix_chars,
+                fromfile_prefix_chars=fromfile_prefix_chars,
+                argument_default=argument_default,
+                conflict_handler=conflict_handler,
+                add_help=add_help,
+                allow_abbrev=allow_abbrev,
+                exit_on_error=exit_on_error,
+                suggest_on_error=suggest_on_error,
+                color=color,
+            )
+        else:
+            # Python < 3.14, so don't pass new arguments to parent argparse.ArgumentParser class
+            super(Cmd2ArgumentParser, self).__init__(
+                prog=prog,
+                usage=usage,
+                description=description,  # type: ignore[arg-type]
+                epilog=epilog,  # type: ignore[arg-type]
+                parents=parents if parents else [],
+                formatter_class=formatter_class,
+                prefix_chars=prefix_chars,
+                fromfile_prefix_chars=fromfile_prefix_chars,
+                argument_default=argument_default,
+                conflict_handler=conflict_handler,
+                add_help=add_help,
+                allow_abbrev=allow_abbrev,
+                exit_on_error=exit_on_error,
+            )
 
         # Recast to assist type checkers since in a Cmd2HelpFormatter, these can be Rich renderables.
         self.description: Optional[RenderableType] = self.description  # type: ignore[assignment]
@@ -1460,7 +1485,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # determine help from format above
         return formatter.format_help() + '\n'
 
-    def _print_message(self, message: str, file: Optional[IO[str]] = None) -> None:
+    def _print_message(self, message: str, file: Optional[IO[str]] = None) -> None:  # type: ignore[override]
         # Override _print_message to use style_aware_write() since we use ANSI escape characters to support color
         if message:
             if file is None:
