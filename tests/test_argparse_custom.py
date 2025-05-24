@@ -249,7 +249,7 @@ def test_override_parser() -> None:
     )
 
     # The standard parser is Cmd2ArgumentParser
-    assert argparse_custom.DEFAULT_ARGUMENT_PARSER == Cmd2ArgumentParser
+    assert Cmd2ArgumentParser == argparse_custom.DEFAULT_ARGUMENT_PARSER
 
     # Set our parser module and force a reload of cmd2 so it loads the module
     argparse.cmd2_parser_module = 'examples.custom_parser'
@@ -260,7 +260,7 @@ def test_override_parser() -> None:
         CustomParser,
     )
 
-    assert argparse_custom.DEFAULT_ARGUMENT_PARSER == CustomParser
+    assert CustomParser == argparse_custom.DEFAULT_ARGUMENT_PARSER
 
 
 def test_apcustom_metavar_tuple() -> None:

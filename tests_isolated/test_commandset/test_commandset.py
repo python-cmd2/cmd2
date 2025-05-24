@@ -553,7 +553,7 @@ def test_subcommands(command_sets_manual) -> None:
 
     assert first_match is not None
     # check that the alias shows up correctly
-    assert ['banana', 'bananer', 'bokchoy'] == command_sets_manual.completion_matches
+    assert command_sets_manual.completion_matches == ['banana', 'bananer', 'bokchoy']
 
     cmd_result = command_sets_manual.app_cmd('cut banana discs')
     assert 'cutting banana: discs' in cmd_result.stdout
@@ -566,7 +566,7 @@ def test_subcommands(command_sets_manual) -> None:
 
     assert first_match is not None
     # verify that argparse completer in commandset functions correctly
-    assert ['diced', 'quartered'] == command_sets_manual.completion_matches
+    assert command_sets_manual.completion_matches == ['diced', 'quartered']
 
     # verify that command set uninstalls without problems
     command_sets_manual.unregister_command_set(fruit_cmds)
@@ -598,7 +598,7 @@ def test_subcommands(command_sets_manual) -> None:
 
     assert first_match is not None
     # check that the alias shows up correctly
-    assert ['banana', 'bananer', 'bokchoy'] == command_sets_manual.completion_matches
+    assert command_sets_manual.completion_matches == ['banana', 'bananer', 'bokchoy']
 
     text = ''
     line = f'cut bokchoy {text}'
@@ -608,7 +608,7 @@ def test_subcommands(command_sets_manual) -> None:
 
     assert first_match is not None
     # verify that argparse completer in commandset functions correctly
-    assert ['diced', 'quartered'] == command_sets_manual.completion_matches
+    assert command_sets_manual.completion_matches == ['diced', 'quartered']
 
     # disable again and verify can still uninstnall
     command_sets_manual.disable_command('cut', 'disabled for test')
@@ -763,7 +763,7 @@ def test_static_subcommands(static_subcommands_app) -> None:
 
     assert first_match is not None
     # check that the alias shows up correctly
-    assert ['banana', 'bananer', 'bokchoy'] == static_subcommands_app.completion_matches
+    assert static_subcommands_app.completion_matches == ['banana', 'bananer', 'bokchoy']
 
     text = ''
     line = f'cut bokchoy {text}'
@@ -773,7 +773,7 @@ def test_static_subcommands(static_subcommands_app) -> None:
 
     assert first_match is not None
     # verify that argparse completer in commandset functions correctly
-    assert ['diced', 'quartered'] == static_subcommands_app.completion_matches
+    assert static_subcommands_app.completion_matches == ['diced', 'quartered']
 
 
 complete_states_expected_self = None
