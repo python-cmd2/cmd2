@@ -90,8 +90,8 @@ class Column:
                                 (defaults to True)
         :param max_data_lines: maximum lines allowed in a data cell. If line count exceeds this, then the final
                                line displayed will be truncated with an ellipsis. (defaults to INFINITY)
-        :raises: ValueError if width is less than 1
-        :raises: ValueError if max_data_lines is less than 1
+        :raises ValueError: if width is less than 1
+        :raises ValueError: if max_data_lines is less than 1
         """
         self.header = header
 
@@ -136,7 +136,7 @@ class TableCreator:
         :param cols: column definitions for this table
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
                           then it will be converted to one space.
-        :raises: ValueError if tab_width is less than 1
+        :raises ValueError: if tab_width is less than 1
         """
         if tab_width < 1:
             raise ValueError("Tab width cannot be less than 1")
@@ -441,9 +441,9 @@ class TableCreator:
         :param post_line: string to print after each line of a row. This can be used for padding after
                           the last cell's text and a right row border. (Defaults to blank)
         :return: row string
-        :raises: ValueError if row_data isn't the same length as self.cols
-        :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-        :raises: ValueError if fill_char, pre_line, inter_cell, or post_line contains an unprintable
+        :raises ValueError: if row_data isn't the same length as self.cols
+        :raises TypeError: if fill_char is more than one character (not including ANSI style sequences)
+        :raises ValueError: if fill_char, pre_line, inter_cell, or post_line contains an unprintable
                  character like a newline
         """
 
@@ -568,10 +568,10 @@ class SimpleTable(TableCreator):
                              want a divider row. Defaults to dash. (Cannot be a line breaking character)
         :param header_bg: optional background color for header cells (defaults to None)
         :param data_bg: optional background color for data cells (defaults to None)
-        :raises: ValueError if tab_width is less than 1
-        :raises: ValueError if column_spacing is less than 0
-        :raises: TypeError if divider_char is longer than one character
-        :raises: ValueError if divider_char is an unprintable character
+        :raises ValueError: if tab_width is less than 1
+        :raises ValueError: if column_spacing is less than 0
+        :raises TypeError: if divider_char is longer than one character
+        :raises ValueError: if divider_char is an unprintable character
         """
         super().__init__(cols, tab_width=tab_width)
 
@@ -624,8 +624,8 @@ class SimpleTable(TableCreator):
         :param num_cols: how many columns the table will have
         :param column_spacing: how many spaces to place between columns. Defaults to 2.
         :return: base width
-        :raises: ValueError if column_spacing is less than 0
-        :raises: ValueError if num_cols is less than 1
+        :raises ValueError: if column_spacing is less than 0
+        :raises ValueError: if num_cols is less than 1
         """
         if num_cols < 1:
             raise ValueError("Column count cannot be less than 1")
@@ -683,7 +683,7 @@ class SimpleTable(TableCreator):
 
         :param row_data: data with an entry for each column in the row
         :return: data row string
-        :raises: ValueError if row_data isn't the same length as self.cols
+        :raises ValueError: if row_data isn't the same length as self.cols
         """
         if len(row_data) != len(self.cols):
             raise ValueError("Length of row_data must match length of cols")
@@ -710,7 +710,7 @@ class SimpleTable(TableCreator):
         :param include_header: If True, then a header will be included at top of table. (Defaults to True)
         :param row_spacing: A number 0 or greater specifying how many blank lines to place between
                             each row (Defaults to 1)
-        :raises: ValueError if row_spacing is less than 0
+        :raises ValueError: if row_spacing is less than 0
         """
         if row_spacing < 0:
             raise ValueError("Row spacing cannot be less than 0")
@@ -769,8 +769,8 @@ class BorderedTable(TableCreator):
         :param border_bg: optional background color for borders (defaults to None)
         :param header_bg: optional background color for header cells (defaults to None)
         :param data_bg: optional background color for data cells (defaults to None)
-        :raises: ValueError if tab_width is less than 1
-        :raises: ValueError if padding is less than 0
+        :raises ValueError: if tab_width is less than 1
+        :raises ValueError: if padding is less than 0
         """
         super().__init__(cols, tab_width=tab_width)
         self.empty_data = [EMPTY] * len(self.cols)
@@ -825,7 +825,7 @@ class BorderedTable(TableCreator):
         :param column_borders: if True, borders between columns will be included in the calculation (Defaults to True)
         :param padding: number of spaces between text and left/right borders of cell
         :return: base width
-        :raises: ValueError if num_cols is less than 1
+        :raises ValueError: if num_cols is less than 1
         """
         if num_cols < 1:
             raise ValueError("Column count cannot be less than 1")
@@ -974,7 +974,7 @@ class BorderedTable(TableCreator):
 
         :param row_data: data with an entry for each column in the row
         :return: data row string
-        :raises: ValueError if row_data isn't the same length as self.cols
+        :raises ValueError: if row_data isn't the same length as self.cols
         """
         if len(row_data) != len(self.cols):
             raise ValueError("Length of row_data must match length of cols")
@@ -1075,8 +1075,8 @@ class AlternatingTable(BorderedTable):
         :param header_bg: optional background color for header cells (defaults to None)
         :param odd_bg: optional background color for odd numbered data rows (defaults to None)
         :param even_bg: optional background color for even numbered data rows (defaults to StdBg.DARK_GRAY)
-        :raises: ValueError if tab_width is less than 1
-        :raises: ValueError if padding is less than 0
+        :raises ValueError: if tab_width is less than 1
+        :raises ValueError: if padding is less than 0
         """
         super().__init__(
             cols,

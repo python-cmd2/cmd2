@@ -309,7 +309,6 @@ class CompletionItem(str):
         :param value: the value being tab completed
         :param description: description text to display
         :param args: args for str __init__
-        :param kwargs: kwargs for str __init__
         """
         super().__init__(*args)
         self.description = description
@@ -482,7 +481,7 @@ def _action_set_choices_callable(self: argparse.Action, choices_callable: Choice
 
     :param self: action being edited
     :param choices_callable: the ChoicesCallable instance to use
-    :raises: TypeError if used on incompatible action type
+    :raises TypeError: if used on incompatible action type
     """
     # Verify consistent use of parameters
     if self.choices is not None:
@@ -513,7 +512,7 @@ def _action_set_choices_provider(
 
     :param self: action being edited
     :param choices_provider: the choices_provider instance to use
-    :raises: TypeError if used on incompatible action type
+    :raises TypeError: if used on incompatible action type
     """
     self._set_choices_callable(ChoicesCallable(is_completer=False, to_call=choices_provider))  # type: ignore[attr-defined]
 
@@ -534,7 +533,7 @@ def _action_set_completer(
 
     :param self: action being edited
     :param completer: the completer instance to use
-    :raises: TypeError if used on incompatible action type
+    :raises TypeError: if used on incompatible action type
     """
     self._set_choices_callable(ChoicesCallable(is_completer=True, to_call=completer))  # type: ignore[attr-defined]
 
@@ -767,7 +766,7 @@ def _add_argument_wrapper(
           See the header of this file for more information
 
     :return: the created argument action
-    :raises: ValueError on incorrect parameter usage
+    :raises ValueError: on incorrect parameter usage
     """
     # Verify consistent use of arguments
     choices_callables = [choices_provider, completer]
@@ -1351,6 +1350,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         conflict_handler: str = 'error',
         add_help: bool = True,
         allow_abbrev: bool = True,
+        exit_on_error: bool = True,
+        suggest_on_error: bool = False,
+        color: bool = False,
         *,
         ap_completer_type: Optional[Type['ArgparseCompleter']] = None,
     ) -> None:
@@ -1361,20 +1363,42 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                                   behavior on this parser. If this is None or not present, then cmd2 will use
                                   argparse_completer.DEFAULT_AP_COMPLETER when tab completing this parser's arguments
         """
-        super(Cmd2ArgumentParser, self).__init__(
-            prog=prog,
-            usage=usage,
-            description=description,  # type: ignore[arg-type]
-            epilog=epilog,  # type: ignore[arg-type]
-            parents=parents if parents else [],
-            formatter_class=formatter_class,
-            prefix_chars=prefix_chars,
-            fromfile_prefix_chars=fromfile_prefix_chars,
-            argument_default=argument_default,
-            conflict_handler=conflict_handler,
-            add_help=add_help,
-            allow_abbrev=allow_abbrev,
-        )
+        if sys.version_info[1] >= 14:
+            # Python >= 3.14 so pass new arguments to parent argparse.ArgumentParser class
+            super(Cmd2ArgumentParser, self).__init__(
+                prog=prog,
+                usage=usage,
+                description=description,  # type: ignore[arg-type]
+                epilog=epilog,  # type: ignore[arg-type]
+                parents=parents if parents else [],
+                formatter_class=formatter_class,
+                prefix_chars=prefix_chars,
+                fromfile_prefix_chars=fromfile_prefix_chars,
+                argument_default=argument_default,
+                conflict_handler=conflict_handler,
+                add_help=add_help,
+                allow_abbrev=allow_abbrev,
+                exit_on_error=exit_on_error,
+                suggest_on_error=suggest_on_error,
+                color=color,
+            )
+        else:
+            # Python < 3.14, so don't pass new arguments to parent argparse.ArgumentParser class
+            super(Cmd2ArgumentParser, self).__init__(
+                prog=prog,
+                usage=usage,
+                description=description,  # type: ignore[arg-type]
+                epilog=epilog,  # type: ignore[arg-type]
+                parents=parents if parents else [],
+                formatter_class=formatter_class,
+                prefix_chars=prefix_chars,
+                fromfile_prefix_chars=fromfile_prefix_chars,
+                argument_default=argument_default,
+                conflict_handler=conflict_handler,
+                add_help=add_help,
+                allow_abbrev=allow_abbrev,
+                exit_on_error=exit_on_error,
+            )
 
         # Recast to assist type checkers since in a Cmd2HelpFormatter, these can be Rich renderables.
         self.description: Optional[RenderableType] = self.description  # type: ignore[assignment]

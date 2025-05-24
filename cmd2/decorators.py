@@ -351,7 +351,7 @@ def with_argparser(
                             contiguously somewhere in the list
             :param kwargs: any keyword arguments being passed to command function
             :return: return value of command function
-            :raises: Cmd2ArgparseError if argparse has error parsing command line
+            :raises Cmd2ArgparseError: if argparse has error parsing command line
             """
             cmd2_app, statement_arg = _parse_positionals(args)
             statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(

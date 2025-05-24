@@ -16,7 +16,6 @@ cmd2 = { editable = true, path = "." }
 cmd2_ext_test = { editable = true, path = "plugins/ext_test" }
 codecov = "*"
 gnureadline = { version = "*", sys_platform = "== 'darwin'" }
-griffe-typingdoc = "*"
 invoke = "*"
 ipython = "*"
 mypy = "*"

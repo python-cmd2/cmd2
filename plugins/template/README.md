@@ -51,8 +51,10 @@ and an example app which uses the plugin:
 import cmd2
 import cmd2_myplugin
 
+
 class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
     """An class to show how to use a plugin"""
+
     def __init__(self, *args, **kwargs):
         # code placed here runs before cmd2.Cmd or
         # any plugins initialize

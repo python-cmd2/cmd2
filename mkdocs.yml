@@ -57,6 +57,7 @@ theme:
 # Plugins
 plugins:
   - search
+  - git-revision-date-localized
   - include-markdown:
       preserve_includer_indent: true
       dedent: true
@@ -71,8 +72,6 @@ plugins:
       handlers:
         python:
           options:
-            extensions:
-              - griffe_typingdoc
             show_root_heading: true
             show_if_no_docstring: true
             preload_modules:
@@ -85,6 +84,7 @@ plugins:
             filters:
               - "!^_"
             merge_init_into_class: true
+            docstring_style: sphinx
             docstring_section_style: spacy
             signature_crossrefs: true
             show_symbol_type_heading: true

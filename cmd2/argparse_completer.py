@@ -224,7 +224,7 @@ class ArgparseCompleter:
         :param cmd_set: if tab completing a command, the CommandSet the command's function belongs to, if applicable.
                         Defaults to None.
 
-        :raises: CompletionError for various types of tab completion errors
+        :raises CompletionError: for various types of tab completion errors
         """
         if not tokens:
             return []
@@ -262,7 +262,7 @@ class ArgparseCompleter:
             Check if an argument belongs to a mutually exclusive group and either mark that group
             as complete or print an error if the group has already been completed
             :param arg_action: the action of the argument
-            :raises: CompletionError if the group is already completed
+            :raises CompletionError: if the group is already completed
             """
             # Check if this action is in a mutually exclusive group
             for group in self._parser._mutually_exclusive_groups:
@@ -677,7 +677,7 @@ class ArgparseCompleter:
         """
         Tab completion routine for an argparse argument
         :return: list of completions
-        :raises: CompletionError if the completer or choices function this calls raises one
+        :raises CompletionError: if the completer or choices function this calls raises one
         """
         # Check if the arg provides choices to the user
         arg_choices: Union[list[str], ChoicesCallable]

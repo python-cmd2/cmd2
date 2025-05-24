@@ -79,7 +79,7 @@ def test_apcustom_no_choices_callables_alongside_choices(kwargs):
 def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs):
     with pytest.raises(TypeError) as excinfo:
         parser = Cmd2ArgumentParser()
-        parser.add_argument('name', action='store_true', **kwargs)
+        parser.add_argument('--name', action='store_true', **kwargs)
     assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
 
 

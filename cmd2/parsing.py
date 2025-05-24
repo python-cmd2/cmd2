@@ -323,7 +323,7 @@ class StatementParser:
 
         :param line: the command line being lexed
         :return: A list of tokens
-        :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
+        :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
         """
 
         # expand shortcuts and aliases
@@ -351,7 +351,7 @@ class StatementParser:
 
         :param line: the command line being parsed
         :return: a new [cmd2.parsing.Statement][] object
-        :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
+        :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
         """
 
         # handle the special case/hardcoded terminator of a blank line
