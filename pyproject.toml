@@ -156,8 +156,8 @@ output-format = "full"
 # McCabe complexity (`C901`) by default.
 select = [
     # https://docs.astral.sh/ruff/rules
-    "A",   # flake8-builtins (variables or arguments shadowing built-ins)
-    "AIR", # Airflow specific warnings
+    "A", # flake8-builtins (variables or arguments shadowing built-ins)
+    # "AIR", # Airflow specific warnings
     # "ANN",  # flake8-annotations (missing type annotations for arguments or return types)
     # "ARG", # flake8-unused-arguments (functions or methods with arguments that are never used)
     "ASYNC", # flake8-async (async await bugs)
@@ -169,15 +169,15 @@ select = [
     # "CPY", # flake8-copyright (warn about missing copyright notice at top of file - currently in preview)
     # "D",    # pydocstyle (warn about things like missing docstrings)
     # "DOC", # pydoclint (docstring warnings - currently in preview)
-    "DJ",  # flake8-django (Django-specific warnings)
+    # "DJ",  # flake8-django (Django-specific warnings)
     "DTZ", # flake8-datetimez (warn about datetime calls where no timezone is specified)
     "E",   # pycodestyle errors (warn about major stylistic issues like mixing spaces and tabs)
     # "EM", # flake8-errmsg (warn about exceptions that use string literals that aren't assigned to a variable first)
     # "ERA",  # eradicate (warn about commented-out code)
-    "EXE",  # flake8-executable (warn about files with a shebang present that aren't executable or vice versa)
-    "F",    # Pyflakes (a bunch of common warnings for things like unused imports, imports shadowed by variables, etc)
-    "FA",   # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
-    "FAST", # FastAPI specific warnings
+    "EXE", # flake8-executable (warn about files with a shebang present that aren't executable or vice versa)
+    "F",   # Pyflakes (a bunch of common warnings for things like unused imports, imports shadowed by variables, etc)
+    "FA",  # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
+    # "FAST", # FastAPI specific warnings
     # "FBT",  # flake8-boolean-trap (force all boolean arguments passed to functions to be keyword arguments and not positional)
     "FIX",  # flake8-fixme (warn about lines containing FIXME, TODO, XXX, or HACK)
     "FLY",  # flynt (automatically convert from old school string .format to f-strings)
@@ -190,8 +190,8 @@ select = [
     "ISC",  # flake8-implicit-str-concat (warnings related to implicit vs explicit string concatenation)
     "LOG",  # flake8-logging (warn about potential logger issues, but very pedantic)
     # "N", # pep8-naming (force idiomatic naming for classes, functions/methods, and variables/arguments)
-    "NPY",  # NumPy specific rules
-    "PD",   # pandas-vet (Pandas specific rules)
+    # "NPY",  # NumPy specific rules
+    # "PD",   # pandas-vet (Pandas specific rules)
     "PERF", # Perflint (warn about performance issues)
     "PGH",  # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
     "PIE",  # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
