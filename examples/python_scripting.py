@@ -77,7 +77,7 @@ class CmdLineApp(cmd2.Cmd):
         else:
             try:
                 os.chdir(path)
-            except Exception as ex:
+            except Exception as ex:  # noqa: BLE001
                 err = f'{ex}'
             else:
                 self.poutput(f'Successfully changed directory to {path}')

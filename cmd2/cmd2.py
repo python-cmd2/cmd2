@@ -2255,7 +2255,7 @@ class Cmd(cmd.Cmd):
                 ansi.style_aware_write(sys.stdout, '\n' + err_str + '\n')
                 rl_force_redisplay()
             return None
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
             self.perror()
             self.pexcept(ex)
@@ -2562,7 +2562,7 @@ class Cmd(cmd.Cmd):
             stop = True
         except PassThroughException as ex:
             raise ex.wrapped_ex
-        except Exception as ex:
+        except Exception as ex:  # noqa: BLE001
             self.pexcept(ex)
         finally:
             try:
@@ -2576,7 +2576,7 @@ class Cmd(cmd.Cmd):
                 stop = True
             except PassThroughException as ex:
                 raise ex.wrapped_ex
-            except Exception as ex:
+            except Exception as ex:  # noqa: BLE001
                 self.pexcept(ex)
 
         return stop
@@ -4131,7 +4131,7 @@ class Cmd(cmd.Cmd):
                 try:
                     orig_value = settable.get_value()
                     settable.set_value(utils.strip_quotes(args.value))
-                except Exception as ex:
+                except ValueError as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
                     self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {settable.get_value()!r}")
@@ -4425,7 +4425,7 @@ class Cmd(cmd.Cmd):
             if py_code_to_run:
                 try:
                     interp.runcode(py_code_to_run)  # type: ignore[arg-type]
-                except BaseException:
+                except BaseException:  # noqa: BLE001
                     # We don't care about any exception that happened in the Python code
                     pass
 
@@ -4448,7 +4448,7 @@ class Cmd(cmd.Cmd):
                     # Since quit() or exit() raise an EmbeddedConsoleExit, interact() exits before printing
                     # the exitmsg. Therefore, we will not provide it one and print it manually later.
                     interp.interact(banner=banner, exitmsg='')
-                except BaseException:
+                except BaseException:  # noqa: BLE001
                     # We don't care about any exception that happened in the interactive console
                     pass
                 finally:

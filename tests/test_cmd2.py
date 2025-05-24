@@ -771,7 +771,7 @@ try:
     #   ValueError for headless Linux systems without Gtk installed
     #   AssertionError can be raised by paste_klipper().
     #   PyperclipException for pyperclip-specific exceptions
-except Exception:
+except Exception:  # noqa: BLE001
     can_paste = False
 else:
     can_paste = True
