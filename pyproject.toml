@@ -208,7 +208,7 @@ select = [
     # "RUF", # Ruff-specific rules (miscellaneous grab bag of lint checks specific to Ruff)
     # "S", # flake8-bandit (security oriented checks, but extremely pedantic - do not attempt to apply to unit test files)
     # "SIM", # flake8-simplify (rules to attempt to simplify code)
-    # "SLF", # flake8-self (warn when protected members are accessed outside of a class or file)
+    # "SLF",  # flake8-self (warn when protected members are accessed outside of a class or file)
     "SLOT", # flake8-slots (warn about subclasses that should define __slots__)
     "T10",  # flake8-debugger (check for pdb traces left in Python code)
     # "T20",  # flake8-print (warn about use of `print` or `pprint` - force use of loggers)
@@ -285,6 +285,7 @@ per-file-ignores."plugins/*.py" = [
     "D",      # Ignore all pydocstyle rules in test folders
     "INP001", # Module is part of an implicit namespace
     "S",      # Ignore all Security rules in test folders
+    "SLF",    # Ignore all warnings about private or protected member access in test folders
 ]
 
 per-file-ignores."tests/*.py" = [
@@ -292,6 +293,7 @@ per-file-ignores."tests/*.py" = [
     "D",    # Ignore all pydocstyle rules in test folders
     "E501", # Line too long
     "S",    # Ignore all Security rules in test folders
+    "SLF",  # Ignore all warnings about private or protected member access in test folders
 ]
 
 per-file-ignores."tests/test_argparse.py" = [
@@ -307,6 +309,7 @@ per-file-ignores."tests_isolated/*.py" = [
     "ANN", # Ignore all type annotation rules in test folders
     "D",   # Ignore all pydocstyle rules in test folders
     "S",   # Ignore all Security rules in test folders
+    "SLF", # Ignore all warnings about private or protected member access in test folders
 ]
 
 per-file-ignores."tests_isolated/test_commandset/test_commandset.py" = [
