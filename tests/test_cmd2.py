@@ -221,7 +221,7 @@ def test_set_no_settables(base_app):
 
 
 @pytest.mark.parametrize(
-    'new_val, is_valid, expected',
+    ('new_val', 'is_valid', 'expected'),
     [
         (ansi.AllowStyle.NEVER, True, ansi.AllowStyle.NEVER),
         ('neVeR', True, ansi.AllowStyle.NEVER),
@@ -391,7 +391,8 @@ def test_run_script_with_empty_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'empty.txt')
     out, err = run_cmd(base_app, 'run_script {}'.format(filename))
-    assert not out and not err
+    assert not out
+    assert not err
     assert base_app.last_result is True
 
 
@@ -741,7 +742,8 @@ def test_pipe_to_shell(base_app):
         command = 'help help | wc'
 
     out, err = run_cmd(base_app, command)
-    assert out and not err
+    assert out
+    assert not err
 
 
 def test_pipe_to_shell_and_redirect(base_app):
@@ -755,7 +757,8 @@ def test_pipe_to_shell_and_redirect(base_app):
         command = 'help help | wc > {}'.format(filename)
 
     out, err = run_cmd(base_app, command)
-    assert not out and not err
+    assert not out
+    assert not err
     assert os.path.exists(filename)
     os.remove(filename)
 
@@ -807,7 +810,8 @@ def test_get_paste_buffer_exception(base_app, mocker, capsys):
     out, err = capsys.readouterr()
     assert out == ''
     # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.paste
-    assert 'ValueError' in err and 'foo' in err
+    assert 'ValueError' in err
+    assert 'foo' in err
 
 
 def test_allow_clipboard_initializer(base_app):
@@ -1493,7 +1497,7 @@ Charm us with the {}...
 
 
 @pytest.mark.parametrize(
-    'selection, type_str',
+    ('selection', 'type_str'),
     [
         ('1', "<class 'int'>"),
         ('2', "<class 'str'>"),
@@ -2889,7 +2893,8 @@ def test_disable_and_enable_category(disable_commands_app):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
-    assert first_match is not None and disable_commands_app.completion_matches == ['result ']
+    assert first_match is not None
+    assert disable_commands_app.completion_matches == ['result ']
 
     # has_no_helper_funcs had no completer originally, so there should be no results
     text = ''

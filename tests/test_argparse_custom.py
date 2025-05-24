@@ -49,7 +49,7 @@ def fake_func():
 
 
 @pytest.mark.parametrize(
-    'kwargs, is_valid',
+    ('kwargs', 'is_valid'),
     [
         ({'choices_provider': fake_func}, True),
         ({'completer': fake_func}, True),

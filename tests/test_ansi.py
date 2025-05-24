@@ -148,7 +148,7 @@ def test_set_title():
 
 
 @pytest.mark.parametrize(
-    'cols, prompt, line, cursor, msg, expected',
+    ('cols', 'prompt', 'line', 'cursor', 'msg', 'expected'),
     [
         (
             127,
@@ -230,7 +230,7 @@ def test_sequence_str_building(ansi_sequence):
 
 
 @pytest.mark.parametrize(
-    'r, g, b, valid',
+    ('r', 'g', 'b', 'valid'),
     [
         (0, 0, 0, True),
         (255, 255, 255, True),

@@ -199,7 +199,7 @@ select = [
     "PLE",  # Pylint Errors
     # "PLR", # Pylint Refactoring suggestions
     "PLW", # Pylint Warnings
-    # "PT", # flake8-pytest-style (warnings about unit test best practices)
+    # "PT",  # flake8-pytest-style (warnings about unit test best practices)
     # "PTH",  # flake8-use-pathlib (force use of pathlib instead of os.path)
     "PYI", # flake8-pyi (warnings related to type hint best practices)
     # "Q",    # flake8-quotes (force double quotes)

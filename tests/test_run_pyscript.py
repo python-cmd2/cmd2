@@ -103,7 +103,8 @@ def test_run_pyscript_help(base_app, request):
     python_script = os.path.join(test_dir, 'pyscript', 'help.py')
     out1, err1 = run_cmd(base_app, 'help')
     out2, err2 = run_cmd(base_app, 'run_pyscript {}'.format(python_script))
-    assert out1 and out1 == out2
+    assert out1
+    assert out1 == out2
 
 
 def test_scripts_add_to_history(base_app, request):

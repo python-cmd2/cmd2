@@ -79,7 +79,7 @@ def test_parse_empty_string_default(default_parser):
 
 
 @pytest.mark.parametrize(
-    'line,tokens',
+    ('line', 'tokens'),
     [
         ('command', ['command']),
         (constants.COMMENT_CHAR + 'comment', []),
@@ -97,7 +97,7 @@ def test_tokenize_default(default_parser, line, tokens):
 
 
 @pytest.mark.parametrize(
-    'line,tokens',
+    ('line', 'tokens'),
     [
         ('command', ['command']),
         ('# comment', []),
@@ -123,7 +123,8 @@ def test_tokenize_unclosed_quotes(parser):
 
 
 @pytest.mark.parametrize(
-    'tokens,command,args', [([], '', ''), (['command'], 'command', ''), (['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')]
+    ('tokens', 'command', 'args'),
+    [([], '', ''), (['command'], 'command', ''), (['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')],
 )
 def test_command_and_args(parser, tokens, command, args):
     (parsed_command, parsed_args) = parser._command_and_args(tokens)
@@ -157,7 +158,7 @@ def test_parse_single_word(parser, line):
 
 
 @pytest.mark.parametrize(
-    'line,terminator',
+    ('line', 'terminator'),
     [
         ('termbare;', ';'),
         ('termbare ;', ';'),
@@ -176,7 +177,7 @@ def test_parse_word_plus_terminator(parser, line, terminator):
 
 
 @pytest.mark.parametrize(
-    'line,terminator',
+    ('line', 'terminator'),
     [
         ('termbare;  suffx', ';'),
         ('termbare ;suffx', ';'),
@@ -290,7 +291,7 @@ def test_parse_complex_pipe(parser):
 
 
 @pytest.mark.parametrize(
-    'line,output',
+    ('line', 'output'),
     [
         ('help > out.txt', '>'),
         ('help>out.txt', '>'),
@@ -515,7 +516,7 @@ def test_parse_redirect_inside_terminator(parser):
 
 
 @pytest.mark.parametrize(
-    'line,terminator',
+    ('line', 'terminator'),
     [
         ('multiline with | inside;', ';'),
         ('multiline with | inside ;', ';'),
@@ -563,7 +564,7 @@ def test_parse_basic_multiline_command(parser):
 
 
 @pytest.mark.parametrize(
-    'line,terminator',
+    ('line', 'terminator'),
     [
         ('multiline has > inside;', ';'),
         ('multiline has > inside;;;', ';'),
@@ -595,7 +596,7 @@ def test_parse_multiline_terminated_by_empty_line(parser):
 
 
 @pytest.mark.parametrize(
-    'line,terminator',
+    ('line', 'terminator'),
     [
         ('multiline command "with\nembedded newline";', ';'),
         ('multiline command "with\nembedded newline";;;', ';'),
@@ -675,7 +676,7 @@ def test_empty_statement_raises_exception():
 
 
 @pytest.mark.parametrize(
-    'line,command,args',
+    ('line', 'command', 'args'),
     [
         ('helpalias', 'help', ''),
         ('helpalias mycommand', 'help', 'mycommand'),
@@ -704,7 +705,7 @@ def test_parse_alias_on_multiline_command(parser):
 
 
 @pytest.mark.parametrize(
-    'line,output',
+    ('line', 'output'),
     [
         ('helpalias > out.txt', '>'),
         ('helpalias>out.txt', '>'),
@@ -862,7 +863,7 @@ def test_parse_command_only_unclosed_quote(parser):
 
 
 @pytest.mark.parametrize(
-    'line,args',
+    ('line', 'args'),
     [
         ('helpalias > out.txt', '> out.txt'),
         ('helpalias>out.txt', '>out.txt'),
@@ -987,39 +988,48 @@ def test_statement_as_dict(parser):
 def test_is_valid_command_invalid(mocker, parser):
     # Non-string command
     valid, errmsg = parser.is_valid_command(5)
-    assert not valid and 'must be a string' in errmsg
+    assert not valid
+    assert 'must be a string' in errmsg
 
     mock = mocker.MagicMock()
     valid, errmsg = parser.is_valid_command(mock)
-    assert not valid and 'must be a string' in errmsg
+    assert not valid
+    assert 'must be a string' in errmsg
 
     # Empty command
     valid, errmsg = parser.is_valid_command('')
-    assert not valid and 'cannot be an empty string' in errmsg
+    assert not valid
+    assert 'cannot be an empty string' in errmsg
 
     # Start with the comment character
     valid, errmsg = parser.is_valid_command(constants.COMMENT_CHAR)
-    assert not valid and 'cannot start with the comment character' in errmsg
+    assert not valid
+    assert 'cannot start with the comment character' in errmsg
 
     # Starts with shortcut
     valid, errmsg = parser.is_valid_command('!ls')
-    assert not valid and 'cannot start with a shortcut' in errmsg
+    assert not valid
+    assert 'cannot start with a shortcut' in errmsg
 
     # Contains whitespace
     valid, errmsg = parser.is_valid_command('shell ls')
-    assert not valid and 'cannot contain: whitespace, quotes,' in errmsg
+    assert not valid
+    assert 'cannot contain: whitespace, quotes,' in errmsg
 
     # Contains a quote
     valid, errmsg = parser.is_valid_command('"shell"')
-    assert not valid and 'cannot contain: whitespace, quotes,' in errmsg
+    assert not valid
+    assert 'cannot contain: whitespace, quotes,' in errmsg
 
     # Contains a redirector
     valid, errmsg = parser.is_valid_command('>shell')
-    assert not valid and 'cannot contain: whitespace, quotes,' in errmsg
+    assert not valid
+    assert 'cannot contain: whitespace, quotes,' in errmsg
 
     # Contains a terminator
     valid, errmsg = parser.is_valid_command(';shell')
-    assert not valid and 'cannot contain: whitespace, quotes,' in errmsg
+    assert not valid
+    assert 'cannot contain: whitespace, quotes,' in errmsg
 
 
 def test_is_valid_command_valid(parser):

@@ -106,7 +106,7 @@ def test_commands_at_invocation():
 
 
 @pytest.mark.parametrize(
-    'filename,feedback_to_output',
+    ('filename', 'feedback_to_output'),
     [
         ('bol_eol.txt', False),
         ('characterclass.txt', False),
@@ -253,7 +253,7 @@ def test_generate_transcript_stop(capsys):
 
 
 @pytest.mark.parametrize(
-    'expected, transformed',
+    ('expected', 'transformed'),
     [
         # strings with zero or one slash or with escaped slashes means no regular
         # expression present, so the result should just be what re.escape returns.

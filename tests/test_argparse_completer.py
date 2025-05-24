@@ -361,7 +361,7 @@ def test_bad_subcommand_help(ac_app):
 
 
 @pytest.mark.parametrize(
-    'command, text, completions',
+    ('command', 'text', 'completions'),
     [
         ('', 'mus', ['music ']),
         ('music', 'cre', ['create ']),
@@ -388,7 +388,7 @@ def test_complete_help(ac_app, command, text, completions):
 
 
 @pytest.mark.parametrize(
-    'subcommand, text, completions',
+    ('subcommand', 'text', 'completions'),
     [('create', '', ['jazz', 'rock']), ('create', 'ja', ['jazz ']), ('create', 'foo', []), ('creab', 'ja', [])],
 )
 def test_subcommand_completions(ac_app, subcommand, text, completions):
@@ -406,7 +406,7 @@ def test_subcommand_completions(ac_app, subcommand, text, completions):
 
 
 @pytest.mark.parametrize(
-    'command_and_args, text, completion_matches, display_matches',
+    ('command_and_args', 'text', 'completion_matches', 'display_matches'),
     [
         # Complete all flags (suppressed will not show)
         (
@@ -547,13 +547,12 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matc
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(
-        completion_matches, key=ac_app.default_sort_key
-    ) and ac_app.display_matches == sorted(display_matches, key=ac_app.default_sort_key)
+    assert ac_app.completion_matches == sorted(completion_matches, key=ac_app.default_sort_key)
+    assert ac_app.display_matches == sorted(display_matches, key=ac_app.default_sort_key)
 
 
 @pytest.mark.parametrize(
-    'flag, text, completions',
+    ('flag', 'text', 'completions'),
     [
         ('-l', '', ArgparseCompleterTester.static_choices_list),
         ('--list', 's', ['static', 'stop']),
@@ -588,7 +587,7 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
 
 
 @pytest.mark.parametrize(
-    'pos, text, completions',
+    ('pos', 'text', 'completions'),
     [
         (1, '', ArgparseCompleterTester.static_choices_list),
         (1, 's', ['static', 'stop']),
@@ -639,11 +638,12 @@ def test_flag_sorting(ac_app):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == option_strings
+    assert first_match is not None
+    assert ac_app.completion_matches == option_strings
 
 
 @pytest.mark.parametrize(
-    'flag, text, completions',
+    ('flag', 'text', 'completions'),
     [('-c', '', ArgparseCompleterTester.completions_for_flag), ('--completer', 'f', ['flag', 'fairly'])],
 )
 def test_autocomp_flag_completers(ac_app, flag, text, completions):
@@ -661,7 +661,7 @@ def test_autocomp_flag_completers(ac_app, flag, text, completions):
 
 
 @pytest.mark.parametrize(
-    'pos, text, completions',
+    ('pos', 'text', 'completions'),
     [
         (1, '', ArgparseCompleterTester.completions_for_pos_1),
         (1, 'p', ['positional_1', 'probably']),
@@ -763,7 +763,7 @@ def test_completion_items(ac_app):
 
 
 @pytest.mark.parametrize(
-    'num_aliases, show_description',
+    ('num_aliases', 'show_description'),
     [
         # The number of completion results determines if the description field of CompletionItems gets displayed
         # in the tab completions. The count must be greater than 1 and less than ac_app.max_completion_items,
@@ -803,7 +803,7 @@ def test_max_completion_items(ac_app, num_aliases, show_description):
 
 
 @pytest.mark.parametrize(
-    'args, completions',
+    ('args', 'completions'),
     [
         # Flag with nargs = 2
         ('--set_value', ArgparseCompleterTester.set_value_choices),
@@ -869,7 +869,7 @@ def test_autcomp_nargs(ac_app, args, completions):
 
 
 @pytest.mark.parametrize(
-    'command_and_args, text, is_error',
+    ('command_and_args', 'text', 'is_error'),
     [
         # Flag is finished before moving on
         ('hint --flag foo --', '', False),
@@ -986,7 +986,7 @@ def test_completion_items_descriptive_header(ac_app):
 
 
 @pytest.mark.parametrize(
-    'command_and_args, text, has_hint',
+    ('command_and_args', 'text', 'has_hint'),
     [
         # Normal cases
         ('hint', '', True),
@@ -1045,7 +1045,7 @@ Hint:
 
 
 @pytest.mark.parametrize(
-    'args, text',
+    ('args', 'text'),
     [
         # Exercise a flag arg and choices function that raises a CompletionError
         ('--choice ', 'choice'),
@@ -1066,7 +1066,7 @@ def test_completion_error(ac_app, capsys, args, text):
 
 
 @pytest.mark.parametrize(
-    'command_and_args, completions',
+    ('command_and_args', 'completions'),
     [
         # Exercise a choices function that receives arg_tokens dictionary
         ('arg_tokens choice subcmd', ['choice', 'subcmd']),
@@ -1092,7 +1092,7 @@ def test_arg_tokens(ac_app, command_and_args, completions):
 
 
 @pytest.mark.parametrize(
-    'command_and_args, text, output_contains, first_match',
+    ('command_and_args', 'text', 'output_contains', 'first_match'),
     [
         # Group isn't done. Hint will show for optional positional and no completions returned
         ('mutex', '', 'the optional positional', None),
@@ -1188,7 +1188,9 @@ def test_complete_command_help_no_tokens(ac_app):
     assert not completions
 
 
-@pytest.mark.parametrize('flag, completions', [('--provider', standalone_choices), ('--completer', standalone_completions)])
+@pytest.mark.parametrize(
+    ('flag', 'completions'), [('--provider', standalone_choices), ('--completer', standalone_completions)]
+)
 def test_complete_standalone(ac_app, flag, completions):
     text = ''
     line = 'standalone {} {}'.format(flag, text)
