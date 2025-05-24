@@ -1,4 +1,4 @@
-"""Test CommandSet"""
+"""Test CommandSet."""
 
 import argparse
 
@@ -11,7 +11,7 @@ class CommandSetA(cmd2.CommandSet):
         self._cmd.poutput('Apple!')
 
     def do_banana(self, statement: cmd2.Statement) -> None:
-        """Banana Command"""
+        """Banana Command."""
         self._cmd.poutput('Banana!!')
 
     cranberry_parser = cmd2.Cmd2ArgumentParser()
@@ -30,7 +30,7 @@ class CommandSetA(cmd2.CommandSet):
     @cmd2.with_argument_list
     @cmd2.with_category('Also Alone')
     def do_durian(self, args: list[str]) -> None:
-        """Durian Command"""
+        """Durian Command."""
         self._cmd.poutput(f'{len(args)} Arguments: ')
         self._cmd.poutput(', '.join(['{}'] * len(args)).format(*args))
 

@@ -1,4 +1,4 @@
-"""History management classes"""
+"""History management classes."""
 
 import json
 import re
@@ -64,7 +64,7 @@ def single_line_format(statement: Statement) -> str:
 
 @dataclass(frozen=True)
 class HistoryItem:
-    """Class used to represent one command in the history list"""
+    """Class used to represent one command in the history list."""
 
     _listformat = ' {:>4}  {}'
     _ex_listformat = ' {:>4}x {}'
@@ -75,7 +75,7 @@ class HistoryItem:
     statement: Statement
 
     def __str__(self) -> str:
-        """A convenient human-readable representation of the history item"""
+        """A convenient human-readable representation of the history item."""
         return self.statement.raw
 
     @property
@@ -89,7 +89,7 @@ class HistoryItem:
     @property
     def expanded(self) -> str:
         """Return the command as run which includes shortcuts and aliases resolved
-        plus any changes made in hooks
+        plus any changes made in hooks.
 
         Proxy property for ``self.statement.expanded_command_line``
         """
@@ -126,12 +126,12 @@ class HistoryItem:
         return ret_str
 
     def to_dict(self) -> dict[str, Any]:
-        """Utility method to convert this HistoryItem into a dictionary for use in persistent JSON history files"""
+        """Utility method to convert this HistoryItem into a dictionary for use in persistent JSON history files."""
         return {HistoryItem._statement_field: self.statement.to_dict()}
 
     @staticmethod
     def from_dict(source_dict: dict[str, Any]) -> 'HistoryItem':
-        """Utility method to restore a HistoryItem from a dictionary
+        """Utility method to restore a HistoryItem from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
         :return: HistoryItem object
@@ -234,7 +234,7 @@ class History(list[HistoryItem]):
     spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$')
 
     def span(self, span: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
-        """Return a slice of the History list
+        """Return a slice of the History list.
 
         :param span: string containing an index or a slice
         :param include_persisted: if True, then retrieve full results including from persisted history
@@ -283,7 +283,7 @@ class History(list[HistoryItem]):
         return self._build_result_dictionary(start, end)
 
     def str_search(self, search: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
-        """Find history items which contain a given string
+        """Find history items which contain a given string.
 
         :param search: the string to search for
         :param include_persisted: if True, then search full history including persisted history
@@ -292,7 +292,7 @@ class History(list[HistoryItem]):
         """
 
         def isin(history_item: HistoryItem) -> bool:
-            """Filter function for string search of history"""
+            """Filter function for string search of history."""
             sloppy = utils.norm_fold(search)
             inraw = sloppy in utils.norm_fold(history_item.raw)
             inexpanded = sloppy in utils.norm_fold(history_item.expanded)
@@ -302,7 +302,7 @@ class History(list[HistoryItem]):
         return self._build_result_dictionary(start, len(self), isin)
 
     def regex_search(self, regex: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
-        """Find history items which match a given regular expression
+        """Find history items which match a given regular expression.
 
         :param regex: the regular expression to search for.
         :param include_persisted: if True, then search full history including persisted history
@@ -315,14 +315,14 @@ class History(list[HistoryItem]):
         finder = re.compile(regex, re.DOTALL | re.MULTILINE)
 
         def isin(hi: HistoryItem) -> bool:
-            """Filter function for doing a regular expression search of history"""
+            """Filter function for doing a regular expression search of history."""
             return bool(finder.search(hi.raw) or finder.search(hi.expanded))
 
         start = 0 if include_persisted else self.session_start_index
         return self._build_result_dictionary(start, len(self), isin)
 
     def truncate(self, max_length: int) -> None:
-        """Truncate the length of the history, dropping the oldest items if necessary
+        """Truncate the length of the history, dropping the oldest items if necessary.
 
         :param max_length: the maximum length of the history, if negative, all history
                            items will be deleted
@@ -340,7 +340,7 @@ class History(list[HistoryItem]):
     ) -> 'OrderedDict[int, HistoryItem]':
         """Build history search results
         :param start: start index to search from
-        :param end: end index to stop searching (exclusive)
+        :param end: end index to stop searching (exclusive).
         """
         results: OrderedDict[int, HistoryItem] = OrderedDict()
         for index in range(start, end):
@@ -349,7 +349,7 @@ class History(list[HistoryItem]):
         return results
 
     def to_json(self) -> str:
-        """Utility method to convert this History into a JSON string for use in persistent history files"""
+        """Utility method to convert this History into a JSON string for use in persistent history files."""
         json_dict = {
             History._history_version_field: History._history_version,
             History._history_items_field: [hi.to_dict() for hi in self],
@@ -358,7 +358,7 @@ class History(list[HistoryItem]):
 
     @staticmethod
     def from_json(history_json: str) -> 'History':
-        """Utility method to restore History from a JSON string
+        """Utility method to restore History from a JSON string.
 
         :param history_json: history data as JSON string (generated using to_json())
         :return: History object

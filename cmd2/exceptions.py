@@ -1,4 +1,4 @@
-"""Custom exceptions for cmd2"""
+"""Custom exceptions for cmd2."""
 
 from typing import Any
 
@@ -57,7 +57,7 @@ class PassThroughException(Exception):
 
     def __init__(self, *args: Any, wrapped_ex: BaseException) -> None:
         """Initializer for PassThroughException
-        :param wrapped_ex: the exception that will be raised
+        :param wrapped_ex: the exception that will be raised.
         """
         self.wrapped_ex = wrapped_ex
         super().__init__(*args)
@@ -69,7 +69,7 @@ class PassThroughException(Exception):
 
 
 class Cmd2ShlexError(Exception):
-    """Raised when shlex fails to parse a command line string in StatementParser"""
+    """Raised when shlex fails to parse a command line string in StatementParser."""
 
 
 class EmbeddedConsoleExit(SystemExit):
@@ -81,4 +81,4 @@ class EmptyStatement(Exception):
 
 
 class RedirectionError(Exception):
-    """Custom exception class for when redirecting or piping output fails"""
+    """Custom exception class for when redirecting or piping output fails."""

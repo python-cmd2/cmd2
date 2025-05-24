@@ -27,7 +27,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class CommandResult(NamedTuple):
-    """Encapsulates the results from a cmd2 app command
+    """Encapsulates the results from a cmd2 app command.
 
     :stdout: str - output captured from stdout while this command is executing
     :stderr: str - output captured from stderr while this command is executing
@@ -68,7 +68,7 @@ class CommandResult(NamedTuple):
     data: Any = None
 
     def __bool__(self) -> bool:
-        """Returns True if the command succeeded, otherwise False"""
+        """Returns True if the command succeeded, otherwise False."""
         # If data was set, then use it to determine success
         if self.data is not None:
             return bool(self.data)
@@ -94,7 +94,7 @@ class PyBridge:
         self.stop = False
 
     def __dir__(self) -> list[str]:
-        """Return a custom set of attribute names"""
+        """Return a custom set of attribute names."""
         attributes: list[str] = []
         attributes.insert(0, 'cmd_echo')
         return attributes
@@ -104,7 +104,7 @@ class PyBridge:
         ex: app('help')
         :param command: command line being run
         :param echo: If provided, this temporarily overrides the value of self.cmd_echo while the
-                     command runs. If True, output will be echoed to stdout/stderr. (Defaults to None)
+                     command runs. If True, output will be echoed to stdout/stderr. (Defaults to None).
 
         """
         if echo is None:

@@ -5,7 +5,7 @@
 3) Persistent history
 4) How to run an initialization script at startup
 5) How to add custom command aliases using the alias command
-6) Shell-like capabilities
+6) Shell-like capabilities.
 """
 
 import cmd2
@@ -37,12 +37,12 @@ class BasicApp(cmd2.Cmd):
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_intro(self, _) -> None:
-        """Display the intro banner"""
+        """Display the intro banner."""
         self.poutput(self.intro)
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_echo(self, arg) -> None:
-        """Example of a multiline command"""
+        """Example of a multiline command."""
         self.poutput(arg)
 
 

@@ -36,7 +36,7 @@ class HelpCategories(cmd2.Cmd):
         super().__init__()
 
     def do_connect(self, _) -> None:
-        """Connect command"""
+        """Connect command."""
         self.poutput('Connect')
 
     # Tag the above command functions under the category Connecting
@@ -44,15 +44,15 @@ class HelpCategories(cmd2.Cmd):
 
     @cmd2.with_category(CMD_CAT_CONNECTING)
     def do_which(self, _) -> None:
-        """Which command"""
+        """Which command."""
         self.poutput('Which')
 
     def do_list(self, _) -> None:
-        """List command"""
+        """List command."""
         self.poutput('List')
 
     def do_deploy(self, _) -> None:
-        """Deploy command"""
+        """Deploy command."""
         self.poutput('Deploy')
 
     start_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
@@ -63,15 +63,15 @@ class HelpCategories(cmd2.Cmd):
     @my_decorator
     @cmd2.with_argparser(start_parser)
     def do_start(self, _) -> None:
-        """Start command"""
+        """Start command."""
         self.poutput('Start')
 
     def do_sessions(self, _) -> None:
-        """Sessions command"""
+        """Sessions command."""
         self.poutput('Sessions')
 
     def do_redeploy(self, _) -> None:
-        """Redeploy command"""
+        """Redeploy command."""
         self.poutput('Redeploy')
 
     restart_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
@@ -83,23 +83,23 @@ class HelpCategories(cmd2.Cmd):
     @cmd2.with_category(CMD_CAT_APP_MGMT)
     @my_decorator
     def do_restart(self, _) -> None:
-        """Restart command"""
+        """Restart command."""
         self.poutput('Restart')
 
     def do_expire(self, _) -> None:
-        """Expire command"""
+        """Expire command."""
         self.poutput('Expire')
 
     def do_undeploy(self, _) -> None:
-        """Undeploy command"""
+        """Undeploy command."""
         self.poutput('Undeploy')
 
     def do_stop(self, _) -> None:
-        """Stop command"""
+        """Stop command."""
         self.poutput('Stop')
 
     def do_findleakers(self, _) -> None:
-        """Find Leakers command"""
+        """Find Leakers command."""
         self.poutput('Find Leakers')
 
     # Tag the above command functions under the category Application Management
@@ -109,33 +109,33 @@ class HelpCategories(cmd2.Cmd):
     )
 
     def do_resources(self, _) -> None:
-        """Resources command"""
+        """Resources command."""
         self.poutput('Resources')
 
     def do_status(self, _) -> None:
-        """Status command"""
+        """Status command."""
         self.poutput('Status')
 
     def do_serverinfo(self, _) -> None:
-        """Server Info command"""
+        """Server Info command."""
         self.poutput('Server Info')
 
     def do_thread_dump(self, _) -> None:
-        """Thread Dump command"""
+        """Thread Dump command."""
         self.poutput('Thread Dump')
 
     def do_sslconnectorciphers(self, _) -> None:
         """SSL Connector Ciphers command is an example of a command that contains
         multiple lines of help information for the user. Each line of help in a
         contiguous set of lines will be printed and aligned in the verbose output
-        provided with 'help --verbose'
+        provided with 'help --verbose'.
 
         This is after a blank line and won't de displayed in the verbose help
         """
         self.poutput('SSL Connector Ciphers')
 
     def do_vminfo(self, _) -> None:
-        """VM Info command"""
+        """VM Info command."""
         self.poutput('VM Info')
 
     # Tag the above command functions under the category Server Information
@@ -149,23 +149,23 @@ class HelpCategories(cmd2.Cmd):
     # The following command functions don't have the HELP_CATEGORY attribute set
     # and show up in the 'Other' group
     def do_config(self, _) -> None:
-        """Config command"""
+        """Config command."""
         self.poutput('Config')
 
     def do_version(self, _) -> None:
-        """Version command"""
+        """Version command."""
         self.poutput(cmd2.__version__)
 
     @cmd2.with_category("Command Management")
     def do_disable_commands(self, _) -> None:
-        """Disable the Application Management commands"""
+        """Disable the Application Management commands."""
         message_to_print = f"{COMMAND_NAME} is not available while {self.CMD_CAT_APP_MGMT} commands are disabled"
         self.disable_category(self.CMD_CAT_APP_MGMT, message_to_print)
         self.poutput("The Application Management commands have been disabled")
 
     @cmd2.with_category("Command Management")
     def do_enable_commands(self, _) -> None:
-        """Enable the Application Management commands"""
+        """Enable the Application Management commands."""
         self.enable_category(self.CMD_CAT_APP_MGMT)
         self.poutput("The Application Management commands have been enabled")
 

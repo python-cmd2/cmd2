@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Examples of using the cmd2 table creation API"""
+"""Examples of using the cmd2 table creation API."""
 
 import functools
 import sys
@@ -26,18 +26,18 @@ green = functools.partial(ansi.style, fg=Fg.GREEN)
 
 
 class DollarFormatter:
-    """Example class to show that any object type can be passed as data to TableCreator and converted to a string"""
+    """Example class to show that any object type can be passed as data to TableCreator and converted to a string."""
 
     def __init__(self, val: float) -> None:
         self.val = val
 
     def __str__(self) -> str:
-        """Returns the value in dollar currency form (e.g. $100.22)"""
+        """Returns the value in dollar currency form (e.g. $100.22)."""
         return f"${self.val:,.2f}"
 
 
 class Relative:
-    """Class used for example data"""
+    """Class used for example data."""
 
     def __init__(self, name: str, relationship: str) -> None:
         self.name = name
@@ -45,7 +45,7 @@ class Relative:
 
 
 class Book:
-    """Class used for example data"""
+    """Class used for example data."""
 
     def __init__(self, title: str, year_published: str) -> None:
         self.title = title
@@ -53,7 +53,7 @@ class Book:
 
 
 class Author:
-    """Class used for example data"""
+    """Class used for example data."""
 
     def __init__(self, name: str, birthday: str, place_of_birth: str) -> None:
         self.name = name
@@ -64,12 +64,12 @@ class Author:
 
 
 def ansi_print(text) -> None:
-    """Wraps style_aware_write so style can be stripped if needed"""
+    """Wraps style_aware_write so style can be stripped if needed."""
     ansi.style_aware_write(sys.stdout, text + '\n\n')
 
 
 def basic_tables() -> None:
-    """Demonstrates basic examples of the table classes"""
+    """Demonstrates basic examples of the table classes."""
     # Table data which demonstrates handling of wrapping and text styles
     data_list: list[list[Any]] = []
     data_list.append(["Billy Smith", "123 Sesame St.\nFake Town, USA 33445", DollarFormatter(100333.03)])

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A simple example demonstrating modular subcommand loading through CommandSets
+"""A simple example demonstrating modular subcommand loading through CommandSets.
 
 In this example, there are loadable CommandSets defined. Each CommandSet has 1 subcommand defined that will be
 attached to the 'cut' command.
@@ -35,7 +35,7 @@ class LoadableFruits(CommandSet):
 
     @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help=banana_description.lower())
     def cut_banana(self, ns: argparse.Namespace) -> None:
-        """Cut banana"""
+        """Cut banana."""
         self._cmd.poutput('cutting banana: ' + ns.direction)
 
 

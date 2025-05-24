@@ -70,15 +70,15 @@ class SubcommandsExample(cmd2.Cmd):
 
     # subcommand functions for the base command
     def base_foo(self, args) -> None:
-        """Foo subcommand of base command"""
+        """Foo subcommand of base command."""
         self.poutput(args.x * args.y)
 
     def base_bar(self, args) -> None:
-        """Bar subcommand of base command"""
+        """Bar subcommand of base command."""
         self.poutput(f'(({args.z}))')
 
     def base_sport(self, args) -> None:
-        """Sport subcommand of base command"""
+        """Sport subcommand of base command."""
         self.poutput(f'Sport is {args.sport}')
 
     # Set handler functions for the subcommands
@@ -88,7 +88,7 @@ class SubcommandsExample(cmd2.Cmd):
 
     @cmd2.with_argparser(base_parser)
     def do_base(self, args) -> None:
-        """Base command help"""
+        """Base command help."""
         func = getattr(args, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -99,7 +99,7 @@ class SubcommandsExample(cmd2.Cmd):
 
     @cmd2.with_argparser(base2_parser)
     def do_alternate(self, args) -> None:
-        """Alternate command help"""
+        """Alternate command help."""
         func = getattr(args, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected

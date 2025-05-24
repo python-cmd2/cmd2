@@ -14,7 +14,7 @@ class CmdLineApp(cmd.Cmd):
     MUMBLE_LAST = ['right?']
 
     def do_exit(self, line) -> bool:
-        """Exit the application"""
+        """Exit the application."""
         return True
 
     do_EOF = do_exit

@@ -1,4 +1,4 @@
-"""Imports the proper Readline for the platform and provides utility functions for it"""
+"""Imports the proper Readline for the platform and provides utility functions for it."""
 
 import sys
 from enum import (
@@ -34,7 +34,7 @@ except ImportError:
 
 
 class RlType(Enum):
-    """Readline library types we support"""
+    """Readline library types we support."""
 
     GNU = 1
     PYREADLINE = 2
@@ -70,7 +70,7 @@ if 'pyreadline3' in sys.modules:
             """Enables VT100 character sequences in a Windows console
             This only works on Windows 10 and up
             :param handle: the handle on which to enable vt100
-            :return: True if vt100 characters are enabled for the handle
+            :return: True if vt100 characters are enabled for the handle.
             """
             ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 
@@ -108,7 +108,7 @@ if 'pyreadline3' in sys.modules:
 
         def pyreadline_remove_history_item(pos: int) -> None:
             """An implementation of remove_history_item() for pyreadline3
-            :param pos: The 0-based position in history to remove
+            :param pos: The 0-based position in history to remove.
             """
             # Save of the current location of the history cursor
             saved_cursor = readline.rl.mode._history.history_cursor
@@ -154,7 +154,7 @@ else:
 def rl_force_redisplay() -> None:  # pragma: no cover
     """Causes readline to display the prompt and input text wherever the cursor is and start
     reading input from this location. This is the proper way to restore the input line after
-    printing to the screen
+    printing to the screen.
     """
     if not sys.stdout.isatty():
         return
@@ -173,7 +173,7 @@ def rl_force_redisplay() -> None:  # pragma: no cover
 
 
 def rl_get_point() -> int:  # pragma: no cover
-    """Returns the offset of the current cursor position in rl_line_buffer"""
+    """Returns the offset of the current cursor position in rl_line_buffer."""
     if rl_type == RlType.GNU:
         return ctypes.c_int.in_dll(readline_lib, "rl_point").value
 
@@ -184,7 +184,7 @@ def rl_get_point() -> int:  # pragma: no cover
 
 
 def rl_get_prompt() -> str:  # pragma: no cover
-    """Get Readline's prompt"""
+    """Get Readline's prompt."""
     if rl_type == RlType.GNU:
         encoded_prompt = ctypes.c_char_p.in_dll(readline_lib, "rl_prompt").value
         if encoded_prompt is None:
@@ -223,7 +223,7 @@ def rl_get_display_prompt() -> str:  # pragma: no cover
 
 def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
     """Sets Readline's prompt
-    :param prompt: the new prompt value
+    :param prompt: the new prompt value.
     """
     escaped_prompt = rl_escape_prompt(prompt)
 
@@ -236,7 +236,7 @@ def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
 
 
 def rl_escape_prompt(prompt: str) -> str:
-    """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes
+    """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
 
     :param prompt: original prompt
     :return: prompt safe to pass to GNU Readline
@@ -267,7 +267,7 @@ def rl_escape_prompt(prompt: str) -> str:
 
 
 def rl_unescape_prompt(prompt: str) -> str:
-    """Remove escape characters from a Readline prompt"""
+    """Remove escape characters from a Readline prompt."""
     if rl_type == RlType.GNU:
         escape_start = "\x01"
         escape_end = "\x02"
@@ -277,7 +277,7 @@ def rl_unescape_prompt(prompt: str) -> str:
 
 
 def rl_in_search_mode() -> bool:  # pragma: no cover
-    """Check if readline is doing either an incremental (e.g. Ctrl-r) or non-incremental (e.g. Esc-p) search"""
+    """Check if readline is doing either an incremental (e.g. Ctrl-r) or non-incremental (e.g. Esc-p) search."""
     if rl_type == RlType.GNU:
         # GNU Readline defines constants that we can use to determine if in search mode.
         #     RL_STATE_ISEARCH    0x0000080

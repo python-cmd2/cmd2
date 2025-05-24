@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """A simple example demonstrating the following:
 1) How to add custom command aliases using the alias command
-2) How to run an initialization script at startup
+2) How to run an initialization script at startup.
 """
 
 import os

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""An example demonstrating how use one of cmd2's argument parsing decorators"""
+"""An example demonstrating how use one of cmd2's argument parsing decorators."""
 
 import argparse
 import os
@@ -20,7 +20,7 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(fsize_parser)
     def do_fsize(self, args: argparse.Namespace) -> None:
-        """Obtain the size of a file"""
+        """Obtain the size of a file."""
         expanded_path = os.path.expanduser(args.file_path)
 
         try:
@@ -48,7 +48,7 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(pow_parser)
     def do_pow(self, args: argparse.Namespace) -> None:
-        """Raise an integer to a small integer exponent, either positive or negative
+        """Raise an integer to a small integer exponent, either positive or negative.
 
         :param args: argparse arguments
         """

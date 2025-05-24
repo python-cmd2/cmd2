@@ -1,4 +1,4 @@
-"""Defines the CustomParser used with override_parser.py example"""
+"""Defines the CustomParser used with override_parser.py example."""
 
 import sys
 
@@ -11,13 +11,13 @@ from cmd2 import (
 
 # First define the parser
 class CustomParser(Cmd2ArgumentParser):
-    """Overrides error class"""
+    """Overrides error class."""
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     def error(self, message: str) -> None:
-        """Custom override that applies custom formatting to the error message"""
+        """Custom override that applies custom formatting to the error message."""
         lines = message.split('\n')
         linum = 0
         formatted_message = ''

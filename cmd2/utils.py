@@ -1,4 +1,4 @@
-"""Shared utility functions"""
+"""Shared utility functions."""
 
 import argparse
 import collections
@@ -48,7 +48,7 @@ _T = TypeVar('_T')
 
 
 def is_quoted(arg: str) -> bool:
-    """Checks if a string is quoted
+    """Checks if a string is quoted.
 
     :param arg: the string being checked for quotes
     :return: True if a string is quoted
@@ -57,7 +57,7 @@ def is_quoted(arg: str) -> bool:
 
 
 def quote_string(arg: str) -> str:
-    """Quote a string"""
+    """Quote a string."""
     if '"' in arg:
         quote = "'"
     else:
@@ -67,7 +67,7 @@ def quote_string(arg: str) -> str:
 
 
 def quote_string_if_needed(arg: str) -> str:
-    """Quote a string if it contains spaces and isn't already quoted"""
+    """Quote a string if it contains spaces and isn't already quoted."""
     if is_quoted(arg) or ' ' not in arg:
         return arg
 
@@ -109,7 +109,7 @@ def to_bool(val: Any) -> bool:
 
 
 class Settable:
-    """Used to configure an attribute to be settable via the set command in the CLI"""
+    """Used to configure an attribute to be settable via the set command in the CLI."""
 
     def __init__(
         self,
@@ -124,7 +124,7 @@ class Settable:
         choices_provider: Optional[ChoicesProviderFunc] = None,
         completer: Optional[CompleterFunc] = None,
     ) -> None:
-        """Settable Initializer
+        """Settable Initializer.
 
         :param name: name of the instance attribute being made settable
         :param val_type: callable used to cast the string value from the command line into its proper type and
@@ -153,7 +153,7 @@ class Settable:
         if val_type is bool:
 
             def get_bool_choices(_) -> list[str]:  # type: ignore[no-untyped-def]
-                """Used to tab complete lowercase boolean values"""
+                """Used to tab complete lowercase boolean values."""
                 return ['true', 'false']
 
             val_type = to_bool
@@ -262,7 +262,7 @@ def alphabetical_sort(list_to_sort: Iterable[str]) -> list[str]:
 def try_int_or_force_to_lower_case(input_str: str) -> Union[int, str]:
     """Tries to convert the passed-in string to an integer. If that fails, it converts it to lower case using norm_fold.
     :param input_str: string to convert
-    :return: the string as an integer or a lower case version of the string
+    :return: the string as an integer or a lower case version of the string.
     """
     try:
         return int(input_str)
@@ -296,7 +296,7 @@ def natural_sort(list_to_sort: Iterable[str]) -> list[str]:
 
 
 def quote_specific_tokens(tokens: list[str], tokens_to_quote: list[str]) -> None:
-    """Quote specific tokens in a list
+    """Quote specific tokens in a list.
 
     :param tokens: token list being edited
     :param tokens_to_quote: the tokens, which if present in tokens, to quote
@@ -307,7 +307,7 @@ def quote_specific_tokens(tokens: list[str], tokens_to_quote: list[str]) -> None
 
 
 def unquote_specific_tokens(tokens: list[str], tokens_to_unquote: list[str]) -> None:
-    """Unquote specific tokens in a list
+    """Unquote specific tokens in a list.
 
     :param tokens: token list being edited
     :param tokens_to_unquote: the tokens, which if present in tokens, to unquote
@@ -320,7 +320,7 @@ def unquote_specific_tokens(tokens: list[str], tokens_to_unquote: list[str]) -> 
 
 def expand_user(token: str) -> str:
     """Wrap os.expanduser() to support expanding ~ in quoted strings
-    :param token: the string to expand
+    :param token: the string to expand.
     """
     if token:
         if is_quoted(token):
@@ -340,7 +340,7 @@ def expand_user(token: str) -> str:
 
 def expand_user_in_tokens(tokens: list[str]) -> None:
     """Call expand_user() on all tokens in a list of strings
-    :param tokens: tokens to expand
+    :param tokens: tokens to expand.
     """
     for index, _ in enumerate(tokens):
         tokens[index] = expand_user(tokens[index])
@@ -349,7 +349,7 @@ def expand_user_in_tokens(tokens: list[str]) -> None:
 def find_editor() -> Optional[str]:
     """Used to set cmd2.Cmd.DEFAULT_EDITOR. If EDITOR env variable is set, that will be used.
     Otherwise the function will look for a known editor in directories specified by PATH env variable.
-    :return: Default editor or None
+    :return: Default editor or None.
     """
     editor = os.environ.get('EDITOR')
     if not editor:
@@ -409,7 +409,7 @@ def files_from_glob_patterns(patterns: list[str], access: int = os.F_OK) -> list
 
 
 def get_exes_in_path(starts_with: str) -> list[str]:
-    """Returns names of executables in a user's path
+    """Returns names of executables in a user's path.
 
     :param starts_with: what the exes should start with. leave blank for all exes in path.
     :return: a list of matching exe names
@@ -454,7 +454,7 @@ class StdSim:
         encoding: str = 'utf-8',
         errors: str = 'replace',
     ) -> None:
-        """StdSim Initializer
+        """StdSim Initializer.
 
         :param inner_stream: the wrapped stream. Should be a TextIO or StdSim instance.
         :param echo: if True, then all input will be echoed to inner_stream
@@ -469,7 +469,7 @@ class StdSim:
         self.buffer = ByteBuf(self)
 
     def write(self, s: str) -> None:
-        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream
+        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream.
 
         :param s: String to write to the stream
         """
@@ -482,15 +482,15 @@ class StdSim:
             self.inner_stream.write(s)
 
     def getvalue(self) -> str:
-        """Get the internal contents as a str"""
+        """Get the internal contents as a str."""
         return self.buffer.byte_buf.decode(encoding=self.encoding, errors=self.errors)
 
     def getbytes(self) -> bytes:
-        """Get the internal contents as bytes"""
+        """Get the internal contents as bytes."""
         return bytes(self.buffer.byte_buf)
 
     def read(self, size: Optional[int] = -1) -> str:
-        """Read from the internal contents as a str and then clear them out
+        """Read from the internal contents as a str and then clear them out.
 
         :param size: Number of bytes to read from the stream
         """
@@ -504,13 +504,13 @@ class StdSim:
         return result
 
     def readbytes(self) -> bytes:
-        """Read from the internal contents as bytes and then clear them out"""
+        """Read from the internal contents as bytes and then clear them out."""
         result = self.getbytes()
         self.clear()
         return result
 
     def clear(self) -> None:
-        """Clear the internal contents"""
+        """Clear the internal contents."""
         self.buffer.byte_buf.clear()
 
     def isatty(self) -> bool:
@@ -536,7 +536,7 @@ class StdSim:
 
 
 class ByteBuf:
-    """Used by StdSim to write binary data and stores the actual bytes written"""
+    """Used by StdSim to write binary data and stores the actual bytes written."""
 
     # Used to know when to flush the StdSim
     NEWLINES = [b'\n', b'\r']
@@ -572,7 +572,7 @@ class ProcReader:
         """ProcReader initializer
         :param proc: the Popen process being read from
         :param stdout: the stream to write captured stdout
-        :param stderr: the stream to write captured stderr
+        :param stderr: the stream to write captured stderr.
         """
         self._proc = proc
         self._stdout = stdout
@@ -589,7 +589,7 @@ class ProcReader:
             self._err_thread.start()
 
     def send_sigint(self) -> None:
-        """Send a SIGINT to the process similar to if <Ctrl>+C were pressed"""
+        """Send a SIGINT to the process similar to if <Ctrl>+C were pressed."""
         import signal
 
         if sys.platform.startswith('win'):
@@ -606,11 +606,11 @@ class ProcReader:
                 return
 
     def terminate(self) -> None:
-        """Terminate the process"""
+        """Terminate the process."""
         self._proc.terminate()
 
     def wait(self) -> None:
-        """Wait for the process to finish"""
+        """Wait for the process to finish."""
         if self._out_thread.is_alive():
             self._out_thread.join()
         if self._err_thread.is_alive():
@@ -650,7 +650,7 @@ class ProcReader:
     def _write_bytes(stream: Union[StdSim, TextIO], to_write: Union[bytes, str]) -> None:
         """Write bytes to a stream
         :param stream: the stream being written to
-        :param to_write: the bytes being written
+        :param to_write: the bytes being written.
         """
         if isinstance(to_write, str):
             to_write = to_write.encode()
@@ -688,7 +688,7 @@ class ContextFlag:
 
 
 class RedirectionSavedState:
-    """Created by each command to store information required to restore state after redirection"""
+    """Created by each command to store information required to restore state after redirection."""
 
     def __init__(
         self,
@@ -701,7 +701,7 @@ class RedirectionSavedState:
         :param self_stdout: saved value of Cmd.stdout
         :param sys_stdout: saved value of sys.stdout
         :param pipe_proc_reader: saved value of Cmd._cur_pipe_proc_reader
-        :param saved_redirecting: saved value of Cmd._redirecting
+        :param saved_redirecting: saved value of Cmd._redirecting.
         """
         # Tells if command is redirecting
         self.redirecting = False
@@ -731,7 +731,7 @@ def _remove_overridden_styles(styles_to_parse: list[str]) -> list[str]:
     )
 
     class StyleState:
-        """Keeps track of what text styles are enabled"""
+        """Keeps track of what text styles are enabled."""
 
         def __init__(self) -> None:
             # Contains styles still in effect, keyed by their index in styles_to_parse
@@ -796,7 +796,7 @@ def _remove_overridden_styles(styles_to_parse: list[str]) -> list[str]:
 
 
 class TextAlignment(Enum):
-    """Horizontal text alignment"""
+    """Horizontal text alignment."""
 
     LEFT = 1
     CENTER = 2
@@ -1080,7 +1080,7 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
 
 
 def get_styles_dict(text: str) -> dict[int, str]:
-    """Return an OrderedDict containing all ANSI style sequences found in a string
+    """Return an OrderedDict containing all ANSI style sequences found in a string.
 
     The structure of the dictionary is:
         key: index where sequences begins
@@ -1164,7 +1164,7 @@ def get_defining_class(meth: Callable[..., Any]) -> Optional[type[Any]]:
 
 
 class CompletionMode(Enum):
-    """Enum for what type of tab completion to perform in cmd2.Cmd.read_input()"""
+    """Enum for what type of tab completion to perform in cmd2.Cmd.read_input()."""
 
     # Tab completion will be disabled during read_input() call
     # Use of custom up-arrow history supported
@@ -1182,10 +1182,10 @@ class CompletionMode(Enum):
 
 
 class CustomCompletionSettings:
-    """Used by cmd2.Cmd.complete() to tab complete strings other than command arguments"""
+    """Used by cmd2.Cmd.complete() to tab complete strings other than command arguments."""
 
     def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False) -> None:
-        """Initializer
+        """Initializer.
 
         :param parser: arg parser defining format of string being tab completed
         :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
@@ -1199,7 +1199,7 @@ class CustomCompletionSettings:
 
 
 def strip_doc_annotations(doc: str) -> str:
-    """Strip annotations from a docstring leaving only the text description
+    """Strip annotations from a docstring leaving only the text description.
 
     :param doc: documentation string
     """
@@ -1235,7 +1235,7 @@ MIN_SIMIL_TO_CONSIDER = 0.7
 def suggest_similar(
     requested_command: str, options: Iterable[str], similarity_function_to_use: Optional[Callable[[str, str], float]] = None
 ) -> Optional[str]:
-    """Given a requested command and an iterable of possible options returns the most similar (if any is similar)
+    """Given a requested command and an iterable of possible options returns the most similar (if any is similar).
 
     :param requested_command: The command entered by the user
     :param options: The list of available commands to search for the most similar

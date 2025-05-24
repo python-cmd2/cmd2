@@ -1,4 +1,4 @@
-"""Supports the definition of commands in separate classes to be composed into cmd2.Cmd"""
+"""Supports the definition of commands in separate classes to be composed into cmd2.Cmd."""
 
 from collections.abc import Callable, Mapping
 from typing import (
@@ -150,7 +150,7 @@ class CommandSet:
         return self._settables
 
     def add_settable(self, settable: Settable) -> None:
-        """Convenience method to add a settable parameter to the CommandSet
+        """Convenience method to add a settable parameter to the CommandSet.
 
         :param settable: Settable object being added
         """
@@ -165,7 +165,7 @@ class CommandSet:
         self._settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
-        """Convenience method for removing a settable parameter from the CommandSet
+        """Convenience method for removing a settable parameter from the CommandSet.
 
         :param name: name of the settable being removed
         :raises KeyError: if the Settable matches this name

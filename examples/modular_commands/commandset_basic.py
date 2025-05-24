@@ -1,4 +1,4 @@
-"""A simple example demonstrating a loadable command set"""
+"""A simple example demonstrating a loadable command set."""
 
 from cmd2 import (
     CommandSet,
@@ -28,12 +28,12 @@ class BasicCompletionCommandSet(CommandSet):
         """Tab completes arguments based on a preceding flag using flag_based_complete
         -f, --food [completes food items]
         -s, --sport [completes sports]
-        -p, --path [completes local file system paths]
+        -p, --path [completes local file system paths].
         """
         self._cmd.poutput(f"Args: {statement.args}")
 
     def complete_flag_based(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
-        """Completion function for do_flag_based"""
+        """Completion function for do_flag_based."""
         flag_dict = {
             # Tab complete food items after -f and --food flags in command line
             '-f': self.food_item_strs,
@@ -49,11 +49,11 @@ class BasicCompletionCommandSet(CommandSet):
         return self._cmd.flag_based_complete(text, line, begidx, endidx, flag_dict=flag_dict)
 
     def do_index_based(self, statement: Statement) -> None:
-        """Tab completes first 3 arguments using index_based_complete"""
+        """Tab completes first 3 arguments using index_based_complete."""
         self._cmd.poutput(f"Args: {statement.args}")
 
     def complete_index_based(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
-        """Completion function for do_index_based"""
+        """Completion function for do_index_based."""
         index_dict = {
             1: self.food_item_strs,  # Tab complete food items at index 1 in command line
             2: self.sport_item_strs,  # Tab complete sport items at index 2 in command line
@@ -63,14 +63,14 @@ class BasicCompletionCommandSet(CommandSet):
         return self._cmd.index_based_complete(text, line, begidx, endidx, index_dict=index_dict)
 
     def do_delimiter_complete(self, statement: Statement) -> None:
-        """Tab completes files from a list using delimiter_complete"""
+        """Tab completes files from a list using delimiter_complete."""
         self._cmd.poutput(f"Args: {statement.args}")
 
     def complete_delimiter_complete(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return self._cmd.delimiter_complete(text, line, begidx, endidx, match_against=self.file_strs, delimiter='/')
 
     def do_raise_error(self, statement: Statement) -> None:
-        """Demonstrates effect of raising CompletionError"""
+        """Demonstrates effect of raising CompletionError."""
         self._cmd.poutput(f"Args: {statement.args}")
 
     def complete_raise_error(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:

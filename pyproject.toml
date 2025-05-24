@@ -263,6 +263,7 @@ per-file-ignores."cmd2/argparse_custom.py" = [
 per-file-ignores."examples/*.py" = [
     "INP001",  # Module is part of an implicit namespace
     "PLW2901", # loop variable overwritten inside loop
+    "S",       # Ignore all Security rules in examples folder
 ]
 
 per-file-ignores."examples/override_parser.py" = [
@@ -279,10 +280,13 @@ per-file-ignores."examples/unicode_commands.py" = [
 
 per-file-ignores."plugins/*.py" = [
     "INP001", # Module is part of an implicit namespace
+    "S",      # Ignore all Security rules in test folders
 ]
 
 per-file-ignores."tests/*.py" = [
+    "D",    # Ignore all pydocstyle rules in test folders
     "E501", # Line too long
+    "S",    # Ignore all Security rules in test folders
 ]
 
 per-file-ignores."tests/test_argparse.py" = [
@@ -292,6 +296,11 @@ per-file-ignores."tests/test_argparse.py" = [
 per-file-ignores."tests/pyscript/*.py" = [
     "F821",   # Undefined name `app`
     "INP001", # Module is part of an implicit namespace
+]
+
+per-file-ignores."tests_isolated/*.py" = [
+    "D", # Ignore all pydocstyle rules in test folders
+    "S", # Ignore all Security rules in test folders
 ]
 
 per-file-ignores."tests_isolated/test_commandset/test_commandset.py" = [

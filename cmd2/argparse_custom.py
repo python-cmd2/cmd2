@@ -256,7 +256,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def generate_range_error(range_min: int, range_max: float) -> str:
-    """Generate an error message when the the number of arguments provided is not within the expected range"""
+    """Generate an error message when the the number of arguments provided is not within the expected range."""
     err_str = "expected "
 
     if range_max == constants.INFINITY:
@@ -275,7 +275,7 @@ def generate_range_error(range_min: int, range_max: float) -> str:
 
 
 class CompletionItem(str):  # noqa: SLOT000
-    """Completion item with descriptive text attached
+    """Completion item with descriptive text attached.
 
     See header of this file for more information
     """
@@ -284,7 +284,7 @@ class CompletionItem(str):  # noqa: SLOT000
         return super().__new__(cls, value)
 
     def __init__(self, value: object, description: str = '', *args: Any) -> None:
-        """CompletionItem Initializer
+        """CompletionItem Initializer.
 
         :param value: the value being tab completed
         :param description: description text to display
@@ -299,7 +299,7 @@ class CompletionItem(str):  # noqa: SLOT000
 
     @property
     def orig_value(self) -> Any:
-        """Read-only property for _orig_value"""
+        """Read-only property for _orig_value."""
         return self._orig_value
 
 
@@ -310,7 +310,7 @@ class CompletionItem(str):  # noqa: SLOT000
 
 @runtime_checkable
 class ChoicesProviderFuncBase(Protocol):
-    """Function that returns a list of choices in support of tab completion"""
+    """Function that returns a list of choices in support of tab completion."""
 
     def __call__(self) -> list[str]: ...  # pragma: no cover
 
@@ -327,7 +327,7 @@ ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithToke
 
 @runtime_checkable
 class CompleterFuncBase(Protocol):
-    """Function to support tab completion with the provided state of the user prompt"""
+    """Function to support tab completion with the provided state of the user prompt."""
 
     def __call__(
         self,
@@ -371,7 +371,7 @@ class ChoicesCallable:
         """Initializer
         :param is_completer: True if to_call is a tab completion routine which expects
                              the args: text, line, begidx, endidx
-        :param to_call: the callable object that will be called to provide choices for the argument
+        :param to_call: the callable object that will be called to provide choices for the argument.
         """
         self.is_completer = is_completer
         if is_completer:
@@ -695,7 +695,7 @@ def _add_argument_wrapper(
     descriptive_header: Optional[str] = None,
     **kwargs: Any,
 ) -> argparse.Action:
-    """Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
+    """Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2.
 
     # Args from original function
     :param self: instance of the _ActionsContainer being added to
@@ -989,7 +989,7 @@ setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_pa
 
 
 class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
-    """Custom help formatter to configure ordering of help text"""
+    """Custom help formatter to configure ordering of help text."""
 
     def _format_usage(
         self,
@@ -1138,7 +1138,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         action: argparse.Action,
         default_metavar: Union[str, tuple[str, ...]],
     ) -> Union[str, tuple[str, ...]]:
-        """Custom method to determine what to use as the metavar value of an action"""
+        """Custom method to determine what to use as the metavar value of an action."""
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
@@ -1165,7 +1165,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         return format_tuple
 
     def _format_args(self, action: argparse.Action, default_metavar: Union[str, tuple[str, ...]]) -> str:
-        """Customized to handle ranged nargs and make other output less verbose"""
+        """Customized to handle ranged nargs and make other output less verbose."""
         metavar = self._determine_metavar(action, default_metavar)
         metavar_formatter = self._metavar_formatter(action, default_metavar)
 
@@ -1193,7 +1193,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
 
 class Cmd2ArgumentParser(argparse.ArgumentParser):
-    """Custom ArgumentParser class that improves error and help output"""
+    """Custom ArgumentParser class that improves error and help output."""
 
     def __init__(
         self,
@@ -1215,7 +1215,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         *,
         ap_completer_type: Optional[type['ArgparseCompleter']] = None,
     ) -> None:
-        """# Custom parameter added by cmd2
+        """# Custom parameter added by cmd2.
 
         :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom tab completion
                                   behavior on this parser. If this is None or not present, then cmd2 will use
@@ -1272,7 +1272,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         return super().add_subparsers(**kwargs)
 
     def error(self, message: str) -> NoReturn:
-        """Custom override that applies custom formatting to the error message"""
+        """Custom override that applies custom formatting to the error message."""
         lines = message.split('\n')
         linum = 0
         formatted_message = ''
@@ -1288,7 +1288,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.exit(2, f'{formatted_message}\n\n')
 
     def format_help(self) -> str:
-        """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
+        """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters."""
         formatter = self._get_formatter()
 
         # usage
@@ -1359,11 +1359,11 @@ class Cmd2AttributeWrapper:
         self.__attribute = attribute
 
     def get(self) -> Any:
-        """Get the value of the attribute"""
+        """Get the value of the attribute."""
         return self.__attribute
 
     def set(self, new_val: Any) -> None:
-        """Set the value of the attribute"""
+        """Set the value of the attribute."""
         self.__attribute = new_val
 
 

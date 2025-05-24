@@ -11,7 +11,7 @@ ASTERISKS = "********************************************************"
 
 
 def get_sub_commands(parser: argparse.ArgumentParser) -> list[str]:
-    """Get a list of subcommands for an ArgumentParser"""
+    """Get a list of subcommands for an ArgumentParser."""
     sub_cmds = []
 
     # Check if this is parser has subcommands
@@ -34,7 +34,7 @@ def add_help_to_file(item: str, outfile: TextIO, is_command: bool) -> None:
     """Write help text for commands and topics to the output file
     :param item: what is having its help text saved
     :param outfile: file being written to
-    :param is_command: tells if the item is a command and not just a help topic
+    :param is_command: tells if the item is a command and not just a help topic.
     """
     if is_command:
         label = "COMMAND"
@@ -49,7 +49,7 @@ def add_help_to_file(item: str, outfile: TextIO, is_command: bool) -> None:
 
 
 def main() -> None:
-    """Main function of this script"""
+    """Main function of this script."""
     # Make sure we have access to self
     if 'self' not in globals():
         print("Re-run this script from a cmd2 application where self_in_py is True")

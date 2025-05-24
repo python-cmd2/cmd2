@@ -1,4 +1,4 @@
-"""Decorators for ``cmd2`` commands"""
+"""Decorators for ``cmd2`` commands."""
 
 import argparse
 from collections.abc import Callable, Sequence
@@ -77,7 +77,7 @@ def _parse_positionals(args: tuple[Any, ...]) -> tuple['cmd2.Cmd', Union[Stateme
     """Helper function for cmd2 decorators to inspect the positional arguments until the cmd2.Cmd argument is found
     Assumes that we will find cmd2.Cmd followed by the command statement object or string.
     :arg args: The positional arguments to inspect
-    :return: The cmd2.Cmd reference and the command line statement
+    :return: The cmd2.Cmd reference and the command line statement.
     """
     for pos, arg in enumerate(args):
         from cmd2 import (
@@ -97,7 +97,7 @@ def _parse_positionals(args: tuple[Any, ...]) -> tuple['cmd2.Cmd', Union[Stateme
 
 
 def _arg_swap(args: Union[Sequence[Any]], search_arg: Any, *replace_arg: Any) -> list[Any]:
-    """Helper function for cmd2 decorators to swap the Statement parameter with one or more decorator-specific parameters
+    """Helper function for cmd2 decorators to swap the Statement parameter with one or more decorator-specific parameters.
 
     :param args: The original positional arguments
     :param search_arg: The argument to search for (usually the Statement)
@@ -166,7 +166,7 @@ def with_argument_list(
 
         @functools.wraps(func)
         def cmd_wrapper(*args: Any, **kwargs: Any) -> Optional[bool]:
-            """Command function wrapper which translates command line into an argument list and calls actual command function
+            """Command function wrapper which translates command line into an argument list and calls actual command function.
 
             :param args: All positional arguments to this function.  We're expecting there to be:
                             cmd2_app, statement: Union[Statement, str]
@@ -333,7 +333,7 @@ def with_argparser(
         @functools.wraps(func)
         def cmd_wrapper(*args: Any, **kwargs: dict[str, Any]) -> Optional[bool]:
             """Command function wrapper which translates command line into argparse Namespace and calls actual
-            command function
+            command function.
 
             :param args: All positional arguments to this function.  We're expecting there to be:
                             cmd2_app, statement: Union[Statement, str]

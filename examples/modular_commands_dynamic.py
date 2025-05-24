@@ -43,7 +43,7 @@ class LoadableVegetables(CommandSet):
 
 
 class ExampleApp(cmd2.Cmd):
-    """CommandSets are loaded via the `load` and `unload` commands"""
+    """CommandSets are loaded via the `load` and `unload` commands."""
 
     def __init__(self, *args, **kwargs) -> None:
         # gotta have this or neither the plugin or cmd2 will initialize

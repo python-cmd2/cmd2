@@ -20,7 +20,7 @@ class Pirate(cmd2.Cmd):
     """A piratical example cmd2 application involving looting and drinking."""
 
     def __init__(self) -> None:
-        """Initialize the base class as well as this one"""
+        """Initialize the base class as well as this one."""
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'~': 'sing'})
         super().__init__(multiline_commands=['sing'], terminators=[MULTILINE_TERMINATOR, '...'], shortcuts=shortcuts)

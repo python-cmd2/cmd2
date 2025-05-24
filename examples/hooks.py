@@ -80,7 +80,7 @@ class CmdLineApp(cmd2.Cmd):
         return data
 
     def abbrev_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-        """Accept unique abbreviated commands"""
+        """Accept unique abbreviated commands."""
         func = self.cmd_func(data.statement.command)
         if func is None:
             # check if the entered command might be an abbreviation
@@ -91,7 +91,7 @@ class CmdLineApp(cmd2.Cmd):
         return data
 
     def proof_hook(self, data: cmd2.plugin.PostcommandData) -> cmd2.plugin.PostcommandData:
-        """Update the shell prompt with the new raw statement after postparsing hooks are finished"""
+        """Update the shell prompt with the new raw statement after postparsing hooks are finished."""
         if self.debug:
             self.prompt = f'({data.statement.raw})'
         return data

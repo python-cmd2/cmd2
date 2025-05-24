@@ -1,4 +1,4 @@
-"""Statement parsing classes for cmd2"""
+"""Statement parsing classes for cmd2."""
 
 import re
 import shlex
@@ -36,7 +36,7 @@ def shlex_split(str_to_split: str) -> list[str]:
 class MacroArg:
     """Information used to replace or unescape arguments in a macro value when the macro is resolved
     Normal argument syntax:    {5}
-    Escaped argument syntax:  {{5}}
+    Escaped argument syntax:  {{5}}.
     """
 
     # The starting index of this argument in the macro value
@@ -66,7 +66,7 @@ class MacroArg:
 
 @dataclass(frozen=True)
 class Macro:
-    """Defines a cmd2 macro"""
+    """Defines a cmd2 macro."""
 
     # Name of the macro
     name: str
@@ -174,7 +174,7 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
 
     @property
     def post_command(self) -> str:
-        """A string containing any ending terminator, suffix, and redirection chars"""
+        """A string containing any ending terminator, suffix, and redirection chars."""
         rtn = ''
         if self.terminator:
             rtn += self.terminator
@@ -194,7 +194,7 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
 
     @property
     def expanded_command_line(self) -> str:
-        """Concatenate [command_and_args][cmd2.Statement.command_and_args] and [post_command][cmd2.Statement.post_command]"""
+        """Concatenate [command_and_args][cmd2.Statement.command_and_args] and [post_command][cmd2.Statement.post_command]."""
         return self.command_and_args + self.post_command
 
     @property
@@ -217,12 +217,12 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
         return rtn
 
     def to_dict(self) -> dict[str, Any]:
-        """Utility method to convert this Statement into a dictionary for use in persistent JSON history files"""
+        """Utility method to convert this Statement into a dictionary for use in persistent JSON history files."""
         return self.__dict__.copy()
 
     @staticmethod
     def from_dict(source_dict: dict[str, Any]) -> 'Statement':
-        """Utility method to restore a Statement from a dictionary
+        """Utility method to restore a Statement from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
         :return: Statement object
@@ -621,7 +621,7 @@ class StatementParser:
         return to_parse, to_parse.argv[1:]
 
     def _expand(self, line: str) -> str:
-        """Expand aliases and shortcuts"""
+        """Expand aliases and shortcuts."""
         # Make a copy of aliases so we can keep track of what aliases have been resolved to avoid an infinite loop
         remaining_aliases = list(self.aliases.keys())
         keep_expanding = bool(remaining_aliases)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """A simple example demonstrating the following:
     1) How arguments and options get parsed and passed to commands
-    2) How to change what syntax gets parsed as a comment and stripped from the arguments
+    2) How to change what syntax gets parsed as a comment and stripped from the arguments.
 
 This is intended to serve as a live demonstration so that developers can
 experiment with and understand how command and argument parsing work.

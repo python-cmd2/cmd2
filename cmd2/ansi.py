@@ -28,18 +28,18 @@ BEL = '\a'
 
 
 class AllowStyle(Enum):
-    """Values for ``cmd2.ansi.allow_style``"""
+    """Values for ``cmd2.ansi.allow_style``."""
 
     ALWAYS = 'Always'  # Always output ANSI style sequences
     NEVER = 'Never'  # Remove ANSI style sequences from all output
     TERMINAL = 'Terminal'  # Remove ANSI style sequences if the output is not going to the terminal
 
     def __str__(self) -> str:
-        """Return value instead of enum name for printing in cmd2's set command"""
+        """Return value instead of enum name for printing in cmd2's set command."""
         return str(self.value)
 
     def __repr__(self) -> str:
-        """Return quoted value instead of enum description for printing in cmd2's set command"""
+        """Return quoted value instead of enum description for printing in cmd2's set command."""
         return repr(self.value)
 
 
@@ -124,7 +124,7 @@ def widest_line(text: str) -> int:
 
 
 def style_aware_write(fileobj: IO[str], msg: str) -> None:
-    """Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting
+    """Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting.
 
     :param fileobj: the file object being written to
     :param msg: the string being written
@@ -183,63 +183,63 @@ def clear_line(clear_type: int = 2) -> str:
 # Base classes which are not intended to be used directly
 ####################################################################################
 class AnsiSequence:
-    """Base class to create ANSI sequence strings"""
+    """Base class to create ANSI sequence strings."""
 
     def __add__(self, other: Any) -> str:
         """Support building an ANSI sequence string when self is the left operand
-        e.g. Fg.LIGHT_MAGENTA + "hello"
+        e.g. Fg.LIGHT_MAGENTA + "hello".
         """
         return str(self) + str(other)
 
     def __radd__(self, other: Any) -> str:
         """Support building an ANSI sequence string when self is the right operand
-        e.g. "hello" + Fg.RESET
+        e.g. "hello" + Fg.RESET.
         """
         return str(other) + str(self)
 
 
 class FgColor(AnsiSequence):
-    """Base class for ANSI Sequences which set foreground text color"""
+    """Base class for ANSI Sequences which set foreground text color."""
 
 
 class BgColor(AnsiSequence):
-    """Base class for ANSI Sequences which set background text color"""
+    """Base class for ANSI Sequences which set background text color."""
 
 
 ####################################################################################
 # Implementations intended for direct use
 ####################################################################################
 class Cursor:
-    """Create ANSI sequences to alter the cursor position"""
+    """Create ANSI sequences to alter the cursor position."""
 
     @staticmethod
     def UP(count: int = 1) -> str:
-        """Move the cursor up a specified amount of lines (Defaults to 1)"""
+        """Move the cursor up a specified amount of lines (Defaults to 1)."""
         return f"{CSI}{count}A"
 
     @staticmethod
     def DOWN(count: int = 1) -> str:
-        """Move the cursor down a specified amount of lines (Defaults to 1)"""
+        """Move the cursor down a specified amount of lines (Defaults to 1)."""
         return f"{CSI}{count}B"
 
     @staticmethod
     def FORWARD(count: int = 1) -> str:
-        """Move the cursor forward a specified amount of lines (Defaults to 1)"""
+        """Move the cursor forward a specified amount of lines (Defaults to 1)."""
         return f"{CSI}{count}C"
 
     @staticmethod
     def BACK(count: int = 1) -> str:
-        """Move the cursor back a specified amount of lines (Defaults to 1)"""
+        """Move the cursor back a specified amount of lines (Defaults to 1)."""
         return f"{CSI}{count}D"
 
     @staticmethod
     def SET_POS(x: int, y: int) -> str:
-        """Set the cursor position to coordinates which are 1-based"""
+        """Set the cursor position to coordinates which are 1-based."""
         return f"{CSI}{y};{x}H"
 
 
 class TextStyle(AnsiSequence, Enum):
-    """Create text style ANSI sequences"""
+    """Create text style ANSI sequences."""
 
     # Resets all styles and colors of text
     RESET_ALL = 0
@@ -264,7 +264,7 @@ class TextStyle(AnsiSequence, Enum):
     def __str__(self) -> str:
         """Return ANSI text style sequence instead of enum name
         This is helpful when using a TextStyle in an f-string or format() call
-        e.g. my_str = f"{TextStyle.UNDERLINE_ENABLE}hello{TextStyle.UNDERLINE_DISABLE}"
+        e.g. my_str = f"{TextStyle.UNDERLINE_ENABLE}hello{TextStyle.UNDERLINE_DISABLE}".
         """
         return f"{CSI}{self.value}m"
 
@@ -297,7 +297,7 @@ class Fg(FgColor, Enum):
     def __str__(self) -> str:
         """Return ANSI color sequence instead of enum name
         This is helpful when using an Fg in an f-string or format() call
-        e.g. my_str = f"{Fg.BLUE}hello{Fg.RESET}"
+        e.g. my_str = f"{Fg.BLUE}hello{Fg.RESET}".
         """
         return f"{CSI}{self.value}m"
 
@@ -330,7 +330,7 @@ class Bg(BgColor, Enum):
     def __str__(self) -> str:
         """Return ANSI color sequence instead of enum name
         This is helpful when using a Bg in an f-string or format() call
-        e.g. my_str = f"{Bg.BLACK}hello{Bg.RESET}"
+        e.g. my_str = f"{Bg.BLACK}hello{Bg.RESET}".
         """
         return f"{CSI}{self.value}m"
 
@@ -601,7 +601,7 @@ class EightBitFg(FgColor, Enum):
     def __str__(self) -> str:
         """Return ANSI color sequence instead of enum name
         This is helpful when using an EightBitFg in an f-string or format() call
-        e.g. my_str = f"{EightBitFg.SLATE_BLUE_1}hello{Fg.RESET}"
+        e.g. my_str = f"{EightBitFg.SLATE_BLUE_1}hello{Fg.RESET}".
         """
         return f"{CSI}38;5;{self.value}m"
 
@@ -872,7 +872,7 @@ class EightBitBg(BgColor, Enum):
     def __str__(self) -> str:
         """Return ANSI color sequence instead of enum name
         This is helpful when using an EightBitBg in an f-string or format() call
-        e.g. my_str = f"{EightBitBg.KHAKI_3}hello{Bg.RESET}"
+        e.g. my_str = f"{EightBitBg.KHAKI_3}hello{Bg.RESET}".
         """
         return f"{CSI}48;5;{self.value}m"
 
@@ -883,7 +883,7 @@ class RgbFg(FgColor):
     """
 
     def __init__(self, r: int, g: int, b: int) -> None:
-        """RgbFg initializer
+        """RgbFg initializer.
 
         :param r: integer from 0-255 for the red component of the color
         :param g: integer from 0-255 for the green component of the color
@@ -898,7 +898,7 @@ class RgbFg(FgColor):
     def __str__(self) -> str:
         """Return ANSI color sequence instead of enum name
         This is helpful when using an RgbFg in an f-string or format() call
-        e.g. my_str = f"{RgbFg(0, 55, 100)}hello{Fg.RESET}"
+        e.g. my_str = f"{RgbFg(0, 55, 100)}hello{Fg.RESET}".
         """
         return self._sequence
 
@@ -909,7 +909,7 @@ class RgbBg(BgColor):
     """
 
     def __init__(self, r: int, g: int, b: int) -> None:
-        """RgbBg initializer
+        """RgbBg initializer.
 
         :param r: integer from 0-255 for the red component of the color
         :param g: integer from 0-255 for the green component of the color
@@ -924,7 +924,7 @@ class RgbBg(BgColor):
     def __str__(self) -> str:
         """Return ANSI color sequence instead of enum name
         This is helpful when using an RgbBg in an f-string or format() call
-        e.g. my_str = f"{RgbBg(100, 255, 27)}hello{Bg.RESET}"
+        e.g. my_str = f"{RgbBg(100, 255, 27)}hello{Bg.RESET}".
         """
         return self._sequence
 

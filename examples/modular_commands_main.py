@@ -31,7 +31,7 @@ class WithCommandSets(Cmd):
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
     def choices_provider(self) -> list[str]:
-        """A choices provider is useful when the choice list is based on instance data of your application"""
+        """A choices provider is useful when the choice list is based on instance data of your application."""
         return self.sport_item_strs
 
     # Parser for example command
@@ -55,7 +55,7 @@ class WithCommandSets(Cmd):
 
     @with_argparser(example_parser)
     def do_example(self, _: argparse.Namespace) -> None:
-        """The example command"""
+        """The example command."""
         self.poutput("I do nothing")
 
 

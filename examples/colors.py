@@ -78,7 +78,7 @@ class CmdLineApp(cmd2.Cmd):
             self.poutput(output_str)
 
     def do_timetravel(self, _) -> None:
-        """A command which always generates an error message, to demonstrate custom error colors"""
+        """A command which always generates an error message, to demonstrate custom error colors."""
         self.perror('Mr. Fusion failed to start. Could not energize flux capacitor.')
 
 

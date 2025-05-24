@@ -9,7 +9,7 @@
  7) Allowing access to your application in py and ipy
  8) Displaying an intro banner upon starting your application
  9) Using a custom prompt
-10) How to make custom attributes settable at runtime
+10) How to make custom attributes settable at runtime.
 """
 
 import cmd2
@@ -57,12 +57,12 @@ class BasicApp(cmd2.Cmd):
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_intro(self, _) -> None:
-        """Display the intro banner"""
+        """Display the intro banner."""
         self.poutput(self.intro)
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_echo(self, arg) -> None:
-        """Example of a multiline command"""
+        """Example of a multiline command."""
         fg_color = Fg[self.foreground_color.upper()]
         self.poutput(style(arg, fg=fg_color))
 
