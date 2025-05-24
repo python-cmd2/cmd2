@@ -1,4 +1,3 @@
-#
 """Statement parsing classes for cmd2"""
 
 import re

@@ -4599,7 +4599,7 @@ class Cmd(cmd.Cmd):
 
             # Allow users to install ipython from a cmd2 prompt when needed and still have ipy command work
             try:
-                start_ipython  # noqa F823
+                start_ipython  # noqa: F823
             except NameError:
                 from IPython import start_ipython  # type: ignore[import]
 
@@ -4636,7 +4636,7 @@ class Cmd(cmd.Cmd):
                 local_vars['self'] = self
 
             # Configure IPython
-            config = TraitletsLoader.Config()  # type: ignore
+            config = TraitletsLoader.Config()
             config.InteractiveShell.banner2 = (
                 'Entering an IPython shell. Type exit, quit, or Ctrl-D to exit.\n'
                 f'Run CLI commands with: {self.py_bridge_name}("command ...")\n'

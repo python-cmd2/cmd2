@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa F821
 """
 A cmd2 script that saves the help text for every command, subcommand, and topic to a file.
 This is meant to be run within a cmd2 session using run_pyscript.
@@ -29,9 +27,7 @@ def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
                     sub_cmds.append(sub_cmd)
 
                     # Look for nested subcommands
-                    for nested_sub_cmd in get_sub_commands(sub_cmd_parser):
-                        sub_cmds.append('{} {}'.format(sub_cmd, nested_sub_cmd))
-
+                    sub_cmds.extend(f'{sub_cmd} {nested_sub_cmd}' for nested_sub_cmd in get_sub_commands(sub_cmd_parser))
                 break
 
     sub_cmds.sort()

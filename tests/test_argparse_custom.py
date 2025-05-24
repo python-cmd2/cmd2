@@ -1,4 +1,3 @@
-# flake8: noqa E302
 """
 Unit/functional testing for argparse customizations in cmd2
 """

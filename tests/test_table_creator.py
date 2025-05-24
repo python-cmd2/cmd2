@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa E501
 """
 Unit testing for cmd2/table_creator.py module
 """

@@ -1,4 +1,3 @@
-#
 """This module contains constants used throughout ``cmd2``."""
 
 # Unless documented in https://cmd2.readthedocs.io/en/latest/api/index.html

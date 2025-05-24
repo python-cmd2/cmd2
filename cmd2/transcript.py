@@ -1,4 +1,3 @@
-#
 """Machinery for running and validating transcripts.
 
 If the user wants to run a transcript (see docs/transcript.rst),

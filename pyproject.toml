@@ -193,7 +193,7 @@ select = [
     "NPY",  # NumPy specific rules
     "PD",   # pandas-vet (Pandas specific rules)
     "PERF", # Perflint (warn about performance issues)
-    # "PGH", # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
+    # "PGH",  # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
     # "PIE", # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
     "PLC", # Pylint Conventions
     "PLE", # Pylint Errors
@@ -270,16 +270,13 @@ per-file-ignores."examples/unicode_commands.py" = [
     "PLC2401", # non-ASCII characters in function names
 ]
 
-per-file-ignores."plugins/ext_test/*.py" = [
-    "INP001", # Module is part of an implicit namespace
-]
-
-per-file-ignores."plugins/template/*.py" = [
+per-file-ignores."plugins/*.py" = [
     "INP001", # Module is part of an implicit namespace
 ]
 
 per-file-ignores."tests/pyscript/*.py" = [
-    "F821", # Undefined name `app`
+    "F821",   # Undefined name `app`
+    "INP001", # Module is part of an implicit namespace
 ]
 
 per-file-ignores."tests/pyscript/raises_exception.py" = [

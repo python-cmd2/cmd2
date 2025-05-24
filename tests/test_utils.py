@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa E302
 """
 Unit testing for cmd2/utils.py module.
 """

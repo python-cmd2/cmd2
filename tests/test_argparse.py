@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa E302
 """
 Cmd2 testing for argument parsing
 """

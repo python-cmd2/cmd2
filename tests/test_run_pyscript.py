@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa E302
 """
 Unit/functional testing for run_pytest in cmd2
 """

@@ -1,6 +1,3 @@
-#
-# coding=utf-8
-# flake8: noqa E302
 """Development related tasks to be run with 'invoke'.
 
 Make sure you satisfy the following Python module requirements if you are trying to publish a release to PyPI:
@@ -147,7 +144,7 @@ namespace.add_task(lint)
 
 # ruff formatter
 @invoke.task(pre=[ext_test_tasks.format])
-def format(context):
+def format(context):  # noqa: A001
     """Run formatter"""
     with context.cd(TASK_ROOT_STR):
         context.run("ruff format --check")

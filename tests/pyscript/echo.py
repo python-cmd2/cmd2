@@ -1,4 +1,3 @@
-# flake8: noqa F821
 # Tests echo argument to app()
 app.cmd_echo = False
 

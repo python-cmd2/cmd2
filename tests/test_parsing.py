@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa E302
 """
 Test the parsing logic in parsing.py
 """

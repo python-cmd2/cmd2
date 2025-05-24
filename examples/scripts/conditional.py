@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa F821
 """
 This is a Python script intended to be used with the "python_scripting.py" cmd2 example application.
 

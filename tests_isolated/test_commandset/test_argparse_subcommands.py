@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa E302
 """
 reproduces test_argparse.py except with SubCommands
 """

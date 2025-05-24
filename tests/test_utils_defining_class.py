@@ -1,5 +1,3 @@
-# coding=utf-8
-# flake8: noqa E302
 """
 Unit testing for get_defining_class in cmd2/utils.py module.
 """
