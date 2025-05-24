@@ -828,12 +828,8 @@ orig_argument_parser_get_nargs_pattern = argparse.ArgumentParser._get_nargs_patt
 def _get_nargs_pattern_wrapper(self: argparse.ArgumentParser, action: argparse.Action) -> str:
     # Wrapper around ArgumentParser._get_nargs_pattern behavior to support nargs ranges
     nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
-    if nargs_range is not None:
-        if nargs_range[1] == constants.INFINITY:
-            range_max = ''
-        else:
-            range_max = nargs_range[1]  # type: ignore[assignment]
-
+    if nargs_range:
+        range_max = '' if nargs_range[1] == constants.INFINITY else nargs_range[1]
         nargs_pattern = f'(-*A{{{nargs_range[0]},{range_max}}}-*)'
 
         # if this is an optional action, -- is not allowed
@@ -1265,14 +1261,12 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     def error(self, message: str) -> NoReturn:
         """Custom override that applies custom formatting to the error message."""
         lines = message.split('\n')
-        linum = 0
         formatted_message = ''
-        for line in lines:
+        for linum, line in enumerate(lines):
             if linum == 0:
                 formatted_message = 'Error: ' + line
             else:
                 formatted_message += '\n       ' + line
-            linum += 1
 
         self.print_usage(sys.stderr)
         formatted_message = ansi.style_error(formatted_message)

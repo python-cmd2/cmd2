@@ -19,14 +19,12 @@ class CustomParser(Cmd2ArgumentParser):
     def error(self, message: str) -> None:
         """Custom override that applies custom formatting to the error message."""
         lines = message.split('\n')
-        linum = 0
         formatted_message = ''
-        for line in lines:
+        for linum, line in enumerate(lines):
             if linum == 0:
                 formatted_message = 'Error: ' + line
             else:
                 formatted_message += '\n       ' + line
-            linum += 1
 
         self.print_usage(sys.stderr)
 
