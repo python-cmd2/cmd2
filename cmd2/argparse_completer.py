@@ -123,7 +123,7 @@ class _ArgumentState:
         elif self.action.nargs == argparse.OPTIONAL:
             self.min = 0
             self.max = 1
-        elif self.action.nargs == argparse.ZERO_OR_MORE or self.action.nargs == argparse.REMAINDER:
+        elif self.action.nargs in (argparse.ZERO_OR_MORE, argparse.REMAINDER):
             self.min = 0
             self.max = INFINITY
         elif self.action.nargs == argparse.ONE_OR_MORE:
