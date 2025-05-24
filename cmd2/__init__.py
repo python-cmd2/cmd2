@@ -1,5 +1,6 @@
 """This simply imports certain things for backwards compatibility."""
 
+import argparse
 import importlib.metadata as importlib_metadata
 import sys
 
@@ -8,10 +9,6 @@ try:
 except importlib_metadata.PackageNotFoundError:  # pragma: no cover
     # package is not installed
     pass
-
-# Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER.
-# Do this before loading cmd2.Cmd class so its commands use the custom parser.
-import argparse
 
 from .ansi import (
     Bg,
@@ -32,6 +29,8 @@ from .argparse_custom import (
     set_default_argument_parser_type,
 )
 
+# Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER.
+# Do this before loading cmd2.Cmd class so its commands use the custom parser.
 cmd2_parser_module = getattr(argparse, 'cmd2_parser_module', None)
 if cmd2_parser_module is not None:
     import importlib
