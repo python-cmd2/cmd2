@@ -9,15 +9,15 @@ import cmd2
 class UnicodeApp(cmd2.Cmd):
     """Example cmd2 application with unicode command names."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.intro = 'Welcome the Unicode example app. Note the full Unicode support:  😇 💩'
 
-    def do_𝛑print(self, _):
+    def do_𝛑print(self, _) -> None:
         """This command prints 𝛑 to 5 decimal places."""
         self.poutput(f"𝛑 = {math.pi:.6}")
 
-    def do_你好(self, arg):
+    def do_你好(self, arg) -> None:
         """This command says hello in Chinese (Mandarin)."""
         self.poutput("你好 " + arg)
 

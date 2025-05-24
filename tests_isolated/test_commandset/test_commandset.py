@@ -45,10 +45,10 @@ class CommandSetA(CommandSetBase):
         super().on_unregistered()
         print("in on_unregistered now")
 
-    def do_apple(self, statement: cmd2.Statement):
+    def do_apple(self, statement: cmd2.Statement) -> None:
         self._cmd.poutput('Apple!')
 
-    def do_banana(self, statement: cmd2.Statement):
+    def do_banana(self, statement: cmd2.Statement) -> None:
         """Banana Command"""
         self._cmd.poutput('Banana!!')
 
@@ -56,18 +56,18 @@ class CommandSetA(CommandSetBase):
     cranberry_parser.add_argument('arg1', choices=['lemonade', 'juice', 'sauce'])
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
-    def do_cranberry(self, ns: argparse.Namespace, unknown: list[str]):
+    def do_cranberry(self, ns: argparse.Namespace, unknown: list[str]) -> None:
         self._cmd.poutput(f'Cranberry {ns.arg1}!!')
         if unknown and len(unknown):
             self._cmd.poutput('Unknown: ' + ', '.join(['{}'] * len(unknown)).format(*unknown))
         self._cmd.last_result = {'arg1': ns.arg1, 'unknown': unknown}
 
-    def help_cranberry(self):
+    def help_cranberry(self) -> None:
         self._cmd.stdout.write('This command does diddly squat...\n')
 
     @cmd2.with_argument_list
     @cmd2.with_category('Also Alone')
-    def do_durian(self, args: list[str]):
+    def do_durian(self, args: list[str]) -> None:
         """Durian Command"""
         self._cmd.poutput(f'{len(args)} Arguments: ')
         self._cmd.poutput(', '.join(['{}'] * len(args)).format(*args))
@@ -81,7 +81,7 @@ class CommandSetA(CommandSetBase):
 
     @cmd2.with_category('Alone')
     @cmd2.with_argparser(elderberry_parser)
-    def do_elderberry(self, ns: argparse.Namespace):
+    def do_elderberry(self, ns: argparse.Namespace) -> None:
         self._cmd.poutput(f'Elderberry {ns.arg1}!!')
         self._cmd.last_result = {'arg1': ns.arg1}
 
@@ -107,22 +107,22 @@ class CommandSetA(CommandSetBase):
 
 @cmd2.with_default_category('Command Set B')
 class CommandSetB(CommandSetBase):
-    def __init__(self, arg1):
+    def __init__(self, arg1) -> None:
         super().__init__()
         self._arg1 = arg1
 
-    def do_aardvark(self, statement: cmd2.Statement):
+    def do_aardvark(self, statement: cmd2.Statement) -> None:
         self._cmd.poutput('Aardvark!')
 
-    def do_bat(self, statement: cmd2.Statement):
+    def do_bat(self, statement: cmd2.Statement) -> None:
         """Banana Command"""
         self._cmd.poutput('Bat!!')
 
-    def do_crocodile(self, statement: cmd2.Statement):
+    def do_crocodile(self, statement: cmd2.Statement) -> None:
         self._cmd.poutput('Crocodile!!')
 
 
-def test_autoload_commands(command_sets_app):
+def test_autoload_commands(command_sets_app) -> None:
     # verifies that, when autoload is enabled, CommandSets and registered functions all show up
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_app._build_command_info()
@@ -144,16 +144,16 @@ def test_autoload_commands(command_sets_app):
     assert 'Command Set B' not in cmds_cats
 
 
-def test_command_synonyms():
+def test_command_synonyms() -> None:
     """Test the use of command synonyms in CommandSets"""
 
     class SynonymCommandSet(cmd2.CommandSet):
-        def __init__(self, arg1):
+        def __init__(self, arg1) -> None:
             super().__init__()
             self._arg1 = arg1
 
         @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(description="Native Command"))
-        def do_builtin(self, _):
+        def do_builtin(self, _) -> None:
             pass
 
         # Create a synonym to a command inside of this CommandSet
@@ -190,7 +190,7 @@ def test_command_synonyms():
     assert normalize(alias_parser.format_help())[0] in out
 
 
-def test_custom_construct_commandsets():
+def test_custom_construct_commandsets() -> None:
     command_set_b = CommandSetB('foo')
 
     # Verify that _cmd cannot be accessed until CommandSet is registered.
@@ -232,7 +232,7 @@ def test_custom_construct_commandsets():
     assert command_set_2 not in matches
 
 
-def test_load_commands(command_sets_manual, capsys):
+def test_load_commands(command_sets_manual, capsys) -> None:
     # now install a command set and verify the commands are now present
     cmd_set = CommandSetA()
 
@@ -298,7 +298,7 @@ def test_load_commands(command_sets_manual, capsys):
     assert 'cranberry' in cmds_cats['Fruits']
 
 
-def test_commandset_decorators(command_sets_app):
+def test_commandset_decorators(command_sets_app) -> None:
     result = command_sets_app.app_cmd('cranberry juice extra1 extra2')
     assert result is not None
     assert result.data is not None
@@ -328,7 +328,7 @@ def test_commandset_decorators(command_sets_app):
     assert result.data is None
 
 
-def test_load_commandset_errors(command_sets_manual, capsys):
+def test_load_commandset_errors(command_sets_manual, capsys) -> None:
     cmd_set = CommandSetA()
 
     # create a conflicting command before installing CommandSet to verify rollback behavior
@@ -383,7 +383,7 @@ def test_load_commandset_errors(command_sets_manual, capsys):
 
 
 class LoadableBase(cmd2.CommandSet):
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         super().__init__()
         self._dummy = dummy  # prevents autoload
         self._cut_called = False
@@ -397,7 +397,7 @@ class LoadableBase(cmd2.CommandSet):
         return ns
 
     @cmd2.with_argparser(cut_parser)
-    def do_cut(self, ns: argparse.Namespace):
+    def do_cut(self, ns: argparse.Namespace) -> None:
         """Cut something"""
         handler = ns.cmd2_handler.get()
         if handler is not None:
@@ -413,7 +413,7 @@ class LoadableBase(cmd2.CommandSet):
     stir_subparsers = stir_parser.add_subparsers(title='item', help='what to stir')
 
     @cmd2.with_argparser(stir_parser, ns_provider=namespace_provider)
-    def do_stir(self, ns: argparse.Namespace):
+    def do_stir(self, ns: argparse.Namespace) -> None:
         """Stir something"""
         if not ns.cut_called:
             self._cmd.poutput('Need to cut before stirring')
@@ -433,7 +433,7 @@ class LoadableBase(cmd2.CommandSet):
     stir_pasta_parser.add_subparsers(title='style', help='Stir style')
 
     @cmd2.as_subcommand_to('stir', 'pasta', stir_pasta_parser)
-    def stir_pasta(self, ns: argparse.Namespace):
+    def stir_pasta(self, ns: argparse.Namespace) -> None:
         handler = ns.cmd2_handler.get()
         if handler is not None:
             # Call whatever subcommand function was selected
@@ -443,11 +443,11 @@ class LoadableBase(cmd2.CommandSet):
 
 
 class LoadableBadBase(cmd2.CommandSet):
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         super().__init__()
         self._dummy = dummy  # prevents autoload
 
-    def do_cut(self, ns: argparse.Namespace):
+    def do_cut(self, ns: argparse.Namespace) -> None:
         """Cut something"""
         handler = ns.cmd2_handler.get()
         if handler is not None:
@@ -461,24 +461,24 @@ class LoadableBadBase(cmd2.CommandSet):
 
 @cmd2.with_default_category('Fruits')
 class LoadableFruits(cmd2.CommandSet):
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         super().__init__()
         self._dummy = dummy  # prevents autoload
 
-    def do_apple(self, _: cmd2.Statement):
+    def do_apple(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Apple')
 
     banana_parser = cmd2.Cmd2ArgumentParser()
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
     @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
-    def cut_banana(self, ns: argparse.Namespace):
+    def cut_banana(self, ns: argparse.Namespace) -> None:
         """Cut banana"""
         self._cmd.poutput('cutting banana: ' + ns.direction)
 
 
 class LoadablePastaStir(cmd2.CommandSet):
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         super().__init__()
         self._dummy = dummy  # prevents autoload
 
@@ -486,17 +486,17 @@ class LoadablePastaStir(cmd2.CommandSet):
     stir_pasta_vigor_parser.add_argument('frequency')
 
     @cmd2.as_subcommand_to('stir pasta', 'vigorously', stir_pasta_vigor_parser)
-    def stir_pasta_vigorously(self, ns: argparse.Namespace):
+    def stir_pasta_vigorously(self, ns: argparse.Namespace) -> None:
         self._cmd.poutput('stir the pasta vigorously')
 
 
 @cmd2.with_default_category('Vegetables')
 class LoadableVegetables(cmd2.CommandSet):
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         super().__init__()
         self._dummy = dummy  # prevents autoload
 
-    def do_arugula(self, _: cmd2.Statement):
+    def do_arugula(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Arugula')
 
     def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
@@ -506,11 +506,11 @@ class LoadableVegetables(cmd2.CommandSet):
     bokchoy_parser.add_argument('style', completer=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
-    def cut_bokchoy(self, ns: argparse.Namespace):
+    def cut_bokchoy(self, ns: argparse.Namespace) -> None:
         self._cmd.poutput('Bok Choy: ' + ns.style)
 
 
-def test_subcommands(command_sets_manual):
+def test_subcommands(command_sets_manual) -> None:
     base_cmds = LoadableBase(1)
     badbase_cmds = LoadableBadBase(1)
     fruit_cmds = LoadableFruits(1)
@@ -631,11 +631,11 @@ def test_subcommands(command_sets_manual):
     command_sets_manual.unregister_command_set(base_cmds)
 
 
-def test_commandset_sigint(command_sets_manual):
+def test_commandset_sigint(command_sets_manual) -> None:
     # shows that the command is able to continue execution if the sigint_handler
     # returns True that we've handled interrupting the command.
     class SigintHandledCommandSet(cmd2.CommandSet):
-        def do_foo(self, _):
+        def do_foo(self, _) -> None:
             self._cmd.poutput('in foo')
             self._cmd.sigint_handler(signal.SIGINT, None)
             self._cmd.poutput('end of foo')
@@ -651,7 +651,7 @@ def test_commandset_sigint(command_sets_manual):
 
     # shows that the command is interrupted if we don't report we've handled the sigint
     class SigintUnhandledCommandSet(cmd2.CommandSet):
-        def do_bar(self, _):
+        def do_bar(self, _) -> None:
             self._cmd.poutput('in do bar')
             self._cmd.sigint_handler(signal.SIGINT, None)
             self._cmd.poutput('end of do bar')
@@ -663,7 +663,7 @@ def test_commandset_sigint(command_sets_manual):
     assert 'end of do bar' not in out.stdout
 
 
-def test_nested_subcommands(command_sets_manual):
+def test_nested_subcommands(command_sets_manual) -> None:
     base_cmds = LoadableBase(1)
     pasta_cmds = LoadablePastaStir(1)
 
@@ -678,7 +678,7 @@ def test_nested_subcommands(command_sets_manual):
         command_sets_manual.unregister_command_set(base_cmds)
 
     class BadNestedSubcommands(cmd2.CommandSet):
-        def __init__(self, dummy):
+        def __init__(self, dummy) -> None:
             super().__init__()
             self._dummy = dummy  # prevents autoload
 
@@ -687,7 +687,7 @@ def test_nested_subcommands(command_sets_manual):
 
         # stir sauce doesn't exist anywhere, this should fail
         @cmd2.as_subcommand_to('stir sauce', 'vigorously', stir_pasta_vigor_parser)
-        def stir_pasta_vigorously(self, ns: argparse.Namespace):
+        def stir_pasta_vigorously(self, ns: argparse.Namespace) -> None:
             self._cmd.poutput('stir the pasta vigorously')
 
     with pytest.raises(CommandSetRegistrationError):
@@ -711,14 +711,14 @@ def test_nested_subcommands(command_sets_manual):
 class AppWithSubCommands(cmd2.Cmd):
     """Class for testing usage of `as_subcommand_to` decorator directly in a Cmd2 subclass."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     cut_parser = cmd2.Cmd2ArgumentParser()
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     @cmd2.with_argparser(cut_parser)
-    def do_cut(self, ns: argparse.Namespace):
+    def do_cut(self, ns: argparse.Namespace) -> None:
         """Cut something"""
         handler = ns.cmd2_handler.get()
         if handler is not None:
@@ -733,7 +733,7 @@ class AppWithSubCommands(cmd2.Cmd):
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
     @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
-    def cut_banana(self, ns: argparse.Namespace):
+    def cut_banana(self, ns: argparse.Namespace) -> None:
         """Cut banana"""
         self.poutput('cutting banana: ' + ns.direction)
 
@@ -744,7 +744,7 @@ class AppWithSubCommands(cmd2.Cmd):
     bokchoy_parser.add_argument('style', completer=complete_style_arg)
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
-    def cut_bokchoy(self, _: argparse.Namespace):
+    def cut_bokchoy(self, _: argparse.Namespace) -> None:
         self.poutput('Bok Choy')
 
 
@@ -754,7 +754,7 @@ def static_subcommands_app():
     return app
 
 
-def test_static_subcommands(static_subcommands_app):
+def test_static_subcommands(static_subcommands_app) -> None:
     cmds_cats, cmds_doc, cmds_undoc, help_topics = static_subcommands_app._build_command_info()
     assert 'Fruits' in cmds_cats
 
@@ -788,7 +788,7 @@ class SupportFuncProvider(cmd2.CommandSet):
 
     states = ['alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware']
 
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         """dummy variable prevents this from being autoloaded in other tests"""
         super().__init__()
 
@@ -804,7 +804,7 @@ class SupportFuncUserSubclass1(SupportFuncProvider):
     parser.add_argument('state', type=str, completer=SupportFuncProvider.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_user_sub1(self, ns: argparse.Namespace):
+    def do_user_sub1(self, ns: argparse.Namespace) -> None:
         self._cmd.poutput(f'something {ns.state}')
 
 
@@ -815,14 +815,14 @@ class SupportFuncUserSubclass2(SupportFuncProvider):
     parser.add_argument('state', type=str, completer=SupportFuncProvider.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_user_sub2(self, ns: argparse.Namespace):
+    def do_user_sub2(self, ns: argparse.Namespace) -> None:
         self._cmd.poutput(f'something {ns.state}')
 
 
 class SupportFuncUserUnrelated(cmd2.CommandSet):
     """A CommandSet that isn't related to SupportFuncProvider which uses its support function"""
 
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         """dummy variable prevents this from being autoloaded in other tests"""
         super().__init__()
 
@@ -830,11 +830,11 @@ class SupportFuncUserUnrelated(cmd2.CommandSet):
     parser.add_argument('state', type=str, completer=SupportFuncProvider.complete_states)
 
     @cmd2.with_argparser(parser)
-    def do_user_unrelated(self, ns: argparse.Namespace):
+    def do_user_unrelated(self, ns: argparse.Namespace) -> None:
         self._cmd.poutput(f'something {ns.state}')
 
 
-def test_cross_commandset_completer(command_sets_manual, capsys):
+def test_cross_commandset_completer(command_sets_manual, capsys) -> None:
     global complete_states_expected_self
     # This tests the different ways to locate the matching CommandSet when completing an argparse argument.
     # Exercises the 3 cases in cmd2.Cmd._resolve_func_self() which is called during argparse tab completion.
@@ -967,7 +967,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys):
 
 
 class CommandSetWithPathComplete(cmd2.CommandSet):
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         """dummy variable prevents this from being autoloaded in other tests"""
         super().__init__()
 
@@ -975,11 +975,11 @@ class CommandSetWithPathComplete(cmd2.CommandSet):
     parser.add_argument('path', nargs='+', help='paths', completer=cmd2.Cmd.path_complete)
 
     @cmd2.with_argparser(parser)
-    def do_path(self, app: cmd2.Cmd, args):
+    def do_path(self, app: cmd2.Cmd, args) -> None:
         app.poutput(args.path)
 
 
-def test_path_complete(command_sets_manual):
+def test_path_complete(command_sets_manual) -> None:
     test_set = CommandSetWithPathComplete(1)
 
     command_sets_manual.register_command_set(test_set)
@@ -993,25 +993,25 @@ def test_path_complete(command_sets_manual):
     assert first_match is not None
 
 
-def test_bad_subcommand():
+def test_bad_subcommand() -> None:
     class BadSubcommandApp(cmd2.Cmd):
         """Class for testing usage of `as_subcommand_to` decorator directly in a Cmd2 subclass."""
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
 
         cut_parser = cmd2.Cmd2ArgumentParser()
         cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
         @cmd2.with_argparser(cut_parser)
-        def do_cut(self, ns: argparse.Namespace):
+        def do_cut(self, ns: argparse.Namespace) -> None:
             """Cut something"""
 
         banana_parser = cmd2.Cmd2ArgumentParser()
         banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
         @cmd2.as_subcommand_to('cut', 'bad name', banana_parser, help='This should fail')
-        def cut_banana(self, ns: argparse.Namespace):
+        def cut_banana(self, ns: argparse.Namespace) -> None:
             """Cut banana"""
             self.poutput('cutting banana: ' + ns.direction)
 
@@ -1019,15 +1019,15 @@ def test_bad_subcommand():
         BadSubcommandApp()
 
 
-def test_commandset_settables():
+def test_commandset_settables() -> None:
     # Define an arbitrary class with some attribute
     class Arbitrary:
-        def __init__(self):
+        def __init__(self) -> None:
             self.some_value = 5
 
     # Declare a CommandSet with a settable of some arbitrary property
     class WithSettablesA(CommandSetBase):
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
             self._arbitrary = Arbitrary()
@@ -1046,7 +1046,7 @@ def test_commandset_settables():
 
     # Declare a CommandSet with an empty settable prefix
     class WithSettablesNoPrefix(CommandSetBase):
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
             self._arbitrary = Arbitrary()
@@ -1065,7 +1065,7 @@ def test_commandset_settables():
 
     # Declare a commandset with duplicate settable name
     class WithSettablesB(CommandSetBase):
-        def __init__(self):
+        def __init__(self) -> None:
             super().__init__()
 
             self._arbitrary = Arbitrary()
@@ -1198,7 +1198,7 @@ Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
 
 class NsProviderSet(cmd2.CommandSet):
     # CommandSet which implements a namespace provider
-    def __init__(self, dummy):
+    def __init__(self, dummy) -> None:
         # Use dummy argument so this won't be autoloaded by other tests
         super().__init__()
 
@@ -1221,7 +1221,7 @@ class NsProviderApp(cmd2.Cmd):
         self.last_result = args.self
 
 
-def test_ns_provider():
+def test_ns_provider() -> None:
     """This exercises code in with_argparser() decorator that calls namespace providers"""
     ns_provider_set = NsProviderSet(1)
     app = NsProviderApp(auto_load_commands=False)

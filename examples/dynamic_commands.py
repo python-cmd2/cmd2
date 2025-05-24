@@ -16,7 +16,7 @@ CATEGORY = 'Dynamic Commands'
 class CommandsInLoop(cmd2.Cmd):
     """Example of dynamically adding do_* commands."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Add dynamic commands before calling cmd2.Cmd's init since it validates command names
         for command in COMMAND_LIST:
             # Create command function and add help category to it
@@ -34,11 +34,11 @@ class CommandsInLoop(cmd2.Cmd):
 
         super().__init__(include_ipy=True)
 
-    def send_text(self, args: cmd2.Statement, *, text: str):
+    def send_text(self, args: cmd2.Statement, *, text: str) -> None:
         """Simulate sending text to a server and printing the response."""
         self.poutput(text.capitalize())
 
-    def text_help(self, *, text: str):
+    def text_help(self, *, text: str) -> None:
         """Deal with printing help for the dynamically added commands."""
         self.poutput(f"Simulate sending {text!r} to a server and printing the response")
 

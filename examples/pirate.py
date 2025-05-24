@@ -20,7 +20,7 @@ color_choices = [c.name.lower() for c in Fg]
 class Pirate(cmd2.Cmd):
     """A piratical example cmd2 application involving looting and drinking."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the base class as well as this one"""
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'~': 'sing'})
@@ -52,11 +52,11 @@ class Pirate(cmd2.Cmd):
             stop = True
         return stop
 
-    def do_loot(self, arg):
+    def do_loot(self, arg) -> None:
         """Seize booty from a passing ship."""
         self.gold += 1
 
-    def do_drink(self, arg):
+    def do_drink(self, arg) -> None:
         """Drown your sorrrows in rrrum.
 
         drink [n] - drink [n] barrel[s] o' rum."""
@@ -67,12 +67,12 @@ class Pirate(cmd2.Cmd):
                 self.poutput(f'''What's "{arg}"?  I'll take rrrum.''')
             self.gold -= 1
 
-    def do_quit(self, arg):
+    def do_quit(self, arg) -> bool:
         """Quit the application gracefully."""
         self.poutput("Quiterrr!")
         return True
 
-    def do_sing(self, arg):
+    def do_sing(self, arg) -> None:
         """Sing a colorful song."""
         self.poutput(cmd2.ansi.style(arg, fg=Fg[self.songcolor.upper()]))
 
@@ -82,7 +82,7 @@ class Pirate(cmd2.Cmd):
     yo_parser.add_argument('beverage', help='beverage to drink with the chant')
 
     @cmd2.with_argparser(yo_parser)
-    def do_yo(self, args):
+    def do_yo(self, args) -> None:
         """Compose a yo-ho-ho type chant with flexible options."""
         chant = ['yo'] + ['ho'] * args.ho
         separator = ', ' if args.commas else ' '

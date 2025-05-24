@@ -29,7 +29,7 @@ def cmdfinalization_hook(data: plugin.CommandFinalizationData) -> plugin.Command
     return data
 
 
-def test_run_pyscript(base_app, request):
+def test_run_pyscript(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'script.py')
     expected = 'This is a python script running ...'
@@ -39,7 +39,7 @@ def test_run_pyscript(base_app, request):
     assert base_app.last_result is True
 
 
-def test_run_pyscript_recursive_not_allowed(base_app, request):
+def test_run_pyscript_recursive_not_allowed(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'recursive.py')
     expected = 'Recursively entering interactive Python shells is not allowed'
@@ -49,14 +49,14 @@ def test_run_pyscript_recursive_not_allowed(base_app, request):
     assert base_app.last_result is False
 
 
-def test_run_pyscript_with_nonexist_file(base_app):
+def test_run_pyscript_with_nonexist_file(base_app) -> None:
     python_script = 'does_not_exist.py'
     out, err = run_cmd(base_app, f"run_pyscript {python_script}")
     assert "Error reading script file" in err[0]
     assert base_app.last_result is False
 
 
-def test_run_pyscript_with_non_python_file(base_app, request):
+def test_run_pyscript_with_non_python_file(base_app, request) -> None:
     m = mock.MagicMock(name='input', return_value='2')
     builtins.input = m
 
@@ -68,7 +68,7 @@ def test_run_pyscript_with_non_python_file(base_app, request):
 
 
 @pytest.mark.parametrize('python_script', odd_file_names)
-def test_run_pyscript_with_odd_file_names(base_app, python_script):
+def test_run_pyscript_with_odd_file_names(base_app, python_script) -> None:
     """
     Pass in file names with various patterns. Since these files don't exist, we will rely
     on the error text to make sure the file names were processed correctly.
@@ -83,7 +83,7 @@ def test_run_pyscript_with_odd_file_names(base_app, python_script):
     assert base_app.last_result is False
 
 
-def test_run_pyscript_with_exception(base_app, request):
+def test_run_pyscript_with_exception(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'raises_exception.py')
     out, err = run_cmd(base_app, f"run_pyscript {python_script}")
@@ -92,13 +92,13 @@ def test_run_pyscript_with_exception(base_app, request):
     assert base_app.last_result is True
 
 
-def test_run_pyscript_requires_an_argument(base_app):
+def test_run_pyscript_requires_an_argument(base_app) -> None:
     out, err = run_cmd(base_app, "run_pyscript")
     assert "the following arguments are required: script_path" in err[1]
     assert base_app.last_result is None
 
 
-def test_run_pyscript_help(base_app, request):
+def test_run_pyscript_help(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'help.py')
     out1, err1 = run_cmd(base_app, 'help')
@@ -107,7 +107,7 @@ def test_run_pyscript_help(base_app, request):
     assert out1 == out2
 
 
-def test_scripts_add_to_history(base_app, request):
+def test_scripts_add_to_history(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'help.py')
     command = f'run_pyscript {python_script}'
@@ -128,7 +128,7 @@ def test_scripts_add_to_history(base_app, request):
     assert base_app.history.get(1).raw == command
 
 
-def test_run_pyscript_dir(base_app, request):
+def test_run_pyscript_dir(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'pyscript_dir.py')
 
@@ -136,7 +136,7 @@ def test_run_pyscript_dir(base_app, request):
     assert out[0] == "['cmd_echo']"
 
 
-def test_run_pyscript_stdout_capture(base_app, request):
+def test_run_pyscript_stdout_capture(base_app, request) -> None:
     base_app.register_cmdfinalization_hook(cmdfinalization_hook)
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'stdout_capture.py')
@@ -146,7 +146,7 @@ def test_run_pyscript_stdout_capture(base_app, request):
     assert out[1] == "PASSED"
 
 
-def test_run_pyscript_stop(base_app, request):
+def test_run_pyscript_stop(base_app, request) -> None:
     # Verify onecmd_plus_hooks() returns True if any commands in a pyscript return True for stop
     test_dir = os.path.dirname(request.module.__file__)
 
@@ -161,7 +161,7 @@ def test_run_pyscript_stop(base_app, request):
     assert stop
 
 
-def test_run_pyscript_environment(base_app, request):
+def test_run_pyscript_environment(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'environment.py')
     out, err = run_cmd(base_app, f'run_pyscript {python_script}')
@@ -169,7 +169,7 @@ def test_run_pyscript_environment(base_app, request):
     assert out[0] == "PASSED"
 
 
-def test_run_pyscript_self_in_py(base_app, request):
+def test_run_pyscript_self_in_py(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'self_in_py.py')
 
@@ -184,7 +184,7 @@ def test_run_pyscript_self_in_py(base_app, request):
     assert 'I do not see self' in out[0]
 
 
-def test_run_pyscript_py_locals(base_app, request):
+def test_run_pyscript_py_locals(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'py_locals.py')
 
@@ -205,7 +205,7 @@ def test_run_pyscript_py_locals(base_app, request):
     assert base_app.py_locals['my_list'][0] == 2
 
 
-def test_run_pyscript_app_echo(base_app, request):
+def test_run_pyscript_app_echo(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'echo.py')
     out, err = run_cmd(base_app, f'run_pyscript {python_script}')

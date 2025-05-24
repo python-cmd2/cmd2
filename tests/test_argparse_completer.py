@@ -44,7 +44,7 @@ def standalone_completer(cli: cmd2.Cmd, text: str, line: str, begidx: int, endid
 class ArgparseCompleterTester(cmd2.Cmd):
     """Cmd2 app that exercises ArgparseCompleter class"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     ############################################################################################################
@@ -342,13 +342,13 @@ def ac_app():
 
 
 @pytest.mark.parametrize('command', ['music', 'music create', 'music create rock', 'music create jazz'])
-def test_help(ac_app, command):
+def test_help(ac_app, command) -> None:
     out1, err1 = run_cmd(ac_app, f'{command} -h')
     out2, err2 = run_cmd(ac_app, f'help {command}')
     assert out1 == out2
 
 
-def test_bad_subcommand_help(ac_app):
+def test_bad_subcommand_help(ac_app) -> None:
     # These should give the same output because the second one isn't using a
     # real subcommand, so help will be called on the music command instead.
     out1, err1 = run_cmd(ac_app, 'help music')
@@ -369,7 +369,7 @@ def test_bad_subcommand_help(ac_app):
         ('music fake', '', []),
     ],
 )
-def test_complete_help(ac_app, command, text, completions):
+def test_complete_help(ac_app, command, text, completions) -> None:
     line = f'help {command} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -387,7 +387,7 @@ def test_complete_help(ac_app, command, text, completions):
     ('subcommand', 'text', 'completions'),
     [('create', '', ['jazz', 'rock']), ('create', 'ja', ['jazz ']), ('create', 'foo', []), ('creab', 'ja', [])],
 )
-def test_subcommand_completions(ac_app, subcommand, text, completions):
+def test_subcommand_completions(ac_app, subcommand, text, completions) -> None:
     line = f'music {subcommand} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -532,7 +532,7 @@ def test_subcommand_completions(ac_app, subcommand, text, completions):
         ('pos_and_flag choice -f -h ', '', [], []),
     ],
 )
-def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matches, display_matches):
+def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matches, display_matches) -> None:
     line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -561,7 +561,7 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matc
         ('--num_completion_items', '', ArgparseCompleterTester.num_completion_items),
     ],
 )
-def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
+def test_autocomp_flag_choices_completion(ac_app, flag, text, completions) -> None:
     line = f'choices {flag} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -594,7 +594,7 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
         (4, '', []),
     ],
 )
-def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
+def test_autocomp_positional_choices_completion(ac_app, pos, text, completions) -> None:
     # Generate line were preceding positionals are already filled
     line = 'choices {} {}'.format('foo ' * (pos - 1), text)
     endidx = len(line)
@@ -616,7 +616,7 @@ def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     assert ac_app.completion_matches == completions
 
 
-def test_flag_sorting(ac_app):
+def test_flag_sorting(ac_app) -> None:
     # This test exercises the case where a positional arg has non-negative integers for its choices.
     # ArgparseCompleter will sort these numerically before converting them to strings. As a result,
     # cmd2.matches_sorted gets set to True. If no completion matches are returned and the entered
@@ -642,7 +642,7 @@ def test_flag_sorting(ac_app):
     ('flag', 'text', 'completions'),
     [('-c', '', ArgparseCompleterTester.completions_for_flag), ('--completer', 'f', ['flag', 'fairly'])],
 )
-def test_autocomp_flag_completers(ac_app, flag, text, completions):
+def test_autocomp_flag_completers(ac_app, flag, text, completions) -> None:
     line = f'completer {flag} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -665,7 +665,7 @@ def test_autocomp_flag_completers(ac_app, flag, text, completions):
         (2, 'm', ['missed', 'me']),
     ],
 )
-def test_autocomp_positional_completers(ac_app, pos, text, completions):
+def test_autocomp_positional_completers(ac_app, pos, text, completions) -> None:
     # Generate line were preceding positionals are already filled
     line = 'completer {} {}'.format('foo ' * (pos - 1), text)
     endidx = len(line)
@@ -680,7 +680,7 @@ def test_autocomp_positional_completers(ac_app, pos, text, completions):
     assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
-def test_autocomp_blank_token(ac_app):
+def test_autocomp_blank_token(ac_app) -> None:
     """Force a blank token to make sure ArgparseCompleter consumes them like argparse does"""
     from cmd2.argparse_completer import (
         ArgparseCompleter,
@@ -711,7 +711,7 @@ def test_autocomp_blank_token(ac_app):
     assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_2)
 
 
-def test_completion_items(ac_app):
+def test_completion_items(ac_app) -> None:
     # First test CompletionItems created from strings
     text = ''
     line = f'choices --completion_items {text}'
@@ -769,7 +769,7 @@ def test_completion_items(ac_app):
         (100, False),
     ],
 )
-def test_max_completion_items(ac_app, num_aliases, show_description):
+def test_max_completion_items(ac_app, num_aliases, show_description) -> None:
     # Create aliases
     for i in range(num_aliases):
         run_cmd(ac_app, f'alias create fake_alias{i} help')
@@ -849,7 +849,7 @@ def test_max_completion_items(ac_app, num_aliases, show_description):
         ('the positional remainder --set_value', ['choices ']),
     ],
 )
-def test_autcomp_nargs(ac_app, args, completions):
+def test_autcomp_nargs(ac_app, args, completions) -> None:
     text = ''
     line = f'nargs {args} {text}'
     endidx = len(line)
@@ -897,7 +897,7 @@ def test_autcomp_nargs(ac_app, args, completions):
         ('nargs --range', '--', True),
     ],
 )
-def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys):
+def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys) -> None:
     line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -908,7 +908,7 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys)
     assert is_error == all(x in out for x in ["Error: argument", "expected"])
 
 
-def test_completion_items_arg_header(ac_app):
+def test_completion_items_arg_header(ac_app) -> None:
     # Test when metavar is None
     text = ''
     line = f'choices --desc_header {text}'
@@ -957,7 +957,7 @@ def test_completion_items_arg_header(ac_app):
     assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[0]
 
 
-def test_completion_items_descriptive_header(ac_app):
+def test_completion_items_descriptive_header(ac_app) -> None:
     from cmd2.argparse_completer import (
         DEFAULT_DESCRIPTIVE_HEADER,
     )
@@ -1007,7 +1007,7 @@ def test_completion_items_descriptive_header(ac_app):
         ('nargs the choices remainder', '-', True),
     ],
 )
-def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys):
+def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys) -> None:
     line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -1020,7 +1020,7 @@ def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys):
         assert not out
 
 
-def test_autocomp_hint_no_help_text(ac_app, capsys):
+def test_autocomp_hint_no_help_text(ac_app, capsys) -> None:
     text = ''
     line = f'hint foo {text}'
     endidx = len(line)
@@ -1049,7 +1049,7 @@ Hint:
         ('', 'completer'),
     ],
 )
-def test_completion_error(ac_app, capsys, args, text):
+def test_completion_error(ac_app, capsys, args, text) -> None:
     line = f'raise_completion_error {args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -1072,7 +1072,7 @@ def test_completion_error(ac_app, capsys, args, text):
         ('arg_tokens completer subcmd --parent_arg override fake', ['override', 'subcmd']),
     ],
 )
-def test_arg_tokens(ac_app, command_and_args, completions):
+def test_arg_tokens(ac_app, command_and_args, completions) -> None:
     text = ''
     line = f'{command_and_args} {text}'
     endidx = len(line)
@@ -1110,7 +1110,7 @@ def test_arg_tokens(ac_app, command_and_args, completions):
         ('mutex --flag flag_val --flag', '', 'the flag arg', None),
     ],
 )
-def test_complete_mutex_group(ac_app, command_and_args, text, output_contains, first_match, capsys):
+def test_complete_mutex_group(ac_app, command_and_args, text, output_contains, first_match, capsys) -> None:
     line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -1121,7 +1121,7 @@ def test_complete_mutex_group(ac_app, command_and_args, text, output_contains, f
     assert output_contains in out
 
 
-def test_single_prefix_char():
+def test_single_prefix_char() -> None:
     from cmd2.argparse_completer import (
         _single_prefix_char,
     )
@@ -1140,7 +1140,7 @@ def test_single_prefix_char():
     assert _single_prefix_char('+', parser)
 
 
-def test_looks_like_flag():
+def test_looks_like_flag() -> None:
     from cmd2.argparse_completer import (
         _looks_like_flag,
     )
@@ -1160,7 +1160,7 @@ def test_looks_like_flag():
     assert _looks_like_flag('--flag', parser)
 
 
-def test_complete_command_no_tokens(ac_app):
+def test_complete_command_no_tokens(ac_app) -> None:
     from cmd2.argparse_completer import (
         ArgparseCompleter,
     )
@@ -1172,7 +1172,7 @@ def test_complete_command_no_tokens(ac_app):
     assert not completions
 
 
-def test_complete_command_help_no_tokens(ac_app):
+def test_complete_command_help_no_tokens(ac_app) -> None:
     from cmd2.argparse_completer import (
         ArgparseCompleter,
     )
@@ -1187,7 +1187,7 @@ def test_complete_command_help_no_tokens(ac_app):
 @pytest.mark.parametrize(
     ('flag', 'completions'), [('--provider', standalone_choices), ('--completer', standalone_completions)]
 )
-def test_complete_standalone(ac_app, flag, completions):
+def test_complete_standalone(ac_app, flag, completions) -> None:
     text = ''
     line = f'standalone {flag} {text}'
     endidx = len(line)
@@ -1219,7 +1219,7 @@ argparse_custom.register_argparse_argument_parameter('complete_when_ready', bool
 
 # App used to test custom ArgparseCompleter types and custom argparse attributes
 class CustomCompleterApp(cmd2.Cmd):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.is_ready = True
 
@@ -1275,7 +1275,7 @@ def custom_completer_app():
     return app
 
 
-def test_default_custom_completer_type(custom_completer_app: CustomCompleterApp):
+def test_default_custom_completer_type(custom_completer_app: CustomCompleterApp) -> None:
     """Test altering the app-wide default ArgparseCompleter type"""
     try:
         argparse_completer.set_default_ap_completer_type(CustomCompleter)
@@ -1300,7 +1300,7 @@ def test_default_custom_completer_type(custom_completer_app: CustomCompleterApp)
         argparse_completer.set_default_ap_completer_type(argparse_completer.ArgparseCompleter)
 
 
-def test_custom_completer_type(custom_completer_app: CustomCompleterApp):
+def test_custom_completer_type(custom_completer_app: CustomCompleterApp) -> None:
     """Test parser with a specific custom ArgparseCompleter type"""
     text = '--m'
     line = f'custom_completer {text}'
@@ -1318,7 +1318,7 @@ def test_custom_completer_type(custom_completer_app: CustomCompleterApp):
     assert not custom_completer_app.completion_matches
 
 
-def test_decorated_subcmd_custom_completer(custom_completer_app: CustomCompleterApp):
+def test_decorated_subcmd_custom_completer(custom_completer_app: CustomCompleterApp) -> None:
     """Tests custom completer type on a subcommand created with @cmd2.as_subcommand_to"""
 
     # First test the subcommand without the custom completer
@@ -1353,7 +1353,7 @@ def test_decorated_subcmd_custom_completer(custom_completer_app: CustomCompleter
     assert not custom_completer_app.completion_matches
 
 
-def test_add_parser_custom_completer():
+def test_add_parser_custom_completer() -> None:
     """Tests setting a custom completer type on a subcommand using add_parser()"""
     parser = Cmd2ArgumentParser()
     subparsers = parser.add_subparsers()

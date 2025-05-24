@@ -17,7 +17,7 @@ def empty_decorator(func: Callable) -> Callable:
     """An empty decorator for myplugin"""
 
     @functools.wraps(func)
-    def _empty_decorator(self, *args, **kwargs):
+    def _empty_decorator(self, *args, **kwargs) -> None:
         self.poutput("in the empty decorator")
         func(self, *args, **kwargs)
 
@@ -37,7 +37,7 @@ class MyPluginMixin(_Base):
             super().__init__(*args, **kwargs)
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         # code placed here runs before cmd2 initializes
         super().__init__(*args, **kwargs)
         # code placed here runs after cmd2 initializes
@@ -46,7 +46,7 @@ class MyPluginMixin(_Base):
         self.register_postloop_hook(self.cmd2_myplugin_postloop_hook)
         self.register_postparsing_hook(self.cmd2_myplugin_postparsing_hook)
 
-    def do_say(self, statement):
+    def do_say(self, statement) -> None:
         """Simple say command"""
         self.poutput(statement)
 

@@ -36,7 +36,7 @@ bg_choices = [c.name.lower() for c in Bg]
 class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application demonstrating colorized output."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell
         super().__init__(include_ipy=True)
 
@@ -58,7 +58,7 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args):
+    def do_speak(self, args) -> None:
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -78,7 +78,7 @@ class CmdLineApp(cmd2.Cmd):
             # .poutput handles newlines, and accommodates output redirection too
             self.poutput(output_str)
 
-    def do_timetravel(self, _):
+    def do_timetravel(self, _) -> None:
         """A command which always generates an error message, to demonstrate custom error colors"""
         self.perror('Mr. Fusion failed to start. Could not energize flux capacitor.')
 

@@ -15,20 +15,20 @@ class CmdLineApp(cmd.Cmd):
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']
 
-    def do_exit(self, line):
+    def do_exit(self, line) -> bool:
         """Exit the application"""
         return True
 
     do_EOF = do_exit
     do_quit = do_exit
 
-    def do_speak(self, line):
+    def do_speak(self, line) -> None:
         """Repeats what you tell me to."""
         print(line, file=self.stdout)
 
     do_say = do_speak
 
-    def do_mumble(self, line):
+    def do_mumble(self, line) -> None:
         """Mumbles what you tell me to."""
         words = line.split(' ')
         output = []

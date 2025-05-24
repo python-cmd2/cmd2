@@ -11,6 +11,7 @@ import tempfile
 from code import (
     InteractiveConsole,
 )
+from typing import Never
 from unittest import (
     mock,
 )
@@ -73,11 +74,11 @@ def outsim_app():
     return CreateOutsimApp()
 
 
-def test_version(base_app):
+def test_version(base_app) -> None:
     assert cmd2.__version__
 
 
-def test_not_in_main_thread(base_app, capsys):
+def test_not_in_main_thread(base_app, capsys) -> None:
     import threading
 
     # Mock threading.main_thread() to return our fake thread
@@ -93,19 +94,19 @@ def test_not_in_main_thread(base_app, capsys):
     assert "cmdloop must be run in the main thread" in str(excinfo.value)
 
 
-def test_empty_statement(base_app):
+def test_empty_statement(base_app) -> None:
     out, err = run_cmd(base_app, '')
     expected = normalize('')
     assert out == expected
 
 
-def test_base_help(base_app):
+def test_base_help(base_app) -> None:
     out, err = run_cmd(base_app, 'help')
     assert base_app.last_result is True
     verify_help_text(base_app, out)
 
 
-def test_base_help_verbose(base_app):
+def test_base_help_verbose(base_app) -> None:
     out, err = run_cmd(base_app, 'help -v')
     assert base_app.last_result is True
     verify_help_text(base_app, out)
@@ -121,7 +122,7 @@ def test_base_help_verbose(base_app):
     assert ':param' not in ''.join(out)
 
 
-def test_base_argparse_help(base_app):
+def test_base_argparse_help(base_app) -> None:
     # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
     out1, err1 = run_cmd(base_app, 'set -h')
     out2, err2 = run_cmd(base_app, 'help set')
@@ -132,26 +133,26 @@ def test_base_argparse_help(base_app):
     assert out1[2].startswith('Set a settable parameter')
 
 
-def test_base_invalid_option(base_app):
+def test_base_invalid_option(base_app) -> None:
     out, err = run_cmd(base_app, 'set -z')
     assert err[0] == 'Usage: set [-h] [param] [value]'
     assert 'Error: unrecognized arguments: -z' in err[1]
 
 
-def test_base_shortcuts(base_app):
+def test_base_shortcuts(base_app) -> None:
     out, err = run_cmd(base_app, 'shortcuts')
     expected = normalize(SHORTCUTS_TXT)
     assert out == expected
     assert base_app.last_result is True
 
 
-def test_command_starts_with_shortcut():
+def test_command_starts_with_shortcut() -> None:
     expected_err = "Invalid command name 'help'"
     with pytest.raises(ValueError, match=expected_err):
         cmd2.Cmd(shortcuts={'help': 'fake'})
 
 
-def test_base_set(base_app):
+def test_base_set(base_app) -> None:
     # force editor to be 'vim' so test is repeatable across platforms
     base_app.editor = 'vim'
     out, err = run_cmd(base_app, 'set')
@@ -163,7 +164,7 @@ def test_base_set(base_app):
         assert base_app.last_result[param] == base_app.settables[param].get_value()
 
 
-def test_set(base_app):
+def test_set(base_app) -> None:
     out, err = run_cmd(base_app, 'set quiet True')
     expected = normalize(
         """
@@ -187,21 +188,21 @@ quiet  True                            Don't print nonessential feedback
     assert base_app.last_result['quiet'] is True
 
 
-def test_set_val_empty(base_app):
+def test_set_val_empty(base_app) -> None:
     base_app.editor = "fake"
     out, err = run_cmd(base_app, 'set editor ""')
     assert base_app.editor == ''
     assert base_app.last_result is True
 
 
-def test_set_val_is_flag(base_app):
+def test_set_val_is_flag(base_app) -> None:
     base_app.editor = "fake"
     out, err = run_cmd(base_app, 'set editor "-h"')
     assert base_app.editor == '-h'
     assert base_app.last_result is True
 
 
-def test_set_not_supported(base_app):
+def test_set_not_supported(base_app) -> None:
     out, err = run_cmd(base_app, 'set qqq True')
     expected = normalize(
         """
@@ -212,7 +213,7 @@ Parameter 'qqq' not supported (type 'set' for list of parameters).
     assert base_app.last_result is False
 
 
-def test_set_no_settables(base_app):
+def test_set_no_settables(base_app) -> None:
     base_app._settables.clear()
     out, err = run_cmd(base_app, 'set quiet True')
     expected = normalize("There are no settable parameters")
@@ -232,7 +233,7 @@ def test_set_no_settables(base_app):
         ('invalid', False, ansi.AllowStyle.TERMINAL),
     ],
 )
-def test_set_allow_style(base_app, new_val, is_valid, expected):
+def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     # Initialize allow_style for this test
     ansi.allow_style = ansi.AllowStyle.TERMINAL
 
@@ -250,7 +251,7 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
     ansi.allow_style = ansi.AllowStyle.TERMINAL
 
 
-def test_set_with_choices(base_app):
+def test_set_with_choices(base_app) -> None:
     """Test choices validation of Settables"""
     fake_choices = ['valid', 'choices']
     base_app.fake = fake_choices[0]
@@ -270,7 +271,7 @@ def test_set_with_choices(base_app):
 
 
 class OnChangeHookApp(cmd2.Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.add_settable(utils.Settable('quiet', bool, "my description", self, onchange_cb=self._onchange_quiet))
 
@@ -285,7 +286,7 @@ def onchange_app():
     return app
 
 
-def test_set_onchange_hook(onchange_app):
+def test_set_onchange_hook(onchange_app) -> None:
     out, err = run_cmd(onchange_app, 'set quiet True')
     expected = normalize(
         """
@@ -298,7 +299,7 @@ now: True
     assert onchange_app.last_result is True
 
 
-def test_base_shell(base_app, monkeypatch):
+def test_base_shell(base_app, monkeypatch) -> None:
     m = mock.Mock()
     monkeypatch.setattr("{}.Popen".format('subprocess'), m)
     out, err = run_cmd(base_app, 'shell echo a')
@@ -306,13 +307,13 @@ def test_base_shell(base_app, monkeypatch):
     assert m.called
 
 
-def test_shell_last_result(base_app):
+def test_shell_last_result(base_app) -> None:
     base_app.last_result = None
     run_cmd(base_app, 'shell fake')
     assert base_app.last_result is not None
 
 
-def test_shell_manual_call(base_app):
+def test_shell_manual_call(base_app) -> None:
     # Verifies crash from Issue #986 doesn't happen
     cmds = ['echo "hi"', 'echo "there"', 'echo "cmd2!"']
     cmd = ';'.join(cmds)
@@ -324,12 +325,12 @@ def test_shell_manual_call(base_app):
     base_app.do_shell(cmd)
 
 
-def test_base_error(base_app):
+def test_base_error(base_app) -> None:
     out, err = run_cmd(base_app, 'meow')
     assert "is not a recognized command" in err[0]
 
 
-def test_base_error_suggest_command(base_app):
+def test_base_error_suggest_command(base_app) -> None:
     try:
         old_suggest_similar_command = base_app.suggest_similar_command
         base_app.suggest_similar_command = True
@@ -339,7 +340,7 @@ def test_base_error_suggest_command(base_app):
         base_app.suggest_similar_command = old_suggest_similar_command
 
 
-def test_run_script(base_app, request):
+def test_run_script(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
@@ -368,13 +369,13 @@ def test_run_script(base_app, request):
     assert script_err == manual_err
 
 
-def test_run_script_with_empty_args(base_app):
+def test_run_script_with_empty_args(base_app) -> None:
     out, err = run_cmd(base_app, 'run_script')
     assert "the following arguments are required" in err[1]
     assert base_app.last_result is None
 
 
-def test_run_script_with_invalid_file(base_app, request):
+def test_run_script_with_invalid_file(base_app, request) -> None:
     # Path does not exist
     out, err = run_cmd(base_app, 'run_script does_not_exist.txt')
     assert "Problem accessing script from " in err[0]
@@ -387,7 +388,7 @@ def test_run_script_with_invalid_file(base_app, request):
     assert base_app.last_result is False
 
 
-def test_run_script_with_empty_file(base_app, request):
+def test_run_script_with_empty_file(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'empty.txt')
     out, err = run_cmd(base_app, f'run_script {filename}')
@@ -396,7 +397,7 @@ def test_run_script_with_empty_file(base_app, request):
     assert base_app.last_result is True
 
 
-def test_run_script_with_binary_file(base_app, request):
+def test_run_script_with_binary_file(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'binary.bin')
     out, err = run_cmd(base_app, f'run_script {filename}')
@@ -404,7 +405,7 @@ def test_run_script_with_binary_file(base_app, request):
     assert base_app.last_result is False
 
 
-def test_run_script_with_python_file(base_app, request):
+def test_run_script_with_python_file(base_app, request) -> None:
     m = mock.MagicMock(name='input', return_value='2')
     builtins.input = m
 
@@ -415,7 +416,7 @@ def test_run_script_with_python_file(base_app, request):
     assert base_app.last_result is False
 
 
-def test_run_script_with_utf8_file(base_app, request):
+def test_run_script_with_utf8_file(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'utf8.txt')
 
@@ -444,7 +445,7 @@ def test_run_script_with_utf8_file(base_app, request):
     assert script_err == manual_err
 
 
-def test_scripts_add_to_history(base_app, request):
+def test_scripts_add_to_history(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
     command = f'run_script {filename}'
@@ -465,7 +466,7 @@ def test_scripts_add_to_history(base_app, request):
     assert base_app.history.get(1).raw == command
 
 
-def test_run_script_nested_run_scripts(base_app, request):
+def test_run_script_nested_run_scripts(base_app, request) -> None:
     # Verify that running a script with nested run_script commands works correctly,
     # and runs the nested script commands in the correct order.
     test_dir = os.path.dirname(request.module.__file__)
@@ -489,7 +490,7 @@ set allow_style Never"""
     assert out == normalize(expected)
 
 
-def test_runcmds_plus_hooks(base_app, request):
+def test_runcmds_plus_hooks(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     prefilepath = os.path.join(test_dir, 'scripts', 'precmds.txt')
     postfilepath = os.path.join(test_dir, 'scripts', 'postcmds.txt')
@@ -507,11 +508,11 @@ set allow_style Never"""
     assert out == normalize(expected)
 
 
-def test_runcmds_plus_hooks_ctrl_c(base_app, capsys):
+def test_runcmds_plus_hooks_ctrl_c(base_app, capsys) -> None:
     """Test Ctrl-C while in runcmds_plus_hooks"""
     import types
 
-    def do_keyboard_interrupt(self, _):
+    def do_keyboard_interrupt(self, _) -> Never:
         raise KeyboardInterrupt('Interrupting this command')
 
     setattr(base_app, 'do_keyboard_interrupt', types.MethodType(do_keyboard_interrupt, base_app))
@@ -531,7 +532,7 @@ def test_runcmds_plus_hooks_ctrl_c(base_app, capsys):
     assert len(base_app.history) == 2
 
 
-def test_relative_run_script(base_app, request):
+def test_relative_run_script(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
@@ -561,7 +562,7 @@ def test_relative_run_script(base_app, request):
 
 
 @pytest.mark.parametrize('file_name', odd_file_names)
-def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatch):
+def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatch) -> None:
     """Test file names with various patterns"""
     # Mock out the do_run_script call to see what args are passed to it
     run_script_mock = mock.MagicMock(name='do_run_script')
@@ -571,15 +572,15 @@ def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatc
     run_script_mock.assert_called_once_with(utils.quote_string(file_name))
 
 
-def test_relative_run_script_requires_an_argument(base_app):
+def test_relative_run_script_requires_an_argument(base_app) -> None:
     out, err = run_cmd(base_app, '_relative_run_script')
     assert 'Error: the following arguments' in err[1]
     assert base_app.last_result is None
 
 
-def test_in_script(request):
+def test_in_script(request) -> None:
     class HookApp(cmd2.Cmd):
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
             self.register_cmdfinalization_hook(self.hook)
 
@@ -596,13 +597,13 @@ def test_in_script(request):
     assert "WE ARE IN SCRIPT" in out[-1]
 
 
-def test_system_exit_in_command(base_app, capsys):
+def test_system_exit_in_command(base_app, capsys) -> None:
     """Test raising SystemExit in a command"""
     import types
 
     exit_code = 5
 
-    def do_system_exit(self, _):
+    def do_system_exit(self, _) -> Never:
         raise SystemExit(exit_code)
 
     setattr(base_app, 'do_system_exit', types.MethodType(do_system_exit, base_app))
@@ -612,13 +613,13 @@ def test_system_exit_in_command(base_app, capsys):
     assert base_app.exit_code == exit_code
 
 
-def test_passthrough_exception_in_command(base_app):
+def test_passthrough_exception_in_command(base_app) -> None:
     """Test raising a PassThroughException in a command"""
     import types
 
     expected_err = "Pass me up"
 
-    def do_passthrough(self, _):
+    def do_passthrough(self, _) -> Never:
         wrapped_ex = OSError(expected_err)
         raise exceptions.PassThroughException(wrapped_ex=wrapped_ex)
 
@@ -628,7 +629,7 @@ def test_passthrough_exception_in_command(base_app):
         base_app.onecmd_plus_hooks('passthrough')
 
 
-def test_output_redirection(base_app):
+def test_output_redirection(base_app) -> None:
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
     os.close(fd)
 
@@ -651,7 +652,7 @@ def test_output_redirection(base_app):
         os.remove(filename)
 
 
-def test_output_redirection_to_nonexistent_directory(base_app):
+def test_output_redirection_to_nonexistent_directory(base_app) -> None:
     filename = '~/fakedir/this_does_not_exist.txt'
 
     out, err = run_cmd(base_app, f'help > {filename}')
@@ -661,7 +662,7 @@ def test_output_redirection_to_nonexistent_directory(base_app):
     assert 'Failed to redirect' in err[0]
 
 
-def test_output_redirection_to_too_long_filename(base_app):
+def test_output_redirection_to_too_long_filename(base_app) -> None:
     filename = (
         '~/sdkfhksdjfhkjdshfkjsdhfkjsdhfkjdshfkjdshfkjshdfkhdsfkjhewfuihewiufhweiufhiweufhiuewhiuewhfiuwehfia'
         'ewhfiuewhfiuewhfiuewhiuewhfiuewhfiuewfhiuwehewiufhewiuhfiweuhfiuwehfiuewfhiuwehiuewfhiuewhiewuhfiueh'
@@ -677,7 +678,7 @@ def test_output_redirection_to_too_long_filename(base_app):
     assert 'Failed to redirect' in err[0]
 
 
-def test_feedback_to_output_true(base_app):
+def test_feedback_to_output_true(base_app) -> None:
     base_app.feedback_to_output = True
     base_app.timing = True
     f, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
@@ -694,7 +695,7 @@ def test_feedback_to_output_true(base_app):
         os.remove(filename)
 
 
-def test_feedback_to_output_false(base_app):
+def test_feedback_to_output_false(base_app) -> None:
     base_app.feedback_to_output = False
     base_app.timing = True
     f, filename = tempfile.mkstemp(prefix='feedback_to_output', suffix='.txt')
@@ -713,7 +714,7 @@ def test_feedback_to_output_false(base_app):
         os.remove(filename)
 
 
-def test_disallow_redirection(base_app):
+def test_disallow_redirection(base_app) -> None:
     # Set allow_redirection to False
     base_app.allow_redirection = False
 
@@ -727,7 +728,7 @@ def test_disallow_redirection(base_app):
     assert not os.path.exists(filename)
 
 
-def test_pipe_to_shell(base_app):
+def test_pipe_to_shell(base_app) -> None:
     if sys.platform == "win32":
         # Windows
         command = 'help | sort'
@@ -741,7 +742,7 @@ def test_pipe_to_shell(base_app):
     assert not err
 
 
-def test_pipe_to_shell_and_redirect(base_app):
+def test_pipe_to_shell_and_redirect(base_app) -> None:
     filename = 'out.txt'
     if sys.platform == "win32":
         # Windows
@@ -758,7 +759,7 @@ def test_pipe_to_shell_and_redirect(base_app):
     os.remove(filename)
 
 
-def test_pipe_to_shell_error(base_app):
+def test_pipe_to_shell_error(base_app) -> None:
     # Try to pipe command output to a shell command that doesn't exist in order to produce an error
     out, err = run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
     assert not out
@@ -780,7 +781,7 @@ else:
 
 
 @pytest.mark.skipif(not can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
-def test_send_to_paste_buffer(base_app):
+def test_send_to_paste_buffer(base_app) -> None:
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
     paste_contents = cmd2.cmd2.get_paste_buffer()
@@ -793,7 +794,7 @@ def test_send_to_paste_buffer(base_app):
     assert len(appended_contents) > len(paste_contents)
 
 
-def test_get_paste_buffer_exception(base_app, mocker, capsys):
+def test_get_paste_buffer_exception(base_app, mocker, capsys) -> None:
     # Force get_paste_buffer to throw an exception
     pastemock = mocker.patch('pyperclip.paste')
     pastemock.side_effect = ValueError('foo')
@@ -809,7 +810,7 @@ def test_get_paste_buffer_exception(base_app, mocker, capsys):
     assert 'foo' in err
 
 
-def test_allow_clipboard_initializer(base_app):
+def test_allow_clipboard_initializer(base_app) -> None:
     assert base_app.allow_clipboard is True
     noclipcmd = cmd2.Cmd(allow_clipboard=False)
     assert noclipcmd.allow_clipboard is False
@@ -819,14 +820,14 @@ def test_allow_clipboard_initializer(base_app):
 # before it tries to do anything with pyperclip, that's why we can
 # safely run this test without skipping it if pyperclip doesn't
 # work in the test environment, like we do for test_send_to_paste_buffer()
-def test_allow_clipboard(base_app):
+def test_allow_clipboard(base_app) -> None:
     base_app.allow_clipboard = False
     out, err = run_cmd(base_app, 'help >')
     assert not out
     assert "Clipboard access not allowed" in err
 
 
-def test_base_timing(base_app):
+def test_base_timing(base_app) -> None:
     base_app.feedback_to_output = False
     out, err = run_cmd(base_app, 'set timing True')
     expected = normalize(
@@ -858,7 +859,7 @@ To enable full traceback, run the following command: 'set debug true'
     return expected_text
 
 
-def test_base_debug(base_app):
+def test_base_debug(base_app) -> None:
     # Purposely set the editor to None
     base_app.editor = None
 
@@ -883,7 +884,7 @@ now: True
     assert err[0].startswith('Traceback (most recent call last):')
 
 
-def test_debug_not_settable(base_app):
+def test_debug_not_settable(base_app) -> None:
     # Set debug to False and make it unsettable
     base_app.debug = False
     base_app.remove_settable('debug')
@@ -895,12 +896,12 @@ def test_debug_not_settable(base_app):
     assert err == ['Invalid syntax: No closing quotation']
 
 
-def test_remove_settable_keyerror(base_app):
+def test_remove_settable_keyerror(base_app) -> None:
     with pytest.raises(KeyError):
         base_app.remove_settable('fake')
 
 
-def test_edit_file(base_app, request, monkeypatch):
+def test_edit_file(base_app, request, monkeypatch) -> None:
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
@@ -918,7 +919,7 @@ def test_edit_file(base_app, request, monkeypatch):
 
 
 @pytest.mark.parametrize('file_name', odd_file_names)
-def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch):
+def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch) -> None:
     """Test editor and file names with various patterns"""
     # Mock out the do_shell call to see what args are passed to it
     shell_mock = mock.MagicMock(name='do_shell')
@@ -930,7 +931,7 @@ def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch):
     shell_mock.assert_called_once_with(f'"fooedit" {utils.quote_string(file_name)}')
 
 
-def test_edit_file_with_spaces(base_app, request, monkeypatch):
+def test_edit_file_with_spaces(base_app, request, monkeypatch) -> None:
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
@@ -947,7 +948,7 @@ def test_edit_file_with_spaces(base_app, request, monkeypatch):
     m.assert_called_once()
 
 
-def test_edit_blank(base_app, monkeypatch):
+def test_edit_blank(base_app, monkeypatch) -> None:
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
@@ -961,7 +962,7 @@ def test_edit_blank(base_app, monkeypatch):
     m.assert_called_once()
 
 
-def test_base_py_interactive(base_app):
+def test_base_py_interactive(base_app) -> None:
     # Mock out the InteractiveConsole.interact() call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='interact')
     InteractiveConsole.interact = m
@@ -972,7 +973,7 @@ def test_base_py_interactive(base_app):
     m.assert_called_once()
 
 
-def test_base_cmdloop_with_startup_commands():
+def test_base_cmdloop_with_startup_commands() -> None:
     intro = 'Hello World, this is an intro ...'
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
@@ -991,7 +992,7 @@ def test_base_cmdloop_with_startup_commands():
     assert out == expected
 
 
-def test_base_cmdloop_without_startup_commands():
+def test_base_cmdloop_without_startup_commands() -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     with mock.patch.object(sys, 'argv', testargs):
@@ -1012,7 +1013,7 @@ def test_base_cmdloop_without_startup_commands():
     assert out == expected
 
 
-def test_cmdloop_without_rawinput():
+def test_cmdloop_without_rawinput() -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     with mock.patch.object(sys, 'argv', testargs):
@@ -1035,7 +1036,7 @@ def test_cmdloop_without_rawinput():
 
 
 @pytest.mark.skipif(sys.platform.startswith('win'), reason="stty sane only run on Linux/Mac")
-def test_stty_sane(base_app, monkeypatch):
+def test_stty_sane(base_app, monkeypatch) -> None:
     """Make sure stty sane is run on Linux/Mac after each command if stdin is a terminal"""
     with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
         # Mock out the subprocess.Popen call so we don't actually run stty sane
@@ -1046,7 +1047,7 @@ def test_stty_sane(base_app, monkeypatch):
         m.assert_called_once_with(['stty', 'sane'])
 
 
-def test_sigint_handler(base_app):
+def test_sigint_handler(base_app) -> None:
     # No KeyboardInterrupt should be raised when using sigint_protection
     with base_app.sigint_protection:
         base_app.sigint_handler(signal.SIGINT, 1)
@@ -1056,14 +1057,14 @@ def test_sigint_handler(base_app):
         base_app.sigint_handler(signal.SIGINT, 1)
 
 
-def test_raise_keyboard_interrupt(base_app):
+def test_raise_keyboard_interrupt(base_app) -> None:
     with pytest.raises(KeyboardInterrupt) as excinfo:
         base_app._raise_keyboard_interrupt()
     assert 'Got a keyboard interrupt' in str(excinfo.value)
 
 
 @pytest.mark.skipif(sys.platform.startswith('win'), reason="SIGTERM only handled on Linux/Mac")
-def test_termination_signal_handler(base_app):
+def test_termination_signal_handler(base_app) -> None:
     with pytest.raises(SystemExit) as excinfo:
         base_app.termination_signal_handler(signal.SIGHUP, 1)
     assert excinfo.value.code == signal.SIGHUP + 128
@@ -1074,7 +1075,7 @@ def test_termination_signal_handler(base_app):
 
 
 class HookFailureApp(cmd2.Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         # register a postparsing hook method
         self.register_postparsing_hook(self.postparsing_precmd)
@@ -1091,21 +1092,21 @@ def hook_failure():
     return app
 
 
-def test_precmd_hook_success(base_app):
+def test_precmd_hook_success(base_app) -> None:
     out = base_app.onecmd_plus_hooks('help')
     assert out is False
 
 
-def test_precmd_hook_failure(hook_failure):
+def test_precmd_hook_failure(hook_failure) -> None:
     out = hook_failure.onecmd_plus_hooks('help')
     assert out is True
 
 
 class SayApp(cmd2.Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def do_say(self, arg):
+    def do_say(self, arg) -> None:
         self.poutput(arg)
 
 
@@ -1116,7 +1117,7 @@ def say_app():
     return app
 
 
-def test_ctrl_c_at_prompt(say_app):
+def test_ctrl_c_at_prompt(say_app) -> None:
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
@@ -1130,12 +1131,12 @@ def test_ctrl_c_at_prompt(say_app):
 
 
 class ShellApp(cmd2.Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.default_to_shell = True
 
 
-def test_default_to_shell(base_app, monkeypatch):
+def test_default_to_shell(base_app, monkeypatch) -> None:
     if sys.platform.startswith('win'):
         line = 'dir'
     else:
@@ -1149,7 +1150,7 @@ def test_default_to_shell(base_app, monkeypatch):
     assert m.called
 
 
-def test_escaping_prompt():
+def test_escaping_prompt() -> None:
     from cmd2.rl_utils import (
         rl_escape_prompt,
         rl_unescape_prompt,
@@ -1180,23 +1181,23 @@ def test_escaping_prompt():
 class HelpApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def do_squat(self, arg):
+    def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
 
-    def help_squat(self):
+    def help_squat(self) -> None:
         self.stdout.write('This command does diddly squat...\n')
 
-    def do_edit(self, arg):
+    def do_edit(self, arg) -> None:
         """This overrides the edit command and does nothing."""
 
     # This command will be in the "undocumented" section of the help menu
-    def do_undoc(self, arg):
+    def do_undoc(self, arg) -> None:
         pass
 
-    def do_multiline_docstr(self, arg):
+    def do_multiline_docstr(self, arg) -> None:
         """
         This documentation
         is multiple lines
@@ -1207,7 +1208,7 @@ class HelpApp(cmd2.Cmd):
     parser_cmd_parser = cmd2.Cmd2ArgumentParser(description="This is the description.")
 
     @cmd2.with_argparser(parser_cmd_parser)
-    def do_parser_cmd(self, args):
+    def do_parser_cmd(self, args) -> None:
         """This is the docstring."""
 
 
@@ -1217,39 +1218,39 @@ def help_app():
     return app
 
 
-def test_custom_command_help(help_app):
+def test_custom_command_help(help_app) -> None:
     out, err = run_cmd(help_app, 'help squat')
     expected = normalize('This command does diddly squat...')
     assert out == expected
     assert help_app.last_result is True
 
 
-def test_custom_help_menu(help_app):
+def test_custom_help_menu(help_app) -> None:
     out, err = run_cmd(help_app, 'help')
     verify_help_text(help_app, out)
 
 
-def test_help_undocumented(help_app):
+def test_help_undocumented(help_app) -> None:
     out, err = run_cmd(help_app, 'help undoc')
     assert err[0].startswith("No help on undoc")
     assert help_app.last_result is False
 
 
-def test_help_overridden_method(help_app):
+def test_help_overridden_method(help_app) -> None:
     out, err = run_cmd(help_app, 'help edit')
     expected = normalize('This overrides the edit command and does nothing.')
     assert out == expected
     assert help_app.last_result is True
 
 
-def test_help_multiline_docstring(help_app):
+def test_help_multiline_docstring(help_app) -> None:
     out, err = run_cmd(help_app, 'help multiline_docstr')
     expected = normalize('This documentation\nis multiple lines\nand there are no\ntabs')
     assert out == expected
     assert help_app.last_result is True
 
 
-def test_help_verbose_uses_parser_description(help_app: HelpApp):
+def test_help_verbose_uses_parser_description(help_app: HelpApp) -> None:
     out, err = run_cmd(help_app, 'help --verbose')
     verify_help_text(help_app, out, verbose_strings=[help_app.parser_cmd_parser.description])
 
@@ -1257,31 +1258,31 @@ def test_help_verbose_uses_parser_description(help_app: HelpApp):
 class HelpCategoriesApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     @cmd2.with_category('Some Category')
-    def do_diddly(self, arg):
+    def do_diddly(self, arg) -> None:
         """This command does diddly"""
 
     # This command will be in the "Some Category" section of the help menu even though it has no docstring
     @cmd2.with_category("Some Category")
-    def do_cat_nodoc(self, arg):
+    def do_cat_nodoc(self, arg) -> None:
         pass
 
-    def do_squat(self, arg):
+    def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
 
-    def help_squat(self):
+    def help_squat(self) -> None:
         self.stdout.write('This command does diddly squat...\n')
 
-    def do_edit(self, arg):
+    def do_edit(self, arg) -> None:
         """This overrides the edit command and does nothing."""
 
     cmd2.categorize((do_squat, do_edit), 'Custom Category')
 
     # This command will be in the "undocumented" section of the help menu
-    def do_undoc(self, arg):
+    def do_undoc(self, arg) -> None:
         pass
 
 
@@ -1291,20 +1292,20 @@ def helpcat_app():
     return app
 
 
-def test_help_cat_base(helpcat_app):
+def test_help_cat_base(helpcat_app) -> None:
     out, err = run_cmd(helpcat_app, 'help')
     assert helpcat_app.last_result is True
     verify_help_text(helpcat_app, out)
 
 
-def test_help_cat_verbose(helpcat_app):
+def test_help_cat_verbose(helpcat_app) -> None:
     out, err = run_cmd(helpcat_app, 'help --verbose')
     assert helpcat_app.last_result is True
     verify_help_text(helpcat_app, out)
 
 
 class SelectApp(cmd2.Cmd):
-    def do_eat(self, arg):
+    def do_eat(self, arg) -> None:
         """Eat something, with a selection of sauces to choose from."""
         # Pass in a single string of space-separated selections
         sauce = self.select('sweet salty', 'Sauce? ')
@@ -1312,14 +1313,14 @@ class SelectApp(cmd2.Cmd):
         result = result.format(food=arg, sauce=sauce)
         self.stdout.write(result + '\n')
 
-    def do_study(self, arg):
+    def do_study(self, arg) -> None:
         """Learn something, with a selection of subjects to choose from."""
         # Pass in a list of strings for selections
         subject = self.select(['math', 'science'], 'Subject? ')
         result = f'Good luck learning {subject}!\n'
         self.stdout.write(result)
 
-    def do_procrastinate(self, arg):
+    def do_procrastinate(self, arg) -> None:
         """Waste time in your manner of choice."""
         # Pass in a list of tuples for selections
         leisure_activity = self.select(
@@ -1328,14 +1329,14 @@ class SelectApp(cmd2.Cmd):
         result = f'Have fun procrasinating with {leisure_activity}!\n'
         self.stdout.write(result)
 
-    def do_play(self, arg):
+    def do_play(self, arg) -> None:
         """Play your favorite musical instrument."""
         # Pass in an uneven list of tuples for selections
         instrument = self.select([('Guitar', 'Electric Guitar'), ('Drums',)], 'Instrument? ')
         result = f'Charm us with the {instrument}...\n'
         self.stdout.write(result)
 
-    def do_return_type(self, arg):
+    def do_return_type(self, arg) -> None:
         """Test that return values can be non-strings"""
         choice = self.select([(1, 'Integer'), ("test_str", 'String'), (self.do_play, 'Method')], 'Choice? ')
         result = f'The return type is {type(choice)}\n'
@@ -1348,7 +1349,7 @@ def select_app():
     return app
 
 
-def test_select_options(select_app, monkeypatch):
+def test_select_options(select_app, monkeypatch) -> None:
     # Mock out the read_input call so we don't actually wait for a user's response on stdin
     read_input_mock = mock.MagicMock(name='read_input', return_value='2')
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
@@ -1370,7 +1371,7 @@ def test_select_options(select_app, monkeypatch):
     assert out == expected
 
 
-def test_select_invalid_option_too_big(select_app, monkeypatch):
+def test_select_invalid_option_too_big(select_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response on stdin
     read_input_mock = mock.MagicMock(name='read_input')
 
@@ -1399,7 +1400,7 @@ def test_select_invalid_option_too_big(select_app, monkeypatch):
     assert out == expected
 
 
-def test_select_invalid_option_too_small(select_app, monkeypatch):
+def test_select_invalid_option_too_small(select_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response on stdin
     read_input_mock = mock.MagicMock(name='read_input')
 
@@ -1428,7 +1429,7 @@ def test_select_invalid_option_too_small(select_app, monkeypatch):
     assert out == expected
 
 
-def test_select_list_of_strings(select_app, monkeypatch):
+def test_select_list_of_strings(select_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response on stdin
     read_input_mock = mock.MagicMock(name='read_input', return_value='2')
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
@@ -1449,7 +1450,7 @@ Good luck learning {}!
     assert out == expected
 
 
-def test_select_list_of_tuples(select_app, monkeypatch):
+def test_select_list_of_tuples(select_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response on stdin
     read_input_mock = mock.MagicMock(name='read_input', return_value='2')
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
@@ -1470,7 +1471,7 @@ Have fun procrasinating with {}!
     assert out == expected
 
 
-def test_select_uneven_list_of_tuples(select_app, monkeypatch):
+def test_select_uneven_list_of_tuples(select_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response on stdin
     read_input_mock = mock.MagicMock(name='read_input', return_value='2')
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
@@ -1499,7 +1500,7 @@ Charm us with the {}...
         ('3', "<class 'method'>"),
     ],
 )
-def test_select_return_type(select_app, monkeypatch, selection, type_str):
+def test_select_return_type(select_app, monkeypatch, selection, type_str) -> None:
     # Mock out the input call so we don't actually wait for a user's response on stdin
     read_input_mock = mock.MagicMock(name='read_input', return_value=selection)
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
@@ -1521,7 +1522,7 @@ The return type is {type_str}
     assert out == expected
 
 
-def test_select_eof(select_app, monkeypatch):
+def test_select_eof(select_app, monkeypatch) -> None:
     # Ctrl-D during select causes an EOFError that just reprompts the user
     read_input_mock = mock.MagicMock(name='read_input', side_effect=[EOFError, 2])
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
@@ -1536,7 +1537,7 @@ def test_select_eof(select_app, monkeypatch):
     assert read_input_mock.call_count == 2
 
 
-def test_select_ctrl_c(outsim_app, monkeypatch):
+def test_select_ctrl_c(outsim_app, monkeypatch) -> None:
     # Ctrl-C during select prints ^C and raises a KeyboardInterrupt
     read_input_mock = mock.MagicMock(name='read_input', side_effect=KeyboardInterrupt)
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
@@ -1553,14 +1554,14 @@ class HelpNoDocstringApp(cmd2.Cmd):
     greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
 
     @cmd2.with_argparser(greet_parser, with_unknown_args=True)
-    def do_greet(self, opts, arg):
+    def do_greet(self, opts, arg) -> None:
         arg = ''.join(arg)
         if opts.shout:
             arg = arg.upper()
         self.stdout.write(arg + '\n')
 
 
-def test_help_with_no_docstring(capsys):
+def test_help_with_no_docstring(capsys) -> None:
     app = HelpNoDocstringApp()
     app.onecmd_plus_hooks('greet -h')
     out, err = capsys.readouterr()
@@ -1578,14 +1579,14 @@ optional arguments:
 
 
 class MultilineApp(cmd2.Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, multiline_commands=['orate'], **kwargs)
 
     orate_parser = cmd2.Cmd2ArgumentParser()
     orate_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
 
     @cmd2.with_argparser(orate_parser, with_unknown_args=True)
-    def do_orate(self, opts, arg):
+    def do_orate(self, opts, arg) -> None:
         arg = ''.join(arg)
         if opts.shout:
             arg = arg.upper()
@@ -1598,12 +1599,12 @@ def multiline_app():
     return app
 
 
-def test_multiline_complete_empty_statement_raises_exception(multiline_app):
+def test_multiline_complete_empty_statement_raises_exception(multiline_app) -> None:
     with pytest.raises(exceptions.EmptyStatement):
         multiline_app._complete_statement('')
 
 
-def test_multiline_complete_statement_without_terminator(multiline_app):
+def test_multiline_complete_statement_without_terminator(multiline_app) -> None:
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
     m = mock.MagicMock(name='input', return_value='\n')
@@ -1618,7 +1619,7 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
     assert statement.multiline_command == command
 
 
-def test_multiline_complete_statement_with_unclosed_quotes(multiline_app):
+def test_multiline_complete_statement_with_unclosed_quotes(multiline_app) -> None:
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
     m = mock.MagicMock(name='input', side_effect=['quotes', '" now closed;'])
@@ -1632,7 +1633,7 @@ def test_multiline_complete_statement_with_unclosed_quotes(multiline_app):
     assert statement.terminator == ';'
 
 
-def test_multiline_input_line_to_statement(multiline_app):
+def test_multiline_input_line_to_statement(multiline_app) -> None:
     # Verify _input_line_to_statement saves the fully entered input line for multiline commands
 
     # Mock out the input call so we don't actually wait for a user's response
@@ -1648,7 +1649,7 @@ def test_multiline_input_line_to_statement(multiline_app):
     assert statement.multiline_command == 'orate'
 
 
-def test_multiline_history_no_prior_history(multiline_app):
+def test_multiline_history_no_prior_history(multiline_app) -> None:
     # Test no existing history prior to typing the command
     m = mock.MagicMock(name='input', side_effect=['person', '\n'])
     builtins.input = m
@@ -1665,7 +1666,7 @@ def test_multiline_history_no_prior_history(multiline_app):
     assert readline.get_history_item(1) == "orate hi person"
 
 
-def test_multiline_history_first_line_matches_prev_entry(multiline_app):
+def test_multiline_history_first_line_matches_prev_entry(multiline_app) -> None:
     # Test when first line of multiline command matches previous history entry
     m = mock.MagicMock(name='input', side_effect=['person', '\n'])
     builtins.input = m
@@ -1684,7 +1685,7 @@ def test_multiline_history_first_line_matches_prev_entry(multiline_app):
     assert readline.get_history_item(2) == "orate hi person"
 
 
-def test_multiline_history_matches_prev_entry(multiline_app):
+def test_multiline_history_matches_prev_entry(multiline_app) -> None:
     # Test combined multiline command that matches previous history entry
     m = mock.MagicMock(name='input', side_effect=['person', '\n'])
     builtins.input = m
@@ -1702,7 +1703,7 @@ def test_multiline_history_matches_prev_entry(multiline_app):
     assert readline.get_history_item(1) == "orate hi person"
 
 
-def test_multiline_history_does_not_match_prev_entry(multiline_app):
+def test_multiline_history_does_not_match_prev_entry(multiline_app) -> None:
     # Test combined multiline command that does not match previous history entry
     m = mock.MagicMock(name='input', side_effect=['person', '\n'])
     builtins.input = m
@@ -1721,7 +1722,7 @@ def test_multiline_history_does_not_match_prev_entry(multiline_app):
     assert readline.get_history_item(2) == "orate hi person"
 
 
-def test_multiline_history_with_quotes(multiline_app):
+def test_multiline_history_with_quotes(multiline_app) -> None:
     # Test combined multiline command with quotes
     m = mock.MagicMock(name='input', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
     builtins.input = m
@@ -1743,19 +1744,19 @@ def test_multiline_history_with_quotes(multiline_app):
 
 
 class CommandResultApp(cmd2.Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def do_affirmative(self, arg):
+    def do_affirmative(self, arg) -> None:
         self.last_result = cmd2.CommandResult(arg, data=True)
 
-    def do_negative(self, arg):
+    def do_negative(self, arg) -> None:
         self.last_result = cmd2.CommandResult(arg, data=False)
 
-    def do_affirmative_no_data(self, arg):
+    def do_affirmative_no_data(self, arg) -> None:
         self.last_result = cmd2.CommandResult(arg)
 
-    def do_negative_no_data(self, arg):
+    def do_negative_no_data(self, arg) -> None:
         self.last_result = cmd2.CommandResult('', arg)
 
 
@@ -1765,7 +1766,7 @@ def commandresult_app():
     return app
 
 
-def test_commandresult_truthy(commandresult_app):
+def test_commandresult_truthy(commandresult_app) -> None:
     arg = 'foo'
     run_cmd(commandresult_app, f'affirmative {arg}')
     assert commandresult_app.last_result
@@ -1776,7 +1777,7 @@ def test_commandresult_truthy(commandresult_app):
     assert commandresult_app.last_result == cmd2.CommandResult(arg)
 
 
-def test_commandresult_falsy(commandresult_app):
+def test_commandresult_falsy(commandresult_app) -> None:
     arg = 'bar'
     run_cmd(commandresult_app, f'negative {arg}')
     assert not commandresult_app.last_result
@@ -1788,7 +1789,7 @@ def test_commandresult_falsy(commandresult_app):
 
 
 @pytest.mark.skipif(sys.platform.startswith('win'), reason="Test is problematic on GitHub Actions Windows runners")
-def test_is_text_file_bad_input(base_app):
+def test_is_text_file_bad_input(base_app) -> None:
     # Test with a non-existent file
     with pytest.raises(FileNotFoundError):
         utils.is_text_file('does_not_exist.txt')
@@ -1798,19 +1799,19 @@ def test_is_text_file_bad_input(base_app):
         utils.is_text_file('.')
 
 
-def test_eof(base_app):
+def test_eof(base_app) -> None:
     # Only thing to verify is that it returns True
     assert base_app.do_eof('')
     assert base_app.last_result is True
 
 
-def test_quit(base_app):
+def test_quit(base_app) -> None:
     # Only thing to verify is that it returns True
     assert base_app.do_quit('')
     assert base_app.last_result is True
 
 
-def test_echo(capsys):
+def test_echo(capsys) -> None:
     app = cmd2.Cmd()
     app.echo = True
     commands = ['help history']
@@ -1821,7 +1822,7 @@ def test_echo(capsys):
     assert out.startswith(f'{app.prompt}{commands[0]}\n' + HELP_HISTORY.split()[0])
 
 
-def test_read_input_rawinput_true(capsys, monkeypatch):
+def test_read_input_rawinput_true(capsys, monkeypatch) -> None:
     prompt_str = 'the_prompt'
     input_str = 'some input'
 
@@ -1886,7 +1887,7 @@ def test_read_input_rawinput_true(capsys, monkeypatch):
         assert not out
 
 
-def test_read_input_rawinput_false(capsys, monkeypatch):
+def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
     prompt_str = 'the_prompt'
     input_str = 'some input'
 
@@ -1939,7 +1940,7 @@ def test_read_input_rawinput_false(capsys, monkeypatch):
     assert not out
 
 
-def test_read_command_line_eof(base_app, monkeypatch):
+def test_read_command_line_eof(base_app, monkeypatch) -> None:
     read_input_mock = mock.MagicMock(name='read_input', side_effect=EOFError)
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
@@ -1947,7 +1948,7 @@ def test_read_command_line_eof(base_app, monkeypatch):
     assert line == 'eof'
 
 
-def test_poutput_string(outsim_app):
+def test_poutput_string(outsim_app) -> None:
     msg = 'This is a test'
     outsim_app.poutput(msg)
     out = outsim_app.stdout.getvalue()
@@ -1955,7 +1956,7 @@ def test_poutput_string(outsim_app):
     assert out == expected
 
 
-def test_poutput_zero(outsim_app):
+def test_poutput_zero(outsim_app) -> None:
     msg = 0
     outsim_app.poutput(msg)
     out = outsim_app.stdout.getvalue()
@@ -1963,7 +1964,7 @@ def test_poutput_zero(outsim_app):
     assert out == expected
 
 
-def test_poutput_empty_string(outsim_app):
+def test_poutput_empty_string(outsim_app) -> None:
     msg = ''
     outsim_app.poutput(msg)
     out = outsim_app.stdout.getvalue()
@@ -1971,7 +1972,7 @@ def test_poutput_empty_string(outsim_app):
     assert out == expected
 
 
-def test_poutput_none(outsim_app):
+def test_poutput_none(outsim_app) -> None:
     msg = None
     outsim_app.poutput(msg)
     out = outsim_app.stdout.getvalue()
@@ -1980,7 +1981,7 @@ def test_poutput_none(outsim_app):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_poutput_ansi_always(outsim_app):
+def test_poutput_ansi_always(outsim_app) -> None:
     msg = 'Hello World'
     colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
     outsim_app.poutput(colored_msg)
@@ -1991,7 +1992,7 @@ def test_poutput_ansi_always(outsim_app):
 
 
 @with_ansi_style(ansi.AllowStyle.NEVER)
-def test_poutput_ansi_never(outsim_app):
+def test_poutput_ansi_never(outsim_app) -> None:
     msg = 'Hello World'
     colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
     outsim_app.poutput(colored_msg)
@@ -2015,7 +2016,7 @@ invalid_command_name = [
 ]
 
 
-def test_get_alias_completion_items(base_app):
+def test_get_alias_completion_items(base_app) -> None:
     run_cmd(base_app, 'alias create fake run_pyscript')
     run_cmd(base_app, 'alias create ls !ls -hal')
 
@@ -2028,7 +2029,7 @@ def test_get_alias_completion_items(base_app):
         assert cur_res.description.rstrip() == base_app.aliases[cur_res]
 
 
-def test_get_macro_completion_items(base_app):
+def test_get_macro_completion_items(base_app) -> None:
     run_cmd(base_app, 'macro create foo !echo foo')
     run_cmd(base_app, 'macro create bar !echo bar')
 
@@ -2041,7 +2042,7 @@ def test_get_macro_completion_items(base_app):
         assert cur_res.description.rstrip() == base_app.macros[cur_res].value
 
 
-def test_get_settable_completion_items(base_app):
+def test_get_settable_completion_items(base_app) -> None:
     results = base_app._get_settable_completion_items()
     assert len(results) == len(base_app.settables)
 
@@ -2059,13 +2060,13 @@ def test_get_settable_completion_items(base_app):
         assert cur_settable.description[0:10] in cur_res.description
 
 
-def test_alias_no_subcommand(base_app):
+def test_alias_no_subcommand(base_app) -> None:
     out, err = run_cmd(base_app, 'alias')
     assert "Usage: alias [-h]" in err[0]
     assert "Error: the following arguments are required: SUBCOMMAND" in err[1]
 
 
-def test_alias_create(base_app):
+def test_alias_create(base_app) -> None:
     # Create the alias
     out, err = run_cmd(base_app, 'alias create fake run_pyscript')
     assert out == normalize("Alias 'fake' created")
@@ -2099,7 +2100,7 @@ def test_alias_create(base_app):
     assert base_app.last_result['fake'] == "help"
 
 
-def test_alias_create_with_quoted_tokens(base_app):
+def test_alias_create_with_quoted_tokens(base_app) -> None:
     """Demonstrate that quotes in alias value will be preserved"""
     alias_name = "fake"
     alias_command = 'help ">" "out file.txt" ";"'
@@ -2117,19 +2118,19 @@ def test_alias_create_with_quoted_tokens(base_app):
 
 
 @pytest.mark.parametrize('alias_name', invalid_command_name)
-def test_alias_create_invalid_name(base_app, alias_name, capsys):
+def test_alias_create_invalid_name(base_app, alias_name, capsys) -> None:
     out, err = run_cmd(base_app, f'alias create {alias_name} help')
     assert "Invalid alias name" in err[0]
     assert base_app.last_result is False
 
 
-def test_alias_create_with_command_name(base_app):
+def test_alias_create_with_command_name(base_app) -> None:
     out, err = run_cmd(base_app, 'alias create help stuff')
     assert "Alias cannot have the same name as a command" in err[0]
     assert base_app.last_result is False
 
 
-def test_alias_create_with_macro_name(base_app):
+def test_alias_create_with_macro_name(base_app) -> None:
     macro = "my_macro"
     run_cmd(base_app, f'macro create {macro} help')
     out, err = run_cmd(base_app, f'alias create {macro} help')
@@ -2137,7 +2138,7 @@ def test_alias_create_with_macro_name(base_app):
     assert base_app.last_result is False
 
 
-def test_alias_that_resolves_into_comment(base_app):
+def test_alias_that_resolves_into_comment(base_app) -> None:
     # Create the alias
     out, err = run_cmd(base_app, 'alias create fake ' + constants.COMMENT_CHAR + ' blah blah')
     assert out == normalize("Alias 'fake' created")
@@ -2148,14 +2149,14 @@ def test_alias_that_resolves_into_comment(base_app):
     assert not err
 
 
-def test_alias_list_invalid_alias(base_app):
+def test_alias_list_invalid_alias(base_app) -> None:
     # Look up invalid alias
     out, err = run_cmd(base_app, 'alias list invalid')
     assert "Alias 'invalid' not found" in err[0]
     assert base_app.last_result == {}
 
 
-def test_alias_delete(base_app):
+def test_alias_delete(base_app) -> None:
     # Create an alias
     run_cmd(base_app, 'alias create fake run_pyscript')
 
@@ -2165,25 +2166,25 @@ def test_alias_delete(base_app):
     assert base_app.last_result is True
 
 
-def test_alias_delete_all(base_app):
+def test_alias_delete_all(base_app) -> None:
     out, err = run_cmd(base_app, 'alias delete --all')
     assert out == normalize("All aliases deleted")
     assert base_app.last_result is True
 
 
-def test_alias_delete_non_existing(base_app):
+def test_alias_delete_non_existing(base_app) -> None:
     out, err = run_cmd(base_app, 'alias delete fake')
     assert "Alias 'fake' does not exist" in err[0]
     assert base_app.last_result is True
 
 
-def test_alias_delete_no_name(base_app):
+def test_alias_delete_no_name(base_app) -> None:
     out, err = run_cmd(base_app, 'alias delete')
     assert "Either --all or alias name(s)" in err[0]
     assert base_app.last_result is False
 
 
-def test_multiple_aliases(base_app):
+def test_multiple_aliases(base_app) -> None:
     alias1 = 'h1'
     alias2 = 'h2'
     run_cmd(base_app, f'alias create {alias1} help')
@@ -2195,13 +2196,13 @@ def test_multiple_aliases(base_app):
     verify_help_text(base_app, out)
 
 
-def test_macro_no_subcommand(base_app):
+def test_macro_no_subcommand(base_app) -> None:
     out, err = run_cmd(base_app, 'macro')
     assert "Usage: macro [-h]" in err[0]
     assert "Error: the following arguments are required: SUBCOMMAND" in err[1]
 
 
-def test_macro_create(base_app):
+def test_macro_create(base_app) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake run_pyscript')
     assert out == normalize("Macro 'fake' created")
@@ -2235,7 +2236,7 @@ def test_macro_create(base_app):
     assert base_app.last_result['fake'] == "help"
 
 
-def test_macro_create_with_quoted_tokens(base_app):
+def test_macro_create_with_quoted_tokens(base_app) -> None:
     """Demonstrate that quotes in macro value will be preserved"""
     macro_name = "fake"
     macro_command = 'help ">" "out file.txt" ";"'
@@ -2253,19 +2254,19 @@ def test_macro_create_with_quoted_tokens(base_app):
 
 
 @pytest.mark.parametrize('macro_name', invalid_command_name)
-def test_macro_create_invalid_name(base_app, macro_name):
+def test_macro_create_invalid_name(base_app, macro_name) -> None:
     out, err = run_cmd(base_app, f'macro create {macro_name} help')
     assert "Invalid macro name" in err[0]
     assert base_app.last_result is False
 
 
-def test_macro_create_with_command_name(base_app):
+def test_macro_create_with_command_name(base_app) -> None:
     out, err = run_cmd(base_app, 'macro create help stuff')
     assert "Macro cannot have the same name as a command" in err[0]
     assert base_app.last_result is False
 
 
-def test_macro_create_with_alias_name(base_app):
+def test_macro_create_with_alias_name(base_app) -> None:
     macro = "my_macro"
     run_cmd(base_app, f'alias create {macro} help')
     out, err = run_cmd(base_app, f'macro create {macro} help')
@@ -2273,7 +2274,7 @@ def test_macro_create_with_alias_name(base_app):
     assert base_app.last_result is False
 
 
-def test_macro_create_with_args(base_app):
+def test_macro_create_with_args(base_app) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake {1} {2}')
     assert out == normalize("Macro 'fake' created")
@@ -2283,7 +2284,7 @@ def test_macro_create_with_args(base_app):
     verify_help_text(base_app, out)
 
 
-def test_macro_create_with_escaped_args(base_app):
+def test_macro_create_with_escaped_args(base_app) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake help {{1}}')
     assert out == normalize("Macro 'fake' created")
@@ -2293,7 +2294,7 @@ def test_macro_create_with_escaped_args(base_app):
     assert err[0].startswith('No help on {1}')
 
 
-def test_macro_usage_with_missing_args(base_app):
+def test_macro_usage_with_missing_args(base_app) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake help {1} {2}')
     assert out == normalize("Macro 'fake' created")
@@ -2303,7 +2304,7 @@ def test_macro_usage_with_missing_args(base_app):
     assert "expects at least 2 arguments" in err[0]
 
 
-def test_macro_usage_with_exta_args(base_app):
+def test_macro_usage_with_exta_args(base_app) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake help {1}')
     assert out == normalize("Macro 'fake' created")
@@ -2313,21 +2314,21 @@ def test_macro_usage_with_exta_args(base_app):
     assert "Usage: alias create" in out[0]
 
 
-def test_macro_create_with_missing_arg_nums(base_app):
+def test_macro_create_with_missing_arg_nums(base_app) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake help {1} {3}')
     assert "Not all numbers between 1 and 3" in err[0]
     assert base_app.last_result is False
 
 
-def test_macro_create_with_invalid_arg_num(base_app):
+def test_macro_create_with_invalid_arg_num(base_app) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake help {1} {-1} {0}')
     assert "Argument numbers must be greater than 0" in err[0]
     assert base_app.last_result is False
 
 
-def test_macro_create_with_unicode_numbered_arg(base_app):
+def test_macro_create_with_unicode_numbered_arg(base_app) -> None:
     # Create the macro expecting 1 argument
     out, err = run_cmd(base_app, 'macro create fake help {\N{ARABIC-INDIC DIGIT ONE}}')
     assert out == normalize("Macro 'fake' created")
@@ -2337,13 +2338,13 @@ def test_macro_create_with_unicode_numbered_arg(base_app):
     assert "expects at least 1 argument" in err[0]
 
 
-def test_macro_create_with_missing_unicode_arg_nums(base_app):
+def test_macro_create_with_missing_unicode_arg_nums(base_app) -> None:
     out, err = run_cmd(base_app, 'macro create fake help {1} {\N{ARABIC-INDIC DIGIT THREE}}')
     assert "Not all numbers between 1 and 3" in err[0]
     assert base_app.last_result is False
 
 
-def test_macro_that_resolves_into_comment(base_app):
+def test_macro_that_resolves_into_comment(base_app) -> None:
     # Create the macro
     out, err = run_cmd(base_app, 'macro create fake {1} blah blah')
     assert out == normalize("Macro 'fake' created")
@@ -2354,14 +2355,14 @@ def test_macro_that_resolves_into_comment(base_app):
     assert not err
 
 
-def test_macro_list_invalid_macro(base_app):
+def test_macro_list_invalid_macro(base_app) -> None:
     # Look up invalid macro
     out, err = run_cmd(base_app, 'macro list invalid')
     assert "Macro 'invalid' not found" in err[0]
     assert base_app.last_result == {}
 
 
-def test_macro_delete(base_app):
+def test_macro_delete(base_app) -> None:
     # Create an macro
     run_cmd(base_app, 'macro create fake run_pyscript')
 
@@ -2371,25 +2372,25 @@ def test_macro_delete(base_app):
     assert base_app.last_result is True
 
 
-def test_macro_delete_all(base_app):
+def test_macro_delete_all(base_app) -> None:
     out, err = run_cmd(base_app, 'macro delete --all')
     assert out == normalize("All macros deleted")
     assert base_app.last_result is True
 
 
-def test_macro_delete_non_existing(base_app):
+def test_macro_delete_non_existing(base_app) -> None:
     out, err = run_cmd(base_app, 'macro delete fake')
     assert "Macro 'fake' does not exist" in err[0]
     assert base_app.last_result is True
 
 
-def test_macro_delete_no_name(base_app):
+def test_macro_delete_no_name(base_app) -> None:
     out, err = run_cmd(base_app, 'macro delete')
     assert "Either --all or macro name(s)" in err[0]
     assert base_app.last_result is False
 
 
-def test_multiple_macros(base_app):
+def test_multiple_macros(base_app) -> None:
     macro1 = 'h1'
     macro2 = 'h2'
     run_cmd(base_app, f'macro create {macro1} help')
@@ -2402,7 +2403,7 @@ def test_multiple_macros(base_app):
     assert len(out2) > len(out)
 
 
-def test_nonexistent_macro(base_app):
+def test_nonexistent_macro(base_app) -> None:
     from cmd2.parsing import (
         StatementParser,
     )
@@ -2418,7 +2419,7 @@ def test_nonexistent_macro(base_app):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_perror_style(base_app, capsys):
+def test_perror_style(base_app, capsys) -> None:
     msg = 'testing...'
     end = '\n'
     base_app.perror(msg)
@@ -2427,7 +2428,7 @@ def test_perror_style(base_app, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_perror_no_style(base_app, capsys):
+def test_perror_no_style(base_app, capsys) -> None:
     msg = 'testing...'
     end = '\n'
     base_app.perror(msg, apply_style=False)
@@ -2436,7 +2437,7 @@ def test_perror_no_style(base_app, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_pexcept_style(base_app, capsys):
+def test_pexcept_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
     base_app.pexcept(msg)
@@ -2445,7 +2446,7 @@ def test_pexcept_style(base_app, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_pexcept_no_style(base_app, capsys):
+def test_pexcept_no_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
     base_app.pexcept(msg, apply_style=False)
@@ -2454,7 +2455,7 @@ def test_pexcept_no_style(base_app, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_pexcept_not_exception(base_app, capsys):
+def test_pexcept_not_exception(base_app, capsys) -> None:
     # Pass in a msg that is not an Exception object
     msg = False
 
@@ -2463,7 +2464,7 @@ def test_pexcept_not_exception(base_app, capsys):
     assert err.startswith(ansi.style_error(msg))
 
 
-def test_ppaged(outsim_app):
+def test_ppaged(outsim_app) -> None:
     msg = 'testing...'
     end = '\n'
     outsim_app.ppaged(msg)
@@ -2472,7 +2473,7 @@ def test_ppaged(outsim_app):
 
 
 @with_ansi_style(ansi.AllowStyle.TERMINAL)
-def test_ppaged_strips_ansi_when_redirecting(outsim_app):
+def test_ppaged_strips_ansi_when_redirecting(outsim_app) -> None:
     msg = 'testing...'
     end = '\n'
     outsim_app._redirecting = True
@@ -2482,7 +2483,7 @@ def test_ppaged_strips_ansi_when_redirecting(outsim_app):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
+def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app) -> None:
     msg = 'testing...'
     end = '\n'
     outsim_app._redirecting = True
@@ -2496,7 +2497,7 @@ def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
 # command parsing by parent methods we don't override
 # don't need to test all the parsing logic here, because
 # parseline just calls StatementParser.parse_command_only()
-def test_parseline_empty(base_app):
+def test_parseline_empty(base_app) -> None:
     statement = ''
     command, args, line = base_app.parseline(statement)
     assert not command
@@ -2504,7 +2505,7 @@ def test_parseline_empty(base_app):
     assert not line
 
 
-def test_parseline_quoted(base_app):
+def test_parseline_quoted(base_app) -> None:
     statement = " command with 'partially completed quotes  "
     command, args, line = base_app.parseline(statement)
     assert command == 'command'
@@ -2512,7 +2513,7 @@ def test_parseline_quoted(base_app):
     assert line == statement.lstrip()
 
 
-def test_onecmd_raw_str_continue(outsim_app):
+def test_onecmd_raw_str_continue(outsim_app) -> None:
     line = "help"
     stop = outsim_app.onecmd(line)
     out = outsim_app.stdout.getvalue()
@@ -2520,7 +2521,7 @@ def test_onecmd_raw_str_continue(outsim_app):
     verify_help_text(outsim_app, out)
 
 
-def test_onecmd_raw_str_quit(outsim_app):
+def test_onecmd_raw_str_quit(outsim_app) -> None:
     line = "quit"
     stop = outsim_app.onecmd(line)
     out = outsim_app.stdout.getvalue()
@@ -2528,7 +2529,7 @@ def test_onecmd_raw_str_quit(outsim_app):
     assert out == ''
 
 
-def test_onecmd_add_to_history(outsim_app):
+def test_onecmd_add_to_history(outsim_app) -> None:
     line = "help"
     saved_hist_len = len(outsim_app.history)
 
@@ -2545,7 +2546,7 @@ def test_onecmd_add_to_history(outsim_app):
     assert new_hist_len == saved_hist_len
 
 
-def test_get_all_commands(base_app):
+def test_get_all_commands(base_app) -> None:
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
     expected_commands = [
@@ -2568,22 +2569,22 @@ def test_get_all_commands(base_app):
     assert commands == expected_commands
 
 
-def test_get_help_topics(base_app):
+def test_get_help_topics(base_app) -> None:
     # Verify that the base app has no additional help_foo methods
     custom_help = base_app.get_help_topics()
     assert len(custom_help) == 0
 
 
-def test_get_help_topics_hidden():
+def test_get_help_topics_hidden() -> None:
     # Verify get_help_topics() filters out hidden commands
     class TestApp(cmd2.Cmd):
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
 
-        def do_my_cmd(self, args):
+        def do_my_cmd(self, args) -> None:
             pass
 
-        def help_my_cmd(self, args):
+        def help_my_cmd(self, args) -> None:
             pass
 
     app = TestApp()
@@ -2596,7 +2597,7 @@ def test_get_help_topics_hidden():
 class ReplWithExitCode(cmd2.Cmd):
     """Example cmd2 application where we can specify an exit code when existing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(allow_cli_args=False)
 
     @cmd2.with_argument_list
@@ -2629,7 +2630,7 @@ def exit_code_repl():
     return app
 
 
-def test_exit_code_default(exit_code_repl):
+def test_exit_code_default(exit_code_repl) -> None:
     app = exit_code_repl
     app.use_rawinput = True
 
@@ -2645,7 +2646,7 @@ def test_exit_code_default(exit_code_repl):
     assert out == expected
 
 
-def test_exit_code_nonzero(exit_code_repl):
+def test_exit_code_nonzero(exit_code_repl) -> None:
     app = exit_code_repl
     app.use_rawinput = True
 
@@ -2662,21 +2663,21 @@ def test_exit_code_nonzero(exit_code_repl):
 
 
 class AnsiApp(cmd2.Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def do_echo(self, args):
+    def do_echo(self, args) -> None:
         self.poutput(args)
         self.perror(args)
 
-    def do_echo_error(self, args):
+    def do_echo_error(self, args) -> None:
         self.poutput(ansi.style(args, fg=ansi.Fg.RED))
         # perror uses colors by default
         self.perror(args)
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_ansi_pouterr_always_tty(mocker, capsys):
+def test_ansi_pouterr_always_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
@@ -2699,7 +2700,7 @@ def test_ansi_pouterr_always_tty(mocker, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
-def test_ansi_pouterr_always_notty(mocker, capsys):
+def test_ansi_pouterr_always_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
@@ -2722,7 +2723,7 @@ def test_ansi_pouterr_always_notty(mocker, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.TERMINAL)
-def test_ansi_terminal_tty(mocker, capsys):
+def test_ansi_terminal_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
@@ -2744,7 +2745,7 @@ def test_ansi_terminal_tty(mocker, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.TERMINAL)
-def test_ansi_terminal_notty(mocker, capsys):
+def test_ansi_terminal_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
@@ -2759,7 +2760,7 @@ def test_ansi_terminal_notty(mocker, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.NEVER)
-def test_ansi_never_tty(mocker, capsys):
+def test_ansi_never_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
@@ -2774,7 +2775,7 @@ def test_ansi_never_tty(mocker, capsys):
 
 
 @with_ansi_style(ansi.AllowStyle.NEVER)
-def test_ansi_never_notty(mocker, capsys):
+def test_ansi_never_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
@@ -2793,21 +2794,21 @@ class DisableCommandsApp(cmd2.Cmd):
 
     category_name = "Test Category"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     @cmd2.with_category(category_name)
-    def do_has_helper_funcs(self, arg):
+    def do_has_helper_funcs(self, arg) -> None:
         self.poutput("The real has_helper_funcs")
 
-    def help_has_helper_funcs(self):
+    def help_has_helper_funcs(self) -> None:
         self.poutput('Help for has_helper_funcs')
 
     def complete_has_helper_funcs(self, *args):
         return ['result']
 
     @cmd2.with_category(category_name)
-    def do_has_no_helper_funcs(self, arg):
+    def do_has_no_helper_funcs(self, arg) -> None:
         """Help for has_no_helper_funcs"""
         self.poutput("The real has_no_helper_funcs")
 
@@ -2818,7 +2819,7 @@ def disable_commands_app():
     return app
 
 
-def test_disable_and_enable_category(disable_commands_app):
+def test_disable_and_enable_category(disable_commands_app) -> None:
     ##########################################################################
     # Disable the category
     ##########################################################################
@@ -2911,7 +2912,7 @@ def test_disable_and_enable_category(disable_commands_app):
     assert 'has_helper_funcs' in help_topics
 
 
-def test_enable_enabled_command(disable_commands_app):
+def test_enable_enabled_command(disable_commands_app) -> None:
     # Test enabling a command that is not disabled
     saved_len = len(disable_commands_app.disabled_commands)
     disable_commands_app.enable_command('has_helper_funcs')
@@ -2920,12 +2921,12 @@ def test_enable_enabled_command(disable_commands_app):
     assert saved_len == len(disable_commands_app.disabled_commands)
 
 
-def test_disable_fake_command(disable_commands_app):
+def test_disable_fake_command(disable_commands_app) -> None:
     with pytest.raises(AttributeError):
         disable_commands_app.disable_command('fake', 'fake message')
 
 
-def test_disable_command_twice(disable_commands_app):
+def test_disable_command_twice(disable_commands_app) -> None:
     saved_len = len(disable_commands_app.disabled_commands)
     message_to_print = 'These commands are currently disabled'
     disable_commands_app.disable_command('has_helper_funcs', message_to_print)
@@ -2941,7 +2942,7 @@ def test_disable_command_twice(disable_commands_app):
     assert saved_len == new_len
 
 
-def test_disabled_command_not_in_history(disable_commands_app):
+def test_disabled_command_not_in_history(disable_commands_app) -> None:
     message_to_print = 'These commands are currently disabled'
     disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
@@ -2950,7 +2951,7 @@ def test_disabled_command_not_in_history(disable_commands_app):
     assert saved_len == len(disable_commands_app.history)
 
 
-def test_disabled_message_command_name(disable_commands_app):
+def test_disabled_message_command_name(disable_commands_app) -> None:
     message_to_print = f'{COMMAND_NAME} is currently disabled'
     disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
@@ -2959,7 +2960,7 @@ def test_disabled_message_command_name(disable_commands_app):
 
 
 @pytest.mark.parametrize('silence_startup_script', [True, False])
-def test_startup_script(request, capsys, silence_startup_script):
+def test_startup_script(request, capsys, silence_startup_script) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     startup_script = os.path.join(test_dir, '.cmd2rc')
     app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script, silence_startup_script=silence_startup_script)
@@ -2979,7 +2980,7 @@ def test_startup_script(request, capsys, silence_startup_script):
 
 
 @pytest.mark.parametrize('startup_script', odd_file_names)
-def test_startup_script_with_odd_file_names(startup_script):
+def test_startup_script_with_odd_file_names(startup_script) -> None:
     """Test file names with various patterns"""
     # Mock os.path.exists to trick cmd2 into adding this script to its startup commands
     saved_exists = os.path.exists
@@ -2993,13 +2994,13 @@ def test_startup_script_with_odd_file_names(startup_script):
     os.path.exists = saved_exists
 
 
-def test_transcripts_at_init():
+def test_transcripts_at_init() -> None:
     transcript_files = ['foo', 'bar']
     app = cmd2.Cmd(allow_cli_args=False, transcript_files=transcript_files)
     assert app._transcript_files == transcript_files
 
 
-def test_columnize_too_wide(outsim_app):
+def test_columnize_too_wide(outsim_app) -> None:
     """Test calling columnize with output that wider than display_width"""
     str_list = ["way too wide", "much wider than the first"]
     outsim_app.columnize(str_list, display_width=5)
@@ -3008,7 +3009,7 @@ def test_columnize_too_wide(outsim_app):
     assert outsim_app.stdout.getvalue() == expected
 
 
-def test_command_parser_retrieval(outsim_app: cmd2.Cmd):
+def test_command_parser_retrieval(outsim_app: cmd2.Cmd) -> None:
     # Pass something that isn't a method
     not_a_method = "just a string"
     assert outsim_app._command_parsers.get(not_a_method) is None
@@ -3017,7 +3018,7 @@ def test_command_parser_retrieval(outsim_app: cmd2.Cmd):
     assert outsim_app._command_parsers.get(outsim_app.__init__) is None
 
 
-def test_command_synonym_parser():
+def test_command_synonym_parser() -> None:
     # Make sure a command synonym returns the same parser as what it aliases
     class SynonymApp(cmd2.cmd2.Cmd):
         do_synonym = cmd2.cmd2.Cmd.do_help

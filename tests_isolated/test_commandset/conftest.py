@@ -177,7 +177,7 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Opti
 class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
 

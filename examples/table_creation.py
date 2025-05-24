@@ -63,12 +63,12 @@ class Author:
         self.relatives: list[Relative] = []
 
 
-def ansi_print(text):
+def ansi_print(text) -> None:
     """Wraps style_aware_write so style can be stripped if needed"""
     ansi.style_aware_write(sys.stdout, text + '\n\n')
 
 
-def basic_tables():
+def basic_tables() -> None:
     """Demonstrates basic examples of the table classes"""
 
     # Table data which demonstrates handling of wrapping and text styles
@@ -112,7 +112,7 @@ def basic_tables():
     ansi_print(table)
 
 
-def nested_tables():
+def nested_tables() -> None:
     """
     Demonstrates how to nest tables with styles which conflict with the parent table by setting style_data_text to False.
     It also demonstrates coloring various aspects of tables.

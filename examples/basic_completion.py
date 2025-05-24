@@ -31,10 +31,10 @@ file_strs = [
 
 
 class BasicCompletion(cmd2.Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def do_flag_based(self, statement: cmd2.Statement):
+    def do_flag_based(self, statement: cmd2.Statement) -> None:
         """Tab completes arguments based on a preceding flag using flag_based_complete
         -f, --food [completes food items]
         -s, --sport [completes sports]
@@ -58,7 +58,7 @@ class BasicCompletion(cmd2.Cmd):
 
         return self.flag_based_complete(text, line, begidx, endidx, flag_dict=flag_dict)
 
-    def do_index_based(self, statement: cmd2.Statement):
+    def do_index_based(self, statement: cmd2.Statement) -> None:
         """Tab completes first 3 arguments using index_based_complete"""
         self.poutput(f"Args: {statement.args}")
 
@@ -72,14 +72,14 @@ class BasicCompletion(cmd2.Cmd):
 
         return self.index_based_complete(text, line, begidx, endidx, index_dict=index_dict)
 
-    def do_delimiter_complete(self, statement: cmd2.Statement):
+    def do_delimiter_complete(self, statement: cmd2.Statement) -> None:
         """Tab completes files from a list using delimiter_complete"""
         self.poutput(f"Args: {statement.args}")
 
     # Use a partialmethod to set arguments to delimiter_complete
     complete_delimiter_complete = functools.partialmethod(cmd2.Cmd.delimiter_complete, match_against=file_strs, delimiter='/')
 
-    def do_raise_error(self, statement: cmd2.Statement):
+    def do_raise_error(self, statement: cmd2.Statement) -> None:
         """Demonstrates effect of raising CompletionError"""
         self.poutput(f"Args: {statement.args}")
 

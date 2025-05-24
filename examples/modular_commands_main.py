@@ -27,7 +27,7 @@ from cmd2 import (
 
 
 class WithCommandSets(Cmd):
-    def __init__(self, command_sets: Optional[Iterable[CommandSet]] = None):
+    def __init__(self, command_sets: Optional[Iterable[CommandSet]] = None) -> None:
         super().__init__(command_sets=command_sets)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 

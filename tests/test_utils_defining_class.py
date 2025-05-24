@@ -8,40 +8,40 @@ import cmd2.utils as cu
 
 
 class ParentClass:
-    def func_with_overrides(self):
+    def func_with_overrides(self) -> None:
         pass
 
-    def parent_only_func(self, param1, param2):
+    def parent_only_func(self, param1, param2) -> None:
         pass
 
 
 class ChildClass(ParentClass):
-    def func_with_overrides(self):
+    def func_with_overrides(self) -> None:
         super().func_with_overrides()
 
-    def child_function(self):
+    def child_function(self) -> None:
         pass
 
-    def lambda1():
+    def lambda1() -> int:
         return 1
 
-    def lambda2():
+    def lambda2() -> int:
         return 2
 
     @classmethod
-    def class_method(cls):
+    def class_method(cls) -> None:
         pass
 
     @staticmethod
-    def static_meth():
+    def static_meth() -> None:
         pass
 
 
-def func_not_in_class():
+def func_not_in_class() -> None:
     pass
 
 
-def test_get_defining_class():
+def test_get_defining_class() -> None:
     parent_instance = ParentClass()
     child_instance = ChildClass()
 

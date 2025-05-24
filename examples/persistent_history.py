@@ -11,7 +11,7 @@ import cmd2
 class Cmd2PersistentHistory(cmd2.Cmd):
     """Basic example of how to enable persistent readline history within your cmd2 app."""
 
-    def __init__(self, hist_file):
+    def __init__(self, hist_file) -> None:
         """Configure the app to load persistent history from a file (both readline and cmd2 history command affected).
 
         :param hist_file: file to load history from at start and write it to at end

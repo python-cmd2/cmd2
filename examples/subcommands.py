@@ -67,19 +67,19 @@ class SubcommandsExample(cmd2.Cmd):
     and the "sport" subcommand has tab completion enabled.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     # subcommand functions for the base command
-    def base_foo(self, args):
+    def base_foo(self, args) -> None:
         """foo subcommand of base command"""
         self.poutput(args.x * args.y)
 
-    def base_bar(self, args):
+    def base_bar(self, args) -> None:
         """bar subcommand of base command"""
         self.poutput(f'(({args.z}))')
 
-    def base_sport(self, args):
+    def base_sport(self, args) -> None:
         """sport subcommand of base command"""
         self.poutput(f'Sport is {args.sport}')
 
@@ -89,7 +89,7 @@ class SubcommandsExample(cmd2.Cmd):
     parser_sport.set_defaults(func=base_sport)
 
     @cmd2.with_argparser(base_parser)
-    def do_base(self, args):
+    def do_base(self, args) -> None:
         """Base command help"""
         func = getattr(args, 'func', None)
         if func is not None:
@@ -100,7 +100,7 @@ class SubcommandsExample(cmd2.Cmd):
             self.do_help('base')
 
     @cmd2.with_argparser(base2_parser)
-    def do_alternate(self, args):
+    def do_alternate(self, args) -> None:
         """Alternate command help"""
         func = getattr(args, 'func', None)
         if func is not None:

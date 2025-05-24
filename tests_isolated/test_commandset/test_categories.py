@@ -15,7 +15,7 @@ from cmd2 import (
 class MyBaseCommandSet(CommandSet):
     """Defines a default category for all sub-class CommandSets"""
 
-    def __init__(self, _: Any):
+    def __init__(self, _: Any) -> None:
         super().__init__()
 
 
@@ -24,10 +24,10 @@ class ChildInheritsParentCategories(MyBaseCommandSet):
     This subclass doesn't declare any categories so all commands here are also categorized under 'Default Category'
     """
 
-    def do_hello(self, _: cmd2.Statement):
+    def do_hello(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Hello')
 
-    def do_world(self, _: cmd2.Statement):
+    def do_world(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('World')
 
 
@@ -38,7 +38,7 @@ class ChildOverridesParentCategoriesNonHeritable(MyBaseCommandSet):
     CommandSet will not inherit this category and will, instead, inherit 'Default Category'
     """
 
-    def do_goodbye(self, _: cmd2.Statement):
+    def do_goodbye(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Goodbye')
 
 
@@ -48,7 +48,7 @@ class GrandchildInheritsGrandparentCategory(ChildOverridesParentCategoriesNonHer
     by the grandparent class.
     """
 
-    def do_aloha(self, _: cmd2.Statement):
+    def do_aloha(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Aloha')
 
 
@@ -59,7 +59,7 @@ class ChildOverridesParentCategories(MyBaseCommandSet):
     category declaration.
     """
 
-    def do_bonjour(self, _: cmd2.Statement):
+    def do_bonjour(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Bonjour')
 
 
@@ -69,7 +69,7 @@ class GrandchildInheritsHeritable(ChildOverridesParentCategories):
     CommandSet will be categorized under 'Heritable Category'
     """
 
-    def do_monde(self, _: cmd2.Statement):
+    def do_monde(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Monde')
 
 
@@ -78,14 +78,14 @@ class ExampleApp(cmd2.Cmd):
     Example to demonstrate heritable default categories
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(auto_load_commands=False)
 
-    def do_something(self, arg):
+    def do_something(self, arg) -> None:
         self.poutput('this is the something command')
 
 
-def test_heritable_categories():
+def test_heritable_categories() -> None:
     app = ExampleApp()
 
     base_cs = MyBaseCommandSet(0)

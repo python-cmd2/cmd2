@@ -12,7 +12,7 @@ import cmd2
 class Cmd2EventBased(cmd2.Cmd):
     """Basic example of how to run cmd2 without it controlling the main loop."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     # ... your class code here ...

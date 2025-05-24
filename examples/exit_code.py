@@ -7,7 +7,7 @@ import cmd2
 class ReplWithExitCode(cmd2.Cmd):
     """Example cmd2 application where we can specify an exit code when existing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     @cmd2.with_argument_list

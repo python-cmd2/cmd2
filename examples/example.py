@@ -24,7 +24,7 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']
 
-    def __init__(self):
+    def __init__(self) -> None:
         shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({'&': 'speak'})
         super().__init__(multiline_commands=['orate'], shortcuts=shortcuts)
@@ -40,7 +40,7 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args):
+    def do_speak(self, args) -> None:
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -62,7 +62,7 @@ class CmdLineApp(cmd2.Cmd):
     mumble_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(mumble_parser)
-    def do_mumble(self, args):
+    def do_mumble(self, args) -> None:
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
         for _ in range(min(repetitions, self.maxrepeats)):

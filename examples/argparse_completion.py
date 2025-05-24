@@ -19,7 +19,7 @@ food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
 
 
 class ArgparseCompletion(Cmd):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 

@@ -18,7 +18,7 @@ import cmd2
 class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application."""
 
-    def __init__(self, ip_addr=None, port=None, transcript_files=None):
+    def __init__(self, ip_addr=None, port=None, transcript_files=None) -> None:
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'&': 'speak'})
         super().__init__(transcript_files=transcript_files, multiline_commands=['orate'], shortcuts=shortcuts)
@@ -41,7 +41,7 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args: argparse.Namespace):
+    def do_speak(self, args: argparse.Namespace) -> None:
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -62,7 +62,7 @@ class CmdLineApp(cmd2.Cmd):
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
     @cmd2.with_argparser(tag_parser)
-    def do_tag(self, args: argparse.Namespace):
+    def do_tag(self, args: argparse.Namespace) -> None:
         """create an html tag"""
         # The Namespace always includes the Statement object created when parsing the command line
         statement = args.cmd2_statement.get()
@@ -72,7 +72,7 @@ class CmdLineApp(cmd2.Cmd):
         self.poutput('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
 
     @cmd2.with_argument_list
-    def do_tagg(self, arglist: list[str]):
+    def do_tagg(self, arglist: list[str]) -> None:
         """version of creating an html tag using arglist instead of argparser"""
         if len(arglist) >= 2:
             tag = arglist[0]

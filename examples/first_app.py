@@ -18,7 +18,7 @@ import cmd2
 class FirstApp(cmd2.Cmd):
     """A simple cmd2 application."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({'&': 'speak'})
         super().__init__(multiline_commands=['orate'], shortcuts=shortcuts)
@@ -34,7 +34,7 @@ class FirstApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args):
+    def do_speak(self, args) -> None:
         """Repeats what you tell me to."""
         words = []
         for word in args.words:

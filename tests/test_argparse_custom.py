@@ -23,7 +23,7 @@ from .conftest import (
 class ApCustomTestApp(cmd2.Cmd):
     """Test app for cmd2's argparse customization"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     range_parser = Cmd2ArgumentParser()
@@ -35,7 +35,7 @@ class ApCustomTestApp(cmd2.Cmd):
     range_parser.add_argument('--arg5', nargs=argparse.ONE_OR_MORE)
 
     @cmd2.with_argparser(range_parser)
-    def do_range(self, _):
+    def do_range(self, _) -> None:
         pass
 
 
@@ -44,7 +44,7 @@ def cust_app():
     return ApCustomTestApp()
 
 
-def fake_func():
+def fake_func() -> None:
     pass
 
 
@@ -56,7 +56,7 @@ def fake_func():
         ({'choices_provider': fake_func, 'completer': fake_func}, False),
     ],
 )
-def test_apcustom_choices_callable_count(kwargs, is_valid):
+def test_apcustom_choices_callable_count(kwargs, is_valid) -> None:
     parser = Cmd2ArgumentParser()
     if is_valid:
         parser.add_argument('name', **kwargs)
@@ -67,7 +67,7 @@ def test_apcustom_choices_callable_count(kwargs, is_valid):
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
-def test_apcustom_no_choices_callables_alongside_choices(kwargs):
+def test_apcustom_no_choices_callables_alongside_choices(kwargs) -> None:
     parser = Cmd2ArgumentParser()
     with pytest.raises(TypeError) as excinfo:
         parser.add_argument('name', choices=['my', 'choices', 'list'], **kwargs)
@@ -75,26 +75,26 @@ def test_apcustom_no_choices_callables_alongside_choices(kwargs):
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
-def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs):
+def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs) -> None:
     parser = Cmd2ArgumentParser()
     with pytest.raises(TypeError) as excinfo:
         parser.add_argument('--name', action='store_true', **kwargs)
     assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
 
 
-def test_apcustom_usage():
+def test_apcustom_usage() -> None:
     usage = "A custom usage statement"
     parser = Cmd2ArgumentParser(usage=usage)
     assert usage in parser.format_help()
 
 
-def test_apcustom_nargs_help_format(cust_app):
+def test_apcustom_nargs_help_format(cust_app) -> None:
     out, err = run_cmd(cust_app, 'help range')
     assert 'Usage: range [-h] [--arg0 ARG0] [--arg1 ARG1{2}] [--arg2 ARG2{3+}]' in out[0]
     assert '             [--arg3 ARG3{2..3}] [--arg4 [ARG4 [...]]] [--arg5 ARG5 [...]]' in out[1]
 
 
-def test_apcustom_nargs_range_validation(cust_app):
+def test_apcustom_nargs_range_validation(cust_app) -> None:
     # nargs = (3,)
     out, err = run_cmd(cust_app, 'range --arg2 one two')
     assert 'Error: argument --arg2: expected at least 3 arguments' in err[2]
@@ -125,28 +125,28 @@ def test_apcustom_nargs_range_validation(cust_app):
         (1, 2, 3),
     ],
 )
-def test_apcustom_narg_invalid_tuples(nargs_tuple):
+def test_apcustom_narg_invalid_tuples(nargs_tuple) -> None:
     parser = Cmd2ArgumentParser()
     expected_err = 'Ranged values for nargs must be a tuple of 1 or 2 integers'
     with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('invalid_tuple', nargs=nargs_tuple)
 
 
-def test_apcustom_narg_tuple_order():
+def test_apcustom_narg_tuple_order() -> None:
     parser = Cmd2ArgumentParser()
     expected_err = 'Invalid nargs range. The first value must be less than the second'
     with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('invalid_tuple', nargs=(2, 1))
 
 
-def test_apcustom_narg_tuple_negative():
+def test_apcustom_narg_tuple_negative() -> None:
     parser = Cmd2ArgumentParser()
     expected_err = 'Negative numbers are invalid for nargs range'
     with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('invalid_tuple', nargs=(-1, 1))
 
 
-def test_apcustom_narg_tuple_zero_base():
+def test_apcustom_narg_tuple_zero_base() -> None:
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0,))
     assert arg.nargs == argparse.ZERO_OR_MORE
@@ -166,7 +166,7 @@ def test_apcustom_narg_tuple_zero_base():
     assert "arg{0..3}" in parser.format_help()
 
 
-def test_apcustom_narg_tuple_one_base():
+def test_apcustom_narg_tuple_one_base() -> None:
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1,))
     assert arg.nargs == argparse.ONE_OR_MORE
@@ -180,7 +180,7 @@ def test_apcustom_narg_tuple_one_base():
     assert "arg{1..5}" in parser.format_help()
 
 
-def test_apcustom_narg_tuple_other_ranges():
+def test_apcustom_narg_tuple_other_ranges() -> None:
     # Test range with no upper bound on max
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2,))
@@ -194,7 +194,7 @@ def test_apcustom_narg_tuple_other_ranges():
     assert arg.nargs_range == (2, 5)
 
 
-def test_apcustom_print_message(capsys):
+def test_apcustom_print_message(capsys) -> None:
     import sys
 
     test_message = 'The test message'
@@ -212,7 +212,7 @@ def test_apcustom_print_message(capsys):
     assert test_message in err
 
 
-def test_generate_range_error():
+def test_generate_range_error() -> None:
     # max is INFINITY
     err_str = generate_range_error(1, constants.INFINITY)
     assert err_str == "expected at least 1 argument"
@@ -235,14 +235,14 @@ def test_generate_range_error():
     assert err_str == "expected 0 to 2 arguments"
 
 
-def test_apcustom_required_options():
+def test_apcustom_required_options() -> None:
     # Make sure a 'required arguments' section shows when a flag is marked required
     parser = Cmd2ArgumentParser()
     parser.add_argument('--required_flag', required=True)
     assert 'required arguments' in parser.format_help()
 
 
-def test_override_parser():
+def test_override_parser() -> None:
     """Test overriding argparse_custom.DEFAULT_ARGUMENT_PARSER"""
     import importlib
 
@@ -265,14 +265,14 @@ def test_override_parser():
     assert argparse_custom.DEFAULT_ARGUMENT_PARSER == CustomParser
 
 
-def test_apcustom_metavar_tuple():
+def test_apcustom_metavar_tuple() -> None:
     # Test the case when a tuple metavar is used with nargs an integer > 1
     parser = Cmd2ArgumentParser()
     parser.add_argument('--aflag', nargs=2, metavar=('foo', 'bar'), help='This is a test')
     assert '[--aflag foo bar]' in parser.format_help()
 
 
-def test_cmd2_attribute_wrapper():
+def test_cmd2_attribute_wrapper() -> None:
     initial_val = 5
     wrapper = cmd2.Cmd2AttributeWrapper(initial_val)
     assert wrapper.get() == initial_val
@@ -282,7 +282,7 @@ def test_cmd2_attribute_wrapper():
     assert wrapper.get() == new_val
 
 
-def test_completion_items_as_choices(capsys):
+def test_completion_items_as_choices(capsys) -> None:
     """
     Test cmd2's patch to Argparse._check_value() which supports CompletionItems as choices.
     Choices are compared to CompletionItems.orig_value instead of the CompletionItem instance.

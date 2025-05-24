@@ -29,13 +29,13 @@ from cmd2 import ansi
 class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 apps."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell
         super().__init__(include_ipy=True)
         self._set_prompt()
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇 💩'
 
-    def _set_prompt(self):
+    def _set_prompt(self) -> None:
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
         self.prompt = ansi.style(f'{self.cwd} $ ', fg=ansi.Fg.CYAN)
@@ -52,7 +52,7 @@ class CmdLineApp(cmd2.Cmd):
         return stop
 
     @cmd2.with_argument_list
-    def do_cd(self, arglist):
+    def do_cd(self, arglist) -> None:
         """Change directory.
         Usage:
             cd <new_dir>
@@ -96,7 +96,7 @@ class CmdLineApp(cmd2.Cmd):
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
     @cmd2.with_argparser(dir_parser, with_unknown_args=True)
-    def do_dir(self, args, unknown):
+    def do_dir(self, args, unknown) -> None:
         """List contents of current directory."""
         # No arguments for this command
         if unknown:

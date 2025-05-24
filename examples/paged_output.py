@@ -9,10 +9,10 @@ import cmd2
 class PagedOutput(cmd2.Cmd):
     """Example cmd2 application which shows how to display output using a pager."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def page_file(self, file_path: str, chop: bool = False):
+    def page_file(self, file_path: str, chop: bool = False) -> None:
         """Helper method to prevent having too much duplicated code."""
         filename = os.path.expanduser(file_path)
         try:
@@ -23,7 +23,7 @@ class PagedOutput(cmd2.Cmd):
             self.pexcept(f'Error reading {filename!r}: {ex}')
 
     @cmd2.with_argument_list
-    def do_page_wrap(self, args: list[str]):
+    def do_page_wrap(self, args: list[str]) -> None:
         """Read in a text file and display its output in a pager, wrapping long lines if they don't fit.
 
         Usage: page_wrap <file_path>
@@ -36,7 +36,7 @@ class PagedOutput(cmd2.Cmd):
     complete_page_wrap = cmd2.Cmd.path_complete
 
     @cmd2.with_argument_list
-    def do_page_truncate(self, args: list[str]):
+    def do_page_truncate(self, args: list[str]) -> None:
         """Read in a text file and display its output in a pager, truncating long lines if they don't fit.
 
         Truncated lines can still be accessed by scrolling to the right using the arrow keys.

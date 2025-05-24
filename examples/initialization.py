@@ -23,7 +23,7 @@ from cmd2 import (
 class BasicApp(cmd2.Cmd):
     CUSTOM_CATEGORY = 'My Custom Commands'
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
@@ -56,12 +56,12 @@ class BasicApp(cmd2.Cmd):
         )
 
     @cmd2.with_category(CUSTOM_CATEGORY)
-    def do_intro(self, _):
+    def do_intro(self, _) -> None:
         """Display the intro banner"""
         self.poutput(self.intro)
 
     @cmd2.with_category(CUSTOM_CATEGORY)
-    def do_echo(self, arg):
+    def do_echo(self, arg) -> None:
         """Example of a multiline command"""
         fg_color = Fg[self.foreground_color.upper()]
         self.poutput(style(arg, fg=fg_color))

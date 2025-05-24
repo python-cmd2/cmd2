@@ -7,7 +7,7 @@ import cmd2
 
 
 class MyApp(cmd2.Cmd):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.remove_settable('debug')
 

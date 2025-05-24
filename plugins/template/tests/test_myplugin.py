@@ -16,11 +16,11 @@ from cmd2 import (
 class MyApp(cmd2_myplugin.MyPluginMixin, cmd2.Cmd):
     """Simple subclass of cmd2.Cmd with our SayMixin plugin included."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     @cmd2_myplugin.empty_decorator
-    def do_empty(self, args):
+    def do_empty(self, args) -> None:
         self.poutput("running the empty command")
 
 
@@ -48,7 +48,7 @@ def init_app():
 #####
 
 
-def test_say(capsys):
+def test_say(capsys) -> None:
     # call our initialization function instead of using a fixture
     app = init_app()
     # run our mixed in command
@@ -60,7 +60,7 @@ def test_say(capsys):
     assert not err
 
 
-def test_decorator(capsys):
+def test_decorator(capsys) -> None:
     # call our initialization function instead of using a fixture
     app = init_app()
     # run one command in the app

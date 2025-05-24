@@ -68,7 +68,7 @@ class AlerterApp(cmd2.Cmd):
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
 
-    def do_start_alerts(self, _):
+    def do_start_alerts(self, _) -> None:
         """Starts the alerter thread"""
         if self._alerter_thread.is_alive():
             print("The alert thread is already started")
@@ -77,7 +77,7 @@ class AlerterApp(cmd2.Cmd):
             self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
             self._alerter_thread.start()
 
-    def do_stop_alerts(self, _):
+    def do_stop_alerts(self, _) -> None:
         """Stops the alerter thread"""
         self._stop_event.set()
         if self._alerter_thread.is_alive():
