@@ -213,27 +213,27 @@ class Cursor:
     """Create ANSI sequences to alter the cursor position."""
 
     @staticmethod
-    def up(count: int = 1) -> str:
+    def _up(count: int = 1) -> str:
         """Move the cursor up a specified amount of lines (Defaults to 1)."""
         return f"{CSI}{count}A"
 
     @staticmethod
-    def down(count: int = 1) -> str:
+    def _down(count: int = 1) -> str:
         """Move the cursor down a specified amount of lines (Defaults to 1)."""
         return f"{CSI}{count}B"
 
     @staticmethod
-    def forward(count: int = 1) -> str:
+    def _forward(count: int = 1) -> str:
         """Move the cursor forward a specified amount of lines (Defaults to 1)."""
         return f"{CSI}{count}C"
 
     @staticmethod
-    def back(count: int = 1) -> str:
+    def _back(count: int = 1) -> str:
         """Move the cursor back a specified amount of lines (Defaults to 1)."""
         return f"{CSI}{count}D"
 
     @staticmethod
-    def set_pos(x: int, y: int) -> str:
+    def _set_pos(x: int, y: int) -> str:
         """Set the cursor position to coordinates which are 1-based."""
         return f"{CSI}{y};{x}H"
 
@@ -1059,11 +1059,11 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
 
     # Move the cursor down to the last input line
     if cursor_input_line != num_input_terminal_lines:
-        terminal_str += Cursor.down(num_input_terminal_lines - cursor_input_line)
+        terminal_str += Cursor._down(num_input_terminal_lines - cursor_input_line)
 
     # Clear each line from the bottom up so that the cursor ends up on the first prompt line
     total_lines = num_prompt_terminal_lines + num_input_terminal_lines
-    terminal_str += (clear_line() + Cursor.up(1)) * (total_lines - 1)
+    terminal_str += (clear_line() + Cursor._up(1)) * (total_lines - 1)
 
     # Clear the first prompt line
     terminal_str += clear_line()
