@@ -12,7 +12,6 @@ from collections import (
 from typing import (
     TYPE_CHECKING,
     Optional,
-    Type,
     Union,
     cast,
 )
@@ -143,11 +142,9 @@ class _UnfinishedFlagError(CompletionError):
         CompletionError which occurs when the user has not finished the current flag
         :param flag_arg_state: information about the unfinished flag action
         """
-        error = "Error: argument {}: {} ({} entered)".format(
-            argparse._get_action_name(flag_arg_state.action),
-            generate_range_error(cast(int, flag_arg_state.min), cast(Union[int, float], flag_arg_state.max)),
-            flag_arg_state.count,
-        )
+        arg = f'{argparse._get_action_name(flag_arg_state.action)}'
+        err = f'{generate_range_error(cast(int, flag_arg_state.min), cast(Union[int, float], flag_arg_state.max))}'
+        error = f"Error: argument {arg}: {err} ({flag_arg_state.count} entered)"
         super().__init__(error)
 
 
@@ -272,9 +269,9 @@ class ArgparseCompleter:
                         if arg_action == completer_action:
                             return
 
-                        error = "Error: argument {}: not allowed with argument {}".format(
-                            argparse._get_action_name(arg_action), argparse._get_action_name(completer_action)
-                        )
+                        arg_str = f'{argparse._get_action_name(arg_action)}'
+                        completer_str = f'{argparse._get_action_name(completer_action)}'
+                        error = f"Error: argument {arg_str}: not allowed with argument {completer_str}"
                         raise CompletionError(error)
 
                     # Mark that this action completed the group
@@ -766,10 +763,10 @@ class ArgparseCompleter:
 
 
 # The default ArgparseCompleter class for a cmd2 app
-DEFAULT_AP_COMPLETER: Type[ArgparseCompleter] = ArgparseCompleter
+DEFAULT_AP_COMPLETER: type[ArgparseCompleter] = ArgparseCompleter
 
 
-def set_default_ap_completer_type(completer_type: Type[ArgparseCompleter]) -> None:
+def set_default_ap_completer_type(completer_type: type[ArgparseCompleter]) -> None:
     """
     Set the default ArgparseCompleter class for a cmd2 app.
 

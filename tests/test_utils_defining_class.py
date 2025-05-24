@@ -7,7 +7,7 @@ import functools
 import cmd2.utils as cu
 
 
-class ParentClass(object):
+class ParentClass:
     def func_with_overrides(self):
         pass
 

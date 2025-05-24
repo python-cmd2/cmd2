@@ -21,7 +21,7 @@ class CommandSetA(cmd2.CommandSet):
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
     def do_cranberry(self, ns: argparse.Namespace, unknown: list[str]):
-        self._cmd.poutput('Cranberry {}!!'.format(ns.arg1))
+        self._cmd.poutput(f'Cranberry {ns.arg1}!!')
         if unknown and len(unknown):
             self._cmd.poutput('Unknown: ' + ', '.join(['{}'] * len(unknown)).format(*unknown))
         self._cmd.last_result = {'arg1': ns.arg1, 'unknown': unknown}
@@ -33,7 +33,7 @@ class CommandSetA(cmd2.CommandSet):
     @cmd2.with_category('Also Alone')
     def do_durian(self, args: list[str]):
         """Durian Command"""
-        self._cmd.poutput('{} Arguments: '.format(len(args)))
+        self._cmd.poutput(f'{len(args)} Arguments: ')
         self._cmd.poutput(', '.join(['{}'] * len(args)).format(*args))
 
     def complete_durian(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
@@ -45,4 +45,4 @@ class CommandSetA(cmd2.CommandSet):
     @cmd2.with_category('Alone')
     @cmd2.with_argparser(elderberry_parser)
     def do_elderberry(self, ns: argparse.Namespace):
-        self._cmd.poutput('Elderberry {}!!'.format(ns.arg1))
+        self._cmd.poutput(f'Elderberry {ns.arg1}!!')

@@ -127,7 +127,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         """Choices method that returns CompletionItems"""
         items = []
         for i in range(10):
-            main_str = 'main_str{}'.format(i)
+            main_str = f'main_str{i}'
             items.append(CompletionItem(main_str, description='blah blah'))
         return items
 
@@ -343,8 +343,8 @@ def ac_app():
 
 @pytest.mark.parametrize('command', ['music', 'music create', 'music create rock', 'music create jazz'])
 def test_help(ac_app, command):
-    out1, err1 = run_cmd(ac_app, '{} -h'.format(command))
-    out2, err2 = run_cmd(ac_app, 'help {}'.format(command))
+    out1, err1 = run_cmd(ac_app, f'{command} -h')
+    out2, err2 = run_cmd(ac_app, f'help {command}')
     assert out1 == out2
 
 
@@ -370,7 +370,7 @@ def test_bad_subcommand_help(ac_app):
     ],
 )
 def test_complete_help(ac_app, command, text, completions):
-    line = 'help {} {}'.format(command, text)
+    line = f'help {command} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -388,7 +388,7 @@ def test_complete_help(ac_app, command, text, completions):
     [('create', '', ['jazz', 'rock']), ('create', 'ja', ['jazz ']), ('create', 'foo', []), ('creab', 'ja', [])],
 )
 def test_subcommand_completions(ac_app, subcommand, text, completions):
-    line = 'music {} {}'.format(subcommand, text)
+    line = f'music {subcommand} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -533,7 +533,7 @@ def test_subcommand_completions(ac_app, subcommand, text, completions):
     ],
 )
 def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matches, display_matches):
-    line = '{} {}'.format(command_and_args, text)
+    line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -562,7 +562,7 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completion_matc
     ],
 )
 def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
-    line = 'choices {} {}'.format(flag, text)
+    line = f'choices {flag} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -629,7 +629,7 @@ def test_flag_sorting(ac_app):
     option_strings.sort(key=ac_app.default_sort_key)
 
     text = '-'
-    line = 'choices arg1 arg2 arg3 {}'.format(text)
+    line = f'choices arg1 arg2 arg3 {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -643,7 +643,7 @@ def test_flag_sorting(ac_app):
     [('-c', '', ArgparseCompleterTester.completions_for_flag), ('--completer', 'f', ['flag', 'fairly'])],
 )
 def test_autocomp_flag_completers(ac_app, flag, text, completions):
-    line = 'completer {} {}'.format(flag, text)
+    line = f'completer {flag} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -690,7 +690,7 @@ def test_autocomp_blank_token(ac_app):
 
     # Blank flag arg will be consumed. Therefore we expect to be completing the first positional.
     text = ''
-    line = 'completer -c {} {}'.format(blank, text)
+    line = f'completer -c {blank} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -701,7 +701,7 @@ def test_autocomp_blank_token(ac_app):
 
     # Blank arg for first positional will be consumed. Therefore we expect to be completing the second positional.
     text = ''
-    line = 'completer {} {}'.format(blank, text)
+    line = f'completer {blank} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -714,7 +714,7 @@ def test_autocomp_blank_token(ac_app):
 def test_completion_items(ac_app):
     # First test CompletionItems created from strings
     text = ''
-    line = 'choices --completion_items {}'.format(text)
+    line = f'choices --completion_items {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -736,7 +736,7 @@ def test_completion_items(ac_app):
 
     # Now test CompletionItems created from numbers
     text = ''
-    line = 'choices --num_completion_items {}'.format(text)
+    line = f'choices --num_completion_items {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -772,12 +772,12 @@ def test_completion_items(ac_app):
 def test_max_completion_items(ac_app, num_aliases, show_description):
     # Create aliases
     for i in range(num_aliases):
-        run_cmd(ac_app, 'alias create fake_alias{} help'.format(i))
+        run_cmd(ac_app, f'alias create fake_alias{i} help')
 
     assert len(ac_app.aliases) == num_aliases
 
     text = 'fake_alias'
-    line = 'alias list {}'.format(text)
+    line = f'alias list {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -851,7 +851,7 @@ def test_max_completion_items(ac_app, num_aliases, show_description):
 )
 def test_autcomp_nargs(ac_app, args, completions):
     text = ''
-    line = 'nargs {} {}'.format(args, text)
+    line = f'nargs {args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -898,7 +898,7 @@ def test_autcomp_nargs(ac_app, args, completions):
     ],
 )
 def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys):
-    line = '{} {}'.format(command_and_args, text)
+    line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -911,7 +911,7 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys)
 def test_completion_items_arg_header(ac_app):
     # Test when metavar is None
     text = ''
-    line = 'choices --desc_header {}'.format(text)
+    line = f'choices --desc_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -920,7 +920,7 @@ def test_completion_items_arg_header(ac_app):
 
     # Test when metavar is a string
     text = ''
-    line = 'choices --no_header {}'.format(text)
+    line = f'choices --no_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -929,7 +929,7 @@ def test_completion_items_arg_header(ac_app):
 
     # Test when metavar is a tuple
     text = ''
-    line = 'choices --tuple_metavar {}'.format(text)
+    line = f'choices --tuple_metavar {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -938,7 +938,7 @@ def test_completion_items_arg_header(ac_app):
     assert ac_app.TUPLE_METAVAR[0].upper() in normalize(ac_app.formatted_completions)[0]
 
     text = ''
-    line = 'choices --tuple_metavar token_1 {}'.format(text)
+    line = f'choices --tuple_metavar token_1 {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -947,7 +947,7 @@ def test_completion_items_arg_header(ac_app):
     assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[0]
 
     text = ''
-    line = 'choices --tuple_metavar token_1 token_2 {}'.format(text)
+    line = f'choices --tuple_metavar token_1 token_2 {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -964,7 +964,7 @@ def test_completion_items_descriptive_header(ac_app):
 
     # This argument provided a descriptive header
     text = ''
-    line = 'choices --desc_header {}'.format(text)
+    line = f'choices --desc_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -973,7 +973,7 @@ def test_completion_items_descriptive_header(ac_app):
 
     # This argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADER
     text = ''
-    line = 'choices --no_header {}'.format(text)
+    line = f'choices --no_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1008,7 +1008,7 @@ def test_completion_items_descriptive_header(ac_app):
     ],
 )
 def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys):
-    line = '{} {}'.format(command_and_args, text)
+    line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1022,7 +1022,7 @@ def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys):
 
 def test_autocomp_hint_no_help_text(ac_app, capsys):
     text = ''
-    line = 'hint foo {}'.format(text)
+    line = f'hint foo {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1050,7 +1050,7 @@ Hint:
     ],
 )
 def test_completion_error(ac_app, capsys, args, text):
-    line = 'raise_completion_error {} {}'.format(args, text)
+    line = f'raise_completion_error {args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1058,7 +1058,7 @@ def test_completion_error(ac_app, capsys, args, text):
     out, err = capsys.readouterr()
 
     assert first_match is None
-    assert "{} broke something".format(text) in out
+    assert f"{text} broke something" in out
 
 
 @pytest.mark.parametrize(
@@ -1074,7 +1074,7 @@ def test_completion_error(ac_app, capsys, args, text):
 )
 def test_arg_tokens(ac_app, command_and_args, completions):
     text = ''
-    line = '{} {}'.format(command_and_args, text)
+    line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1111,7 +1111,7 @@ def test_arg_tokens(ac_app, command_and_args, completions):
     ],
 )
 def test_complete_mutex_group(ac_app, command_and_args, text, output_contains, first_match, capsys):
-    line = '{} {}'.format(command_and_args, text)
+    line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1189,7 +1189,7 @@ def test_complete_command_help_no_tokens(ac_app):
 )
 def test_complete_standalone(ac_app, flag, completions):
     text = ''
-    line = 'standalone {} {}'.format(flag, text)
+    line = f'standalone {flag} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 

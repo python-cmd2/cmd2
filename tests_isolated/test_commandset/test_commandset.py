@@ -57,7 +57,7 @@ class CommandSetA(CommandSetBase):
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
     def do_cranberry(self, ns: argparse.Namespace, unknown: list[str]):
-        self._cmd.poutput('Cranberry {}!!'.format(ns.arg1))
+        self._cmd.poutput(f'Cranberry {ns.arg1}!!')
         if unknown and len(unknown):
             self._cmd.poutput('Unknown: ' + ', '.join(['{}'] * len(unknown)).format(*unknown))
         self._cmd.last_result = {'arg1': ns.arg1, 'unknown': unknown}
@@ -69,7 +69,7 @@ class CommandSetA(CommandSetBase):
     @cmd2.with_category('Also Alone')
     def do_durian(self, args: list[str]):
         """Durian Command"""
-        self._cmd.poutput('{} Arguments: '.format(len(args)))
+        self._cmd.poutput(f'{len(args)} Arguments: ')
         self._cmd.poutput(', '.join(['{}'] * len(args)).format(*args))
         self._cmd.last_result = {'args': args}
 
@@ -82,7 +82,7 @@ class CommandSetA(CommandSetBase):
     @cmd2.with_category('Alone')
     @cmd2.with_argparser(elderberry_parser)
     def do_elderberry(self, ns: argparse.Namespace):
-        self._cmd.poutput('Elderberry {}!!'.format(ns.arg1))
+        self._cmd.poutput(f'Elderberry {ns.arg1}!!')
         self._cmd.last_result = {'arg1': ns.arg1}
 
     # Test that CommandSet with as_subcommand_to decorator successfully loads
@@ -548,7 +548,7 @@ def test_subcommands(command_sets_manual):
     assert 'Fruits' in cmds_cats
 
     text = ''
-    line = 'cut {}'.format(text)
+    line = f'cut {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
@@ -561,7 +561,7 @@ def test_subcommands(command_sets_manual):
     assert 'cutting banana: discs' in cmd_result.stdout
 
     text = ''
-    line = 'cut bokchoy {}'.format(text)
+    line = f'cut bokchoy {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
@@ -593,7 +593,7 @@ def test_subcommands(command_sets_manual):
     assert 'Fruits' in cmds_cats
 
     text = ''
-    line = 'cut {}'.format(text)
+    line = f'cut {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
@@ -603,7 +603,7 @@ def test_subcommands(command_sets_manual):
     assert ['banana', 'bananer', 'bokchoy'] == command_sets_manual.completion_matches
 
     text = ''
-    line = 'cut bokchoy {}'.format(text)
+    line = f'cut bokchoy {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
@@ -759,7 +759,7 @@ def test_static_subcommands(static_subcommands_app):
     assert 'Fruits' in cmds_cats
 
     text = ''
-    line = 'cut {}'.format(text)
+    line = f'cut {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, static_subcommands_app)
@@ -769,7 +769,7 @@ def test_static_subcommands(static_subcommands_app):
     assert ['banana', 'bananer', 'bokchoy'] == static_subcommands_app.completion_matches
 
     text = ''
-    line = 'cut bokchoy {}'.format(text)
+    line = f'cut bokchoy {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, static_subcommands_app)
@@ -805,7 +805,7 @@ class SupportFuncUserSubclass1(SupportFuncProvider):
 
     @cmd2.with_argparser(parser)
     def do_user_sub1(self, ns: argparse.Namespace):
-        self._cmd.poutput('something {}'.format(ns.state))
+        self._cmd.poutput(f'something {ns.state}')
 
 
 class SupportFuncUserSubclass2(SupportFuncProvider):
@@ -816,7 +816,7 @@ class SupportFuncUserSubclass2(SupportFuncProvider):
 
     @cmd2.with_argparser(parser)
     def do_user_sub2(self, ns: argparse.Namespace):
-        self._cmd.poutput('something {}'.format(ns.state))
+        self._cmd.poutput(f'something {ns.state}')
 
 
 class SupportFuncUserUnrelated(cmd2.CommandSet):
@@ -831,7 +831,7 @@ class SupportFuncUserUnrelated(cmd2.CommandSet):
 
     @cmd2.with_argparser(parser)
     def do_user_unrelated(self, ns: argparse.Namespace):
-        self._cmd.poutput('something {}'.format(ns.state))
+        self._cmd.poutput(f'something {ns.state}')
 
 
 def test_cross_commandset_completer(command_sets_manual, capsys):
@@ -857,7 +857,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys):
     command_sets_manual.register_command_set(user_sub2)
 
     text = ''
-    line = 'user_sub1 {}'.format(text)
+    line = f'user_sub1 {text}'
     endidx = len(line)
     begidx = endidx
     complete_states_expected_self = user_sub1
@@ -883,7 +883,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys):
     command_sets_manual.register_command_set(user_unrelated)
 
     text = ''
-    line = 'user_unrelated {}'.format(text)
+    line = f'user_unrelated {text}'
     endidx = len(line)
     begidx = endidx
     complete_states_expected_self = func_provider
@@ -906,7 +906,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys):
     command_sets_manual.register_command_set(user_unrelated)
 
     text = ''
-    line = 'user_unrelated {}'.format(text)
+    line = f'user_unrelated {text}'
     endidx = len(line)
     begidx = endidx
     complete_states_expected_self = user_sub1
@@ -928,7 +928,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys):
     command_sets_manual.register_command_set(user_unrelated)
 
     text = ''
-    line = 'user_unrelated {}'.format(text)
+    line = f'user_unrelated {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
@@ -951,7 +951,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys):
     command_sets_manual.register_command_set(user_unrelated)
 
     text = ''
-    line = 'user_unrelated {}'.format(text)
+    line = f'user_unrelated {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
@@ -985,7 +985,7 @@ def test_path_complete(command_sets_manual):
     command_sets_manual.register_command_set(test_set)
 
     text = ''
-    line = 'path {}'.format(text)
+    line = f'path {text}'
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)

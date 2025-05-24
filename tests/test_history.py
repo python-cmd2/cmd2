@@ -669,7 +669,7 @@ def test_history_output_file():
 
     fd, fname = tempfile.mkstemp(prefix='', suffix='.txt')
     os.close(fd)
-    run_cmd(app, 'history -o "{}"'.format(fname))
+    run_cmd(app, f'history -o "{fname}"')
     assert app.last_result is True
 
     expected = normalize('help\nshortcuts\nhelp history\nalias create my_alias history;')
@@ -684,7 +684,7 @@ def test_history_bad_output_file(base_app):
     run_cmd(base_app, 'help history')
 
     fname = os.path.join(os.path.sep, "fake", "fake", "fake")
-    out, err = run_cmd(base_app, 'history -o "{}"'.format(fname))
+    out, err = run_cmd(base_app, f'history -o "{fname}"')
 
     assert not out
     assert "Error saving" in err[0]

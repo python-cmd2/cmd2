@@ -30,7 +30,7 @@ def rmrf(items, verbose=True):
 
     for item in items:
         if verbose:
-            print("Removing {}".format(item))
+            print(f"Removing {item}")
         shutil.rmtree(item, ignore_errors=True)
         # rmtree doesn't remove bare files
         try:
@@ -270,8 +270,8 @@ def tag(context, name, message=''):
     """Add a Git tag and push it to origin"""
     # If a tag was provided on the command-line, then add a Git tag and push it to origin
     if name:
-        context.run('git tag -a {} -m {!r}'.format(name, message))
-        context.run('git push origin {}'.format(name))
+        context.run(f'git tag -a {name} -m {message!r}')
+        context.run(f'git push origin {name}')
 
 
 namespace.add_task(tag)
@@ -288,10 +288,10 @@ def validatetag(context):
     ver_regex = re.compile(r'(\d+)\.(\d+)\.(\d+)')
     match = ver_regex.fullmatch(git_tag)
     if match is None:
-        print('Tag {!r} does not appear to be a valid version number'.format(git_tag))
+        print(f'Tag {git_tag!r} does not appear to be a valid version number')
         sys.exit(-1)
     else:
-        print('Tag {!r} appears to be a valid version number'.format(git_tag))
+        print(f'Tag {git_tag!r} appears to be a valid version number')
 
 
 namespace.add_task(validatetag)

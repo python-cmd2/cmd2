@@ -70,7 +70,7 @@ class ArgparseApp(cmd2.Cmd):
 
     @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(), ns_provider=namespace_provider)
     def do_test_argparse_ns(self, args):
-        self.stdout.write('{}'.format(args.custom_stuff))
+        self.stdout.write(f'{args.custom_stuff}')
 
     @cmd2.with_argument_list
     def do_arglist(self, arglist, *, keyword_arg: Optional[str] = None):
@@ -84,7 +84,7 @@ class ArgparseApp(cmd2.Cmd):
 
     @cmd2.with_argument_list(preserve_quotes=True)
     def do_preservelist(self, arglist):
-        self.stdout.write('{}'.format(arglist))
+        self.stdout.write(f'{arglist}')
 
     @classmethod
     def _speak_parser_builder(cls) -> cmd2.Cmd2ArgumentParser:
@@ -120,7 +120,7 @@ class ArgparseApp(cmd2.Cmd):
 
     @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(), ns_provider=namespace_provider, with_unknown_args=True)
     def do_test_argparse_with_list_ns(self, args, extra):
-        self.stdout.write('{}'.format(args.custom_stuff))
+        self.stdout.write(f'{args.custom_stuff}')
 
 
 @pytest.fixture

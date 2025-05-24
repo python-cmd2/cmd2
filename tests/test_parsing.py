@@ -317,7 +317,7 @@ def test_parse_redirect(parser, line, output):
     ],
 )  # without dashes  # with dashes in path
 def test_parse_redirect_with_args(parser, dest):
-    line = 'output into > {}'.format(dest)
+    line = f'output into > {dest}'
     statement = parser.parse(line)
     assert statement.command == 'output'
     assert statement == 'into'

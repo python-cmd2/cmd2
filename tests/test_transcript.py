@@ -171,7 +171,7 @@ this is a \/multiline\/ command
     os.close(fd)
 
     # tell the history command to create a transcript
-    run_cmd(app, 'history -t "{}"'.format(history_fname))
+    run_cmd(app, f'history -t "{history_fname}"')
 
     # read in the transcript created by the history command
     with open(history_fname) as f:
@@ -188,7 +188,7 @@ def test_history_transcript_bad_path(mocker):
 
     # Bad directory
     history_fname = '~/fakedir/this_does_not_exist.txt'
-    out, err = run_cmd(app, 'history -t "{}"'.format(history_fname))
+    out, err = run_cmd(app, f'history -t "{history_fname}"')
     assert "is not a directory" in err[0]
 
     # Cause os.open to fail and make sure error gets printed
@@ -196,7 +196,7 @@ def test_history_transcript_bad_path(mocker):
     mock_remove.side_effect = OSError
 
     history_fname = 'outfile.txt'
-    out, err = run_cmd(app, 'history -t "{}"'.format(history_fname))
+    out, err = run_cmd(app, f'history -t "{history_fname}"')
     assert "Error saving transcript file" in err[0]
 
 
@@ -212,7 +212,7 @@ def test_run_script_record_transcript(base_app, request):
     os.close(fd)
 
     # Execute the run_script command with the -t option to generate a transcript
-    run_cmd(base_app, 'run_script {} -t {}'.format(filename, transcript_fname))
+    run_cmd(base_app, f'run_script {filename} -t {transcript_fname}')
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None

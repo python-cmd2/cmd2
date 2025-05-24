@@ -43,10 +43,10 @@ def add_help_to_file(item: str, outfile: TextIO, is_command: bool) -> None:
     else:
         label = "TOPIC"
 
-    header = '{}\n{}: {}\n{}\n'.format(ASTERISKS, label, item, ASTERISKS)
+    header = f'{ASTERISKS}\n{label}: {item}\n{ASTERISKS}\n'
     outfile.write(header)
 
-    result = app('help {}'.format(item))
+    result = app(f'help {item}')
     outfile.write(result.stdout)
 
 
@@ -60,7 +60,7 @@ def main() -> None:
 
     # Make sure the user passed in an output file
     if len(sys.argv) != 2:
-        print("Usage: {} <output_file>".format(os.path.basename(sys.argv[0])))
+        print(f"Usage: {os.path.basename(sys.argv[0])} <output_file>")
         return
 
     # Open the output file
@@ -68,11 +68,11 @@ def main() -> None:
     try:
         outfile = open(outfile_path, 'w')
     except OSError as e:
-        print("Error opening {} because: {}".format(outfile_path, e))
+        print(f"Error opening {outfile_path} because: {e}")
         return
 
     # Write the help summary
-    header = '{0}\nSUMMARY\n{0}\n'.format(ASTERISKS)
+    header = f'{ASTERISKS}\nSUMMARY\n{ASTERISKS}\n'
     outfile.write(header)
 
     result = app('help -v')
@@ -91,11 +91,11 @@ def main() -> None:
         if is_command:
             # Add any subcommands
             for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
-                full_cmd = '{} {}'.format(item, subcmd)
+                full_cmd = f'{item} {subcmd}'
                 add_help_to_file(full_cmd, outfile, is_command)
 
     outfile.close()
-    print("Output written to {}".format(outfile_path))
+    print(f"Output written to {outfile_path}")
 
 
 # Run main function

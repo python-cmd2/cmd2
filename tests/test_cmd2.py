@@ -237,7 +237,7 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
     ansi.allow_style = ansi.AllowStyle.TERMINAL
 
     # Use the set command to alter it
-    out, err = run_cmd(base_app, 'set allow_style {}'.format(new_val))
+    out, err = run_cmd(base_app, f'set allow_style {new_val}')
     assert base_app.last_result is is_valid
 
     # Verify the results
@@ -347,7 +347,7 @@ def test_run_script(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, f'run_script {filename}')
     assert base_app.last_result is True
 
     assert base_app._script_dir == []
@@ -382,7 +382,7 @@ def test_run_script_with_invalid_file(base_app, request):
 
     # Path is a directory
     test_dir = os.path.dirname(request.module.__file__)
-    out, err = run_cmd(base_app, 'run_script {}'.format(test_dir))
+    out, err = run_cmd(base_app, f'run_script {test_dir}')
     assert "Problem accessing script from " in err[0]
     assert base_app.last_result is False
 
@@ -390,7 +390,7 @@ def test_run_script_with_invalid_file(base_app, request):
 def test_run_script_with_empty_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'empty.txt')
-    out, err = run_cmd(base_app, 'run_script {}'.format(filename))
+    out, err = run_cmd(base_app, f'run_script {filename}')
     assert not out
     assert not err
     assert base_app.last_result is True
@@ -399,7 +399,7 @@ def test_run_script_with_empty_file(base_app, request):
 def test_run_script_with_binary_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'binary.bin')
-    out, err = run_cmd(base_app, 'run_script {}'.format(filename))
+    out, err = run_cmd(base_app, f'run_script {filename}')
     assert "is not an ASCII or UTF-8 encoded text file" in err[0]
     assert base_app.last_result is False
 
@@ -410,7 +410,7 @@ def test_run_script_with_python_file(base_app, request):
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'pyscript', 'stop.py')
-    out, err = run_cmd(base_app, 'run_script {}'.format(filename))
+    out, err = run_cmd(base_app, f'run_script {filename}')
     assert "appears to be a Python file" in err[0]
     assert base_app.last_result is False
 
@@ -423,7 +423,7 @@ def test_run_script_with_utf8_file(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, f'run_script {filename}')
     assert base_app.last_result is True
 
     assert base_app._script_dir == []
@@ -545,7 +545,7 @@ def test_relative_run_script(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, '_relative_run_script {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, f'_relative_run_script {filename}')
     assert base_app.last_result is True
 
     assert base_app._script_dir == []
@@ -573,7 +573,7 @@ def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatc
     run_script_mock = mock.MagicMock(name='do_run_script')
     monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
-    run_cmd(base_app, "_relative_run_script {}".format(utils.quote_string(file_name)))
+    run_cmd(base_app, f"_relative_run_script {utils.quote_string(file_name)}")
     run_script_mock.assert_called_once_with(utils.quote_string(file_name))
 
 
@@ -597,7 +597,7 @@ def test_in_script(request):
     hook_app = HookApp()
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
-    out, err = run_cmd(hook_app, 'run_script {}'.format(filename))
+    out, err = run_cmd(hook_app, f'run_script {filename}')
 
     assert "WE ARE IN SCRIPT" in out[-1]
 
@@ -640,13 +640,13 @@ def test_output_redirection(base_app):
 
     try:
         # Verify that writing to a file works
-        run_cmd(base_app, 'help > {}'.format(filename))
+        run_cmd(base_app, f'help > {filename}')
         with open(filename) as f:
             content = f.read()
         verify_help_text(base_app, content)
 
         # Verify that appending to a file also works
-        run_cmd(base_app, 'help history >> {}'.format(filename))
+        run_cmd(base_app, f'help history >> {filename}')
         with open(filename) as f:
             appended_content = f.read()
         assert appended_content.startswith(content)
@@ -660,10 +660,10 @@ def test_output_redirection(base_app):
 def test_output_redirection_to_nonexistent_directory(base_app):
     filename = '~/fakedir/this_does_not_exist.txt'
 
-    out, err = run_cmd(base_app, 'help > {}'.format(filename))
+    out, err = run_cmd(base_app, f'help > {filename}')
     assert 'Failed to redirect' in err[0]
 
-    out, err = run_cmd(base_app, 'help >> {}'.format(filename))
+    out, err = run_cmd(base_app, f'help >> {filename}')
     assert 'Failed to redirect' in err[0]
 
 
@@ -676,10 +676,10 @@ def test_output_redirection_to_too_long_filename(base_app):
         'whfieuwfhieufhiuewhfeiuwfhiuefhueiwhfw'
     )
 
-    out, err = run_cmd(base_app, 'help > {}'.format(filename))
+    out, err = run_cmd(base_app, f'help > {filename}')
     assert 'Failed to redirect' in err[0]
 
-    out, err = run_cmd(base_app, 'help >> {}'.format(filename))
+    out, err = run_cmd(base_app, f'help >> {filename}')
     assert 'Failed to redirect' in err[0]
 
 
@@ -690,7 +690,7 @@ def test_feedback_to_output_true(base_app):
     os.close(f)
 
     try:
-        run_cmd(base_app, 'help > {}'.format(filename))
+        run_cmd(base_app, f'help > {filename}')
         with open(filename) as f:
             content = f.readlines()
         assert content[-1].startswith('Elapsed: ')
@@ -707,7 +707,7 @@ def test_feedback_to_output_false(base_app):
     os.close(f)
 
     try:
-        out, err = run_cmd(base_app, 'help > {}'.format(filename))
+        out, err = run_cmd(base_app, f'help > {filename}')
 
         with open(filename) as f:
             content = f.readlines()
@@ -726,7 +726,7 @@ def test_disallow_redirection(base_app):
     filename = 'test_allow_redirect.txt'
 
     # Verify output wasn't redirected
-    out, err = run_cmd(base_app, 'help > {}'.format(filename))
+    out, err = run_cmd(base_app, f'help > {filename}')
     verify_help_text(base_app, out)
 
     # Verify that no file got created
@@ -751,11 +751,11 @@ def test_pipe_to_shell_and_redirect(base_app):
     filename = 'out.txt'
     if sys.platform == "win32":
         # Windows
-        command = 'help | sort > {}'.format(filename)
+        command = f'help | sort > {filename}'
     else:
         # Mac and Linux
         # Get help on help and pipe it's output to the input of the word count shell command
-        command = 'help help | wc > {}'.format(filename)
+        command = f'help help | wc > {filename}'
 
     out, err = run_cmd(base_app, command)
     assert not out
@@ -855,10 +855,10 @@ def _expected_no_editor_error():
         expected_exception = 'EnvironmentError'
 
     expected_text = normalize(
-        """
-EXCEPTION of type '{}' occurred with message: Please use 'set editor' to specify your text editing program of choice.
+        f"""
+EXCEPTION of type '{expected_exception}' occurred with message: Please use 'set editor' to specify your text editing program of choice.
 To enable full traceback, run the following command: 'set debug true'
-""".format(expected_exception)
+"""
     )
 
     return expected_text
@@ -917,7 +917,7 @@ def test_edit_file(base_app, request, monkeypatch):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
-    run_cmd(base_app, 'edit {}'.format(filename))
+    run_cmd(base_app, f'edit {filename}')
 
     # We think we have an editor, so should expect a Popen call
     m.assert_called_once()
@@ -932,8 +932,8 @@ def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch):
 
     base_app.editor = 'fooedit'
     file_name = utils.quote_string('nothingweird.py')
-    run_cmd(base_app, "edit {}".format(utils.quote_string(file_name)))
-    shell_mock.assert_called_once_with('"fooedit" {}'.format(utils.quote_string(file_name)))
+    run_cmd(base_app, f"edit {utils.quote_string(file_name)}")
+    shell_mock.assert_called_once_with(f'"fooedit" {utils.quote_string(file_name)}')
 
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch):
@@ -947,7 +947,7 @@ def test_edit_file_with_spaces(base_app, request, monkeypatch):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'my commands.txt')
 
-    run_cmd(base_app, 'edit "{}"'.format(filename))
+    run_cmd(base_app, f'edit "{filename}"')
 
     # We think we have an editor, so should expect a Popen call
     m.assert_called_once()
@@ -1322,7 +1322,7 @@ class SelectApp(cmd2.Cmd):
         """Learn something, with a selection of subjects to choose from."""
         # Pass in a list of strings for selections
         subject = self.select(['math', 'science'], 'Subject? ')
-        result = 'Good luck learning {}!\n'.format(subject)
+        result = f'Good luck learning {subject}!\n'
         self.stdout.write(result)
 
     def do_procrastinate(self, arg):
@@ -1331,14 +1331,14 @@ class SelectApp(cmd2.Cmd):
         leisure_activity = self.select(
             [('Netflix and chill', 'Netflix'), ('YouTube', 'WebSurfing')], 'How would you like to procrastinate? '
         )
-        result = 'Have fun procrasinating with {}!\n'.format(leisure_activity)
+        result = f'Have fun procrasinating with {leisure_activity}!\n'
         self.stdout.write(result)
 
     def do_play(self, arg):
         """Play your favorite musical instrument."""
         # Pass in an uneven list of tuples for selections
         instrument = self.select([('Guitar', 'Electric Guitar'), ('Drums',)], 'Instrument? ')
-        result = 'Charm us with the {}...\n'.format(instrument)
+        result = f'Charm us with the {instrument}...\n'
         self.stdout.write(result)
 
     def do_return_type(self, arg):
@@ -1360,13 +1360,13 @@ def test_select_options(select_app, monkeypatch):
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     food = 'bacon'
-    out, err = run_cmd(select_app, "eat {}".format(food))
+    out, err = run_cmd(select_app, f"eat {food}")
     expected = normalize(
-        """
+        f"""
    1. sweet
    2. salty
-{} with salty sauce, yum!
-""".format(food)
+{food} with salty sauce, yum!
+"""
     )
 
     # Make sure our mock was called with the expected arguments
@@ -1385,14 +1385,14 @@ def test_select_invalid_option_too_big(select_app, monkeypatch):
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     food = 'fish'
-    out, err = run_cmd(select_app, "eat {}".format(food))
+    out, err = run_cmd(select_app, f"eat {food}")
     expected = normalize(
-        """
+        f"""
    1. sweet
    2. salty
 '3' isn't a valid choice. Pick a number between 1 and 2:
-{} with sweet sauce, yum!
-""".format(food)
+{food} with sweet sauce, yum!
+"""
     )
 
     # Make sure our mock was called exactly twice with the expected arguments
@@ -1414,14 +1414,14 @@ def test_select_invalid_option_too_small(select_app, monkeypatch):
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     food = 'fish'
-    out, err = run_cmd(select_app, "eat {}".format(food))
+    out, err = run_cmd(select_app, f"eat {food}")
     expected = normalize(
-        """
+        f"""
    1. sweet
    2. salty
 '0' isn't a valid choice. Pick a number between 1 and 2:
-{} with sweet sauce, yum!
-""".format(food)
+{food} with sweet sauce, yum!
+"""
     )
 
     # Make sure our mock was called exactly twice with the expected arguments
@@ -1512,12 +1512,12 @@ def test_select_return_type(select_app, monkeypatch, selection, type_str):
 
     out, err = run_cmd(select_app, "return_type")
     expected = normalize(
-        """
+        f"""
    1. Integer
    2. String
    3. Method
-The return type is {}
-""".format(type_str)
+The return type is {type_str}
+"""
     )
 
     # Make sure our mock was called with the expected arguments
@@ -1533,7 +1533,7 @@ def test_select_eof(select_app, monkeypatch):
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     food = 'fish'
-    out, err = run_cmd(select_app, "eat {}".format(food))
+    out, err = run_cmd(select_app, f"eat {food}")
 
     # Make sure our mock was called exactly twice with the expected arguments
     arg = 'Sauce? '
@@ -1617,7 +1617,7 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
 
     command = 'orate'
     args = 'hello world'
-    line = '{} {}'.format(command, args)
+    line = f'{command} {args}'
     statement = multiline_app._complete_statement(line)
     assert statement == args
     assert statement.command == command
@@ -1773,22 +1773,22 @@ def commandresult_app():
 
 def test_commandresult_truthy(commandresult_app):
     arg = 'foo'
-    run_cmd(commandresult_app, 'affirmative {}'.format(arg))
+    run_cmd(commandresult_app, f'affirmative {arg}')
     assert commandresult_app.last_result
     assert commandresult_app.last_result == cmd2.CommandResult(arg, data=True)
 
-    run_cmd(commandresult_app, 'affirmative_no_data {}'.format(arg))
+    run_cmd(commandresult_app, f'affirmative_no_data {arg}')
     assert commandresult_app.last_result
     assert commandresult_app.last_result == cmd2.CommandResult(arg)
 
 
 def test_commandresult_falsy(commandresult_app):
     arg = 'bar'
-    run_cmd(commandresult_app, 'negative {}'.format(arg))
+    run_cmd(commandresult_app, f'negative {arg}')
     assert not commandresult_app.last_result
     assert commandresult_app.last_result == cmd2.CommandResult(arg, data=False)
 
-    run_cmd(commandresult_app, 'negative_no_data {}'.format(arg))
+    run_cmd(commandresult_app, f'negative_no_data {arg}')
     assert not commandresult_app.last_result
     assert commandresult_app.last_result == cmd2.CommandResult('', arg)
 
@@ -1824,7 +1824,7 @@ def test_echo(capsys):
     app.runcmds_plus_hooks(commands)
 
     out, err = capsys.readouterr()
-    assert out.startswith('{}{}\n'.format(app.prompt, commands[0]) + HELP_HISTORY.split()[0])
+    assert out.startswith(f'{app.prompt}{commands[0]}\n' + HELP_HISTORY.split()[0])
 
 
 def test_read_input_rawinput_true(capsys, monkeypatch):
@@ -1882,7 +1882,7 @@ def test_read_input_rawinput_true(capsys, monkeypatch):
         line = app.read_input(prompt_str)
         out, err = capsys.readouterr()
         assert line == input_str
-        assert out == "{}{}\n".format(prompt_str, input_str)
+        assert out == f"{prompt_str}{input_str}\n"
 
         # echo False
         app.echo = False
@@ -1900,7 +1900,7 @@ def test_read_input_rawinput_false(capsys, monkeypatch):
         """Make a cmd2 app with a custom stdin"""
         app_input_str = '' if empty_input else input_str
 
-        fakein = io.StringIO('{}'.format(app_input_str))
+        fakein = io.StringIO(f'{app_input_str}')
         fakein.isatty = mock.MagicMock(name='isatty', return_value=isatty)
 
         new_app = cmd2.Cmd(stdin=fakein)
@@ -1927,7 +1927,7 @@ def test_read_input_rawinput_false(capsys, monkeypatch):
     line = app.read_input(prompt_str)
     out, err = capsys.readouterr()
     assert line == input_str
-    assert out == "{}{}\n".format(prompt_str, input_str)
+    assert out == f"{prompt_str}{input_str}\n"
 
     # isatty is False, echo is False
     app = make_app(isatty=False)
@@ -2124,7 +2124,7 @@ def test_alias_create_with_quoted_tokens(base_app):
 
 @pytest.mark.parametrize('alias_name', invalid_command_name)
 def test_alias_create_invalid_name(base_app, alias_name, capsys):
-    out, err = run_cmd(base_app, 'alias create {} help'.format(alias_name))
+    out, err = run_cmd(base_app, f'alias create {alias_name} help')
     assert "Invalid alias name" in err[0]
     assert base_app.last_result is False
 
@@ -2137,8 +2137,8 @@ def test_alias_create_with_command_name(base_app):
 
 def test_alias_create_with_macro_name(base_app):
     macro = "my_macro"
-    run_cmd(base_app, 'macro create {} help'.format(macro))
-    out, err = run_cmd(base_app, 'alias create {} help'.format(macro))
+    run_cmd(base_app, f'macro create {macro} help')
+    out, err = run_cmd(base_app, f'alias create {macro} help')
     assert "Alias cannot have the same name as a macro" in err[0]
     assert base_app.last_result is False
 
@@ -2192,8 +2192,8 @@ def test_alias_delete_no_name(base_app):
 def test_multiple_aliases(base_app):
     alias1 = 'h1'
     alias2 = 'h2'
-    run_cmd(base_app, 'alias create {} help'.format(alias1))
-    run_cmd(base_app, 'alias create {} help -v'.format(alias2))
+    run_cmd(base_app, f'alias create {alias1} help')
+    run_cmd(base_app, f'alias create {alias2} help -v')
     out, err = run_cmd(base_app, alias1)
     verify_help_text(base_app, out)
 
@@ -2260,7 +2260,7 @@ def test_macro_create_with_quoted_tokens(base_app):
 
 @pytest.mark.parametrize('macro_name', invalid_command_name)
 def test_macro_create_invalid_name(base_app, macro_name):
-    out, err = run_cmd(base_app, 'macro create {} help'.format(macro_name))
+    out, err = run_cmd(base_app, f'macro create {macro_name} help')
     assert "Invalid macro name" in err[0]
     assert base_app.last_result is False
 
@@ -2273,8 +2273,8 @@ def test_macro_create_with_command_name(base_app):
 
 def test_macro_create_with_alias_name(base_app):
     macro = "my_macro"
-    run_cmd(base_app, 'alias create {} help'.format(macro))
-    out, err = run_cmd(base_app, 'macro create {} help'.format(macro))
+    run_cmd(base_app, f'alias create {macro} help')
+    out, err = run_cmd(base_app, f'macro create {macro} help')
     assert "Macro cannot have the same name as an alias" in err[0]
     assert base_app.last_result is False
 
@@ -2398,8 +2398,8 @@ def test_macro_delete_no_name(base_app):
 def test_multiple_macros(base_app):
     macro1 = 'h1'
     macro2 = 'h2'
-    run_cmd(base_app, 'macro create {} help'.format(macro1))
-    run_cmd(base_app, 'macro create {} help -v'.format(macro2))
+    run_cmd(base_app, f'macro create {macro1} help')
+    run_cmd(base_app, f'macro create {macro2} help -v')
     out, err = run_cmd(base_app, macro1)
     verify_help_text(base_app, out)
 
@@ -2617,7 +2617,7 @@ class ReplWithExitCode(cmd2.Cmd):
             try:
                 self.exit_code = int(arg_list[0])
             except ValueError:
-                self.perror("{} isn't a valid integer exit code".format(arg_list[0]))
+                self.perror(f"{arg_list[0]} isn't a valid integer exit code")
                 self.exit_code = 1
 
         # Return True to stop the command loop
@@ -2625,7 +2625,7 @@ class ReplWithExitCode(cmd2.Cmd):
 
     def postloop(self) -> None:
         """Hook method executed once when the cmdloop() method is about to return."""
-        self.poutput('exiting with code: {}'.format(self.exit_code))
+        self.poutput(f'exiting with code: {self.exit_code}')
 
 
 @pytest.fixture
@@ -2846,7 +2846,7 @@ def test_disable_and_enable_category(disable_commands_app):
 
     # Make sure neither function completes
     text = ''
-    line = 'has_helper_funcs {}'.format(text)
+    line = f'has_helper_funcs {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -2854,7 +2854,7 @@ def test_disable_and_enable_category(disable_commands_app):
     assert first_match is None
 
     text = ''
-    line = 'has_no_helper_funcs {}'.format(text)
+    line = f'has_no_helper_funcs {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -2890,7 +2890,7 @@ def test_disable_and_enable_category(disable_commands_app):
 
     # has_helper_funcs should complete now
     text = ''
-    line = 'has_helper_funcs {}'.format(text)
+    line = f'has_helper_funcs {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -2900,7 +2900,7 @@ def test_disable_and_enable_category(disable_commands_app):
 
     # has_no_helper_funcs had no completer originally, so there should be no results
     text = ''
-    line = 'has_no_helper_funcs {}'.format(text)
+    line = f'has_no_helper_funcs {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -2957,7 +2957,7 @@ def test_disabled_command_not_in_history(disable_commands_app):
 
 
 def test_disabled_message_command_name(disable_commands_app):
-    message_to_print = '{} is currently disabled'.format(COMMAND_NAME)
+    message_to_print = f'{COMMAND_NAME} is currently disabled'
     disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
     out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
@@ -2993,7 +2993,7 @@ def test_startup_script_with_odd_file_names(startup_script):
 
     app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
     assert len(app._startup_commands) == 1
-    assert app._startup_commands[0] == "run_script {}".format(utils.quote_string(os.path.abspath(startup_script)))
+    assert app._startup_commands[0] == f"run_script {utils.quote_string(os.path.abspath(startup_script))}"
 
     # Restore os.path.exists
     os.path.exists = saved_exists
