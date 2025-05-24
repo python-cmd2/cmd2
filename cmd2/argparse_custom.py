@@ -283,7 +283,7 @@ class CompletionItem(str):  # noqa: SLOT000
     """
 
     def __new__(cls, value: object, *args: Any, **kwargs: Any) -> 'CompletionItem':
-        return super(CompletionItem, cls).__new__(cls, value)
+        return super().__new__(cls, value)
 
     def __init__(self, value: object, description: str = '', *args: Any) -> None:
         """
@@ -1252,7 +1252,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         """
         if sys.version_info >= (3, 14):
             # Python >= 3.14 so pass new arguments to parent argparse.ArgumentParser class
-            super(Cmd2ArgumentParser, self).__init__(
+            super().__init__(
                 prog=prog,
                 usage=usage,
                 description=description,
@@ -1271,7 +1271,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             )
         else:
             # Python < 3.14, so don't pass new arguments to parent argparse.ArgumentParser class
-            super(Cmd2ArgumentParser, self).__init__(
+            super().__init__(
                 prog=prog,
                 usage=usage,
                 description=description,

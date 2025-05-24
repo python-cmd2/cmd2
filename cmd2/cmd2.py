@@ -4089,7 +4089,7 @@ class Cmd(cmd.Cmd):
                 except IndexError:
                     fulloptions.append((opt[0], opt[0]))
         for idx, (_, text) in enumerate(fulloptions):
-            self.poutput('  %2d. %s' % (idx + 1, text))
+            self.poutput('  %2d. %s' % (idx + 1, text))  # noqa: UP031
 
         while True:
             try:

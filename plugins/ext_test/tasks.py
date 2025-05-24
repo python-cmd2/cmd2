@@ -24,7 +24,7 @@ def rmrf(items, verbose=True):
 
     for item in items:
         if verbose:
-            print("Removing {}".format(item))
+            print(f"Removing {item}")
         shutil.rmtree(item, ignore_errors=True)
         # rmtree doesn't remove bare files
         try:
