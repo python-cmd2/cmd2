@@ -180,7 +180,7 @@ def wheel(context) -> None:
 
 namespace.add_task(wheel)
 
-#
+
 # these two tasks are commented out so you don't
 # accidentally run them and upload this template to pypi
 #
@@ -188,11 +188,11 @@ namespace.add_task(wheel)
 # @invoke.task(pre=[sdist, wheel])
 # def pypi(context):
 #     """Build and upload a distribution to pypi"""
-#     context.run('twine upload dist/*')
-# namespace.add_task(pypi)
+#     context.run('twine upload dist/*')  # noqa: ERA001
+# namespace.add_task(pypi)  # noqa: ERA001
 
 # @invoke.task(pre=[sdist, wheel])
 # def pypi_test(context):
-#     """Build and upload a distribution to https://test.pypi.org"""
-#     context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
-# namespace.add_task(pypi_test)
+#     """Build and upload a distribution to https://test.pypi.org"""  # noqa: ERA001
+#     context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')  # noqa: ERA001
+# namespace.add_task(pypi_test)  # noqa: ERA001

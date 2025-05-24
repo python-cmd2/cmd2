@@ -63,7 +63,6 @@ class ExternalTestMixin(_Base):
 
         :type self: cmd2.Cmd
         """
-        # assert isinstance(self, cmd2.Cmd) and isinstance(self, ExternalTestMixin)
         for func in self._postloop_hooks:
             func()
         self.postloop()

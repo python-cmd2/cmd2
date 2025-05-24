@@ -101,7 +101,7 @@ if 'pyreadline3' in sys.modules:
     ############################################################################################################
     # pyreadline3 is incomplete in terms of the Python readline API. Add the missing functions we need.
     ############################################################################################################
-    # readline.remove_history_item()
+    # Add missing `readline.remove_history_item()`
     try:
         getattr(readline, 'remove_history_item')
     except AttributeError:

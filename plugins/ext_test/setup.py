@@ -2,16 +2,10 @@ import os
 
 import setuptools
 
-#
 # get the long description from the README file
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
-
-# scm_version = {
-#     'root': '../..',
-#     'git_describe_command': "git describe --dirty --tags --long --match plugin-ext-test*",
-# }
 
 PACKAGE_DATA = {
     'cmd2_ext_test': ['py.typed'],

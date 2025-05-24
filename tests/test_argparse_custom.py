@@ -93,7 +93,7 @@ def test_apcustom_nargs_help_format(cust_app) -> None:
 
 
 def test_apcustom_nargs_range_validation(cust_app) -> None:
-    # nargs = (3,)
+    # nargs = (3,)  # noqa: ERA001
     out, err = run_cmd(cust_app, 'range --arg2 one two')
     assert 'Error: argument --arg2: expected at least 3 arguments' in err[2]
 
@@ -103,7 +103,7 @@ def test_apcustom_nargs_range_validation(cust_app) -> None:
     out, err = run_cmd(cust_app, 'range --arg2 one two three four')
     assert not err
 
-    # nargs = (2,3)
+    # nargs = (2,3)  # noqa: ERA001
     out, err = run_cmd(cust_app, 'range --arg3 one')
     assert 'Error: argument --arg3: expected 2 to 3 arguments' in err[2]
 

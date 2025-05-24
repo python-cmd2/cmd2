@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """A sample cmd application that shows how to trivially migrate a cmd application to use cmd2."""
 
-# import cmd2 as cmd
+# import cmd2 as cmd  # noqa: ERA001
 import cmd  # Comment this line and uncomment the one above to migrate to cmd2
 import random
 

@@ -2,7 +2,6 @@ import os
 
 import setuptools
 
-#
 # get the long description from the README file
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -10,7 +9,7 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='cmd2-myplugin',
-    # use_scm_version=True,  # use_scm_version doesn't work if setup.py isn't in the repository root
+    # use_scm_version=True,  # use_scm_version doesn't work if setup.py isn't in the repository root  # noqa: ERA001
     version='2.0.0',
     description='A template used to build plugins for cmd2',
     long_description=long_description,
