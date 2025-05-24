@@ -11,7 +11,7 @@ import tempfile
 from code import (
     InteractiveConsole,
 )
-from typing import Never
+from typing import NoReturn
 from unittest import (
     mock,
 )
@@ -512,7 +512,7 @@ def test_runcmds_plus_hooks_ctrl_c(base_app, capsys) -> None:
     """Test Ctrl-C while in runcmds_plus_hooks"""
     import types
 
-    def do_keyboard_interrupt(self, _) -> Never:
+    def do_keyboard_interrupt(self, _) -> NoReturn:
         raise KeyboardInterrupt('Interrupting this command')
 
     setattr(base_app, 'do_keyboard_interrupt', types.MethodType(do_keyboard_interrupt, base_app))
@@ -603,7 +603,7 @@ def test_system_exit_in_command(base_app, capsys) -> None:
 
     exit_code = 5
 
-    def do_system_exit(self, _) -> Never:
+    def do_system_exit(self, _) -> NoReturn:
         raise SystemExit(exit_code)
 
     setattr(base_app, 'do_system_exit', types.MethodType(do_system_exit, base_app))
@@ -619,7 +619,7 @@ def test_passthrough_exception_in_command(base_app) -> None:
 
     expected_err = "Pass me up"
 
-    def do_passthrough(self, _) -> Never:
+    def do_passthrough(self, _) -> NoReturn:
         wrapped_ex = OSError(expected_err)
         raise exceptions.PassThroughException(wrapped_ex=wrapped_ex)
 

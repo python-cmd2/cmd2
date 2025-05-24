@@ -8,7 +8,7 @@ file system paths, and shell commands.
 import enum
 import os
 import sys
-from typing import Never
+from typing import NoReturn
 from unittest import (
     mock,
 )
@@ -97,7 +97,7 @@ class CompletionsExample(cmd2.Cmd):
     def do_test_raise_exception(self, args) -> None:
         pass
 
-    def complete_test_raise_exception(self, text, line, begidx, endidx) -> Never:
+    def complete_test_raise_exception(self, text, line, begidx, endidx) -> NoReturn:
         raise IndexError("You are out of bounds!!")
 
     def do_test_multiline(self, args) -> None:

@@ -7,7 +7,7 @@ import random
 import re
 import sys
 import tempfile
-from typing import Never
+from typing import NoReturn
 from unittest import (
     mock,
 )
@@ -90,7 +90,7 @@ class CmdLineApp(cmd2.Cmd):
     def do_nothing(self, statement) -> None:
         """Do nothing and output nothing"""
 
-    def do_keyboard_interrupt(self, _) -> Never:
+    def do_keyboard_interrupt(self, _) -> NoReturn:
         raise KeyboardInterrupt('Interrupting this command')
 
 

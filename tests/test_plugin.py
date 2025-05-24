@@ -4,7 +4,7 @@ Test plugin infrastructure and hooks.
 
 import argparse
 import sys
-from typing import Never
+from typing import NoReturn
 from unittest import (
     mock,
 )
@@ -273,7 +273,7 @@ class PluggedApp(Plugin, cmd2.Cmd):
         """Repeat back the arguments"""
         self.poutput(statement)
 
-    def do_skip_postcmd_hooks(self, _) -> Never:
+    def do_skip_postcmd_hooks(self, _) -> NoReturn:
         self.poutput("In do_skip_postcmd_hooks")
         raise exceptions.SkipPostcommandHooks
 
