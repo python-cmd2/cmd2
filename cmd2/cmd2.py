@@ -3488,7 +3488,7 @@ class Cmd(cmd.Cmd):
     @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_list_help)
     def _alias_list(self, args: argparse.Namespace) -> None:
         """List some or all aliases as 'alias create' commands"""
-        self.last_result = {}  # Dict[alias_name, alias_value]
+        self.last_result = {}  # dict[alias_name, alias_value]
 
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
@@ -3723,7 +3723,7 @@ class Cmd(cmd.Cmd):
     @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
     def _macro_list(self, args: argparse.Namespace) -> None:
         """List some or all macros as 'macro create' commands"""
-        self.last_result = {}  # Dict[macro_name, macro_value]
+        self.last_result = {}  # dict[macro_name, macro_value]
 
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
@@ -4215,7 +4215,7 @@ class Cmd(cmd.Cmd):
         self.poutput(table.generate_header())
 
         # Build the table and populate self.last_result
-        self.last_result = {}  # Dict[settable_name, settable_value]
+        self.last_result = {}  # dict[settable_name, settable_value]
 
         for param in sorted(to_show, key=self.default_sort_key):
             settable = self.settables[param]

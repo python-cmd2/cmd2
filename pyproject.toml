@@ -202,7 +202,7 @@ select = [
     "PT",  # flake8-pytest-style (warnings about unit test best practices)
     # "PTH",  # flake8-use-pathlib (force use of pathlib instead of os.path)
     "PYI", # flake8-pyi (warnings related to type hint best practices)
-    # "Q",    # flake8-quotes (force double quotes)
+    "Q",   # flake8-quotes (force double quotes)
     # "RET",  # flake8-return (various warnings related to implicit vs explicit return statements)
     "RSE", # flake8-raise (warn about unnecessary parentheses on raised exceptions)
     # "RUF", # Ruff-specific rules (miscellaneous grab bag of lint checks specific to Ruff)
