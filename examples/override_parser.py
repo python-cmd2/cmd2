@@ -12,9 +12,7 @@ argparse.cmd2_parser_module = 'custom_parser'
 
 # Next import from cmd2. It will import your module just before the cmd2.Cmd class file is imported
 # and therefore override the parser class it uses on its commands.
-from cmd2 import (
-    cmd2,
-)
+from cmd2 import cmd2  # noqa: E402
 
 if __name__ == '__main__':
     import sys

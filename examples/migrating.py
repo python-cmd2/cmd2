@@ -17,7 +17,7 @@ class CmdLineApp(cmd.Cmd):
         """Exit the application."""
         return True
 
-    do_EOF = do_exit
+    do_EOF = do_exit  # noqa: N815
     do_quit = do_exit
 
     def do_speak(self, line) -> None:

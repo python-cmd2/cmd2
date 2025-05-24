@@ -48,15 +48,15 @@ namespace.add_collection(namespace_clean, 'clean')
 @invoke.task
 def pytest(context, junit=False, pty=True, append_cov=False):
     """Run tests and code coverage using pytest"""
-    ROOT_PATH = TASK_ROOT.parent.parent
+    root_path = TASK_ROOT.parent.parent
 
-    with context.cd(str(ROOT_PATH)):
+    with context.cd(str(root_path)):
         command_str = 'pytest --cov=cmd2_ext_test --cov-report=term --cov-report=html'
         if append_cov:
             command_str += ' --cov-append'
         if junit:
             command_str += ' --junitxml=junit/test-results.xml'
-        command_str += ' ' + str((TASK_ROOT / 'tests').relative_to(ROOT_PATH))
+        command_str += ' ' + str((TASK_ROOT / 'tests').relative_to(root_path))
         context.run(command_str, pty=pty)
 
 

@@ -189,7 +189,7 @@ select = [
     "INT",  # flake8-gettext (warnings that only apply when you are internationalizing your strings)
     "ISC",  # flake8-implicit-str-concat (warnings related to implicit vs explicit string concatenation)
     "LOG",  # flake8-logging (warn about potential logger issues, but very pedantic)
-    # "N", # pep8-naming (force idiomatic naming for classes, functions/methods, and variables/arguments)
+    "N",    # pep8-naming (force idiomatic naming for classes, functions/methods, and variables/arguments)
     # "NPY",  # NumPy specific rules
     # "PD",   # pandas-vet (Pandas specific rules)
     "PERF", # Perflint (warn about performance issues)
@@ -260,6 +260,10 @@ per-file-ignores."cmd2/argparse_custom.py" = [
     "UP031", # Use format specifiers instead of percent format (auto fix is unsafe)
 ]
 
+per-file-ignores."cmd2/ansi.py" = [
+    "N802", # Function names should be lowercase for things like Curor.UP
+]
+
 per-file-ignores."examples/*.py" = [
     "ANN",     # Ignore all type annotation rules in examples folder
     "D",       # Ignore all pydocstyle rules in examples folder
@@ -268,16 +272,8 @@ per-file-ignores."examples/*.py" = [
     "S",       # Ignore all Security rules in examples folder
 ]
 
-per-file-ignores."examples/override_parser.py" = [
-    "E402", # Module level import not at top of file
-]
-
 per-file-ignores."examples/scripts/*.py" = [
     "F821", # Undefined name `app`
-]
-
-per-file-ignores."examples/unicode_commands.py" = [
-    "PLC2401", # non-ASCII characters in function names
 ]
 
 per-file-ignores."plugins/*.py" = [
@@ -296,10 +292,6 @@ per-file-ignores."tests/*.py" = [
     "SLF",  # Ignore all warnings about private or protected member access in test folders
 ]
 
-per-file-ignores."tests/test_argparse.py" = [
-    "PLW2901", # loop variable overwritten inside loop
-]
-
 per-file-ignores."tests/pyscript/*.py" = [
     "F821",   # Undefined name `app`
     "INP001", # Module is part of an implicit namespace
@@ -310,10 +302,6 @@ per-file-ignores."tests_isolated/*.py" = [
     "D",   # Ignore all pydocstyle rules in test folders
     "S",   # Ignore all Security rules in test folders
     "SLF", # Ignore all warnings about private or protected member access in test folders
-]
-
-per-file-ignores."tests_isolated/test_commandset/test_commandset.py" = [
-    "PLW0603", # Using the global statement to update {name} is discouraged
 ]
 
 

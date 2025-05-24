@@ -41,13 +41,14 @@ class ArgparseApp(cmd2.Cmd):
         """
         words = []
         for word in args.words:
+            modified_word = word
             if word is None:
-                word = ''
+                modified_word = ''
             if args.piglatin:
-                word = f'{word[1:]}{word[0]}ay'
+                modified_word = f'{word[1:]}{word[0]}ay'
             if args.shout:
-                word = word.upper()
-            words.append(word)
+                modified_word = word.upper()
+            words.append(modified_word)
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
             self.stdout.write(' '.join(words))
@@ -96,13 +97,14 @@ class ArgparseApp(cmd2.Cmd):
         """Repeat what you tell me to."""
         words = []
         for word in extra:
+            modified_word = word
             if word is None:
-                word = ''
+                modified_word = ''
             if args.piglatin:
-                word = f'{word[1:]}{word[0]}ay'
+                modified_word = f'{word[1:]}{word[0]}ay'
             if args.shout:
-                word = word.upper()
-            words.append(word)
+                modified_word = word.upper()
+            words.append(modified_word)
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
             self.stdout.write(' '.join(words))

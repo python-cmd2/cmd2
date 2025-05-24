@@ -72,24 +72,24 @@ if 'pyreadline3' in sys.modules:
             :param handle: the handle on which to enable vt100
             :return: True if vt100 characters are enabled for the handle.
             """
-            ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+            enable_virtual_terminal_processing = 0x0004
 
             # Get the current mode for this handle in the console
             cur_mode = DWORD(0)
             readline.rl.console.GetConsoleMode(handle, byref(cur_mode))
 
-            retVal = False
+            ret_val = False
 
             # Check if ENABLE_VIRTUAL_TERMINAL_PROCESSING is already enabled
-            if (cur_mode.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0:
-                retVal = True
+            if (cur_mode.value & enable_virtual_terminal_processing) != 0:
+                ret_val = True
 
-            elif readline.rl.console.SetConsoleMode(handle, cur_mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING):
+            elif readline.rl.console.SetConsoleMode(handle, cur_mode.value | enable_virtual_terminal_processing):
                 # Restore the original mode when we exit
                 atexit.register(readline.rl.console.SetConsoleMode, handle, cur_mode)
-                retVal = True
+                ret_val = True
 
-            return retVal
+            return ret_val
 
         # Enable VT100 sequences for stdout and stderr
         STD_OUT_HANDLE = -11
@@ -273,10 +273,10 @@ def rl_in_search_mode() -> bool:  # pragma: no cover
         # GNU Readline defines constants that we can use to determine if in search mode.
         #     RL_STATE_ISEARCH    0x0000080
         #     RL_STATE_NSEARCH    0x0000100
-        IN_SEARCH_MODE = 0x0000180
+        in_search_mode = 0x0000180
 
         readline_state = ctypes.c_int.in_dll(readline_lib, "rl_readline_state").value
-        return bool(IN_SEARCH_MODE & readline_state)
+        return bool(in_search_mode & readline_state)
     if rl_type == RlType.PYREADLINE:
         from pyreadline3.modes.emacs import (  # type: ignore[import]
             EmacsMode,

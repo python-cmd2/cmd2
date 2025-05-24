@@ -13,11 +13,11 @@ class UnicodeApp(cmd2.Cmd):
         super().__init__()
         self.intro = 'Welcome the Unicode example app. Note the full Unicode support:  😇 💩'
 
-    def do_𝛑print(self, _) -> None:
+    def do_𝛑print(self, _) -> None:  # noqa: PLC2401
         """This command prints 𝛑 to 5 decimal places."""
         self.poutput(f"𝛑 = {math.pi:.6}")
 
-    def do_你好(self, arg) -> None:
+    def do_你好(self, arg) -> None:  # noqa: N802, PLC2401
         """This command says hello in Chinese (Mandarin)."""
         self.poutput("你好 " + arg)
 

@@ -1973,7 +1973,7 @@ class Cmd(cmd.Cmd):
         :param parser: the parser to examine
         :return: type of ArgparseCompleter
         """
-        Completer = Optional[type[argparse_completer.ArgparseCompleter]]
+        Completer = Optional[type[argparse_completer.ArgparseCompleter]]  # noqa: N806
         completer_type: Completer = parser.get_ap_completer_type()  # type: ignore[attr-defined]
 
         if completer_type is None:
@@ -4528,7 +4528,7 @@ class Cmd(cmd.Cmd):
 
         # Detect whether IPython is installed
         try:
-            import traitlets.config.loader as TraitletsLoader  # type: ignore[import]
+            import traitlets.config.loader as traitlets_loader  # type: ignore[import]
 
             # Allow users to install ipython from a cmd2 prompt when needed and still have ipy command work
             try:
@@ -4569,7 +4569,7 @@ class Cmd(cmd.Cmd):
                 local_vars['self'] = self
 
             # Configure IPython
-            config = TraitletsLoader.Config()
+            config = traitlets_loader.Config()
             config.InteractiveShell.banner2 = (
                 'Entering an IPython shell. Type exit, quit, or Ctrl-D to exit.\n'
                 f'Run CLI commands with: {self.py_bridge_name}("command ...")\n'

@@ -61,7 +61,7 @@ def with_ansi_style(style):
     return arg_decorator
 
 
-def CreateOutsimApp():
+def create_outsim_app():
     c = cmd2.Cmd()
     c.stdout = utils.StdSim(c.stdout)
     return c
@@ -69,7 +69,7 @@ def CreateOutsimApp():
 
 @pytest.fixture
 def outsim_app():
-    return CreateOutsimApp()
+    return create_outsim_app()
 
 
 def test_version(base_app) -> None:
@@ -976,7 +976,7 @@ def test_base_cmdloop_with_startup_commands() -> None:
     expected = intro + '\n'
 
     with mock.patch.object(sys, 'argv', testargs):
-        app = CreateOutsimApp()
+        app = create_outsim_app()
 
     app.use_rawinput = True
 
@@ -991,7 +991,7 @@ def test_base_cmdloop_without_startup_commands() -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     with mock.patch.object(sys, 'argv', testargs):
-        app = CreateOutsimApp()
+        app = create_outsim_app()
 
     app.use_rawinput = True
     app.intro = 'Hello World, this is an intro ...'
@@ -1012,7 +1012,7 @@ def test_cmdloop_without_rawinput() -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     with mock.patch.object(sys, 'argv', testargs):
-        app = CreateOutsimApp()
+        app = create_outsim_app()
 
     app.use_rawinput = False
     app.echo = False

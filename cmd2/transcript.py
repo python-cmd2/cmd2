@@ -43,7 +43,7 @@ class Cmd2TestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         if self.cmdapp:
-            self._fetchTranscripts()
+            self._fetch_transcripts()
 
             # Trap stdout
             self._orig_stdout = self.cmdapp.stdout
@@ -54,13 +54,13 @@ class Cmd2TestCase(unittest.TestCase):
             # Restore stdout
             self.cmdapp.stdout = self._orig_stdout
 
-    def runTest(self) -> None:  # was testall
+    def runTest(self) -> None:  # was testall  # noqa: N802
         if self.cmdapp:
             its = sorted(self.transcripts.items())
             for fname, transcript in its:
                 self._test_transcript(fname, transcript)
 
-    def _fetchTranscripts(self) -> None:
+    def _fetch_transcripts(self) -> None:
         self.transcripts = {}
         testfiles = cast(list[str], getattr(self.cmdapp, 'testfiles', []))
         for fname in testfiles:

@@ -7,7 +7,7 @@ from typing import Any
 ############################################################################################################
 
 
-class SkipPostcommandHooks(Exception):
+class SkipPostcommandHooks(Exception):  # noqa: N818
     """Custom exception class for when a command has a failure bad enough to skip post command
     hooks, but not bad enough to print the exception to the user.
     """
@@ -50,7 +50,7 @@ class CompletionError(Exception):
         super().__init__(*args)
 
 
-class PassThroughException(Exception):
+class PassThroughException(Exception):  # noqa: N818
     """Normally all unhandled exceptions raised during commands get printed to the user.
     This class is used to wrap an exception that should be raised instead of printed.
     """
@@ -76,7 +76,7 @@ class EmbeddedConsoleExit(SystemExit):
     """Custom exception class for use with the py command."""
 
 
-class EmptyStatement(Exception):
+class EmptyStatement(Exception):  # noqa: N818
     """Custom exception class for handling behavior when the user just presses <Enter>."""
 
 

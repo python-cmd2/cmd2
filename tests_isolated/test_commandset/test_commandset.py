@@ -832,7 +832,7 @@ class SupportFuncUserUnrelated(cmd2.CommandSet):
 
 
 def test_cross_commandset_completer(command_sets_manual, capsys) -> None:
-    global complete_states_expected_self
+    global complete_states_expected_self  # noqa: PLW0603
     # This tests the different ways to locate the matching CommandSet when completing an argparse argument.
     # Exercises the 3 cases in cmd2.Cmd._resolve_func_self() which is called during argparse tab completion.
 

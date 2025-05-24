@@ -883,7 +883,7 @@ setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 ATTR_AP_COMPLETER_TYPE = 'ap_completer_type'
 
 
-def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Optional[type['ArgparseCompleter']]:
+def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Optional[type['ArgparseCompleter']]:  # noqa: N802
     """Get the ap_completer_type attribute of an argparse ArgumentParser.
 
     This function is added by cmd2 as a method called ``get_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
@@ -899,7 +899,7 @@ def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Opti
 setattr(argparse.ArgumentParser, 'get_ap_completer_type', _ArgumentParser_get_ap_completer_type)
 
 
-def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: type['ArgparseCompleter']) -> None:
+def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: type['ArgparseCompleter']) -> None:  # noqa: N802
     """Set the ap_completer_type attribute of an argparse ArgumentParser.
 
     This function is added by cmd2 as a method called ``set_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
@@ -918,7 +918,7 @@ setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap
 ############################################################################################################
 # Patch ArgumentParser._check_value to support CompletionItems as choices
 ############################################################################################################
-def _ArgumentParser_check_value(self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:
+def _ArgumentParser_check_value(self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:  # noqa: N802
     """Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
     When evaluating choices, input is compared to CompletionItem.orig_value instead of the
     CompletionItem instance.
@@ -950,7 +950,7 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 ############################################################################################################
 
 
-def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore[type-arg]
+def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore[type-arg]  # noqa: N802
     """Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
 
     This function is added by cmd2 as a method called ``remove_parser()`` to ``argparse._SubParsersAction`` class.
