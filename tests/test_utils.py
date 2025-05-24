@@ -247,20 +247,20 @@ def test_stdsim_line_buffering(base_app) -> None:
     import os
     import tempfile
 
-    file = tempfile.NamedTemporaryFile(mode='wt')
-    file.line_buffering = True
+    with tempfile.NamedTemporaryFile(mode='wt') as file:
+        file.line_buffering = True
 
-    stdsim = cu.StdSim(file, echo=True)
-    saved_size = os.path.getsize(file.name)
+        stdsim = cu.StdSim(file, echo=True)
+        saved_size = os.path.getsize(file.name)
 
-    bytes_to_write = b'hello\n'
-    stdsim.buffer.write(bytes_to_write)
-    assert os.path.getsize(file.name) == saved_size + len(bytes_to_write)
-    saved_size = os.path.getsize(file.name)
+        bytes_to_write = b'hello\n'
+        stdsim.buffer.write(bytes_to_write)
+        assert os.path.getsize(file.name) == saved_size + len(bytes_to_write)
+        saved_size = os.path.getsize(file.name)
 
-    bytes_to_write = b'hello\r'
-    stdsim.buffer.write(bytes_to_write)
-    assert os.path.getsize(file.name) == saved_size + len(bytes_to_write)
+        bytes_to_write = b'hello\r'
+        stdsim.buffer.write(bytes_to_write)
+        assert os.path.getsize(file.name) == saved_size + len(bytes_to_write)
 
 
 @pytest.fixture

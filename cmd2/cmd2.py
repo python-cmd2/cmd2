@@ -30,6 +30,7 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 # setting is True
 import argparse
 import cmd
+import contextlib
 import copy
 import functools
 import glob
@@ -48,10 +49,6 @@ from collections import (
     namedtuple,
 )
 from collections.abc import Callable, Iterable, Mapping
-from contextlib import (
-    redirect_stdout,
-    suppress,
-)
 from types import (
     FrameType,
     ModuleType,
@@ -123,10 +120,8 @@ from .parsing import (
 )
 
 # NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
-try:
+with contextlib.suppress(ImportError):
     from IPython import start_ipython  # type: ignore[import]
-except ImportError:
-    pass
 
 from .rl_utils import (
     RlType,
@@ -1098,9 +1093,8 @@ class Cmd(cmd.Cmd):
 
         :param settable: Settable object being added
         """
-        if not self.always_prefix_settables:
-            if settable.name in self.settables and settable.name not in self._settables:
-                raise KeyError(f'Duplicate settable: {settable.name}')
+        if not self.always_prefix_settables and settable.name in self.settables and settable.name not in self._settables:
+            raise KeyError(f'Duplicate settable: {settable.name}')
         self._settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
@@ -1306,7 +1300,7 @@ class Cmd(cmd.Cmd):
         # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
         functional_terminal = False
 
-        if self.stdin.isatty() and self.stdout.isatty():
+        if self.stdin.isatty() and self.stdout.isatty():  # noqa: SIM102
             if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
                 functional_terminal = True
 
@@ -2844,8 +2838,8 @@ class Cmd(cmd.Cmd):
             read_fd, write_fd = os.pipe()
 
             # Open each side of the pipe
-            subproc_stdin = open(read_fd)
-            new_stdout: TextIO = cast(TextIO, open(write_fd, 'w'))
+            subproc_stdin = open(read_fd)  # noqa: SIM115
+            new_stdout: TextIO = cast(TextIO, open(write_fd, 'w'))  # noqa: SIM115
 
             # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
             # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
@@ -2875,7 +2869,7 @@ class Cmd(cmd.Cmd):
             # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
             # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
             # if the pipe process is still running.
-            with suppress(subprocess.TimeoutExpired):
+            with contextlib.suppress(subprocess.TimeoutExpired):
                 proc.wait(0.2)
 
             # Check if the pipe process already exited
@@ -2894,7 +2888,7 @@ class Cmd(cmd.Cmd):
                 mode = 'a' if statement.output == constants.REDIRECTION_APPEND else 'w'
                 try:
                     # Use line buffering
-                    new_stdout = cast(TextIO, open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))
+                    new_stdout = cast(TextIO, open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))  # noqa: SIM115
                 except OSError as ex:
                     raise RedirectionError(f'Failed to redirect because: {ex}')
 
@@ -2915,7 +2909,7 @@ class Cmd(cmd.Cmd):
                 # no point opening up the temporary file
                 current_paste_buffer = get_paste_buffer()
                 # create a temporary file to store output
-                new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))
+                new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
                 redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
 
@@ -2941,11 +2935,9 @@ class Cmd(cmd.Cmd):
                 self.stdout.seek(0)
                 write_to_paste_buffer(self.stdout.read())
 
-            try:
+            with contextlib.suppress(BrokenPipeError):
                 # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
-            except BrokenPipeError:
-                pass
 
             # Restore the stdout values
             self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
@@ -3199,11 +3191,9 @@ class Cmd(cmd.Cmd):
         """
         try:
             # Wrap in try since terminal_lock may not be locked
-            try:
+            with contextlib.suppress(RuntimeError):
                 # Command line is about to be drawn. Allow asynchronous changes to the terminal.
                 self.terminal_lock.release()
-            except RuntimeError:
-                pass
             return self.read_input(prompt, completion_mode=utils.CompletionMode.COMMANDS)
         except EOFError:
             return 'eof'
@@ -3948,7 +3938,7 @@ class Cmd(cmd.Cmd):
                         result = io.StringIO()
 
                         # try to redirect system stdout
-                        with redirect_stdout(result):
+                        with contextlib.redirect_stdout(result):
                             # save our internal stdout
                             stdout_orig = self.stdout
                             try:
@@ -4245,7 +4235,7 @@ class Cmd(cmd.Cmd):
         # Delete any prompts that have been set
         attributes = ['ps1', 'ps2', 'ps3']
         for cur_attr in attributes:
-            with suppress(KeyError):
+            with contextlib.suppress(KeyError):
                 del sys.__dict__[cur_attr]
 
         # Reset functions
@@ -4423,7 +4413,7 @@ class Cmd(cmd.Cmd):
 
             # Check if we are running Python code
             if py_code_to_run:
-                try:
+                try:  # noqa: SIM105
                     interp.runcode(py_code_to_run)  # type: ignore[arg-type]
                 except BaseException:  # noqa: BLE001, S110
                     # We don't care about any exception that happened in the Python code
@@ -4646,7 +4636,7 @@ class Cmd(cmd.Cmd):
         self.last_result = False
 
         # -v must be used alone with no other options
-        if args.verbose:
+        if args.verbose:  # noqa: SIM102
             if args.clear or args.edit or args.output_file or args.run or args.transcript or args.expanded or args.script:
                 self.poutput("-v cannot be used with any other options")
                 self.poutput(self.history_parser.format_usage())

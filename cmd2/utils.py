@@ -2,6 +2,7 @@
 
 import argparse
 import collections
+import contextlib
 import functools
 import glob
 import inspect
@@ -646,11 +647,9 @@ class ProcReader:
         if isinstance(to_write, str):
             to_write = to_write.encode()
 
-        try:
+        # BrokenPipeError can occur if output is being piped to a process that closed
+        with contextlib.suppress(BrokenPipeError):
             stream.buffer.write(to_write)
-        except BrokenPipeError:
-            # This occurs if output is being piped to a process that closed
-            pass
 
 
 class ContextFlag:
@@ -877,12 +876,8 @@ def align_text(
         line_styles = list(get_styles_dict(line).values())
 
         # Calculate how wide each side of filling needs to be
-        if line_width >= width:
-            # Don't return here even though the line needs no fill chars.
-            # There may be styles sequences to restore.
-            total_fill_width = 0
-        else:
-            total_fill_width = width - line_width
+        total_fill_width = 0 if line_width >= width else width - line_width
+        # Even if the line needs no fill chars, there may be styles sequences to restore
 
         if alignment == TextAlignment.LEFT:
             left_fill_width = 0
