@@ -70,7 +70,6 @@ def ansi_print(text) -> None:
 
 def basic_tables() -> None:
     """Demonstrates basic examples of the table classes"""
-
     # Table data which demonstrates handling of wrapping and text styles
     data_list: list[list[Any]] = []
     data_list.append(["Billy Smith", "123 Sesame St.\nFake Town, USA 33445", DollarFormatter(100333.03)])
@@ -113,11 +112,9 @@ def basic_tables() -> None:
 
 
 def nested_tables() -> None:
-    """
-    Demonstrates how to nest tables with styles which conflict with the parent table by setting style_data_text to False.
+    """Demonstrates how to nest tables with styles which conflict with the parent table by setting style_data_text to False.
     It also demonstrates coloring various aspects of tables.
     """
-
     # Create data for this example
     author_data: list[Author] = []
     author_1 = Author("Frank Herbert", "10/08/1920", "Tacoma, Washington")

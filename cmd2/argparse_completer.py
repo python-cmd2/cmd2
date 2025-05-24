@@ -1,5 +1,4 @@
-"""
-This module defines the ArgparseCompleter class which provides argparse-based tab completion to cmd2 apps.
+"""This module defines the ArgparseCompleter class which provides argparse-based tab completion to cmd2 apps.
 See the header of argparse_custom.py for instructions on how to use these features.
 """
 
@@ -76,8 +75,7 @@ def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
 
 
 def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
-    """
-    Determine if a token looks like a flag. Unless an argument has nargs set to argparse.REMAINDER,
+    """Determine if a token looks like a flag. Unless an argument has nargs set to argparse.REMAINDER,
     then anything that looks like a flag can't be consumed as a value for it.
     Based on argparse._parse_optional().
     """
@@ -138,8 +136,7 @@ class _ArgumentState:
 
 class _UnfinishedFlagError(CompletionError):
     def __init__(self, flag_arg_state: _ArgumentState) -> None:
-        """
-        CompletionError which occurs when the user has not finished the current flag
+        """CompletionError which occurs when the user has not finished the current flag
         :param flag_arg_state: information about the unfinished flag action
         """
         arg = f'{argparse._get_action_name(flag_arg_state.action)}'
@@ -150,8 +147,7 @@ class _UnfinishedFlagError(CompletionError):
 
 class _NoResultsError(CompletionError):
     def __init__(self, parser: argparse.ArgumentParser, arg_action: argparse.Action) -> None:
-        """
-        CompletionError which occurs when there are no results. If hinting is allowed, then its message will
+        """CompletionError which occurs when there are no results. If hinting is allowed, then its message will
         be a hint about the argument being tab completed.
         :param parser: ArgumentParser instance which owns the action being tab completed
         :param arg_action: action being tab completed
@@ -166,8 +162,7 @@ class ArgparseCompleter:
     def __init__(
         self, parser: argparse.ArgumentParser, cmd2_app: 'Cmd', *, parent_tokens: Optional[dict[str, list[str]]] = None
     ) -> None:
-        """
-        Create an ArgparseCompleter
+        """Create an ArgparseCompleter
 
         :param parser: ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this ArgparseCompleter
@@ -207,8 +202,7 @@ class ArgparseCompleter:
     def complete(
         self, text: str, line: str, begidx: int, endidx: int, tokens: list[str], *, cmd_set: Optional[CommandSet] = None
     ) -> list[str]:
-        """
-        Complete text using argparse metadata
+        """Complete text using argparse metadata
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -252,8 +246,7 @@ class ArgparseCompleter:
             consumed_arg_values[arg_state.action.dest].append(token)
 
         def update_mutex_groups(arg_action: argparse.Action) -> None:
-            """
-            Check if an argument belongs to a mutually exclusive group and either mark that group
+            """Check if an argument belongs to a mutually exclusive group and either mark that group
             as complete or print an error if the group has already been completed
             :param arg_action: the action of the argument
             :raises CompletionError: if the group is already completed
@@ -501,7 +494,6 @@ class ArgparseCompleter:
 
     def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, matched_flags: list[str]) -> list[str]:
         """Tab completion routine for a parsers unused flags"""
-
         # Build a list of flags that can be tab completed
         match_against = []
 
@@ -535,7 +527,6 @@ class ArgparseCompleter:
 
     def _format_completions(self, arg_state: _ArgumentState, completions: Union[list[str], list[CompletionItem]]) -> list[str]:
         """Format CompletionItems into hint table"""
-
         # Nothing to do if we don't have at least 2 completions which are all CompletionItems
         if len(completions) < 2 or not all(isinstance(c, CompletionItem) for c in completions):
             return cast(list[str], completions)
@@ -611,8 +602,7 @@ class ArgparseCompleter:
         return cast(list[str], completions)
 
     def complete_subcommand_help(self, text: str, line: str, begidx: int, endidx: int, tokens: list[str]) -> list[str]:
-        """
-        Supports cmd2's help command in the completion of subcommand names
+        """Supports cmd2's help command in the completion of subcommand names
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
@@ -638,8 +628,7 @@ class ArgparseCompleter:
         return []
 
     def format_help(self, tokens: list[str]) -> str:
-        """
-        Supports cmd2's help command in the retrieval of help text
+        """Supports cmd2's help command in the retrieval of help text
         :param tokens: arguments passed to help command
         :return: help text of the command being queried
         """
@@ -668,8 +657,7 @@ class ArgparseCompleter:
         *,
         cmd_set: Optional[CommandSet] = None,
     ) -> list[str]:
-        """
-        Tab completion routine for an argparse argument
+        """Tab completion routine for an argparse argument
         :return: list of completions
         :raises CompletionError: if the completer or choices function this calls raises one
         """
@@ -767,8 +755,7 @@ DEFAULT_AP_COMPLETER: type[ArgparseCompleter] = ArgparseCompleter
 
 
 def set_default_ap_completer_type(completer_type: type[ArgparseCompleter]) -> None:
-    """
-    Set the default ArgparseCompleter class for a cmd2 app.
+    """Set the default ArgparseCompleter class for a cmd2 app.
 
     :param completer_type: Type that is a subclass of ArgparseCompleter.
     """

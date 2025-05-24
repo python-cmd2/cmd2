@@ -1,5 +1,4 @@
-"""
-Unit/functional testing for readline tab completion functions in the cmd2.py module.
+"""Unit/functional testing for readline tab completion functions in the cmd2.py module.
 
 These are primarily tests related to readline completer functions which handle tab completion of cmd2/cmd commands,
 file system paths, and shell commands.
@@ -58,9 +57,7 @@ index_dict = {
 
 
 class CompletionsExample(cmd2.Cmd):
-    """
-    Example cmd2 application used to exercise tab completion tests
-    """
+    """Example cmd2 application used to exercise tab completion tests"""
 
     def __init__(self) -> None:
         cmd2.Cmd.__init__(self, multiline_commands=['test_multiline'])
@@ -1211,8 +1208,7 @@ def test_subcommand_tab_completion_space_in_text(sc_app) -> None:
 
 
 class SubcommandsWithUnknownExample(cmd2.Cmd):
-    """
-    Example cmd2 application where we a base command which has a couple subcommands
+    """Example cmd2 application where we a base command which has a couple subcommands
     and the "sport" subcommand has tab completion enabled.
     """
 
@@ -1221,15 +1217,15 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
 
     # subcommand functions for the base command
     def base_foo(self, args) -> None:
-        """foo subcommand of base command"""
+        """Foo subcommand of base command"""
         self.poutput(args.x * args.y)
 
     def base_bar(self, args) -> None:
-        """bar subcommand of base command"""
+        """Bar subcommand of base command"""
         self.poutput(f'(({args.z}))')
 
     def base_sport(self, args) -> None:
-        """sport subcommand of base command"""
+        """Sport subcommand of base command"""
         self.poutput(f'Sport is {args.sport}')
 
     # create the top-level parser for the base command

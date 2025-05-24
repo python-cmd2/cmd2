@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-A sample application for tagging categories on commands.
+"""A sample application for tagging categories on commands.
 
 It also demonstrates the effects of decorator order when it comes to argparse errors occurring.
 """
@@ -126,8 +125,7 @@ class HelpCategories(cmd2.Cmd):
         self.poutput('Thread Dump')
 
     def do_sslconnectorciphers(self, _) -> None:
-        """
-        SSL Connector Ciphers command is an example of a command that contains
+        """SSL Connector Ciphers command is an example of a command that contains
         multiple lines of help information for the user. Each line of help in a
         contiguous set of lines will be printed and aligned in the verbose output
         provided with 'help --verbose'

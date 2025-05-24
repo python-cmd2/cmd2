@@ -1,6 +1,4 @@
-"""
-Test the parsing logic in parsing.py
-"""
+"""Test the parsing logic in parsing.py"""
 
 import dataclasses
 
@@ -504,7 +502,8 @@ def test_parse_output_to_paste_buffer(parser) -> None:
 def test_parse_redirect_inside_terminator(parser) -> None:
     """The terminator designates the end of the command/arguments portion.
     If a redirector occurs before a terminator, then it will be treated as
-    part of the arguments and not as a redirector."""
+    part of the arguments and not as a redirector.
+    """
     line = 'has > inside;'
     statement = parser.parse(line)
     assert statement.command == 'has'

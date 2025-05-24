@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-A sample application for cmd2 demonstrating how to use hooks.
+"""A sample application for cmd2 demonstrating how to use hooks.
 
 This application shows how to use postparsing hooks to allow case insensitive
 command names, abbreviated commands, as well as allowing numeric arguments to

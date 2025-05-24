@@ -1,6 +1,4 @@
-"""
-Supports the definition of commands in separate classes to be composed into cmd2.Cmd
-"""
+"""Supports the definition of commands in separate classes to be composed into cmd2.Cmd"""
 
 from collections.abc import Callable, Mapping
 from typing import (
@@ -31,8 +29,7 @@ CommandSetType = TypeVar('CommandSetType', bound=type['CommandSet'])
 
 
 def with_default_category(category: str, *, heritable: bool = True) -> Callable[[CommandSetType], CommandSetType]:
-    """
-    Decorator that applies a category to all ``do_*`` command methods in a class that do not already
+    """Decorator that applies a category to all ``do_*`` command methods in a class that do not already
     have a category specified.
 
     CommandSets that are decorated by this with `heritable` set to True (default) will set a class attribute that is
@@ -82,8 +79,7 @@ def with_default_category(category: str, *, heritable: bool = True) -> Callable[
 
 
 class CommandSet:
-    """
-    Base class for defining sets of commands to load in cmd2.
+    """Base class for defining sets of commands to load in cmd2.
 
     ``with_default_category`` can be used to apply a default category to all commands in the CommandSet.
 
@@ -101,8 +97,7 @@ class CommandSet:
 
     @property
     def _cmd(self) -> 'cmd2.Cmd':
-        """
-        Property for child classes to access self.__cmd_internal.
+        """Property for child classes to access self.__cmd_internal.
 
         Using this property ensures that self.__cmd_internal has been set
         and it tells type checkers that it's no longer a None type.
@@ -117,8 +112,7 @@ class CommandSet:
         return self.__cmd_internal
 
     def on_register(self, cmd: 'cmd2.Cmd') -> None:
-        """
-        Called by cmd2.Cmd as the first step to registering a CommandSet. The commands defined in this class have
+        """Called by cmd2.Cmd as the first step to registering a CommandSet. The commands defined in this class have
         not been added to the CLI object at this point. Subclasses can override this to perform any initialization
         requiring access to the Cmd object (e.g. configure commands and their parsers based on CLI state data).
 
@@ -131,21 +125,18 @@ class CommandSet:
             raise CommandSetRegistrationError('This CommandSet has already been registered')
 
     def on_registered(self) -> None:
-        """
-        Called by cmd2.Cmd after a CommandSet is registered and all its commands have been added to the CLI.
+        """Called by cmd2.Cmd after a CommandSet is registered and all its commands have been added to the CLI.
         Subclasses can override this to perform custom steps related to the newly added commands (e.g. setting
         them to a disabled state).
         """
 
     def on_unregister(self) -> None:
-        """
-        Called by ``cmd2.Cmd`` as the first step to unregistering a CommandSet. Subclasses can override this to
+        """Called by ``cmd2.Cmd`` as the first step to unregistering a CommandSet. Subclasses can override this to
         perform any cleanup steps which require their commands being registered in the CLI.
         """
 
     def on_unregistered(self) -> None:
-        """
-        Called by ``cmd2.Cmd`` after a CommandSet has been unregistered and all its commands removed from the CLI.
+        """Called by ``cmd2.Cmd`` after a CommandSet has been unregistered and all its commands removed from the CLI.
         Subclasses can override this to perform remaining cleanup steps.
         """
         self.__cmd_internal = None
@@ -159,8 +150,7 @@ class CommandSet:
         return self._settables
 
     def add_settable(self, settable: Settable) -> None:
-        """
-        Convenience method to add a settable parameter to the CommandSet
+        """Convenience method to add a settable parameter to the CommandSet
 
         :param settable: Settable object being added
         """
@@ -175,8 +165,7 @@ class CommandSet:
         self._settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
-        """
-        Convenience method for removing a settable parameter from the CommandSet
+        """Convenience method for removing a settable parameter from the CommandSet
 
         :param name: name of the settable being removed
         :raises KeyError: if the Settable matches this name
@@ -187,8 +176,7 @@ class CommandSet:
             raise KeyError(name + " is not a settable parameter")
 
     def sigint_handler(self) -> bool:
-        """
-        Handle a SIGINT that occurred for a command in this CommandSet.
+        """Handle a SIGINT that occurred for a command in this CommandSet.
 
         :return: True if this completes the interrupt handling and no KeyboardInterrupt will be raised.
                  False to raise a KeyboardInterrupt.

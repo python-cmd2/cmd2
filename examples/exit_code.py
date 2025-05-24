@@ -16,7 +16,8 @@ class ReplWithExitCode(cmd2.Cmd):
 
         Usage:  exit [exit_code]
             Where:
-                * exit_code - integer exit code to return to the shell"""
+                * exit_code - integer exit code to return to the shell
+        """
         # If an argument was provided
         if arg_list:
             try:

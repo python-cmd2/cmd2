@@ -1,6 +1,4 @@
-"""
-Cmd2 unit/functional testing
-"""
+"""Cmd2 unit/functional testing"""
 
 import sys
 from contextlib import (
@@ -142,8 +140,7 @@ odd_file_names = ['nothingweird', 'has   spaces', '"is_double_quoted"', "'is_sin
 
 
 def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Optional[str]:
-    """
-    This is a convenience function to test cmd2.complete() since
+    """This is a convenience function to test cmd2.complete() since
     in a unit test environment there is no actual console readline
     is monitoring. Therefore we use mock to provide readline data
     to complete().

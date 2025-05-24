@@ -57,9 +57,7 @@ class LoadableVegetables(CommandSet):
 
 
 class ExampleApp(cmd2.Cmd):
-    """
-    CommandSets are automatically loaded. Nothing needs to be done.
-    """
+    """CommandSets are automatically loaded. Nothing needs to be done."""
 
     def __init__(self, *args, **kwargs) -> None:
         # gotta have this or neither the plugin or cmd2 will initialize

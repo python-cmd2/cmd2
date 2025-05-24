@@ -1,5 +1,4 @@
-"""
-Support for ANSI escape sequences which are used for things like applying style to text,
+"""Support for ANSI escape sequences which are used for things like applying style to text,
 setting the window title, and asynchronous alerts.
 """
 
@@ -83,8 +82,7 @@ RGB_BG_RE = re.compile(rf'{ESC}\[48;2(?:;(?:1?[0-9]?[0-9]?|2[0-4][0-9]|25[0-5]))
 
 
 def strip_style(text: str) -> str:
-    """
-    Strip ANSI style sequences from a string.
+    """Strip ANSI style sequences from a string.
 
     :param text: string which may contain ANSI style sequences
     :return: the same string with any ANSI style sequences removed
@@ -93,8 +91,7 @@ def strip_style(text: str) -> str:
 
 
 def style_aware_wcswidth(text: str) -> int:
-    """
-    Wrap wcswidth to make it compatible with strings that contain ANSI style sequences.
+    """Wrap wcswidth to make it compatible with strings that contain ANSI style sequences.
     This is intended for single line strings. If text contains a newline, this
     function will return -1. For multiline strings, call widest_line() instead.
 
@@ -108,8 +105,7 @@ def style_aware_wcswidth(text: str) -> int:
 
 
 def widest_line(text: str) -> int:
-    """
-    Return the width of the widest line in a multiline string. This wraps style_aware_wcswidth()
+    """Return the width of the widest line in a multiline string. This wraps style_aware_wcswidth()
     so it handles ANSI style sequences and has the same restrictions on non-printable characters.
 
     :param text: the string being measured
@@ -128,8 +124,7 @@ def widest_line(text: str) -> int:
 
 
 def style_aware_write(fileobj: IO[str], msg: str) -> None:
-    """
-    Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting
+    """Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting
 
     :param fileobj: the file object being written to
     :param msg: the string being written
@@ -143,8 +138,7 @@ def style_aware_write(fileobj: IO[str], msg: str) -> None:
 # Utility functions which create various ANSI sequences
 ####################################################################################
 def set_title(title: str) -> str:
-    """
-    Generate a string that, when printed, sets a terminal's window title.
+    """Generate a string that, when printed, sets a terminal's window title.
 
     :param title: new title for the window
     :return: the set title string
@@ -153,8 +147,7 @@ def set_title(title: str) -> str:
 
 
 def clear_screen(clear_type: int = 2) -> str:
-    """
-    Generate a string that, when printed, clears a terminal screen based on value of clear_type.
+    """Generate a string that, when printed, clears a terminal screen based on value of clear_type.
 
     :param clear_type: integer which specifies how to clear the screen (Defaults to 2)
                        Possible values:
@@ -171,8 +164,7 @@ def clear_screen(clear_type: int = 2) -> str:
 
 
 def clear_line(clear_type: int = 2) -> str:
-    """
-    Generate a string that, when printed, clears a line based on value of clear_type.
+    """Generate a string that, when printed, clears a line based on value of clear_type.
 
     :param clear_type: integer which specifies how to clear the line (Defaults to 2)
                        Possible values:
@@ -194,15 +186,13 @@ class AnsiSequence:
     """Base class to create ANSI sequence strings"""
 
     def __add__(self, other: Any) -> str:
-        """
-        Support building an ANSI sequence string when self is the left operand
+        """Support building an ANSI sequence string when self is the left operand
         e.g. Fg.LIGHT_MAGENTA + "hello"
         """
         return str(self) + str(other)
 
     def __radd__(self, other: Any) -> str:
-        """
-        Support building an ANSI sequence string when self is the right operand
+        """Support building an ANSI sequence string when self is the right operand
         e.g. "hello" + Fg.RESET
         """
         return str(other) + str(self)
@@ -272,8 +262,7 @@ class TextStyle(AnsiSequence, Enum):
     UNDERLINE_DISABLE = 24
 
     def __str__(self) -> str:
-        """
-        Return ANSI text style sequence instead of enum name
+        """Return ANSI text style sequence instead of enum name
         This is helpful when using a TextStyle in an f-string or format() call
         e.g. my_str = f"{TextStyle.UNDERLINE_ENABLE}hello{TextStyle.UNDERLINE_DISABLE}"
         """
@@ -281,8 +270,7 @@ class TextStyle(AnsiSequence, Enum):
 
 
 class Fg(FgColor, Enum):
-    """
-    Create ANSI sequences for the 16 standard terminal foreground text colors.
+    """Create ANSI sequences for the 16 standard terminal foreground text colors.
     A terminal's color settings affect how these colors appear.
     To reset any foreground color, use Fg.RESET.
     """
@@ -307,8 +295,7 @@ class Fg(FgColor, Enum):
     RESET = 39
 
     def __str__(self) -> str:
-        """
-        Return ANSI color sequence instead of enum name
+        """Return ANSI color sequence instead of enum name
         This is helpful when using an Fg in an f-string or format() call
         e.g. my_str = f"{Fg.BLUE}hello{Fg.RESET}"
         """
@@ -316,8 +303,7 @@ class Fg(FgColor, Enum):
 
 
 class Bg(BgColor, Enum):
-    """
-    Create ANSI sequences for the 16 standard terminal background text colors.
+    """Create ANSI sequences for the 16 standard terminal background text colors.
     A terminal's color settings affect how these colors appear.
     To reset any background color, use Bg.RESET.
     """
@@ -342,8 +328,7 @@ class Bg(BgColor, Enum):
     RESET = 49
 
     def __str__(self) -> str:
-        """
-        Return ANSI color sequence instead of enum name
+        """Return ANSI color sequence instead of enum name
         This is helpful when using a Bg in an f-string or format() call
         e.g. my_str = f"{Bg.BLACK}hello{Bg.RESET}"
         """
@@ -351,8 +336,7 @@ class Bg(BgColor, Enum):
 
 
 class EightBitFg(FgColor, Enum):
-    """
-    Create ANSI sequences for 8-bit terminal foreground text colors. Most terminals support 8-bit/256-color mode.
+    """Create ANSI sequences for 8-bit terminal foreground text colors. Most terminals support 8-bit/256-color mode.
     The first 16 colors correspond to the 16 colors from Fg and behave the same way.
     To reset any foreground color, including 8-bit, use Fg.RESET.
     """
@@ -615,8 +599,7 @@ class EightBitFg(FgColor, Enum):
     GRAY_93 = 255
 
     def __str__(self) -> str:
-        """
-        Return ANSI color sequence instead of enum name
+        """Return ANSI color sequence instead of enum name
         This is helpful when using an EightBitFg in an f-string or format() call
         e.g. my_str = f"{EightBitFg.SLATE_BLUE_1}hello{Fg.RESET}"
         """
@@ -624,8 +607,7 @@ class EightBitFg(FgColor, Enum):
 
 
 class EightBitBg(BgColor, Enum):
-    """
-    Create ANSI sequences for 8-bit terminal background text colors. Most terminals support 8-bit/256-color mode.
+    """Create ANSI sequences for 8-bit terminal background text colors. Most terminals support 8-bit/256-color mode.
     The first 16 colors correspond to the 16 colors from Bg and behave the same way.
     To reset any background color, including 8-bit, use Bg.RESET.
     """
@@ -888,8 +870,7 @@ class EightBitBg(BgColor, Enum):
     GRAY_93 = 255
 
     def __str__(self) -> str:
-        """
-        Return ANSI color sequence instead of enum name
+        """Return ANSI color sequence instead of enum name
         This is helpful when using an EightBitBg in an f-string or format() call
         e.g. my_str = f"{EightBitBg.KHAKI_3}hello{Bg.RESET}"
         """
@@ -897,14 +878,12 @@ class EightBitBg(BgColor, Enum):
 
 
 class RgbFg(FgColor):
-    """
-    Create ANSI sequences for 24-bit (RGB) terminal foreground text colors. The terminal must support 24-bit/true-color mode.
+    """Create ANSI sequences for 24-bit (RGB) terminal foreground text colors. The terminal must support 24-bit/true-color.
     To reset any foreground color, including 24-bit, use Fg.RESET.
     """
 
     def __init__(self, r: int, g: int, b: int) -> None:
-        """
-        RgbFg initializer
+        """RgbFg initializer
 
         :param r: integer from 0-255 for the red component of the color
         :param g: integer from 0-255 for the green component of the color
@@ -917,8 +896,7 @@ class RgbFg(FgColor):
         self._sequence = f"{CSI}38;2;{r};{g};{b}m"
 
     def __str__(self) -> str:
-        """
-        Return ANSI color sequence instead of enum name
+        """Return ANSI color sequence instead of enum name
         This is helpful when using an RgbFg in an f-string or format() call
         e.g. my_str = f"{RgbFg(0, 55, 100)}hello{Fg.RESET}"
         """
@@ -926,14 +904,12 @@ class RgbFg(FgColor):
 
 
 class RgbBg(BgColor):
-    """
-    Create ANSI sequences for 24-bit (RGB) terminal background text colors. The terminal must support 24-bit/true-color mode.
+    """Create ANSI sequences for 24-bit (RGB) terminal background text colors. The terminal must support 24-bit/true-color.
     To reset any background color, including 24-bit, use Bg.RESET.
     """
 
     def __init__(self, r: int, g: int, b: int) -> None:
-        """
-        RgbBg initializer
+        """RgbBg initializer
 
         :param r: integer from 0-255 for the red component of the color
         :param g: integer from 0-255 for the green component of the color
@@ -946,8 +922,7 @@ class RgbBg(BgColor):
         self._sequence = f"{CSI}48;2;{r};{g};{b}m"
 
     def __str__(self) -> str:
-        """
-        Return ANSI color sequence instead of enum name
+        """Return ANSI color sequence instead of enum name
         This is helpful when using an RgbBg in an f-string or format() call
         e.g. my_str = f"{RgbBg(100, 255, 27)}hello{Bg.RESET}"
         """
@@ -966,8 +941,7 @@ def style(
     strikethrough: Optional[bool] = None,
     underline: Optional[bool] = None,
 ) -> str:
-    """
-    Apply ANSI colors and/or styles to a string and return it.
+    """Apply ANSI colors and/or styles to a string and return it.
     The styling is self contained which means that at the end of the string reset code(s) are issued
     to undo whatever styling was done at the beginning.
 
@@ -1056,7 +1030,6 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     :param alert_msg: the message to display to the user
     :return: the correct string so that the alert message appears to the user to be printed above the current line.
     """
-
     # Split the prompt lines since it can contain newline characters.
     prompt_lines = prompt.splitlines() or ['']
 

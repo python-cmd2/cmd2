@@ -1,6 +1,4 @@
-"""
-Unit testing for cmd2/utils.py module.
-"""
+"""Unit testing for cmd2/utils.py module."""
 
 import os
 import signal

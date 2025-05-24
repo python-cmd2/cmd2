@@ -1,6 +1,4 @@
-"""
-Unit testing for cmd2/ansi.py module
-"""
+"""Unit testing for cmd2/ansi.py module"""
 
 import pytest
 

@@ -1,6 +1,4 @@
-"""
-Unit/functional testing for argparse completer in cmd2
-"""
+"""Unit/functional testing for argparse completer in cmd2"""
 
 import argparse
 import numbers
@@ -1202,7 +1200,6 @@ def test_complete_standalone(ac_app, flag, completions) -> None:
 class CustomCompleter(argparse_completer.ArgparseCompleter):
     def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, matched_flags: list[str]) -> list[str]:
         """Override so flags with 'complete_when_ready' set to True will complete only when app is ready"""
-
         # Find flags which should not be completed and place them in matched_flags
         for flag in self._flags:
             action = self._flag_to_action[flag]
@@ -1320,7 +1317,6 @@ def test_custom_completer_type(custom_completer_app: CustomCompleterApp) -> None
 
 def test_decorated_subcmd_custom_completer(custom_completer_app: CustomCompleterApp) -> None:
     """Tests custom completer type on a subcommand created with @cmd2.as_subcommand_to"""
-
     # First test the subcommand without the custom completer
     text = '--m'
     line = f'top no_custom {text}'

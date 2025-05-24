@@ -1,6 +1,4 @@
-"""
-A simple example demonstrating a loadable command set
-"""
+"""A simple example demonstrating a loadable command set"""
 
 from cmd2 import (
     CommandSet,
@@ -76,8 +74,7 @@ class BasicCompletionCommandSet(CommandSet):
         self._cmd.poutput(f"Args: {statement.args}")
 
     def complete_raise_error(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
-        """
-        CompletionErrors can be raised if an error occurs while tab completing.
+        """CompletionErrors can be raised if an error occurs while tab completing.
 
         Example use cases
             - Reading a database to retrieve a tab completion data set failed

@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-A sample application for cmd2 demonstrating how to remove one of the built-in runtime settable parameters.
-"""
+"""A sample application for cmd2 demonstrating how to remove one of the built-in runtime settable parameters."""
 
 import cmd2
 

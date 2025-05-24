@@ -1,6 +1,4 @@
-"""
-Test history functions of cmd2
-"""
+"""Test history functions of cmd2"""
 
 import os
 import tempfile

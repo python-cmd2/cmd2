@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-A simple example demonstrating how to integrate tab completion with argparse-based commands.
-"""
+"""A simple example demonstrating how to integrate tab completion with argparse-based commands."""
 
 import argparse
 
@@ -28,8 +26,7 @@ class ArgparseCompletion(Cmd):
         return self.sport_item_strs
 
     def choices_completion_error(self) -> list[str]:
-        """
-        CompletionErrors can be raised if an error occurs while tab completing.
+        """CompletionErrors can be raised if an error occurs while tab completing.
 
         Example use cases
             - Reading a database to retrieve a tab completion data set failed
@@ -47,8 +44,7 @@ class ArgparseCompletion(Cmd):
         return [CompletionItem(item_id, description) for item_id, description in items.items()]
 
     def choices_arg_tokens(self, arg_tokens: dict[str, list[str]]) -> list[str]:
-        """
-        If a choices or completer function/method takes a value called arg_tokens, then it will be
+        """If a choices or completer function/method takes a value called arg_tokens, then it will be
         passed a dictionary that maps the command line tokens up through the one being completed
         to their argparse argument name.  All values of the arg_tokens dictionary are lists, even if
         a particular argument expects only 1 token.

@@ -1,6 +1,4 @@
-"""
-Test plugin infrastructure and hooks.
-"""
+"""Test plugin infrastructure and hooks."""
 
 import argparse
 import sys
@@ -970,8 +968,7 @@ def test_skip_postcmd_hooks(capsys) -> None:
 
 
 def test_cmd2_argparse_exception(capsys) -> None:
-    """
-    Verify Cmd2ArgparseErrors raised after calling a command prevent postcmd events from
+    """Verify Cmd2ArgparseErrors raised after calling a command prevent postcmd events from
     running but do not affect cmdfinalization events
     """
     app = PluggedApp()

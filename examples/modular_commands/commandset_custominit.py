@@ -1,6 +1,4 @@
-"""
-A simple example demonstrating a loadable command set
-"""
+"""A simple example demonstrating a loadable command set"""
 
 from cmd2 import (
     Cmd,

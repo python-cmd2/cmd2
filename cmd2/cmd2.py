@@ -211,8 +211,7 @@ else:
 
 
 class _CommandParsers:
-    """
-    Create and store all command method argument parsers for a given Cmd instance.
+    """Create and store all command method argument parsers for a given Cmd instance.
 
     Parser creation and retrieval are accomplished through the get() method.
     """
@@ -233,8 +232,7 @@ class _CommandParsers:
             return ""
 
     def __contains__(self, command_method: CommandFunc) -> bool:
-        """
-        Return whether a given method's parser is in self.
+        """Return whether a given method's parser is in self.
 
         If the parser does not yet exist, it will be created if applicable.
         This is basically for checking if a method is argarse-based.
@@ -243,8 +241,7 @@ class _CommandParsers:
         return bool(parser)
 
     def get(self, command_method: CommandFunc) -> Optional[argparse.ArgumentParser]:
-        """
-        Return a given method's parser or None if the method is not argparse-based.
+        """Return a given method's parser or None if the method is not argparse-based.
 
         If the parser does not yet exist, it will be created.
         """
@@ -635,8 +632,7 @@ class Cmd(cmd.Cmd):
         self.current_command: Optional[Statement] = None
 
     def find_commandsets(self, commandset_type: type[CommandSet], *, subclass_match: bool = False) -> list[CommandSet]:
-        """
-        Find all CommandSets that match the provided CommandSet type.
+        """Find all CommandSets that match the provided CommandSet type.
         By default, locates a CommandSet that is an exact type match but may optionally return all CommandSets that
         are sub-classes of the provided type
         :param commandset_type: CommandSet sub-class type to search for
@@ -650,8 +646,7 @@ class Cmd(cmd.Cmd):
         ]
 
     def find_commandset_for_command(self, command_name: str) -> Optional[CommandSet]:
-        """
-        Finds the CommandSet that registered the command name
+        """Finds the CommandSet that registered the command name
         :param command_name: command name to search
         :return: CommandSet that provided the command
         """
@@ -682,8 +677,7 @@ class Cmd(cmd.Cmd):
         load_commandset_by_type(all_commandset_defs)
 
     def register_command_set(self, cmdset: CommandSet) -> None:
-        """
-        Installs a CommandSet, loading all commands defined in the CommandSet
+        """Installs a CommandSet, loading all commands defined in the CommandSet
 
         :param cmdset: CommandSet to load
         """
@@ -782,8 +776,7 @@ class Cmd(cmd.Cmd):
         return parser
 
     def _install_command_function(self, command_func_name: str, command_method: CommandFunc, context: str = '') -> None:
-        """
-        Install a new command function into the CLI.
+        """Install a new command function into the CLI.
 
         :param command_func_name: name of command function to add
                                   This points to the command method and may differ from the method's
@@ -792,7 +785,6 @@ class Cmd(cmd.Cmd):
         :param context: optional info to provide in error message. (e.g. class this function belongs to)
         :raises CommandSetRegistrationError: if the command function fails to install
         """
-
         # command_func_name must begin with COMMAND_FUNC_PREFIX to be identified as a command by cmd2.
         if not command_func_name.startswith(COMMAND_FUNC_PREFIX):
             raise CommandSetRegistrationError(f"{command_func_name} does not begin with '{COMMAND_FUNC_PREFIX}'")
@@ -839,8 +831,7 @@ class Cmd(cmd.Cmd):
         setattr(self, help_func_name, cmd_help)
 
     def unregister_command_set(self, cmdset: CommandSet) -> None:
-        """
-        Uninstalls a CommandSet and unloads all associated commands
+        """Uninstalls a CommandSet and unloads all associated commands
 
         :param cmdset: CommandSet to uninstall
         """
@@ -911,8 +902,7 @@ class Cmd(cmd.Cmd):
                     check_parser_uninstallable(command_parser)
 
     def _register_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
-        """
-        Register subcommands with their base command
+        """Register subcommands with their base command
 
         :param cmdset: CommandSet or cmd2.Cmd subclass containing subcommands
         """
@@ -1018,8 +1008,7 @@ class Cmd(cmd.Cmd):
                     break
 
     def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
-        """
-        Unregister subcommands from their base command
+        """Unregister subcommands from their base command
 
         :param cmdset: CommandSet containing subcommands
         """
@@ -1065,8 +1054,7 @@ class Cmd(cmd.Cmd):
 
     @property
     def always_prefix_settables(self) -> bool:
-        """
-        Flags whether CommandSet settable values should always be prefixed
+        """Flags whether CommandSet settable values should always be prefixed
 
         :return: True if CommandSet settable values will always be prefixed. False if not.
         """
@@ -1074,8 +1062,7 @@ class Cmd(cmd.Cmd):
 
     @always_prefix_settables.setter
     def always_prefix_settables(self, new_value: bool) -> None:
-        """
-        Set whether CommandSet settable values should always be prefixed.
+        """Set whether CommandSet settable values should always be prefixed.
 
         :param new_value: True if CommandSet settable values should always be prefixed. False if not.
         :raises ValueError: If a registered CommandSet does not have a defined prefix
@@ -1091,8 +1078,7 @@ class Cmd(cmd.Cmd):
 
     @property
     def settables(self) -> Mapping[str, Settable]:
-        """
-        Get all available user-settable attributes. This includes settables defined in installed CommandSets
+        """Get all available user-settable attributes. This includes settables defined in installed CommandSets
 
         :return: Mapping from attribute-name to Settable of all user-settable attributes from
         """
@@ -1107,8 +1093,7 @@ class Cmd(cmd.Cmd):
         return all_settables
 
     def add_settable(self, settable: Settable) -> None:
-        """
-        Add a settable parameter to ``self.settables``
+        """Add a settable parameter to ``self.settables``
 
         :param settable: Settable object being added
         """
@@ -1118,8 +1103,7 @@ class Cmd(cmd.Cmd):
         self._settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
-        """
-        Convenience method for removing a settable parameter from ``self.settables``
+        """Convenience method for removing a settable parameter from ``self.settables``
 
         :param name: name of the settable being removed
         :raises KeyError: if the Settable matches this name
@@ -1206,8 +1190,7 @@ class Cmd(cmd.Cmd):
         end: str = '\n',
         style: Optional[Callable[[str], str]] = None,
     ) -> None:
-        """
-        Print message to a given file object.
+        """Print message to a given file object.
 
         :param dest: the file object being written to
         :param msg: object to print
@@ -1357,8 +1340,7 @@ class Cmd(cmd.Cmd):
     # -----  Methods related to tab completion -----
 
     def _reset_completion_defaults(self) -> None:
-        """
-        Resets tab completion settings
+        """Resets tab completion settings
         Needs to be called each time readline runs tab completion
         """
         self.allow_appended_space = True
@@ -1447,8 +1429,7 @@ class Cmd(cmd.Cmd):
         endidx: int,
         match_against: Iterable[str],
     ) -> list[str]:
-        """
-        Basic tab completion function that matches against a list of strings without considering line contents
+        """Basic tab completion function that matches against a list of strings without considering line contents
         or cursor position. The args required by this function are defined in the header of Python's cmd.py.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
@@ -1469,8 +1450,7 @@ class Cmd(cmd.Cmd):
         match_against: Iterable[str],
         delimiter: str,
     ) -> list[str]:
-        """
-        Performs tab completion against a list but each match is split on a delimiter and only
+        """Performs tab completion against a list but each match is split on a delimiter and only
         the portion of the match being tab completed is shown as the completion suggestions.
         This is useful if you match against strings that are hierarchical in nature and have a
         common delimiter.
@@ -1995,8 +1975,7 @@ class Cmd(cmd.Cmd):
 
     @staticmethod
     def _determine_ap_completer_type(parser: argparse.ArgumentParser) -> type[argparse_completer.ArgparseCompleter]:
-        """
-        Determine what type of ArgparseCompleter to use on a given parser. If the parser does not have one
+        """Determine what type of ArgparseCompleter to use on a given parser. If the parser does not have one
         set, then use argparse_completer.DEFAULT_AP_COMPLETER.
 
         :param parser: the parser to examine
@@ -2012,8 +1991,7 @@ class Cmd(cmd.Cmd):
     def _perform_completion(
         self, text: str, line: str, begidx: int, endidx: int, custom_settings: Optional[utils.CustomCompletionSettings] = None
     ) -> None:
-        """
-        Helper function for complete() that performs the actual completion
+        """Helper function for complete() that performs the actual completion
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -2408,8 +2386,7 @@ class Cmd(cmd.Cmd):
                 self._raise_keyboard_interrupt()
 
     def termination_signal_handler(self, signum: int, _: Optional[FrameType]) -> None:
-        """
-        Signal handler for SIGHUP and SIGTERM. Only runs on Linux and Mac.
+        """Signal handler for SIGHUP and SIGTERM. Only runs on Linux and Mac.
 
         SIGHUP - received when terminal window is closed
         SIGTERM - received when this app has been requested to terminate
@@ -2640,8 +2617,7 @@ class Cmd(cmd.Cmd):
         add_to_history: bool = True,
         stop_on_keyboard_interrupt: bool = False,
     ) -> bool:
-        """
-        Used when commands are being run in an automated fashion like text scripts or history replays.
+        """Used when commands are being run in an automated fashion like text scripts or history replays.
         The prompt and command line for each command will be printed if echo is True.
 
         :param cmds: commands to run
@@ -2761,8 +2737,7 @@ class Cmd(cmd.Cmd):
         return statement
 
     def _input_line_to_statement(self, line: str, *, orig_rl_history_length: Optional[int] = None) -> Statement:
-        """
-        Parse the user's input line and convert it to a Statement, ensuring that all macros are also resolved
+        """Parse the user's input line and convert it to a Statement, ensuring that all macros are also resolved
 
         :param line: the line being parsed
         :param orig_rl_history_length: Optional length of the readline history before the current command was typed.
@@ -2815,8 +2790,7 @@ class Cmd(cmd.Cmd):
         return statement
 
     def _resolve_macro(self, statement: Statement) -> Optional[str]:
-        """
-        Resolve a macro and return the resulting string
+        """Resolve a macro and return the resulting string
 
         :param statement: the parsed statement from the command line
         :return: the resolved macro or None on error
@@ -2999,18 +2973,17 @@ class Cmd(cmd.Cmd):
         self._redirecting = saved_redir_state.saved_redirecting
 
     def cmd_func(self, command: str) -> Optional[CommandFunc]:
-        """
-        Get the function for a command
+        """Get the function for a command
 
         :param command: the name of the command
 
         Example:
-
         ```py
         helpfunc = self.cmd_func('help')
         ```
 
         helpfunc now contains a reference to the ``do_help`` method
+
         """
         func_name = constants.COMMAND_FUNC_PREFIX + command
         func = getattr(self, func_name, None)
@@ -3084,8 +3057,7 @@ class Cmd(cmd.Cmd):
         completer: Optional[CompleterFunc] = None,
         parser: Optional[argparse.ArgumentParser] = None,
     ) -> str:
-        """
-        Read input from appropriate stdin value. Also supports tab completion and up-arrow history while
+        """Read input from appropriate stdin value. Also supports tab completion and up-arrow history while
         input is being entered.
 
         :param prompt: prompt to display to user
@@ -3232,8 +3204,7 @@ class Cmd(cmd.Cmd):
         return line.rstrip('\r\n')
 
     def _read_command_line(self, prompt: str) -> str:
-        """
-        Read command line from appropriate stdin
+        """Read command line from appropriate stdin
 
         :param prompt: prompt to display to user
         :return: command line text of 'eof' if an EOFError was caught
@@ -3254,8 +3225,7 @@ class Cmd(cmd.Cmd):
             self.terminal_lock.acquire()
 
     def _set_up_cmd2_readline(self) -> _SavedReadlineSettings:
-        """
-        Called at beginning of command loop to set up readline with cmd2-specific settings
+        """Called at beginning of command loop to set up readline with cmd2-specific settings
 
         :return: Class containing saved readline settings
         """
@@ -3295,8 +3265,7 @@ class Cmd(cmd.Cmd):
         return readline_settings
 
     def _restore_readline(self, readline_settings: _SavedReadlineSettings) -> None:
-        """
-        Called at end of command loop to restore saved readline settings
+        """Called at end of command loop to restore saved readline settings
 
         :param readline_settings: the readline settings to restore
         """
@@ -3757,7 +3726,6 @@ class Cmd(cmd.Cmd):
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         """Completes the command argument of help"""
-
         # Complete token against topics and visible commands
         topics = set(self.get_help_topics())
         visible_commands = set(self.get_visible_commands())
@@ -3768,7 +3736,6 @@ class Cmd(cmd.Cmd):
         self, text: str, line: str, begidx: int, endidx: int, arg_tokens: dict[str, list[str]]
     ) -> list[str]:
         """Completes the subcommands argument of help"""
-
         # Make sure we have a command whose subcommands we will complete
         command = arg_tokens['command'][0]
         if not command:
@@ -3836,8 +3803,7 @@ class Cmd(cmd.Cmd):
                 self.last_result = False
 
     def print_topics(self, header: str, cmds: Optional[list[str]], cmdlen: int, maxcol: int) -> None:
-        """
-        Print groups of commands and topics in columns and an optional header
+        """Print groups of commands and topics in columns and an optional header
         Override of cmd's print_topics() to handle headers with newlines, ANSI style sequences, and wide characters
 
         :param header: string to print above commands being printed
@@ -4045,8 +4011,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(eof_parser)
     def do_eof(self, _: argparse.Namespace) -> Optional[bool]:
-        """
-        Called when Ctrl-D is pressed and calls quit with no arguments.
+        """Called when Ctrl-D is pressed and calls quit with no arguments.
         This can be overridden if quit should be called differently.
         """
         self.poutput()
@@ -4073,7 +4038,8 @@ class Cmd(cmd.Cmd):
           | a list of strings -> will be offered as options
           | a list of tuples -> interpreted as (value, text), so
                                 that the return value can differ from
-                                the text advertised to the user"""
+                                the text advertised to the user
+        """
         local_opts: Union[list[str], list[tuple[Any, Optional[str]]]]
         if isinstance(opts, str):
             local_opts = cast(list[tuple[Any, Optional[str]]], list(zip(opts.split(), opts.split())))
@@ -4289,8 +4255,7 @@ class Cmd(cmd.Cmd):
 
     @staticmethod
     def _reset_py_display() -> None:
-        """
-        Resets the dynamic objects in the sys module that the py and ipy consoles fight over.
+        """Resets the dynamic objects in the sys module that the py and ipy consoles fight over.
         When a Python console starts it adopts certain display settings if they've already been set.
         If an ipy console has previously been run, then py uses its settings and ends up looking
         like an ipy console in terms of prompt and exception text. This method forces the Python
@@ -4312,8 +4277,7 @@ class Cmd(cmd.Cmd):
         sys.excepthook = sys.__excepthook__
 
     def _set_up_py_shell_env(self, interp: InteractiveConsole) -> _SavedCmd2Env:
-        """
-        Set up interactive Python shell environment
+        """Set up interactive Python shell environment
         :return: Class containing saved up cmd2 environment
         """
         cmd2_env = _SavedCmd2Env()
@@ -4376,8 +4340,7 @@ class Cmd(cmd.Cmd):
         return cmd2_env
 
     def _restore_cmd2_env(self, cmd2_env: _SavedCmd2Env) -> None:
-        """
-        Restore cmd2 environment after exiting an interactive Python shell
+        """Restore cmd2 environment after exiting an interactive Python shell
 
         :param cmd2_env: the environment settings to restore
         """
@@ -4413,8 +4376,7 @@ class Cmd(cmd.Cmd):
                             sys.modules['readline'] = cmd2_env.readline_module
 
     def _run_python(self, *, pyscript: Optional[str] = None) -> Optional[bool]:
-        """
-        Called by do_py() and do_run_pyscript().
+        """Called by do_py() and do_run_pyscript().
         If pyscript is None, then this function runs an interactive Python shell.
         Otherwise, it runs the pyscript file.
 
@@ -4532,8 +4494,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(py_parser)
     def do_py(self, _: argparse.Namespace) -> Optional[bool]:
-        """
-        Run an interactive Python shell
+        """Run an interactive Python shell
         :return: True if running of commands should stop
         """
         # self.last_resort will be set by _run_python()
@@ -4547,8 +4508,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(run_pyscript_parser)
     def do_run_pyscript(self, args: argparse.Namespace) -> Optional[bool]:
-        """
-        Run a Python script file inside the console
+        """Run a Python script file inside the console
 
         :return: True if running of commands should stop
         """
@@ -4584,8 +4544,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(ipython_parser)
     def do_ipy(self, _: argparse.Namespace) -> Optional[bool]:  # pragma: no cover
-        """
-        Enter an interactive IPython shell
+        """Enter an interactive IPython shell
 
         :return: True if running of commands should stop
         """
@@ -4704,8 +4663,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> Optional[bool]:
-        """
-        View, run, edit, save, or clear previously entered commands
+        """View, run, edit, save, or clear previously entered commands
 
         :return: True if running of commands should stop
         """
@@ -5047,13 +5005,11 @@ class Cmd(cmd.Cmd):
     @with_argparser(edit_parser)
     def do_edit(self, args: argparse.Namespace) -> None:
         """Run a text editor and optionally open a file with it"""
-
         # self.last_result will be set by do_shell() which is called by run_editor()
         self.run_editor(args.file_path)
 
     def run_editor(self, file_path: Optional[str] = None) -> None:
-        """
-        Run a text editor and optionally open a file with it
+        """Run a text editor and optionally open a file with it
 
         :param file_path: optional path of the file to edit. Defaults to None.
         :raises EnvironmentError: if self.editor is not set
@@ -5173,8 +5129,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(relative_run_script_parser)
     def do__relative_run_script(self, args: argparse.Namespace) -> Optional[bool]:
-        """
-        Run commands in script file that is encoded as either ASCII or UTF-8 text
+        """Run commands in script file that is encoded as either ASCII or UTF-8 text
 
         :return: True if running of commands should stop
         """
@@ -5248,8 +5203,7 @@ class Cmd(cmd.Cmd):
             self.exit_code = 1
 
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
-        """
-        Display an important message to the user while they are at a command line prompt.
+        """Display an important message to the user while they are at a command line prompt.
         To the user it appears as if an alert message is printed above the prompt and their
         current input text and cursor location is left alone.
 
@@ -5320,8 +5274,7 @@ class Cmd(cmd.Cmd):
             raise RuntimeError("another thread holds terminal_lock")
 
     def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
-        """
-        Update the command line prompt while the user is still typing at it.
+        """Update the command line prompt while the user is still typing at it.
 
         This is good for alerting the user to system changes dynamically in between commands.
         For instance you could alter the color of the prompt to indicate a system status or increase a
@@ -5340,8 +5293,7 @@ class Cmd(cmd.Cmd):
         self.async_alert('', new_prompt)
 
     def async_refresh_prompt(self) -> None:  # pragma: no cover
-        """
-        Refresh the oncreen prompt to match self.prompt.
+        """Refresh the oncreen prompt to match self.prompt.
 
         One case where the onscreen prompt and self.prompt can get out of sync is
         when async_alert() is called while a user is in search mode (e.g. Ctrl-r).
@@ -5367,8 +5319,7 @@ class Cmd(cmd.Cmd):
 
     @staticmethod
     def set_window_title(title: str) -> None:  # pragma: no cover
-        """
-        Set the terminal window title.
+        """Set the terminal window title.
 
         NOTE: This function writes to stderr. Therefore, if you call this during a command run by a pyscript,
               the string which updates the title will appear in that command's CommandResult.stderr data.
@@ -5386,8 +5337,7 @@ class Cmd(cmd.Cmd):
             pass
 
     def enable_command(self, command: str) -> None:
-        """
-        Enable a command by restoring its functions
+        """Enable a command by restoring its functions
 
         :param command: the command being enabled
         """
@@ -5419,8 +5369,7 @@ class Cmd(cmd.Cmd):
         del self.disabled_commands[command]
 
     def enable_category(self, category: str) -> None:
-        """
-        Enable an entire category of commands
+        """Enable an entire category of commands
 
         :param category: the category to enable
         """
@@ -5430,8 +5379,7 @@ class Cmd(cmd.Cmd):
                 self.enable_command(cmd_name)
 
     def disable_command(self, command: str, message_to_print: str) -> None:
-        """
-        Disable a command and overwrite its functions
+        """Disable a command and overwrite its functions
 
         :param command: the command being disabled
         :param message_to_print: what to print when this command is run or help is called on it while disabled
@@ -5487,8 +5435,7 @@ class Cmd(cmd.Cmd):
                 self.disable_command(cmd_name, message_to_print)
 
     def _report_disabled_command_usage(self, *_args: Any, message_to_print: str, **_kwargs: Any) -> None:
-        """
-        Report when a disabled command has been run or had help called on it
+        """Report when a disabled command has been run or had help called on it
 
         :param _args: not used
         :param message_to_print: the message reporting that the command is disabled
@@ -5684,8 +5631,7 @@ class Cmd(cmd.Cmd):
         cmd_support_func: Callable[..., Any],
         cmd_self: Union[CommandSet, 'Cmd', None],
     ) -> Optional[object]:
-        """
-        Attempt to resolve a candidate instance to pass as 'self' for an unbound class method that was
+        """Attempt to resolve a candidate instance to pass as 'self' for an unbound class method that was
         used when defining command's argparse object. Since we restrict registration to only a single CommandSet
         instance of each type, using type is a reasonably safe way to resolve the correct object instance
 

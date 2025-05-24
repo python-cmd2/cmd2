@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """A simple example demonstrating how to use Argparse to support subcommands.
 
-
 This example shows an easy way for a single command to have many subcommands, each of which takes different arguments
 and provides separate contextual help.
 """
@@ -62,8 +61,7 @@ sport2_arg = parser_sport2.add_argument('sport', help='Enter name of a sport', c
 
 
 class SubcommandsExample(cmd2.Cmd):
-    """
-    Example cmd2 application where we a base command which has a couple subcommands
+    """Example cmd2 application where we a base command which has a couple subcommands
     and the "sport" subcommand has tab completion enabled.
     """
 
@@ -72,15 +70,15 @@ class SubcommandsExample(cmd2.Cmd):
 
     # subcommand functions for the base command
     def base_foo(self, args) -> None:
-        """foo subcommand of base command"""
+        """Foo subcommand of base command"""
         self.poutput(args.x * args.y)
 
     def base_bar(self, args) -> None:
-        """bar subcommand of base command"""
+        """Bar subcommand of base command"""
         self.poutput(f'(({args.z}))')
 
     def base_sport(self, args) -> None:
-        """sport subcommand of base command"""
+        """Sport subcommand of base command"""
         self.poutput(f'Sport is {args.sport}')
 
     # Set handler functions for the subcommands

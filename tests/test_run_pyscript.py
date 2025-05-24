@@ -1,6 +1,4 @@
-"""
-Unit/functional testing for run_pytest in cmd2
-"""
+"""Unit/functional testing for run_pytest in cmd2"""
 
 import builtins
 import os
@@ -69,8 +67,7 @@ def test_run_pyscript_with_non_python_file(base_app, request) -> None:
 
 @pytest.mark.parametrize('python_script', odd_file_names)
 def test_run_pyscript_with_odd_file_names(base_app, python_script) -> None:
-    """
-    Pass in file names with various patterns. Since these files don't exist, we will rely
+    """Pass in file names with various patterns. Since these files don't exist, we will rely
     on the error text to make sure the file names were processed correctly.
     """
     # Mock input to get us passed the warning about not ending in .py

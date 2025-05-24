@@ -63,7 +63,7 @@ class CmdLineApp(cmd2.Cmd):
 
     @cmd2.with_argparser(tag_parser)
     def do_tag(self, args: argparse.Namespace) -> None:
-        """create an html tag"""
+        """Create an html tag"""
         # The Namespace always includes the Statement object created when parsing the command line
         statement = args.cmd2_statement.get()
 
@@ -73,7 +73,7 @@ class CmdLineApp(cmd2.Cmd):
 
     @cmd2.with_argument_list
     def do_tagg(self, arglist: list[str]) -> None:
-        """version of creating an html tag using arglist instead of argparser"""
+        """Version of creating an html tag using arglist instead of argparser"""
         if len(arglist) >= 2:
             tag = arglist[0]
             content = arglist[1:]

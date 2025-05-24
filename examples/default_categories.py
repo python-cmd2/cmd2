@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Simple example demonstrating basic CommandSet usage.
-"""
+"""Simple example demonstrating basic CommandSet usage."""
 
 import cmd2
 from cmd2 import (
@@ -16,9 +14,7 @@ class MyBaseCommandSet(CommandSet):
 
 
 class ChildInheritsParentCategories(MyBaseCommandSet):
-    """
-    This subclass doesn't declare any categories so all commands here are also categorized under 'Default Category'
-    """
+    """This subclass doesn't declare any categories so all commands here are also categorized under 'Default Category'"""
 
     def do_hello(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Hello')
@@ -29,8 +25,7 @@ class ChildInheritsParentCategories(MyBaseCommandSet):
 
 @with_default_category('Non-Heritable Category', heritable=False)
 class ChildOverridesParentCategoriesNonHeritable(MyBaseCommandSet):
-    """
-    This subclass overrides the 'Default Category' from the parent, but in a non-heritable fashion. Sub-classes of this
+    """This subclass overrides the 'Default Category' from the parent, but in a non-heritable fashion. Sub-classes of this
     CommandSet will not inherit this category and will, instead, inherit 'Default Category'
     """
 
@@ -39,8 +34,7 @@ class ChildOverridesParentCategoriesNonHeritable(MyBaseCommandSet):
 
 
 class GrandchildInheritsGrandparentCategory(ChildOverridesParentCategoriesNonHeritable):
-    """
-    This subclass's parent class declared its default category non-heritable. Instead, it inherits the category defined
+    """This subclass's parent class declared its default category non-heritable. Instead, it inherits the category defined
     by the grandparent class.
     """
 
@@ -50,8 +44,7 @@ class GrandchildInheritsGrandparentCategory(ChildOverridesParentCategoriesNonHer
 
 @with_default_category('Heritable Category')
 class ChildOverridesParentCategories(MyBaseCommandSet):
-    """
-    This subclass is decorated with a default category that is heritable. This overrides the parent class's default
+    """This subclass is decorated with a default category that is heritable. This overrides the parent class's default
     category declaration.
     """
 
@@ -60,8 +53,7 @@ class ChildOverridesParentCategories(MyBaseCommandSet):
 
 
 class GrandchildInheritsHeritable(ChildOverridesParentCategories):
-    """
-    This subclass's parent declares a default category that overrides its parent. As a result, commands in this
+    """This subclass's parent declares a default category that overrides its parent. As a result, commands in this
     CommandSet will be categorized under 'Heritable Category'
     """
 
@@ -70,9 +62,7 @@ class GrandchildInheritsHeritable(ChildOverridesParentCategories):
 
 
 class ExampleApp(cmd2.Cmd):
-    """
-    Example to demonstrate heritable default categories
-    """
+    """Example to demonstrate heritable default categories"""
 
     def __init__(self) -> None:
         super().__init__()

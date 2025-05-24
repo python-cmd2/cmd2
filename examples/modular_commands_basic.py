@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Simple example demonstrating basic CommandSet usage.
-"""
+"""Simple example demonstrating basic CommandSet usage."""
 
 import cmd2
 from cmd2 import (
@@ -23,9 +21,7 @@ class AutoLoadCommandSet(CommandSet):
 
 
 class ExampleApp(cmd2.Cmd):
-    """
-    CommandSets are automatically loaded. Nothing needs to be done.
-    """
+    """CommandSets are automatically loaded. Nothing needs to be done."""
 
     def __init__(self) -> None:
         super().__init__()

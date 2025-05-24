@@ -1,5 +1,4 @@
-"""
-This is a Python script intended to be used with the "python_scripting.py" cmd2 example application.
+"""This is a Python script intended to be used with the "python_scripting.py" cmd2 example application.
 
 To run it you should do the following:
     ./python_scripting.py

@@ -1,6 +1,4 @@
-"""
-reproduces test_argparse.py except with SubCommands
-"""
+"""reproduces test_argparse.py except with SubCommands"""
 
 import pytest
 
@@ -20,15 +18,15 @@ class SubcommandSet(cmd2.CommandSet):
 
     # subcommand functions for the base command
     def base_foo(self, args) -> None:
-        """foo subcommand of base command"""
+        """Foo subcommand of base command"""
         self._cmd.poutput(args.x * args.y)
 
     def base_bar(self, args) -> None:
-        """bar subcommand of base command"""
+        """Bar subcommand of base command"""
         self._cmd.poutput(f'(({args.z}))')
 
     def base_helpless(self, args) -> None:
-        """helpless subcommand of base command"""
+        """Helpless subcommand of base command"""
         self._cmd.poutput(f'(({args.z}))')
 
     # create the top-level parser for the base command

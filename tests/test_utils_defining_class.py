@@ -1,6 +1,4 @@
-"""
-Unit testing for get_defining_class in cmd2/utils.py module.
-"""
+"""Unit testing for get_defining_class in cmd2/utils.py module."""
 
 import functools
 

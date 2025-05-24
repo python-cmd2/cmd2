@@ -1,15 +1,14 @@
 #!/usr/bin/env python
-"""
-A simple application using cmd2 which demonstrates 8 key features:
+"""A simple application using cmd2 which demonstrates 8 key features:
 
-    * Settings
-    * Commands
-    * Argument Parsing
-    * Generating Output
-    * Help
-    * Shortcuts
-    * Multiline Commands
-    * History
+* Settings
+* Commands
+* Argument Parsing
+* Generating Output
+* Help
+* Shortcuts
+* Multiline Commands
+* History
 """
 
 import cmd2

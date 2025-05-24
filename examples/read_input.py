@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion
-"""
+"""A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion"""
 
 import cmd2
 

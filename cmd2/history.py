@@ -1,6 +1,4 @@
-"""
-History management classes
-"""
+"""History management classes"""
 
 import json
 import re
@@ -28,8 +26,7 @@ from .parsing import (
 
 
 def single_line_format(statement: Statement) -> str:
-    """
-    Format a command line to display on a single line.
+    """Format a command line to display on a single line.
 
     Spaces and newlines in quotes are preserved so those strings will span multiple lines.
 
@@ -134,8 +131,7 @@ class HistoryItem:
 
     @staticmethod
     def from_dict(source_dict: dict[str, Any]) -> 'HistoryItem':
-        """
-        Utility method to restore a HistoryItem from a dictionary
+        """Utility method to restore a HistoryItem from a dictionary
 
         :param source_dict: source data dictionary (generated using to_dict())
         :return: HistoryItem object
@@ -296,7 +292,7 @@ class History(list[HistoryItem]):
         """
 
         def isin(history_item: HistoryItem) -> bool:
-            """filter function for string search of history"""
+            """Filter function for string search of history"""
             sloppy = utils.norm_fold(search)
             inraw = sloppy in utils.norm_fold(history_item.raw)
             inexpanded = sloppy in utils.norm_fold(history_item.expanded)
@@ -319,7 +315,7 @@ class History(list[HistoryItem]):
         finder = re.compile(regex, re.DOTALL | re.MULTILINE)
 
         def isin(hi: HistoryItem) -> bool:
-            """filter function for doing a regular expression search of history"""
+            """Filter function for doing a regular expression search of history"""
             return bool(finder.search(hi.raw) or finder.search(hi.expanded))
 
         start = 0 if include_persisted else self.session_start_index
@@ -342,8 +338,7 @@ class History(list[HistoryItem]):
     def _build_result_dictionary(
         self, start: int, end: int, filter_func: Optional[Callable[[HistoryItem], bool]] = None
     ) -> 'OrderedDict[int, HistoryItem]':
-        """
-        Build history search results
+        """Build history search results
         :param start: start index to search from
         :param end: end index to stop searching (exclusive)
         """
@@ -363,8 +358,7 @@ class History(list[HistoryItem]):
 
     @staticmethod
     def from_json(history_json: str) -> 'History':
-        """
-        Utility method to restore History from a JSON string
+        """Utility method to restore History from a JSON string
 
         :param history_json: history data as JSON string (generated using to_json())
         :return: History object

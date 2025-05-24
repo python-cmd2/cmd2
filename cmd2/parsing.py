@@ -23,8 +23,7 @@ from .exceptions import (
 
 
 def shlex_split(str_to_split: str) -> list[str]:
-    """
-    A wrapper around shlex.split() that uses cmd2's preferred arguments.
+    """A wrapper around shlex.split() that uses cmd2's preferred arguments.
     This allows other classes to easily call split() the same way StatementParser does.
 
     :param str_to_split: the string being split
@@ -35,8 +34,7 @@ def shlex_split(str_to_split: str) -> list[str]:
 
 @dataclass(frozen=True)
 class MacroArg:
-    """
-    Information used to replace or unescape arguments in a macro value when the macro is resolved
+    """Information used to replace or unescape arguments in a macro value when the macro is resolved
     Normal argument syntax:    {5}
     Escaped argument syntax:  {{5}}
     """
@@ -202,7 +200,7 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
 
     @property
     def argv(self) -> list[str]:
-        """a list of arguments a-la ``sys.argv``.
+        """A list of arguments a-la ``sys.argv``.
 
         The first element of the list is the command after shortcut and macro
         expansion. Subsequent elements of the list contain any additional
@@ -225,8 +223,7 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
 
     @staticmethod
     def from_dict(source_dict: dict[str, Any]) -> 'Statement':
-        """
-        Utility method to restore a Statement from a dictionary
+        """Utility method to restore a Statement from a dictionary
 
         :param source_dict: source data dictionary (generated using to_dict())
         :return: Statement object
@@ -364,15 +361,13 @@ class StatementParser:
         return valid, errmsg
 
     def tokenize(self, line: str) -> list[str]:
-        """
-        Lex a string into a list of tokens. Shortcuts and aliases are expanded and
+        """Lex a string into a list of tokens. Shortcuts and aliases are expanded and
         comments are removed.
 
         :param line: the command line being lexed
         :return: A list of tokens
         :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
         """
-
         # expand shortcuts and aliases
         line = self._expand(line)
 
@@ -391,8 +386,7 @@ class StatementParser:
         return tokens
 
     def parse(self, line: str) -> Statement:
-        """
-        Tokenize the input and parse it into a [cmd2.parsing.Statement][] object,
+        """Tokenize the input and parse it into a [cmd2.parsing.Statement][] object,
         stripping comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
 
@@ -400,7 +394,6 @@ class StatementParser:
         :return: a new [cmd2.parsing.Statement][] object
         :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
         """
-
         # handle the special case/hardcoded terminator of a blank line
         # we have to do this before we tokenize because tokenizing
         # destroys all unquoted whitespace in the input
@@ -602,8 +595,7 @@ class StatementParser:
     def get_command_arg_list(
         self, command_name: str, to_parse: Union[Statement, str], preserve_quotes: bool
     ) -> tuple[Statement, list[str]]:
-        """
-        Convenience method used by the argument parsing decorators.
+        """Convenience method used by the argument parsing decorators.
 
         Retrieves just the arguments being passed to their ``do_*`` methods as a list.
 
@@ -634,7 +626,6 @@ class StatementParser:
 
     def _expand(self, line: str) -> str:
         """Expand aliases and shortcuts"""
-
         # Make a copy of aliases so we can keep track of what aliases have been resolved to avoid an infinite loop
         remaining_aliases = list(self.aliases.keys())
         keep_expanding = bool(remaining_aliases)

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-A sample application for cmd2.
+"""A sample application for cmd2.
 
 Thanks to cmd2's built-in transcript testing capability, it also serves as a
 test suite for example.py when used with the transcript_regex.txt transcript.

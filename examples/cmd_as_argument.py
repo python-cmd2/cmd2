@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-A sample application for cmd2.
+"""A sample application for cmd2.
 
 This example is very similar to example.py, but had additional
 code in main() that shows how to accept a command from
@@ -84,7 +83,6 @@ class CmdLineApp(cmd2.Cmd):
 
 def main(argv=None):
     """Run when invoked from the operating system shell"""
-
     parser = cmd2.Cmd2ArgumentParser(description='Commands as arguments')
     command_help = 'optional command to run, if no command given, enter an interactive shell'
     parser.add_argument('command', nargs='?', help=command_help)

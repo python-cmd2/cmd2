@@ -1,5 +1,4 @@
-"""
-This module adds capabilities to argparse by patching a few of its functions.
+"""This module adds capabilities to argparse by patching a few of its functions.
 It also defines a parser class called Cmd2ArgumentParser which improves error
 and help output over normal argparse. All cmd2 code uses this parser and it is
 recommended that developers of cmd2-based apps either use it or write their own
@@ -276,8 +275,7 @@ def generate_range_error(range_min: int, range_max: float) -> str:
 
 
 class CompletionItem(str):  # noqa: SLOT000
-    """
-    Completion item with descriptive text attached
+    """Completion item with descriptive text attached
 
     See header of this file for more information
     """
@@ -286,8 +284,7 @@ class CompletionItem(str):  # noqa: SLOT000
         return super().__new__(cls, value)
 
     def __init__(self, value: object, description: str = '', *args: Any) -> None:
-        """
-        CompletionItem Initializer
+        """CompletionItem Initializer
 
         :param value: the value being tab completed
         :param description: description text to display
@@ -313,18 +310,14 @@ class CompletionItem(str):  # noqa: SLOT000
 
 @runtime_checkable
 class ChoicesProviderFuncBase(Protocol):
-    """
-    Function that returns a list of choices in support of tab completion
-    """
+    """Function that returns a list of choices in support of tab completion"""
 
     def __call__(self) -> list[str]: ...  # pragma: no cover
 
 
 @runtime_checkable
 class ChoicesProviderFuncWithTokens(Protocol):
-    """
-    Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments.
-    """
+    """Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments."""
 
     def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]: ...  # pragma: no cover
 
@@ -334,9 +327,7 @@ ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithToke
 
 @runtime_checkable
 class CompleterFuncBase(Protocol):
-    """
-    Function to support tab completion with the provided state of the user prompt
-    """
+    """Function to support tab completion with the provided state of the user prompt"""
 
     def __call__(
         self,
@@ -349,8 +340,7 @@ class CompleterFuncBase(Protocol):
 
 @runtime_checkable
 class CompleterFuncWithTokens(Protocol):
-    """
-    Function to support tab completion with the provided state of the user prompt and accepts a dictionary of prior
+    """Function to support tab completion with the provided state of the user prompt and accepts a dictionary of prior
     arguments.
     """
 
@@ -369,8 +359,7 @@ CompleterFunc = Union[CompleterFuncBase, CompleterFuncWithTokens]
 
 
 class ChoicesCallable:
-    """
-    Enables using a callable as the choices provider for an argparse argument.
+    """Enables using a callable as the choices provider for an argparse argument.
     While argparse has the built-in choices attribute, it is limited to an iterable.
     """
 
@@ -379,8 +368,7 @@ class ChoicesCallable:
         is_completer: bool,
         to_call: Union[CompleterFunc, ChoicesProviderFunc],
     ) -> None:
-        """
-        Initializer
+        """Initializer
         :param is_completer: True if to_call is a tab completion routine which expects
                              the args: text, line, begidx, endidx
         :param to_call: the callable object that will be called to provide choices for the argument
@@ -437,8 +425,7 @@ ATTR_SUPPRESS_TAB_HINT = 'suppress_tab_hint'
 # Patch argparse.Action with accessors for choice_callable attribute
 ############################################################################################################
 def _action_get_choices_callable(self: argparse.Action) -> Optional[ChoicesCallable]:
-    """
-    Get the choices_callable attribute of an argparse Action.
+    """Get the choices_callable attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``get_choices_callable()`` to ``argparse.Action`` class.
 
@@ -454,8 +441,7 @@ setattr(argparse.Action, 'get_choices_callable', _action_get_choices_callable)
 
 
 def _action_set_choices_callable(self: argparse.Action, choices_callable: ChoicesCallable) -> None:
-    """
-    Set the choices_callable attribute of an argparse Action.
+    """Set the choices_callable attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``_set_choices_callable()`` to ``argparse.Action`` class.
 
@@ -485,8 +471,7 @@ def _action_set_choices_provider(
     self: argparse.Action,
     choices_provider: ChoicesProviderFunc,
 ) -> None:
-    """
-    Set choices_provider of an argparse Action.
+    """Set choices_provider of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_choices_callable()`` to ``argparse.Action`` class.
 
@@ -506,8 +491,7 @@ def _action_set_completer(
     self: argparse.Action,
     completer: CompleterFunc,
 ) -> None:
-    """
-    Set completer of an argparse Action.
+    """Set completer of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_completer()`` to ``argparse.Action`` class.
 
@@ -527,8 +511,7 @@ setattr(argparse.Action, 'set_completer', _action_set_completer)
 # Patch argparse.Action with accessors for descriptive_header attribute
 ############################################################################################################
 def _action_get_descriptive_header(self: argparse.Action) -> Optional[str]:
-    """
-    Get the descriptive_header attribute of an argparse Action.
+    """Get the descriptive_header attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``get_descriptive_header()`` to ``argparse.Action`` class.
 
@@ -544,8 +527,7 @@ setattr(argparse.Action, 'get_descriptive_header', _action_get_descriptive_heade
 
 
 def _action_set_descriptive_header(self: argparse.Action, descriptive_header: Optional[str]) -> None:
-    """
-    Set the descriptive_header attribute of an argparse Action.
+    """Set the descriptive_header attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_descriptive_header()`` to ``argparse.Action`` class.
 
@@ -564,8 +546,7 @@ setattr(argparse.Action, 'set_descriptive_header', _action_set_descriptive_heade
 # Patch argparse.Action with accessors for nargs_range attribute
 ############################################################################################################
 def _action_get_nargs_range(self: argparse.Action) -> Optional[tuple[int, Union[int, float]]]:
-    """
-    Get the nargs_range attribute of an argparse Action.
+    """Get the nargs_range attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``get_nargs_range()`` to ``argparse.Action`` class.
 
@@ -581,8 +562,7 @@ setattr(argparse.Action, 'get_nargs_range', _action_get_nargs_range)
 
 
 def _action_set_nargs_range(self: argparse.Action, nargs_range: Optional[tuple[int, Union[int, float]]]) -> None:
-    """
-    Set the nargs_range attribute of an argparse Action.
+    """Set the nargs_range attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_nargs_range()`` to ``argparse.Action`` class.
 
@@ -601,8 +581,7 @@ setattr(argparse.Action, 'set_nargs_range', _action_set_nargs_range)
 # Patch argparse.Action with accessors for suppress_tab_hint attribute
 ############################################################################################################
 def _action_get_suppress_tab_hint(self: argparse.Action) -> bool:
-    """
-    Get the suppress_tab_hint attribute of an argparse Action.
+    """Get the suppress_tab_hint attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``get_suppress_tab_hint()`` to ``argparse.Action`` class.
 
@@ -618,8 +597,7 @@ setattr(argparse.Action, 'get_suppress_tab_hint', _action_get_suppress_tab_hint)
 
 
 def _action_set_suppress_tab_hint(self: argparse.Action, suppress_tab_hint: bool) -> None:
-    """
-    Set the suppress_tab_hint attribute of an argparse Action.
+    """Set the suppress_tab_hint attribute of an argparse Action.
 
     This function is added by cmd2 as a method called ``set_suppress_tab_hint()`` to ``argparse.Action`` class.
 
@@ -643,8 +621,7 @@ _CUSTOM_ATTRIB_PFX = '_attr_'
 
 
 def register_argparse_argument_parameter(param_name: str, param_type: Optional[type[Any]]) -> None:
-    """
-    Registers a custom argparse argument parameter.
+    """Registers a custom argparse argument parameter.
 
     The registered name will then be a recognized keyword parameter to the parser's `add_argument()` function.
 
@@ -718,8 +695,7 @@ def _add_argument_wrapper(
     descriptive_header: Optional[str] = None,
     **kwargs: Any,
 ) -> argparse.Action:
-    """
-    Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
+    """Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
 
     # Args from original function
     :param self: instance of the _ActionsContainer being added to
@@ -908,8 +884,7 @@ ATTR_AP_COMPLETER_TYPE = 'ap_completer_type'
 
 
 def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> Optional[type['ArgparseCompleter']]:
-    """
-    Get the ap_completer_type attribute of an argparse ArgumentParser.
+    """Get the ap_completer_type attribute of an argparse ArgumentParser.
 
     This function is added by cmd2 as a method called ``get_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
 
@@ -925,8 +900,7 @@ setattr(argparse.ArgumentParser, 'get_ap_completer_type', _ArgumentParser_get_ap
 
 
 def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: type['ArgparseCompleter']) -> None:
-    """
-    Set the ap_completer_type attribute of an argparse ArgumentParser.
+    """Set the ap_completer_type attribute of an argparse ArgumentParser.
 
     This function is added by cmd2 as a method called ``set_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
 
@@ -945,8 +919,7 @@ setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap
 # Patch ArgumentParser._check_value to support CompletionItems as choices
 ############################################################################################################
 def _ArgumentParser_check_value(self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:
-    """
-    Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
+    """Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
     When evaluating choices, input is compared to CompletionItem.orig_value instead of the
     CompletionItem instance.
 
@@ -978,8 +951,7 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 
 
 def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore[type-arg]
-    """
-    Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
+    """Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
 
     This function is added by cmd2 as a method called ``remove_parser()`` to ``argparse._SubParsersAction`` class.
 
@@ -1243,8 +1215,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         *,
         ap_completer_type: Optional[type['ArgparseCompleter']] = None,
     ) -> None:
-        """
-        # Custom parameter added by cmd2
+        """# Custom parameter added by cmd2
 
         :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom tab completion
                                   behavior on this parser. If this is None or not present, then cmd2 will use
@@ -1290,8 +1261,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
     def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:  # type: ignore[type-arg]
-        """
-        Custom override. Sets a default title if one was not given.
+        """Custom override. Sets a default title if one was not given.
 
         :param kwargs: additional keyword arguments
         :return: argparse Subparser Action
@@ -1380,8 +1350,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
 
 class Cmd2AttributeWrapper:
-    """
-    Wraps a cmd2-specific attribute added to an argparse Namespace.
+    """Wraps a cmd2-specific attribute added to an argparse Namespace.
     This makes it easy to know which attributes in a Namespace are
     arguments from a parser and which were added by cmd2.
     """
@@ -1403,8 +1372,7 @@ DEFAULT_ARGUMENT_PARSER: type[argparse.ArgumentParser] = Cmd2ArgumentParser
 
 
 def set_default_argument_parser_type(parser_type: type[argparse.ArgumentParser]) -> None:
-    """
-    Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
+    """Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
     you want to override the parser for cmd2's built-in commands. See examples/override_parser.py.
     """
     global DEFAULT_ARGUMENT_PARSER  # noqa: PLW0603

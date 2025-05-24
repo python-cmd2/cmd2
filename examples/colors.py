@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-A sample application for cmd2. Demonstrating colorized output.
+"""A sample application for cmd2. Demonstrating colorized output.
 
 Experiment with the command line options on the `speak` command to see how
 different output colors ca

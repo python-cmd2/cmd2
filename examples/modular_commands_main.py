@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-A complex example demonstrating a variety of methods to load CommandSets using a mix of command decorators
+"""A complex example demonstrating a variety of methods to load CommandSets using a mix of command decorators
 with examples of how to integrate tab completion with argparse-based commands.
 """
 

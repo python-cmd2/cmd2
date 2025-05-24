@@ -1,6 +1,4 @@
-"""
-Unit/functional testing for argparse customizations in cmd2
-"""
+"""Unit/functional testing for argparse customizations in cmd2"""
 
 import argparse
 
@@ -283,8 +281,7 @@ def test_cmd2_attribute_wrapper() -> None:
 
 
 def test_completion_items_as_choices(capsys) -> None:
-    """
-    Test cmd2's patch to Argparse._check_value() which supports CompletionItems as choices.
+    """Test cmd2's patch to Argparse._check_value() which supports CompletionItems as choices.
     Choices are compared to CompletionItems.orig_value instead of the CompletionItem instance.
     """
     from cmd2.argparse_custom import (

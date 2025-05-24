@@ -1,6 +1,4 @@
-"""
-Cmd2 testing for argument parsing
-"""
+"""Cmd2 testing for argument parsing"""
 
 import argparse
 from typing import Optional
@@ -35,8 +33,7 @@ class ArgparseApp(cmd2.Cmd):
 
     @cmd2.with_argparser(_say_parser_builder)
     def do_say(self, args, *, keyword_arg: Optional[str] = None) -> None:
-        """
-        Repeat what you
+        """Repeat what you
         tell me to.
 
         :param args: argparse namespace
@@ -261,15 +258,15 @@ class SubcommandApp(cmd2.Cmd):
 
     # subcommand functions for the base command
     def base_foo(self, args) -> None:
-        """foo subcommand of base command"""
+        """Foo subcommand of base command"""
         self.poutput(args.x * args.y)
 
     def base_bar(self, args) -> None:
-        """bar subcommand of base command"""
+        """Bar subcommand of base command"""
         self.poutput(f'(({args.z}))')
 
     def base_helpless(self, args) -> None:
-        """helpless subcommand of base command"""
+        """Helpless subcommand of base command"""
         self.poutput(f'(({args.z}))')
 
     # create the top-level parser for the base command
@@ -400,8 +397,7 @@ def test_subcommand_invalid_help(subcommand_app) -> None:
 
 
 def test_add_another_subcommand(subcommand_app) -> None:
-    """
-    This tests makes sure _set_parser_prog() sets _prog_prefix on every _SubParsersAction so that all future calls
+    """This tests makes sure _set_parser_prog() sets _prog_prefix on every _SubParsersAction so that all future calls
     to add_parser() write the correct prog value to the parser being added.
     """
     base_parser = subcommand_app._command_parsers.get(subcommand_app.do_base)

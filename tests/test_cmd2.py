@@ -1,6 +1,4 @@
-"""
-Cmd2 unit/functional testing
-"""
+"""Cmd2 unit/functional testing"""
 
 import builtins
 import io
@@ -1198,8 +1196,7 @@ class HelpApp(cmd2.Cmd):
         pass
 
     def do_multiline_docstr(self, arg) -> None:
-        """
-        This documentation
+        """This documentation
         is multiple lines
         and there are no
         tabs
@@ -2606,7 +2603,8 @@ class ReplWithExitCode(cmd2.Cmd):
 
         Usage:  exit [exit_code]
             Where:
-                * exit_code - integer exit code to return to the shell"""
+                * exit_code - integer exit code to return to the shell
+        """
         # If an argument was provided
         if arg_list:
             try:

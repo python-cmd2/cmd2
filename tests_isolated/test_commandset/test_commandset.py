@@ -1,6 +1,4 @@
-"""
-Test CommandSet
-"""
+"""Test CommandSet"""
 
 import argparse
 import signal
@@ -789,7 +787,7 @@ class SupportFuncProvider(cmd2.CommandSet):
     states = ['alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware']
 
     def __init__(self, dummy) -> None:
-        """dummy variable prevents this from being autoloaded in other tests"""
+        """Dummy variable prevents this from being autoloaded in other tests"""
         super().__init__()
 
     def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
@@ -823,7 +821,7 @@ class SupportFuncUserUnrelated(cmd2.CommandSet):
     """A CommandSet that isn't related to SupportFuncProvider which uses its support function"""
 
     def __init__(self, dummy) -> None:
-        """dummy variable prevents this from being autoloaded in other tests"""
+        """Dummy variable prevents this from being autoloaded in other tests"""
         super().__init__()
 
     parser = cmd2.Cmd2ArgumentParser()
@@ -968,7 +966,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys) -> None:
 
 class CommandSetWithPathComplete(cmd2.CommandSet):
     def __init__(self, dummy) -> None:
-        """dummy variable prevents this from being autoloaded in other tests"""
+        """Dummy variable prevents this from being autoloaded in other tests"""
         super().__init__()
 
     parser = cmd2.Cmd2ArgumentParser()

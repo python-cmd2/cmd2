@@ -1,6 +1,4 @@
-"""
-Unit testing for cmd2/table_creator.py module
-"""
+"""Unit testing for cmd2/table_creator.py module"""
 
 import pytest
 
@@ -286,8 +284,7 @@ def test_wrap_long_word_max_data_lines() -> None:
 
 
 def test_wrap_long_char_wider_than_max_width() -> None:
-    """
-    This tests case where a character is wider than max_width. This can happen if max_width
+    """This tests case where a character is wider than max_width. This can happen if max_width
     is 1 and the text contains wide characters (e.g. East Asian). Replace it with an ellipsis.
     """
     column_1 = Column("Col 1", width=1)

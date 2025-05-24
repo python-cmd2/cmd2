@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-This example is adapted from the pirate8.py example created by Catherine Devlin and
+"""This example is adapted from the pirate8.py example created by Catherine Devlin and
 presented as part of her PyCon 2010 talk.
 
 It demonstrates many features of cmd2.
@@ -59,7 +58,8 @@ class Pirate(cmd2.Cmd):
     def do_drink(self, arg) -> None:
         """Drown your sorrrows in rrrum.
 
-        drink [n] - drink [n] barrel[s] o' rum."""
+        drink [n] - drink [n] barrel[s] o' rum.
+        """
         try:
             self.gold -= int(arg)
         except ValueError:

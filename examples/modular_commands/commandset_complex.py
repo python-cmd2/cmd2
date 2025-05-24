@@ -1,6 +1,4 @@
-"""
-Test CommandSet
-"""
+"""Test CommandSet"""
 
 import argparse
 

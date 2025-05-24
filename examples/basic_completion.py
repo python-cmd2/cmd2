@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-A simple example demonstrating how to enable tab completion by assigning a completer function to do_* commands.
+"""A simple example demonstrating how to enable tab completion by assigning a completer function to do_* commands.
 This also demonstrates capabilities of the following completer features included with cmd2:
 - CompletionError exceptions
 - delimiter_complete()
@@ -84,8 +83,7 @@ class BasicCompletion(cmd2.Cmd):
         self.poutput(f"Args: {statement.args}")
 
     def complete_raise_error(self, text, line, begidx, endidx) -> list[str]:
-        """
-        CompletionErrors can be raised if an error occurs while tab completing.
+        """CompletionErrors can be raised if an error occurs while tab completing.
 
         Example use cases
             - Reading a database to retrieve a tab completion data set failed
