@@ -12,7 +12,6 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
 # Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER.
 # Do this before loading cmd2.Cmd class so its commands use the custom parser.
 import argparse
-from typing import List
 
 from .ansi import (
     Bg,
@@ -56,7 +55,7 @@ from .parsing import Statement
 from .py_bridge import CommandResult
 from .utils import CompletionMode, CustomCompletionSettings, Settable, categorize
 
-__all__: List[str] = [
+__all__: list[str] = [
     'COMMAND_NAME',
     'DEFAULT_SHORTCUTS',
     # ANSI Exports

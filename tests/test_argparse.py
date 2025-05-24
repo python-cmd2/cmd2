@@ -3,9 +3,7 @@ Cmd2 testing for argument parsing
 """
 
 import argparse
-from typing import (
-    Optional,
-)
+from typing import Optional
 
 import pytest
 

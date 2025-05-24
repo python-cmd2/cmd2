@@ -3,9 +3,7 @@
 
 import functools
 import sys
-from typing import (
-    Any,
-)
+from typing import Any
 
 from cmd2 import (
     EightBitBg,

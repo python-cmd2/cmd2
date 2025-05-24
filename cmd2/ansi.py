@@ -986,10 +986,10 @@ def style(
     :raises TypeError: if bg isn't None or a subclass of BgColor
     :return: the stylized string
     """
-    # List of strings that add style
+    # list of strings that add style
     additions: list[AnsiSequence] = []
 
-    # List of strings that remove style
+    # list of strings that remove style
     removals: list[AnsiSequence] = []
 
     # Process the style settings

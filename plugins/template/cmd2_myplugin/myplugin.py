@@ -3,9 +3,7 @@
 
 import functools
 from collections.abc import Callable
-from typing import (
-    TYPE_CHECKING,
-)
+from typing import TYPE_CHECKING
 
 import cmd2
 

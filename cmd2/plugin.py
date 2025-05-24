@@ -3,9 +3,7 @@
 from dataclasses import (
     dataclass,
 )
-from typing import (
-    Optional,
-)
+from typing import Optional
 
 from .parsing import (
     Statement,

@@ -6,9 +6,7 @@ with examples of how to integrate tab completion with argparse-based commands.
 
 import argparse
 from collections.abc import Iterable
-from typing import (
-    Optional,
-)
+from typing import Optional
 
 from modular_commands.commandset_basic import (  # noqa: F401
     BasicCompletionCommandSet,

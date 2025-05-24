@@ -1,8 +1,6 @@
 """Custom exceptions for cmd2"""
 
-from typing import (
-    Any,
-)
+from typing import Any
 
 ############################################################################################################
 # The following exceptions are part of the public API
