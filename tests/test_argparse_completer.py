@@ -130,7 +130,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     def completion_item_method(self) -> List[CompletionItem]:
         """Choices method that returns CompletionItems"""
         items = []
-        for i in range(0, 10):
+        for i in range(10):
             main_str = 'main_str{}'.format(i)
             items.append(CompletionItem(main_str, description='blah blah'))
         return items
@@ -775,7 +775,7 @@ def test_completion_items(ac_app):
 )
 def test_max_completion_items(ac_app, num_aliases, show_description):
     # Create aliases
-    for i in range(0, num_aliases):
+    for i in range(num_aliases):
         run_cmd(ac_app, 'alias create fake_alias{} help'.format(i))
 
     assert len(ac_app.aliases) == num_aliases
@@ -1232,7 +1232,6 @@ class CustomCompleterApp(cmd2.Cmd):
     @with_argparser(default_completer_parser)
     def do_default_completer(self, args: argparse.Namespace) -> None:
         """Test command"""
-        pass
 
     # Parser that's used to test setting a custom completer at the parser level
     custom_completer_parser = Cmd2ArgumentParser(
@@ -1243,7 +1242,6 @@ class CustomCompleterApp(cmd2.Cmd):
     @with_argparser(custom_completer_parser)
     def do_custom_completer(self, args: argparse.Namespace) -> None:
         """Test command"""
-        pass
 
     # Test as_subcommand_to decorator with custom completer
     top_parser = Cmd2ArgumentParser(description="Top Command")

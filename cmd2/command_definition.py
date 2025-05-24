@@ -136,14 +136,12 @@ class CommandSet:
         Subclasses can override this to perform custom steps related to the newly added commands (e.g. setting
         them to a disabled state).
         """
-        pass
 
     def on_unregister(self) -> None:
         """
         Called by ``cmd2.Cmd`` as the first step to unregistering a CommandSet. Subclasses can override this to
         perform any cleanup steps which require their commands being registered in the CLI.
         """
-        pass
 
     def on_unregistered(self) -> None:
         """

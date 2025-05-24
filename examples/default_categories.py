@@ -14,7 +14,6 @@ from cmd2 import (
 class MyBaseCommandSet(CommandSet):
     """Defines a default category for all sub-class CommandSets"""
 
-    pass
 
 
 class ChildInheritsParentCategories(MyBaseCommandSet):

@@ -211,13 +211,11 @@ class AnsiSequence:
 class FgColor(AnsiSequence):
     """Base class for ANSI Sequences which set foreground text color"""
 
-    pass
 
 
 class BgColor(AnsiSequence):
     """Base class for ANSI Sequences which set background text color"""
 
-    pass
 
 
 ####################################################################################

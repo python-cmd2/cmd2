@@ -194,9 +194,9 @@ select = [
     "PD",   # pandas-vet (Pandas specific rules)
     "PERF", # Perflint (warn about performance issues)
     "PGH",  # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
-    # "PIE", # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
-    "PLC", # Pylint Conventions
-    "PLE", # Pylint Errors
+    "PIE",  # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
+    "PLC",  # Pylint Conventions
+    "PLE",  # Pylint Errors
     # "PLR", # Pylint Refactoring suggestions
     # "PLW", # Pylint Warnings
     # "PT", # flake8-pytest-style (warnings about unit test best practices)

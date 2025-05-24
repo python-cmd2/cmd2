@@ -2463,7 +2463,6 @@ class Cmd(cmd.Cmd):
         to run hooks before the command loop begins. See
         [Hooks](../features/hooks.md) for more information.
         """
-        pass
 
     def postloop(self) -> None:
         """Hook method executed once when the [cmd2.Cmd.cmdloop][] method is about to return.
@@ -2472,7 +2471,6 @@ class Cmd(cmd.Cmd):
         to run hooks after the command loop completes. See
         [Hooks](../features/hooks.md) for more information.
         """
-        pass
 
     def parseline(self, line: str) -> tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.

@@ -88,7 +88,6 @@ class CmdLineApp(cmd2.Cmd):
 
     def do_nothing(self, statement):
         """Do nothing and output nothing"""
-        pass
 
     def do_keyboard_interrupt(self, _):
         raise KeyboardInterrupt('Interrupting this command')

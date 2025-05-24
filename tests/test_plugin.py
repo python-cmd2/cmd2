@@ -49,11 +49,9 @@ class Plugin:
 
     def prepost_hook_too_many_parameters(self, param) -> None:
         """A preloop or postloop hook with too many parameters"""
-        pass
 
     def prepost_hook_with_wrong_return_annotation(self) -> bool:
         """A preloop or postloop hook with incorrect return type"""
-        pass
 
     ###
     #
@@ -93,23 +91,18 @@ class Plugin:
 
     def postparse_hook_too_many_parameters(self, data1, data2) -> cmd2.plugin.PostparsingData:
         """A postparsing hook with too many parameters"""
-        pass
 
     def postparse_hook_undeclared_parameter_annotation(self, data) -> cmd2.plugin.PostparsingData:
         """A postparsing hook with an undeclared parameter type"""
-        pass
 
     def postparse_hook_wrong_parameter_annotation(self, data: str) -> cmd2.plugin.PostparsingData:
         """A postparsing hook with the wrong parameter type"""
-        pass
 
     def postparse_hook_undeclared_return_annotation(self, data: cmd2.plugin.PostparsingData):
         """A postparsing hook with an undeclared return type"""
-        pass
 
     def postparse_hook_wrong_return_annotation(self, data: cmd2.plugin.PostparsingData) -> str:
         """A postparsing hook with the wrong return type"""
-        pass
 
     ###
     #
@@ -138,7 +131,6 @@ class Plugin:
 
     def precmd_hook_not_enough_parameters(self) -> plugin.PrecommandData:
         """A precommand hook with no parameters"""
-        pass
 
     def precmd_hook_too_many_parameters(self, one: plugin.PrecommandData, two: str) -> plugin.PrecommandData:
         """A precommand hook with too many parameters"""
@@ -181,7 +173,6 @@ class Plugin:
 
     def postcmd_hook_not_enough_parameters(self) -> plugin.PostcommandData:
         """A precommand hook with no parameters"""
-        pass
 
     def postcmd_hook_too_many_parameters(self, one: plugin.PostcommandData, two: str) -> plugin.PostcommandData:
         """A precommand hook with too many parameters"""
@@ -247,7 +238,6 @@ class Plugin:
 
     def cmdfinalization_hook_not_enough_parameters(self) -> plugin.CommandFinalizationData:
         """A command finalization hook with no parameters."""
-        pass
 
     def cmdfinalization_hook_too_many_parameters(
         self, one: plugin.CommandFinalizationData, two: str

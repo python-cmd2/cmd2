@@ -107,7 +107,6 @@ class CompletionsExample(cmd2.Cmd):
 
     def do_test_no_completer(self, args):
         """Completing this should result in completedefault() being called"""
-        pass
 
     def complete_foo_val(self, text, line, begidx, endidx, arg_tokens):
         """Supports unit testing cmd2.Cmd2.complete_set_val to confirm it passes all tokens in the set command"""

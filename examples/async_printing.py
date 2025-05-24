@@ -108,7 +108,7 @@ class AlerterApp(cmd2.Cmd):
             if rand_num > 2:
                 return []
 
-            for i in range(0, rand_num):
+            for i in range(rand_num):
                 self._alert_count += 1
                 alerts.append(f"Alert {self._alert_count}")
 

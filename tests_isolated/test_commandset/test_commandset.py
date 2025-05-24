@@ -1009,7 +1009,6 @@ def test_bad_subcommand():
         @cmd2.with_argparser(cut_parser)
         def do_cut(self, ns: argparse.Namespace):
             """Cut something"""
-            pass
 
         banana_parser = cmd2.Cmd2ArgumentParser()
         banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])

@@ -1186,14 +1186,12 @@ class HelpApp(cmd2.Cmd):
 
     def do_squat(self, arg):
         """This docstring help will never be shown because the help_squat method overrides it."""
-        pass
 
     def help_squat(self):
         self.stdout.write('This command does diddly squat...\n')
 
     def do_edit(self, arg):
         """This overrides the edit command and does nothing."""
-        pass
 
     # This command will be in the "undocumented" section of the help menu
     def do_undoc(self, arg):
@@ -1206,14 +1204,12 @@ class HelpApp(cmd2.Cmd):
         and there are no
         tabs
         """
-        pass
 
     parser_cmd_parser = cmd2.Cmd2ArgumentParser(description="This is the description.")
 
     @cmd2.with_argparser(parser_cmd_parser)
     def do_parser_cmd(self, args):
         """This is the docstring."""
-        pass
 
 
 @pytest.fixture
@@ -1268,7 +1264,6 @@ class HelpCategoriesApp(cmd2.Cmd):
     @cmd2.with_category('Some Category')
     def do_diddly(self, arg):
         """This command does diddly"""
-        pass
 
     # This command will be in the "Some Category" section of the help menu even though it has no docstring
     @cmd2.with_category("Some Category")
@@ -1277,14 +1272,12 @@ class HelpCategoriesApp(cmd2.Cmd):
 
     def do_squat(self, arg):
         """This docstring help will never be shown because the help_squat method overrides it."""
-        pass
 
     def help_squat(self):
         self.stdout.write('This command does diddly squat...\n')
 
     def do_edit(self, arg):
         """This overrides the edit command and does nothing."""
-        pass
 
     cmd2.categorize((do_squat, do_edit), 'Custom Category')
 

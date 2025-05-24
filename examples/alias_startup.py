@@ -18,7 +18,6 @@ class AliasAndStartup(cmd2.Cmd):
 
     def do_nothing(self, args):
         """This command does nothing and produces no output."""
-        pass
 
 
 if __name__ == '__main__':

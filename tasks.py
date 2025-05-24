@@ -260,7 +260,6 @@ clean_tasks.append(plugin_tasks.clean_all)
 def clean_all(_):
     """Run all clean tasks"""
     # pylint: disable=unused-argument
-    pass
 
 
 namespace_clean.add_task(clean_all, 'all')
