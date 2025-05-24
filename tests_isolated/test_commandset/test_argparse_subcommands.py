@@ -50,9 +50,9 @@ class SubcommandSet(cmd2.CommandSet):
     # This subcommand has aliases and no help text. It exists to prevent changes to _set_parser_prog() which
     # use an approach which relies on action._choices_actions list. See comment in that function for more
     # details.
-    parser_bar = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
-    parser_bar.add_argument('z', help='string')
-    parser_bar.set_defaults(func=base_bar)
+    parser_helpless = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
+    parser_helpless.add_argument('z', help='string')
+    parser_helpless.set_defaults(func=base_bar)
 
     @cmd2.with_argparser(base_parser)
     def do_base(self, args):

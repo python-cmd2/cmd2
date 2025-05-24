@@ -15,7 +15,6 @@ class MyBaseCommandSet(CommandSet):
     """Defines a default category for all sub-class CommandSets"""
 
 
-
 class ChildInheritsParentCategories(MyBaseCommandSet):
     """
     This subclass doesn't declare any categories so all commands here are also categorized under 'Default Category'

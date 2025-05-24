@@ -16,7 +16,6 @@ class SkipPostcommandHooks(Exception):
     """
 
 
-
 class Cmd2ArgparseError(SkipPostcommandHooks):
     """
     A ``SkipPostcommandHooks`` exception for when a command fails to parse its arguments.
@@ -26,13 +25,11 @@ class Cmd2ArgparseError(SkipPostcommandHooks):
     """
 
 
-
 class CommandSetRegistrationError(Exception):
     """
     Exception that can be thrown when an error occurs while a CommandSet is being added or removed
     from a cmd2 application.
     """
-
 
 
 class CompletionError(Exception):
@@ -84,17 +81,13 @@ class Cmd2ShlexError(Exception):
     """Raised when shlex fails to parse a command line string in StatementParser"""
 
 
-
 class EmbeddedConsoleExit(SystemExit):
     """Custom exception class for use with the py command."""
-
 
 
 class EmptyStatement(Exception):
     """Custom exception class for handling behavior when the user just presses <Enter>."""
 
 
-
 class RedirectionError(Exception):
     """Custom exception class for when redirecting or piping output fails"""
-

@@ -1263,10 +1263,10 @@ class CustomCompleterApp(cmd2.Cmd):
         pass
 
     # Parser for a subcommand with a custom completer type
-    custom_completer_parser = Cmd2ArgumentParser(description="Custom completer", ap_completer_type=CustomCompleter)
-    custom_completer_parser.add_argument('--myflag', complete_when_ready=True)
+    custom_completer_parser2 = Cmd2ArgumentParser(description="Custom completer", ap_completer_type=CustomCompleter)
+    custom_completer_parser2.add_argument('--myflag', complete_when_ready=True)
 
-    @cmd2.as_subcommand_to('top', 'custom', custom_completer_parser, help="custom completer")
+    @cmd2.as_subcommand_to('top', 'custom', custom_completer_parser2, help="custom completer")
     def _subcmd_custom(self, args: argparse.Namespace) -> None:
         pass
 
