@@ -261,6 +261,7 @@ per-file-ignores."cmd2/argparse_custom.py" = [
 ]
 
 per-file-ignores."examples/*.py" = [
+    "D",       # Ignore all pydocstyle rules in examples folder
     "INP001",  # Module is part of an implicit namespace
     "PLW2901", # loop variable overwritten inside loop
     "S",       # Ignore all Security rules in examples folder
@@ -279,6 +280,7 @@ per-file-ignores."examples/unicode_commands.py" = [
 ]
 
 per-file-ignores."plugins/*.py" = [
+    "D",      # Ignore all pydocstyle rules in test folders
     "INP001", # Module is part of an implicit namespace
     "S",      # Ignore all Security rules in test folders
 ]
