@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A sample application for cmd2.
+"""A sample application for cmd2.
 
 This example is very similar to example.py, but had additional
 code in main() that shows how to accept a command from
@@ -22,12 +20,12 @@ class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application."""
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
-    # default_to_shell = True
+    # default_to_shell = True  # noqa: ERA001
     MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']
 
-    def __init__(self):
+    def __init__(self) -> None:
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'&': 'speak'})
         # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell
@@ -45,12 +43,12 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args):
+    def do_speak(self, args) -> None:
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
             if args.piglatin:
-                word = '%s%say' % (word[1:], word[0])
+                word = f'{word[1:]}{word[0]}ay'
             if args.shout:
                 word = word.upper()
             words.append(word)
@@ -67,7 +65,7 @@ class CmdLineApp(cmd2.Cmd):
     mumble_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(mumble_parser)
-    def do_mumble(self, args):
+    def do_mumble(self, args) -> None:
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
@@ -84,8 +82,7 @@ class CmdLineApp(cmd2.Cmd):
 
 
 def main(argv=None):
-    """Run when invoked from the operating system shell"""
-
+    """Run when invoked from the operating system shell."""
     parser = cmd2.Cmd2ArgumentParser(description='Commands as arguments')
     command_help = 'optional command to run, if no command given, enter an interactive shell'
     parser.add_argument('command', nargs='?', help=command_help)

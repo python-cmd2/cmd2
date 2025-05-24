@@ -1,9 +1,8 @@
-#
-# -*- coding: utf-8 -*-
-# flake8: noqa F401
 """This simply imports certain things for backwards compatibility."""
 
+import argparse
 import importlib.metadata as importlib_metadata
+import sys
 
 try:
     __version__ = importlib_metadata.version(__name__)
@@ -11,7 +10,6 @@ except importlib_metadata.PackageNotFoundError:  # pragma: no cover
     # package is not installed
     pass
 
-from . import plugin
 from .ansi import (
     Bg,
     Cursor,
@@ -31,21 +29,20 @@ from .argparse_custom import (
     register_argparse_argument_parameter,
     set_default_argument_parser_type,
 )
+
+# Check if user has defined a module that sets a custom value for argparse_custom.DEFAULT_ARGUMENT_PARSER.
+# Do this before loading cmd2.Cmd class so its commands use the custom parser.
+cmd2_parser_module = getattr(argparse, 'cmd2_parser_module', None)
+if cmd2_parser_module is not None:
+    import importlib
+
+    importlib.import_module(cmd2_parser_module)
+
+from . import plugin
 from .cmd2 import Cmd
-from .command_definition import (
-    CommandSet,
-    with_default_category,
-)
-from .constants import (
-    COMMAND_NAME,
-    DEFAULT_SHORTCUTS,
-)
-from .decorators import (
-    as_subcommand_to,
-    with_argparser,
-    with_argument_list,
-    with_category,
-)
+from .command_definition import CommandSet, with_default_category
+from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
+from .decorators import as_subcommand_to, with_argparser, with_argument_list, with_category
 from .exceptions import (
     Cmd2ArgparseError,
     CommandSetRegistrationError,
@@ -55,12 +52,7 @@ from .exceptions import (
 )
 from .parsing import Statement
 from .py_bridge import CommandResult
-from .utils import (
-    CompletionMode,
-    CustomCompletionSettings,
-    Settable,
-    categorize,
-)
+from .utils import CompletionMode, CustomCompletionSettings, Settable, categorize
 
 __all__: list[str] = [
     'COMMAND_NAME',

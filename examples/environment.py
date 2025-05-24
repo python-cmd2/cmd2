@@ -1,8 +1,5 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A sample application for cmd2 demonstrating customized environment parameters
-"""
+"""A sample application for cmd2 demonstrating customized environment parameters."""
 
 import cmd2
 
@@ -10,7 +7,7 @@ import cmd2
 class EnvironmentApp(cmd2.Cmd):
     """Example cmd2 application."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.degrees_c = 22
         self.sunny = False
@@ -19,17 +16,17 @@ class EnvironmentApp(cmd2.Cmd):
         )
         self.add_settable(cmd2.Settable('sunny', bool, 'Is it sunny outside?', self))
 
-    def do_sunbathe(self, arg):
+    def do_sunbathe(self, arg) -> None:
         """Attempt to sunbathe."""
         if self.degrees_c < 20:
-            result = "It's {} C - are you a penguin?".format(self.degrees_c)
+            result = f"It's {self.degrees_c} C - are you a penguin?"
         elif not self.sunny:
             result = 'Too dim.'
         else:
             result = 'UV is bad for your skin.'
         self.poutput(result)
 
-    def _onchange_degrees_c(self, param_name, old, new):
+    def _onchange_degrees_c(self, param_name, old, new) -> None:
         # if it's over 40C, it's gotta be sunny, right?
         if new > 40:
             self.sunny = True

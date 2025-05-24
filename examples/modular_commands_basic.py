@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-# coding=utf-8
-"""
-Simple example demonstrating basic CommandSet usage.
-"""
+"""Simple example demonstrating basic CommandSet usage."""
 
 import cmd2
 from cmd2 import (
@@ -13,25 +10,23 @@ from cmd2 import (
 
 @with_default_category('My Category')
 class AutoLoadCommandSet(CommandSet):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def do_hello(self, _: cmd2.Statement):
+    def do_hello(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Hello')
 
-    def do_world(self, _: cmd2.Statement):
+    def do_world(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('World')
 
 
 class ExampleApp(cmd2.Cmd):
-    """
-    CommandSets are automatically loaded. Nothing needs to be done.
-    """
+    """CommandSets are automatically loaded. Nothing needs to be done."""
 
-    def __init__(self):
-        super(ExampleApp, self).__init__()
+    def __init__(self) -> None:
+        super().__init__()
 
-    def do_something(self, arg):
+    def do_something(self, arg) -> None:
         self.poutput('this is the something command')
 
 

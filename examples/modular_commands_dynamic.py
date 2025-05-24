@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-# coding=utf-8
-"""
-Simple example demonstrating dynamic CommandSet loading and unloading.
+"""Simple example demonstrating dynamic CommandSet loading and unloading.
 
 There are 2 CommandSets defined. ExampleApp sets the `auto_load_commands` flag to false.
 
@@ -22,34 +20,32 @@ from cmd2 import (
 
 @with_default_category('Fruits')
 class LoadableFruits(CommandSet):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def do_apple(self, _: cmd2.Statement):
+    def do_apple(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Apple')
 
-    def do_banana(self, _: cmd2.Statement):
+    def do_banana(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Banana')
 
 
 @with_default_category('Vegetables')
 class LoadableVegetables(CommandSet):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def do_arugula(self, _: cmd2.Statement):
+    def do_arugula(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Arugula')
 
-    def do_bokchoy(self, _: cmd2.Statement):
+    def do_bokchoy(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Bok Choy')
 
 
 class ExampleApp(cmd2.Cmd):
-    """
-    CommandSets are loaded via the `load` and `unload` commands
-    """
+    """CommandSets are loaded via the `load` and `unload` commands."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, auto_load_commands=False, **kwargs)
 
@@ -61,7 +57,7 @@ class ExampleApp(cmd2.Cmd):
 
     @with_argparser(load_parser)
     @with_category('Command Loading')
-    def do_load(self, ns: argparse.Namespace):
+    def do_load(self, ns: argparse.Namespace) -> None:
         if ns.cmds == 'fruits':
             try:
                 self.register_command_set(self._fruits)
@@ -77,7 +73,7 @@ class ExampleApp(cmd2.Cmd):
                 self.poutput('Vegetables already loaded')
 
     @with_argparser(load_parser)
-    def do_unload(self, ns: argparse.Namespace):
+    def do_unload(self, ns: argparse.Namespace) -> None:
         if ns.cmds == 'fruits':
             self.unregister_command_set(self._fruits)
             self.poutput('Fruits unloaded')

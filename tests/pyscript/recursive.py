@@ -1,9 +1,4 @@
-#!/usr/bin/env python
-# coding=utf-8
-# flake8: noqa F821
-"""
-Example demonstrating that calling run_pyscript recursively inside another Python script isn't allowed
-"""
+"""Example demonstrating that calling run_pyscript recursively inside another Python script isn't allowed"""
 
 import os
 import sys

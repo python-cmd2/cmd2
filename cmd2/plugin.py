@@ -1,13 +1,9 @@
-#
-# coding=utf-8
-"""Classes for the cmd2 plugin system"""
+"""Classes for the cmd2 plugin system."""
 
 from dataclasses import (
     dataclass,
 )
-from typing import (
-    Optional,
-)
+from typing import Optional
 
 from .parsing import (
     Statement,
@@ -16,7 +12,7 @@ from .parsing import (
 
 @dataclass
 class PostparsingData:
-    """Data class containing information passed to postparsing hook methods"""
+    """Data class containing information passed to postparsing hook methods."""
 
     stop: bool
     statement: Statement
@@ -24,14 +20,14 @@ class PostparsingData:
 
 @dataclass
 class PrecommandData:
-    """Data class containing information passed to precommand hook methods"""
+    """Data class containing information passed to precommand hook methods."""
 
     statement: Statement
 
 
 @dataclass
 class PostcommandData:
-    """Data class containing information passed to postcommand hook methods"""
+    """Data class containing information passed to postcommand hook methods."""
 
     stop: bool
     statement: Statement
@@ -39,7 +35,7 @@ class PostcommandData:
 
 @dataclass
 class CommandFinalizationData:
-    """Data class containing information passed to command finalization hook methods"""
+    """Data class containing information passed to command finalization hook methods."""
 
     stop: bool
     statement: Optional[Statement]

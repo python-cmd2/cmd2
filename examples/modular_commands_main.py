@@ -1,15 +1,11 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A complex example demonstrating a variety of methods to load CommandSets using a mix of command decorators
+"""A complex example demonstrating a variety of methods to load CommandSets using a mix of command decorators
 with examples of how to integrate tab completion with argparse-based commands.
 """
 
 import argparse
-from typing import (
-    Iterable,
-    Optional,
-)
+from collections.abc import Iterable
+from typing import Optional
 
 from modular_commands.commandset_basic import (  # noqa: F401
     BasicCompletionCommandSet,
@@ -17,7 +13,7 @@ from modular_commands.commandset_basic import (  # noqa: F401
 from modular_commands.commandset_complex import (  # noqa: F401
     CommandSetA,
 )
-from modular_commands.commandset_custominit import (  # noqa: F401
+from modular_commands.commandset_custominit import (
     CustomInitCommandSet,
 )
 
@@ -30,12 +26,12 @@ from cmd2 import (
 
 
 class WithCommandSets(Cmd):
-    def __init__(self, command_sets: Optional[Iterable[CommandSet]] = None):
+    def __init__(self, command_sets: Optional[Iterable[CommandSet]] = None) -> None:
         super().__init__(command_sets=command_sets)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
     def choices_provider(self) -> list[str]:
-        """A choices provider is useful when the choice list is based on instance data of your application"""
+        """A choices provider is useful when the choice list is based on instance data of your application."""
         return self.sport_item_strs
 
     # Parser for example command
@@ -59,7 +55,7 @@ class WithCommandSets(Cmd):
 
     @with_argparser(example_parser)
     def do_example(self, _: argparse.Namespace) -> None:
-        """The example command"""
+        """The example command."""
         self.poutput("I do nothing")
 
 

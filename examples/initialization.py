@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# coding=utf-8
 """A simple example cmd2 application demonstrating the following:
  1) Colorizing/stylizing output
  2) Using multiline commands
@@ -10,7 +9,7 @@
  7) Allowing access to your application in py and ipy
  8) Displaying an intro banner upon starting your application
  9) Using a custom prompt
-10) How to make custom attributes settable at runtime
+10) How to make custom attributes settable at runtime.
 """
 
 import cmd2
@@ -24,7 +23,7 @@ from cmd2 import (
 class BasicApp(cmd2.Cmd):
     CUSTOM_CATEGORY = 'My Custom Commands'
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
@@ -57,13 +56,13 @@ class BasicApp(cmd2.Cmd):
         )
 
     @cmd2.with_category(CUSTOM_CATEGORY)
-    def do_intro(self, _):
-        """Display the intro banner"""
+    def do_intro(self, _) -> None:
+        """Display the intro banner."""
         self.poutput(self.intro)
 
     @cmd2.with_category(CUSTOM_CATEGORY)
-    def do_echo(self, arg):
-        """Example of a multiline command"""
+    def do_echo(self, arg) -> None:
+        """Example of a multiline command."""
         fg_color = Fg[self.foreground_color.upper()]
         self.poutput(style(arg, fg=fg_color))
 

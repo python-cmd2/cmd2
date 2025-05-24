@@ -1,6 +1,3 @@
-#
-# coding=utf-8
-# flake8: noqa E302
 """Development related tasks to be run with 'invoke'.
 
 Make sure you satisfy the following Python module requirements if you are trying to publish a release to PyPI:
@@ -27,7 +24,7 @@ def rmrf(items, verbose=True):
 
     for item in items:
         if verbose:
-            print("Removing {}".format(item))
+            print(f"Removing {item}")
         shutil.rmtree(item, ignore_errors=True)
         # rmtree doesn't remove bare files
         try:
@@ -51,15 +48,15 @@ namespace.add_collection(namespace_clean, 'clean')
 @invoke.task
 def pytest(context, junit=False, pty=True, append_cov=False):
     """Run tests and code coverage using pytest"""
-    ROOT_PATH = TASK_ROOT.parent.parent
+    root_path = TASK_ROOT.parent.parent
 
-    with context.cd(str(ROOT_PATH)):
+    with context.cd(str(root_path)):
         command_str = 'pytest --cov=cmd2_ext_test --cov-report=term --cov-report=html'
         if append_cov:
             command_str += ' --cov-append'
         if junit:
             command_str += ' --junitxml=junit/test-results.xml'
-        command_str += ' ' + str((TASK_ROOT / 'tests').relative_to(ROOT_PATH))
+        command_str += ' ' + str((TASK_ROOT / 'tests').relative_to(root_path))
         context.run(command_str, pty=pty)
 
 
@@ -147,7 +144,6 @@ clean_tasks = list(namespace_clean.tasks.values())
 def clean_all(context):
     """Run all clean tasks"""
     # pylint: disable=unused-argument
-    pass
 
 
 namespace_clean.add_task(clean_all, 'all')
@@ -205,7 +201,7 @@ namespace.add_task(lint)
 
 
 @invoke.task
-def format(context):
+def format(context):  # noqa: A001
     """Run ruff format --check"""
     with context.cd(TASK_ROOT_STR):
         context.run("ruff format --check")

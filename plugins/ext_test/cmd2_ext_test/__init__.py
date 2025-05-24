@@ -1,5 +1,3 @@
-#
-# coding=utf-8
 """cmd2 External Python Testing Mixin
 
 Allows developers to exercise their cmd2 application using the PyScript interface

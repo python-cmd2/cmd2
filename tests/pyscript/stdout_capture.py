@@ -1,4 +1,3 @@
-# flake8: noqa F821
 # This script demonstrates when output of a command finalization hook is captured by a pyscript app() call
 import sys
 

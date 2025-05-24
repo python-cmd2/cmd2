@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-# coding=utf-8
 """A simple example demonstrating how to use Argparse to support subcommands.
-
 
 This example shows an easy way for a single command to have many subcommands, each of which takes different arguments
 and provides separate contextual help.
@@ -63,26 +61,25 @@ sport2_arg = parser_sport2.add_argument('sport', help='Enter name of a sport', c
 
 
 class SubcommandsExample(cmd2.Cmd):
-    """
-    Example cmd2 application where we a base command which has a couple subcommands
+    """Example cmd2 application where we a base command which has a couple subcommands
     and the "sport" subcommand has tab completion enabled.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     # subcommand functions for the base command
-    def base_foo(self, args):
-        """foo subcommand of base command"""
+    def base_foo(self, args) -> None:
+        """Foo subcommand of base command."""
         self.poutput(args.x * args.y)
 
-    def base_bar(self, args):
-        """bar subcommand of base command"""
-        self.poutput('((%s))' % args.z)
+    def base_bar(self, args) -> None:
+        """Bar subcommand of base command."""
+        self.poutput(f'(({args.z}))')
 
-    def base_sport(self, args):
-        """sport subcommand of base command"""
-        self.poutput('Sport is {}'.format(args.sport))
+    def base_sport(self, args) -> None:
+        """Sport subcommand of base command."""
+        self.poutput(f'Sport is {args.sport}')
 
     # Set handler functions for the subcommands
     parser_foo.set_defaults(func=base_foo)
@@ -90,8 +87,8 @@ class SubcommandsExample(cmd2.Cmd):
     parser_sport.set_defaults(func=base_sport)
 
     @cmd2.with_argparser(base_parser)
-    def do_base(self, args):
-        """Base command help"""
+    def do_base(self, args) -> None:
+        """Base command help."""
         func = getattr(args, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -101,8 +98,8 @@ class SubcommandsExample(cmd2.Cmd):
             self.do_help('base')
 
     @cmd2.with_argparser(base2_parser)
-    def do_alternate(self, args):
-        """Alternate command help"""
+    def do_alternate(self, args) -> None:
+        """Alternate command help."""
         func = getattr(args, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected

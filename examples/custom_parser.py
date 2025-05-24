@@ -1,6 +1,5 @@
-# coding=utf-8
-"""
-The standard parser used by cmd2 built-in commands is Cmd2ArgumentParser.
+"""Defines the CustomParser used with override_parser.py example.
+
 The following code shows how to override it with your own parser class.
 """
 
@@ -18,13 +17,13 @@ from cmd2 import (
 # Since built-in commands rely on customizations made in Cmd2ArgumentParser,
 # your custom parser class should inherit from Cmd2ArgumentParser.
 class CustomParser(Cmd2ArgumentParser):
-    """Overrides error method"""
+    """Overrides error method."""
 
     def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
         super().__init__(*args, **kwargs)
 
     def error(self, message: str) -> NoReturn:
-        """Custom override that applies custom formatting to the error message"""
+        """Custom override that applies custom formatting to the error message."""
         lines = message.split('\n')
         linum = 0
         formatted_message = ''
@@ -39,7 +38,7 @@ class CustomParser(Cmd2ArgumentParser):
 
         # Format errors with style_warning()
         formatted_message = ansi.style_warning(formatted_message)
-        self.exit(2, '{}\n\n'.format(formatted_message))
+        self.exit(2, f'{formatted_message}\n\n')
 
 
 if __name__ == '__main__':

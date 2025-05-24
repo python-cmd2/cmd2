@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# coding=utf-8
-"""
-A sample application for cmd2 demonstrating how to use hooks.
+"""A sample application for cmd2 demonstrating how to use hooks.
 
 This application shows how to use postparsing hooks to allow case insensitive
 command names, abbreviated commands, as well as allowing numeric arguments to
@@ -40,8 +38,8 @@ class CmdLineApp(cmd2.Cmd):
     """
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
-    # default_to_shell = True
-    def __init__(self, *args, **kwargs):
+    # default_to_shell = True  # noqa: ERA001
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
         # register four hooks
@@ -82,7 +80,7 @@ class CmdLineApp(cmd2.Cmd):
         return data
 
     def abbrev_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-        """Accept unique abbreviated commands"""
+        """Accept unique abbreviated commands."""
         func = self.cmd_func(data.statement.command)
         if func is None:
             # check if the entered command might be an abbreviation
@@ -93,7 +91,7 @@ class CmdLineApp(cmd2.Cmd):
         return data
 
     def proof_hook(self, data: cmd2.plugin.PostcommandData) -> cmd2.plugin.PostcommandData:
-        """Update the shell prompt with the new raw statement after postparsing hooks are finished"""
+        """Update the shell prompt with the new raw statement after postparsing hooks are finished."""
         if self.debug:
             self.prompt = f'({data.statement.raw})'
         return data

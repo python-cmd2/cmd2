@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# coding=utf-8
-"""A simple example demonstrating modular subcommand loading through CommandSets
+"""A simple example demonstrating modular subcommand loading through CommandSets.
 
 In this example, there are loadable CommandSets defined. Each CommandSet has 1 subcommand defined that will be
 attached to the 'cut' command.
@@ -24,10 +23,10 @@ from cmd2 import (
 
 @with_default_category('Fruits')
 class LoadableFruits(CommandSet):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def do_apple(self, _: cmd2.Statement):
+    def do_apple(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Apple')
 
     banana_description = "Cut a banana"
@@ -35,17 +34,17 @@ class LoadableFruits(CommandSet):
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
     @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help=banana_description.lower())
-    def cut_banana(self, ns: argparse.Namespace):
-        """Cut banana"""
+    def cut_banana(self, ns: argparse.Namespace) -> None:
+        """Cut banana."""
         self._cmd.poutput('cutting banana: ' + ns.direction)
 
 
 @with_default_category('Vegetables')
 class LoadableVegetables(CommandSet):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-    def do_arugula(self, _: cmd2.Statement):
+    def do_arugula(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Arugula')
 
     bokchoy_description = "Cut some bokchoy"
@@ -53,16 +52,14 @@ class LoadableVegetables(CommandSet):
     bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser, help=bokchoy_description.lower())
-    def cut_bokchoy(self, _: argparse.Namespace):
+    def cut_bokchoy(self, _: argparse.Namespace) -> None:
         self._cmd.poutput('Bok Choy')
 
 
 class ExampleApp(cmd2.Cmd):
-    """
-    CommandSets are automatically loaded. Nothing needs to be done.
-    """
+    """CommandSets are automatically loaded. Nothing needs to be done."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, auto_load_commands=False, **kwargs)
 
@@ -74,7 +71,7 @@ class ExampleApp(cmd2.Cmd):
 
     @with_argparser(load_parser)
     @with_category('Command Loading')
-    def do_load(self, ns: argparse.Namespace):
+    def do_load(self, ns: argparse.Namespace) -> None:
         if ns.cmds == 'fruits':
             try:
                 self.register_command_set(self._fruits)
@@ -90,7 +87,7 @@ class ExampleApp(cmd2.Cmd):
                 self.poutput('Vegetables already loaded')
 
     @with_argparser(load_parser)
-    def do_unload(self, ns: argparse.Namespace):
+    def do_unload(self, ns: argparse.Namespace) -> None:
         if ns.cmds == 'fruits':
             self.unregister_command_set(self._fruits)
             self.poutput('Fruits unloaded')
@@ -103,7 +100,7 @@ class ExampleApp(cmd2.Cmd):
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     @with_argparser(cut_parser)
-    def do_cut(self, ns: argparse.Namespace):
+    def do_cut(self, ns: argparse.Namespace) -> None:
         # Call handler for whatever subcommand was selected
         handler = ns.cmd2_handler.get()
         if handler is not None:

@@ -1,6 +1,4 @@
-#
-# coding=utf-8
-"""Description of myplugin
+"""Description of myplugin.
 
 An overview of what myplugin does.
 """

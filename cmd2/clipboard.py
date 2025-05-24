@@ -1,7 +1,4 @@
-# coding=utf-8
-"""
-This module provides basic ability to copy from and paste to the clipboard/pastebuffer.
-"""
+"""This module provides basic ability to copy from and paste to the clipboard/pastebuffer."""
 
 import typing
 
@@ -13,8 +10,7 @@ def get_paste_buffer() -> str:
 
     :return: contents of the clipboard
     """
-    pb_str = typing.cast(str, pyperclip.paste())
-    return pb_str
+    return typing.cast(str, pyperclip.paste())
 
 
 def write_to_paste_buffer(txt: str) -> None:

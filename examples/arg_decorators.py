@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-# coding=utf-8
-"""An example demonstrating how use one of cmd2's argument parsing decorators"""
+"""An example demonstrating how use one of cmd2's argument parsing decorators."""
 
 import argparse
 import os
@@ -9,7 +8,7 @@ import cmd2
 
 
 class ArgparsingApp(cmd2.Cmd):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(include_ipy=True)
         self.intro = 'cmd2 has awesome decorators to make it easy to use Argparse to parse command arguments'
 
@@ -21,13 +20,13 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(fsize_parser)
     def do_fsize(self, args: argparse.Namespace) -> None:
-        """Obtain the size of a file"""
+        """Obtain the size of a file."""
         expanded_path = os.path.expanduser(args.file_path)
 
         try:
             size = os.path.getsize(expanded_path)
         except OSError as ex:
-            self.perror("Error retrieving size: {}".format(ex))
+            self.perror(f"Error retrieving size: {ex}")
             return
 
         if args.unit == 'KB':
@@ -39,8 +38,8 @@ class ArgparsingApp(cmd2.Cmd):
         size = round(size, 2)
 
         if args.comma:
-            size = '{:,}'.format(size)
-        self.poutput('{} {}'.format(size, args.unit))
+            size = f'{size:,}'
+        self.poutput(f'{size} {args.unit}')
 
     # do_pow parser
     pow_parser = cmd2.Cmd2ArgumentParser()
@@ -49,12 +48,11 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(pow_parser)
     def do_pow(self, args: argparse.Namespace) -> None:
-        """
-        Raise an integer to a small integer exponent, either positive or negative
+        """Raise an integer to a small integer exponent, either positive or negative.
 
         :param args: argparse arguments
         """
-        self.poutput('{} ** {} == {}'.format(args.base, args.exponent, args.base**args.exponent))
+        self.poutput(f'{args.base} ** {args.exponent} == {args.base**args.exponent}')
 
 
 if __name__ == '__main__':

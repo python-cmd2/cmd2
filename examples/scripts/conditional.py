@@ -1,7 +1,4 @@
-# coding=utf-8
-# flake8: noqa F821
-"""
-This is a Python script intended to be used with the "python_scripting.py" cmd2 example application.
+"""This is a Python script intended to be used with the "python_scripting.py" cmd2 example application.
 
 To run it you should do the following:
     ./python_scripting.py
@@ -16,36 +13,36 @@ import sys
 
 if len(sys.argv) > 1:
     directory = sys.argv[1]
-    print('Using specified directory: {!r}'.format(directory))
+    print(f'Using specified directory: {directory!r}')
 else:
     directory = 'foobar'
-    print('Using default directory: {!r}'.format(directory))
+    print(f'Using default directory: {directory!r}')
 
 # Keep track of where we stared
 original_dir = os.getcwd()
 
 # Try to change to the specified directory
-result = app('cd {}'.format(directory))
+result = app(f'cd {directory}')
 
 # Conditionally do something based on the results of the last command
 if result:
     print(f"STDOUT: {result.stdout}\n")
     print(f"STDERR: {result.stderr}\n")
 
-    print('\nContents of directory {!r}:'.format(directory))
+    print(f'\nContents of directory {directory!r}:')
     result = app('dir -l')
 
     print(f"STDOUT: {result.stdout}\n")
     print(f"STDERR: {result.stderr}\n")
 
-    print('{}\n'.format(result.data))
+    print(f'{result.data}\n')
 
     # Change back to where we were
-    print('Changing back to original directory: {!r}'.format(original_dir))
-    app('cd {}'.format(original_dir))
+    print(f'Changing back to original directory: {original_dir!r}')
+    app(f'cd {original_dir}')
 else:
     # cd command failed, print a warning
-    print('Failed to change directory to {!r}'.format(directory))
+    print(f'Failed to change directory to {directory!r}')
 
     print(f"STDOUT: {result.stdout}\n")
     print(f"STDERR: {result.stderr}\n")

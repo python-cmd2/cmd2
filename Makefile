@@ -13,6 +13,18 @@ check: ## Run code quality tools.
 	@echo "🚀 Static type checking: Running mypy"
 	@uv run mypy
 
+.PHONY: format
+format: ## Perform ruff formatting
+	@uv run ruff format
+
+.PHONY: lint
+lint: ## Perform ruff linting
+	@uv run ruff check --fix
+
+.PHONY: typecheck
+typecheck: ## Perform type checking
+	@uv run mypy
+
 .PHONY: test
 test: ## Test the code with pytest.
 	@echo "🚀 Testing code: Running pytest"
