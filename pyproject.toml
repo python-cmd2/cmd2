@@ -200,7 +200,7 @@ select = [
     # "PLR", # Pylint Refactoring suggestions
     "PLW", # Pylint Warnings
     "PT",  # flake8-pytest-style (warnings about unit test best practices)
-    # "PTH",  # flake8-use-pathlib (force use of pathlib instead of os.path)
+    # "PTH", # flake8-use-pathlib (force use of pathlib instead of os.path)
     "PYI", # flake8-pyi (warnings related to type hint best practices)
     "Q",   # flake8-quotes (force double quotes)
     # "RET",  # flake8-return (various warnings related to implicit vs explicit return statements)
@@ -209,8 +209,8 @@ select = [
     # "S", # flake8-bandit (security oriented checks, but extremely pedantic - do not attempt to apply to unit test files)
     # "SIM", # flake8-simplify (rules to attempt to simplify code)
     # "SLF", # flake8-self (warn when protected members are accessed outside of a class or file)
-    # "SLOT", # flake8-slots (warn about subclasses that should define __slots__)
-    "T10", # flake8-debugger (check for pdb traces left in Python code)
+    "SLOT", # flake8-slots (warn about subclasses that should define __slots__)
+    "T10",  # flake8-debugger (check for pdb traces left in Python code)
     # "T20",  # flake8-print (warn about use of `print` or `pprint` - force use of loggers)
     "TC",  # flake8-type-checking (type checking warnings)
     "TD",  # flake8-todos (force all TODOs to include an author and issue link)

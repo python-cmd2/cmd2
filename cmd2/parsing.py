@@ -84,7 +84,7 @@ class Macro:
 
 
 @dataclass(frozen=True)
-class Statement(str):  # type: ignore[override]
+class Statement(str):  # type: ignore[override]  # noqa: SLOT000
     """String subclass with additional attributes to store the results of parsing.
 
     The ``cmd`` module in the standard library passes commands around as a

@@ -275,7 +275,7 @@ def generate_range_error(range_min: int, range_max: float) -> str:
     return err_str
 
 
-class CompletionItem(str):
+class CompletionItem(str):  # noqa: SLOT000
     """
     Completion item with descriptive text attached
 
