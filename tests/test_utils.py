@@ -142,8 +142,7 @@ def test_quote_string_if_needed_no() -> None:
 
 @pytest.fixture
 def stdout_sim():
-    stdsim = cu.StdSim(sys.stdout, echo=True)
-    return stdsim
+    return cu.StdSim(sys.stdout, echo=True)
 
 
 def test_stdsim_write_str(stdout_sim) -> None:
@@ -279,8 +278,7 @@ def pr_none():
         kwargs['start_new_session'] = True
 
     proc = subprocess.Popen(command, shell=True, **kwargs)
-    pr = cu.ProcReader(proc, None, None)
-    return pr
+    return cu.ProcReader(proc, None, None)
 
 
 def test_proc_reader_send_sigint(pr_none) -> None:

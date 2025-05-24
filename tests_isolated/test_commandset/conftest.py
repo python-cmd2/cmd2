@@ -180,11 +180,9 @@ class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
 
 @pytest.fixture
 def command_sets_app():
-    app = WithCommandSets()
-    return app
+    return WithCommandSets()
 
 
 @pytest.fixture
 def command_sets_manual():
-    app = WithCommandSets(auto_load_commands=False)
-    return app
+    return WithCommandSets(auto_load_commands=False)

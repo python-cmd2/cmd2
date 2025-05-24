@@ -19,7 +19,7 @@ from cmd2.parsing import (
 
 @pytest.fixture
 def parser():
-    parser = StatementParser(
+    return StatementParser(
         terminators=[';', '&'],
         multiline_commands=['multiline'],
         aliases={
@@ -31,13 +31,11 @@ def parser():
         },
         shortcuts={'?': 'help', '!': 'shell'},
     )
-    return parser
 
 
 @pytest.fixture
 def default_parser():
-    parser = StatementParser()
-    return parser
+    return StatementParser()
 
 
 def test_parse_empty_string(parser) -> None:

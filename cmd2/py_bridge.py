@@ -137,10 +137,9 @@ class PyBridge:
                 self.stop = stop or self.stop
 
         # Save the result
-        result = CommandResult(
+        return CommandResult(
             stdout=copy_cmd_stdout.getvalue(),
             stderr=copy_stderr.getvalue(),
             stop=stop,
             data=self._cmd2_app.last_result,
         )
-        return result

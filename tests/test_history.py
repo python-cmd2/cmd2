@@ -56,7 +56,7 @@ def hist():
         Statement,
     )
 
-    h = History(
+    return History(
         [
             HistoryItem(Statement('', raw='first')),
             HistoryItem(Statement('', raw='second')),
@@ -64,7 +64,6 @@ def hist():
             HistoryItem(Statement('', raw='fourth')),
         ]
     )
-    return h
 
 
 # Represents the hist fixture's JSON
@@ -381,8 +380,7 @@ def histitem():
         command='help',
         arg_list=['history'],
     )
-    histitem = HistoryItem(statement)
-    return histitem
+    return HistoryItem(statement)
 
 
 @pytest.fixture
@@ -391,7 +389,7 @@ def parser():
         StatementParser,
     )
 
-    parser = StatementParser(
+    return StatementParser(
         terminators=[';', '&'],
         multiline_commands=['multiline'],
         aliases={
@@ -403,7 +401,6 @@ def parser():
         },
         shortcuts={'?': 'help', '!': 'shell'},
     )
-    return parser
 
 
 def test_multiline_histitem(parser) -> None:

@@ -154,8 +154,7 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
         NOTE:  @dataclass takes care of initializing other members in the __init__ it
         generates.
         """
-        stmt = super().__new__(cls, value)
-        return stmt
+        return super().__new__(cls, value)
 
     @property
     def command_and_args(self) -> str:
@@ -382,8 +381,7 @@ class StatementParser:
             raise Cmd2ShlexError(ex)
 
         # custom lexing
-        tokens = self.split_on_punctuation(tokens)
-        return tokens
+        return self.split_on_punctuation(tokens)
 
     def parse(self, line: str) -> Statement:
         """Tokenize the input and parse it into a [cmd2.parsing.Statement][] object,
@@ -515,7 +513,7 @@ class StatementParser:
             multiline_command = ''
 
         # build the statement
-        statement = Statement(
+        return Statement(
             args,
             raw=line,
             command=command,
@@ -527,7 +525,6 @@ class StatementParser:
             output=output,
             output_to=output_to,
         )
-        return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
         """Partially parse input into a [cmd2.Statement][] object.
@@ -589,8 +586,7 @@ class StatementParser:
             multiline_command = ''
 
         # build the statement
-        statement = Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)
-        return statement
+        return Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)
 
     def get_command_arg_list(
         self, command_name: str, to_parse: Union[Statement, str], preserve_quotes: bool

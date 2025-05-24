@@ -35,8 +35,7 @@ class MyApp(cmd2_myplugin.MyPluginMixin, cmd2.Cmd):
 
 
 def init_app():
-    app = MyApp()
-    return app
+    return MyApp()
 
 
 #####

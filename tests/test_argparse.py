@@ -122,8 +122,7 @@ class ArgparseApp(cmd2.Cmd):
 
 @pytest.fixture
 def argparse_app():
-    app = ArgparseApp()
-    return app
+    return ArgparseApp()
 
 
 def test_invalid_syntax(argparse_app) -> None:
@@ -324,8 +323,7 @@ class SubcommandApp(cmd2.Cmd):
 
 @pytest.fixture
 def subcommand_app():
-    app = SubcommandApp()
-    return app
+    return SubcommandApp()
 
 
 def test_subcommand_foo(subcommand_app) -> None:

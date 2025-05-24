@@ -122,8 +122,7 @@ class CompletionsExample(cmd2.Cmd):
 
 @pytest.fixture
 def cmd2_app():
-    c = CompletionsExample()
-    return c
+    return CompletionsExample()
 
 
 def test_cmd2_command_completion_single(cmd2_app) -> None:
@@ -1261,8 +1260,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
 @pytest.fixture
 def scu_app():
     """Declare test fixture for with_argparser decorator"""
-    app = SubcommandsWithUnknownExample()
-    return app
+    return SubcommandsWithUnknownExample()
 
 
 def test_subcmd_with_unknown_completion_single_end(scu_app) -> None:

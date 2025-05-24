@@ -748,8 +748,7 @@ class AppWithSubCommands(cmd2.Cmd):
 
 @pytest.fixture
 def static_subcommands_app():
-    app = AppWithSubCommands()
-    return app
+    return AppWithSubCommands()
 
 
 def test_static_subcommands(static_subcommands_app) -> None:

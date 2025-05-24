@@ -280,8 +280,7 @@ class OnChangeHookApp(cmd2.Cmd):
 
 @pytest.fixture
 def onchange_app():
-    app = OnChangeHookApp()
-    return app
+    return OnChangeHookApp()
 
 
 def test_set_onchange_hook(onchange_app) -> None:
@@ -847,14 +846,12 @@ def _expected_no_editor_error():
     if hasattr(sys, "pypy_translation_info"):
         expected_exception = 'EnvironmentError'
 
-    expected_text = normalize(
+    return normalize(
         f"""
 EXCEPTION of type '{expected_exception}' occurred with message: Please use 'set editor' to specify your text editing program of choice.
 To enable full traceback, run the following command: 'set debug true'
 """
     )
-
-    return expected_text
 
 
 def test_base_debug(base_app) -> None:
@@ -1086,8 +1083,7 @@ class HookFailureApp(cmd2.Cmd):
 
 @pytest.fixture
 def hook_failure():
-    app = HookFailureApp()
-    return app
+    return HookFailureApp()
 
 
 def test_precmd_hook_success(base_app) -> None:
@@ -1211,8 +1207,7 @@ class HelpApp(cmd2.Cmd):
 
 @pytest.fixture
 def help_app():
-    app = HelpApp()
-    return app
+    return HelpApp()
 
 
 def test_custom_command_help(help_app) -> None:
@@ -1285,8 +1280,7 @@ class HelpCategoriesApp(cmd2.Cmd):
 
 @pytest.fixture
 def helpcat_app():
-    app = HelpCategoriesApp()
-    return app
+    return HelpCategoriesApp()
 
 
 def test_help_cat_base(helpcat_app) -> None:
@@ -1342,8 +1336,7 @@ class SelectApp(cmd2.Cmd):
 
 @pytest.fixture
 def select_app():
-    app = SelectApp()
-    return app
+    return SelectApp()
 
 
 def test_select_options(select_app, monkeypatch) -> None:
@@ -1592,8 +1585,7 @@ class MultilineApp(cmd2.Cmd):
 
 @pytest.fixture
 def multiline_app():
-    app = MultilineApp()
-    return app
+    return MultilineApp()
 
 
 def test_multiline_complete_empty_statement_raises_exception(multiline_app) -> None:
@@ -1759,8 +1751,7 @@ class CommandResultApp(cmd2.Cmd):
 
 @pytest.fixture
 def commandresult_app():
-    app = CommandResultApp()
-    return app
+    return CommandResultApp()
 
 
 def test_commandresult_truthy(commandresult_app) -> None:
@@ -2813,8 +2804,7 @@ class DisableCommandsApp(cmd2.Cmd):
 
 @pytest.fixture
 def disable_commands_app():
-    app = DisableCommandsApp()
-    return app
+    return DisableCommandsApp()
 
 
 def test_disable_and_enable_category(disable_commands_app) -> None:

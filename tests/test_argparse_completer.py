@@ -1268,8 +1268,7 @@ class CustomCompleterApp(cmd2.Cmd):
 
 @pytest.fixture
 def custom_completer_app():
-    app = CustomCompleterApp()
-    return app
+    return CustomCompleterApp()
 
 
 def test_default_custom_completer_type(custom_completer_app: CustomCompleterApp) -> None:
