@@ -25,7 +25,8 @@ class ChildClass(ParentClass):
     def lambda1():
         return 1
 
-    lambda2 = (lambda: lambda: 2)()
+    def lambda2():
+        return 2
 
     @classmethod
     def class_method(cls):

@@ -193,7 +193,7 @@ select = [
     "NPY",  # NumPy specific rules
     "PD",   # pandas-vet (Pandas specific rules)
     "PERF", # Perflint (warn about performance issues)
-    # "PGH",  # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
+    "PGH",  # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
     # "PIE", # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
     "PLC", # Pylint Conventions
     "PLE", # Pylint Errors
@@ -274,12 +274,12 @@ per-file-ignores."plugins/*.py" = [
     "INP001", # Module is part of an implicit namespace
 ]
 
-per-file-ignores."tests/pyscript/*.py" = [
-    "F821",   # Undefined name `app`
-    "INP001", # Module is part of an implicit namespace
+per-file-ignores."tests/*.py" = [
+    "E501", # Line too long
 ]
 
-per-file-ignores."tests/pyscript/raises_exception.py" = [
+per-file-ignores."tests/pyscript/*.py" = [
+    "F821",   # Undefined name `app`
     "INP001", # Module is part of an implicit namespace
 ]
 
