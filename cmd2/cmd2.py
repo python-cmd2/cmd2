@@ -2553,9 +2553,9 @@ class Cmd(cmd.Cmd):
             self.perror(f"Invalid syntax: {ex}")
         except RedirectionError as ex:
             self.perror(ex)
-        except KeyboardInterrupt as ex:
+        except KeyboardInterrupt:
             if raise_keyboard_interrupt and not stop:
-                raise ex
+                raise
         except SystemExit as ex:
             if isinstance(ex.code, int):
                 self.exit_code = ex.code
@@ -2567,9 +2567,9 @@ class Cmd(cmd.Cmd):
         finally:
             try:
                 stop = self._run_cmdfinalization_hooks(stop, statement)
-            except KeyboardInterrupt as ex:
+            except KeyboardInterrupt:
                 if raise_keyboard_interrupt and not stop:
-                    raise ex
+                    raise
             except SystemExit as ex:
                 if isinstance(ex.code, int):
                     self.exit_code = ex.code
@@ -4041,9 +4041,9 @@ class Cmd(cmd.Cmd):
             except EOFError:
                 response = ''
                 self.poutput()
-            except KeyboardInterrupt as ex:
+            except KeyboardInterrupt:
                 self.poutput('^C')
-                raise ex
+                raise
 
             if not response:
                 continue

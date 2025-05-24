@@ -215,7 +215,7 @@ select = [
     "TC",  # flake8-type-checking (type checking warnings)
     "TD",  # flake8-todos (force all TODOs to include an author and issue link)
     "TID", # flake8-tidy-imports (extra import rules to check)
-    # "TRY",  # tryceratops (warnings related to exceptions and try/except)
+    # "TRY", # tryceratops (warnings related to exceptions and try/except)
     "UP",  # pyupgrade (A tool (and pre-commit hook) to automatically upgrade syntax for newer versions of the language)
     "W",   # pycodestyle warnings (warn about minor stylistic issues)
     "YTT", # flake8-2020 (checks for misuse of sys.version or sys.version_info)
