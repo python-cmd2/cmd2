@@ -260,10 +260,6 @@ per-file-ignores."cmd2/argparse_custom.py" = [
     "UP031", # Use format specifiers instead of percent format (auto fix is unsafe)
 ]
 
-per-file-ignores."cmd2/ansi.py" = [
-    "N802", # Function names should be lowercase for things like Curor.UP
-]
-
 per-file-ignores."examples/*.py" = [
     "ANN",     # Ignore all type annotation rules in examples folder
     "D",       # Ignore all pydocstyle rules in examples folder
