@@ -414,7 +414,7 @@ def as_subcommand_to(
         Callable[[CommandParentType], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
     ],
     *,
-    help: Optional[str] = None,
+    help: Optional[str] = None,  # noqa: A002
     aliases: Optional[list[str]] = None,
 ) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]:
     """
