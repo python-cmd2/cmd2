@@ -178,7 +178,7 @@ class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
 
     def __init__(self, *args, **kwargs):
-        super(WithCommandSets, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 @pytest.fixture

@@ -1210,7 +1210,7 @@ class CustomCompleter(argparse_completer.ArgparseCompleter):
             if action.get_complete_when_ready() is True and not app.is_ready:
                 matched_flags.append(flag)
 
-        return super(CustomCompleter, self)._complete_flags(text, line, begidx, endidx, matched_flags)
+        return super()._complete_flags(text, line, begidx, endidx, matched_flags)
 
 
 # Add a custom argparse action attribute

@@ -17,7 +17,7 @@ class ParentClass:
 
 class ChildClass(ParentClass):
     def func_with_overrides(self):
-        super(ChildClass, self).func_with_overrides()
+        super().func_with_overrides()
 
     def child_function(self):
         pass

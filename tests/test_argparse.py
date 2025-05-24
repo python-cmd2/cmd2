@@ -47,7 +47,7 @@ class ArgparseApp(cmd2.Cmd):
             if word is None:
                 word = ''
             if args.piglatin:
-                word = '%s%say' % (word[1:], word[0])
+                word = f'{word[1:]}{word[0]}ay'
             if args.shout:
                 word = word.upper()
             words.append(word)
@@ -102,7 +102,7 @@ class ArgparseApp(cmd2.Cmd):
             if word is None:
                 word = ''
             if args.piglatin:
-                word = '%s%say' % (word[1:], word[0])
+                word = f'{word[1:]}{word[0]}ay'
             if args.shout:
                 word = word.upper()
             words.append(word)
@@ -266,11 +266,11 @@ class SubcommandApp(cmd2.Cmd):
 
     def base_bar(self, args):
         """bar subcommand of base command"""
-        self.poutput('((%s))' % args.z)
+        self.poutput(f'(({args.z}))')
 
     def base_helpless(self, args):
         """helpless subcommand of base command"""
-        self.poutput('((%s))' % args.z)
+        self.poutput(f'(({args.z}))')
 
     # create the top-level parser for the base command
     base_parser = cmd2.Cmd2ArgumentParser()

@@ -165,7 +165,7 @@ class History(list[HistoryItem]):
     _history_items_field = 'history_items'
 
     def __init__(self, seq: Iterable[HistoryItem] = ()) -> None:
-        super(History, self).__init__(seq)
+        super().__init__(seq)
         self.session_start_index = 0
 
     def start_session(self) -> None:
@@ -192,7 +192,7 @@ class History(list[HistoryItem]):
                     and added to the end of the list
         """
         history_item = HistoryItem(new) if isinstance(new, Statement) else new
-        super(History, self).append(history_item)
+        super().append(history_item)
 
     def clear(self) -> None:
         """Remove all items from the History list."""

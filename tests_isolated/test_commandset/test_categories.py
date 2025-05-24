@@ -16,7 +16,7 @@ class MyBaseCommandSet(CommandSet):
     """Defines a default category for all sub-class CommandSets"""
 
     def __init__(self, _: Any):
-        super(MyBaseCommandSet, self).__init__()
+        super().__init__()
 
 
 class ChildInheritsParentCategories(MyBaseCommandSet):
@@ -79,7 +79,7 @@ class ExampleApp(cmd2.Cmd):
     """
 
     def __init__(self):
-        super(ExampleApp, self).__init__(auto_load_commands=False)
+        super().__init__(auto_load_commands=False)
 
     def do_something(self, arg):
         self.poutput('this is the something command')

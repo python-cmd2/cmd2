@@ -77,7 +77,7 @@ class SubcommandsExample(cmd2.Cmd):
 
     def base_bar(self, args):
         """bar subcommand of base command"""
-        self.poutput('((%s))' % args.z)
+        self.poutput(f'(({args.z}))')
 
     def base_sport(self, args):
         """sport subcommand of base command"""

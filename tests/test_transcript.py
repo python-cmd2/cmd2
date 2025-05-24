@@ -53,7 +53,7 @@ class CmdLineApp(cmd2.Cmd):
         """Repeats what you tell me to."""
         arg = ' '.join(arg)
         if opts.piglatin:
-            arg = '%s%say' % (arg[1:], arg[0])
+            arg = f'{arg[1:]}{arg[0]}ay'
         if opts.shout:
             arg = arg.upper()
         repetitions = opts.repeat or 1

@@ -477,17 +477,14 @@ def test_run_script_nested_run_scripts(base_app, request):
     assert base_app.last_result is True
 
     # Check that the right commands were executed.
-    expected = (
-        """
-%s
+    expected = f"""
+{initial_run}
 _relative_run_script precmds.txt
 set allow_style Always
 help
 shortcuts
 _relative_run_script postcmds.txt
 set allow_style Never"""
-        % initial_run
-    )
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
@@ -498,16 +495,13 @@ def test_runcmds_plus_hooks(base_app, request):
     postfilepath = os.path.join(test_dir, 'scripts', 'postcmds.txt')
 
     base_app.runcmds_plus_hooks(['run_script ' + prefilepath, 'help', 'shortcuts', 'run_script ' + postfilepath])
-    expected = """
-run_script %s
+    expected = f"""
+run_script {prefilepath}
 set allow_style Always
 help
 shortcuts
-run_script %s
-set allow_style Never""" % (
-        prefilepath,
-        postfilepath,
-    )
+run_script {postfilepath}
+set allow_style Never"""
 
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)

@@ -384,7 +384,7 @@ def test_load_commandset_errors(command_sets_manual, capsys):
 
 class LoadableBase(cmd2.CommandSet):
     def __init__(self, dummy):
-        super(LoadableBase, self).__init__()
+        super().__init__()
         self._dummy = dummy  # prevents autoload
         self._cut_called = False
 
@@ -444,7 +444,7 @@ class LoadableBase(cmd2.CommandSet):
 
 class LoadableBadBase(cmd2.CommandSet):
     def __init__(self, dummy):
-        super(LoadableBadBase, self).__init__()
+        super().__init__()
         self._dummy = dummy  # prevents autoload
 
     def do_cut(self, ns: argparse.Namespace):
@@ -462,7 +462,7 @@ class LoadableBadBase(cmd2.CommandSet):
 @cmd2.with_default_category('Fruits')
 class LoadableFruits(cmd2.CommandSet):
     def __init__(self, dummy):
-        super(LoadableFruits, self).__init__()
+        super().__init__()
         self._dummy = dummy  # prevents autoload
 
     def do_apple(self, _: cmd2.Statement):
@@ -479,7 +479,7 @@ class LoadableFruits(cmd2.CommandSet):
 
 class LoadablePastaStir(cmd2.CommandSet):
     def __init__(self, dummy):
-        super(LoadablePastaStir, self).__init__()
+        super().__init__()
         self._dummy = dummy  # prevents autoload
 
     stir_pasta_vigor_parser = cmd2.Cmd2ArgumentParser()
@@ -493,7 +493,7 @@ class LoadablePastaStir(cmd2.CommandSet):
 @cmd2.with_default_category('Vegetables')
 class LoadableVegetables(cmd2.CommandSet):
     def __init__(self, dummy):
-        super(LoadableVegetables, self).__init__()
+        super().__init__()
         self._dummy = dummy  # prevents autoload
 
     def do_arugula(self, _: cmd2.Statement):
@@ -679,7 +679,7 @@ def test_nested_subcommands(command_sets_manual):
 
     class BadNestedSubcommands(cmd2.CommandSet):
         def __init__(self, dummy):
-            super(BadNestedSubcommands, self).__init__()
+            super().__init__()
             self._dummy = dummy  # prevents autoload
 
         stir_pasta_vigor_parser = cmd2.Cmd2ArgumentParser()
@@ -712,7 +712,7 @@ class AppWithSubCommands(cmd2.Cmd):
     """Class for testing usage of `as_subcommand_to` decorator directly in a Cmd2 subclass."""
 
     def __init__(self, *args, **kwargs):
-        super(AppWithSubCommands, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     cut_parser = cmd2.Cmd2ArgumentParser()
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
@@ -790,7 +790,7 @@ class SupportFuncProvider(cmd2.CommandSet):
 
     def __init__(self, dummy):
         """dummy variable prevents this from being autoloaded in other tests"""
-        super(SupportFuncProvider, self).__init__()
+        super().__init__()
 
     def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         assert self is complete_states_expected_self
@@ -824,7 +824,7 @@ class SupportFuncUserUnrelated(cmd2.CommandSet):
 
     def __init__(self, dummy):
         """dummy variable prevents this from being autoloaded in other tests"""
-        super(SupportFuncUserUnrelated, self).__init__()
+        super().__init__()
 
     parser = cmd2.Cmd2ArgumentParser()
     parser.add_argument('state', type=str, completer=SupportFuncProvider.complete_states)
@@ -969,7 +969,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys):
 class CommandSetWithPathComplete(cmd2.CommandSet):
     def __init__(self, dummy):
         """dummy variable prevents this from being autoloaded in other tests"""
-        super(CommandSetWithPathComplete, self).__init__()
+        super().__init__()
 
     parser = cmd2.Cmd2ArgumentParser()
     parser.add_argument('path', nargs='+', help='paths', completer=cmd2.Cmd.path_complete)
@@ -998,7 +998,7 @@ def test_bad_subcommand():
         """Class for testing usage of `as_subcommand_to` decorator directly in a Cmd2 subclass."""
 
         def __init__(self, *args, **kwargs):
-            super(BadSubcommandApp, self).__init__(*args, **kwargs)
+            super().__init__(*args, **kwargs)
 
         cut_parser = cmd2.Cmd2ArgumentParser()
         cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
@@ -1028,7 +1028,7 @@ def test_commandset_settables():
     # Declare a CommandSet with a settable of some arbitrary property
     class WithSettablesA(CommandSetBase):
         def __init__(self):
-            super(WithSettablesA, self).__init__()
+            super().__init__()
 
             self._arbitrary = Arbitrary()
             self._settable_prefix = 'addon'
@@ -1047,7 +1047,7 @@ def test_commandset_settables():
     # Declare a CommandSet with an empty settable prefix
     class WithSettablesNoPrefix(CommandSetBase):
         def __init__(self):
-            super(WithSettablesNoPrefix, self).__init__()
+            super().__init__()
 
             self._arbitrary = Arbitrary()
             self._settable_prefix = ''
@@ -1066,7 +1066,7 @@ def test_commandset_settables():
     # Declare a commandset with duplicate settable name
     class WithSettablesB(CommandSetBase):
         def __init__(self):
-            super(WithSettablesB, self).__init__()
+            super().__init__()
 
             self._arbitrary = Arbitrary()
             self._settable_prefix = 'some'
@@ -1200,7 +1200,7 @@ class NsProviderSet(cmd2.CommandSet):
     # CommandSet which implements a namespace provider
     def __init__(self, dummy):
         # Use dummy argument so this won't be autoloaded by other tests
-        super(NsProviderSet, self).__init__()
+        super().__init__()
 
     def ns_provider(self) -> argparse.Namespace:
         ns = argparse.Namespace()
@@ -1213,7 +1213,7 @@ class NsProviderApp(cmd2.Cmd):
     # Used to test namespace providers in CommandSets
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        super(NsProviderApp, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(), ns_provider=NsProviderSet.ns_provider)
     def do_test_ns(self, args: argparse.Namespace) -> None:

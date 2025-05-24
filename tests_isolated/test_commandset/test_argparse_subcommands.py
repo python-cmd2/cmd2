@@ -16,7 +16,7 @@ class SubcommandSet(cmd2.CommandSet):
     """Example cmd2 application where we a base command which has a couple subcommands."""
 
     def __init__(self, dummy):
-        super(SubcommandSet, self).__init__()
+        super().__init__()
 
     # subcommand functions for the base command
     def base_foo(self, args):
@@ -25,11 +25,11 @@ class SubcommandSet(cmd2.CommandSet):
 
     def base_bar(self, args):
         """bar subcommand of base command"""
-        self._cmd.poutput('((%s))' % args.z)
+        self._cmd.poutput(f'(({args.z}))')
 
     def base_helpless(self, args):
         """helpless subcommand of base command"""
-        self._cmd.poutput('((%s))' % args.z)
+        self._cmd.poutput(f'(({args.z}))')
 
     # create the top-level parser for the base command
     base_parser = cmd2.Cmd2ArgumentParser()

@@ -75,7 +75,7 @@ class ExampleApp(cmd2.Cmd):
     """
 
     def __init__(self):
-        super(ExampleApp, self).__init__()
+        super().__init__()
 
     def do_something(self, arg):
         self.poutput('this is the something command')
