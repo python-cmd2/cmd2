@@ -291,7 +291,7 @@ class SubcommandApp(cmd2.Cmd):
     # details.
     parser_helpless = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
     parser_helpless.add_argument('z', help='string')
-    parser_helpless.set_defaults(func=base_bar)
+    parser_helpless.set_defaults(func=base_helpless)
 
     @cmd2.with_argparser(base_parser)
     def do_base(self, args) -> None:
