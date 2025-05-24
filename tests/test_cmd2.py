@@ -146,9 +146,9 @@ def test_base_shortcuts(base_app):
 
 
 def test_command_starts_with_shortcut():
-    with pytest.raises(ValueError) as excinfo:
+    expected_err = "Invalid command name 'help'"
+    with pytest.raises(ValueError, match=expected_err):
         cmd2.Cmd(shortcuts={'help': 'fake'})
-    assert "Invalid command name 'help'" in str(excinfo.value)
 
 
 def test_base_set(base_app):

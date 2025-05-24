@@ -16,9 +16,7 @@ from unittest import (
     mock,
 )
 
-from pytest import (
-    fixture,
-)
+import pytest
 
 import cmd2
 from cmd2.rl_utils import (
@@ -151,7 +149,7 @@ def run_cmd(app, cmd):
     return normalize(out), normalize(err)
 
 
-@fixture
+@pytest.fixture
 def base_app():
     return cmd2.Cmd(include_py=True, include_ipy=True)
 

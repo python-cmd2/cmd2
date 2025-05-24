@@ -58,26 +58,26 @@ def fake_func():
 )
 def test_apcustom_choices_callable_count(kwargs, is_valid):
     parser = Cmd2ArgumentParser()
-    try:
+    if is_valid:
         parser.add_argument('name', **kwargs)
-        assert is_valid
-    except ValueError as ex:
-        assert not is_valid
-        assert 'Only one of the following parameters' in str(ex)
+    else:
+        expected_err = 'Only one of the following parameters'
+        with pytest.raises(ValueError, match=expected_err):
+            parser.add_argument('name', **kwargs)
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
 def test_apcustom_no_choices_callables_alongside_choices(kwargs):
+    parser = Cmd2ArgumentParser()
     with pytest.raises(TypeError) as excinfo:
-        parser = Cmd2ArgumentParser()
         parser.add_argument('name', choices=['my', 'choices', 'list'], **kwargs)
     assert 'None of the following parameters can be used alongside a choices parameter' in str(excinfo.value)
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
 def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs):
+    parser = Cmd2ArgumentParser()
     with pytest.raises(TypeError) as excinfo:
-        parser = Cmd2ArgumentParser()
         parser.add_argument('--name', action='store_true', **kwargs)
     assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
 
@@ -126,24 +126,24 @@ def test_apcustom_nargs_range_validation(cust_app):
     ],
 )
 def test_apcustom_narg_invalid_tuples(nargs_tuple):
-    with pytest.raises(ValueError) as excinfo:
-        parser = Cmd2ArgumentParser()
+    parser = Cmd2ArgumentParser()
+    expected_err = 'Ranged values for nargs must be a tuple of 1 or 2 integers'
+    with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('invalid_tuple', nargs=nargs_tuple)
-    assert 'Ranged values for nargs must be a tuple of 1 or 2 integers' in str(excinfo.value)
 
 
 def test_apcustom_narg_tuple_order():
-    with pytest.raises(ValueError) as excinfo:
-        parser = Cmd2ArgumentParser()
+    parser = Cmd2ArgumentParser()
+    expected_err = 'Invalid nargs range. The first value must be less than the second'
+    with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('invalid_tuple', nargs=(2, 1))
-    assert 'Invalid nargs range. The first value must be less than the second' in str(excinfo.value)
 
 
 def test_apcustom_narg_tuple_negative():
-    with pytest.raises(ValueError) as excinfo:
-        parser = Cmd2ArgumentParser()
+    parser = Cmd2ArgumentParser()
+    expected_err = 'Negative numbers are invalid for nargs range'
+    with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('invalid_tuple', nargs=(-1, 1))
-    assert 'Negative numbers are invalid for nargs range' in str(excinfo.value)
 
 
 def test_apcustom_narg_tuple_zero_base():

@@ -179,11 +179,12 @@ def test_clear_screen():
     assert ansi.clear_screen(clear_type) == f"{ansi.CSI}{clear_type}J"
 
     clear_type = -1
-    with pytest.raises(ValueError):
+    expected_err = "clear_type must in an integer from 0 to 3"
+    with pytest.raises(ValueError, match=expected_err):
         ansi.clear_screen(clear_type)
 
     clear_type = 4
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=expected_err):
         ansi.clear_screen(clear_type)
 
 
@@ -192,11 +193,12 @@ def test_clear_line():
     assert ansi.clear_line(clear_type) == f"{ansi.CSI}{clear_type}K"
 
     clear_type = -1
-    with pytest.raises(ValueError):
+    expected_err = "clear_type must in an integer from 0 to 2"
+    with pytest.raises(ValueError, match=expected_err):
         ansi.clear_line(clear_type)
 
     clear_type = 3
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=expected_err):
         ansi.clear_line(clear_type)
 
 
@@ -247,9 +249,10 @@ def test_rgb_bounds(r, g, b, valid):
         ansi.RgbFg(r, g, b)
         ansi.RgbBg(r, g, b)
     else:
-        with pytest.raises(ValueError):
+        expected_err = "RGB values must be integers in the range of 0 to 255"
+        with pytest.raises(ValueError, match=expected_err):
             ansi.RgbFg(r, g, b)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=expected_err):
             ansi.RgbBg(r, g, b)
 
 
