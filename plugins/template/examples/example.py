@@ -1,5 +1,3 @@
-#
-
 import cmd2_myplugin
 
 import cmd2

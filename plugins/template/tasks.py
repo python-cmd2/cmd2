@@ -1,4 +1,3 @@
-#
 """Development related tasks to be run with 'invoke'"""
 
 import os

@@ -1,4 +1,3 @@
-#
 """An example cmd2 plugin"""
 
 import functools
