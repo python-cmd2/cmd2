@@ -1,8 +1,10 @@
 # Simple Makefile for use with a uv-based development environment
 .PHONY: install
-install: ## Install the virtual environment
-	@echo "🚀 Creating virtual environment"
+install: ## Install the virtual environment with dependencies
+	@echo "🚀 Creating uv Python virtual environment"
 	@uv sync
+	@echo "🚀 Installing Prettier using npm"
+	@npm install
 
 .PHONY: check
 check: ## Run code quality tools.

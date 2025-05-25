@@ -266,7 +266,6 @@ per-file-ignores."cmd2/argparse_custom.py" = [
     "B010", # Do not call setattr with a constant attribute value
 ]
 
-
 per-file-ignores."examples/*.py" = [
     "ANN",     # Ignore all type annotation rules in examples folder
     "D",       # Ignore all pydocstyle rules in examples folder
@@ -308,7 +307,6 @@ per-file-ignores."tests_isolated/*.py" = [
     "S",   # Ignore all Security rules in test folders
     "SLF", # Ignore all warnings about private or protected member access in test folders
 ]
-
 
 [tool.ruff.format]
 # Like Black, use double quotes for strings.

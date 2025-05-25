@@ -2,7 +2,6 @@
 
 - Breaking Change
     - `cmd2` 2.6 supports Python 3.9+ (removed support for Python 3.8)
-    - Renamed methods in `cmd2.ansi.Cursor` to make it clear they are intended for internal use only as was documented
 - Enhancements
     - Add support for Python 3.14
 
