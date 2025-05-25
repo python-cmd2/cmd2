@@ -377,9 +377,9 @@ class Cmd(cmd.Cmd):
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
-            setattr(self, 'do_py', None)
+            setattr(self, 'do_py', None)  # noqa: B010
         if not include_ipy:
-            setattr(self, 'do_ipy', None)
+            setattr(self, 'do_ipy', None)  # noqa: B010
 
         # initialize plugin system
         # needs to be done before we call __init__(0)

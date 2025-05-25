@@ -319,7 +319,7 @@ class ChoicesProviderFuncBase(Protocol):
 class ChoicesProviderFuncWithTokens(Protocol):
     """Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments."""
 
-    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]: ...  # pragma: no cover
+    def __call__(self, *, arg_tokens: dict[str, list[str]]) -> list[str]: ...  # pragma: no cover
 
 
 ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens]
@@ -351,7 +351,7 @@ class CompleterFuncWithTokens(Protocol):
         begidx: int,
         endidx: int,
         *,
-        arg_tokens: dict[str, list[str]] = {},
+        arg_tokens: dict[str, list[str]] = {},  # noqa: B006
     ) -> list[str]: ...  # pragma: no cover
 
 
