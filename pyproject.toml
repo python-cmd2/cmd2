@@ -256,10 +256,6 @@ per-file-ignores."cmd2/__init__.py" = [
     "F401", # Unused import
 ]
 
-per-file-ignores."cmd2/argparse_custom.py" = [
-    "UP031", # Use format specifiers instead of percent format (auto fix is unsafe)
-]
-
 per-file-ignores."examples/*.py" = [
     "ANN",     # Ignore all type annotation rules in examples folder
     "D",       # Ignore all pydocstyle rules in examples folder

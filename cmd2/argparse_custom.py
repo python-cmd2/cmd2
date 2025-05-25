@@ -1003,11 +1003,11 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
         # if no optionals or positionals are available, usage is just prog
         elif not actions:
-            usage = '%(prog)s' % {"prog": self._prog}
+            usage = f'{self._prog}'
 
         # if optionals and positionals are available, calculate usage
         else:
-            prog = '%(prog)s' % {"prog": self._prog}
+            prog = f'{self._prog}'
 
             # split optionals from positionals
             optionals = []
@@ -1098,7 +1098,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 usage = '\n'.join(lines)
 
         # prefix with 'Usage:'
-        return '%s%s\n\n' % (prefix, usage)
+        return f'{prefix}{usage}\n\n'
 
     def _format_action_invocation(self, action: argparse.Action) -> str:
         if not action.option_strings:
@@ -1134,7 +1134,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         elif action.choices is not None:
             choice_strs = [str(choice) for choice in action.choices]
             # Begin cmd2 customization (added space after comma)
-            result = '{%s}' % ', '.join(choice_strs)
+            result = f'{", ".join(choice_strs)}'
             # End cmd2 customization
         else:
             result = default_metavar
@@ -1164,17 +1164,17 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         if nargs_range is not None:
             range_str = f'{nargs_range[0]}+' if nargs_range[1] == constants.INFINITY else f'{nargs_range[0]}..{nargs_range[1]}'
 
-            return '{}{{{}}}'.format('%s' % metavar_formatter(1), range_str)
+            return '{}{{{}}}'.format('%s' % metavar_formatter(1), range_str)  # noqa: UP031
 
         # Make this output less verbose. Do not customize the output when metavar is a
         # tuple of strings. Allow argparse's formatter to handle that instead.
         if isinstance(metavar, str):
             if action.nargs == ZERO_OR_MORE:
-                return '[%s [...]]' % metavar_formatter(1)
+                return '[%s [...]]' % metavar_formatter(1)  # noqa: UP031
             if action.nargs == ONE_OR_MORE:
-                return '%s [...]' % metavar_formatter(1)
+                return '%s [...]' % metavar_formatter(1)  # noqa: UP031
             if isinstance(action.nargs, int) and action.nargs > 1:
-                return '{}{{{}}}'.format('%s' % metavar_formatter(1), action.nargs)
+                return '{}{{{}}}'.format('%s' % metavar_formatter(1), action.nargs)  # noqa: UP031
 
         return super()._format_args(action, default_metavar)  # type: ignore[arg-type]
 
