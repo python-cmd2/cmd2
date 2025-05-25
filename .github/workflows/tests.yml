@@ -1,22 +1,28 @@
 # For documentation on GitHub Actions Workflows, see:
 # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
-name: "build"
-
-on: [push, pull_request]
+name: Tests
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [master]
 
 jobs:
-  build:
+  tests:
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14-dev"]
+      fail-fast: false
+
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v4 # https://github.com/actions/checkout
+      - name: Check out
+        uses: actions/checkout@v4
         with:
-          # Only a single commit is fetched by default, for the ref/SHA that triggered the workflow.
-          # Set fetch-depth: 0 to fetch all history for all branches and tags.
           fetch-depth: 0 # Needed for setuptools_scm to work correctly
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -26,7 +32,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
-
       - name: Install the project
         run: uv sync --all-extras --dev
 
@@ -35,3 +40,7 @@ jobs:
 
       - name: Run isolated tests
         run: uv run inv pytest --junit --no-pty --isolated
+
+      - name: Upload coverage reports to Codecov with GitHub Action on Python 3.13 for each OS
+        uses: codecov/codecov-action@v3
+        if: ${{ matrix.python-version == '3.13' }}
