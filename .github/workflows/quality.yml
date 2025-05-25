@@ -1,0 +1,29 @@
+# For documentation on GitHub Actions Workflows, see:
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+name: Quality
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Set up the environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Run pre-commit
+        run: uv run pre-commit run -a --show-diff-on-failure

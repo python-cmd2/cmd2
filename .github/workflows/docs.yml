@@ -1,0 +1,26 @@
+# For documentation on GitHub Actions Workflows, see:
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions
+name: Docs
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [master]
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up the environment
+        uses: ./.github/actions/setup-python-env
+
+      - name: Check if documentation can be built
+        run: uv run mkdocs build -s
