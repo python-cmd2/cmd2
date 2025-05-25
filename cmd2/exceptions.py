@@ -8,13 +8,12 @@ from typing import Any
 
 
 class SkipPostcommandHooks(Exception):  # noqa: N818
-    """Custom exception class for when a command has a failure bad enough to skip post command
-    hooks, but not bad enough to print the exception to the user.
-    """
+    """For when a command has a failed bad enough to skip post command hooks, but not bad enough to print to the user."""
 
 
 class Cmd2ArgparseError(SkipPostcommandHooks):
     """A ``SkipPostcommandHooks`` exception for when a command fails to parse its arguments.
+
     Normally argparse raises a SystemExit exception in these cases. To avoid stopping the command
     loop, catch the SystemExit and raise this instead. If you still need to run post command hooks
     after parsing fails, just return instead of raising an exception.
@@ -22,17 +21,16 @@ class Cmd2ArgparseError(SkipPostcommandHooks):
 
 
 class CommandSetRegistrationError(Exception):
-    """Exception that can be thrown when an error occurs while a CommandSet is being added or removed
-    from a cmd2 application.
-    """
+    """For when an error occurs while a CommandSet is being added or removed from a cmd2 application."""
 
 
 class CompletionError(Exception):
-    """Raised during tab completion operations to report any sort of error you want printed. This can also be used
-    just to display a message, even if it's not an error. For instance, ArgparseCompleter raises CompletionErrors
-    to display tab completion hints and sets apply_style to False so hints aren't colored like error text.
+    """Raised during tab completion operations to report any sort of error you want printed.
 
-    Example use cases
+    This can also be used just to display a message, even if it's not an error. For instance, ArgparseCompleter raises
+    CompletionErrors to display tab completion hints and sets apply_style to False so hints aren't colored like error text.
+
+    Example use cases:
 
     - Reading a database to retrieve a tab completion data set failed
     - A previous command line argument that determines the data set being completed is invalid
@@ -40,7 +38,8 @@ class CompletionError(Exception):
     """
 
     def __init__(self, *args: Any, apply_style: bool = True) -> None:
-        """Initializer for CompletionError
+        """Initialize CompletionError instance.
+
         :param apply_style: If True, then ansi.style_error will be applied to the message text when printed.
                             Set to False in cases where the message text already has the desired style.
                             Defaults to True.
@@ -52,11 +51,13 @@ class CompletionError(Exception):
 
 class PassThroughException(Exception):  # noqa: N818
     """Normally all unhandled exceptions raised during commands get printed to the user.
+
     This class is used to wrap an exception that should be raised instead of printed.
     """
 
     def __init__(self, *args: Any, wrapped_ex: BaseException) -> None:
-        """Initializer for PassThroughException
+        """Initialize PassThroughException instance.
+
         :param wrapped_ex: the exception that will be raised.
         """
         self.wrapped_ex = wrapped_ex

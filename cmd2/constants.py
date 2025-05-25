@@ -1,4 +1,4 @@
-"""This module contains constants used throughout ``cmd2``."""
+"""Constants used throughout ``cmd2``."""
 
 # Unless documented in https://cmd2.readthedocs.io/en/latest/api/index.html
 # nothing here should be considered part of the public API of this module

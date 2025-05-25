@@ -1,5 +1,6 @@
-"""Bridges calls made inside of a Python environment to the Cmd2 host app
-while maintaining a reasonable degree of isolation between the two.
+"""Bridges calls made inside of a Python environment to the Cmd2 host app.
+
+Maintains a reasonable degree of isolation between the two.
 """
 
 import sys
@@ -68,7 +69,7 @@ class CommandResult(NamedTuple):
     data: Any = None
 
     def __bool__(self) -> bool:
-        """Returns True if the command succeeded, otherwise False."""
+        """Return True if the command succeeded, otherwise False."""
         # If data was set, then use it to determine success
         if self.data is not None:
             return bool(self.data)
@@ -100,11 +101,12 @@ class PyBridge:
         return attributes
 
     def __call__(self, command: str, *, echo: Optional[bool] = None) -> CommandResult:
-        """Provide functionality to call application commands by calling PyBridge
+        """Provide functionality to call application commands by calling PyBridge.
+
         ex: app('help')
         :param command: command line being run
         :param echo: If provided, this temporarily overrides the value of self.cmd_echo while the
-                     command runs. If True, output will be echoed to stdout/stderr. (Defaults to None).
+                     command runs. If True, output will be echoed to stdout/stderr. (Defaults to None)
 
         """
         if echo is None:

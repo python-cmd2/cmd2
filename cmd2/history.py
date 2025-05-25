@@ -75,7 +75,7 @@ class HistoryItem:
     statement: Statement
 
     def __str__(self) -> str:
-        """A convenient human-readable representation of the history item."""
+        """Human-readable representation of the history item."""
         return self.statement.raw
 
     @property
@@ -88,8 +88,7 @@ class HistoryItem:
 
     @property
     def expanded(self) -> str:
-        """Return the command as run which includes shortcuts and aliases resolved
-        plus any changes made in hooks.
+        """Return the command as run which includes shortcuts and aliases resolved plus any changes made in hooks.
 
         Proxy property for ``self.statement.expanded_command_line``
         """
@@ -123,12 +122,12 @@ class HistoryItem:
         return ret_str
 
     def to_dict(self) -> dict[str, Any]:
-        """Utility method to convert this HistoryItem into a dictionary for use in persistent JSON history files."""
+        """Convert this HistoryItem into a dictionary for use in persistent JSON history files."""
         return {HistoryItem._statement_field: self.statement.to_dict()}
 
     @staticmethod
     def from_dict(source_dict: dict[str, Any]) -> 'HistoryItem':
-        """Utility method to restore a HistoryItem from a dictionary.
+        """Restore a HistoryItem from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
         :return: HistoryItem object
@@ -139,8 +138,7 @@ class HistoryItem:
 
 
 class History(list[HistoryItem]):
-    """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods
-    for searching and managing the list.
+    """A list of [HistoryItem][cmd2.history.HistoryItem] objects with additional methods for searching and managing the list.
 
     [cmd2.Cmd][] instantiates this class into the `cmd2.Cmd.history`
     attribute, and adds commands to it as a user enters them.
@@ -335,7 +333,8 @@ class History(list[HistoryItem]):
     def _build_result_dictionary(
         self, start: int, end: int, filter_func: Optional[Callable[[HistoryItem], bool]] = None
     ) -> 'OrderedDict[int, HistoryItem]':
-        """Build history search results
+        """Build history search results.
+
         :param start: start index to search from
         :param end: end index to stop searching (exclusive).
         """
@@ -346,7 +345,7 @@ class History(list[HistoryItem]):
         return results
 
     def to_json(self) -> str:
-        """Utility method to convert this History into a JSON string for use in persistent history files."""
+        """Convert this History into a JSON string for use in persistent history files."""
         json_dict = {
             History._history_version_field: History._history_version,
             History._history_items_field: [hi.to_dict() for hi in self],
@@ -355,7 +354,7 @@ class History(list[HistoryItem]):
 
     @staticmethod
     def from_json(history_json: str) -> 'History':
-        """Utility method to restore History from a JSON string.
+        """Restore History from a JSON string.
 
         :param history_json: history data as JSON string (generated using to_json())
         :return: History object

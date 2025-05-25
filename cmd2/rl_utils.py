@@ -66,7 +66,8 @@ if 'pyreadline3' in sys.modules:
     if sys.stdout is not None and sys.stdout.isatty():  # pragma: no cover
 
         def enable_win_vt100(handle: HANDLE) -> bool:
-            """Enables VT100 character sequences in a Windows console
+            """Enable VT100 character sequences in a Windows console.
+
             This only works on Windows 10 and up
             :param handle: the handle on which to enable vt100
             :return: True if vt100 characters are enabled for the handle.
@@ -104,7 +105,10 @@ if 'pyreadline3' in sys.modules:
     if not hasattr(readline, 'remove_history_item'):
 
         def pyreadline_remove_history_item(pos: int) -> None:
-            """An implementation of remove_history_item() for pyreadline3
+            """Remove the specified item number from the pyreadline3 history.
+
+            An implementation of remove_history_item() for pyreadline3.
+
             :param pos: The 0-based position in history to remove.
             """
             # Save of the current location of the history cursor
@@ -149,9 +153,9 @@ else:
 
 
 def rl_force_redisplay() -> None:  # pragma: no cover
-    """Causes readline to display the prompt and input text wherever the cursor is and start
-    reading input from this location. This is the proper way to restore the input line after
-    printing to the screen.
+    """Causes readline to display the prompt and input text wherever the cursor is and start reading input from this location.
+
+    This is the proper way to restore the input line after printing to the screen.
     """
     if not sys.stdout.isatty():
         return
@@ -170,7 +174,7 @@ def rl_force_redisplay() -> None:  # pragma: no cover
 
 
 def rl_get_point() -> int:  # pragma: no cover
-    """Returns the offset of the current cursor position in rl_line_buffer."""
+    """Return the offset of the current cursor position in rl_line_buffer."""
     if rl_type == RlType.GNU:
         return ctypes.c_int.in_dll(readline_lib, "rl_point").value
 
@@ -210,7 +214,8 @@ def rl_get_display_prompt() -> str:  # pragma: no cover
 
 
 def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
-    """Sets Readline's prompt
+    """Set Readline's prompt.
+
     :param prompt: the new prompt value.
     """
     escaped_prompt = rl_escape_prompt(prompt)
