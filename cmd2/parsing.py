@@ -232,7 +232,7 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
         try:
             value = source_dict[Statement._args_field]
         except KeyError as ex:
-            raise KeyError(f"Statement dictionary is missing {ex} field")
+            raise KeyError(f"Statement dictionary is missing {ex} field") from None
 
         # Pass the rest at kwargs (minus args)
         kwargs = source_dict.copy()
@@ -377,7 +377,7 @@ class StatementParser:
         try:
             tokens = shlex_split(line)
         except ValueError as ex:
-            raise Cmd2ShlexError(ex)
+            raise Cmd2ShlexError(ex) from None
 
         # custom lexing
         return self.split_on_punctuation(tokens)

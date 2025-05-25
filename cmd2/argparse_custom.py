@@ -640,15 +640,15 @@ def register_argparse_argument_parameter(param_name: str, param_type: Optional[t
     getter_name = f'get_{param_name}'
 
     def _action_get_custom_parameter(self: argparse.Action) -> Any:
-        f"""
-        Get the custom {param_name} attribute of an argparse Action.
+        """
+        Get the custom attribute of an argparse Action.
 
-        This function is added by cmd2 as a method called ``{getter_name}()`` to ``argparse.Action`` class.
+        This function is added by cmd2 as a method called ``get_<param_name>()`` to ``argparse.Action`` class.
 
-        To call: ``action.{getter_name}()``
+        To call: ``action.get_<param_name>()``
 
         :param self: argparse Action being queried
-        :return: The value of {param_name} or None if attribute does not exist
+        :return: The value of the custom attribute or None if attribute does not exist
         """
         return getattr(self, attr_name, None)
 
@@ -657,12 +657,12 @@ def register_argparse_argument_parameter(param_name: str, param_type: Optional[t
     setter_name = f'set_{param_name}'
 
     def _action_set_custom_parameter(self: argparse.Action, value: Any) -> None:
-        f"""
-        Set the custom {param_name} attribute of an argparse Action.
+        """
+        Set the custom attribute of an argparse Action.
 
-        This function is added by cmd2 as a method called ``{setter_name}()`` to ``argparse.Action`` class.
+        This function is added by cmd2 as a method called ``set_<param_name>()`` to ``argparse.Action`` class.
 
-        To call: ``action.{setter_name}({param_name})``
+        To call: ``action.set_<param_name>(<param_value>)``
 
         :param self: argparse Action being updated
         :param value: value being assigned

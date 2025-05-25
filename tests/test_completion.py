@@ -1031,7 +1031,7 @@ class RedirCompType(enum.Enum):
 def test_redirect_complete(cmd2_app, monkeypatch, line, comp_type) -> None:
     # Test both cases of allow_redirection
     cmd2_app.allow_redirection = True
-    for count in range(2):
+    for _ in range(2):
         shell_cmd_complete_mock = mock.MagicMock(name='shell_cmd_complete')
         monkeypatch.setattr("cmd2.Cmd.shell_cmd_complete", shell_cmd_complete_mock)
 

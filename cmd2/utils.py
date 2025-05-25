@@ -1133,7 +1133,7 @@ def get_defining_class(meth: Callable[..., Any]) -> Optional[type[Any]]:
     if isinstance(meth, functools.partial):
         return get_defining_class(meth.func)
     if inspect.ismethod(meth) or (
-        inspect.isbuiltin(meth) and getattr(meth, '__self__') is not None and getattr(meth.__self__, '__class__')
+        inspect.isbuiltin(meth) and hasattr(meth, '__self__') and hasattr(meth.__self__, '__class__')
     ):
         for cls in inspect.getmro(meth.__self__.__class__):  # type: ignore[attr-defined]
             if meth.__name__ in cls.__dict__:

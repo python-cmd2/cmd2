@@ -56,7 +56,7 @@ class SubcommandSet(cmd2.CommandSet):
     def do_base(self, args) -> None:
         """Base command help"""
         # Call whatever subcommand function was selected
-        func = getattr(args, 'func')
+        func = args.func
         func(self, args)
 
 

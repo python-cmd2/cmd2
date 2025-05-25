@@ -172,8 +172,8 @@ class CommandSet:
         """
         try:
             del self._settables[name]
-        except KeyError:
-            raise KeyError(name + " is not a settable parameter")
+        except KeyError as exc:
+            raise KeyError(name + " is not a settable parameter") from exc
 
     def sigint_handler(self) -> bool:
         """Handle a SIGINT that occurred for a command in this CommandSet.

@@ -161,7 +161,7 @@ select = [
     "ANN",   # flake8-annotations (missing type annotations for arguments or return types)
     "ARG",   # flake8-unused-arguments (functions or methods with arguments that are never used)
     "ASYNC", # flake8-async (async await bugs)
-    # "B", # flake8-bugbear (various likely bugs and design issues)
+    # "B",     # flake8-bugbear (various likely bugs and design issues)
     "BLE", # flake8-blind-except (force more specific exception types than just Exception)
     "C4",  # flake8-comprehensions (warn about things that could be written as a comprehensions but aren't)
     "C90", # McCabe cyclomatic complexity (warn about functions that are too complex)

@@ -1083,7 +1083,7 @@ def test_commandset_settables() -> None:
     cmdset = WithSettablesA()
     arbitrary2 = Arbitrary()
     app = cmd2.Cmd(command_sets=[cmdset], auto_load_commands=False)
-    setattr(app, 'str_value', '')
+    app.str_value = ''
     app.add_settable(Settable('always_prefix_settables', bool, 'Prefix settables', app))
     app._settables['str_value'] = Settable('str_value', str, 'String value', app)
 

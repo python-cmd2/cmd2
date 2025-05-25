@@ -512,7 +512,7 @@ def test_runcmds_plus_hooks_ctrl_c(base_app, capsys) -> None:
     def do_keyboard_interrupt(self, _) -> NoReturn:
         raise KeyboardInterrupt('Interrupting this command')
 
-    setattr(base_app, 'do_keyboard_interrupt', types.MethodType(do_keyboard_interrupt, base_app))
+    base_app.do_keyboard_interrupt = types.MethodType(do_keyboard_interrupt, base_app)
 
     # Default behavior is to not stop runcmds_plus_hooks() on Ctrl-C
     base_app.history.clear()
@@ -603,7 +603,7 @@ def test_system_exit_in_command(base_app, capsys) -> None:
     def do_system_exit(self, _) -> NoReturn:
         raise SystemExit(exit_code)
 
-    setattr(base_app, 'do_system_exit', types.MethodType(do_system_exit, base_app))
+    base_app.do_system_exit = types.MethodType(do_system_exit, base_app)
 
     stop = base_app.onecmd_plus_hooks('system_exit')
     assert stop
@@ -620,7 +620,7 @@ def test_passthrough_exception_in_command(base_app) -> None:
         wrapped_ex = OSError(expected_err)
         raise exceptions.PassThroughException(wrapped_ex=wrapped_ex)
 
-    setattr(base_app, 'do_passthrough', types.MethodType(do_passthrough, base_app))
+    base_app.do_passthrough = types.MethodType(do_passthrough, base_app)
 
     with pytest.raises(OSError, match=expected_err):
         base_app.onecmd_plus_hooks('passthrough')
