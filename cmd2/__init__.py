@@ -52,7 +52,7 @@ from .parsing import Statement
 from .py_bridge import CommandResult
 from .utils import CompletionMode, CustomCompletionSettings, Settable, categorize
 
-__all__: list[str] = [
+__all__: list[str] = [  # noqa: RUF022
     'COMMAND_NAME',
     'DEFAULT_SHORTCUTS',
     # ANSI Exports

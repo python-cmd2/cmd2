@@ -281,7 +281,7 @@ class _CommandParsers:
 class Cmd(cmd.Cmd):
     """An easy but powerful framework for writing line-oriented command interpreters.
 
-    Extends the Python Standard Library’s cmd package by adding a lot of useful features
+    Extends the Python Standard Library's cmd package by adding a lot of useful features
     to the out of the box configuration.
 
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
