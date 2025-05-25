@@ -86,9 +86,11 @@ class CommandSet:
     """
 
     def __init__(self) -> None:
-        # Private reference to the CLI instance in which this CommandSet running.
-        # This will be set when the CommandSet is registered and it should be
-        # accessed by child classes using the self._cmd property.
+        """Private reference to the CLI instance in which this CommandSet running.
+
+        This will be set when the CommandSet is registered and it should be
+        accessed by child classes using the self._cmd property.
+        """
         self.__cmd_internal: Optional[cmd2.Cmd] = None
 
         self._settables: dict[str, Settable] = {}
@@ -147,10 +149,12 @@ class CommandSet:
 
     @property
     def settable_prefix(self) -> str:
+        """Read-only accessor for the underlying private settable_prefix field."""
         return self._settable_prefix
 
     @property
     def settables(self) -> Mapping[str, Settable]:
+        """Read-only accessor for the underlying private settables field."""
         return self._settables
 
     def add_settable(self, settable: Settable) -> None:

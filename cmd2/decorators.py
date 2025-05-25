@@ -32,7 +32,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def with_category(category: str) -> Callable[[CommandFunc], CommandFunc]:
-    """A decorator to apply a category to a ``do_*`` command method.
+    """Decorate a ``do_*`` command method to apply a category.
 
     :param category: the name of the category in which this command should
                      be grouped when displaying the list of commands.
@@ -138,7 +138,7 @@ def with_argument_list(
     RawCommandFuncOptionalBoolReturn[CommandParent],
     Callable[[ArgListCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]],
 ]:
-    """A decorator to alter the arguments passed to a ``do_*`` method.
+    """Decorate a ``do_*`` method to alter the arguments passed to it so it is passed a list[str].
 
     Default passes a string of whatever the user typed. With this decorator, the
     decorated method will receive a list of arguments parsed from user input.
@@ -160,7 +160,8 @@ def with_argument_list(
     import functools
 
     def arg_decorator(func: ArgListCommandFunc[CommandParent]) -> RawCommandFuncOptionalBoolReturn[CommandParent]:
-        """Decorator function that ingests an Argument List function and returns a raw command function.
+        """Decorate function that ingests an Argument List function and returns a raw command function.
+
         The returned function will process the raw input into an argument list to be passed to the wrapped function.
 
         :param func: The defined argument list command function
@@ -278,8 +279,7 @@ def with_argparser(
     preserve_quotes: bool = False,
     with_unknown_args: bool = False,
 ) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]:
-    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
-    with the given instance of argparse.ArgumentParser.
+    """Decorate a ``do_*`` method to populate its ``args`` argument with the given instance of argparse.ArgumentParser.
 
     :param parser: unique instance of ArgumentParser or a callable that returns an ArgumentParser
     :param ns_provider: An optional function that accepts a cmd2.Cmd or cmd2.CommandSet object as an argument and returns an
@@ -327,7 +327,8 @@ def with_argparser(
     import functools
 
     def arg_decorator(func: ArgparseCommandFunc[CommandParent]) -> RawCommandFuncOptionalBoolReturn[CommandParent]:
-        """Decorator function that ingests an Argparse Command Function and returns a raw command function.
+        """Decorate function that ingests an Argparse Command Function and returns a raw command function.
+
         The returned function will process the raw input into an argparse Namespace to be passed to the wrapped function.
 
         :param func: The defined argparse command function

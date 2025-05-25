@@ -156,6 +156,7 @@ class History(list[HistoryItem]):
     _history_items_field = 'history_items'
 
     def __init__(self, seq: Iterable[HistoryItem] = ()) -> None:
+        """Initialize History instances."""
         super().__init__(seq)
         self.session_start_index = 0
 

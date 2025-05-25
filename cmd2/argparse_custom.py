@@ -282,6 +282,7 @@ class CompletionItem(str):  # noqa: SLOT000
     """
 
     def __new__(cls, value: object, *_args: Any, **_kwargs: Any) -> 'CompletionItem':
+        """Responsible for creating and returning a new instance, called before __init__ when an object is instantiated."""
         return super().__new__(cls, value)
 
     def __init__(self, value: object, description: str = '', *args: Any) -> None:
@@ -313,14 +314,16 @@ class CompletionItem(str):  # noqa: SLOT000
 class ChoicesProviderFuncBase(Protocol):
     """Function that returns a list of choices in support of tab completion."""
 
-    def __call__(self) -> list[str]: ...  # pragma: no cover
+    def __call__(self) -> list[str]:  # pragma: no cover
+        """Enable instances to be called like functions."""
 
 
 @runtime_checkable
 class ChoicesProviderFuncWithTokens(Protocol):
     """Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments."""
 
-    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]: ...  # pragma: no cover  # noqa: B006
+    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]:  # pragma: no cover  # noqa: B006
+        """Enable instances to be called like functions."""
 
 
 ChoicesProviderFunc = Union[ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens]
@@ -336,7 +339,8 @@ class CompleterFuncBase(Protocol):
         line: str,
         begidx: int,
         endidx: int,
-    ) -> list[str]: ...  # pragma: no cover
+    ) -> list[str]:  # pragma: no cover
+        """Enable instances to be called like functions."""
 
 
 @runtime_checkable
@@ -351,7 +355,8 @@ class CompleterFuncWithTokens(Protocol):
         endidx: int,
         *,
         arg_tokens: dict[str, list[str]] = {},  # noqa: B006
-    ) -> list[str]: ...  # pragma: no cover
+    ) -> list[str]:  # pragma: no cover
+        """Enable instances to be called like functions."""
 
 
 CompleterFunc = Union[CompleterFuncBase, CompleterFuncWithTokens]
@@ -391,6 +396,7 @@ class ChoicesCallable:
 
     @property
     def completer(self) -> CompleterFunc:
+        """Retreive the internal Completer function, first type checking to ensure it is the right type."""
         if not isinstance(self.to_call, (CompleterFuncBase, CompleterFuncWithTokens)):  # pragma: no cover
             # this should've been caught in the constructor, just a backup check
             raise TypeError('Function is not a CompleterFunc')
@@ -398,6 +404,7 @@ class ChoicesCallable:
 
     @property
     def choices_provider(self) -> ChoicesProviderFunc:
+        """Retreive the internal ChoicesProvider function, first type checking to ensure it is the right type."""
         if not isinstance(self.to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
             # this should've been caught in the constructor, just a backup check
             raise TypeError('Function is not a ChoicesProviderFunc')
@@ -1350,6 +1357,7 @@ class Cmd2AttributeWrapper:
     """
 
     def __init__(self, attribute: Any) -> None:
+        """Initialize Cmd2AttributeWrapper instances."""
         self.__attribute = attribute
 
     def get(self) -> Any:

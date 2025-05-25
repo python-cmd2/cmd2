@@ -87,6 +87,7 @@ class PyBridge:
     """
 
     def __init__(self, cmd2_app: 'cmd2.Cmd', *, add_to_history: bool = True) -> None:
+        """Initialize PyBridge instances."""
         self._cmd2_app = cmd2_app
         self._add_to_history = add_to_history
         self.cmd_echo = False
