@@ -30,5 +30,5 @@ runs:
         cache-suffix: ${{ matrix.python-version }}
 
     - name: Install Python dependencies
-      run: uv sync $${{ inputs.extra-dependencies }}
+      run: uv sync ${{ inputs.extra-dependencies }}
       shell: bash
