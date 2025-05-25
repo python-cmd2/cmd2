@@ -150,7 +150,7 @@ class Settable:
         """
         if val_type is bool:
 
-            def get_bool_choices(_) -> list[str]:  # type: ignore[no-untyped-def]
+            def get_bool_choices(_: str) -> list[str]:
                 """Used to tab complete lowercase boolean values."""
                 return ['true', 'false']
 
