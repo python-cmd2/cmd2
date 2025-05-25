@@ -50,7 +50,7 @@ class ArgparseApp(cmd2.Cmd):
                 modified_word = word.upper()
             words.append(modified_word)
         repetitions = args.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
 
@@ -106,7 +106,7 @@ class ArgparseApp(cmd2.Cmd):
                 modified_word = word.upper()
             words.append(modified_word)
         repetitions = args.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
 
@@ -297,7 +297,7 @@ class SubcommandApp(cmd2.Cmd):
     def do_base(self, args) -> None:
         """Base command help"""
         # Call whatever subcommand function was selected
-        func = getattr(args, 'func')
+        func = args.func
         func(self, args)
 
     # Add subcommands using as_subcommand_to decorator

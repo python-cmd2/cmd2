@@ -498,9 +498,9 @@ class TableCreator:
                 to_top = line_diff
                 to_bottom = 0
 
-            for i in range(to_top):
+            for _ in range(to_top):
                 cell.lines.appendleft(padding_line)
-            for i in range(to_bottom):
+            for _ in range(to_bottom):
                 cell.lines.append(padding_line)
 
         # Build this row one line at a time

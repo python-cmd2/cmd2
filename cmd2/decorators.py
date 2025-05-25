@@ -369,15 +369,15 @@ def with_argparser(
                 else:
                     new_args = (arg_parser.parse_args(parsed_arglist, namespace),)
                 ns = new_args[0]
-            except SystemExit:
-                raise Cmd2ArgparseError
+            except SystemExit as exc:
+                raise Cmd2ArgparseError from exc
             else:
                 # Add wrapped statement to Namespace as cmd2_statement
-                setattr(ns, 'cmd2_statement', Cmd2AttributeWrapper(statement))
+                ns.cmd2_statement = Cmd2AttributeWrapper(statement)
 
                 # Add wrapped subcmd handler (which can be None) to Namespace as cmd2_handler
                 handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
-                setattr(ns, 'cmd2_handler', Cmd2AttributeWrapper(handler))
+                ns.cmd2_handler = Cmd2AttributeWrapper(handler)
 
                 # Remove the subcmd handler attribute from the Namespace
                 # since cmd2_handler is how a developer accesses it.

@@ -53,7 +53,7 @@ class CmdLineApp(cmd2.Cmd):
                 word = word.upper()
             words.append(word)
         repetitions = args.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
             self.poutput(' '.join(words))
 
@@ -68,7 +68,7 @@ class CmdLineApp(cmd2.Cmd):
     def do_mumble(self, args) -> None:
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             output = []
             if random.random() < 0.33:
                 output.append(random.choice(self.MUMBLE_FIRST))

@@ -51,7 +51,7 @@ class CmdLineApp(cmd2.Cmd):
                 word = word.upper()
             words.append(word)
         repetitions = args.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             self.poutput(' '.join(words))
 
     do_say = do_speak  # now "say" is a synonym for "speak"

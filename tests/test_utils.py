@@ -208,7 +208,7 @@ def test_stdsim_getattr_exist(stdout_sim) -> None:
     # Here the StdSim getattr is allowing us to access methods within StdSim
     my_str = 'Hello World'
     stdout_sim.write(my_str)
-    val_func = getattr(stdout_sim, 'getvalue')
+    val_func = stdout_sim.getvalue
     assert val_func() == my_str
 
 

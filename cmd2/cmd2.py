@@ -57,6 +57,7 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Optional,
     TextIO,
     TypeVar,
@@ -297,6 +298,9 @@ class Cmd(cmd.Cmd):
     ALPHABETICAL_SORT_KEY = utils.norm_fold
     NATURAL_SORT_KEY = utils.natural_keys
 
+    # List for storing transcript test file names
+    testfiles: ClassVar[list[str]] = []
+
     def __init__(
         self,
         completekey: str = 'tab',
@@ -373,9 +377,9 @@ class Cmd(cmd.Cmd):
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
-            setattr(self, 'do_py', None)
+            setattr(self, 'do_py', None)  # noqa: B010
         if not include_ipy:
-            setattr(self, 'do_ipy', None)
+            setattr(self, 'do_ipy', None)  # noqa: B010
 
         # initialize plugin system
         # needs to be done before we call __init__(0)
@@ -401,7 +405,7 @@ class Cmd(cmd.Cmd):
         # The maximum number of CompletionItems to display during tab completion. If the number of completion
         # suggestions exceeds this number, they will be displayed in the typical columnized format and will
         # not include the description value of the CompletionItems.
-        self.max_completion_items = 50
+        self.max_completion_items: int = 50
 
         # A dictionary mapping settable names to their Settable instance
         self._settables: dict[str, Settable] = {}
@@ -414,7 +418,7 @@ class Cmd(cmd.Cmd):
         self.build_settables()
 
         # Use as prompt for multiline commands on the 2nd+ line of input
-        self.continuation_prompt = '> '
+        self.continuation_prompt: str = '> '
 
         # Allow access to your application in embedded Python shells and scripts py via self
         self.self_in_py = False
@@ -445,7 +449,7 @@ class Cmd(cmd.Cmd):
         # True if running inside a Python shell or pyscript, False otherwise
         self._in_py = False
 
-        self.statement_parser = StatementParser(
+        self.statement_parser: StatementParser = StatementParser(
             terminators=terminators, multiline_commands=multiline_commands, shortcuts=shortcuts
         )
 
@@ -456,7 +460,7 @@ class Cmd(cmd.Cmd):
         self._script_dir: list[str] = []
 
         # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
-        self.sigint_protection = utils.ContextFlag()
+        self.sigint_protection: utils.ContextFlag = utils.ContextFlag()
 
         # If the current command created a process to pipe to, then this will be a ProcReader object.
         # Otherwise it will be None. It's used to know when a pipe process can be killed and/or waited upon.
@@ -551,7 +555,7 @@ class Cmd(cmd.Cmd):
         #     command and category names
         #     alias, macro, settable, and shortcut names
         #     tab completion results when self.matches_sorted is False
-        self.default_sort_key = Cmd.ALPHABETICAL_SORT_KEY
+        self.default_sort_key: Callable[[str], str] = Cmd.ALPHABETICAL_SORT_KEY
 
         ############################################################################################################
         # The following variables are used by tab completion functions. They are reset each time complete() is run
@@ -567,14 +571,14 @@ class Cmd(cmd.Cmd):
         self.allow_closing_quote = True
 
         # An optional hint which prints above tab completion suggestions
-        self.completion_hint = ''
+        self.completion_hint: str = ''
 
         # Normally cmd2 uses readline's formatter to columnize the list of completion suggestions.
         # If a custom format is preferred, write the formatted completions to this string. cmd2 will
         # then print it instead of the readline format. ANSI style sequences and newlines are supported
         # when using this value. Even when using formatted_completions, the full matches must still be returned
         # from your completer function. ArgparseCompleter writes its tab completion tables to this string.
-        self.formatted_completions = ''
+        self.formatted_completions: str = ''
 
         # Used by complete() for readline tab completion
         self.completion_matches: list[str] = []
@@ -594,10 +598,10 @@ class Cmd(cmd.Cmd):
         # Set to True before returning matches to complete() in cases where matches have already been sorted.
         # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
         # This does not affect self.formatted_completions.
-        self.matches_sorted = False
+        self.matches_sorted: bool = False
 
         # Command parsers for this Cmd instance.
-        self._command_parsers = _CommandParsers(self)
+        self._command_parsers: _CommandParsers = _CommandParsers(self)
 
         # Add functions decorated to be subcommands
         self._register_subcommands(self)
@@ -915,7 +919,7 @@ class Cmd(cmd.Cmd):
         )
 
         # iterate through all matching methods
-        for method_name, method in methods:
+        for _method_name, method in methods:
             subcommand_name: str = getattr(method, constants.SUBCMD_ATTR_NAME)
             full_command_name: str = getattr(method, constants.SUBCMD_ATTR_COMMAND)
             subcmd_parser_builder = getattr(method, constants.CMD_ATTR_ARGPARSER)
@@ -952,7 +956,7 @@ class Cmd(cmd.Cmd):
                             if choice_name == cur_subcmd:
                                 return find_subcommand(choice, subcmd_names)
                         break
-                raise CommandSetRegistrationError(f"Could not find subcommand '{full_command_name}'")
+                raise CommandSetRegistrationError(f"Could not find subcommand '{action}'")
 
             target_parser = find_subcommand(command_parser, subcommand_names)
 
@@ -1021,7 +1025,7 @@ class Cmd(cmd.Cmd):
         )
 
         # iterate through all matching methods
-        for method_name, method in methods:
+        for _method_name, method in methods:
             subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
             command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)
 
@@ -1105,8 +1109,8 @@ class Cmd(cmd.Cmd):
         """
         try:
             del self._settables[name]
-        except KeyError:
-            raise KeyError(name + " is not a settable parameter")
+        except KeyError as exc:
+            raise KeyError(name + " is not a settable parameter") from exc
 
     def build_settables(self) -> None:
         """Create the dictionary of user-settable parameters."""
@@ -1119,11 +1123,11 @@ class Cmd(cmd.Cmd):
             """Converts a string value into an ansi.AllowStyle."""
             try:
                 return ansi.AllowStyle[value.upper()]
-            except KeyError:
+            except KeyError as esc:
                 raise ValueError(
                     f"must be {ansi.AllowStyle.ALWAYS}, {ansi.AllowStyle.NEVER}, or "
                     f"{ansi.AllowStyle.TERMINAL} (case-insensitive)"
-                )
+                ) from esc
 
         self.add_settable(
             Settable(
@@ -2561,7 +2565,7 @@ class Cmd(cmd.Cmd):
                 self.exit_code = ex.code
             stop = True
         except PassThroughException as ex:
-            raise ex.wrapped_ex
+            raise ex.wrapped_ex from None
         except Exception as ex:  # noqa: BLE001
             self.pexcept(ex)
         finally:
@@ -2575,7 +2579,7 @@ class Cmd(cmd.Cmd):
                     self.exit_code = ex.code
                 stop = True
             except PassThroughException as ex:
-                raise ex.wrapped_ex
+                raise ex.wrapped_ex from None
             except Exception as ex:  # noqa: BLE001
                 self.pexcept(ex)
 
@@ -2896,7 +2900,7 @@ class Cmd(cmd.Cmd):
                     # Use line buffering
                     new_stdout = cast(TextIO, open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))  # noqa: SIM115
                 except OSError as ex:
-                    raise RedirectionError(f'Failed to redirect because: {ex}')
+                    raise RedirectionError('Failed to redirect output') from ex
 
                 redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
@@ -4059,8 +4063,8 @@ class Cmd(cmd.Cmd):
         param = arg_tokens['param'][0]
         try:
             settable = self.settables[param]
-        except KeyError:
-            raise CompletionError(param + " is not a settable parameter")
+        except KeyError as exc:
+            raise CompletionError(param + " is not a settable parameter") from exc
 
         # Create a parser with a value field based on this settable
         settable_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(parents=[Cmd.set_parser_parent])
@@ -4528,7 +4532,7 @@ class Cmd(cmd.Cmd):
 
             # Allow users to install ipython from a cmd2 prompt when needed and still have ipy command work
             try:
-                start_ipython  # noqa: F823
+                _dummy = start_ipython  # noqa: F823
             except NameError:
                 from IPython import start_ipython  # type: ignore[import]
 
@@ -5145,7 +5149,7 @@ class Cmd(cmd.Cmd):
         self.poutput(f'cmd2 app: {sys.argv[0]}')
         self.poutput(ansi.style(f'collected {num_transcripts} transcript{plural}', bold=True))
 
-        setattr(self.__class__, 'testfiles', transcripts_expanded)
+        self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
         stream = cast(TextIO, utils.StdSim(sys.stderr))

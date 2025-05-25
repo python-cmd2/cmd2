@@ -40,6 +40,7 @@ dev = [
     "black>=24",
     "codecov>=2",
     "invoke>=2",
+    "ipython>=8",
     "mkdocs-git-revision-date-localized-plugin>=1.3",
     "mkdocs-include-markdown-plugin>=6",
     "mkdocs-macros-plugin>=1",
@@ -161,11 +162,11 @@ select = [
     "ANN",   # flake8-annotations (missing type annotations for arguments or return types)
     "ARG",   # flake8-unused-arguments (functions or methods with arguments that are never used)
     "ASYNC", # flake8-async (async await bugs)
-    # "B", # flake8-bugbear (various likely bugs and design issues)
-    "BLE", # flake8-blind-except (force more specific exception types than just Exception)
-    "C4",  # flake8-comprehensions (warn about things that could be written as a comprehensions but aren't)
-    "C90", # McCabe cyclomatic complexity (warn about functions that are too complex)
-    "COM", # flake8-commas (forces commas at the end of every type of iterable/container
+    "B",     # flake8-bugbear (various likely bugs and design issues)
+    "BLE",   # flake8-blind-except (force more specific exception types than just Exception)
+    "C4",    # flake8-comprehensions (warn about things that could be written as a comprehensions but aren't)
+    "C90",   # McCabe cyclomatic complexity (warn about functions that are too complex)
+    "COM",   # flake8-commas (forces commas at the end of every type of iterable/container
     # "CPY", # flake8-copyright (warn about missing copyright notice at top of file - currently in preview)
     # "D", # pydocstyle (warn about things like missing docstrings)
     # "DOC", # pydoclint (docstring warnings - currently in preview)
@@ -223,6 +224,7 @@ select = [
 ignore = [
     # `uv run ruff rule E501` for a description of that rule
     "ANN401", # Dynamically typed expressions (typing.Any) are disallowed (would be good to enable this later)
+    "B905",   # zip() without an explicit strict= parameter (strict added in Python 3.10+)
     "COM812", # Conflicts with ruff format (see https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules)
     "COM819", # Conflicts with ruff format
     "D206",   # Conflicts with ruff format
@@ -257,6 +259,11 @@ per-file-ignores."cmd2/__init__.py" = [
     "E402", # Module level import not at top of file
     "F401", # Unused import
 ]
+
+per-file-ignores."cmd2/argparse_custom.py" = [
+    "B010", # Do not call setattr with a constant attribute value
+]
+
 
 per-file-ignores."examples/*.py" = [
     "ANN",     # Ignore all type annotation rules in examples folder
