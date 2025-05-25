@@ -34,7 +34,7 @@ class CommandsInLoop(cmd2.Cmd):
 
         super().__init__(include_ipy=True)
 
-    def send_text(self, args: cmd2.Statement, *, text: str) -> None:
+    def send_text(self, _args: cmd2.Statement, *, text: str) -> None:
         """Simulate sending text to a server and printing the response."""
         self.poutput(text.capitalize())
 

@@ -41,7 +41,7 @@ class Pirate(cmd2.Cmd):
         self.initial_gold = self.gold
         return line
 
-    def postcmd(self, stop, line):
+    def postcmd(self, stop, _line):
         """Runs right before a command is about to return."""
         if self.gold != self.initial_gold:
             self.poutput(f'Now we gots {self.gold} doubloons')
@@ -51,7 +51,7 @@ class Pirate(cmd2.Cmd):
             stop = True
         return stop
 
-    def do_loot(self, arg) -> None:
+    def do_loot(self, _arg) -> None:
         """Seize booty from a passing ship."""
         self.gold += 1
 
@@ -67,7 +67,7 @@ class Pirate(cmd2.Cmd):
                 self.poutput(f'''What's "{arg}"?  I'll take rrrum.''')
             self.gold -= 1
 
-    def do_quit(self, arg) -> bool:
+    def do_quit(self, _arg) -> bool:
         """Quit the application gracefully."""
         self.poutput("Quiterrr!")
         return True

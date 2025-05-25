@@ -18,7 +18,7 @@ class MyApp(cmd2_myplugin.MyPluginMixin, cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     @cmd2_myplugin.empty_decorator
-    def do_empty(self, args) -> None:
+    def do_empty(self, _args) -> None:
         self.poutput("running the empty command")
 
 

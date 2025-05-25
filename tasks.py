@@ -125,7 +125,7 @@ MKDOCS_OPTS = '-nvWT'  # Be nitpicky, verbose, and treat warnings as errors
 
 
 @invoke.task()
-def docs(context: Context, builder: str = 'html') -> None:
+def docs(context: Context) -> None:
     """Build documentation using MkDocs."""
     with context.cd(TASK_ROOT_STR):
         context.run('mkdocs build', pty=True)

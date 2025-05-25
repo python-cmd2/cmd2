@@ -13,7 +13,7 @@ class CmdLineApp(cmd.Cmd):
     MUMBLE_FIRST = ('so', 'like', 'well')
     MUMBLE_LAST = ('right?',)
 
-    def do_exit(self, line) -> bool:
+    def do_exit(self, _line) -> bool:
         """Exit the application."""
         return True
 
