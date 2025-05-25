@@ -65,6 +65,7 @@ docs = [
     "setuptools_scm>=8",
 ]
 plugins = ["cmd2-ext-test"]
+quality = ["pre-commit>=2.20.0"]
 test = [
     "codecov>=2",
     "coverage>=7",

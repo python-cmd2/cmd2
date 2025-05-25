@@ -16,16 +16,18 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for setuptools_scm to work correctly
 
       - uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
-
-      - name: Set up the environment
-        uses: ./.github/actions/setup-python-env
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v6
         with:
-          extra-dependencies: --all-extras
-
+          python-version: "3.13"
+      - name: Install the project
+        run: uv sync --group quality
       - name: Run pre-commit
         run: uv run pre-commit run -a --show-diff-on-failure
