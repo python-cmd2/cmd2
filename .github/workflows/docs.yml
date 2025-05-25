@@ -18,11 +18,14 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
-
-      - name: Set up the environment
-        uses: ./.github/actions/setup-python-env
         with:
-          extra-dependencies: --group docs
+          fetch-depth: 0 # Needed for setuptools_scm to work correctly
 
-      - name: Check if documentation can be built
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - name: Install the project
+        run: uv sync --group docs
+      - name: Check if the MkDocs documentation can be built
         run: uv run mkdocs build -s
