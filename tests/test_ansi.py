@@ -202,14 +202,14 @@ def test_clear_line() -> None:
 
 def test_cursor() -> None:
     count = 1
-    assert ansi.Cursor._up(count) == f"{ansi.CSI}{count}A"
-    assert ansi.Cursor._down(count) == f"{ansi.CSI}{count}B"
-    assert ansi.Cursor._forward(count) == f"{ansi.CSI}{count}C"
-    assert ansi.Cursor._back(count) == f"{ansi.CSI}{count}D"
+    assert ansi.Cursor.UP(count) == f"{ansi.CSI}{count}A"
+    assert ansi.Cursor.DOWN(count) == f"{ansi.CSI}{count}B"
+    assert ansi.Cursor.FORWARD(count) == f"{ansi.CSI}{count}C"
+    assert ansi.Cursor.BACK(count) == f"{ansi.CSI}{count}D"
 
     x = 4
     y = 5
-    assert ansi.Cursor._set_pos(x, y) == f"{ansi.CSI}{y};{x}H"
+    assert ansi.Cursor.SET_POS(x, y) == f"{ansi.CSI}{y};{x}H"
 
 
 @pytest.mark.parametrize(
