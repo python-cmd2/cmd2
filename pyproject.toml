@@ -168,7 +168,7 @@ select = [
     "C90",   # McCabe cyclomatic complexity (warn about functions that are too complex)
     "COM",   # flake8-commas (forces commas at the end of every type of iterable/container
     # "CPY", # flake8-copyright (warn about missing copyright notice at top of file - currently in preview)
-    # "D", # pydocstyle (warn about things like missing docstrings)
+    "D", # pydocstyle (warn about things like missing docstrings)
     # "DOC", # pydoclint (docstring warnings - currently in preview)
     # "DJ",  # flake8-django (Django-specific warnings)
     "DTZ", # flake8-datetimez (warn about datetime calls where no timezone is specified)

@@ -528,6 +528,7 @@ class StdSim:
             return False
 
     def __getattr__(self, item: str) -> Any:
+        """When an attribute lookup fails to find the attribute in the usual places, this special method is called."""
         if item in self.__dict__:
             return self.__dict__[item]
         return getattr(self.inner_stream, item)
@@ -540,6 +541,7 @@ class ByteBuf:
     NEWLINES = (b'\n', b'\r')
 
     def __init__(self, std_sim_instance: StdSim) -> None:
+        """Initialize the ByteBuf instance."""
         self.byte_buf = bytearray()
         self.std_sim_instance = std_sim_instance
 
@@ -671,17 +673,22 @@ class ContextFlag:
     """
 
     def __init__(self) -> None:
-        # When this flag has a positive value, it is considered set.
-        # When it is 0, it is not set. It should never go below 0.
+        """When this flag has a positive value, it is considered set. When it is 0, it is not set.
+
+        It should never go below 0.
+        """
         self.__count = 0
 
     def __bool__(self) -> bool:
+        """Define the truth value of an object when it is used in a boolean context."""
         return self.__count > 0
 
     def __enter__(self) -> None:
+        """When a with block is entered, the __enter__ method of the context manager is called."""
         self.__count += 1
 
     def __exit__(self, *args: object) -> None:
+        """When the execution flow exits a with statement block this is called, regardless of whether an exception occurred."""
         self.__count -= 1
         if self.__count < 0:
             raise ValueError("count has gone below 0")
@@ -1224,8 +1231,10 @@ def strip_doc_annotations(doc: str) -> str:
 
 
 def similarity_function(s1: str, s2: str) -> float:
-    # The ratio from s1,s2 may be different to s2,s1. We keep the max.
-    # See https://docs.python.org/3/library/difflib.html#difflib.SequenceMatcher.ratio
+    """Ratio from s1,s2 may be different to s2,s1. We keep the max.
+
+    See https://docs.python.org/3/library/difflib.html#difflib.SequenceMatcher.ratio
+    """
     return max(SequenceMatcher(None, s1, s2).ratio(), SequenceMatcher(None, s2, s1).ratio())
 
 

@@ -1341,7 +1341,8 @@ class Cmd(cmd.Cmd):
     # -----  Methods related to tab completion -----
 
     def _reset_completion_defaults(self) -> None:
-        """Resets tab completion settings
+        """Reset tab completion settings.
+
         Needs to be called each time readline runs tab completion.
         """
         self.allow_appended_space = True
@@ -2406,47 +2407,43 @@ class Cmd(cmd.Cmd):
         raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def precmd(self, statement: Union[Statement, str]) -> Statement:
-        """Hook method executed just before the command is executed by
-        [cmd2.Cmd.onecmd][] and after adding it to history.
+        """Ran just before the command is executed by [cmd2.Cmd.onecmd][] and after adding it to history (cmd  Hook method).
 
         :param statement: subclass of str which also contains the parsed input
         :return: a potentially modified version of the input Statement object
 
-        See [cmd2.Cmd.register_postparsing_hook][] and
-        [cmd2.Cmd.register_precmd_hook][] for more robust ways
-        to run hooks before the command is executed. See
-        [Hooks](../features/hooks.md) for more information.
+        See [cmd2.Cmd.register_postparsing_hook][] and [cmd2.Cmd.register_precmd_hook][] for more robust ways
+        to run hooks before the command is executed. See [Hooks](../features/hooks.md) for more information.
         """
         return Statement(statement) if not isinstance(statement, Statement) else statement
 
     def postcmd(self, stop: bool, statement: Union[Statement, str]) -> bool:  # noqa: ARG002
-        """Hook method executed just after a command is executed by
-        [cmd2.Cmd.onecmd][].
+        """Ran just after a command is executed by [cmd2.Cmd.onecmd][] (cmd inherited Hook method).
 
         :param stop: return `True` to request the command loop terminate
         :param statement: subclass of str which also contains the parsed input
 
         See [cmd2.Cmd.register_postcmd_hook][] and [cmd2.Cmd.register_cmdfinalization_hook][] for more robust ways
-        to run hooks after the command is executed. See
-        [Hooks](../features/hooks.md) for more information.
+        to run hooks after the command is executed. See [Hooks](../features/hooks.md) for more information.
         """
         return stop
 
     def preloop(self) -> None:
-        """Hook method executed once when the [cmd2.Cmd.cmdloop][]
-        method is called.
+        """Ran once when the [cmd2.Cmd.cmdloop][] method is called (cmd inherited Hook method).
 
-        See [cmd2.Cmd.register_preloop_hook][] for a more robust way
-        to run hooks before the command loop begins. See
-        [Hooks](../features/hooks.md) for more information.
+        This method is a stub that does nothing and exists to be overridden by subclasses.
+
+        See [cmd2.Cmd.register_preloop_hook][] for a more robust wayto run hooks before the command loop begins.
+        See [Hooks](../features/hooks.md) for more information.
         """
 
     def postloop(self) -> None:
-        """Hook method executed once when the [cmd2.Cmd.cmdloop][] method is about to return.
+        """Ran once when the [cmd2.Cmd.cmdloop][] method is about to return (cmd inherited Hook Method).
 
-        See [cmd2.Cmd.register_postloop_hook][] for a more robust way
-        to run hooks after the command loop completes. See
-        [Hooks](../features/hooks.md) for more information.
+        This method is a stub that does nothing and exists to be overridden by subclasses.
+
+        See [cmd2.Cmd.register_postloop_hook][] for a more robust way to run hooks after the command loop completes.
+        See [Hooks](../features/hooks.md) for more information.
         """
 
     def parseline(self, line: str) -> tuple[str, str, str]:

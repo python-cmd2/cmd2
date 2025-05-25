@@ -42,6 +42,7 @@ class Cmd2TestCase(unittest.TestCase):
     cmdapp: Optional['Cmd'] = None
 
     def setUp(self) -> None:
+        """Instructions that will be executed before each test method."""
         if self.cmdapp:
             self._fetch_transcripts()
 
@@ -50,11 +51,13 @@ class Cmd2TestCase(unittest.TestCase):
             self.cmdapp.stdout = cast(TextIO, utils.StdSim(cast(TextIO, self.cmdapp.stdout)))
 
     def tearDown(self) -> None:
+        """Instructions that will be executed after each test method."""
         if self.cmdapp:
             # Restore stdout
             self.cmdapp.stdout = self._orig_stdout
 
     def runTest(self) -> None:  # was testall  # noqa: N802
+        """Override of the default runTest method for the unittest.TestCase class."""
         if self.cmdapp:
             its = sorted(self.transcripts.items())
             for fname, transcript in its:
