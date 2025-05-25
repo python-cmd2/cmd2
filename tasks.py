@@ -12,8 +12,10 @@ import pathlib
 import re
 import shutil
 import sys
+from typing import Union
 
 import invoke
+from invoke.context import Context
 
 from plugins import (
     tasks as plugin_tasks,
@@ -24,7 +26,7 @@ TASK_ROOT_STR = str(TASK_ROOT)
 
 
 # shared function
-def rmrf(items, verbose=True) -> None:
+def rmrf(items: Union[str, list[str], set[str]], verbose: bool = True) -> None:
     """Silently remove a list of directories or files."""
     if isinstance(items, str):
         items = [items]
@@ -51,7 +53,7 @@ namespace.add_collection(namespace_clean, 'clean')
 
 
 @invoke.task()
-def pytest(context, junit=False, pty=True, base=False, isolated=False) -> None:
+def pytest(context: Context, junit: bool = False, pty: bool = True, base: bool = False, isolated: bool = False) -> None:
     """Run tests and code coverage using pytest."""
     with context.cd(TASK_ROOT_STR):
         command_str = 'pytest '
@@ -79,7 +81,7 @@ namespace.add_task(pytest)
 
 
 @invoke.task(post=[plugin_tasks.pytest_clean])
-def pytest_clean(context) -> None:
+def pytest_clean(context: Context) -> None:
     """Remove pytest cache and code coverage files and directories."""
     # pylint: disable=unused-argument
     with context.cd(str(TASK_ROOT / 'tests')):
@@ -92,7 +94,7 @@ namespace_clean.add_task(pytest_clean, 'pytest')
 
 
 @invoke.task()
-def mypy(context) -> None:
+def mypy(context: Context) -> None:
     """Run mypy optional static type checker."""
     with context.cd(TASK_ROOT_STR):
         context.run("mypy .")
@@ -102,7 +104,7 @@ namespace.add_task(mypy)
 
 
 @invoke.task()
-def mypy_clean(context) -> None:
+def mypy_clean(context: Context) -> None:
     """Remove mypy cache directory."""
     # pylint: disable=unused-argument
     with context.cd(TASK_ROOT_STR):
@@ -123,7 +125,7 @@ MKDOCS_OPTS = '-nvWT'  # Be nitpicky, verbose, and treat warnings as errors
 
 
 @invoke.task()
-def docs(context, builder='html') -> None:
+def docs(context: Context, builder: str = 'html') -> None:
     """Build documentation using MkDocs."""
     with context.cd(TASK_ROOT_STR):
         context.run('mkdocs build', pty=True)
@@ -133,7 +135,7 @@ namespace.add_task(docs)
 
 
 @invoke.task
-def docs_clean(context) -> None:
+def docs_clean(context: Context) -> None:
     """Remove rendered documentation."""
     # pylint: disable=unused-argument
     with context.cd(TASK_ROOT_STR):
@@ -144,7 +146,7 @@ namespace_clean.add_task(docs_clean, name='docs')
 
 
 @invoke.task
-def livehtml(context) -> None:
+def livehtml(context: Context) -> None:
     """Launch webserver on http://localhost:8000 with rendered documentation."""
     with context.cd(TASK_ROOT_STR):
         context.run('mkdocs serve', pty=True)
@@ -163,7 +165,7 @@ DISTDIR = 'dist'
 
 
 @invoke.task(post=[plugin_tasks.build_clean])
-def build_clean(context) -> None:
+def build_clean(context: Context) -> None:
     """Remove the build directory."""
     # pylint: disable=unused-argument
     with context.cd(TASK_ROOT_STR):
@@ -174,7 +176,7 @@ namespace_clean.add_task(build_clean, 'build')
 
 
 @invoke.task(post=[plugin_tasks.dist_clean])
-def dist_clean(context) -> None:
+def dist_clean(context: Context) -> None:
     """Remove the dist directory."""
     # pylint: disable=unused-argument
     with context.cd(TASK_ROOT_STR):
@@ -185,7 +187,7 @@ namespace_clean.add_task(dist_clean, 'dist')
 
 
 @invoke.task()
-def eggs_clean(context) -> None:
+def eggs_clean(context: Context) -> None:
     """Remove egg directories."""
     # pylint: disable=unused-argument
     with context.cd(TASK_ROOT_STR):
@@ -203,7 +205,7 @@ namespace_clean.add_task(eggs_clean, 'eggs')
 
 
 @invoke.task()
-def pycache_clean(context) -> None:
+def pycache_clean(context: Context) -> None:
     """Remove __pycache__ directories."""
     # pylint: disable=unused-argument
     with context.cd(TASK_ROOT_STR):
@@ -220,7 +222,7 @@ namespace_clean.add_task(pycache_clean, 'pycache')
 
 # ruff fast linter
 @invoke.task()
-def lint(context) -> None:
+def lint(context: Context) -> None:
     """Run ruff fast linter."""
     with context.cd(TASK_ROOT_STR):
         context.run("ruff check")
@@ -231,7 +233,7 @@ namespace.add_task(lint)
 
 # ruff fast formatter
 @invoke.task()
-def format(context) -> None:  # noqa: A001
+def format(context: Context) -> None:  # noqa: A001
     """Run ruff format --check."""
     with context.cd(TASK_ROOT_STR):
         context.run("ruff format --check")
@@ -241,7 +243,7 @@ namespace.add_task(format)
 
 
 @invoke.task()
-def ruff_clean(context) -> None:
+def ruff_clean(context: Context) -> None:
     """Remove .ruff_cache directory."""
     with context.cd(TASK_ROOT_STR):
         context.run("ruff clean")
@@ -256,7 +258,7 @@ clean_tasks.append(plugin_tasks.clean_all)
 
 
 @invoke.task(pre=clean_tasks, default=True)
-def clean_all(_) -> None:
+def clean_all(_: Context) -> None:
     """Run all clean tasks."""
     # pylint: disable=unused-argument
 
@@ -265,7 +267,7 @@ namespace_clean.add_task(clean_all, 'all')
 
 
 @invoke.task
-def tag(context, name, message='') -> None:
+def tag(context: Context, name: str, message: str = '') -> None:
     """Add a Git tag and push it to origin."""
     # If a tag was provided on the command-line, then add a Git tag and push it to origin
     if name:
@@ -277,7 +279,7 @@ namespace.add_task(tag)
 
 
 @invoke.task()
-def validatetag(context) -> None:
+def validatetag(context: Context) -> None:
     """Check to make sure that a tag exists for the current HEAD and it looks like a valid version number."""
     # Validate that a Git tag exists for the current commit HEAD
     result = context.run("git describe --exact-match --tags $(git log -n1 --pretty='%h')")
@@ -297,7 +299,7 @@ namespace.add_task(validatetag)
 
 
 @invoke.task(pre=[clean_all], post=[plugin_tasks.sdist])
-def sdist(context) -> None:
+def sdist(context: Context) -> None:
     """Create a source distribution."""
     with context.cd(TASK_ROOT_STR):
         context.run('python -m build --sdist')
@@ -307,7 +309,7 @@ namespace.add_task(sdist)
 
 
 @invoke.task(pre=[clean_all], post=[plugin_tasks.wheel])
-def wheel(context) -> None:
+def wheel(context: Context) -> None:
     """Build a wheel distribution."""
     with context.cd(TASK_ROOT_STR):
         context.run('python -m build --wheel')
@@ -317,7 +319,7 @@ namespace.add_task(wheel)
 
 
 @invoke.task(pre=[validatetag, sdist, wheel])
-def pypi(context) -> None:
+def pypi(context: Context) -> None:
     """Build and upload a distribution to pypi."""
     with context.cd(TASK_ROOT_STR):
         context.run('twine upload dist/*')
@@ -327,7 +329,7 @@ namespace.add_task(pypi)
 
 
 @invoke.task(pre=[validatetag, sdist, wheel])
-def pypi_test(context) -> None:
+def pypi_test(context: Context) -> None:
     """Build and upload a distribution to https://test.pypi.org."""
     with context.cd(TASK_ROOT_STR):
         context.run('twine upload --repository testpypi dist/*')
