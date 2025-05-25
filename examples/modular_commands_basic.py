@@ -26,7 +26,7 @@ class ExampleApp(cmd2.Cmd):
     def __init__(self) -> None:
         super().__init__()
 
-    def do_something(self, arg) -> None:
+    def do_something(self, _arg) -> None:
         self.poutput('this is the something command')
 
 

@@ -1111,7 +1111,7 @@ class Cmd(cmd.Cmd):
     def build_settables(self) -> None:
         """Create the dictionary of user-settable parameters."""
 
-        def get_allow_style_choices(cli_self: Cmd) -> list[str]:
+        def get_allow_style_choices(_cli_self: Cmd) -> list[str]:
             """Used to tab complete allow_style values."""
             return [val.name.lower() for val in ansi.AllowStyle]
 
@@ -1419,9 +1419,9 @@ class Cmd(cmd.Cmd):
     def basic_complete(
         self,
         text: str,
-        line: str,
-        begidx: int,
-        endidx: int,
+        line: str,  # noqa: ARG002
+        begidx: int,  # noqa: ARG002
+        endidx: int,  # noqa: ARG002
         match_against: Iterable[str],
     ) -> list[str]:
         """Basic tab completion function that matches against a list of strings without considering line contents
@@ -1602,7 +1602,13 @@ class Cmd(cmd.Cmd):
         return matches
 
     def path_complete(
-        self, text: str, line: str, begidx: int, endidx: int, *, path_filter: Optional[Callable[[str], bool]] = None
+        self,
+        text: str,
+        line: str,
+        begidx: int,  # noqa: ARG002
+        endidx: int,
+        *,
+        path_filter: Optional[Callable[[str], bool]] = None,
     ) -> list[str]:
         """Performs completion of local file system paths.
 
@@ -2346,7 +2352,7 @@ class Cmd(cmd.Cmd):
         # Filter out hidden and disabled commands
         return [topic for topic in all_topics if topic not in self.hidden_commands and topic not in self.disabled_commands]
 
-    def sigint_handler(self, signum: int, _: Optional[FrameType]) -> None:
+    def sigint_handler(self, signum: int, _: Optional[FrameType]) -> None:  # noqa: ARG002
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
 
         If you need custom SIGINT behavior, then override this method.
@@ -2402,7 +2408,7 @@ class Cmd(cmd.Cmd):
         """
         return Statement(statement) if not isinstance(statement, Statement) else statement
 
-    def postcmd(self, stop: bool, statement: Union[Statement, str]) -> bool:
+    def postcmd(self, stop: bool, statement: Union[Statement, str]) -> bool:  # noqa: ARG002
         """Hook method executed just after a command is executed by
         [cmd2.Cmd.onecmd][].
 
@@ -3087,7 +3093,7 @@ class Cmd(cmd.Cmd):
                 # Disable completion
                 if completion_mode == utils.CompletionMode.NONE:
 
-                    def complete_none(text: str, state: int) -> Optional[str]:  # pragma: no cover
+                    def complete_none(text: str, state: int) -> Optional[str]:  # pragma: no cover  # noqa: ARG001
                         return None
 
                     complete_func = complete_none
@@ -3773,7 +3779,7 @@ class Cmd(cmd.Cmd):
                 self.perror(err_msg, apply_style=False)
                 self.last_result = False
 
-    def print_topics(self, header: str, cmds: Optional[list[str]], cmdlen: int, maxcol: int) -> None:
+    def print_topics(self, header: str, cmds: Optional[list[str]], cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
         """Print groups of commands and topics in columns and an optional header
         Override of cmd's print_topics() to handle headers with newlines, ANSI style sequences, and wide characters.
 
@@ -5379,7 +5385,7 @@ class Cmd(cmd.Cmd):
         setattr(self, help_func_name, new_func)
 
         # Set the completer to a function that returns a blank list
-        setattr(self, completer_func_name, lambda *args, **kwargs: [])
+        setattr(self, completer_func_name, lambda *_args, **_kwargs: [])
 
     def disable_category(self, category: str, message_to_print: str) -> None:
         """Disable an entire category of commands.

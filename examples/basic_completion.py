@@ -82,7 +82,7 @@ class BasicCompletion(cmd2.Cmd):
         """Demonstrates effect of raising CompletionError."""
         self.poutput(f"Args: {statement.args}")
 
-    def complete_raise_error(self, text, line, begidx, endidx) -> list[str]:
+    def complete_raise_error(self, _text, _line, _begidx, _endidx) -> list[str]:
         """CompletionErrors can be raised if an error occurs while tab completing.
 
         Example use cases

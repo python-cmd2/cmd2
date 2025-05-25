@@ -158,8 +158,8 @@ select = [
     # https://docs.astral.sh/ruff/rules
     "A", # flake8-builtins (variables or arguments shadowing built-ins)
     # "AIR", # Airflow specific warnings
-    "ANN", # flake8-annotations (missing type annotations for arguments or return types)
-    # "ARG", # flake8-unused-arguments (functions or methods with arguments that are never used)
+    "ANN",   # flake8-annotations (missing type annotations for arguments or return types)
+    "ARG",   # flake8-unused-arguments (functions or methods with arguments that are never used)
     "ASYNC", # flake8-async (async await bugs)
     # "B", # flake8-bugbear (various likely bugs and design issues)
     "BLE", # flake8-blind-except (force more specific exception types than just Exception)
@@ -279,6 +279,7 @@ per-file-ignores."plugins/*.py" = [
 
 per-file-ignores."tests/*.py" = [
     "ANN",  # Ignore all type annotation rules in test folders
+    "ARG",  # Ignore all unused argument warnings in test folders
     "D",    # Ignore all pydocstyle rules in test folders
     "E501", # Line too long
     "S",    # Ignore all Security rules in test folders
@@ -292,6 +293,7 @@ per-file-ignores."tests/pyscript/*.py" = [
 
 per-file-ignores."tests_isolated/*.py" = [
     "ANN", # Ignore all type annotation rules in test folders
+    "ARG", # Ignore all unused argument warnings in test folders
     "D",   # Ignore all pydocstyle rules in test folders
     "S",   # Ignore all Security rules in test folders
     "SLF", # Ignore all warnings about private or protected member access in test folders

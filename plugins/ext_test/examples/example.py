@@ -11,7 +11,7 @@ class Example(cmd2.Cmd):
         # gotta have this or neither the plugin or cmd2 will initialize
         super().__init__(*args, **kwargs)
 
-    def do_something(self, arg):
+    def do_something(self, _arg):
         self.last_result = 5
         self.poutput('this is the something command')
 

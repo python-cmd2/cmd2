@@ -16,7 +16,7 @@ class EnvironmentApp(cmd2.Cmd):
         )
         self.add_settable(cmd2.Settable('sunny', bool, 'Is it sunny outside?', self))
 
-    def do_sunbathe(self, arg) -> None:
+    def do_sunbathe(self, _arg) -> None:
         """Attempt to sunbathe."""
         if self.degrees_c < 20:
             result = f"It's {self.degrees_c} C - are you a penguin?"
@@ -26,7 +26,7 @@ class EnvironmentApp(cmd2.Cmd):
             result = 'UV is bad for your skin.'
         self.poutput(result)
 
-    def _onchange_degrees_c(self, param_name, old, new) -> None:
+    def _onchange_degrees_c(self, _param_name, _old, new) -> None:
         # if it's over 40C, it's gotta be sunny, right?
         if new > 40:
             self.sunny = True

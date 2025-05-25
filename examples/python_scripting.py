@@ -40,7 +40,7 @@ class CmdLineApp(cmd2.Cmd):
         self.cwd = os.getcwd()
         self.prompt = ansi.style(f'{self.cwd} $ ', fg=ansi.Fg.CYAN)
 
-    def postcmd(self, stop: bool, line: str) -> bool:
+    def postcmd(self, stop: bool, _line: str) -> bool:
         """Hook method executed just after a command dispatch is finished.
 
         :param stop: if True, the command has indicated the application should exit
@@ -96,7 +96,7 @@ class CmdLineApp(cmd2.Cmd):
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
     @cmd2.with_argparser(dir_parser, with_unknown_args=True)
-    def do_dir(self, args, unknown) -> None:
+    def do_dir(self, _args, unknown) -> None:
         """List contents of current directory."""
         # No arguments for this command
         if unknown:

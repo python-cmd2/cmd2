@@ -280,7 +280,7 @@ class CompletionItem(str):  # noqa: SLOT000
     See header of this file for more information
     """
 
-    def __new__(cls, value: object, *args: Any, **kwargs: Any) -> 'CompletionItem':
+    def __new__(cls, value: object, *_args: Any, **_kwargs: Any) -> 'CompletionItem':
         return super().__new__(cls, value)
 
     def __init__(self, value: object, description: str = '', *args: Any) -> None:
@@ -914,7 +914,7 @@ setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap
 ############################################################################################################
 # Patch ArgumentParser._check_value to support CompletionItems as choices
 ############################################################################################################
-def _ArgumentParser_check_value(self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:  # noqa: N802
+def _ArgumentParser_check_value(_self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:  # noqa: N802
     """Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
     When evaluating choices, input is compared to CompletionItem.orig_value instead of the
     CompletionItem instance.

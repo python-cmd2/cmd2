@@ -73,7 +73,7 @@ class BasicCompletionCommandSet(CommandSet):
         """Demonstrates effect of raising CompletionError."""
         self._cmd.poutput(f"Args: {statement.args}")
 
-    def complete_raise_error(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
+    def complete_raise_error(self, _text: str, _line: str, _begidx: int, _endidx: int) -> list[str]:
         """CompletionErrors can be raised if an error occurs while tab completing.
 
         Example use cases
@@ -83,5 +83,5 @@ class BasicCompletionCommandSet(CommandSet):
         raise CompletionError("This is how a CompletionError behaves")
 
     @with_category('Not Basic Completion')
-    def do_custom_category(self, statement: Statement) -> None:
+    def do_custom_category(self, _statement: Statement) -> None:
         self._cmd.poutput('Demonstrates a command that bypasses the default category')

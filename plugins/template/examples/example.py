@@ -11,7 +11,7 @@ class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     @cmd2_myplugin.empty_decorator
-    def do_something(self, arg) -> None:
+    def do_something(self, _arg) -> None:
         self.poutput('this is the something command')
 
 

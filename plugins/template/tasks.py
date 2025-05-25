@@ -96,7 +96,7 @@ DISTDIR = 'dist'
 
 
 @invoke.task
-def build_clean(context) -> None:
+def build_clean(_context) -> None:
     """Remove the build directory."""
     # pylint: disable=unused-argument
     rmrf(BUILDDIR)
@@ -106,7 +106,7 @@ namespace_clean.add_task(build_clean, 'build')
 
 
 @invoke.task
-def dist_clean(context) -> None:
+def dist_clean(_context) -> None:
     """Remove the dist directory."""
     # pylint: disable=unused-argument
     rmrf(DISTDIR)
@@ -116,7 +116,7 @@ namespace_clean.add_task(dist_clean, 'dist')
 
 
 @invoke.task
-def eggs_clean(context) -> None:
+def eggs_clean(_context) -> None:
     """Remove egg directories."""
     # pylint: disable=unused-argument
     dirs = set()
@@ -133,7 +133,7 @@ namespace_clean.add_task(eggs_clean, 'eggs')
 
 
 @invoke.task
-def bytecode_clean(context) -> None:
+def bytecode_clean(_context) -> None:
     """Remove __pycache__ directories and *.pyc files."""
     # pylint: disable=unused-argument
     dirs = set()
