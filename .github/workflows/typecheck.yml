@@ -23,12 +23,13 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for setuptools_scm to work correctly
 
-      - name: Set up the environment
-        uses: ./.github/actions/setup-python-env
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv
         with:
           python-version: ${{ matrix.python-version }}
-          extra-dependencies: --group validate
 
       - name: Check typing
-        run: uv run mypy
+        run: uv run mypy .
