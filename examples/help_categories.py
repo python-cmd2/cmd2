@@ -25,7 +25,7 @@ def my_decorator(f):
 class HelpCategories(cmd2.Cmd):
     """Example cmd2 application."""
 
-    START_TIMES = ['now', 'later', 'sometime', 'whenever']
+    START_TIMES = ('now', 'later', 'sometime', 'whenever')
 
     # Command categories
     CMD_CAT_CONNECTING = 'Connecting'

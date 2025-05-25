@@ -21,9 +21,9 @@ class CmdLineApp(cmd2.Cmd):
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
     # default_to_shell = True  # noqa: ERA001
-    MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
-    MUMBLE_FIRST = ['so', 'like', 'well']
-    MUMBLE_LAST = ['right?']
+    MUMBLES = ('like', '...', 'um', 'er', 'hmmm', 'ahh')
+    MUMBLE_FIRST = ('so', 'like', 'well')
+    MUMBLE_LAST = ('right?',)
 
     def __init__(self) -> None:
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)

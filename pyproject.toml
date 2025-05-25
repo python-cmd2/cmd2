@@ -205,7 +205,7 @@ select = [
     "Q",   # flake8-quotes (force double quotes)
     "RET", # flake8-return (various warnings related to implicit vs explicit return statements)
     "RSE", # flake8-raise (warn about unnecessary parentheses on raised exceptions)
-    # "RUF", # Ruff-specific rules (miscellaneous grab bag of lint checks specific to Ruff)
+    "RUF", # Ruff-specific rules (miscellaneous grab bag of lint checks specific to Ruff)
     "S",   # flake8-bandit (security oriented checks, but extremely pedantic - do not attempt to apply to unit test files)
     "SIM", # flake8-simplify (rules to attempt to simplify code)
     # "SLF",  # flake8-self (warn when protected members are accessed outside of a class or file)

@@ -12,17 +12,17 @@ from cmd2 import (
 @with_default_category('Basic Completion')
 class BasicCompletionCommandSet(CommandSet):
     # List of strings used with completion functions
-    food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
-    sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
+    food_item_strs = ('Pizza', 'Ham', 'Ham Sandwich', 'Potato')
+    sport_item_strs = ('Bat', 'Basket', 'Basketball', 'Football', 'Space Ball')
 
     # This data is used to demonstrate delimiter_complete
-    file_strs = [
+    file_strs = (
         '/home/user/file.db',
         '/home/user/file space.db',
         '/home/user/another.db',
         '/home/other user/maps.db',
         '/home/other user/tests.db',
-    ]
+    )
 
     def do_flag_based(self, statement: Statement) -> None:
         """Tab completes arguments based on a preceding flag using flag_based_complete

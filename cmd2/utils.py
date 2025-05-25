@@ -531,7 +531,7 @@ class ByteBuf:
     """Used by StdSim to write binary data and stores the actual bytes written."""
 
     # Used to know when to flush the StdSim
-    NEWLINES = [b'\n', b'\r']
+    NEWLINES = (b'\n', b'\r')
 
     def __init__(self, std_sim_instance: StdSim) -> None:
         self.byte_buf = bytearray()
