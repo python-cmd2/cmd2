@@ -28,6 +28,7 @@ jobs:
         uses: ./.github/actions/setup-python-env
         with:
           python-version: ${{ matrix.python-version }}
+          extra-dependencies: --group validate
 
       - name: Check typing
         run: uv run mypy

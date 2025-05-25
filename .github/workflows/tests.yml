@@ -27,6 +27,7 @@ jobs:
         uses: ./.github/actions/setup-python-env
         with:
           python-version: ${{ matrix.python-version }}
+          extra-dependencies: --all-extras --dev
 
       - name: Run tests
         run: uv run inv pytest --junit --no-pty --base

@@ -24,6 +24,8 @@ jobs:
 
       - name: Set up the environment
         uses: ./.github/actions/setup-python-env
+        with:
+          extra-dependencies: --all-extras
 
       - name: Run pre-commit
         run: uv run pre-commit run -a --show-diff-on-failure

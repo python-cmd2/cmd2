@@ -2,6 +2,10 @@ name: "Setup Python Environment"
 description: "Set up Python environment for the given Python version"
 
 inputs:
+  extra-dependencies:
+    description: "Extra dependency groups to install"
+    required: false
+    default: ""
   python-version:
     description: "Python version to use"
     required: true
@@ -26,5 +30,5 @@ runs:
         cache-suffix: ${{ matrix.python-version }}
 
     - name: Install Python dependencies
-      run: uv sync
+      run: uv sync $${{ inputs.extra-dependencies }}
       shell: bash

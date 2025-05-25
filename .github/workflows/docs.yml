@@ -21,6 +21,8 @@ jobs:
 
       - name: Set up the environment
         uses: ./.github/actions/setup-python-env
+        with:
+          extra-dependencies: --group docs
 
       - name: Check if documentation can be built
         run: uv run mkdocs build -s
