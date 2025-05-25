@@ -92,11 +92,7 @@ def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
         return False
 
     # Flags can't have a space
-    if ' ' in token:
-        return False
-
-    # Starts like a flag
-    return True
+    return ' ' not in token
 
 
 class _ArgumentState:
@@ -368,34 +364,30 @@ class ArgparseCompleter:
             # Otherwise treat as a positional argument
             else:
                 # If we aren't current tracking a positional, then get the next positional arg to handle this token
-                if pos_arg_state is None:
-                    # Make sure we are still have positional arguments to parse
-                    if remaining_positionals:
-                        action = remaining_positionals.popleft()
+                if pos_arg_state is None and remaining_positionals:
+                    action = remaining_positionals.popleft()
 
-                        # Are we at a subcommand? If so, forward to the matching completer
-                        if action == self._subcommand_action:
-                            if token in self._subcommand_action.choices:
-                                # Merge self._parent_tokens and consumed_arg_values
-                                parent_tokens = {**self._parent_tokens, **consumed_arg_values}
+                    # Are we at a subcommand? If so, forward to the matching completer
+                    if action == self._subcommand_action:
+                        if token in self._subcommand_action.choices:
+                            # Merge self._parent_tokens and consumed_arg_values
+                            parent_tokens = {**self._parent_tokens, **consumed_arg_values}
 
-                                # Include the subcommand name if its destination was set
-                                if action.dest != argparse.SUPPRESS:
-                                    parent_tokens[action.dest] = [token]
+                            # Include the subcommand name if its destination was set
+                            if action.dest != argparse.SUPPRESS:
+                                parent_tokens[action.dest] = [token]
 
-                                parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
-                                completer_type = self._cmd2_app._determine_ap_completer_type(parser)
+                            parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
+                            completer_type = self._cmd2_app._determine_ap_completer_type(parser)
 
-                                completer = completer_type(parser, self._cmd2_app, parent_tokens=parent_tokens)
+                            completer = completer_type(parser, self._cmd2_app, parent_tokens=parent_tokens)
 
-                                return completer.complete(
-                                    text, line, begidx, endidx, tokens[token_index + 1 :], cmd_set=cmd_set
-                                )
-                            # Invalid subcommand entered, so no way to complete remaining tokens
-                            return []
+                            return completer.complete(text, line, begidx, endidx, tokens[token_index + 1 :], cmd_set=cmd_set)
+                        # Invalid subcommand entered, so no way to complete remaining tokens
+                        return []
 
-                        # Otherwise keep track of the argument
-                        pos_arg_state = _ArgumentState(action)
+                    # Otherwise keep track of the argument
+                    pos_arg_state = _ArgumentState(action)
 
                 # Check if we have a positional to consume this token
                 if pos_arg_state is not None:

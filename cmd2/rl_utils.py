@@ -1,5 +1,6 @@
 """Imports the proper Readline for the platform and provides utility functions for it."""
 
+import contextlib
 import sys
 from enum import (
     Enum,
@@ -27,10 +28,8 @@ try:
     import gnureadline as readline  # type: ignore[import]
 except ImportError:
     # Note: If this actually fails, you should install gnureadline on Linux/Mac or pyreadline3 on Windows.
-    try:
+    with contextlib.suppress(ImportError):
         import readline  # type: ignore[no-redef]
-    except ImportError:  # pragma: no cover
-        pass
 
 
 class RlType(Enum):

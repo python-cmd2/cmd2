@@ -60,7 +60,8 @@ def main() -> None:
     # Open the output file
     outfile_path = os.path.expanduser(sys.argv[1])
     try:
-        outfile = open(outfile_path, 'w')
+        with open(outfile_path, 'w') as outfile:
+            pass
     except OSError as e:
         print(f"Error opening {outfile_path} because: {e}")
         return

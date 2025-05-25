@@ -107,17 +107,17 @@ class ArgparseCompleterTester(cmd2.Cmd):
     TUPLE_METAVAR = ('arg1', 'others')
     CUSTOM_DESC_HEADER = "Custom Header"
 
-    # lists used in our tests (there is a mix of sorted and unsorted on purpose)
-    non_negative_num_choices = [1, 2, 3, 0.5, 22]
-    num_choices = [-1, 1, -2, 2.5, 0, -12]
-    static_choices_list = ['static', 'choices', 'stop', 'here']
-    choices_from_provider = ['choices', 'provider', 'probably', 'improved']
-    completion_item_choices = [CompletionItem('choice_1', 'A description'), CompletionItem('choice_2', 'Another description')]
+    # tuples (for sake of immutability) used in our tests (there is a mix of sorted and unsorted on purpose)
+    non_negative_num_choices = (1, 2, 3, 0.5, 22)
+    num_choices = (-1, 1, -2, 2.5, 0, -12)
+    static_choices_list = ('static', 'choices', 'stop', 'here')
+    choices_from_provider = ('choices', 'provider', 'probably', 'improved')
+    completion_item_choices = (CompletionItem('choice_1', 'A description'), CompletionItem('choice_2', 'Another description'))
 
     # This tests that CompletionItems created with numerical values are sorted as numbers.
-    num_completion_items = [CompletionItem(5, "Five"), CompletionItem(1.5, "One.Five"), CompletionItem(2, "Five")]
+    num_completion_items = (CompletionItem(5, "Five"), CompletionItem(1.5, "One.Five"), CompletionItem(2, "Five"))
 
-    def choices_provider(self) -> list[str]:
+    def choices_provider(self) -> tuple[str]:
         """Method that provides choices"""
         return self.choices_from_provider
 
@@ -179,9 +179,9 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to testing completer parameter
     ############################################################################################################
-    completions_for_flag = ['completions', 'flag', 'fairly', 'complete']
-    completions_for_pos_1 = ['completions', 'positional_1', 'probably', 'missed', 'spot']
-    completions_for_pos_2 = ['completions', 'positional_2', 'probably', 'missed', 'me']
+    completions_for_flag = ('completions', 'flag', 'fairly', 'complete')
+    completions_for_pos_1 = ('completions', 'positional_1', 'probably', 'missed', 'spot')
+    completions_for_pos_2 = ('completions', 'positional_2', 'probably', 'missed', 'me')
 
     def flag_completer(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         return self.basic_complete(text, line, begidx, endidx, self.completions_for_flag)
@@ -208,12 +208,12 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to nargs
     ############################################################################################################
-    set_value_choices = ['set', 'value', 'choices']
-    one_or_more_choices = ['one', 'or', 'more', 'choices']
-    optional_choices = ['a', 'few', 'optional', 'choices']
-    range_choices = ['some', 'range', 'choices']
-    remainder_choices = ['remainder', 'choices']
-    positional_choices = ['the', 'positional', 'choices']
+    set_value_choices = ('set', 'value', 'choices')
+    one_or_more_choices = ('one', 'or', 'more', 'choices')
+    optional_choices = ('a', 'few', 'optional', 'choices')
+    range_choices = ('some', 'range', 'choices')
+    remainder_choices = ('remainder', 'choices')
+    positional_choices = ('the', 'positional', 'choices')
 
     nargs_parser = Cmd2ArgumentParser()
 
@@ -572,10 +572,9 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions) -> No
 
     # Numbers will be sorted in ascending order and then converted to strings by ArgparseCompleter
     if completions and all(isinstance(x, numbers.Number) for x in completions):
-        completions.sort()
-        completions = [str(x) for x in completions]
+        completions = [str(x) for x in sorted(completions)]
     else:
-        completions.sort(key=ac_app.default_sort_key)
+        completions = sorted(completions, key=ac_app.default_sort_key)
 
     assert ac_app.completion_matches == completions
 
@@ -606,10 +605,9 @@ def test_autocomp_positional_choices_completion(ac_app, pos, text, completions) 
 
     # Numbers will be sorted in ascending order and then converted to strings by ArgparseCompleter
     if completions and all(isinstance(x, numbers.Number) for x in completions):
-        completions.sort()
-        completions = [str(x) for x in completions]
+        completions = [str(x) for x in sorted(completions)]
     else:
-        completions.sort(key=ac_app.default_sort_key)
+        completions = sorted(completions, key=ac_app.default_sort_key)
 
     assert ac_app.completion_matches == completions
 

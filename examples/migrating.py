@@ -9,9 +9,9 @@ import random
 class CmdLineApp(cmd.Cmd):
     """Example cmd application."""
 
-    MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
-    MUMBLE_FIRST = ['so', 'like', 'well']
-    MUMBLE_LAST = ['right?']
+    MUMBLES = ('like', '...', 'um', 'er', 'hmmm', 'ahh')
+    MUMBLE_FIRST = ('so', 'like', 'well')
+    MUMBLE_LAST = ('right?',)
 
     def do_exit(self, line) -> bool:
         """Exit the application."""

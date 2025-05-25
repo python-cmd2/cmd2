@@ -1,14 +1,12 @@
 """This simply imports certain things for backwards compatibility."""
 
 import argparse
+import contextlib
 import importlib.metadata as importlib_metadata
 import sys
 
-try:
+with contextlib.suppress(importlib_metadata.PackageNotFoundError):
     __version__ = importlib_metadata.version(__name__)
-except importlib_metadata.PackageNotFoundError:  # pragma: no cover
-    # package is not installed
-    pass
 
 from .ansi import (
     Bg,
@@ -54,7 +52,7 @@ from .parsing import Statement
 from .py_bridge import CommandResult
 from .utils import CompletionMode, CustomCompletionSettings, Settable, categorize
 
-__all__: list[str] = [
+__all__: list[str] = [  # noqa: RUF022
     'COMMAND_NAME',
     'DEFAULT_SHORTCUTS',
     # ANSI Exports

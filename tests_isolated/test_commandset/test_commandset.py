@@ -783,7 +783,7 @@ complete_states_expected_self = None
 class SupportFuncProvider(cmd2.CommandSet):
     """CommandSet which provides a support function (complete_states) to other CommandSets"""
 
-    states = ['alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware']
+    states = ('alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware')
 
     def __init__(self, dummy) -> None:
         """Dummy variable prevents this from being autoloaded in other tests"""
@@ -862,7 +862,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys) -> None:
     complete_states_expected_self = None
 
     assert first_match == 'alabama'
-    assert command_sets_manual.completion_matches == SupportFuncProvider.states
+    assert command_sets_manual.completion_matches == list(SupportFuncProvider.states)
 
     assert (
         getattr(command_sets_manual.cmd_func('user_sub1').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY) == 'With Completer'
@@ -888,7 +888,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys) -> None:
     complete_states_expected_self = None
 
     assert first_match == 'alabama'
-    assert command_sets_manual.completion_matches == SupportFuncProvider.states
+    assert command_sets_manual.completion_matches == list(SupportFuncProvider.states)
 
     command_sets_manual.unregister_command_set(user_unrelated)
     command_sets_manual.unregister_command_set(func_provider)
@@ -911,7 +911,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys) -> None:
     complete_states_expected_self = None
 
     assert first_match == 'alabama'
-    assert command_sets_manual.completion_matches == SupportFuncProvider.states
+    assert command_sets_manual.completion_matches == list(SupportFuncProvider.states)
 
     command_sets_manual.unregister_command_set(user_unrelated)
     command_sets_manual.unregister_command_set(user_sub1)

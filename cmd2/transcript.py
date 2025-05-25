@@ -64,9 +64,8 @@ class Cmd2TestCase(unittest.TestCase):
         self.transcripts = {}
         testfiles = cast(list[str], getattr(self.cmdapp, 'testfiles', []))
         for fname in testfiles:
-            tfile = open(fname)
-            self.transcripts[fname] = iter(tfile.readlines())
-            tfile.close()
+            with open(fname) as tfile:
+                self.transcripts[fname] = iter(tfile.readlines())
 
     def _test_transcript(self, fname: str, transcript: Iterator[str]) -> None:
         if self.cmdapp is None:
