@@ -4020,7 +4020,7 @@ class Cmd(cmd.Cmd):
         """
         local_opts: Union[list[str], list[tuple[Any, Optional[str]]]]
         if isinstance(opts, str):
-            local_opts = cast(list[tuple[Any, Optional[str]]], list(zip(opts.split(), opts.split(), strict=False)))
+            local_opts = cast(list[tuple[Any, Optional[str]]], list(zip(opts.split(), opts.split())))
         else:
             local_opts = opts
         fulloptions: list[tuple[Any, Optional[str]]] = []
