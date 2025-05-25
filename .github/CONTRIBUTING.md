@@ -1,13 +1,13 @@
 # Contributor's guide
 
-We welcome pull requests from cmd2 users and seasoned Python developers alike! Follow these steps to contribute:
+We welcome pull requests from `cmd2` users and seasoned Python developers alike! Follow these steps to contribute:
 
 1. Find an issue that needs assistance by searching for
    the [Help Wanted](https://github.com/python-cmd2/cmd2/labels/help%20wanted) tag
 
 2. Let us know you're working on it by posting a comment on the issue
 
-3. Follow the [Contribution guidelines](#contribution-guidelines) to start working on the issue
+3. Follow the [Contribution guidelines](#contribution-guidelines) below to start working on the issue
 
 Remember to feel free to ask for help by leaving a comment within the Issue.
 
@@ -25,7 +25,7 @@ Working on your first pull request? You can learn how from the
 - [Creating a branch](#creating-a-branch)
 - [Setting up for cmd2 development](#setting-up-for-cmd2-development)
 - [Making changes](#making-changes)
-- [Static code analysis](#static-code-analysis)
+- [Code Quality Checks](#code-quality-checks)
 - [Running the test suite](#running-the-test-suite)
 - [Squashing your commits](#squashing-your-commits)
 - [Creating a pull request](#creating-a-pull-request)
@@ -40,28 +40,44 @@ Working on your first pull request? You can learn how from the
 
 ### Prerequisites
 
-The tables below list all prerequisites along with the minimum required version for each.
+`cmd2` development is heavily based around using [uv](https://github.com/astral-sh/uv) for Python package and project
+management as well as creating and updating a local Python virtual environment. We also rely on [npm](https://www.npmjs.com/)
+for installing a few dependencies like [prettier](https://prettier.io/) for formatting non-Python files.
 
-> _Updating to the latest releases for all prerequisites via `uv` is recommended_.
+We have a [Makefile](../Makefile) with commands that make it quick and easy for developers to get everything setup and
+perform common development tasks.
+
+Nearly all project configuration, including for dependencies and quality tools is in the [pyproject.toml](../pyproject.toml) file.
+
+> _Updating to the latest releases for all prerequisites via `uv` is recommended_. This can be done with `uv lock --upgrade` followed by `uv sync`.
 
 #### Prerequisites to run cmd2 applications
 
-| Prerequisite                                        | Minimum Version |
-| --------------------------------------------------- | --------------- |
-| [python](https://www.python.org/downloads/)         | `3.9`           |
-| [pyperclip](https://github.com/asweigart/pyperclip) | `1.8.2`         |
-| [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.2.12`        |
+See the `dependencies` list under the `[project]` heading in [pyproject.toml](../pyproject.toml).
+
+| Prerequisite                                        | Minimum Version | Purpose                                |
+| --------------------------------------------------- | --------------- | -------------------------------------- |
+| [python](https://www.python.org/downloads/)         | `3.9`           | Python programming language            |
+| [pyperclip](https://github.com/asweigart/pyperclip) | `1.8`           | Cross-platform clipboard functions     |
+| [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.2.10`        | Measure the displayed width of unicode |
+
+> `macOS` and `Windows` each have an extra dependency to ensure they have a viable alternative to [readline](https://tiswww.case.edu/php/chet/readline/rltop.html) available.
 
 #### Additional prerequisites to build and publish cmd2
 
-| Prerequisite                                             | Minimum Version |
-| -------------------------------------------------------- | --------------- |
-| [build](https://pypi.org/project/build/)                 | `1.2.2`         |
-| [setuptools](https://pypi.org/project/setuptools/)       | `72.1.0`        |
-| [setuptools-scm](https://github.com/pypa/setuptools-scm) | `8.0.4`         |
-| [twine](https://github.com/pypa/twine)                   | `5.1.1`         |
+See the `build` list under the `[dependency-groups]` heading in [pyproject.toml](../pyproject.toml) for a list of dependencies needed for building `cmd2`.
+
+| Prerequisite                                             | Minimum Version | Purpose                          |
+| -------------------------------------------------------- | --------------- | -------------------------------- |
+| [build](https://pypi.org/project/build/)                 | `1.2.2`         | Python build frontend            |
+| [setuptools](https://pypi.org/project/setuptools/)       | `72.1.0`        | Python package management        |
+| [setuptools-scm](https://github.com/pypa/setuptools-scm) | `8.0.4`         | Manage your versions by scm tags |
+
+> [twine](https://github.com/pypa/twine) 5.1 or newer is also needed for publishing releases to PyPI, but that is something only core maintainers need to worry about.
 
 #### Additional prerequisites for developing cmd2
+
+See the `dev` list under the `[dependency-groups]` heading in [pyproject.toml](../pyproject.toml) for a list of dependencies needed for building `cmd2`.
 
 | Prerequisite                                                                               | Minimum Version | Purpose                          |
 | ------------------------------------------------------------------------------------------ | --------------- | -------------------------------- |
@@ -205,8 +221,7 @@ _[this](https://github.com/Kunena/Kunena-Forum/wiki/Create-a-new-branch-with-git
 
 ### Setting up for cmd2 development
 
-For doing cmd2 development, it is recommended you create a virtual environment using Conda or Virtualenv and install the
-package from the source.
+For doing `cmd2` development, it is strongly recommended you create a virtual environment `uv` using the instructions in the next section.
 
 #### Create a new environment for cmd2 using uv
 
@@ -216,18 +231,14 @@ package from the source.
 contains configuration for using `uv` in it's `pyproject.toml` file which makes it extremely easy to setup a `cmd2`
 development environment using `uv`.
 
-To create a virtual environment and install everything needed for `cmd2` development using `uv`, do the following
-from a GitHub checkout:
+To create a virtual environment using the latest stable version of Python and install everything needed for `cmd2` development using `uv`,
+do the following from the root of your cloned `cmd2` repository:
 
 ```sh
 make install
 ```
 
-To install the recommended Git pre-commit hooks for auto-formatting locally, do the following:
-
-```sh
-uv run pre-commit run -a
-```
+This will also install the recommended Git pre-commit hooks for auto-formatting and linting locally.
 
 To create a new virtualenv, using a specific version of Python you have installed, use the
 --python VERSION flag, like so:
@@ -264,35 +275,31 @@ testing, rendering documentation, and building and distributing releases. These
 modules can be configured many different ways, which can make it difficult to
 learn the specific incantations required for each project you're familiar with.
 
-This project uses `invoke <http://www.pyinvoke.org>` to provide a clean,
-high-level interface for these development tasks. To see the full list of functions
-available:
+This project uses [make]() to provide a clean, high-level interface for these development tasks. To see the full list of make commands available:
 
 ```sh
-$ uv run inv -l
+$ make help
 ```
 
-You can run multiple tasks in a single invocation, for example::
+You can run multiple make commands in a single invocation, for example::
 
 ```sh
-$ uv run inv docs sdist wheel
+$ make test docs-test
 ```
 
-That one command will remove all superfluous cache, testing, and build
-files, render the documentation, and build a source distribution and a
-wheel distribution.
+That one command will run all unit and integration tests and also ensure the documentation builds without any warnings.
 
-If you want to see the details about what `invoke` is doing under the hood,
-have a look at `tasks.py`.
+If you want to see the details about what any of these commands are doing under the hood, just look at the [Makefile](../Makefile).
 
 Now you can check if everything is installed and working:
 
 ```sh
 $ cd ~src/cmd2
-$ uv run inv pytest
+$ make check
 ```
 
-If the tests are executed it means that dependencies and project are installed successfully.
+This will run all auto-formatters, linters, and type checkers to ensure code quality. You should run this every time before committing any code.
+If this all runs successfully, then your virtual environment is setup and working properly.
 
 You can also run the example app and see a prompt that says "(Cmd)" running the command:
 
@@ -315,9 +322,10 @@ This bit is up to you!
 The cmd2 project directory structure is pretty simple and straightforward. All
 actual code for cmd2 is located underneath the `cmd2` directory. The code to
 generate the documentation is in the `docs` directory. Unit tests are in the
-`tests` directory. The `examples` directory contains examples of how to use
-cmd2. There are various other files in the root directory, but these are
-primarily related to continuous integration and release deployment.
+`tests` directory. Integration tests are in the `tests_isolated` directory.
+The `examples` directory contains examples of how to use cmd2. There are various
+other files in the root directory, but these are primarily related to continuous
+integration and release deployment.
 
 #### Changes to the documentation files
 
@@ -325,57 +333,60 @@ If you made changes to any file in the `/docs` directory, you need to build the
 MkDocs documentation and make sure your changes look good:
 
 ```sh
-$ uv inv docs
+$ make docs-test
 ```
 
-In order to see the changes, use your web browser of choice to open `~/cmd2/docs/_build/html/index.html`.
+In order to see the changes, use your web browser of choice to open `~/cmd2/build/html/index.html`.
 
 If you would rather use a webserver to view the documentation, including
 automatic page refreshes as you edit the files, use:
 
 ```sh
-$ uv inv livehtml
+$ make docs
 ```
 
 You will be shown the IP address and port number where the documents are now
-served (usually [http://localhost:8000](http://localhost:8000)).
+served, usually [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
 ### Code Quality Checks
 
-You should have some sort of [PEP 8](https://www.python.org/dev/peps/pep-0008/)-based linting running in your editor or
-IDE or at the command line before you commit code. `cmd2` uses [ruff](https://github.com/astral-sh/ruff) as part of
-its continuous integration (CI) process for both linting and auto-formatting.
+You should have idiomatic formatters and linters running in your IDE or at the command line before you commit code.
+`cmd2` uses [ruff](https://github.com/astral-sh/ruff) as part of its continuous integration (CI) process for both linting and auto-formatting of
+Python code. It also uses [prettier](https://prettier.io/) for auto-formatting other file types and [mypy](https://mypy-lang.org/) for doing
+static type checking of Python code based on type annotations.
 
 > Please do not ignore any linting errors in code you write or modify, as they are meant to **help** you and to ensure a
 > clean and simple code base. Don't worry about linting errors in code you don't touch though - cleaning up the legacy
 > code is a work in progress.
 
-#### Formatting
-
-To check if formatting is correct:
+You can quickly run all code quality stuff in one fell swoop using:
 
 ```sh
-uv run inv format
+make check
 ```
 
-To automatically fix formatting:
+#### Python Formatting
+
+To check if Python formatting is correct:
 
 ```sh
-uv run ruff format
+make format
 ```
+
+NOTE: This will automatically fix the formatting, so just run it twice and it should be good.
 
 #### Linting
 
-To run the linter:
+To run the Python linter:
 
 ```shell
-uv run inv lint
+make lint
 ```
 
 #### Static Type Checking
 
 ```shell
-uv run inv mypy
+make typecheck
 ```
 
 ### Running the test suite
@@ -384,7 +395,7 @@ When you're ready to share your code, run the test suite:
 
 ```sh
 $ cd ~/cmd2
-$ uv run pytest
+$ make test
 ```
 
 and ensure all tests pass.
@@ -394,9 +405,9 @@ is shown on the screen. A full report is available in `~/cmd2/htmlcov/index.html
 
 ### Squashing your commits
 
-When you make a pull request, it is preferable for all of your changes to be in one commit.
-If you have made more then one commit, then you can _squash_ your commits.
-To do this, see [this article](http://forum.freecodecamp.com/t/how-to-squash-multiple-commits-into-one-with-git/13231).
+While squashing your commits is best practice, don't worry about it. We do this automatically when we merge in Pull Requests (PRs).
+
+If you want to understand how to do this manually, see [this article](http://forum.freecodecamp.com/t/how-to-squash-multiple-commits-into-one-with-git/13231).
 
 ### Creating a pull request
 
@@ -515,9 +526,9 @@ how to do it.
 ### How we review and merge pull requests
 
 cmd2 has a team of volunteer Maintainers. These Maintainers routinely go through open pull requests in a process
-called [Quality Assurance](https://en.wikipedia.org/wiki/Quality_assurance) (QA). We also use multiple continuous
-integration (CI) providers to automatically run all of the unit tests on multiple operating systems and versions of
-Python.
+called [Quality Assurance](https://en.wikipedia.org/wiki/Quality_assurance) (QA). We use [GitHub Actions](https://github.com/features/actions)
+to automatically run all of the unit tests on multiple operating systems and versions of Python and to also run the code quality checks
+on at least one version of Python.
 
 1. If your changes can merge without conflicts and all unit tests pass for all OSes and supported versions of Python,
    then your pull request (PR) will have a big green checkbox which says something like "All Checks Passed" next to it.
@@ -600,6 +611,93 @@ excellent support for debugging console applications.
 
 [PyCharm](https://www.jetbrains.com/pycharm/) is also quite good and has very
 nice [code inspection](https://www.jetbrains.com/help/pycharm/code-inspection.html) capabilities.
+
+#### PyCharm Settings
+
+One of the best things about **PyCharm** is that it "just works" with essentially no configuration tweaks required. The
+default out-of-the-box experience is excellent.
+
+The one plugin we consider essential for PyCharm is [RyeCharm](https://plugins.jetbrains.com/plugin/25230-ryecharm). `RyeCharm` is an all-in-one PyCharm plugin for [Astral](https://astral.sh/)-backed Python tools: [uv](https://github.com/astral-sh/uv), [Ruff](https://github.com/astral-sh/ruff), and [ty](https://github.com/astral-sh/ty). NOTE: `ty` support is provisional as that new type checker is in early alpha developement.
+
+#### VSCode Settings
+
+While **VSCode** is a phenomenal IDE for developing in Python, the out-of-the-box experience leaves a lot to be desired. You will need to install a
+number of extenstions and tweak the default configuration for many of them in order to get an optimal developer experience.
+
+Recommended VSCode extensions:
+
+- [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python) - Python language support with extension access points for IntelliSense (Pylance), Debugging (Python Debugger), linting, formatting, etc.
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Code formatter for Markdown and YAML files
+- [GitLens](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens) - Supercharges Git support in VSCode
+- [YAML](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) - YAML language support
+- [Code Spell Checker](https://marketplace.visualstudio.com/items?itemName=streetsidesoftware.code-spell-checker) - Spell checker for source code
+- [Markdown All in One](https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one) - All you need to write Markdown (keyboard shortcuts, table of contents, auto preview and more)
+- [Makefile Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.makefile-tools) - Provide makefile support in VS Code
+- [Even Better TOML](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml) - Fully-featured TOML support
+- [Markdown Preview Mermaid Support](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid) - Adds Mermaid diagram and flowchart support to VS Code's builtin markdown preview
+- [Ruff](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) - Support for the Ruff linter and formatter
+
+Depending on what file types you are editing, you may only need a subset of those extensions.
+
+Here is an example of what your `User Settings JSON` file in VSCode might look like for a good experience, take it as a starting point and tweak as you see fit
+
+```json
+{
+    "[css]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "editor.formatOnSave": true,
+    "editor.largeFileOptimizations": false,
+    "editor.renderWhitespace": "trailing",
+    "git.blame.editorDecoration.enabled": false,
+    "git.openRepositoryInParentFolders": "always",
+    "gitlens.telemetry.enabled": false,
+    "[html]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[markdown]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true
+    },
+    "python.analysis.ignore": ["*"],
+    "python.terminal.shellIntegration.enabled": true,
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        }
+    },
+    "redhat.telemetry.enabled": false,
+    "ruff.lineLength": 127,
+    "security.workspace.trust.untrustedFiles": "open",
+    "telemetry.telemetryLevel": "off",
+    "[toml]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true
+    },
+    "yaml.schemas": {
+        "https://squidfunk.github.io/mkdocs-material/schema.json": "mkdocs.yml"
+    },
+    "yaml.customTags": [
+        "!ENV scalar",
+        "!ENV sequence",
+        "!relative scalar",
+        "tag:yaml.org,2002:python/name:material.extensions.emoji.to_svg",
+        "tag:yaml.org,2002:python/name:material.extensions.emoji.twemoji",
+        "tag:yaml.org,2002:python/name:pymdownx.superfences.fence_code_format",
+        "tag:yaml.org,2002:python/object/apply:pymdownx.slugs.slugify mapping"
+    ],
+    "[yaml]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
+}
+```
 
 ## Branching Strategy and Semantic Versioning
 
