@@ -640,8 +640,7 @@ def register_argparse_argument_parameter(param_name: str, param_type: Optional[t
     getter_name = f'get_{param_name}'
 
     def _action_get_custom_parameter(self: argparse.Action) -> Any:
-        """
-        Get the custom attribute of an argparse Action.
+        """Get the custom attribute of an argparse Action.
 
         This function is added by cmd2 as a method called ``get_<param_name>()`` to ``argparse.Action`` class.
 
@@ -657,8 +656,7 @@ def register_argparse_argument_parameter(param_name: str, param_type: Optional[t
     setter_name = f'set_{param_name}'
 
     def _action_set_custom_parameter(self: argparse.Action, value: Any) -> None:
-        """
-        Set the custom attribute of an argparse Action.
+        """Set the custom attribute of an argparse Action.
 
         This function is added by cmd2 as a method called ``set_<param_name>()`` to ``argparse.Action`` class.
 
