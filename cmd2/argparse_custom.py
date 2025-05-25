@@ -1,4 +1,5 @@
-"""This module adds capabilities to argparse by patching a few of its functions.
+"""Module adds capabilities to argparse by patching a few of its functions.
+
 It also defines a parser class called Cmd2ArgumentParser which improves error
 and help output over normal argparse. All cmd2 code uses this parser and it is
 recommended that developers of cmd2-based apps either use it or write their own
@@ -340,9 +341,7 @@ class CompleterFuncBase(Protocol):
 
 @runtime_checkable
 class CompleterFuncWithTokens(Protocol):
-    """Function to support tab completion with the provided state of the user prompt and accepts a dictionary of prior
-    arguments.
-    """
+    """Function to support tab completion with the provided state of the user prompt, accepts a dictionary of prior args."""
 
     def __call__(
         self,
@@ -360,6 +359,7 @@ CompleterFunc = Union[CompleterFuncBase, CompleterFuncWithTokens]
 
 class ChoicesCallable:
     """Enables using a callable as the choices provider for an argparse argument.
+
     While argparse has the built-in choices attribute, it is limited to an iterable.
     """
 
@@ -368,7 +368,8 @@ class ChoicesCallable:
         is_completer: bool,
         to_call: Union[CompleterFunc, ChoicesProviderFunc],
     ) -> None:
-        """Initializer
+        """Initialize the ChoiceCallable instance.
+
         :param is_completer: True if to_call is a tab completion routine which expects
                              the args: text, line, begidx, endidx
         :param to_call: the callable object that will be called to provide choices for the argument.
@@ -621,7 +622,7 @@ _CUSTOM_ATTRIB_PFX = '_attr_'
 
 
 def register_argparse_argument_parameter(param_name: str, param_type: Optional[type[Any]]) -> None:
-    """Registers a custom argparse argument parameter.
+    """Register a custom argparse argument parameter.
 
     The registered name will then be a recognized keyword parameter to the parser's `add_argument()` function.
 
@@ -693,7 +694,7 @@ def _add_argument_wrapper(
     descriptive_header: Optional[str] = None,
     **kwargs: Any,
 ) -> argparse.Action:
-    """Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2.
+    """Wrap ActionsContainer.add_argument() which supports more settings used by cmd2.
 
     # Args from original function
     :param self: instance of the _ActionsContainer being added to
@@ -913,7 +914,8 @@ setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap
 # Patch ArgumentParser._check_value to support CompletionItems as choices
 ############################################################################################################
 def _ArgumentParser_check_value(_self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:  # noqa: N802
-    """Custom override of ArgumentParser._check_value that supports CompletionItems as choices.
+    """Check_value that supports CompletionItems as choices (Custom override of ArgumentParser._check_value).
+
     When evaluating choices, input is compared to CompletionItem.orig_value instead of the
     CompletionItem instance.
 
@@ -945,7 +947,7 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 
 
 def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore[type-arg]  # noqa: N802
-    """Removes a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
+    """Remove a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
 
     This function is added by cmd2 as a method called ``remove_parser()`` to ``argparse._SubParsersAction`` class.
 
@@ -1126,7 +1128,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         action: argparse.Action,
         default_metavar: Union[str, tuple[str, ...]],
     ) -> Union[str, tuple[str, ...]]:
-        """Custom method to determine what to use as the metavar value of an action."""
+        """Determine what to use as the metavar value of an action."""
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
@@ -1153,7 +1155,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         return format_tuple
 
     def _format_args(self, action: argparse.Action, default_metavar: Union[str, tuple[str, ...]]) -> str:
-        """Customized to handle ranged nargs and make other output less verbose."""
+        """Handle ranged nargs and make other output less verbose."""
         metavar = self._determine_metavar(action, default_metavar)
         metavar_formatter = self._metavar_formatter(action, default_metavar)
 
@@ -1200,7 +1202,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         *,
         ap_completer_type: Optional[type['ArgparseCompleter']] = None,
     ) -> None:
-        """# Custom parameter added by cmd2.
+        """Initialize the Cmd2ArgumentParser instance, a custom ArgumentParser added by cmd2.
 
         :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom tab completion
                                   behavior on this parser. If this is None or not present, then cmd2 will use
@@ -1221,9 +1223,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 conflict_handler=conflict_handler,
                 add_help=add_help,
                 allow_abbrev=allow_abbrev,
-                exit_on_error=exit_on_error,
-                suggest_on_error=suggest_on_error,
-                color=color,
+                exit_on_error=exit_on_error,  # added in Python 3.9
+                suggest_on_error=suggest_on_error,  # added in Python 3.14
+                color=color,  # added in Python 3.14
             )
         else:
             # Python < 3.14, so don't pass new arguments to parent argparse.ArgumentParser class
@@ -1240,13 +1242,15 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 conflict_handler=conflict_handler,
                 add_help=add_help,
                 allow_abbrev=allow_abbrev,
-                exit_on_error=exit_on_error,
+                exit_on_error=exit_on_error,  # added in Python 3.9
             )
 
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
     def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:  # type: ignore[type-arg]
-        """Custom override. Sets a default title if one was not given.
+        """Add a subcommand parser.
+
+        Set a default title if one was not given.f
 
         :param kwargs: additional keyword arguments
         :return: argparse Subparser Action
@@ -1257,7 +1261,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         return super().add_subparsers(**kwargs)
 
     def error(self, message: str) -> NoReturn:
-        """Custom override that applies custom formatting to the error message."""
+        """Print a usage message, including the message, to sys.stderr and terminates the program with a status code of 2.
+
+        Custom override that applies custom formatting to the error message.
+        """
         lines = message.split('\n')
         formatted_message = ''
         for linum, line in enumerate(lines):
@@ -1271,7 +1278,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.exit(2, f'{formatted_message}\n\n')
 
     def format_help(self) -> str:
-        """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters."""
+        """Return a string containing a help message, including the program usage and information about the arguments.
+
+        Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters.
+        """
         formatter = self._get_formatter()
 
         # usage
@@ -1334,6 +1344,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
 class Cmd2AttributeWrapper:
     """Wraps a cmd2-specific attribute added to an argparse Namespace.
+
     This makes it easy to know which attributes in a Namespace are
     arguments from a parser and which were added by cmd2.
     """
@@ -1355,8 +1366,10 @@ DEFAULT_ARGUMENT_PARSER: type[argparse.ArgumentParser] = Cmd2ArgumentParser
 
 
 def set_default_argument_parser_type(parser_type: type[argparse.ArgumentParser]) -> None:
-    """Set the default ArgumentParser class for a cmd2 app. This must be called prior to loading cmd2.py if
-    you want to override the parser for cmd2's built-in commands. See examples/override_parser.py.
+    """Set the default ArgumentParser class for a cmd2 app.
+
+    This must be called prior to loading cmd2.py if you want to override the parser for cmd2's built-in commands.
+    See examples/override_parser.py.
     """
     global DEFAULT_ARGUMENT_PARSER  # noqa: PLW0603
     DEFAULT_ARGUMENT_PARSER = parser_type

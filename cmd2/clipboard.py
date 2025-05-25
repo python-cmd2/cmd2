@@ -1,4 +1,4 @@
-"""This module provides basic ability to copy from and paste to the clipboard/pastebuffer."""
+"""Module provides basic ability to copy from and paste to the clipboard/pastebuffer."""
 
 import typing
 

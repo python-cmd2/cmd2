@@ -1,4 +1,4 @@
-"""This simply imports certain things for backwards compatibility."""
+"""Import certain things for backwards compatibility."""
 
 import argparse
 import contextlib

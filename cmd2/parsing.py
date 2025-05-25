@@ -23,7 +23,10 @@ from .exceptions import (
 
 
 def shlex_split(str_to_split: str) -> list[str]:
-    """A wrapper around shlex.split() that uses cmd2's preferred arguments.
+    """Split the string *str_to_split* using shell-like syntax.
+
+    A wrapper around shlex.split() that uses cmd2's preferred arguments.
+
     This allows other classes to easily call split() the same way StatementParser does.
 
     :param str_to_split: the string being split
@@ -34,7 +37,8 @@ def shlex_split(str_to_split: str) -> list[str]:
 
 @dataclass(frozen=True)
 class MacroArg:
-    """Information used to replace or unescape arguments in a macro value when the macro is resolved
+    """Information used to replace or unescape arguments in a macro value when the macro is resolved.
+
     Normal argument syntax:    {5}
     Escaped argument syntax:  {{5}}.
     """
@@ -217,12 +221,12 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
         return rtn
 
     def to_dict(self) -> dict[str, Any]:
-        """Utility method to convert this Statement into a dictionary for use in persistent JSON history files."""
+        """Convert this Statement into a dictionary for use in persistent JSON history files."""
         return self.__dict__.copy()
 
     @staticmethod
     def from_dict(source_dict: dict[str, Any]) -> 'Statement':
-        """Utility method to restore a Statement from a dictionary.
+        """Restore a Statement from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
         :return: Statement object
@@ -359,8 +363,7 @@ class StatementParser:
         return valid, errmsg
 
     def tokenize(self, line: str) -> list[str]:
-        """Lex a string into a list of tokens. Shortcuts and aliases are expanded and
-        comments are removed.
+        """Lex a string into a list of tokens. Shortcuts and aliases are expanded and comments are removed.
 
         :param line: the command line being lexed
         :return: A list of tokens
@@ -383,9 +386,9 @@ class StatementParser:
         return self.split_on_punctuation(tokens)
 
     def parse(self, line: str) -> Statement:
-        """Tokenize the input and parse it into a [cmd2.parsing.Statement][] object,
-        stripping comments, expanding aliases and shortcuts, and extracting output
-        redirection directives.
+        """Tokenize the input and parse it into a [cmd2.parsing.Statement][] object.
+
+        Stripping comments, expanding aliases and shortcuts, and extracting output redirection directives.
 
         :param line: the command line being parsed
         :return: a new [cmd2.parsing.Statement][] object
@@ -523,7 +526,7 @@ class StatementParser:
         )
 
     def parse_command_only(self, rawinput: str) -> Statement:
-        """Partially parse input into a [cmd2.Statement][] object.
+        """Parse input into a [cmd2.Statement][] object (partially).
 
         The command is identified, and shortcuts and aliases are expanded.
         Multiline commands are identified, but terminators and output
@@ -584,9 +587,9 @@ class StatementParser:
     def get_command_arg_list(
         self, command_name: str, to_parse: Union[Statement, str], preserve_quotes: bool
     ) -> tuple[Statement, list[str]]:
-        """Convenience method used by the argument parsing decorators.
+        """Retrieve just the arguments being passed to their ``do_*`` methods as a list.
 
-        Retrieves just the arguments being passed to their ``do_*`` methods as a list.
+        Convenience method used by the argument parsing decorators.
 
         :param command_name: name of the command being run
         :param to_parse: what is being passed to the ``do_*`` method. It can be one of two types:
@@ -651,9 +654,7 @@ class StatementParser:
 
     @staticmethod
     def _command_and_args(tokens: list[str]) -> tuple[str, str]:
-        """Given a list of tokens, return a tuple of the command
-        and the args as a string.
-        """
+        """Given a list of tokens, return a tuple of the command and the args as a string."""
         command = ''
         args = ''
 

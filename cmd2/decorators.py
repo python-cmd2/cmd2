@@ -74,8 +74,10 @@ RawCommandFuncOptionalBoolReturn = Callable[[CommandParent, Union[Statement, str
 # found we can swap out the statement with each decorator's specific parameters
 ##########################
 def _parse_positionals(args: tuple[Any, ...]) -> tuple['cmd2.Cmd', Union[Statement, str]]:
-    """Helper function for cmd2 decorators to inspect the positional arguments until the cmd2.Cmd argument is found
+    """Inspect the positional arguments until the cmd2.Cmd argument is found.
+
     Assumes that we will find cmd2.Cmd followed by the command statement object or string.
+
     :arg args: The positional arguments to inspect
     :return: The cmd2.Cmd reference and the command line statement.
     """
@@ -97,7 +99,7 @@ def _parse_positionals(args: tuple[Any, ...]) -> tuple['cmd2.Cmd', Union[Stateme
 
 
 def _arg_swap(args: Union[Sequence[Any]], search_arg: Any, *replace_arg: Any) -> list[Any]:
-    """Helper function for cmd2 decorators to swap the Statement parameter with one or more decorator-specific parameters.
+    """Swap the Statement parameter with one or more decorator-specific parameters.
 
     :param args: The original positional arguments
     :param search_arg: The argument to search for (usually the Statement)
@@ -136,8 +138,9 @@ def with_argument_list(
     RawCommandFuncOptionalBoolReturn[CommandParent],
     Callable[[ArgListCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]],
 ]:
-    """A decorator to alter the arguments passed to a ``do_*`` method. Default
-    passes a string of whatever the user typed. With this decorator, the
+    """A decorator to alter the arguments passed to a ``do_*`` method.
+
+    Default passes a string of whatever the user typed. With this decorator, the
     decorated method will receive a list of arguments parsed from user input.
 
     :param func_arg: Single-element positional argument list containing ``doi_*`` method
@@ -189,8 +192,9 @@ def with_argument_list(
 
 
 def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
-    """Recursively set prog attribute of a parser and all of its subparsers so that the root command
-    is a command name and not sys.argv[0].
+    """Recursively set prog attribute of a parser and all of its subparsers.
+
+    Does so that the root command is a command name and not sys.argv[0].
 
     :param parser: the parser being edited
     :param prog: new value for the parser's prog attribute
@@ -332,8 +336,7 @@ def with_argparser(
 
         @functools.wraps(func)
         def cmd_wrapper(*args: Any, **kwargs: dict[str, Any]) -> Optional[bool]:
-            """Command function wrapper which translates command line into argparse Namespace and calls actual
-            command function.
+            """Command function wrapper which translates command line into argparse Namespace and call actual command function.
 
             :param args: All positional arguments to this function.  We're expecting there to be:
                             cmd2_app, statement: Union[Statement, str]
