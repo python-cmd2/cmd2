@@ -215,7 +215,7 @@ select = [
     "TC",  # flake8-type-checking (type checking warnings)
     "TD",  # flake8-todos (force all TODOs to include an author and issue link)
     "TID", # flake8-tidy-imports (extra import rules to check)
-    # "TRY", # tryceratops (warnings related to exceptions and try/except)
+    "TRY", # tryceratops (warnings related to exceptions and try/except)
     "UP",  # pyupgrade (A tool (and pre-commit hook) to automatically upgrade syntax for newer versions of the language)
     "W",   # pycodestyle warnings (warn about minor stylistic issues)
     "YTT", # flake8-2020 (checks for misuse of sys.version or sys.version_info)
@@ -236,6 +236,7 @@ ignore = [
     "Q002",   # Conflicts with ruff format
     "Q003",   # Conflicts with ruff format
     "TC006",  # Add quotes to type expression in typing.cast() (not needed except for forward references)
+    "TRY003", # Avoid specifying long messages outside the exception class (force custom exceptions for everything)
     "UP007",  # Use X | Y for type annotations (requires Python 3.10+)
     "UP017",  # Use datetime.UTC alias (requires Python 3.11+)
     "UP036",  # Version block is outdated for minimum Python version (requires ruff target_version set to minimum supported)
