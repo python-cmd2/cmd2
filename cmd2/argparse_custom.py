@@ -392,14 +392,14 @@ class ChoicesCallable:
     def completer(self) -> CompleterFunc:
         if not isinstance(self.to_call, (CompleterFuncBase, CompleterFuncWithTokens)):  # pragma: no cover
             # this should've been caught in the constructor, just a backup check
-            raise ValueError('Function is not a CompleterFunc')
+            raise TypeError('Function is not a CompleterFunc')
         return self.to_call
 
     @property
     def choices_provider(self) -> ChoicesProviderFunc:
         if not isinstance(self.to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
             # this should've been caught in the constructor, just a backup check
-            raise ValueError('Function is not a ChoicesProviderFunc')
+            raise TypeError('Function is not a ChoicesProviderFunc')
         return self.to_call
 
 

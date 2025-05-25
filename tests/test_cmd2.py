@@ -643,8 +643,6 @@ def test_output_redirection(base_app) -> None:
             appended_content = f.read()
         assert appended_content.startswith(content)
         assert len(appended_content) > len(content)
-    except Exception:
-        raise
     finally:
         os.remove(filename)
 
@@ -686,8 +684,6 @@ def test_feedback_to_output_true(base_app) -> None:
         with open(filename) as f:
             content = f.readlines()
         assert content[-1].startswith('Elapsed: ')
-    except:
-        raise
     finally:
         os.remove(filename)
 
@@ -705,8 +701,6 @@ def test_feedback_to_output_false(base_app) -> None:
             content = f.readlines()
         assert not content[-1].startswith('Elapsed: ')
         assert err[0].startswith('Elapsed')
-    except:
-        raise
     finally:
         os.remove(filename)
 

@@ -2497,7 +2497,7 @@ class Cmd(cmd.Cmd):
             if stop:
                 # we should not run the command, but
                 # we need to run the finalization hooks
-                raise EmptyStatement
+                raise EmptyStatement  # noqa: TRY301
 
             redir_saved_state: Optional[utils.RedirectionSavedState] = None
 
@@ -4047,7 +4047,7 @@ class Cmd(cmd.Cmd):
             try:
                 choice = int(response)
                 if choice < 1:
-                    raise IndexError
+                    raise IndexError  # noqa: TRY301
                 return fulloptions[choice - 1][0]
             except (ValueError, IndexError):
                 self.poutput(f"'{response}' isn't a valid choice. Pick a number between 1 and {len(fulloptions)}:")
