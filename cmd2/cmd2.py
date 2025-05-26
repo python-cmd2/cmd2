@@ -36,6 +36,7 @@ import functools
 import glob
 import inspect
 import os
+import pprint
 import pydoc
 import re
 import sys
@@ -1337,6 +1338,17 @@ class Cmd(cmd.Cmd):
                     sys.stderr.write(self.broken_pipe_warning)
         else:
             self.poutput(msg, end=end)
+
+    def ppretty(self, data: Any, *, indent: int = 2, width: int = 80, depth: Optional[int] = None, end: str = '\n') -> None:
+        """Pretty print arbitrary Python data structures to self.stdout and appends a newline by default.
+
+        :param data: object to print
+        :param indent: the amount of indentation added for each nesting level
+        :param width: the desired maximum number of characters per line in the output, a best effort will be made for long data
+        :param depth: the number of nesting levels which may be printed, if data is too deep, the next level replaced by ...
+        :param end: string appended after the end of the message, default a newline
+        """
+        self.print_to(self.stdout, pprint.pformat(data, indent, width, depth), end=end)
 
     # -----  Methods related to tab completion -----
 
