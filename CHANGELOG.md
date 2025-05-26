@@ -4,6 +4,7 @@
     - `cmd2` 2.6 supports Python 3.9+ (removed support for Python 3.8)
 - Enhancements
     - Add support for Python 3.14
+    - Added new `Cmd.ppretty()` method for pretty printing arbitrary Python data structures
 
 ## 2.5.11 (January 25, 2025)
 

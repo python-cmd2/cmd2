@@ -68,6 +68,8 @@ Here is the list of examples in alphabetical order by filename along with a brie
     - Shows how to enable persistent history in your `cmd2` application
 - [pirate.py](https://github.com/python-cmd2/cmd2/blob/master/examples/pirate.py)
     - Demonstrates many features including colorized output, multiline commands, shorcuts, defaulting to shell, etc.
+- [pretty_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/pretty_print.py)
+    - Demonstrates use of cmd2.Cmd.ppretty() for pretty-printing arbitrary Python data structures like dictionaries.
 - [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py)
     - Shows how cmd2's built-in `run_pyscript` command can provide advanced Python scripting of cmd2 applications
 - [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)

@@ -1962,6 +1962,24 @@ def test_poutput_none(outsim_app) -> None:
     assert out == expected
 
 
+def test_ppretty_dict(outsim_app) -> None:
+    data = {
+        "name": "John Doe",
+        "age": 30,
+        "address": {"street": "123 Main St", "city": "Anytown", "state": "CA"},
+        "hobbies": ["reading", "hiking", "coding"],
+    }
+    outsim_app.ppretty(data)
+    out = outsim_app.stdout.getvalue()
+    expected = """
+{ 'address': {'city': 'Anytown', 'state': 'CA', 'street': '123 Main St'},
+  'age': 30,
+  'hobbies': ['reading', 'hiking', 'coding'],
+  'name': 'John Doe'}
+"""
+    assert out == expected.lstrip()
+
+
 @with_ansi_style(ansi.AllowStyle.ALWAYS)
 def test_poutput_ansi_always(outsim_app) -> None:
     msg = 'Hello World'

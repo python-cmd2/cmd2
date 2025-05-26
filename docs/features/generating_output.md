@@ -80,3 +80,14 @@ These functions differ from Python's string justifying functions in that they su
 When generating output in multiple columns, you often need to calculate the width of each item so you can pad it appropriately with spaces. However, there are categories of Unicode characters that occupy 2 cells, and other that occupy 0. To further complicate matters, you might have included ANSI escape sequences in the output to generate colors on the terminal.
 
 The `cmd2.ansi.style_aware_wcswidth` function solves both of these problems. Pass it a string, and regardless of which Unicode characters and ANSI text style escape sequences it contains, it will tell you how many characters on the screen that string will consume when printed.
+
+## Pretty Printing Data Structures
+
+The `cmd2.Cmd.ppretty` method is similar to the Python [pprint](https://docs.python.org/3/library/pprint.html) function from the standard `pprint` module. `cmd2.Cmd.pprint` adds the same conveniences as `cmd2.Cmd.poutput`.
+
+This method provides a capability to “pretty-print” arbitrary Python data structures in a form which can be used as input to the interpreter and is easy for humans
+to read.
+
+The formatted representation keeps objects on a single line if it can, and breaks them onto multiple lines if they don’t fit within the allowed width, adjustable by the width parameter defaulting to 80 characters.
+
+Dictionaries are sorted by key before the display is computed.
