@@ -36,26 +36,23 @@ jobs:
         run: uv sync --all-extras --dev
 
       - name: Run tests
-        run: uv run inv pytest --junit --no-pty --base
+        run: uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
 
       - name: Run isolated tests
-        run: uv run inv pytest --junit --no-pty --isolated
+        run: uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests_isolated
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
-          files: ./junit.xml,!./cache
           flags: python${{ matrix.python-version }}
           name: codecov-umbrella-test-results
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          directory: ./coverage/reports/
           env_vars: OS,PYTHON
           fail_ci_if_error: true
-          files: ./coverage1.xml,./coverage2.xml,!./cache
           flags: unittests
           name: codecov-umbrella
           token: ${{ secrets.CODECOV_TOKEN }}
