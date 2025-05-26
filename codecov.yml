@@ -1,0 +1,17 @@
+# Components allow you to isolate and categorize coverage data from your project with virtual filters
+component_management:
+  individual_components:
+    - component_id: cmd2 # this is an identifier that should not be changed
+      name: cmd2 # this is a display name, and can be changed freely
+      paths:
+        - cmd2/**
+    - component_id: plugins
+      name: plugins
+      paths:
+        - plugins/**
+
+# Ignore certain paths, all files under these paths will be skipped during processing
+ignore:
+  - "examples" # ignore example code folder
+  - "tests" # ignore unit test code folder
+  - "tests_isolated" # ignore integration test code folder
