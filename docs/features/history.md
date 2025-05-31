@@ -127,6 +127,10 @@ The `history` command can also save both the commands and their output to a text
 
 The `--transcript` option implies `--run`: the commands must be re-run in order to capture their output to the transcript file.
 
+!!! warning
+
+    Unlike the `-o`/`--output-file` option, the `-t`/`--transcript` option will actually run the selected history commands again. This is necessary for creating a transcript file since the history saves the commands themselves but does not save their output. Please note that a side-effect of this is that the commands will appear again at the end of the history.
+
 The last action the history command can perform is to clear the command history using `-c` or `--clear`:
 
     (Cmd) history -c

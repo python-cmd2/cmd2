@@ -4632,7 +4632,7 @@ class Cmd(cmd.Cmd):
         '-t',
         '--transcript',
         metavar='TRANSCRIPT_FILE',
-        help='output commands and results to a transcript file,\nimplies -s',
+        help='create a transcript file by re-running the commands,\nimplies both -r and -s',
         completer=path_complete,
     )
     history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
@@ -4750,7 +4750,7 @@ class Cmd(cmd.Cmd):
                 self.pfeedback(f"{len(history)} command{plural} saved to {full_path}")
                 self.last_result = True
         elif args.transcript:
-            # self.last_resort will be set by _generate_transcript()
+            # self.last_result will be set by _generate_transcript()
             self._generate_transcript(list(history.values()), args.transcript)
         else:
             # Display the history items retrieved
