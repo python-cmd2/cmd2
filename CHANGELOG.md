@@ -1,4 +1,4 @@
-## 2.6.0 (May TBD, 2025)
+## 2.6.0 (May 31, 2025)
 
 - Breaking Change
     - `cmd2` 2.6 supports Python 3.9+ (removed support for Python 3.8)
