@@ -65,8 +65,8 @@ optional arguments:
   -o, --output_file FILE
                         output commands to a script file, implies -s
   -t, --transcript TRANSCRIPT_FILE
-                        output commands and results to a transcript file,
-                        implies -s
+                        create a transcript file by re-running the commands,
+                        implies both -r and -s
   -c, --clear           clear all history
 
 formatting:
