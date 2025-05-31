@@ -4502,7 +4502,7 @@ class Cmd(cmd.Cmd):
 
         :return: True if running of commands should stop.
         """
-        # self.last_resort will be set by _run_python()
+        # self.last_result will be set by _run_python()
         return self._run_python()
 
     run_pyscript_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run a Python script file inside the console")
@@ -4537,7 +4537,7 @@ class Cmd(cmd.Cmd):
             # Overwrite sys.argv to allow the script to take command line arguments
             sys.argv = [args.script_path, *args.script_arguments]
 
-            # self.last_resort will be set by _run_python()
+            # self.last_result will be set by _run_python()
             py_return = self._run_python(pyscript=args.script_path)
         finally:
             # Restore command line arguments to original state
@@ -4632,7 +4632,7 @@ class Cmd(cmd.Cmd):
         '-t',
         '--transcript',
         metavar='TRANSCRIPT_FILE',
-        help='output commands and results to a transcript file,\nimplies -s',
+        help='create a transcript file by re-running the commands,\nimplies both -r and -s',
         completer=path_complete,
     )
     history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
@@ -4730,7 +4730,7 @@ class Cmd(cmd.Cmd):
             try:
                 self.run_editor(fname)
 
-                # self.last_resort will be set by do_run_script()
+                # self.last_result will be set by do_run_script()
                 return self.do_run_script(utils.quote_string(fname))
             finally:
                 os.remove(fname)
@@ -4750,7 +4750,7 @@ class Cmd(cmd.Cmd):
                 self.pfeedback(f"{len(history)} command{plural} saved to {full_path}")
                 self.last_result = True
         elif args.transcript:
-            # self.last_resort will be set by _generate_transcript()
+            # self.last_result will be set by _generate_transcript()
             self._generate_transcript(list(history.values()), args.transcript)
         else:
             # Display the history items retrieved
@@ -5093,7 +5093,7 @@ class Cmd(cmd.Cmd):
             self._script_dir.append(os.path.dirname(expanded_path))
 
             if args.transcript:
-                # self.last_resort will be set by _generate_transcript()
+                # self.last_result will be set by _generate_transcript()
                 self._generate_transcript(
                     script_commands,
                     os.path.expanduser(args.transcript),

@@ -1,10 +1,11 @@
-## 2.6.0 (May TBD, 2025)
+## 2.6.0 (May 31, 2025)
 
 - Breaking Change
     - `cmd2` 2.6 supports Python 3.9+ (removed support for Python 3.8)
 - Enhancements
-    - Add support for Python 3.14
+    - Added support for Python 3.14
     - Added new `Cmd.ppretty()` method for pretty printing arbitrary Python data structures
+    - Clarified help text for `-t`/`--transcript` argument to the `history` command
 
 ## 2.5.11 (January 25, 2025)
 
