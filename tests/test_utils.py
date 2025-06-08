@@ -892,3 +892,44 @@ def test_similarity_overwrite_function() -> None:
 
     suggested_command = cu.suggest_similar("test", ["test"], similarity_function_to_use=custom_similarity_function)
     assert suggested_command is None
+
+
+def test_get_types_invalid_input() -> None:
+    x = 1
+    with pytest.raises(ValueError, match="Argument passed to get_types should be a function or method"):
+        cu.get_types(x)
+
+
+def test_get_types_empty() -> None:
+    def a(b):
+        print(b)
+
+    param_ann, ret_ann = cu.get_types(a)
+    assert ret_ann is None
+    assert param_ann == {}
+
+
+def test_get_types_non_empty() -> None:
+    def foo(x: int) -> str:
+        return f"{x * x}"
+
+    param_ann, ret_ann = cu.get_types(foo)
+    assert ret_ann is str
+    param_name, param_value = next(iter(param_ann.items()))
+    assert param_name == 'x'
+    assert param_value is int
+
+
+def test_get_types_method() -> None:
+    class Foo:
+        def bar(self, x: bool) -> None:
+            print(x)
+
+    f = Foo()
+
+    param_ann, ret_ann = cu.get_types(f.bar)
+    assert ret_ann is None
+    assert len(param_ann) == 1
+    param_name, param_value = next(iter(param_ann.items()))
+    assert param_name == 'x'
+    assert param_value is bool
