@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """A simple example demonstrating support for unicode command names."""
 
+from __future__ import annotations
+
 import math
 
 import cmd2

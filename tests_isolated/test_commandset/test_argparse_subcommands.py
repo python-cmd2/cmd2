@@ -1,5 +1,7 @@
 """reproduces test_argparse.py except with SubCommands"""
 
+from __future__ import annotations
+
 import pytest
 
 import cmd2

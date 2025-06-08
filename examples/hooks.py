@@ -7,6 +7,8 @@ follow a command without any intervening whitespace.
 
 """
 
+from __future__ import annotations
+
 import re
 
 import cmd2

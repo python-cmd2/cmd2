@@ -4,6 +4,8 @@
 It also demonstrates the effects of decorator order when it comes to argparse errors occurring.
 """
 
+from __future__ import annotations
+
 import functools
 
 import cmd2

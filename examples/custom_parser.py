@@ -1,5 +1,7 @@
 """Defines the CustomParser used with override_parser.py example."""
 
+from __future__ import annotations
+
 import sys
 
 from cmd2 import (

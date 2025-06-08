@@ -1,5 +1,7 @@
 """Unit/functional testing for run_pytest in cmd2"""
 
+from __future__ import annotations
+
 import builtins
 import os
 from unittest import (

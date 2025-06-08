@@ -5,6 +5,8 @@ This will allow end users of your cmd2-based application to use the arrow keys a
 across invocations of your cmd2 application.  This can make it much easier for them to use your application.
 """
 
+from __future__ import annotations
+
 import cmd2
 
 

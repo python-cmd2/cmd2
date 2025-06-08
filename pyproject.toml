@@ -233,7 +233,6 @@ ignore = [
     "E111",   # Conflicts with ruff format
     "E114",   # Conflicts with ruff format
     "E117",   # Conflicts with ruff format
-    "FA100",  # Adding from __future__ import annotations screws up cmd2 because of how use inspect to validate type annotations at runtime
     "ISC002", # Conflicts with ruff format
     "Q000",   # Conflicts with ruff format
     "Q001",   # Conflicts with ruff format
@@ -241,9 +240,7 @@ ignore = [
     "Q003",   # Conflicts with ruff format
     "TC006",  # Add quotes to type expression in typing.cast() (not needed except for forward references)
     "TRY003", # Avoid specifying long messages outside the exception class (force custom exceptions for everything)
-    "UP007",  # Use X | Y for type annotations (requires Python 3.10+)
     "UP017",  # Use datetime.UTC alias (requires Python 3.11+)
-    "UP036",  # Version block is outdated for minimum Python version (requires ruff target_version set to minimum supported)
     "UP038",  # Use X | Y in {} call instead of (X, Y) - deprecated due to poor performance (requires Python 3.10+)
     "W191",   # Conflicts with ruff format
 ]
@@ -256,6 +253,9 @@ unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 mccabe.max-complexity = 49
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
 # Module level import not at top of file and unused import

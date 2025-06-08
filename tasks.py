@@ -6,27 +6,31 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 
+from __future__ import annotations
+
 import contextlib
 import os
 import pathlib
 import re
 import shutil
 import sys
-from typing import Union
+from typing import TYPE_CHECKING
 
 import invoke
-from invoke.context import Context
 
 from plugins import (
     tasks as plugin_tasks,
 )
+
+if TYPE_CHECKING:
+    from invoke.context import Context
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
 
 
 # shared function
-def rmrf(items: Union[str, list[str], set[str]], verbose: bool = True) -> None:
+def rmrf(items: str | list[str] | set[str], verbose: bool = True) -> None:
     """Silently remove a list of directories or files."""
     if isinstance(items, str):
         items = [items]

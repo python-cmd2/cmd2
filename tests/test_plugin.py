@@ -1,8 +1,9 @@
 """Test plugin infrastructure and hooks."""
 
-import argparse
+from __future__ import annotations
+
 import sys
-from typing import NoReturn
+from typing import TYPE_CHECKING, NoReturn
 from unittest import (
     mock,
 )
@@ -16,6 +17,9 @@ from cmd2 import (
     plugin,
     with_argparser,
 )
+
+if TYPE_CHECKING:
+    import argparse
 
 
 class Plugin:

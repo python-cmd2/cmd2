@@ -2,6 +2,8 @@
 This is meant to be run within a cmd2 session using run_pyscript.
 """
 
+from __future__ import annotations
+
 import argparse
 import os
 import sys

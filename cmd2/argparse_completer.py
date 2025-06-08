@@ -3,6 +3,8 @@
 See the header of argparse_custom.py for instructions on how to use these features.
 """
 
+from __future__ import annotations
+
 import argparse
 import inspect
 import numbers
@@ -11,7 +13,6 @@ from collections import (
 )
 from typing import (
     TYPE_CHECKING,
-    Optional,
     Union,
     cast,
 )
@@ -28,15 +29,15 @@ if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import (
         Cmd,
     )
+    from .command_definition import (
+        CommandSet,
+    )
 
 from .argparse_custom import (
     ChoicesCallable,
     ChoicesProviderFuncWithTokens,
     CompletionItem,
     generate_range_error,
-)
-from .command_definition import (
-    CommandSet,
 )
 from .exceptions import (
     CompletionError,
@@ -104,8 +105,8 @@ class _ArgumentState:
 
     def __init__(self, arg_action: argparse.Action) -> None:
         self.action = arg_action
-        self.min: Union[int, str]
-        self.max: Union[float, int, str]
+        self.min: int | str
+        self.max: float | int | str
         self.count = 0
         self.is_remainder = self.action.nargs == argparse.REMAINDER
 
@@ -162,7 +163,7 @@ class ArgparseCompleter:
     """Automatic command line tab completion based on argparse parameters."""
 
     def __init__(
-        self, parser: argparse.ArgumentParser, cmd2_app: 'Cmd', *, parent_tokens: Optional[dict[str, list[str]]] = None
+        self, parser: argparse.ArgumentParser, cmd2_app: Cmd, *, parent_tokens: dict[str, list[str]] | None = None
     ) -> None:
         """Create an ArgparseCompleter.
 
@@ -202,7 +203,7 @@ class ArgparseCompleter:
                     self._subcommand_action = action
 
     def complete(
-        self, text: str, line: str, begidx: int, endidx: int, tokens: list[str], *, cmd_set: Optional[CommandSet] = None
+        self, text: str, line: str, begidx: int, endidx: int, tokens: list[str], *, cmd_set: CommandSet | None = None
     ) -> list[str]:
         """Complete text using argparse metadata.
 
@@ -227,10 +228,10 @@ class ArgparseCompleter:
         skip_remaining_flags = False
 
         # _ArgumentState of the current positional
-        pos_arg_state: Optional[_ArgumentState] = None
+        pos_arg_state: _ArgumentState | None = None
 
         # _ArgumentState of the current flag
-        flag_arg_state: Optional[_ArgumentState] = None
+        flag_arg_state: _ArgumentState | None = None
 
         # Non-reusable flags that we've parsed
         matched_flags: list[str] = []
@@ -522,7 +523,7 @@ class ArgparseCompleter:
 
         return matches
 
-    def _format_completions(self, arg_state: _ArgumentState, completions: Union[list[str], list[CompletionItem]]) -> list[str]:
+    def _format_completions(self, arg_state: _ArgumentState, completions: list[str] | list[CompletionItem]) -> list[str]:
         """Format CompletionItems into hint table."""
         # Nothing to do if we don't have at least 2 completions which are all CompletionItems
         if len(completions) < 2 or not all(isinstance(c, CompletionItem) for c in completions):
@@ -652,7 +653,7 @@ class ArgparseCompleter:
         arg_state: _ArgumentState,
         consumed_arg_values: dict[str, list[str]],
         *,
-        cmd_set: Optional[CommandSet] = None,
+        cmd_set: CommandSet | None = None,
     ) -> list[str]:
         """Tab completion routine for an argparse argument.
 
@@ -660,7 +661,7 @@ class ArgparseCompleter:
         :raises CompletionError: if the completer or choices function this calls raises one.
         """
         # Check if the arg provides choices to the user
-        arg_choices: Union[list[str], ChoicesCallable]
+        arg_choices: list[str] | ChoicesCallable
         if arg_state.action.choices is not None:
             arg_choices = list(arg_state.action.choices)
             if not arg_choices:

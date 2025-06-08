@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """A simple example demonstrating use of cmd2.Cmd.ppretty()."""
 
+from __future__ import annotations
+
 import cmd2
 
 data = {

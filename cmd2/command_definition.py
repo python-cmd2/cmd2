@@ -1,5 +1,7 @@
 """Supports the definition of commands in separate classes to be composed into cmd2.Cmd."""
 
+from __future__ import annotations
+
 from collections.abc import Callable, Mapping
 from typing import (
     TYPE_CHECKING,
@@ -14,12 +16,13 @@ from .constants import (
 from .exceptions import (
     CommandSetRegistrationError,
 )
-from .utils import (
-    Settable,
-)
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2
+
+    from .utils import (
+        Settable,
+    )
 
 #: Callable signature for a basic command  function
 #: Further refinements are needed to define the input parameters
@@ -91,13 +94,13 @@ class CommandSet:
         This will be set when the CommandSet is registered and it should be
         accessed by child classes using the self._cmd property.
         """
-        self.__cmd_internal: Optional[cmd2.Cmd] = None
+        self.__cmd_internal: cmd2.Cmd | None = None
 
         self._settables: dict[str, Settable] = {}
         self._settable_prefix = self.__class__.__name__
 
     @property
-    def _cmd(self) -> 'cmd2.Cmd':
+    def _cmd(self) -> cmd2.Cmd:
         """Property for child classes to access self.__cmd_internal.
 
         Using this property ensures that self.__cmd_internal has been set
@@ -112,7 +115,7 @@ class CommandSet:
             raise CommandSetRegistrationError('This CommandSet is not registered')
         return self.__cmd_internal
 
-    def on_register(self, cmd: 'cmd2.Cmd') -> None:
+    def on_register(self, cmd: cmd2.Cmd) -> None:
         """First step to registering a CommandSet, called by cmd2.Cmd.
 
         The commands defined in this class have not been added to the CLI object at this point.

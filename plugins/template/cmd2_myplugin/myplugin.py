@@ -1,12 +1,15 @@
 """An example cmd2 plugin."""
 
+from __future__ import annotations
+
 import functools
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-import cmd2
-
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
+    import cmd2
+
     _Base = cmd2.Cmd
 else:
     _Base = object

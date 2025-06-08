@@ -1,5 +1,7 @@
 """Unit/functional testing for argparse completer in cmd2"""
 
+from __future__ import annotations
+
 import argparse
 import numbers
 from typing import cast

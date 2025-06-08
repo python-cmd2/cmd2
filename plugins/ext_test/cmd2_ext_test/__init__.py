@@ -3,6 +3,8 @@
 Allows developers to exercise their cmd2 application using the PyScript interface
 """
 
+from __future__ import annotations
+
 import importlib.metadata as importlib_metadata
 
 try:

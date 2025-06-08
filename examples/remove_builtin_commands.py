@@ -8,6 +8,8 @@ name, they just won't clutter the help menu.
 Commands can also be removed entirely by using Python's "del".
 """
 
+from __future__ import annotations
+
 import cmd2
 
 

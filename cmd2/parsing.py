@@ -1,17 +1,19 @@
 """Statement parsing classes for cmd2."""
 
+from __future__ import annotations
+
 import re
 import shlex
-from collections.abc import Iterable
 from dataclasses import (
     dataclass,
     field,
 )
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Optional,
-    Union,
 )
+
+from typing_extensions import Self
 
 from . import (
     constants,
@@ -20,6 +22,9 @@ from . import (
 from .exceptions import (
     Cmd2ShlexError,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 def shlex_split(str_to_split: str) -> list[str]:
@@ -149,7 +154,7 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
     # Used in JSON dictionaries
     _args_field = 'args'
 
-    def __new__(cls, value: object, *_pos_args: Any, **_kw_args: Any) -> 'Statement':
+    def __new__(cls, value: object, *_pos_args: Any, **_kw_args: Any) -> Self:
         """Create a new instance of Statement.
 
         We must override __new__ because we are subclassing `str` which is
@@ -225,7 +230,7 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
         return self.__dict__.copy()
 
     @staticmethod
-    def from_dict(source_dict: dict[str, Any]) -> 'Statement':
+    def from_dict(source_dict: dict[str, Any]) -> Statement:
         """Restore a Statement from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
@@ -250,10 +255,10 @@ class StatementParser:
 
     def __init__(
         self,
-        terminators: Optional[Iterable[str]] = None,
-        multiline_commands: Optional[Iterable[str]] = None,
-        aliases: Optional[dict[str, str]] = None,
-        shortcuts: Optional[dict[str, str]] = None,
+        terminators: Iterable[str] | None = None,
+        multiline_commands: Iterable[str] | None = None,
+        aliases: dict[str, str] | None = None,
+        shortcuts: dict[str, str] | None = None,
     ) -> None:
         """Initialize an instance of StatementParser.
 
@@ -585,7 +590,7 @@ class StatementParser:
         return Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)
 
     def get_command_arg_list(
-        self, command_name: str, to_parse: Union[Statement, str], preserve_quotes: bool
+        self, command_name: str, to_parse: Statement | str, preserve_quotes: bool
     ) -> tuple[Statement, list[str]]:
         """Retrieve just the arguments being passed to their ``do_*`` methods as a list.
 

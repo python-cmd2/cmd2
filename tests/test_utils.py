@@ -1,5 +1,7 @@
 """Unit testing for cmd2/utils.py module."""
 
+from __future__ import annotations
+
 import os
 import signal
 import sys

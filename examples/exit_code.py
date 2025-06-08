@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """A simple example demonstrating the following how to emit a non-zero exit code in your cmd2 application."""
 
+from __future__ import annotations
+
 import cmd2
 
 

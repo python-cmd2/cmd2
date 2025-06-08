@@ -7,7 +7,9 @@ The `load` and `unload` commands will load and unload the CommandSets. The avail
 on which CommandSets are loaded
 """
 
-import argparse
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import cmd2
 from cmd2 import (
@@ -16,6 +18,9 @@ from cmd2 import (
     with_category,
     with_default_category,
 )
+
+if TYPE_CHECKING:
+    import argparse
 
 
 @with_default_category('Fruits')

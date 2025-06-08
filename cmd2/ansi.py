@@ -3,6 +3,8 @@
 These are used for things like applying style to text, setting the window title, and asynchronous alerts.
 """
 
+from __future__ import annotations
+
 import functools
 import re
 from enum import (
@@ -11,7 +13,6 @@ from enum import (
 from typing import (
     IO,
     Any,
-    Optional,
     cast,
 )
 
@@ -951,14 +952,14 @@ class RgbBg(BgColor):
 def style(
     value: Any,
     *,
-    fg: Optional[FgColor] = None,
-    bg: Optional[BgColor] = None,
-    bold: Optional[bool] = None,
-    dim: Optional[bool] = None,
-    italic: Optional[bool] = None,
-    overline: Optional[bool] = None,
-    strikethrough: Optional[bool] = None,
-    underline: Optional[bool] = None,
+    fg: FgColor | None = None,
+    bg: BgColor | None = None,
+    bold: bool | None = None,
+    dim: bool | None = None,
+    italic: bool | None = None,
+    overline: bool | None = None,
+    strikethrough: bool | None = None,
+    underline: bool | None = None,
 ) -> str:
     """Apply ANSI colors and/or styles to a string and return it.
 

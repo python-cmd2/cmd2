@@ -1,11 +1,12 @@
 """Imports the proper Readline for the platform and provides utility functions for it."""
 
+from __future__ import annotations
+
 import contextlib
 import sys
 from enum import (
     Enum,
 )
-from typing import Union
 
 #########################################################################################################################
 # NOTE ON LIBEDIT:
@@ -191,7 +192,7 @@ def rl_get_prompt() -> str:  # pragma: no cover
         prompt = '' if encoded_prompt is None else encoded_prompt.decode(encoding='utf-8')
 
     elif rl_type == RlType.PYREADLINE:
-        prompt_data: Union[str, bytes] = readline.rl.prompt
+        prompt_data: str | bytes = readline.rl.prompt
         prompt = prompt_data.decode(encoding='utf-8') if isinstance(prompt_data, bytes) else prompt_data
 
     else:

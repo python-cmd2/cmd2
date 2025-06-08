@@ -10,9 +10,14 @@ all the commands in the transcript against decorator_example.py,
 verifying that the output produced matches the transcript.
 """
 
-import argparse
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import cmd2
+
+if TYPE_CHECKING:
+    import argparse
 
 
 class CmdLineApp(cmd2.Cmd):

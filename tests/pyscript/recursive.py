@@ -1,5 +1,7 @@
 """Example demonstrating that calling run_pyscript recursively inside another Python script isn't allowed"""
 
+from __future__ import annotations
+
 import os
 import sys
 

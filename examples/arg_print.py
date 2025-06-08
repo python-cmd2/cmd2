@@ -9,6 +9,8 @@ experiment with and understand how command and argument parsing work.
 It also serves as an example of how to create shortcuts.
 """
 
+from __future__ import annotations
+
 import cmd2
 
 

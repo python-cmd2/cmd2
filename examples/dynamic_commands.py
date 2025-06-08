@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """A simple example demonstrating how do_* commands can be created in a loop."""
 
+from __future__ import annotations
+
 import functools
 
 import cmd2

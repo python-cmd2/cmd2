@@ -1,5 +1,7 @@
 """Import certain things for backwards compatibility."""
 
+from __future__ import annotations
+
 import argparse
 import contextlib
 import importlib.metadata as importlib_metadata

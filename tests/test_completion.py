@@ -4,6 +4,8 @@ These are primarily tests related to readline completer functions which handle t
 file system paths, and shell commands.
 """
 
+from __future__ import annotations
+
 import enum
 import os
 import sys

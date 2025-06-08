@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """An example demonstrating how use one of cmd2's argument parsing decorators."""
 
-import argparse
+from __future__ import annotations
+
 import os
+from typing import TYPE_CHECKING
 
 import cmd2
+
+if TYPE_CHECKING:
+    import argparse
 
 
 class ArgparsingApp(cmd2.Cmd):

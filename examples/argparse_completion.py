@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """A simple example demonstrating how to integrate tab completion with argparse-based commands."""
 
-import argparse
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from cmd2 import (
     Cmd,
@@ -11,6 +13,9 @@ from cmd2 import (
     ansi,
     with_argparser,
 )
+
+if TYPE_CHECKING:
+    import argparse
 
 # Data source for argparse.choices
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']

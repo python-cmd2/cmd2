@@ -1,5 +1,7 @@
 """A simple example demonstrating a loadable command set."""
 
+from __future__ import annotations
+
 from cmd2 import (
     Cmd,
     CommandSet,

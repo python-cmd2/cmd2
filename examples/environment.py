@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """A sample application for cmd2 demonstrating customized environment parameters."""
 
+from __future__ import annotations
+
 import cmd2
 
 

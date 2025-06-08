@@ -12,6 +12,8 @@
 10) How to make custom attributes settable at runtime.
 """
 
+from __future__ import annotations
+
 import cmd2
 from cmd2 import (
     Bg,

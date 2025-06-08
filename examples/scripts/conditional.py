@@ -8,6 +8,8 @@ Note: The "app" function is defined within the cmd2 embedded Python environment 
 application instance. Note: self only exists in this environment if self_in_py is True.
 """
 
+from __future__ import annotations
+
 import os
 import sys
 

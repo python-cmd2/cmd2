@@ -20,6 +20,8 @@ This application and the "examples/scripts/conditional.py" script serve as an
 example for one way in which this can be done.
 """
 
+from __future__ import annotations
+
 import os
 
 import cmd2

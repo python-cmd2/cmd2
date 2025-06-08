@@ -1,5 +1,7 @@
 """Cmd2 functional testing based on transcript"""
 
+from __future__ import annotations
+
 import os
 import random
 import re

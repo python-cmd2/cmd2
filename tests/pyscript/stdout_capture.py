@@ -1,4 +1,6 @@
 # This script demonstrates when output of a command finalization hook is captured by a pyscript app() call
+from __future__ import annotations
+
 import sys
 
 # The unit test framework passes in the string being printed by the command finalization hook

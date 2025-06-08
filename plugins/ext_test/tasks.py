@@ -6,6 +6,8 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 
+from __future__ import annotations
+
 import contextlib
 import os
 import pathlib

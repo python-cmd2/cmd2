@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Simple example demonstrating basic CommandSet usage."""
 
+from __future__ import annotations
+
 import cmd2
 from cmd2 import (
     CommandSet,

@@ -6,6 +6,8 @@ The following code shows how to override it with your own parser class.
 # First set a value called argparse.cmd2_parser_module with the module that defines the custom parser.
 # See the code for custom_parser.py. It simply defines a parser and calls cmd2.set_default_argument_parser_type()
 # with the custom parser's type.
+from __future__ import annotations
+
 import argparse
 
 argparse.cmd2_parser_module = 'custom_parser'

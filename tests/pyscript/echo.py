@@ -1,4 +1,6 @@
 # Tests echo argument to app()
+from __future__ import annotations
+
 app.cmd_echo = False
 
 # echo defaults to current setting which is False, so this help text should not be echoed to pytest's stdout

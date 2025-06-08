@@ -3,6 +3,8 @@
 and changes the window title.
 """
 
+from __future__ import annotations
+
 import random
 import threading
 import time

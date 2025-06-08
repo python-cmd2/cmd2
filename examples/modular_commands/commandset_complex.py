@@ -1,8 +1,13 @@
 """Test CommandSet."""
 
-import argparse
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import cmd2
+
+if TYPE_CHECKING:
+    import argparse
 
 
 @cmd2.with_default_category('Fruits')

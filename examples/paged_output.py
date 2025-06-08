@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """A simple example demonstrating the using paged output via the ppaged() method."""
 
+from __future__ import annotations
+
 import os
 
 import cmd2

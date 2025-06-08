@@ -2,6 +2,7 @@
 
 # Unless documented in https://cmd2.readthedocs.io/en/latest/api/index.html
 # nothing here should be considered part of the public API of this module
+from __future__ import annotations
 
 INFINITY = float('inf')
 

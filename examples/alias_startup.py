@@ -4,6 +4,8 @@
 2) How to run an initialization script at startup.
 """
 
+from __future__ import annotations
+
 import os
 
 import cmd2

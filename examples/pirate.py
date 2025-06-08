@@ -5,6 +5,8 @@ presented as part of her PyCon 2010 talk.
 It demonstrates many features of cmd2.
 """
 
+from __future__ import annotations
+
 import cmd2
 from cmd2 import (
     Fg,

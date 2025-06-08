@@ -1,5 +1,7 @@
 """Unit/functional testing for argparse customizations in cmd2"""
 
+from __future__ import annotations
+
 import argparse
 
 import pytest

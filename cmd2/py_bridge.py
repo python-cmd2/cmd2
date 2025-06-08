@@ -3,6 +3,8 @@
 Maintains a reasonable degree of isolation between the two.
 """
 
+from __future__ import annotations
+
 import sys
 from contextlib import (
     redirect_stderr,
@@ -13,7 +15,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     NamedTuple,
-    Optional,
     TextIO,
     Union,
     cast,
@@ -86,7 +87,7 @@ class PyBridge:
                            Defaults to True.
     """
 
-    def __init__(self, cmd2_app: 'cmd2.Cmd', *, add_to_history: bool = True) -> None:
+    def __init__(self, cmd2_app: cmd2.Cmd, *, add_to_history: bool = True) -> None:
         """Initialize PyBridge instances."""
         self._cmd2_app = cmd2_app
         self._add_to_history = add_to_history
@@ -101,7 +102,7 @@ class PyBridge:
         attributes.insert(0, 'cmd_echo')
         return attributes
 
-    def __call__(self, command: str, *, echo: Optional[bool] = None) -> CommandResult:
+    def __call__(self, command: str, *, echo: bool | None = None) -> CommandResult:
         """Provide functionality to call application commands by calling PyBridge.
 
         ex: app('help')

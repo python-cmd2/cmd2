@@ -1,5 +1,7 @@
 """Test history functions of cmd2"""
 
+from __future__ import annotations
+
 import contextlib
 import os
 import tempfile

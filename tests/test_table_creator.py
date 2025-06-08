@@ -1,5 +1,7 @@
 """Unit testing for cmd2/table_creator.py module"""
 
+from __future__ import annotations
+
 import pytest
 
 from cmd2 import (

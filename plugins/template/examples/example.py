@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import cmd2_myplugin
 
 import cmd2

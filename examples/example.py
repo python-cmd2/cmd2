@@ -9,6 +9,8 @@ the transcript against example.py, verifying that the output produced matches
 the transcript.
 """
 
+from __future__ import annotations
+
 import random
 
 import cmd2

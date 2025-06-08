@@ -6,6 +6,8 @@ This is an example of how to use cmd2 in a way so that cmd2 doesn't own the inne
 This opens up the possibility of registering cmd2 input with event loops, like asyncio, without occupying the main loop.
 """
 
+from __future__ import annotations
+
 import cmd2
 
 

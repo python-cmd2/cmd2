@@ -1,5 +1,7 @@
 """Development related tasks to be run with 'invoke'."""
 
+from __future__ import annotations
+
 import contextlib
 import os
 import pathlib

@@ -3,6 +3,8 @@
 An overview of what myplugin does.
 """
 
+from __future__ import annotations
+
 import importlib.metadata as importlib_metadata
 
 from .myplugin import (  # noqa: F401

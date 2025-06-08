@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """Examples of using the cmd2 table creation API."""
 
+from __future__ import annotations
+
 import functools
 import sys
 from typing import Any

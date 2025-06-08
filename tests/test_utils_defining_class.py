@@ -1,5 +1,7 @@
 """Unit testing for get_defining_class in cmd2/utils.py module."""
 
+from __future__ import annotations
+
 import functools
 
 import cmd2.utils as cu

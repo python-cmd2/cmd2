@@ -10,6 +10,8 @@ $ python cmd_as_argument.py speak -p hello there
 
 """
 
+from __future__ import annotations
+
 import argparse
 import random
 

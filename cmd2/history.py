@@ -1,18 +1,18 @@
 """History management classes."""
 
+from __future__ import annotations
+
 import json
 import re
 from collections import (
     OrderedDict,
 )
-from collections.abc import Callable, Iterable
 from dataclasses import (
     dataclass,
 )
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Optional,
-    Union,
     overload,
 )
 
@@ -23,6 +23,9 @@ from .parsing import (
     Statement,
     shlex_split,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
 
 
 def single_line_format(statement: Statement) -> str:
@@ -126,7 +129,7 @@ class HistoryItem:
         return {HistoryItem._statement_field: self.statement.to_dict()}
 
     @staticmethod
-    def from_dict(source_dict: dict[str, Any]) -> 'HistoryItem':
+    def from_dict(source_dict: dict[str, Any]) -> HistoryItem:
         """Restore a HistoryItem from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
@@ -164,7 +167,7 @@ class History(list[HistoryItem]):
         """Start a new session, thereby setting the next index as the first index in the new session."""
         self.session_start_index = len(self)
 
-    def _zero_based_index(self, onebased: Union[int, str]) -> int:
+    def _zero_based_index(self, onebased: int | str) -> int:
         """Convert a one-based index to a zero-based index."""
         result = int(onebased)
         if result > 0:
@@ -177,7 +180,7 @@ class History(list[HistoryItem]):
     @overload
     def append(self, new: Statement) -> None: ...  # pragma: no cover
 
-    def append(self, new: Union[Statement, HistoryItem]) -> None:
+    def append(self, new: Statement | HistoryItem) -> None:
         """Append a new statement to the end of the History list.
 
         :param new: Statement object which will be composed into a HistoryItem
@@ -229,7 +232,7 @@ class History(list[HistoryItem]):
     #
     spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$')
 
-    def span(self, span: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
+    def span(self, span: str, include_persisted: bool = False) -> OrderedDict[int, HistoryItem]:
         """Return a slice of the History list.
 
         :param span: string containing an index or a slice
@@ -278,7 +281,7 @@ class History(list[HistoryItem]):
 
         return self._build_result_dictionary(start, end)
 
-    def str_search(self, search: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
+    def str_search(self, search: str, include_persisted: bool = False) -> OrderedDict[int, HistoryItem]:
         """Find history items which contain a given string.
 
         :param search: the string to search for
@@ -297,7 +300,7 @@ class History(list[HistoryItem]):
         start = 0 if include_persisted else self.session_start_index
         return self._build_result_dictionary(start, len(self), isin)
 
-    def regex_search(self, regex: str, include_persisted: bool = False) -> 'OrderedDict[int, HistoryItem]':
+    def regex_search(self, regex: str, include_persisted: bool = False) -> OrderedDict[int, HistoryItem]:
         """Find history items which match a given regular expression.
 
         :param regex: the regular expression to search for.
@@ -332,8 +335,8 @@ class History(list[HistoryItem]):
             del self[0:last_element]
 
     def _build_result_dictionary(
-        self, start: int, end: int, filter_func: Optional[Callable[[HistoryItem], bool]] = None
-    ) -> 'OrderedDict[int, HistoryItem]':
+        self, start: int, end: int, filter_func: Callable[[HistoryItem], bool] | None = None
+    ) -> OrderedDict[int, HistoryItem]:
         """Build history search results.
 
         :param start: start index to search from
@@ -354,7 +357,7 @@ class History(list[HistoryItem]):
         return json.dumps(json_dict, ensure_ascii=False, indent=2)
 
     @staticmethod
-    def from_json(history_json: str) -> 'History':
+    def from_json(history_json: str) -> History:
         """Restore History from a JSON string.
 
         :param history_json: history data as JSON string (generated using to_json())

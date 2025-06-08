@@ -8,12 +8,12 @@ This file contains the class necessary to make that work. This
 class is used in cmd2.py::run_transcript_tests()
 """
 
+from __future__ import annotations
+
 import re
 import unittest
-from collections.abc import Iterator
 from typing import (
     TYPE_CHECKING,
-    Optional,
     TextIO,
     cast,
 )
@@ -24,6 +24,8 @@ from . import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterator
+
     from cmd2 import (
         Cmd,
     )
@@ -39,7 +41,7 @@ class Cmd2TestCase(unittest.TestCase):
     See example.py
     """
 
-    cmdapp: Optional['Cmd'] = None
+    cmdapp: Cmd | None = None
 
     def setUp(self) -> None:
         """Instructions that will be executed before each test method."""

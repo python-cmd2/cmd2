@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion."""
 
+from __future__ import annotations
+
 import contextlib
 
 import cmd2

@@ -1,5 +1,7 @@
 """Simple example demonstrating basic CommandSet usage."""
 
+from __future__ import annotations
+
 from typing import Any
 
 import cmd2

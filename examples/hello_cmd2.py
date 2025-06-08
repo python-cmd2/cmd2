@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """This is intended to be a completely bare-bones cmd2 application suitable for rapid testing and debugging."""
 
+from __future__ import annotations
+
 from cmd2 import (
     cmd2,
 )

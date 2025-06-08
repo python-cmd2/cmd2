@@ -5,18 +5,19 @@ The general use case is to inherit from TableCreator to create a table class wit
 There are already implemented and ready-to-use examples of this below TableCreator's code.
 """
 
+from __future__ import annotations
+
 import copy
 import io
 from collections import (
     deque,
 )
-from collections.abc import Sequence
 from enum import (
     Enum,
 )
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Optional,
 )
 
 from wcwidth import (  # type: ignore[import]
@@ -28,6 +29,9 @@ from . import (
     constants,
     utils,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 # Constants
 EMPTY = ''
@@ -57,7 +61,7 @@ class Column:
         self,
         header: str,
         *,
-        width: Optional[int] = None,
+        width: int | None = None,
         header_horiz_align: HorizontalAlignment = HorizontalAlignment.LEFT,
         header_vert_align: VerticalAlignment = VerticalAlignment.BOTTOM,
         style_header_text: bool = True,
@@ -543,9 +547,9 @@ class SimpleTable(TableCreator):
         *,
         column_spacing: int = 2,
         tab_width: int = 4,
-        divider_char: Optional[str] = '-',
-        header_bg: Optional[ansi.BgColor] = None,
-        data_bg: Optional[ansi.BgColor] = None,
+        divider_char: str | None = '-',
+        header_bg: ansi.BgColor | None = None,
+        data_bg: ansi.BgColor | None = None,
     ) -> None:
         """SimpleTable initializer.
 
@@ -737,10 +741,10 @@ class BorderedTable(TableCreator):
         tab_width: int = 4,
         column_borders: bool = True,
         padding: int = 1,
-        border_fg: Optional[ansi.FgColor] = None,
-        border_bg: Optional[ansi.BgColor] = None,
-        header_bg: Optional[ansi.BgColor] = None,
-        data_bg: Optional[ansi.BgColor] = None,
+        border_fg: ansi.FgColor | None = None,
+        border_bg: ansi.BgColor | None = None,
+        header_bg: ansi.BgColor | None = None,
+        data_bg: ansi.BgColor | None = None,
     ) -> None:
         """BorderedTable initializer.
 
@@ -1035,11 +1039,11 @@ class AlternatingTable(BorderedTable):
         tab_width: int = 4,
         column_borders: bool = True,
         padding: int = 1,
-        border_fg: Optional[ansi.FgColor] = None,
-        border_bg: Optional[ansi.BgColor] = None,
-        header_bg: Optional[ansi.BgColor] = None,
-        odd_bg: Optional[ansi.BgColor] = None,
-        even_bg: Optional[ansi.BgColor] = ansi.Bg.DARK_GRAY,
+        border_fg: ansi.FgColor | None = None,
+        border_bg: ansi.BgColor | None = None,
+        header_bg: ansi.BgColor | None = None,
+        odd_bg: ansi.BgColor | None = None,
+        even_bg: ansi.BgColor | None = ansi.Bg.DARK_GRAY,
     ) -> None:
         """AlternatingTable initializer.
 

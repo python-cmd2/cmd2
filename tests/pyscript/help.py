@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 app.cmd_echo = True
 app('help')
 

@@ -1,5 +1,7 @@
 """Cmd2 unit/functional testing"""
 
+from __future__ import annotations
+
 import builtins
 import io
 import os

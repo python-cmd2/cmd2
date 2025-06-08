@@ -1,5 +1,7 @@
 """Test the parsing logic in parsing.py"""
 
+from __future__ import annotations
+
 import dataclasses
 
 import pytest

@@ -8,6 +8,8 @@
 6) Shell-like capabilities.
 """
 
+from __future__ import annotations
+
 import cmd2
 from cmd2 import (
     Bg,
