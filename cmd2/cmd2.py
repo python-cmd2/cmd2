@@ -3597,8 +3597,8 @@ class Cmd(cmd.Cmd):
         max_arg_num = 0
         arg_nums = set()
 
-        while True:
-            try:
+        try:
+            while True:
                 cur_match = normal_matches.__next__()
 
                 # Get the number string between the braces
@@ -3612,9 +3612,8 @@ class Cmd(cmd.Cmd):
                 max_arg_num = max(max_arg_num, cur_num)
 
                 arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=False))
-
-            except StopIteration:
-                break
+        except StopIteration:
+            pass
 
         # Make sure the argument numbers are continuous
         if len(arg_nums) != max_arg_num:
@@ -3624,16 +3623,16 @@ class Cmd(cmd.Cmd):
         # Find all escaped arguments
         escaped_matches = re.finditer(MacroArg.macro_escaped_arg_pattern, value)
 
-        while True:
-            try:
+        try:
+            while True:
                 cur_match = escaped_matches.__next__()
 
                 # Get the number string between the braces
                 cur_num_str = re.findall(MacroArg.digit_pattern, cur_match.group())[0]
 
                 arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=True))
-            except StopIteration:
-                break
+        except StopIteration:
+            pass
 
         # Set the macro
         result = "overwritten" if args.name in self.macros else "created"
