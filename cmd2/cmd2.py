@@ -144,6 +144,7 @@ from .table_creator import (
 from .utils import (
     Settable,
     get_defining_class,
+    get_types,
     strip_doc_annotations,
     suggest_similar,
 )
@@ -5544,10 +5545,10 @@ class Cmd(cmd.Cmd):
     def _validate_prepostloop_callable(cls, func: Callable[[], None]) -> None:
         """Check parameter and return types for preloop and postloop hooks."""
         cls._validate_callable_param_count(func, 0)
-        # make sure there is no return notation
-        signature = inspect.signature(func)
-        if signature.return_annotation is not None:
-            raise TypeError(f"{func.__name__} must declare return a return type of 'None'")
+        # make sure there is no return annotation or the return is specified as None
+        _, ret_ann = get_types(func)
+        if ret_ann is not None:
+            raise TypeError(f"{func.__name__} must have a return type of 'None', got: {ret_ann}")
 
     def register_preloop_hook(self, func: Callable[[], None]) -> None:
         """Register a function to be called at the beginning of the command loop."""
@@ -5563,11 +5564,13 @@ class Cmd(cmd.Cmd):
     def _validate_postparsing_callable(cls, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Check parameter and return types for postparsing hooks."""
         cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
-        signature = inspect.signature(func)
-        _, param = next(iter(signature.parameters.items()))
-        if param.annotation != plugin.PostparsingData:
+        type_hints, ret_ann = get_types(func)
+        if not type_hints:
+            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: 'cmd2.plugin.PostparsingData'")
+        par_ann = next(iter(type_hints.values()))
+        if par_ann != plugin.PostparsingData:
             raise TypeError(f"{func.__name__} must have one parameter declared with type 'cmd2.plugin.PostparsingData'")
-        if signature.return_annotation != plugin.PostparsingData:
+        if ret_ann != plugin.PostparsingData:
             raise TypeError(f"{func.__name__} must declare return a return type of 'cmd2.plugin.PostparsingData'")
 
     def register_postparsing_hook(self, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
@@ -5582,21 +5585,21 @@ class Cmd(cmd.Cmd):
         cls, func: Callable[[CommandDataType], CommandDataType], data_type: type[CommandDataType]
     ) -> None:
         """Check parameter and return types for pre and post command hooks."""
-        signature = inspect.signature(func)
         # validate that the callable has the right number of parameters
         cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
+
+        type_hints, ret_ann = get_types(func)
+        if not type_hints:
+            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: {data_type}")
+        param_name, par_ann = next(iter(type_hints.items()))
         # validate the parameter has the right annotation
-        paramname = next(iter(signature.parameters.keys()))
-        param = signature.parameters[paramname]
-        if param.annotation != data_type:
-            raise TypeError(f'argument 1 of {func.__name__} has incompatible type {param.annotation}, expected {data_type}')
+        if par_ann != data_type:
+            raise TypeError(f'argument 1 of {func.__name__} has incompatible type {par_ann}, expected {data_type}')
         # validate the return value has the right annotation
-        if signature.return_annotation == signature.empty:
+        if ret_ann is None:
             raise TypeError(f'{func.__name__} does not have a declared return type, expected {data_type}')
-        if signature.return_annotation != data_type:
-            raise TypeError(
-                f'{func.__name__} has incompatible return type {signature.return_annotation}, expected {data_type}'
-            )
+        if ret_ann != data_type:
+            raise TypeError(f'{func.__name__} has incompatible return type {ret_ann}, expected {data_type}')
 
     def register_precmd_hook(self, func: Callable[[plugin.PrecommandData], plugin.PrecommandData]) -> None:
         """Register a hook to be called before the command function."""
@@ -5614,12 +5617,16 @@ class Cmd(cmd.Cmd):
     ) -> None:
         """Check parameter and return types for command finalization hooks."""
         cls._validate_callable_param_count(func, 1)
-        signature = inspect.signature(func)
-        _, param = next(iter(signature.parameters.items()))
-        if param.annotation != plugin.CommandFinalizationData:
-            raise TypeError(f"{func.__name__} must have one parameter declared with type {plugin.CommandFinalizationData}")
-        if signature.return_annotation != plugin.CommandFinalizationData:
-            raise TypeError("{func.__name__} must declare return a return type of {plugin.CommandFinalizationData}")
+        type_hints, ret_ann = get_types(func)
+        if not type_hints:
+            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: {plugin.CommandFinalizationData}")
+        _, par_ann = next(iter(type_hints.items()))
+        if par_ann != plugin.CommandFinalizationData:
+            raise TypeError(
+                f"{func.__name__} must have one parameter declared with type {plugin.CommandFinalizationData}, got: {par_ann}"
+            )
+        if ret_ann != plugin.CommandFinalizationData:
+            raise TypeError(f"{func.__name__} must declare return a return type of {plugin.CommandFinalizationData}")
 
     def register_cmdfinalization_hook(
         self, func: Callable[[plugin.CommandFinalizationData], plugin.CommandFinalizationData]

@@ -14,29 +14,13 @@ import sys
 import threading
 import unicodedata
 from collections.abc import Callable, Iterable
-from difflib import (
-    SequenceMatcher,
-)
-from enum import (
-    Enum,
-)
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Optional,
-    TextIO,
-    TypeVar,
-    Union,
-    cast,
-)
+from difflib import SequenceMatcher
+from enum import Enum
+from types import NoneType
+from typing import TYPE_CHECKING, Any, Optional, TextIO, TypeVar, Union, cast, get_type_hints
 
-from . import (
-    constants,
-)
-from .argparse_custom import (
-    ChoicesProviderFunc,
-    CompleterFunc,
-)
+from . import constants
+from .argparse_custom import ChoicesProviderFunc, CompleterFunc
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2  # noqa: F401
@@ -1261,3 +1245,24 @@ def suggest_similar(
             best_simil = simil
             proposed_command = each
     return proposed_command
+
+
+def get_types(func_or_method: Callable[..., Any]) -> tuple[dict[str, Any], Any]:
+    """Use typing.get_type_hints() to extract type hints for parameters and return value.
+
+    This exists because the inspect module doesn't have a safe way of doing this that works
+    both with and without importing annotations from __future__ until Python 3.10.
+
+    TODO: Once cmd2 only supports Python 3.10+, change to use inspect.get_annotations(eval_str=True)
+
+    :param func_or_method: Function or method to return the type hints for
+    :return tuple with first element being dictionary mapping param names to type hints
+            and second element being return type hint, unspecified, returns None
+    """
+    type_hints = get_type_hints(func_or_method)  # Get dictionary of type hints
+    ret_ann = type_hints.pop('return', None)  # Pop off the return annotation if it exists
+    if inspect.ismethod(func_or_method):
+        type_hints.pop('self', None)  # Pop off `self` hint for methods
+    if ret_ann is NoneType:
+        ret_ann = None  # Simplify logic to just return None instead of NoneType
+    return type_hints, ret_ann
