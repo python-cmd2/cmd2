@@ -1,7 +1,7 @@
-## 2.6.1 (TBD)
+## 2.6.1 (June 8, 2025)
 
 - Bug Fixes
-    - Fix bug that prevented `cmd2` from working with `from __future__ import annotations`
+    - Fixed bug that prevented `cmd2` from working with `from __future__ import annotations`
 
 ## 2.6.0 (May 31, 2025)
 
