@@ -1,7 +1,7 @@
 ## 2.6.1 (TBD)
 
-- Enhancements
-    - Ruggedize runtime validation of type annotations when registering hook methods
+- Bug Fixes
+    - Fix bug that prevented `cmd2` from working with `from __future__ import annotations`
 
 ## 2.6.0 (May 31, 2025)
 
