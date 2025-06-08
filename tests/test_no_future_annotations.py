@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-import cmd2
+import cmd2  # noqa: I002
 
 from .conftest import normalize, run_cmd
 
