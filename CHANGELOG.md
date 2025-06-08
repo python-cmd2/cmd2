@@ -1,3 +1,8 @@
+## 2.6.1 (TBD)
+
+- Enhancements
+    - Ruggedize runtime validation of type annotations when registering hook methods
+
 ## 2.6.0 (May 31, 2025)
 
 - Breaking Change
