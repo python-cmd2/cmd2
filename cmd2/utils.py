@@ -1258,7 +1258,10 @@ def get_types(func_or_method: Callable[..., Any]) -> tuple[dict[str, Any], Any]:
     :return tuple with first element being dictionary mapping param names to type hints
             and second element being return type hint, unspecified, returns None
     """
-    type_hints = get_type_hints(func_or_method)  # Get dictionary of type hints
+    try:
+        type_hints = get_type_hints(func_or_method)  # Get dictionary of type hints
+    except TypeError as exc:
+        raise ValueError("Argument passed to get_types should be a function or method") from exc
     ret_ann = type_hints.pop('return', None)  # Pop off the return annotation if it exists
     if inspect.ismethod(func_or_method):
         type_hints.pop('self', None)  # Pop off `self` hint for methods
