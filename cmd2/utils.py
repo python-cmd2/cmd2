@@ -16,7 +16,6 @@ import unicodedata
 from collections.abc import Callable, Iterable
 from difflib import SequenceMatcher
 from enum import Enum
-from types import NoneType
 from typing import TYPE_CHECKING, Any, Optional, TextIO, TypeVar, Union, cast, get_type_hints
 
 from . import constants
@@ -1263,6 +1262,6 @@ def get_types(func_or_method: Callable[..., Any]) -> tuple[dict[str, Any], Any]:
     ret_ann = type_hints.pop('return', None)  # Pop off the return annotation if it exists
     if inspect.ismethod(func_or_method):
         type_hints.pop('self', None)  # Pop off `self` hint for methods
-    if ret_ann is NoneType:
+    if ret_ann is type(None):
         ret_ann = None  # Simplify logic to just return None instead of NoneType
     return type_hints, ret_ann
