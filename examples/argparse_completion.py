@@ -14,7 +14,7 @@ from cmd2 import (
     with_argparser,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import argparse
 
 # Data source for argparse.choices

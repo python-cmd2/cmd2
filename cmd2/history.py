@@ -24,7 +24,7 @@ from .parsing import (
     shlex_split,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Iterable
 
 

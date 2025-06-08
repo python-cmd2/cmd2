@@ -147,7 +147,7 @@ from .utils import (
     suggest_similar,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from types import (
         FrameType,
         ModuleType,

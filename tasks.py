@@ -22,7 +22,7 @@ from plugins import (
     tasks as plugin_tasks,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from invoke.context import Context
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent

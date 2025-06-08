@@ -30,7 +30,7 @@ from . import (
     utils,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Sequence
 
 # Constants

@@ -23,7 +23,7 @@ from .exceptions import (
     Cmd2ShlexError,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable
 
 

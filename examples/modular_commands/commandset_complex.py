@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import cmd2
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import argparse
 
 

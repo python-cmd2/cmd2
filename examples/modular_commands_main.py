@@ -24,7 +24,7 @@ from cmd2 import (
     with_argparser,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import argparse
     from collections.abc import Iterable
 
