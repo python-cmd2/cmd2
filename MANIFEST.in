@@ -1,9 +1,8 @@
-include LICENSE README.md CHANGELOG.md noxfile.py tasks.py Pipfile
+include LICENSE README.md CHANGELOG.md mkdocs.yml pyproject.toml tasks.py
 recursive-include examples *
 recursive-include tests *
 recursive-include docs *
 prune .github
-prune docs/_build
-prune docs/.nox
-exclude .github .gitignore azure-pipelines.yml
+prune build
+exclude .github .gitignore .readthedocs.yaml
 global-exclude htmlcov/** .coverage* __pycache__/** .gitignore
