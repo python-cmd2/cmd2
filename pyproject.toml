@@ -176,7 +176,7 @@ select = [
     "ERA", # eradicate (warn about commented-out code)
     "EXE", # flake8-executable (warn about files with a shebang present that aren't executable or vice versa)
     "F",   # Pyflakes (a bunch of common warnings for things like unused imports, imports shadowed by variables, etc)
-    "FA",  # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
+    # "FA",  # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
     # "FAST", # FastAPI specific warnings
     # "FBT",  # flake8-boolean-trap (force all boolean arguments passed to functions to be keyword arguments and not positional)
     "FIX",  # flake8-fixme (warn about lines containing FIXME, TODO, XXX, or HACK)
@@ -233,7 +233,6 @@ ignore = [
     "E111",   # Conflicts with ruff format
     "E114",   # Conflicts with ruff format
     "E117",   # Conflicts with ruff format
-    "FA100",  # Adding from __future__ import annotations screws up cmd2 because of how use inspect to validate type annotations at runtime
     "ISC002", # Conflicts with ruff format
     "Q000",   # Conflicts with ruff format
     "Q001",   # Conflicts with ruff format
@@ -243,7 +242,6 @@ ignore = [
     "TRY003", # Avoid specifying long messages outside the exception class (force custom exceptions for everything)
     "UP007",  # Use X | Y for type annotations (requires Python 3.10+)
     "UP017",  # Use datetime.UTC alias (requires Python 3.11+)
-    "UP036",  # Version block is outdated for minimum Python version (requires ruff target_version set to minimum supported)
     "UP038",  # Use X | Y in {} call instead of (X, Y) - deprecated due to poor performance (requires Python 3.10+)
     "W191",   # Conflicts with ruff format
 ]
