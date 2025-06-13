@@ -39,7 +39,8 @@ jobs:
         run: uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
 
       - name: Run isolated tests
-        run: uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests_isolated
+        run:
+          uv run python -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests_isolated
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}

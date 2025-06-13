@@ -1,0 +1,4 @@
+/* Allow to consume a bigger portion of the overall display width */
+.md-grid {
+  max-width: 90%;
+}

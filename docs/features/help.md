@@ -1,10 +1,13 @@
 # Help
 
-From our experience, end users rarely read documentation no matter how high-quality or useful that documentation might be. So it is important that you provide good built-in help within your application. Fortunately, `cmd2` makes this easy.
+From our experience, end users rarely read documentation no matter how high-quality or useful that
+documentation might be. So it is important that you provide good built-in help within your
+application. Fortunately, `cmd2` makes this easy.
 
 ## Getting Help
 
-`cmd2` makes it easy for end users of `cmd2` applications to get help via the built-in `help` command. The `help` command by itself displays a list of the commands available:
+`cmd2` makes it easy for end users of `cmd2` applications to get help via the built-in `help`
+command. The `help` command by itself displays a list of the commands available:
 
 ```text
 (Cmd) help
@@ -29,11 +32,20 @@ optional arguments:
 
 ## Providing Help
 
-`cmd2` makes it easy for developers of `cmd2` applications to provide this help. By default, the help for a command is the docstring for the `do_*` method defining the command - e.g. for a command **foo**, that command is implemented by defining the `do_foo` method and the docstring for that method is the help.
+`cmd2` makes it easy for developers of `cmd2` applications to provide this help. By default, the
+help for a command is the docstring for the `do_*` method defining the command - e.g. for a command
+**foo**, that command is implemented by defining the `do_foo` method and the docstring for that
+method is the help.
 
-For commands which use one of the `argparse` decorators to parse arguments, help is provided by `argparse`. See [Help Messages](./argument_processing.md#help-messages) for more information.
+For commands which use one of the `argparse` decorators to parse arguments, help is provided by
+`argparse`. See [Help Messages](./argument_processing.md#help-messages) for more information.
 
-Occasionally there might be an unusual circumstance where providing static help text isn't good enough and you want to provide dynamic information in the help text for a command. To meet this need, if a `help_foo` method is defined to match the `do_foo` method, then that method will be used to provide the help for command **foo**. This dynamic help is only supported for commands which do not use an `argparse` decorator because didn't want different output for `help cmd` than for `cmd -h`.
+Occasionally there might be an unusual circumstance where providing static help text isn't good
+enough and you want to provide dynamic information in the help text for a command. To meet this
+need, if a `help_foo` method is defined to match the `do_foo` method, then that method will be used
+to provide the help for command **foo**. This dynamic help is only supported for commands which do
+not use an `argparse` decorator because didn't want different output for `help cmd` than for
+`cmd -h`.
 
 ## Categorizing Commands
 
@@ -44,7 +56,8 @@ By default, the `help` command displays:
     alias  help     ipy    py    run_pyscript  set    shortcuts
     edit   history  macro  quit  run_script    shell
 
-If you have a large number of commands, you can optionally group your commands into categories. Here's the output from the example `help_categories.py`:
+If you have a large number of commands, you can optionally group your commands into categories.
+Here's the output from the example `help_categories.py`:
 
     Documented commands (use 'help -v' for verbose/'help <topic>' for details):
 
@@ -70,7 +83,10 @@ If you have a large number of commands, you can optionally group your commands i
     alias   edit  history  py    run_pyscript  set    shortcuts
     config  help  macro    quit  run_script    shell  version
 
-There are 2 methods of specifying command categories, using the `@with_category` decorator or with the `categorize()` function. Once a single command category is detected, the help output switches to a categorized mode of display. All commands with an explicit category defined default to the category `Other`.
+There are 2 methods of specifying command categories, using the `@with_category` decorator or with
+the `categorize()` function. Once a single command category is detected, the help output switches to
+a categorized mode of display. All commands with an explicit category defined default to the
+category `Other`.
 
 Using the `@with_category` decorator:
 
@@ -115,7 +131,8 @@ categorize((do_undeploy,
             do_findleakers), CMD_CAT_APP_MGMT)
 ```
 
-The `help` command also has a verbose option (`help -v` or `help --verbose`) that combines the help categories with per-command Help Messages:
+The `help` command also has a verbose option (`help -v` or `help --verbose`) that combines the help
+categories with per-command Help Messages:
 
     Documented commands (use 'help -v' for verbose/'help <topic>' for details):
 
@@ -166,4 +183,5 @@ The `help` command also has a verbose option (`help -v` or `help --verbose`) tha
     shortcuts           List available shortcuts
     version             Version command
 
-When called with the `-v` flag for verbose help, the one-line description for each command is provided by the first line of the docstring for that command's associated `do_*` method.
+When called with the `-v` flag for verbose help, the one-line description for each command is
+provided by the first line of the docstring for that command's associated `do_*` method.

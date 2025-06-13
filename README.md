@@ -29,22 +29,22 @@ when using cmd.
 
 ![system schema](https://raw.githubusercontent.com/python-cmd2/cmd2/master/.github/images/graph.drawio.png)
 
-When creating solutions developers have no shortage of tools to create rich and smart user interfaces.
-System administrators have long been duct taping together brittle workflows based on a menagerie of simple command line
-tools created by strangers on github and the guy down the hall.
-Unfortunately, when CLIs become significantly complex the ease of command discoverability tends to fade quickly.
-On the other hand, Web and traditional desktop GUIs are first in class when it comes to easily discovering
-functionality.
-The price we pay for beautifully colored displays is complexity required to aggregate disperate applications into larger
-systems.
-`cmd2` fills the niche between high [ease of command discovery](https://clig.dev/#ease-of-discovery) applications and
-smart workflow automation systems.
+When creating solutions developers have no shortage of tools to create rich and smart user
+interfaces. System administrators have long been duct taping together brittle workflows based on a
+menagerie of simple command line tools created by strangers on github and the guy down the hall.
+Unfortunately, when CLIs become significantly complex the ease of command discoverability tends to
+fade quickly. On the other hand, Web and traditional desktop GUIs are first in class when it comes
+to easily discovering functionality. The price we pay for beautifully colored displays is complexity
+required to aggregate disperate applications into larger systems. `cmd2` fills the niche between
+high [ease of command discovery](https://clig.dev/#ease-of-discovery) applications and smart
+workflow automation systems.
 
-The `cmd2` framework provides a great mixture of both worlds. Application designers can easily create complex
-applications and rely on the cmd2 library to offer effortless user facing help and extensive tab completion.
-When users become comfortable with functionality, cmd2 turns into a feature rich library enabling a smooth transition to
-full automation. If designed with enough forethought, a well implemented cmd2 application can serve as a boutique
-workflow tool. `cmd2` pulls off this flexibility based on two pillars of philosophy:
+The `cmd2` framework provides a great mixture of both worlds. Application designers can easily
+create complex applications and rely on the cmd2 library to offer effortless user facing help and
+extensive tab completion. When users become comfortable with functionality, cmd2 turns into a
+feature rich library enabling a smooth transition to full automation. If designed with enough
+forethought, a well implemented cmd2 application can serve as a boutique workflow tool. `cmd2` pulls
+off this flexibility based on two pillars of philosophy:
 
 - Tab Completion
 - Automation Transition
@@ -53,8 +53,8 @@ workflow tool. `cmd2` pulls off this flexibility based on two pillars of philoso
 
 <a href="https://imgflip.com/i/63h03x"><img src="https://i.imgflip.com/63h03x.jpg" title="made at imgflip.com" width="70%" height="%70"/></a>
 
-Deep extensive tab completion and help text generation based on the argparse library create the first pillar of 'ease of
-command discovery'. The following is a list of features in this category.
+Deep extensive tab completion and help text generation based on the argparse library create the
+first pillar of 'ease of command discovery'. The following is a list of features in this category.
 
 - Great tab completion of commands, subcommands, file system paths, and shell commands.
 - Custom tab completion for user designed commands via simple function overloading.
@@ -65,13 +65,15 @@ command discovery'. The following is a list of features in this category.
 
 <a href="https://imgflip.com/i/66t0y0"><img src="https://i.imgflip.com/66t0y0.jpg" title="made at imgflip.com" width="70%" height="70%"/></a>
 
-cmd2 creates the second pillar of 'ease of transition to automation' through alias/macro creation, command line argument
-parsing and execution of cmd2 scripting.
+cmd2 creates the second pillar of 'ease of transition to automation' through alias/macro creation,
+command line argument parsing and execution of cmd2 scripting.
 
 - Flexible alias and macro creation for quick abstraction of commands.
 - Text file scripting of your application with `run_script` (`@`) and `_relative_run_script` (`@@`)
-- Powerful and flexible built-in Python scripting of your application using the `run_pyscript` command
-- Transcripts for use with built-in regression can be automatically generated from `history -t` or `run_script -t`
+- Powerful and flexible built-in Python scripting of your application using the `run_pyscript`
+  command
+- Transcripts for use with built-in regression can be automatically generated from `history -t` or
+  `run_script -t`
 
 ## Installation
 
@@ -81,11 +83,12 @@ On all operating systems, the latest stable version of `cmd2` can be installed u
 pip install -U cmd2
 ```
 
-cmd2 works with Python 3.9+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party dependencies.
+cmd2 works with Python 3.9+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party
+dependencies.
 
 For information on other installation options, see
-[Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html) in the cmd2
-documentation.
+[Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html) in the
+cmd2 documentation.
 
 ## Documentation
 
@@ -93,7 +96,8 @@ The latest documentation for cmd2 can be read online here: https://cmd2.readthed
 
 It is available in HTML, PDF, and ePub formats.
 
-The best way to learn the cmd2 api is to delve into the example applications located in source under examples.
+The best way to learn the cmd2 api is to delve into the example applications located in source under
+examples.
 
 ## Tutorials
 
@@ -102,13 +106,15 @@ The best way to learn the cmd2 api is to delve into the example applications loc
     - [slides](https://github.com/python-cmd2/talks/blob/master/PyOhio_2019/cmd2-PyOhio_2019.pdf)
     - [example code](https://github.com/python-cmd2/talks/tree/master/PyOhio_2019/examples)
 - [Cookiecutter](https://github.com/cookiecutter/cookiecutter) Templates from community
-    - Basic cookiecutter template for cmd2 application : https://github.com/jayrod/cookiecutter-python-cmd2
-    - Advanced cookiecutter template with external plugin
-      support : https://github.com/jayrod/cookiecutter-python-cmd2-ext-plug
+    - Basic cookiecutter template for cmd2 application :
+      https://github.com/jayrod/cookiecutter-python-cmd2
+    - Advanced cookiecutter template with external plugin support :
+      https://github.com/jayrod/cookiecutter-python-cmd2-ext-plug
 - [cmd2 example applications](https://github.com/python-cmd2/cmd2/tree/master/examples)
     - Basic cmd2 examples to demonstrate how to use various features
 - [Advanced Examples](https://github.com/jayrod/cmd2-example-apps)
-    - More complex examples that demonstrate more featuers about how to put together a complete application
+    - More complex examples that demonstrate more featuers about how to put together a complete
+      application
 
 ## Hello World
 
@@ -136,10 +142,10 @@ if __name__ == '__main__':
 
 ## Found a bug?
 
-If you think you've found a bug, please first read through the
-open [Issues](https://github.com/python-cmd2/cmd2/issues). If you're confident it's a new bug, go ahead and create a new
-GitHub issue. Be sure to include as much information as possible so we can reproduce the bug. At a minimum, please state
-the following:
+If you think you've found a bug, please first read through the open
+[Issues](https://github.com/python-cmd2/cmd2/issues). If you're confident it's a new bug, go ahead
+and create a new GitHub issue. Be sure to include as much information as possible so we can
+reproduce the bug. At a minimum, please state the following:
 
 - `cmd2` version
 - Python version
@@ -181,4 +187,5 @@ Possibly defunct but still good examples
 | [FLASHMINGO](https://github.com/mandiant/flashmingo)                          | Automatic analysis of SWF files based on some heuristics. Extensible via plugins.      | [Mandiant](https://github.com/mandiant)                        |
 | [psiTurk](https://github.com/NYUCCL/psiTurk)                                  | An open platform for science on Amazon Mechanical Turk                                 | [NYU Computation and Cognition Lab](https://github.com/NYUCCL) |
 
-Note: If you have created an application based on `cmd2` that you would like us to mention here, please get in touch.
+Note: If you have created an application based on `cmd2` that you would like us to mention here,
+please get in touch.

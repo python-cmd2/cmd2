@@ -1,6 +1,8 @@
 # Project information
 site_name: cmd2
-site_description: cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python.
+site_description:
+  cmd2 - quickly build feature-rich and user-friendly interactive command line applications in
+  Python.
 site_dir: build/html
 site_url: !ENV [READTHEDOCS_CANONICAL_URL, https://cmd2.readthedocs.io/]
 
@@ -216,6 +218,7 @@ nav:
 
 # Include extra CSS to make some style adjustments for ReadTheDocs
 extra_css:
+  - stylesheets/cmd2.css
   - stylesheets/readthedocs.css
 
 # Include extra JS to setup Read the Docs addons integrations

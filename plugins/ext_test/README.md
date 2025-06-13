@@ -10,13 +10,14 @@
 
 ## Overview
 
-This plugin supports testing of a cmd2 application by exposing access cmd2 commands with the same context
-as from within a cmd2 pyscript. This allows for verification of an application's support for pyscripts.
+This plugin supports testing of a cmd2 application by exposing access cmd2 commands with the same
+context as from within a cmd2 pyscript. This allows for verification of an application's support for
+pyscripts.
 
 ## Example cmd2 Application
 
-The following short example shows how to mix in the external test plugin to create a fixture for testing
-your cmd2 application.
+The following short example shows how to mix in the external test plugin to create a fixture for
+testing your cmd2 application.
 
 Define your cmd2 application
 
@@ -57,11 +58,10 @@ def example_app():
 
 ## Writing Tests
 
-Now write your tests that validate your application using the `app_cmd` function to access
-the cmd2 application's commands. This allows invocation of the application's commands in the
-same format as a user would type. The results from calling a command matches what is returned
-from running an python script with cmd2's pyscript command, which provides stdout, stderr, and
-the command's result data.
+Now write your tests that validate your application using the `app_cmd` function to access the cmd2
+application's commands. This allows invocation of the application's commands in the same format as a
+user would type. The results from calling a command matches what is returned from running an python
+script with cmd2's pyscript command, which provides stdout, stderr, and the command's result data.
 
 ```python
 from cmd2 import CommandResult

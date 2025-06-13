@@ -29,7 +29,5 @@ ${config.versions.active
 </ul>
 </div>`;
 
-  document
-    .querySelector(".md-header__topic")
-    .insertAdjacentHTML("beforeend", versioning);
+  document.querySelector(".md-header__topic").insertAdjacentHTML("beforeend", versioning);
 });
