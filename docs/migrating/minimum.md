@@ -1,6 +1,7 @@
 # Minimum Required Changes
 
-`cmd2.Cmd` subclasses `Cmd.cmd` from the standard library, and overrides most of the methods. Most apps based on the standard library can be migrated to `cmd2` in just a couple of minutes.
+`cmd2.Cmd` subclasses `Cmd.cmd` from the standard library, and overrides most of the methods. Most
+apps based on the standard library can be migrated to `cmd2` in just a couple of minutes.
 
 ## Import and Inheritance
 
@@ -30,11 +31,15 @@ class CmdLineApp(cmd2.Cmd):
 
 ## Exiting
 
-Have a look at the commands you created to exit your application. You probably have one called `exit` and maybe a similar one called `quit`. You also might have implemented a `do_EOF()` method so your program exits like many operating system shells. If all these commands do is quit the application, you may be able to remove them. See [Exiting](../features/misc.md#exiting).
+Have a look at the commands you created to exit your application. You probably have one called
+`exit` and maybe a similar one called `quit`. You also might have implemented a `do_EOF()` method so
+your program exits like many operating system shells. If all these commands do is quit the
+application, you may be able to remove them. See [Exiting](../features/misc.md#exiting).
 
 ## Distribution
 
-If you are distributing your application, you'll also need to ensure that `cmd2` is properly installed. You will need to add the following dependency to your `pyproject.toml` or `setup.py`:
+If you are distributing your application, you'll also need to ensure that `cmd2` is properly
+installed. You will need to add the following dependency to your `pyproject.toml` or `setup.py`:
 
     'cmd2>=2,<3'
 

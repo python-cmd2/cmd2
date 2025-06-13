@@ -1,27 +1,41 @@
 # Argument Processing
 
-`cmd2` makes it easy to add sophisticated argument processing to your commands using the [argparse](https://docs.python.org/3/library/argparse.html) python module. `cmd2` handles the following for you:
+`cmd2` makes it easy to add sophisticated argument processing to your commands using the
+[argparse](https://docs.python.org/3/library/argparse.html) python module. `cmd2` handles the
+following for you:
 
 1. Parsing input and quoted strings like the Unix shell
 1. Parse the resulting argument list using an instance of `argparse.ArgumentParser` that you provide
-1. Passes the resulting `argparse.Namespace` object to your command function. The `Namespace` includes the `Statement` object that was created when parsing the command line. It can be retrieved by calling `cmd2_statement.get()` on the `Namespace`.
+1. Passes the resulting `argparse.Namespace` object to your command function. The `Namespace`
+   includes the `Statement` object that was created when parsing the command line. It can be
+   retrieved by calling `cmd2_statement.get()` on the `Namespace`.
 1. Adds the usage message from the argument parser to your command.
 1. Checks if the `-h/--help` option is present, and if so, display the help message for the command
 
 These features are all provided by the `@with_argparser` decorator which is importable from `cmd2`.
 
-See the either the [argprint](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) or [decorator](https://github.com/python-cmd2/cmd2/blob/master/examples/decorator_example.py) example to learn more about how to use the various `cmd2` argument processing decorators in your `cmd2` applications.
+See the either the [argprint](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py)
+or [decorator](https://github.com/python-cmd2/cmd2/blob/master/examples/decorator_example.py)
+example to learn more about how to use the various `cmd2` argument processing decorators in your
+`cmd2` applications.
 
-`cmd2` provides the following [decorators](../api/decorators.md) for assisting with parsing arguments passed to commands:
+`cmd2` provides the following [decorators](../api/decorators.md) for assisting with parsing
+arguments passed to commands:
 
 - `cmd2.decorators.with_argparser`
 - `cmd2.decorators.with_argument_list`
 
-All of these decorators accept an optional **preserve_quotes** argument which defaults to `False`. Setting this argument to `True` is useful for cases where you are passing the arguments to another command which might have its own argument parsing.
+All of these decorators accept an optional **preserve_quotes** argument which defaults to `False`.
+Setting this argument to `True` is useful for cases where you are passing the arguments to another
+command which might have its own argument parsing.
 
 ## Argument Parsing
 
-For each command in the `cmd2` subclass which requires argument parsing, create a unique instance of `argparse.ArgumentParser()` which can parse the input appropriately for the command. Then decorate the command method with the `@with_argparser` decorator, passing the argument parser as the first parameter to the decorator. This changes the second argument to the command method, which will contain the results of `ArgumentParser.parse_args()`.
+For each command in the `cmd2` subclass which requires argument parsing, create a unique instance of
+`argparse.ArgumentParser()` which can parse the input appropriately for the command. Then decorate
+the command method with the `@with_argparser` decorator, passing the argument parser as the first
+parameter to the decorator. This changes the second argument to the command method, which will
+contain the results of `ArgumentParser.parse_args()`.
 
 Here's what it looks like:
 
@@ -53,7 +67,9 @@ def do_speak(self, opts)
 
 ## Help Messages
 
-By default, `cmd2` uses the docstring of the command method when a user asks for help on the command. When you use the `@with_argparser` decorator, the docstring for the `do_*` method is used to set the description for the `argparse.ArgumentParser`.
+By default, `cmd2` uses the docstring of the command method when a user asks for help on the
+command. When you use the `@with_argparser` decorator, the docstring for the `do_*` method is used
+to set the description for the `argparse.ArgumentParser`.
 
 With this code:
 
@@ -85,7 +101,8 @@ optional arguments:
   -h, --help  show this help message and exit
 ```
 
-If you would prefer you can set the `description` while instantiating the `argparse.ArgumentParser` and leave the docstring on your method empty:
+If you would prefer you can set the `description` while instantiating the `argparse.ArgumentParser`
+and leave the docstring on your method empty:
 
 ```py
 from cmd2 import Cmd2ArgumentParser, with_argparser
@@ -152,7 +169,9 @@ This command cannot generate tags with no content, like <br/>
 
 ## Argument List
 
-The default behavior of `cmd2` is to pass the user input directly to your `do_*` methods as a string. The object passed to your method is actually a `Statement` object, which has additional attributes that may be helpful, including `arg_list` and `argv`:
+The default behavior of `cmd2` is to pass the user input directly to your `do_*` methods as a
+string. The object passed to your method is actually a `Statement` object, which has additional
+attributes that may be helpful, including `arg_list` and `argv`:
 
 ```py
 class CmdLineApp(cmd2.Cmd):
@@ -176,7 +195,10 @@ class CmdLineApp(cmd2.Cmd):
             self.poutput(arg)
 ```
 
-If you don't want to access the additional attributes on the string passed to you`do_*` method you can still have `cmd2` apply shell parsing rules to the user input and pass you a list of arguments instead of a string. Apply the `@with_argument_list` decorator to those methods that should receive an argument list instead of a string:
+If you don't want to access the additional attributes on the string passed to you`do_*` method you
+can still have `cmd2` apply shell parsing rules to the user input and pass you a list of arguments
+instead of a string. Apply the `@with_argument_list` decorator to those methods that should receive
+an argument list instead of a string:
 
 ```py
 from cmd2 import with_argument_list
@@ -196,7 +218,8 @@ class CmdLineApp(cmd2.Cmd):
 
 ## Unknown Positional Arguments
 
-If you want all unknown arguments to be passed to your command as a list of strings, then decorate the command method with the `@with_argparser(..., with_unknown_args=True)` decorator.
+If you want all unknown arguments to be passed to your command as a list of strings, then decorate
+the command method with the `@with_argparser(..., with_unknown_args=True)` decorator.
 
 Here's what it looks like:
 
@@ -225,9 +248,12 @@ def do_dir(self, args, unknown):
 
 ## Using A Custom Namespace
 
-In some cases, it may be necessary to write custom `argparse` code that is dependent on state data of your application. To support this ability while still allowing use of the decorators, `@with_argparser` has an optional argument called `ns_provider`.
+In some cases, it may be necessary to write custom `argparse` code that is dependent on state data
+of your application. To support this ability while still allowing use of the decorators,
+`@with_argparser` has an optional argument called `ns_provider`.
 
-`ns_provider` is a Callable that accepts a `cmd2.Cmd` object as an argument and returns an `argparse.Namespace`:
+`ns_provider` is a Callable that accepts a `cmd2.Cmd` object as an argument and returns an
+`argparse.Namespace`:
 
 ```py
 Callable[[cmd2.Cmd], argparse.Namespace]
@@ -249,15 +275,19 @@ To use this function with the argparse decorators, do the following:
 @with_argparser(my_parser, ns_provider=settings_ns_provider)
 ```
 
-The Namespace is passed by the decorators to the `argparse` parsing functions which gives your custom code access to the state data it needs for its parsing logic.
+The Namespace is passed by the decorators to the `argparse` parsing functions which gives your
+custom code access to the state data it needs for its parsing logic.
 
 ## Subcommands
 
-Subcommands are supported for commands using the `@with_argparser` decorator. The syntax is based on argparse sub-parsers.
+Subcommands are supported for commands using the `@with_argparser` decorator. The syntax is based on
+argparse sub-parsers.
 
-You may add multiple layers of subcommands for your command. `cmd2` will automatically traverse and tab complete subcommands for all commands using argparse.
+You may add multiple layers of subcommands for your command. `cmd2` will automatically traverse and
+tab complete subcommands for all commands using argparse.
 
-See the [subcommands](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) example to learn more about how to use subcommands in your `cmd2` application.
+See the [subcommands](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py)
+example to learn more about how to use subcommands in your `cmd2` application.
 
 ## Argparse Extensions
 
@@ -266,13 +296,19 @@ See the [subcommands](https://github.com/python-cmd2/cmd2/blob/master/examples/s
 - `nargs=(5,)` - accept 5 or more items
 - `nargs=(8, 12)` - accept 8 to 12 items
 
-`cmd2` also provides the `cmd2.argparse_custom.Cmd2ArgumentParser` class which inherits from `argparse.ArgumentParser` and improves error and help output.
+`cmd2` also provides the `cmd2.argparse_custom.Cmd2ArgumentParser` class which inherits from
+`argparse.ArgumentParser` and improves error and help output.
 
 ## Decorator Order
 
-If you are using custom decorators in combination with `@cmd2.with_argparser`, then the order of your custom decorator(s) relative to the `cmd2` decorator matters when it comes to runtime behavior and `argparse` errors. There is nothing `cmd2`-specific here, this is just a side-effect of how decorators work in Python. To learn more about how decorators work, see [decorator_primer](https://realpython.com/primer-on-python-decorators).
+If you are using custom decorators in combination with `@cmd2.with_argparser`, then the order of
+your custom decorator(s) relative to the `cmd2` decorator matters when it comes to runtime behavior
+and `argparse` errors. There is nothing `cmd2`-specific here, this is just a side-effect of how
+decorators work in Python. To learn more about how decorators work, see
+[decorator_primer](https://realpython.com/primer-on-python-decorators).
 
-If you want your custom decorator's runtime behavior to occur in the case of an `argparse` error, then that decorator needs to go **after** the `argparse` one, e.g.:
+If you want your custom decorator's runtime behavior to occur in the case of an `argparse` error,
+then that decorator needs to go **after** the `argparse` one, e.g.:
 
 ```py
 @cmd2.with_argparser(foo_parser)
@@ -282,7 +318,8 @@ def do_foo(self, args: argparse.Namespace) -> None:
     pass
 ```
 
-However, if you do NOT want the custom decorator runtime behavior to occur even in the case of an `argparse` error, then that decorator needs to go **before** the `arpgarse` one, e.g.:
+However, if you do NOT want the custom decorator runtime behavior to occur even in the case of an
+`argparse` error, then that decorator needs to go **before** the `arpgarse` one, e.g.:
 
 ```py
 @my_decorator
@@ -292,12 +329,17 @@ def do_bar(self, args: argparse.Namespace) -> None:
     pass
 ```
 
-The [help_categories](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py) example demonstrates both above cases in a concrete fashion.
+The [help_categories](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py)
+example demonstrates both above cases in a concrete fashion.
 
 ## Reserved Argument Names
 
-`cmd2` argparse decorators add the following attributes to argparse Namespaces. To avoid naming collisions, do not use any of the names for your argparse arguments.
+`cmd2` argparse decorators add the following attributes to argparse Namespaces. To avoid naming
+collisions, do not use any of the names for your argparse arguments.
 
-- `cmd2_statement` - `cmd2.Cmd2AttributeWrapper` object containing `cmd2.Statement` object that was created when parsing the command line.
-- `cmd2_handler` - `cmd2.Cmd2AttributeWrapper` object containing a subcommand handler function or `None` if one was not set.
-- `__subcmd_handler__` - used by cmd2 to identify the handler for a subcommand created with `@cmd2.as_subcommand_to` decorator.
+- `cmd2_statement` - `cmd2.Cmd2AttributeWrapper` object containing `cmd2.Statement` object that was
+  created when parsing the command line.
+- `cmd2_handler` - `cmd2.Cmd2AttributeWrapper` object containing a subcommand handler function or
+  `None` if one was not set.
+- `__subcmd_handler__` - used by cmd2 to identify the handler for a subcommand created with
+  `@cmd2.as_subcommand_to` decorator.

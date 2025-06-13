@@ -7,7 +7,7 @@ install: ## Install the virtual environment with dependencies
 	@echo "🚀 Installing Git pre-commit hooks locally"
 	@uv run pre-commit install
 	@echo "🚀 Installing Prettier using npm"
-	@npm install
+	@npm install -q --no-fund --include=dev
 
 .PHONY: check
 check: ## Run code quality tools.

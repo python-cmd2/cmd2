@@ -12,7 +12,8 @@ Mention quit, and EOF handling built into `cmd2`.
 
 Presents numbered options to user, as bash `select`.
 
-`app.select` is called from within a method (not by the user directly; it is `app.select`, not `app.do_select`).
+`app.select` is called from within a method (not by the user directly; it is `app.select`, not
+`app.do_select`).
 
 ::: cmd2.Cmd.select
 
@@ -34,31 +35,37 @@ wheaties with salty sauce, yum!
 
 ## Disabling Commands
 
-`cmd2` supports disabling commands during runtime. This is useful if certain commands should only be available when the application is in a specific state. When a command is disabled, it will not show up in the help menu or tab complete. If a user tries to run the command, a command-specific message supplied by the developer will be printed. The following functions support this feature.
+`cmd2` supports disabling commands during runtime. This is useful if certain commands should only be
+available when the application is in a specific state. When a command is disabled, it will not show
+up in the help menu or tab complete. If a user tries to run the command, a command-specific message
+supplied by the developer will be printed. The following functions support this feature.
 
-- **enable_command**
-  : Enable an individual command
-- **enable_category**
-  : Enable an entire category of commands
-- **disable_command**
-  : Disable an individual command and set the message that will print when this command is run or help is called on it while disabled
-- **disable_category**
-  : Disable an entire category of commands and set the message that will print when anything in this category is run or help is called on it while disabled
+- **enable_command** : Enable an individual command
+- **enable_category** : Enable an entire category of commands
+- **disable_command** : Disable an individual command and set the message that will print when this
+  command is run or help is called on it while disabled
+- **disable_category** : Disable an entire category of commands and set the message that will print
+  when anything in this category is run or help is called on it while disabled
 
 See the definitions of these functions for descriptions of their arguments.
 
-See the `do_enable_commands()` and `do_disable_commands()` functions in the [HelpCategories](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py) example for a demonstration.
+See the `do_enable_commands()` and `do_disable_commands()` functions in the
+[HelpCategories](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py)
+example for a demonstration.
 
 ## Default to shell
 
-Every `cmd2` application can execute operating-system level (shell) commands with `shell` or a `!` shortcut:
+Every `cmd2` application can execute operating-system level (shell) commands with `shell` or a `!`
+shortcut:
 
     (Cmd) shell which python
     /usr/bin/python
     (Cmd) !which python
     /usr/bin/python
 
-However, if the parameter `default_to_shell` is `True`, then _every_ command will be attempted on the operating system. Only if that attempt fails (i.e., produces a nonzero return value) will the application's own `default` method be called.
+However, if the parameter `default_to_shell` is `True`, then _every_ command will be attempted on
+the operating system. Only if that attempt fails (i.e., produces a nonzero return value) will the
+application's own `default` method be called.
 
     (Cmd) which python
     /usr/bin/python

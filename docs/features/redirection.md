@@ -1,6 +1,7 @@
 # Output Redirection and Pipes
 
-As in POSIX shells, output of a command can be redirected and/or piped. This feature is fully cross-platform and works identically on Windows, macOS, and Linux.
+As in POSIX shells, output of a command can be redirected and/or piped. This feature is fully
+cross-platform and works identically on Windows, macOS, and Linux.
 
 ## Output Redirection
 
@@ -11,11 +12,14 @@ Redirecting the output of a `cmd2` command to a file works just like in POSIX sh
 - send to a file with `>`, as in `mycommand args > filename.txt`
 - append to a file with `>>`, as in `mycommand args >> filename.txt`
 
-If you need to include any of these redirection characters in your command, you can enclose them in quotation marks, `mycommand 'with > in the argument'`.
+If you need to include any of these redirection characters in your command, you can enclose them in
+quotation marks, `mycommand 'with > in the argument'`.
 
 ### Redirect to the clipboard
 
-`cmd2` output redirection supports an additional feature not found in most shells - if the file name following the `>` or `>>` is left blank, then the output is redirected to the operating system clipboard so that it can then be pasted into another program.
+`cmd2` output redirection supports an additional feature not found in most shells - if the file name
+following the `>` or `>>` is left blank, then the output is redirected to the operating system
+clipboard so that it can then be pasted into another program.
 
 - overwrite the clipboard with `mycommand args >`
 - append to the clipboard with `mycommand args >>`
@@ -28,11 +32,14 @@ Piping the output of a `cmd2` command to a shell command works just like in POSI
 
 ## Multiple Pipes and Redirection
 
-Multiple pipes, optionally followed by a redirect, are supported. Thus, it is possible to do something like the following:
+Multiple pipes, optionally followed by a redirect, are supported. Thus, it is possible to do
+something like the following:
 
     (Cmd) help | grep py | wc > output.txt
 
-The above runs the **help** command, pipes its output to **grep** searching for any lines containing _py_, then pipes the output of grep to the **wc** "word count" command, and finally writes redirects the output of that to a file called _output.txt_.
+The above runs the **help** command, pipes its output to **grep** searching for any lines containing
+_py_, then pipes the output of grep to the **wc** "word count" command, and finally writes redirects
+the output of that to a file called _output.txt_.
 
 ## Disabling Redirection
 
