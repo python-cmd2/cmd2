@@ -2610,7 +2610,7 @@ class Cmd(cmd.Cmd):
                 # caused by certain binary characters having been printed to it.
                 import subprocess
 
-                proc = subprocess.Popen(['stty', 'sane'])  # noqa: S603, S607
+                proc = subprocess.Popen(['stty', 'sane'])  # noqa: S607
                 proc.communicate()
 
         data = plugin.CommandFinalizationData(stop, statement)
