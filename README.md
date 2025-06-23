@@ -84,7 +84,7 @@ pip install -U cmd2
 ```
 
 cmd2 works with Python 3.9+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party
-dependencies.
+dependencies. It works with both conventional CPython and free-threaded variants.
 
 For information on other installation options, see
 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html) in the
