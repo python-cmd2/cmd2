@@ -1,7 +1,7 @@
-## 2.6.2 (June TBD, 2025)
+## 2.6.2 (TBD, 2025)
 
-- Bug Fixes
-    - TBD
+- Enhancements
+    - Added explicit support for free-threaded versions of Python, starting with version 3.14
 
 ## 2.6.1 (June 8, 2025)
 
