@@ -254,17 +254,11 @@ class _CommandParsers:
             command = command_method.__name__[len(COMMAND_FUNC_PREFIX) :]
 
             parser_builder = getattr(command_method, constants.CMD_ATTR_ARGPARSER, None)
-            parent = self._cmd.find_commandset_for_command(command) or self._cmd
-            parser = self._cmd._build_parser(parent, parser_builder)
-            if parser is None:
+            if parser_builder is None:
                 return None
 
-            # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
-            from .decorators import (
-                _set_parser_prog,
-            )
-
-            _set_parser_prog(parser, command)
+            parent = self._cmd.find_commandset_for_command(command) or self._cmd
+            parser = self._cmd._build_parser(parent, parser_builder, command)
 
             # If the description has not been set, then use the method docstring if one exists
             if parser.description is None and hasattr(command_method, '__wrapped__') and command_method.__wrapped__.__doc__:
@@ -758,24 +752,39 @@ class Cmd(cmd.Cmd):
     def _build_parser(
         self,
         parent: CommandParent,
-        parser_builder: Optional[
-            Union[
-                argparse.ArgumentParser,
-                Callable[[], argparse.ArgumentParser],
-                StaticArgParseBuilder,
-                ClassArgParseBuilder,
-            ]
+        parser_builder: Union[
+            argparse.ArgumentParser,
+            Callable[[], argparse.ArgumentParser],
+            StaticArgParseBuilder,
+            ClassArgParseBuilder,
         ],
-    ) -> Optional[argparse.ArgumentParser]:
-        parser: Optional[argparse.ArgumentParser] = None
+        prog: str,
+    ) -> argparse.ArgumentParser:
+        """Build argument parser for a command/subcommand.
+
+        :param parent: CommandParent object which owns the parser
+        :param parser_builder: method used to build the parser
+        :param prog: prog value to set in new parser
+        :return: new parser
+        :raises TypeError: if parser_builder is invalid type
+        """
         if isinstance(parser_builder, staticmethod):
             parser = parser_builder.__func__()
         elif isinstance(parser_builder, classmethod):
-            parser = parser_builder.__func__(parent if not None else self)  # type: ignore[arg-type]
+            parser = parser_builder.__func__(parent.__class__)
         elif callable(parser_builder):
             parser = parser_builder()
         elif isinstance(parser_builder, argparse.ArgumentParser):
             parser = copy.deepcopy(parser_builder)
+        else:
+            raise TypeError(f"Invalid type for parser_builder: {type(parser_builder)}")
+
+        from .decorators import (
+            _set_parser_prog,
+        )
+
+        _set_parser_prog(parser, prog)
+
         return parser
 
     def _install_command_function(self, command_func_name: str, command_method: CommandFunc, context: str = '') -> None:
@@ -963,12 +972,7 @@ class Cmd(cmd.Cmd):
 
             target_parser = find_subcommand(command_parser, subcommand_names)
 
-            subcmd_parser = cast(argparse.ArgumentParser, self._build_parser(cmdset, subcmd_parser_builder))
-            from .decorators import (
-                _set_parser_prog,
-            )
-
-            _set_parser_prog(subcmd_parser, f'{command_name} {subcommand_name}')
+            subcmd_parser = self._build_parser(cmdset, subcmd_parser_builder, f'{command_name} {subcommand_name}')
             if subcmd_parser.description is None and method.__doc__:
                 subcmd_parser.description = strip_doc_annotations(method.__doc__)
 
