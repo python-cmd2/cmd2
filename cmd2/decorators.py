@@ -393,6 +393,12 @@ def with_argparser(
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
+        if isinstance(parser, argparse.ArgumentParser):
+            # Set parser's prog value for backward compatibility within the cmd2 2.0 family.
+            # This will be removed in cmd2 3.0 since we never reference this parser's prog value.
+            # We only set prog on the deep copy of this parser created in Cmd._build_parser().
+            _set_parser_prog(parser, command_name)
+
         # Set some custom attributes for this command
         setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, parser)
         setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
