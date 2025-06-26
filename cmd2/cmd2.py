@@ -762,8 +762,10 @@ class Cmd(cmd.Cmd):
     ) -> argparse.ArgumentParser:
         """Build argument parser for a command/subcommand.
 
-        :param parent: CommandParent object which owns the parser
-        :param parser_builder: method used to build the parser
+        :param parent: CommandParent object which owns the command using the parser.
+                       This function assumes that parent is where parser_builder
+                       is defined when parser_builder is a classmethod.
+        :param parser_builder: means used to build the parser
         :param prog: prog value to set in new parser
         :return: new parser
         :raises TypeError: if parser_builder is invalid type
