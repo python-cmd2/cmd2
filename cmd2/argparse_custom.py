@@ -229,10 +229,12 @@ from argparse import (
     ZERO_OR_MORE,
     ArgumentError,
 )
-from collections.abc import Callable, Iterable, Sequence
-from gettext import (
-    gettext,
+from collections.abc import (
+    Callable,
+    Iterable,
+    Sequence,
 )
+from gettext import gettext
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -246,9 +248,7 @@ from typing import (
     runtime_checkable,
 )
 
-from rich_argparse import (
-    RawTextRichHelpFormatter,
-)
+from rich_argparse import RawTextRichHelpFormatter
 
 from . import (
     ansi,
