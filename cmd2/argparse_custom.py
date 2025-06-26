@@ -1215,42 +1215,30 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                                   behavior on this parser. If this is None or not present, then cmd2 will use
                                   argparse_completer.DEFAULT_AP_COMPLETER when tab completing this parser's arguments
         """
+        kw_args: dict[str, bool] = {}
         if sys.version_info >= (3, 14):
             # Python >= 3.14 so pass new arguments to parent argparse.ArgumentParser class
-            super().__init__(
-                prog=prog,
-                usage=usage,
-                description=description,
-                epilog=epilog,
-                parents=parents if parents else [],
-                formatter_class=formatter_class,  # type: ignore[arg-type]
-                prefix_chars=prefix_chars,
-                fromfile_prefix_chars=fromfile_prefix_chars,
-                argument_default=argument_default,
-                conflict_handler=conflict_handler,
-                add_help=add_help,
-                allow_abbrev=allow_abbrev,
-                exit_on_error=exit_on_error,  # added in Python 3.9
-                suggest_on_error=suggest_on_error,  # added in Python 3.14
-                color=color,  # added in Python 3.14
-            )
-        else:
-            # Python < 3.14, so don't pass new arguments to parent argparse.ArgumentParser class
-            super().__init__(
-                prog=prog,
-                usage=usage,
-                description=description,
-                epilog=epilog,
-                parents=parents if parents else [],
-                formatter_class=formatter_class,  # type: ignore[arg-type]
-                prefix_chars=prefix_chars,
-                fromfile_prefix_chars=fromfile_prefix_chars,
-                argument_default=argument_default,
-                conflict_handler=conflict_handler,
-                add_help=add_help,
-                allow_abbrev=allow_abbrev,
-                exit_on_error=exit_on_error,  # added in Python 3.9
-            )
+            kw_args = {
+                "suggest_on_error": suggest_on_error,
+                "color": color,
+            }
+
+        super().__init__(
+            prog=prog,
+            usage=usage,
+            description=description,
+            epilog=epilog,
+            parents=parents if parents else [],
+            formatter_class=formatter_class,  # type: ignore[arg-type]
+            prefix_chars=prefix_chars,
+            fromfile_prefix_chars=fromfile_prefix_chars,
+            argument_default=argument_default,
+            conflict_handler=conflict_handler,
+            add_help=add_help,
+            allow_abbrev=allow_abbrev,
+            exit_on_error=exit_on_error,  # added in Python 3.9
+            **kw_args,  # added in Python 3.14
+        )
 
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
