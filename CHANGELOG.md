@@ -1,7 +1,13 @@
 ## 2.6.2 (TBD, 2025)
 
 - Enhancements
+
     - Added explicit support for free-threaded versions of Python, starting with version 3.14
+
+- Bug Fixes
+    - Restored code to set a parser's `prog` value in the `with_argparser` decorator. This is to
+      preserve backward compatibility in the `cmd2` 2.0 family. This functionality will be removed
+      in `cmd2` 3.0.0.
 
 ## 2.6.1 (June 8, 2025)
 

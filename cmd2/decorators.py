@@ -395,8 +395,10 @@ def with_argparser(
 
         if isinstance(parser, argparse.ArgumentParser):
             # Set parser's prog value for backward compatibility within the cmd2 2.0 family.
-            # This will be removed in cmd2 3.0 since we never reference this parser's prog value.
-            # We only set prog on the deep copy of this parser created in Cmd._build_parser().
+            # This will be removed in cmd2 3.0 since we never reference this parser object's prog value.
+            # Since it's possible for the same parser object to be passed into multiple with_argparser()
+            # calls, we only set prog on the deep copies of this parser based on the specific do_xxxx
+            # instance method they are associated with.
             _set_parser_prog(parser, command_name)
 
         # Set some custom attributes for this command
