@@ -248,6 +248,12 @@ def test_preservelist(argparse_app) -> None:
     assert out[0] == "['foo', '\"bar baz\"']"
 
 
+def test_invalid_parser_builder(argparse_app):
+    parser_builder = None
+    with pytest.raises(TypeError):
+        argparse_app._build_parser(argparse_app, parser_builder, "fake_prog")
+
+
 def _build_has_subcmd_parser() -> cmd2.Cmd2ArgumentParser:
     has_subcmds_parser = cmd2.Cmd2ArgumentParser(description="Tests as_subcmd_to decorator")
     has_subcmds_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
