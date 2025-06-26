@@ -1215,10 +1215,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                                   behavior on this parser. If this is None or not present, then cmd2 will use
                                   argparse_completer.DEFAULT_AP_COMPLETER when tab completing this parser's arguments
         """
-        kw_args: dict[str, bool] = {}
+        kwargs: dict[str, bool] = {}
         if sys.version_info >= (3, 14):
             # Python >= 3.14 so pass new arguments to parent argparse.ArgumentParser class
-            kw_args = {
+            kwargs = {
                 "suggest_on_error": suggest_on_error,
                 "color": color,
             }
@@ -1237,7 +1237,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             add_help=add_help,
             allow_abbrev=allow_abbrev,
             exit_on_error=exit_on_error,  # added in Python 3.9
-            **kw_args,  # added in Python 3.14
+            **kwargs,  # added in Python 3.14
         )
 
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
