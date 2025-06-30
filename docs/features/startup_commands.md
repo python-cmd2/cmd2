@@ -47,8 +47,8 @@ class StartupApp(cmd2.Cmd):
 ```
 
 This text file should contain a [Command Script](./scripting.md#command-scripts). See the
-[AliasStartup](https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py) example
-for a demonstration.
+[AliasStartup](https://github.com/python-cmd2/cmd2/blob/main/examples/alias_startup.py) example for
+a demonstration.
 
 You can silence a startup script's output by setting `silence_startup_script` to True:
 

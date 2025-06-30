@@ -2,9 +2,9 @@
 
 ## Overview
 
-The [External Test Plugin](https://github.com/python-cmd2/cmd2/tree/master/plugins/ext_test)
-supports testing of a cmd2 application by exposing access to cmd2 commands with the same context as
-from within a cmd2 [Python Script](../features/scripting.md#python-scripts). This interface captures
+The [External Test Plugin](https://github.com/python-cmd2/cmd2/tree/main/plugins/ext_test) supports
+testing of a cmd2 application by exposing access to cmd2 commands with the same context as from
+within a cmd2 [Python Script](../features/scripting.md#python-scripts). This interface captures
 `stdout`, `stderr`, as well as any application-specific data returned by the command. This also
 allows for verification of an application's support for
 [Python Scripts](../features/scripting.md#python-scripts) and enables the cmd2 application to be

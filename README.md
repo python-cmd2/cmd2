@@ -2,7 +2,7 @@
 
 [![Latest Version](https://img.shields.io/pypi/v/cmd2.svg?style=flat-square&label=latest%20stable%20version)](https://pypi.python.org/pypi/cmd2/)
 [![GitHub Actions](https://github.com/python-cmd2/cmd2/workflows/CI/badge.svg)](https://github.com/python-cmd2/cmd2/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/master/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
+[![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/main/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
 [![Documentation Status](https://readthedocs.org/projects/cmd2/badge/?version=latest)](http://cmd2.readthedocs.io/en/latest/?badge=latest)
 <a href="https://discord.gg/RpVG6tk"><img src="https://img.shields.io/badge/chat-on%20discord-7289da.svg" alt="Chat"></a>
 
@@ -16,7 +16,7 @@
   <a href="#projects-using-cmd2">Projects using cmd2</a> •
 </p>
 
-[![Screenshot](https://raw.githubusercontent.com/python-cmd2/cmd2/master/cmd2.png)](https://youtu.be/DDU_JH6cFsA)
+[![Screenshot](https://raw.githubusercontent.com/python-cmd2/cmd2/main/cmd2.png)](https://youtu.be/DDU_JH6cFsA)
 
 cmd2 is a tool for building interactive command line applications in Python. Its goal is to make it
 quick and easy for developers to build feature-rich and user-friendly interactive command line
@@ -27,7 +27,7 @@ when using cmd.
 
 ## The developers toolbox
 
-![system schema](https://raw.githubusercontent.com/python-cmd2/cmd2/master/.github/images/graph.drawio.png)
+![system schema](https://raw.githubusercontent.com/python-cmd2/cmd2/main/.github/images/graph.drawio.png)
 
 When creating solutions developers have no shortage of tools to create rich and smart user
 interfaces. System administrators have long been duct taping together brittle workflows based on a
@@ -110,7 +110,7 @@ examples.
       https://github.com/jayrod/cookiecutter-python-cmd2
     - Advanced cookiecutter template with external plugin support :
       https://github.com/jayrod/cookiecutter-python-cmd2-ext-plug
-- [cmd2 example applications](https://github.com/python-cmd2/cmd2/tree/master/examples)
+- [cmd2 example applications](https://github.com/python-cmd2/cmd2/tree/main/examples)
     - Basic cmd2 examples to demonstrate how to use various features
 - [Advanced Examples](https://github.com/jayrod/cmd2-example-apps)
     - More complex examples that demonstrate more featuers about how to put together a complete

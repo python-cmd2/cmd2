@@ -6,7 +6,7 @@
 
 This prompt can be configured by setting the `cmd2.Cmd.prompt` instance attribute. This contains the
 string which should be printed as a prompt for user input. See the
-[Pirate](https://github.com/python-cmd2/cmd2/blob/master/examples/pirate.py#L39) example for the
+[Pirate](https://github.com/python-cmd2/cmd2/blob/main/examples/pirate.py#L39) example for the
 simple use case of statically setting the prompt.
 
 ## Continuation Prompt
@@ -15,7 +15,7 @@ When a user types a [Multiline Command](./multiline_commands.md) it may span mor
 input. The prompt for the first line of input is specified by the `cmd2.Cmd.prompt` instance
 attribute. The prompt for subsequent lines of input is defined by the `cmd2.Cmd.continuation_prompt`
 attribute.See the
-[Initialization](https://github.com/python-cmd2/cmd2/blob/master/examples/initialization.py#L42)
+[Initialization](https://github.com/python-cmd2/cmd2/blob/main/examples/initialization.py#L42)
 example for a demonstration of customizing the continuation prompt.
 
 ## Updating the prompt
@@ -23,7 +23,7 @@ example for a demonstration of customizing the continuation prompt.
 If you wish to update the prompt between commands, you can do so using one of the
 [Application Lifecycle Hooks](./hooks.md#application-lifecycle-hooks) such as a
 [Postcommand hook](./hooks.md#postcommand-hooks). See
-[PythonScripting](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py#L38-L55)
+[PythonScripting](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py#L38-L55)
 for an example of dynamically updating the prompt.
 
 ## Asynchronous Feedback
@@ -49,5 +49,5 @@ Windows 10 and greater all support these.
 ::: cmd2.Cmd.set_window_title
 
 The easiest way to understand these functions is to see the
-[AsyncPrinting](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py) example
+[AsyncPrinting](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py) example
 for a demonstration.

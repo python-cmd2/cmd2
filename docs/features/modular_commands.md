@@ -27,8 +27,8 @@ specific to a CommandSet.
 
 See API documentation for `cmd2.command_definition.CommandSet`.
 
-See [the examples](https://github.com/python-cmd2/cmd2/tree/master/examples/modular_commands) for
-more details.
+See [the examples](https://github.com/python-cmd2/cmd2/tree/main/examples/modular_commands) for more
+details.
 
 ## Defining Commands
 

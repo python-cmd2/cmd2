@@ -47,7 +47,7 @@ This will install the required 3rd-party dependencies, if necessary.
 
 ## Install from GitHub {: #github }
 
-The latest version of `cmd2` can be installed directly from the master branch on GitHub using
+The latest version of `cmd2` can be installed directly from the main branch on GitHub using
 [pip](https://pypi.org/project/pip):
 
 ```shell

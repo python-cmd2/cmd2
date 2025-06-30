@@ -50,8 +50,8 @@ supplied by the developer will be printed. The following functions support this 
 See the definitions of these functions for descriptions of their arguments.
 
 See the `do_enable_commands()` and `do_disable_commands()` functions in the
-[HelpCategories](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py)
-example for a demonstration.
+[HelpCategories](https://github.com/python-cmd2/cmd2/blob/main/examples/help_categories.py) example
+for a demonstration.
 
 ## Default to shell
 

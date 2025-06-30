@@ -42,17 +42,17 @@ complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.pa
 - `cmd2.Cmd.path_complete` - helper method provides flexible tab completion of file system paths
 
     > - See the
-    >   [paged_output](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py)
+    >   [paged_output](https://github.com/python-cmd2/cmd2/blob/main/examples/paged_output.py)
     >   example for a simple use case
     > - See the
-    >   [python_scripting](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py)
+    >   [python_scripting](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
     >   example for a more full-featured use case
 
 - `cmd2.Cmd.delimiter_complete` - helper method for tab completion against a list but each match is
   split on a delimiter
 
     > - See the
-    >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py)
+    >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
     >   example for a demonstration of how to use this feature
 
 - `cmd2.Cmd.flag_based_complete` - helper method for tab completion based on a particular flag
@@ -62,7 +62,7 @@ complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.pa
   the input string
 
     > - See the
-    >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py)
+    >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
     >   example for a demonstration of how to use these features
     > - `flag_based_complete()` and `index_based_complete()` are basic methods and should only be
     >   used if you are not familiar with argparse. The recommended approach for tab completing
@@ -95,13 +95,13 @@ Tab completion of argument values can be configured by using one of three parame
 - `choices_provider`
 - `completer`
 
-See the [arg_decorators](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_decorators.py)
-or [colors](https://github.com/python-cmd2/cmd2/blob/master/examples/colors.py) example for a
+See the [arg_decorators](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_decorators.py)
+or [colors](https://github.com/python-cmd2/cmd2/blob/main/examples/colors.py) example for a
 demonstration of how to use the `choices` parameter. See the
-[argparse_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py)
+[argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 example for a demonstration of how to use the `choices_provider` parameter. See the
-[arg_decorators](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_decorators.py) or
-[argparse_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py)
+[arg_decorators](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_decorators.py) or
+[argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 example for a demonstration of how to use the `completer` parameter.
 
 When tab completing flags or argument values for a `cmd2` command using one of these decorators,
@@ -117,7 +117,7 @@ facilitate this, `cmd2` defines the `cmd2.argparse_custom.CompletionItem` class 
 returned from any of the 3 completion parameters: `choices`, `choices_provider`, and `completer`.
 
 See the
-[argparse_completion](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py)
+[argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 example or the implementation of the built-in [set](./builtin_commands.md#set) command for
 demonstration of how this is used.
 
@@ -125,7 +125,7 @@ demonstration of how this is used.
 
 `cmd2` provides `cmd2.Cmd.read_input` as an alternative to Python's `input()` function. `read_input`
 supports configurable tab completion and up-arrow history at the prompt. See
-[read_input](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py) example for a
+[read_input](https://github.com/python-cmd2/cmd2/blob/main/examples/read_input.py) example for a
 demonstration.
 
 ## For More Information

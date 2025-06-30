@@ -290,5 +290,5 @@ When creating your `setup.py` file, keep the following in mind:
 
 ## License
 
-cmd2 [uses the very liberal MIT license](https://github.com/python-cmd2/cmd2/blob/master/LICENSE).
-We invite plugin authors to consider doing the same.
+cmd2 [uses the very liberal MIT license](https://github.com/python-cmd2/cmd2/blob/main/LICENSE). We
+invite plugin authors to consider doing the same.

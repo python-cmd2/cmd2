@@ -29,5 +29,5 @@ can be used to create the whole table at once or one row at a time.
 to distinguish between rows instead of row border lines. This class can be used to create the whole
 table at once or one row at a time.
 
-See the [table_creation](https://github.com/python-cmd2/cmd2/blob/master/examples/table_creation.py)
+See the [table_creation](https://github.com/python-cmd2/cmd2/blob/main/examples/table_creation.py)
 example to see these classes in use

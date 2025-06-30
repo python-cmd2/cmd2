@@ -101,7 +101,7 @@
       prompts.
         - This fix introduces behavior where an updated prompt won't display after an aborted search
           until a user presses Enter. See
-          [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
+          [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
           example for how to handle this case using `Cmd.need_prompt_refresh()` and
           `Cmd.async_refresh_prompt()`.
 - Enhancements
@@ -321,8 +321,8 @@
       persistent history files created with versions older than 2.0.0 are not compatible.
 - Enhancements
     - Added support for custom tab completion and up-arrow input history to `cmd2.Cmd2.read_input`.
-      See [read_input.py](https://github.com/python-cmd2/cmd2/blob/master/examples/read_input.py)
-      for an example.
+      See [read_input.py](https://github.com/python-cmd2/cmd2/blob/main/examples/read_input.py) for
+      an example.
     - Added `cmd2.exceptions.PassThroughException` to raise unhandled command exceptions instead of
       printing them.
     - Added support for ANSI styles and newlines in tab completion results using
@@ -534,7 +534,7 @@
         - See [table_creation](https://cmd2.readthedocs.io/en/latest/features/table_creation.html)
           documentation for an overview.
         - See
-          [table_creation.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_creation.py)
+          [table_creation.py](https://github.com/python-cmd2/cmd2/blob/main/examples/table_creation.py)
           for an example.
     - Added the following exceptions to the public API
         - `SkipPostcommandHooks` - Custom exception class for when a command has a failure bad
@@ -786,7 +786,7 @@
     - Greatly simplified using argparse-based tab completion. The new interface is a complete
       overhaul that breaks the previous way of specifying completion and choices functions. See
       header of
-      [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
+      [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/main/cmd2/argparse_custom.py)
       for more information.
     - Enabled tab completion on multiline commands
 - **Renamed Commands Notice**
@@ -1109,7 +1109,7 @@
     - Added `async_alert`, `async_update_prompt`, and `set_window_title` functions
         - These allow you to provide feedback to the user in an asynchronous fashion, meaning alerts
           can display when the user is still entering text at the prompt. See
-          [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
+          [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
           for an example.
     - Cross-platform colored output support
         - `colorama` gets initialized properly in `Cmd.__init()`
@@ -1147,7 +1147,7 @@
     - New dependency on `attrs` third party module
     - Added `matches_sorted` member to support custom sorting of tab completion matches
     - Added
-      [tab_autocomp_dynamic.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocomp_dynamic.py)
+      [tab_autocomp_dynamic.py](https://github.com/python-cmd2/cmd2/blob/main/examples/tab_autocomp_dynamic.py)
       example
         - Demonstrates updating the argparse object during init instead of during class construction
 - Deprecations
@@ -1190,7 +1190,7 @@
         - If `chop` is `False`, then `self.pager` is used as the pager
         - Otherwise `self.pager_chop` is used as the pager
     - Greatly improved the
-      [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py)
+      [table_display.py](https://github.com/python-cmd2/cmd2/blob/main/examples/table_display.py)
       example
         - Now uses the new [tableformatter](https://github.com/python-tableformatter/tableformatter)
           module which looks better than `tabulate`
@@ -1224,7 +1224,7 @@
 - Enhancements
     - Automatic completion of `argparse` arguments via `cmd2.argparse_completer.AutoCompleter`
         - See the
-          [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py)
+          [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/main/examples/tab_autocompletion.py)
           example for a demonstration of how to use this feature
     - `cmd2` no longer depends on the `six` module
     - `cmd2` is now a multi-file Python package instead of a single-file module
@@ -1262,7 +1262,7 @@
           [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html)
           section of the documentation for more information on these decorators
         - Alternatively, see the
-          [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
+          [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
     - Deleted `cmd_with_subs_completer`, `get_subcommands`, and `get_subcommand_completer`
         - Replaced by default AutoCompleter implementation for all commands using argparse
     - Deleted support for old method of calling application commands with `cmd()` and `self`
@@ -1305,7 +1305,7 @@
           [Grouping Commands](http://cmd2.readthedocs.io/en/latest/argument_processing.html?highlight=verbose#grouping-commands)
           section of the docs for more info
         - See
-          [help_categories.py](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py)
+          [help_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/help_categories.py)
           for an example
     - Tab completion of paths now supports ~user user path expansion
     - Simplified implementation of various tab completion functions so they no longer require
@@ -1357,8 +1357,8 @@
     - `cmd_with_subs_completer()` no longer takes an argument called `base`. Adding tab completion
       to subcommands has been simplified to declaring it in the subcommand parser's default
       settings. This easily allows arbitrary completers like path_complete to be used. See
-      [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for
-      an example of how to use tab completion in subcommands. In addition, the docstring for
+      [subcommands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/subcommands.py) for an
+      example of how to use tab completion in subcommands. In addition, the docstring for
       `cmd_with_subs_completer()` offers more details.
 
 ## 0.8.2 (March 21, 2018)
@@ -1376,12 +1376,12 @@
       attribute to enable canceling current line instead of quitting when Ctrl+C is typed
     - Added possibility of having readline history preservation in a SubMenu
     - Added
-      [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py)
+      [table_display.py](https://github.com/python-cmd2/cmd2/blob/main/examples/table_display.py)
       example to demonstrate how to display tabular data
     - Added command aliasing with `alias` and `unalias` commands
     - Added the ability to load an initialization script at startup
         - See
-          [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py)
+          [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/main/examples/alias_startup.py)
           for an example
     - Added a default SIGINT handler which terminates any open pipe subprocesses and re-raises a
       KeyboardInterrupt
@@ -1394,14 +1394,14 @@
     - Fixed a bug in a unit test which would fail if your home directory was empty on a Linux system
     - Fixed outdated help text for the **edit** command
     - Fixed outdated
-      [remove_unused.py](https://github.com/python-cmd2/cmd2/blob/master/examples/remove_unused.py)
+      [remove_unused.py](https://github.com/python-cmd2/cmd2/blob/main/examples/remove_unused.py)
 - Enhancements
     - Added support for sub-menus.
-        - See [submenus.py](https://github.com/python-cmd2/cmd2/blob/master/examples/submenus.py)
-          for an example of how to use it
+        - See [submenus.py](https://github.com/python-cmd2/cmd2/blob/main/examples/submenus.py) for
+          an example of how to use it
     - Added option for persistent readline history
         - See
-          [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/master/examples/persistent_history.py)
+          [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/main/examples/persistent_history.py)
           for an example
         - See the
           [Searchable command history](http://cmd2.readthedocs.io/en/latest/freefeatures.html#searchable-command-history)
@@ -1412,10 +1412,10 @@
     - `exclude_from_help` and `excludeFromHistory` are now instance instead of class attributes
     - Added flag and index based tab completion helper functions
         - See
-          [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py)
+          [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/main/examples/tab_completion.py)
     - Added support for displaying output which won't fit on the screen via a pager using `ppaged()`
         - See
-          [paged_output.py](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py)
+          [paged_output.py](https://github.com/python-cmd2/cmd2/blob/main/examples/paged_output.py)
 - Attributes Removed (**can cause breaking changes**)
     - `abbrev` - Removed support for abbreviated commands
         - Good tab completion makes this unnecessary and its presence could cause harmful unintended
@@ -1442,13 +1442,13 @@
     - See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html)
       section of the documentation for more information on these decorators
         - Alternatively, see the
-          [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
-          and [arg_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py)
+          [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
+          and [arg_print.py](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_print.py)
           examples
     - Added support for Argparse subcommands when using the **with_argument_parser** or \*
       \*with_argparser_and_unknown_args\*\* decorators
         - See
-          [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py)
+          [subcommands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/subcommands.py)
           for an example of how to use subcommands
         - Tab completion of subcommand names is automatically supported
     - The **\_\_relative_load** command is now hidden from the help menu by default

@@ -20,7 +20,7 @@ setuptools.setup(
     keywords='cmd2 test plugin',
     author='Eric Lin',
     author_email='anselor@gmail.com',
-    url='https://github.com/python-cmd2/cmd2/tree/master/plugins/ext_test',
+    url='https://github.com/python-cmd2/cmd2/tree/main/plugins/ext_test',
     license='MIT',
     package_data=PACKAGE_DATA,
     packages=['cmd2_ext_test'],

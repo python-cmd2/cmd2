@@ -172,36 +172,36 @@ Now that you have a copy of your fork, there is work you will need to do to keep
 
 Do this prior to every time you create a branch for a PR:
 
-1. Make sure you are on the `master` branch
+1. Make sure you are on the `main` branch
 
 > ```sh
 > $ git status
-> On branch master
-> Your branch is up-to-date with 'origin/master'.
+> On branch main
+> Your branch is up-to-date with 'origin/main'.
 > ```
 
-> If your aren't on `master`, resolve outstanding files and commits and checkout the `master` branch
+> If your aren't on `main`, resolve outstanding files and commits and checkout the `main` branch
 
 > ```sh
-> $ git checkout master
+> $ git checkout main
 > ```
 
 2. Do a pull with rebase against `upstream`
 
 > ```sh
-> $ git pull --rebase upstream master
+> $ git pull --rebase upstream main
 > ```
 
-> This will pull down all of the changes to the official master branch, without making an additional
+> This will pull down all of the changes to the official mai branch, without making an additional
 > commit in your local repo.
 
-3. (_Optional_) Force push your updated master branch to your GitHub fork
+3. (_Optional_) Force push your updated main branch to your GitHub fork
 
 > ```sh
-> $ git push origin master --force
+> $ git push origin main --force
 > ```
 
-> This will overwrite the master branch of your fork.
+> This will overwrite the main branch of your fork.
 
 ### Creating a branch
 
@@ -449,9 +449,9 @@ GitHub has a good guide on how to contribute to open source
 #### Important: ALWAYS EDIT ON A BRANCH
 
 If you take away only one thing from this document, it should be this: Never, **EVER** make edits to
-the `master` branch. ALWAYS make a new branch BEFORE you edit files. This is critical, because if
-your PR is not accepted, your copy of master will be forever sullied and the only way to fix it is
-to delete your fork and re-fork.
+the `main` branch. ALWAYS make a new branch BEFORE you edit files. This is critical, because if your
+PR is not accepted, your copy of main will be forever sullied and the only way to fix it is to
+delete your fork and re-fork.
 
 #### Methods
 
@@ -465,21 +465,21 @@ There are two methods of creating a pull request for cmd2:
 This is the recommended method. Read about
 [how to set up and maintain a local instance of cmd2](#maintaining-your-fork).
 
-1. Perform the maintenance step of rebasing `master`
-2. Ensure you're on the `master` branch using `git status`:
+1. Perform the maintenance step of rebasing `main`
+2. Ensure you're on the `main` branch using `git status`:
 
 ```sh
 $ git status
-On branch master
-Your branch is up-to-date with 'origin/master'.
+On branch main
+Your branch is up-to-date with 'origin/main'.
 
 nothing to commit, working directory clean
 ```
 
-1. If you're not on master or your working directory is not clean, resolve any outstanding
-   files/commits and checkout master `git checkout master`
+1. If you're not on main or your working directory is not clean, resolve any outstanding
+   files/commits and checkout main `git checkout main`
 
-2. Create a branch off of `master` with git: `git checkout -B branch/name-here` **Note:** Branch
+2. Create a branch off of `main` with git: `git checkout -B branch/name-here` **Note:** Branch
    naming is important. Use a name like `fix/short-fix-description` or
    `feature/short-feature-description`. Review the
    [Contribution Guidelines](#contribution-guidelines) for more detail.
@@ -514,9 +514,9 @@ on how to do it.
 1. Once the edits have been committed, you will be prompted to create a pull request on your fork's
    GitHub page
 
-2. By default, all pull requests should be against the cmd2 main repo, `master` branch
+2. By default, all pull requests should be against the cmd2 main repo, `main` branch
 
-3. Submit a pull request from your branch to cmd2's `master` branch
+3. Submit a pull request from your branch to cmd2's `main` branch
 
 4. The title (also called the subject) of your PR should be descriptive of your changes and
    succinctly indicate what is being fixed
@@ -756,8 +756,8 @@ Given a version number `MAJOR`.`MINOR`.`PATCH`, increment the:
 
 ### Branching Strategy
 
-We use the **master** branch for the upcoming `PATCH` release - i.e. if the current version of
-`cmd2` is 1.0.2, then the **master** branch contains code which is planned for release in 1.0.3.
+We use the **main** branch for the upcoming `PATCH` release - i.e. if the current version of `cmd2`
+is 1.0.2, then the **main** branch contains code which is planned for release in 1.0.3.
 
 If work needs to be done for a `MAJOR` or `MINOR` release when we anticipate there will be a `PATCH`
 release in-between, then a branch should be created named for the appropriate version number for the
@@ -765,17 +765,16 @@ work, e.g. if the current release of `cmd2` is 1.0.2 and a backwards-incompatibl
 committed for an upcoming `MAJOR` release, then this work should be committed to a **2.0.0** branch
 until such a time as we are ready to release version 2.0.0.
 
-Following this strategy, releases are always done from the **master** branch and `MAJOR` or `MINOR`
-branches are merged to **master** immediately prior to doing a release. Once merged to **master**,
-the other branches can be deleted. All releases are tagged so that they can be reproduced if
-necessary.
+Following this strategy, releases are always done from the **main** branch and `MAJOR` or `MINOR`
+branches are merged to **main** immediately prior to doing a release. Once merged to **main**, the
+other branches can be deleted. All releases are tagged so that they can be reproduced if necessary.
 
 ## Publishing a new release
 
 Since 0.9.2, the process of publishing a new release of `cmd2` to [PyPi](https://pypi.org/) has been
 mostly automated. The manual steps are all git operations. Here's the checklist:
 
-1. Make sure you're on the proper branch (almost always **master**)
+1. Make sure you're on the proper branch (almost always **main**)
 1. Make sure all the unit tests pass with `invoke pytest` or `py.test`
 1. Make sure latest year in `LICENSE` matches current year
 1. Make sure `CHANGELOG.md` describes the version and has the correct release date

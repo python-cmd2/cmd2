@@ -48,8 +48,7 @@ Comments are useful in scripts, but would be pointless within an interactive ses
 If you require logic flow, loops, branching, or other advanced features, you can write a python
 script which executes in the context of your `cmd2` app. This script is run using the
 [run_pyscript](./builtin_commands.md#run_pyscript) command. Here's a simple example that uses the
-[arg_printer](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/arg_printer.py)
-script:
+[arg_printer](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/arg_printer.py) script:
 
     (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar 'baz 23'
     Running Python script 'arg_printer.py' which was called with 3 arguments
@@ -102,10 +101,10 @@ second = 'second'
 app(f'command {first} -t {second})
 ```
 
-See [python_scripting](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py)
+See [python_scripting](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
 example and associated
-[conditional](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py)
-script for more information.
+[conditional](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/conditional.py) script
+for more information.
 
 ### Design principles
 

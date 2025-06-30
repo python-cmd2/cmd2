@@ -39,8 +39,7 @@ by the simple text file scripts. Python scripts can include conditional control 
 [Scripting](./scripting.md) for an explanation of both scripting methods in **cmd2** applications.
 
 A simple example of using `run_pyscript` is shown below along with the
-[arg_printer](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/arg_printer.py)
-script:
+[arg_printer](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/arg_printer.py) script:
 
 ```sh
 (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar baz

@@ -101,7 +101,7 @@ initialization code:
 1.  Pass the `Settable` object to `cmd2.Cmd.add_settable`
 
 Here's an example, from
-[examples/environment.py](https://github.com/python-cmd2/cmd2/blob/master/examples/environment.py):
+[examples/environment.py](https://github.com/python-cmd2/cmd2/blob/main/examples/environment.py):
 
 ```py
 {%

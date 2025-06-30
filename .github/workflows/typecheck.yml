@@ -5,7 +5,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
-    branches: [master]
+    branches: [main]
 
 permissions:
   contents: read
