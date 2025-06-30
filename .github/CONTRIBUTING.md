@@ -48,7 +48,7 @@ We also rely on [npm](https://www.npmjs.com/) for installing a few dependencies 
 [prettier](https://prettier.io/) for formatting non-Python files.
 
 We have a [Makefile](../Makefile) with commands that make it quick and easy for developers to get
-everything setup and perform common development tasks.
+everything set up and perform common development tasks.
 
 Nearly all project configuration, including for dependencies and quality tools is in the
 [pyproject.toml](../pyproject.toml) file.
@@ -234,8 +234,8 @@ _[this](https://github.com/Kunena/Kunena-Forum/wiki/Create-a-new-branch-with-git
 
 ### Setting up for cmd2 development
 
-For doing `cmd2` development, it is strongly recommended you create a virtual environment `uv` using
-the instructions in the next section.
+For doing `cmd2` development, it is strongly recommended you create a virtual environment using `uv`
+by following the instructions in the next section.
 
 #### Create a new environment for cmd2 using uv
 
@@ -243,7 +243,7 @@ the instructions in the next section.
 
 `uv` is single tool to replace `pip`, `pip-tools`, `pipx`, `poetry`, `pyenv`, `twine`, `virtualenv`,
 and more. `cmd2` contains configuration for using `uv` in it's `pyproject.toml` file which makes it
-extremely easy to setup a `cmd2` development environment using `uv`.
+extremely easy to set up a `cmd2` development environment using `uv`.
 
 To create a virtual environment using the latest stable version of Python and install everything
 needed for `cmd2` development using `uv`, do the following from the root of your cloned `cmd2`
@@ -275,11 +275,11 @@ Linux or macOS:
 source .venv/bin/activate
 ```
 
-Assuming you cloned the repository to `~/src/cmd2` and setup a virtual environment using `uv`,
-`cmd2` in this venv in
-[editable mode](https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs). Changes to
-the source code are immediately available when the python interpreter imports `cmd2`, there is no
-need to re-install the module after every change. This command will also install all of the runtime
+Assuming you cloned the repository to `~/src/cmd2` and set up a virtual environment using `uv`,
+`cmd2` in this venv is in
+[editable mode](https://pip.pypa.io/en/stable/cli/pip_install/#editable-installs). Changes to the
+source code are immediately available when the python interpreter imports `cmd2`, there is no need
+to re-install the module after every change. This command will also install all of the runtime
 dependencies for `cmd2` and modules used for development of `cmd2`:
 
 ```sh
@@ -320,7 +320,7 @@ $ make check
 
 This will run all auto-formatters, linters, and type checkers to ensure code quality. You should run
 this every time before committing any code. If this all runs successfully, then your virtual
-environment is setup and working properly.
+environment is set up and working properly.
 
 You can also run the example app and see a prompt that says "(Cmd)" running the command:
 
