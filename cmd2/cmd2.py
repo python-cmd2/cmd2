@@ -42,14 +42,16 @@ import re
 import sys
 import tempfile
 import threading
-from code import (
-    InteractiveConsole,
-)
+from code import InteractiveConsole
 from collections import (
     OrderedDict,
     namedtuple,
 )
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import (
+    Callable,
+    Iterable,
+    Mapping,
+)
 from types import (
     FrameType,
     ModuleType,
@@ -763,8 +765,8 @@ class Cmd(cmd.Cmd):
         """Build argument parser for a command/subcommand.
 
         :param parent: CommandParent object which owns the command using the parser.
-                       This function assumes that parent is where parser_builder
-                       is defined when parser_builder is a classmethod.
+                       When parser_builder is a classmethod, this function passes
+                       parent's class to it.
         :param parser_builder: means used to build the parser
         :param prog: prog value to set in new parser
         :return: new parser
@@ -781,9 +783,7 @@ class Cmd(cmd.Cmd):
         else:
             raise TypeError(f"Invalid type for parser_builder: {type(parser_builder)}")
 
-        from .decorators import (
-            _set_parser_prog,
-        )
+        from .decorators import _set_parser_prog
 
         _set_parser_prog(parser, prog)
 

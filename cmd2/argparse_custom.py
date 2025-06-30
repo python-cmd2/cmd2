@@ -229,14 +229,17 @@ from argparse import (
     ZERO_OR_MORE,
     ArgumentError,
 )
-from collections.abc import Callable, Iterable, Sequence
-from gettext import (
-    gettext,
+from collections.abc import (
+    Callable,
+    Iterable,
+    Sequence,
 )
+from gettext import gettext
 from typing import (
     IO,
     TYPE_CHECKING,
     Any,
+    ClassVar,
     NoReturn,
     Optional,
     Protocol,
@@ -244,6 +247,8 @@ from typing import (
     cast,
     runtime_checkable,
 )
+
+from rich_argparse import RawTextRichHelpFormatter
 
 from . import (
     ansi,
@@ -991,8 +996,24 @@ setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_pa
 ############################################################################################################
 
 
-class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
+class Cmd2HelpFormatter(RawTextRichHelpFormatter):
     """Custom help formatter to configure ordering of help text."""
+
+    # rich-argparse formats all group names with str.title().
+    # Override their formatter to do nothing.
+    group_name_formatter: ClassVar[Callable[[str], str]] = str
+
+    # Disable automatic highlighting in the help text.
+    highlights: ClassVar[list[str]] = []
+
+    # Disable markup rendering in usage, help, description, and epilog text.
+    # cmd2's built-in commands do not escape opening brackets in their help text
+    # and therefore rely on these settings being False. If you desire to use
+    # markup in your help text, inherit from Cmd2HelpFormatter and override
+    # these settings in that child class.
+    usage_markup: ClassVar[bool] = False
+    help_markup: ClassVar[bool] = False
+    text_markup: ClassVar[bool] = False
 
     def _format_usage(
         self,
