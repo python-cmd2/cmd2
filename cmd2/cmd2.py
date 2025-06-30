@@ -765,8 +765,8 @@ class Cmd(cmd.Cmd):
         """Build argument parser for a command/subcommand.
 
         :param parent: CommandParent object which owns the command using the parser.
-                       This function assumes that parent is where parser_builder
-                       is defined when parser_builder is a classmethod.
+                       When parser_builder is a classmethod, this function passes
+                       parent's class to it.
         :param parser_builder: means used to build the parser
         :param prog: prog value to set in new parser
         :return: new parser

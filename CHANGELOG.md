@@ -1,3 +1,8 @@
+## 2.7.0 (TBD)
+
+- Enhancements
+    - Integrated rich-argparse with cmd2's default argparse help formatter.
+
 ## 2.6.2 (June 26, 2025)
 
 - Enhancements

@@ -1009,7 +1009,7 @@ class Cmd2HelpFormatter(RawTextRichHelpFormatter):
     # Disable markup rendering in usage, help, description, and epilog text.
     # cmd2's built-in commands do not escape opening brackets in their help text
     # and therefore rely on these settings being False. If you desire to use
-    # markup in your help text, inherit from a Cmd2 help formatter and override
+    # markup in your help text, inherit from Cmd2HelpFormatter and override
     # these settings in that child class.
     usage_markup: ClassVar[bool] = False
     help_markup: ClassVar[bool] = False
