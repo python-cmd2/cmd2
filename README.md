@@ -25,6 +25,10 @@ applications. It provides a simple API which is an extension of Python's built-i
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary
 when using cmd.
 
+> :warning: **cmd2 is now "feature complete" for the `2.x` branch and is actively working on the
+> 3.0.0 release on the `main` branch. New features will only be addressed in 3.x moving forwards. If
+> need be, we will still fix bugs in 2.x.**
+
 ## The developers toolbox
 
 ![system schema](https://raw.githubusercontent.com/python-cmd2/cmd2/main/.github/images/graph.drawio.png)
