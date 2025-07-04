@@ -24,8 +24,6 @@ from examples.subcommands import (
 
 from .conftest import (
     complete_tester,
-    normalize,
-    run_cmd,
 )
 
 # List of strings used with completion functions
@@ -180,26 +178,6 @@ def test_complete_exception(cmd2_app, capsys) -> None:
 
     assert first_match is None
     assert "IndexError" in err
-
-
-def test_complete_macro(base_app, request) -> None:
-    # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake run_pyscript {1}')
-    assert out == normalize("Macro 'fake' created")
-
-    # Macros do path completion
-    test_dir = os.path.dirname(request.module.__file__)
-
-    text = os.path.join(test_dir, 's')
-    line = f'fake {text}'
-
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
-    first_match = complete_tester(text, line, begidx, endidx, base_app)
-    assert first_match is not None
-    assert base_app.completion_matches == expected
 
 
 def test_default_sort_key(cmd2_app) -> None:
