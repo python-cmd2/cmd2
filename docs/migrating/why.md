@@ -37,8 +37,8 @@ and capabilities, without you having to do anything:
   Before you do, you might consider the various ways `cmd2` has of
   [Generatoring Output](../features/generating_output.md).
 - Users can load script files, which contain a series of commands to be executed.
-- Users can create [Shortcuts, Aliases, and Macros](../features/shortcuts_aliases_macros.md) to
-  reduce the typing required for repetitive commands.
+- Users can create [Shortcuts and Aliases](../features/shortcuts_aliases.md) to reduce the typing
+  required for repetitive commands.
 - Embedded python shell allows a user to execute python code from within your `cmd2` app. How meta.
 - [Clipboard Integration](../features/clipboard.md) allows you to save command output to the
   operating system clipboard.

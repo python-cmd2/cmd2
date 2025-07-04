@@ -36,56 +36,6 @@ def shlex_split(str_to_split: str) -> list[str]:
 
 
 @dataclass(frozen=True)
-class MacroArg:
-    """Information used to replace or unescape arguments in a macro value when the macro is resolved.
-
-    Normal argument syntax:    {5}
-    Escaped argument syntax:  {{5}}.
-    """
-
-    # The starting index of this argument in the macro value
-    start_index: int
-
-    # The number string that appears between the braces
-    # This is a string instead of an int because we support unicode digits and must be able
-    # to reproduce this string later
-    number_str: str
-
-    # Tells if this argument is escaped and therefore needs to be unescaped
-    is_escaped: bool
-
-    # Pattern used to find normal argument
-    # Digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
-    # Match strings like: {5}, {{{{{4}, {2}}}}}
-    macro_normal_arg_pattern = re.compile(r'(?<!{){\d+}|{\d+}(?!})')
-
-    # Pattern used to find escaped arguments
-    # Digits surrounded by 2 or more braces on both sides
-    # Match strings like: {{5}}, {{{{{4}}, {{2}}}}}
-    macro_escaped_arg_pattern = re.compile(r'{{2}\d+}{2}')
-
-    # Finds a string of digits
-    digit_pattern = re.compile(r'\d+')
-
-
-@dataclass(frozen=True)
-class Macro:
-    """Defines a cmd2 macro."""
-
-    # Name of the macro
-    name: str
-
-    # The string the macro resolves to
-    value: str
-
-    # The minimum number of args the user has to pass to this macro
-    minimum_arg_count: int
-
-    # Used to fill in argument placeholders in the macro
-    arg_list: list[MacroArg] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
 class Statement(str):  # type: ignore[override]  # noqa: SLOT000
     """String subclass with additional attributes to store the results of parsing.
 
@@ -205,10 +155,10 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
     def argv(self) -> list[str]:
         """A list of arguments a-la ``sys.argv``.
 
-        The first element of the list is the command after shortcut and macro
-        expansion. Subsequent elements of the list contain any additional
-        arguments, with quotes removed, just like bash would. This is very
-        useful if you are going to use ``argparse.parse_args()``.
+        The first element of the list is the command after shortcut expansion.
+        Subsequent elements of the list contain any additional arguments,
+        with quotes removed, just like bash would. This is very useful if
+        you are going to use ``argparse.parse_args()``.
 
         If you want to strip quotes from the input, you can use ``argv[1:]``.
         """

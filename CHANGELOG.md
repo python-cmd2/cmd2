@@ -1,3 +1,8 @@
+## 3.0.0 (TBD)
+
+- Breaking Change
+    - Removed macros
+
 ## 2.7.0 (June 30, 2025)
 
 - Enhancements

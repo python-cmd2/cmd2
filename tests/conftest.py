@@ -72,8 +72,7 @@ optional arguments:
 formatting:
   -s, --script          output commands in script format, i.e. without command
                         numbers
-  -x, --expanded        output fully parsed commands with any aliases and
-                        macros expanded, instead of typed commands
+  -x, --expanded        output fully parsed commands with aliases and shortcuts expanded
   -v, --verbose         display history and include expanded commands if they
                         differ from the typed command
   -a, --all             display all commands, including ones persisted from
