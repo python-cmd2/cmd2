@@ -22,55 +22,57 @@
 # You can also use email addresses if you prefer.
 #docs/*  docs@example.com
 
+# GitHub stuff
+.github/*                  @tleonhardt
+
 # cmd2 code
-cmd2/__init__.py           @tleonhardt @kotfu
+cmd2/__init__.py           @kmvanbrunt @tleonhardt
 cmd2/ansi.py               @kmvanbrunt @tleonhardt
 cmd2/argparse_*.py         @kmvanbrunt @anselor
 cmd2/clipboard.py          @tleonhardt
-cmd2/cmd2.py               @tleonhardt @kmvanbrunt @kotfu
+cmd2/cmd2.py               @tleonhardt @kmvanbrunt
 cmd2/command_definition.py @anselor
-cmd2/constants.py          @kotfu
-cmd2/decorators.py         @kotfu @kmvanbrunt @anselor
+cmd2/constants.py          @tleonhardt @kmvanbrunt
+cmd2/decorators.py         @kmvanbrunt @anselor
 cmd2/exceptions.py         @kmvanbrunt @anselor
-cmd2/history.py            @kotfu @tleonhardt
-cmd2/parsing.py            @kotfu @kmvanbrunt
-cmd2/plugin.py             @kotfu
+cmd2/history.py            @tleonhardt
+cmd2/parsing.py            @kmvanbrunt
+cmd2/plugin.py             @anselor
 cmd2/py_bridge.py          @kmvanbrunt
 cmd2/rl_utils.py           @kmvanbrunt
 cmd2/table_creator.py      @kmvanbrunt
-cmd2/transcript.py         @kotfu
-cmd2/utils.py              @tleonhardt @kotfu @kmvanbrunt
+cmd2/transcript.py         @tleonhardt
+cmd2/utils.py              @tleonhardt @kmvanbrunt
 
 # Documentation
-docs/*                  @tleonhardt @kotfu
+docs/*                     @tleonhardt
 
 # Examples
-examples/async_printing.py  @kmvanbrunt
-examples/environment.py     @kotfu
-examples/tab_*.py           @kmvanbrunt
-examples/modular_*.py       @anselor
-examples/modular_commands/* @anselor
+examples/modular*          @anselor
+examples/*.py              @kmvanbrunt @tleonhardt
 
-plugins/template/*          @kotfu
-plugins/ext_test/*          @anselor
+# Plugins
+plugins/*                  @anselor
 
-# Unit Tests
-tests/pyscript/*              @kmvanbrunt
-tests/transcripts/*           @kotfu
-tests/__init__.py             @kotfu
-tests/conftest.py             @kotfu @tleonhardt
-tests/test_argparse.py        @kotfu
-tests/test_argparse_*.py      @kmvanbrunt
-tests/test_comp*.py           @kmvanbrunt
-tests/test_pars*.py           @kotfu
-tests/test_run_pyscript.py    @kmvanbrunt
-tests/test_transcript.py      @kotfu
-
-tests_isolated/test_commandset/*    @anselor
+# Unit and Integration Tests
+tests/*                    @kmvanbrunt @tleonhardt
+tests_isolated/*           @anselor
 
 # Top-level project stuff
-setup.py                @tleonhardt @kotfu
-tasks.py                @kotfu
-
-# GitHub stuff
-.github/*               @tleonhardt
+.coveragerc                @tleonhardt
+.gitignore                 @tleonhardt @kmvanbrunt
+.pre-commit-config.yaml    @tleonhardt
+.prettierignore            @tleonhardt
+.prettierrc                @tleonhardt
+.readthedocs.yaml          @tleonhardt
+CHANGELOG.md               @kmvanbrunt @tleonhardt
+cmd2.png                   @kmvanbrunt @tleonhardt
+codecov.yml                @tleonhardt
+LICENSE                    @kmvanbrunt @tleonhardt
+Makefile                   @tleonhardt
+MANIFEST.in                @tleonhardt
+mkdocs.yml                 @tleonhardt
+package.json               @tleonhardt
+pyproject.toml             @tleonhardt @kmvanbrunt
+README.md                  @kmvanbrunt @tleonhardt
+tasks.py                   @tleonhardt
