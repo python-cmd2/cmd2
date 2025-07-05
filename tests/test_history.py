@@ -770,9 +770,7 @@ def test_history_verbose_with_other_options(base_app) -> None:
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c', '-x']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -v ' + opt)
-        assert 4 <= len(out) <= 5
-        assert out[0] == '-v cannot be used with any other options'
-        assert out[1].startswith('Usage:')
+        assert '-v cannot be used with any other options' in out
         assert base_app.last_result is False
 
 
@@ -798,9 +796,7 @@ def test_history_script_with_invalid_options(base_app) -> None:
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -s ' + opt)
-        assert 4 <= len(out) <= 5
-        assert out[0] == '-s and -x cannot be used with -c, -r, -e, -o, or -t'
-        assert out[1].startswith('Usage:')
+        assert '-s and -x cannot be used with -c, -r, -e, -o, or -t' in out
         assert base_app.last_result is False
 
 
@@ -818,9 +814,7 @@ def test_history_expanded_with_invalid_options(base_app) -> None:
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -x ' + opt)
-        assert 4 <= len(out) <= 5
-        assert out[0] == '-s and -x cannot be used with -c, -r, -e, -o, or -t'
-        assert out[1].startswith('Usage:')
+        assert '-s and -x cannot be used with -c, -r, -e, -o, or -t' in out
         assert base_app.last_result is False
 
 

@@ -145,17 +145,8 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 mccabe.max-complexity = 49
 
-per-file-ignores."cmd2/__init__.py" = [
-    "E402", # Module level import not at top of file
-    "F401", # Unused import
-]
-
 per-file-ignores."docs/conf.py" = [
     "F401", # Unused import
-]
-
-per-file-ignores."examples/override_parser.py" = [
-    "E402", # Module level import not at top of file
 ]
 
 per-file-ignores."examples/scripts/*.py" = [
