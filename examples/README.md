@@ -35,7 +35,7 @@ each:
 - [colors.py](https://github.com/python-cmd2/cmd2/blob/main/examples/colors.py)
     - Show various ways of using colorized output within a cmd2 application
 - [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
-    - Demonstrates how to create your own customer `Cmd2ArgumentParser`
+    - Demonstrates how to create your own custom `Cmd2ArgumentParser`
 - [decorator_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/decorator_example.py)
     - Shows how to use cmd2's various argparse decorators to processes command-line arguments
 - [default_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/default_categories.py)
