@@ -1,7 +1,13 @@
 ## 3.0.0 (TBD)
 
-- Breaking Change
+- Breaking Changes
+
     - Removed macros
+
+- Enhancements
+    - Simplified the process to set a custom parser for `cmd2's` built-in commands. See
+      [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
+      example for more details.
 
 ## 2.7.0 (June 30, 2025)
 

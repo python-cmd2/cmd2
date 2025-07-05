@@ -240,29 +240,6 @@ def test_apcustom_required_options() -> None:
     assert 'required arguments' in parser.format_help()
 
 
-def test_override_parser() -> None:
-    """Test overriding argparse_custom.DEFAULT_ARGUMENT_PARSER"""
-    import importlib
-
-    from cmd2 import (
-        argparse_custom,
-    )
-
-    # The standard parser is Cmd2ArgumentParser
-    assert Cmd2ArgumentParser == argparse_custom.DEFAULT_ARGUMENT_PARSER
-
-    # Set our parser module and force a reload of cmd2 so it loads the module
-    argparse.cmd2_parser_module = 'examples.custom_parser'
-    importlib.reload(cmd2)
-
-    # Verify DEFAULT_ARGUMENT_PARSER is now our CustomParser
-    from examples.custom_parser import (
-        CustomParser,
-    )
-
-    assert CustomParser == argparse_custom.DEFAULT_ARGUMENT_PARSER
-
-
 def test_apcustom_metavar_tuple() -> None:
     # Test the case when a tuple metavar is used with nargs an integer > 1
     parser = Cmd2ArgumentParser()
