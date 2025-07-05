@@ -35,8 +35,7 @@ each:
 - [colors.py](https://github.com/python-cmd2/cmd2/blob/main/examples/colors.py)
     - Show various ways of using colorized output within a cmd2 application
 - [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
-    - Demonstrates how to create your own customer `Cmd2ArgumentParser`; used by the
-      `override_parser.py` example
+    - Demonstrates how to create your own custom `Cmd2ArgumentParser`
 - [decorator_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/decorator_example.py)
     - Shows how to use cmd2's various argparse decorators to processes command-line arguments
 - [default_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/default_categories.py)
@@ -78,8 +77,6 @@ each:
       command decorators
 - [modular_subcommands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_subcommands.py)
     - Shows how to dynamically add and remove subcommands at runtime using `CommandSets`
-- [override-parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/override_parser.py)
-    - Shows how to override cmd2's default `Cmd2ArgumentParser` with your own customer parser class
 - [paged_output.py](https://github.com/python-cmd2/cmd2/blob/main/examples/paged_output.py)
     - Shows how to use output pagination within `cmd2` apps via the `ppaged` method
 - [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/main/examples/persistent_history.py)
