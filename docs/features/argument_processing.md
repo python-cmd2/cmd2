@@ -63,7 +63,7 @@ def do_speak(self, opts)
 
 !!! note
 
-    The `@with_argparser` decorator sets the `prog` variable in the argument parser based on the name of the method it is decorating. This will override anything you specify in `prog` variable when creating the argument parser.
+    `cmd2` sets the `prog` variable in the argument parser based on the name of the method it is decorating. This will override anything you specify in `prog` variable when creating the argument parser.
 
 ## Help Messages
 

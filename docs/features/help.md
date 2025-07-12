@@ -173,17 +173,17 @@ categories with per-command Help Messages:
 
     Other
     ======================================================================================================
-    alias                 Manage aliases
+    alias                 Manage aliases.
     config                Config command.
-    edit                  Run a text editor and optionally open a file with it
-    help                  List available commands or provide detailed help for a specific command
-    history               View, run, edit, save, or clear previously entered commands
-    quit                  Exit this application
-    run_pyscript          Run a Python script file inside the console
-    run_script            Run commands in script file that is encoded as either ASCII or UTF-8 text
+    edit                  Run a text editor and optionally open a file with it.
+    help                  List available commands or provide detailed help for a specific command.
+    history               View, run, edit, save, or clear previously entered commands.
+    quit                  Exit this application.
+    run_pyscript          Run Python script within this application's environment.
+    run_script            Run text script.
     set                   Set a settable parameter or show current settings of parameters.
-    shell                 Execute a command as if at the OS prompt
-    shortcuts             List available shortcuts
+    shell                 Execute a command as if at the OS prompt.
+    shortcuts             List available shortcuts.
     version               Version command.
 
 When called with the `-v` flag for verbose help, the one-line description for each command is

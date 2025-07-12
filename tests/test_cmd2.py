@@ -24,6 +24,7 @@ from cmd2 import (
     constants,
     exceptions,
     plugin,
+    rich_utils,
     utils,
 )
 from cmd2.rl_utils import (
@@ -48,12 +49,12 @@ def with_ansi_style(style):
 
         @functools.wraps(func)
         def cmd_wrapper(*args, **kwargs):
-            old = ansi.allow_style
-            ansi.allow_style = style
+            old = rich_utils.allow_style
+            rich_utils.allow_style = style
             try:
                 retval = func(*args, **kwargs)
             finally:
-                ansi.allow_style = old
+                rich_utils.allow_style = old
             return retval
 
         return cmd_wrapper
@@ -222,31 +223,31 @@ def test_set_no_settables(base_app) -> None:
 @pytest.mark.parametrize(
     ('new_val', 'is_valid', 'expected'),
     [
-        (ansi.AllowStyle.NEVER, True, ansi.AllowStyle.NEVER),
-        ('neVeR', True, ansi.AllowStyle.NEVER),
-        (ansi.AllowStyle.TERMINAL, True, ansi.AllowStyle.TERMINAL),
-        ('TeRMInal', True, ansi.AllowStyle.TERMINAL),
-        (ansi.AllowStyle.ALWAYS, True, ansi.AllowStyle.ALWAYS),
-        ('AlWaYs', True, ansi.AllowStyle.ALWAYS),
-        ('invalid', False, ansi.AllowStyle.TERMINAL),
+        (rich_utils.AllowStyle.NEVER, True, rich_utils.AllowStyle.NEVER),
+        ('neVeR', True, rich_utils.AllowStyle.NEVER),
+        (rich_utils.AllowStyle.TERMINAL, True, rich_utils.AllowStyle.TERMINAL),
+        ('TeRMInal', True, rich_utils.AllowStyle.TERMINAL),
+        (rich_utils.AllowStyle.ALWAYS, True, rich_utils.AllowStyle.ALWAYS),
+        ('AlWaYs', True, rich_utils.AllowStyle.ALWAYS),
+        ('invalid', False, rich_utils.AllowStyle.TERMINAL),
     ],
 )
 def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     # Initialize allow_style for this test
-    ansi.allow_style = ansi.AllowStyle.TERMINAL
+    rich_utils.allow_style = rich_utils.AllowStyle.TERMINAL
 
     # Use the set command to alter it
     out, err = run_cmd(base_app, f'set allow_style {new_val}')
     assert base_app.last_result is is_valid
 
     # Verify the results
-    assert ansi.allow_style == expected
+    assert rich_utils.allow_style == expected
     if is_valid:
         assert not err
         assert out
 
     # Reset allow_style to its default since it's an application-wide setting that can affect other unit tests
-    ansi.allow_style = ansi.AllowStyle.TERMINAL
+    rich_utils.allow_style = rich_utils.AllowStyle.TERMINAL
 
 
 def test_set_with_choices(base_app) -> None:
@@ -1238,7 +1239,8 @@ def test_help_multiline_docstring(help_app) -> None:
 
 def test_help_verbose_uses_parser_description(help_app: HelpApp) -> None:
     out, err = run_cmd(help_app, 'help --verbose')
-    verify_help_text(help_app, out, verbose_strings=[help_app.parser_cmd_parser.description])
+    expected_verbose = utils.strip_doc_annotations(help_app.do_parser_cmd.__doc__)
+    verify_help_text(help_app, out, verbose_strings=[expected_verbose])
 
 
 class HelpCategoriesApp(cmd2.Cmd):
@@ -1554,7 +1556,7 @@ def test_help_with_no_docstring(capsys) -> None:
         out
         == """Usage: greet [-h] [-s]
 
-optional arguments:
+Optional Arguments:
   -h, --help   show this help message and exit
   -s, --shout  N00B EMULATION MODE
 
@@ -1980,7 +1982,7 @@ def test_ppretty_dict(outsim_app) -> None:
     assert out == expected.lstrip()
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_poutput_ansi_always(outsim_app) -> None:
     msg = 'Hello World'
     colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
@@ -1991,7 +1993,7 @@ def test_poutput_ansi_always(outsim_app) -> None:
     assert out == expected
 
 
-@with_ansi_style(ansi.AllowStyle.NEVER)
+@with_ansi_style(rich_utils.AllowStyle.NEVER)
 def test_poutput_ansi_never(outsim_app) -> None:
     msg = 'Hello World'
     colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
@@ -2174,7 +2176,7 @@ def test_multiple_aliases(base_app) -> None:
     verify_help_text(base_app, out)
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_perror_style(base_app, capsys) -> None:
     msg = 'testing...'
     end = '\n'
@@ -2183,7 +2185,7 @@ def test_perror_style(base_app, capsys) -> None:
     assert err == ansi.style_error(msg) + end
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_perror_no_style(base_app, capsys) -> None:
     msg = 'testing...'
     end = '\n'
@@ -2192,7 +2194,7 @@ def test_perror_no_style(base_app, capsys) -> None:
     assert err == msg + end
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_pexcept_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
@@ -2201,7 +2203,7 @@ def test_pexcept_style(base_app, capsys) -> None:
     assert err.startswith(ansi.style_error("EXCEPTION of type 'Exception' occurred with message: testing..."))
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_pexcept_no_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
@@ -2210,7 +2212,7 @@ def test_pexcept_no_style(base_app, capsys) -> None:
     assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_pexcept_not_exception(base_app, capsys) -> None:
     # Pass in a msg that is not an Exception object
     msg = False
@@ -2228,7 +2230,7 @@ def test_ppaged(outsim_app) -> None:
     assert out == msg + end
 
 
-@with_ansi_style(ansi.AllowStyle.TERMINAL)
+@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
 def test_ppaged_strips_ansi_when_redirecting(outsim_app) -> None:
     msg = 'testing...'
     end = '\n'
@@ -2238,7 +2240,7 @@ def test_ppaged_strips_ansi_when_redirecting(outsim_app) -> None:
     assert out == msg + end
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app) -> None:
     msg = 'testing...'
     end = '\n'
@@ -2432,7 +2434,7 @@ class AnsiApp(cmd2.Cmd):
         self.perror(args)
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_ansi_pouterr_always_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
@@ -2455,7 +2457,7 @@ def test_ansi_pouterr_always_tty(mocker, capsys) -> None:
     assert 'oopsie' in err
 
 
-@with_ansi_style(ansi.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_ansi_pouterr_always_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
@@ -2478,7 +2480,7 @@ def test_ansi_pouterr_always_notty(mocker, capsys) -> None:
     assert 'oopsie' in err
 
 
-@with_ansi_style(ansi.AllowStyle.TERMINAL)
+@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
 def test_ansi_terminal_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
@@ -2500,7 +2502,7 @@ def test_ansi_terminal_tty(mocker, capsys) -> None:
     assert 'oopsie' in err
 
 
-@with_ansi_style(ansi.AllowStyle.TERMINAL)
+@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
 def test_ansi_terminal_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
@@ -2515,7 +2517,7 @@ def test_ansi_terminal_notty(mocker, capsys) -> None:
     assert out == err == 'oopsie\n'
 
 
-@with_ansi_style(ansi.AllowStyle.NEVER)
+@with_ansi_style(rich_utils.AllowStyle.NEVER)
 def test_ansi_never_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
@@ -2530,7 +2532,7 @@ def test_ansi_never_tty(mocker, capsys) -> None:
     assert out == err == 'oopsie\n'
 
 
-@with_ansi_style(ansi.AllowStyle.NEVER)
+@with_ansi_style(rich_utils.AllowStyle.NEVER)
 def test_ansi_never_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)

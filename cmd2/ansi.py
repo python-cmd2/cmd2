@@ -19,6 +19,8 @@ from wcwidth import (  # type: ignore[import]
     wcswidth,
 )
 
+from . import rich_utils
+
 #######################################################
 # Common ANSI escape sequence constants
 #######################################################
@@ -27,38 +29,6 @@ CSI = f'{ESC}['
 OSC = f'{ESC}]'
 BEL = '\a'
 
-
-class AllowStyle(Enum):
-    """Values for ``cmd2.ansi.allow_style``."""
-
-    ALWAYS = 'Always'  # Always output ANSI style sequences
-    NEVER = 'Never'  # Remove ANSI style sequences from all output
-    TERMINAL = 'Terminal'  # Remove ANSI style sequences if the output is not going to the terminal
-
-    def __str__(self) -> str:
-        """Return value instead of enum name for printing in cmd2's set command."""
-        return str(self.value)
-
-    def __repr__(self) -> str:
-        """Return quoted value instead of enum description for printing in cmd2's set command."""
-        return repr(self.value)
-
-
-# Controls when ANSI style sequences are allowed in output
-allow_style = AllowStyle.TERMINAL
-"""When using outside of a cmd2 app, set this variable to one of:
-
-- ``AllowStyle.ALWAYS`` - always output ANSI style sequences
-- ``AllowStyle.NEVER`` - remove ANSI style sequences from all output
-- ``AllowStyle.TERMINAL`` - remove ANSI style sequences if the output is not going to the terminal
-
-to control how ANSI style sequences are handled by ``style_aware_write()``.
-
-``style_aware_write()`` is called by cmd2 methods like ``poutput()``, ``perror()``,
-``pwarning()``, etc.
-
-The default is ``AllowStyle.TERMINAL``.
-"""
 
 # Regular expression to match ANSI style sequence
 ANSI_STYLE_RE = re.compile(rf'{ESC}\[[^m]*m')
@@ -133,8 +103,11 @@ def style_aware_write(fileobj: IO[str], msg: str) -> None:
     :param fileobj: the file object being written to
     :param msg: the string being written
     """
-    if allow_style == AllowStyle.NEVER or (allow_style == AllowStyle.TERMINAL and not fileobj.isatty()):
+    if rich_utils.allow_style == rich_utils.AllowStyle.NEVER or (
+        rich_utils.allow_style == rich_utils.AllowStyle.TERMINAL and not fileobj.isatty()
+    ):
         msg = strip_style(msg)
+
     fileobj.write(msg)
 
 
