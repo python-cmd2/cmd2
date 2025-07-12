@@ -6,7 +6,10 @@ import importlib.metadata as importlib_metadata
 with contextlib.suppress(importlib_metadata.PackageNotFoundError):
     __version__ = importlib_metadata.version(__name__)
 
-from . import plugin
+from . import (
+    plugin,
+    rich_utils,
+)
 from .ansi import (
     Bg,
     Cursor,
@@ -96,6 +99,7 @@ __all__: list[str] = [  # noqa: RUF022
     'SkipPostcommandHooks',
     # modules
     'plugin',
+    'rich_utils',
     # Utilities
     'categorize',
     'CompletionMode',

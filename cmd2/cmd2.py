@@ -67,12 +67,15 @@ from typing import (
     cast,
 )
 
+from rich.console import Group
+
 from . import (
     ansi,
     argparse_completer,
     argparse_custom,
     constants,
     plugin,
+    rich_utils,
     utils,
 )
 from .argparse_custom import (
@@ -261,8 +264,8 @@ class _CommandParsers:
             parser = self._cmd._build_parser(parent, parser_builder, command)
 
             # If the description has not been set, then use the method docstring if one exists
-            if parser.description is None and hasattr(command_method, '__wrapped__') and command_method.__wrapped__.__doc__:
-                parser.description = strip_doc_annotations(command_method.__wrapped__.__doc__)
+            if parser.description is None and command_method.__doc__:
+                parser.description = strip_doc_annotations(command_method.__doc__)
 
             self._parsers[full_method_name] = parser
 
@@ -285,10 +288,6 @@ class Cmd(cmd.Cmd):
     """
 
     DEFAULT_EDITOR = utils.find_editor()
-
-    INTERNAL_COMMAND_EPILOG = (
-        "Notes:\n  This command is for internal use and is not intended to be called from the\n  command line."
-    )
 
     # Sorting keys for strings
     ALPHABETICAL_SORT_KEY = utils.norm_fold
@@ -1116,16 +1115,16 @@ class Cmd(cmd.Cmd):
 
         def get_allow_style_choices(_cli_self: Cmd) -> list[str]:
             """Tab complete allow_style values."""
-            return [val.name.lower() for val in ansi.AllowStyle]
+            return [val.name.lower() for val in rich_utils.AllowStyle]
 
-        def allow_style_type(value: str) -> ansi.AllowStyle:
-            """Convert a string value into an ansi.AllowStyle."""
+        def allow_style_type(value: str) -> rich_utils.AllowStyle:
+            """Convert a string value into an rich_utils.AllowStyle."""
             try:
-                return ansi.AllowStyle[value.upper()]
+                return rich_utils.AllowStyle[value.upper()]
             except KeyError as esc:
                 raise ValueError(
-                    f"must be {ansi.AllowStyle.ALWAYS}, {ansi.AllowStyle.NEVER}, or "
-                    f"{ansi.AllowStyle.TERMINAL} (case-insensitive)"
+                    f"must be {rich_utils.AllowStyle.ALWAYS}, {rich_utils.AllowStyle.NEVER}, or "
+                    f"{rich_utils.AllowStyle.TERMINAL} (case-insensitive)"
                 ) from esc
 
         self.add_settable(
@@ -1133,7 +1132,7 @@ class Cmd(cmd.Cmd):
                 'allow_style',
                 allow_style_type,
                 'Allow ANSI text style sequences in output (valid values: '
-                f'{ansi.AllowStyle.ALWAYS}, {ansi.AllowStyle.NEVER}, {ansi.AllowStyle.TERMINAL})',
+                f'{rich_utils.AllowStyle.ALWAYS}, {rich_utils.AllowStyle.NEVER}, {rich_utils.AllowStyle.TERMINAL})',
                 self,
                 choices_provider=cast(ChoicesProviderFunc, get_allow_style_choices),
             )
@@ -1156,14 +1155,14 @@ class Cmd(cmd.Cmd):
     # -----  Methods related to presenting output to the user -----
 
     @property
-    def allow_style(self) -> ansi.AllowStyle:
+    def allow_style(self) -> rich_utils.AllowStyle:
         """Read-only property needed to support do_set when it reads allow_style."""
-        return ansi.allow_style
+        return rich_utils.allow_style
 
     @allow_style.setter
-    def allow_style(self, new_val: ansi.AllowStyle) -> None:
+    def allow_style(self, new_val: rich_utils.AllowStyle) -> None:
         """Setter property needed to support do_set when it updates allow_style."""
-        ansi.allow_style = new_val
+        rich_utils.allow_style = new_val
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported."""
@@ -1312,7 +1311,7 @@ class Cmd(cmd.Cmd):
         # Also only attempt to use a pager if actually running in a real fully functional terminal.
         if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
             final_msg = f"{msg}{end}"
-            if ansi.allow_style == ansi.AllowStyle.NEVER:
+            if rich_utils.allow_style == rich_utils.AllowStyle.NEVER:
                 final_msg = ansi.strip_style(final_msg)
 
             pager = self.pager
@@ -3219,7 +3218,11 @@ class Cmd(cmd.Cmd):
     # Top-level parser for alias
     @staticmethod
     def _build_alias_parser() -> Cmd2ArgumentParser:
-        alias_description = "Manage aliases\n\nAn alias is a command that enables replacement of a word by another string."
+        alias_description = Group(
+            "Manage aliases.",
+            "\n",
+            "An alias is a command that enables replacement of a word by another string.",
+        )
         alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description)
         alias_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
 
@@ -3234,28 +3237,38 @@ class Cmd(cmd.Cmd):
         handler(args)
 
     # alias -> create
-    alias_create_description = "Create or overwrite an alias"
-
     @classmethod
     def _build_alias_create_parser(cls) -> Cmd2ArgumentParser:
-        alias_create_epilog = (
-            "Notes:\n"
-            "  If you want to use redirection, pipes, or terminators in the value of the\n"
-            "  alias, then quote them.\n"
-            "\n"
-            "  Since aliases are resolved during parsing, tab completion will function as\n"
-            "  it would for the actual command the alias resolves to.\n"
-            "\n"
-            "Examples:\n"
-            "  alias create ls !ls -lF\n"
-            "  alias create show_log !cat \"log file.txt\"\n"
-            "  alias create save_results print_results \">\" out.txt\n"
+        alias_create_description = "Create or overwrite an alias."
+        alias_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_create_description)
+
+        # Create Notes TextGroup
+        alias_create_notes = Group(
+            "If you want to use redirection, pipes, or terminators in the value of the alias, then quote them.",
+            "\n",
+            (
+                "Since aliases are resolved during parsing, tab completion will function as it would "
+                "for the actual command the alias resolves to."
+            ),
+        )
+        notes_group = alias_create_parser.create_text_group("Notes", alias_create_notes)
+
+        # Create Examples TextGroup
+        alias_create_examples = Group(
+            "alias create ls !ls -lF",
+            "alias create show_log !cat \"log file.txt\"",
+            "alias create save_results print_results \">\" out.txt",
+        )
+        examples_group = alias_create_parser.create_text_group("Examples", alias_create_examples)
+
+        # Display both Notes and Examples in the epilog
+        alias_create_parser.epilog = Group(
+            notes_group,
+            "\n",
+            examples_group,
         )
 
-        alias_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
-            description=cls.alias_create_description,
-            epilog=alias_create_epilog,
-        )
+        # Add arguments
         alias_create_parser.add_argument('name', help='name of this alias')
         alias_create_parser.add_argument(
             'command',
@@ -3271,7 +3284,7 @@ class Cmd(cmd.Cmd):
 
         return alias_create_parser
 
-    @as_subcommand_to('alias', 'create', _build_alias_create_parser, help=alias_create_description.lower())
+    @as_subcommand_to('alias', 'create', _build_alias_create_parser, help="create or overwrite an alias")
     def _alias_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite an alias."""
         self.last_result = False
@@ -3306,7 +3319,7 @@ class Cmd(cmd.Cmd):
     # alias -> delete
     @classmethod
     def _build_alias_delete_parser(cls) -> Cmd2ArgumentParser:
-        alias_delete_description = "Delete specified aliases or all aliases if --all is used"
+        alias_delete_description = "Delete specified aliases or all aliases if --all is used."
 
         alias_delete_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_delete_description)
         alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
@@ -3342,11 +3355,13 @@ class Cmd(cmd.Cmd):
     # alias -> list
     @classmethod
     def _build_alias_list_parser(cls) -> Cmd2ArgumentParser:
-        alias_list_description = (
-            "List specified aliases in a reusable form that can be saved to a startup\n"
-            "script to preserve aliases across sessions\n"
-            "\n"
-            "Without arguments, all aliases will be listed."
+        alias_list_description = Group(
+            (
+                "List specified aliases in a reusable form that can be saved to a startup "
+                "script to preserve aliases across sessions."
+            ),
+            "\n",
+            "Without arguments, all aliases will be listed.",
         )
 
         alias_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_list_description)
@@ -3419,7 +3434,7 @@ class Cmd(cmd.Cmd):
     @classmethod
     def _build_help_parser(cls) -> Cmd2ArgumentParser:
         help_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
-            description="List available commands or provide detailed help for a specific command"
+            description="List available commands or provide detailed help for a specific command."
         )
         help_parser.add_argument(
             '-v',
@@ -3639,12 +3654,8 @@ class Cmd(cmd.Cmd):
 
                     doc: Optional[str]
 
-                    # If this is an argparse command, use its description.
-                    if (cmd_parser := self._command_parsers.get(cmd_func)) is not None:
-                        doc = cmd_parser.description
-
                     # Non-argparse commands can have help_functions for their documentation
-                    elif command in topics:
+                    if command in topics:
                         help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
                         result = io.StringIO()
 
@@ -3675,7 +3686,7 @@ class Cmd(cmd.Cmd):
 
     @staticmethod
     def _build_shortcuts_parser() -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
+        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="List available shortcuts.")
 
     @with_argparser(_build_shortcuts_parser)
     def do_shortcuts(self, _: argparse.Namespace) -> None:
@@ -3686,12 +3697,15 @@ class Cmd(cmd.Cmd):
         self.poutput(f"Shortcuts for other commands:\n{result}")
         self.last_result = True
 
-    @classmethod
-    def _build_eof_parser(cls) -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(
-            description="Called when Ctrl-D is pressed",
-            epilog=cls.INTERNAL_COMMAND_EPILOG,
+    @staticmethod
+    def _build_eof_parser() -> Cmd2ArgumentParser:
+        eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
+        eof_parser.epilog = eof_parser.create_text_group(
+            "Note",
+            "This command is for internal use and is not intended to be called from the command line.",
         )
+
+        return eof_parser
 
     @with_argparser(_build_eof_parser)
     def do_eof(self, _: argparse.Namespace) -> Optional[bool]:
@@ -3706,7 +3720,7 @@ class Cmd(cmd.Cmd):
 
     @staticmethod
     def _build_quit_parser() -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Exit this application")
+        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Exit this application.")
 
     @with_argparser(_build_quit_parser)
     def do_quit(self, _: argparse.Namespace) -> Optional[bool]:
@@ -3770,10 +3784,13 @@ class Cmd(cmd.Cmd):
     def _build_base_set_parser(cls) -> Cmd2ArgumentParser:
         # When tab completing value, we recreate the set command parser with a value argument specific to
         # the settable being edited. To make this easier, define a base parser with all the common elements.
-        set_description = (
-            "Set a settable parameter or show current settings of parameters\n\n"
-            "Call without arguments for a list of all settable parameters with their values.\n"
-            "Call with just param to view that parameter's value."
+        set_description = Group(
+            "Set a settable parameter or show current settings of parameters.",
+            "\n",
+            (
+                "Call without arguments for a list of all settable parameters with their values. "
+                "Call with just param to view that parameter's value."
+            ),
         )
         base_set_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=set_description)
         base_set_parser.add_argument(
@@ -3891,7 +3908,7 @@ class Cmd(cmd.Cmd):
 
     @classmethod
     def _build_shell_parser(cls) -> Cmd2ArgumentParser:
-        shell_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt")
+        shell_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt.")
         shell_parser.add_argument('command', help='the command to run', completer=cls.shell_cmd_complete)
         shell_parser.add_argument(
             'command_args', nargs=argparse.REMAINDER, help='arguments to pass to command', completer=cls.path_complete
@@ -4199,7 +4216,7 @@ class Cmd(cmd.Cmd):
 
     @staticmethod
     def _build_py_parser() -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive Python shell")
+        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive Python shell.")
 
     @with_argparser(_build_py_parser)
     def do_py(self, _: argparse.Namespace) -> Optional[bool]:
@@ -4213,7 +4230,7 @@ class Cmd(cmd.Cmd):
     @classmethod
     def _build_run_pyscript_parser(cls) -> Cmd2ArgumentParser:
         run_pyscript_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
-            description="Run a Python script file inside the console"
+            description="Run Python script within this application's environment."
         )
         run_pyscript_parser.add_argument('script_path', help='path to the script file', completer=cls.path_complete)
         run_pyscript_parser.add_argument(
@@ -4224,7 +4241,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(_build_run_pyscript_parser)
     def do_run_pyscript(self, args: argparse.Namespace) -> Optional[bool]:
-        """Run a Python script file inside the console.
+        """Run Python script within this application's environment.
 
         :return: True if running of commands should stop
         """
@@ -4258,11 +4275,11 @@ class Cmd(cmd.Cmd):
 
     @staticmethod
     def _build_ipython_parser() -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell")
+        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell.")
 
     @with_argparser(_build_ipython_parser)
     def do_ipy(self, _: argparse.Namespace) -> Optional[bool]:  # pragma: no cover
-        """Enter an interactive IPython shell.
+        """Run an interactive IPython shell.
 
         :return: True if running of commands should stop
         """
@@ -4334,9 +4351,11 @@ class Cmd(cmd.Cmd):
 
     @classmethod
     def _build_history_parser(cls) -> Cmd2ArgumentParser:
-        history_description = "View, run, edit, save, or clear previously entered commands"
+        history_description = "View, run, edit, save, or clear previously entered commands."
 
-        history_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=history_description)
+        history_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
+            description=history_description, formatter_class=argparse_custom.RawTextCmd2HelpFormatter
+        )
         history_action_group = history_parser.add_mutually_exclusive_group()
         history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
         history_action_group.add_argument('-e', '--edit', action='store_true', help='edit and then run selected history items')
@@ -4351,7 +4370,7 @@ class Cmd(cmd.Cmd):
             '-t',
             '--transcript',
             metavar='TRANSCRIPT_FILE',
-            help='create a transcript file by re-running the commands,\nimplies both -r and -s',
+            help='create a transcript file by re-running the commands, implies both -r and -s',
             completer=cls.path_complete,
         )
         history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
@@ -4361,7 +4380,7 @@ class Cmd(cmd.Cmd):
             '-s',
             '--script',
             action='store_true',
-            help='output commands in script format, i.e. without command\nnumbers',
+            help='output commands in script format, i.e. without command numbers',
         )
         history_format_group.add_argument(
             '-x',
@@ -4373,13 +4392,13 @@ class Cmd(cmd.Cmd):
             '-v',
             '--verbose',
             action='store_true',
-            help='display history and include expanded commands if they\ndiffer from the typed command',
+            help='display history and include expanded commands if they differ from the typed command',
         )
         history_format_group.add_argument(
             '-a',
             '--all',
             action='store_true',
-            help='display all commands, including ones persisted from\nprevious sessions',
+            help='display all commands, including ones persisted from previous sessions',
         )
 
         history_arg_help = (
@@ -4718,15 +4737,15 @@ class Cmd(cmd.Cmd):
 
     @classmethod
     def _build_edit_parser(cls) -> Cmd2ArgumentParser:
-        edit_description = (
-            "Run a text editor and optionally open a file with it\n"
-            "\n"
-            "The editor used is determined by a settable parameter. To set it:\n"
-            "\n"
-            "  set editor (program-name)"
+        from rich.markdown import Markdown
+
+        edit_description = "Run a text editor and optionally open a file with it."
+        edit_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=edit_description)
+        edit_parser.epilog = edit_parser.create_text_group(
+            "Note",
+            Markdown("To set a new editor, run: `set editor <program>`"),
         )
 
-        edit_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=edit_description)
         edit_parser.add_argument(
             'file_path',
             nargs=argparse.OPTIONAL,
@@ -4763,26 +4782,15 @@ class Cmd(cmd.Cmd):
             return self._script_dir[-1]
         return None
 
-    run_script_description = (
-        "Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
-        "\n"
-        "Script should contain one command per line, just like the command would be\n"
-        "typed in the console.\n"
-        "\n"
-        "If the -t/--transcript flag is used, this command instead records\n"
-        "the output of the script commands to a transcript for testing purposes.\n"
-    )
-
     @classmethod
-    def _build_run_script_parser(cls) -> Cmd2ArgumentParser:
-        run_script_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=cls.run_script_description)
-        run_script_parser.add_argument(
-            '-t',
-            '--transcript',
-            metavar='TRANSCRIPT_FILE',
-            help='record the output of the script as a transcript file',
-            completer=cls.path_complete,
+    def _build_base_run_script_parser(cls) -> Cmd2ArgumentParser:
+        run_script_description = Group(
+            "Run text script.",
+            "\n",
+            "Scripts should contain one command per line, entered as you would in the console.",
         )
+
+        run_script_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=run_script_description)
         run_script_parser.add_argument(
             'script_path',
             help="path to the script file",
@@ -4791,9 +4799,22 @@ class Cmd(cmd.Cmd):
 
         return run_script_parser
 
+    @classmethod
+    def _build_run_script_parser(cls) -> Cmd2ArgumentParser:
+        run_script_parser = cls._build_base_run_script_parser()
+        run_script_parser.add_argument(
+            '-t',
+            '--transcript',
+            metavar='TRANSCRIPT_FILE',
+            help='record the output of the script as a transcript file',
+            completer=cls.path_complete,
+        )
+
+        return run_script_parser
+
     @with_argparser(_build_run_script_parser)
     def do_run_script(self, args: argparse.Namespace) -> Optional[bool]:
-        """Run commands in script file that is encoded as either ASCII or UTF-8 text.
+        """Run text script.
 
         :return: True if running of commands should stop
         """
@@ -4856,31 +4877,36 @@ class Cmd(cmd.Cmd):
 
     @classmethod
     def _build_relative_run_script_parser(cls) -> Cmd2ArgumentParser:
-        relative_run_script_description = cls.run_script_description
-        relative_run_script_description += (
-            "\n\n"
-            "If this is called from within an already-running script, the filename will be\n"
-            "interpreted relative to the already-running script's directory."
+        relative_run_script_parser = cls._build_base_run_script_parser()
+
+        # Append to existing description
+        relative_run_script_parser.description = Group(
+            cast(Group, relative_run_script_parser.description),
+            "\n",
+            (
+                "If this is called from within an already-running script, the filename will be "
+                "interpreted relative to the already-running script's directory."
+            ),
         )
 
-        relative_run_script_epilog = "Notes:\n  This command is intended to only be used within text file scripts."
-
-        relative_run_script_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
-            description=relative_run_script_description, epilog=relative_run_script_epilog
+        relative_run_script_parser.epilog = relative_run_script_parser.create_text_group(
+            "Note",
+            "This command is intended to be used from within a text script.",
         )
-        relative_run_script_parser.add_argument('file_path', help='a file path pointing to a script')
 
         return relative_run_script_parser
 
     @with_argparser(_build_relative_run_script_parser)
     def do__relative_run_script(self, args: argparse.Namespace) -> Optional[bool]:
-        """Run commands in script file that is encoded as either ASCII or UTF-8 text.
+        """Run text script.
+
+        This command is intended to be used from within a text script.
 
         :return: True if running of commands should stop
         """
-        file_path = args.file_path
+        script_path = args.script_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
-        relative_path = os.path.join(self._current_script_dir or '', file_path)
+        relative_path = os.path.join(self._current_script_dir or '', script_path)
 
         # self.last_result will be set by do_run_script()
         return self.do_run_script(utils.quote_string(relative_path))

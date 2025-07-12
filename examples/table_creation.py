@@ -10,6 +10,7 @@ from cmd2 import (
     EightBitFg,
     Fg,
     ansi,
+    rich_utils,
 )
 from cmd2.table_creator import (
     AlternatingTable,
@@ -269,6 +270,6 @@ def nested_tables() -> None:
 
 if __name__ == '__main__':
     # Default to terminal mode so redirecting to a file won't include the ANSI style sequences
-    ansi.allow_style = ansi.AllowStyle.TERMINAL
+    rich_utils.allow_style = rich_utils.AllowStyle.TERMINAL
     basic_tables()
     nested_tables()

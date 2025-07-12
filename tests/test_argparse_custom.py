@@ -237,7 +237,7 @@ def test_apcustom_required_options() -> None:
     # Make sure a 'required arguments' section shows when a flag is marked required
     parser = Cmd2ArgumentParser()
     parser.add_argument('--required_flag', required=True)
-    assert 'required arguments' in parser.format_help()
+    assert 'Required Arguments' in parser.format_help()
 
 
 def test_apcustom_metavar_tuple() -> None:

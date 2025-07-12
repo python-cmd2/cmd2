@@ -236,7 +236,6 @@ from collections.abc import (
 )
 from gettext import gettext
 from typing import (
-    IO,
     TYPE_CHECKING,
     Any,
     ClassVar,
@@ -248,11 +247,23 @@ from typing import (
     runtime_checkable,
 )
 
-from rich_argparse import RawTextRichHelpFormatter
+from rich.console import (
+    Group,
+    RenderableType,
+)
+from rich.table import Column, Table
+from rich.text import Text
+from rich_argparse import (
+    ArgumentDefaultsRichHelpFormatter,
+    MetavarTypeRichHelpFormatter,
+    RawDescriptionRichHelpFormatter,
+    RawTextRichHelpFormatter,
+    RichHelpFormatter,
+)
 
 from . import (
-    ansi,
     constants,
+    rich_utils,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -759,11 +770,11 @@ def _add_argument_wrapper(
             # Validate nargs tuple
             if (
                 len(nargs) != 2
-                or not isinstance(nargs[0], int)  # type: ignore[unreachable]
-                or not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY)  # type: ignore[misc]
+                or not isinstance(nargs[0], int)
+                or not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY)
             ):
                 raise ValueError('Ranged values for nargs must be a tuple of 1 or 2 integers')
-            if nargs[0] >= nargs[1]:  # type: ignore[misc]
+            if nargs[0] >= nargs[1]:
                 raise ValueError('Invalid nargs range. The first value must be less than the second')
             if nargs[0] < 0:
                 raise ValueError('Negative numbers are invalid for nargs range')
@@ -771,7 +782,7 @@ def _add_argument_wrapper(
             # Save the nargs tuple as our range setting
             nargs_range = nargs
             range_min = nargs_range[0]
-            range_max = nargs_range[1]  # type: ignore[misc]
+            range_max = nargs_range[1]
 
             # Convert nargs into a format argparse recognizes
             if range_min == 0:
@@ -807,7 +818,7 @@ def _add_argument_wrapper(
     new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
     # Set the custom attributes
-    new_arg.set_nargs_range(nargs_range)  # type: ignore[arg-type, attr-defined]
+    new_arg.set_nargs_range(nargs_range)  # type: ignore[attr-defined]
 
     if choices_provider:
         new_arg.set_choices_provider(choices_provider)  # type: ignore[attr-defined]
@@ -996,12 +1007,8 @@ setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_pa
 ############################################################################################################
 
 
-class Cmd2HelpFormatter(RawTextRichHelpFormatter):
+class Cmd2HelpFormatter(RichHelpFormatter):
     """Custom help formatter to configure ordering of help text."""
-
-    # rich-argparse formats all group names with str.title().
-    # Override their formatter to do nothing.
-    group_name_formatter: ClassVar[Callable[[str], str]] = str
 
     # Disable automatic highlighting in the help text.
     highlights: ClassVar[list[str]] = []
@@ -1014,6 +1021,22 @@ class Cmd2HelpFormatter(RawTextRichHelpFormatter):
     usage_markup: ClassVar[bool] = False
     help_markup: ClassVar[bool] = False
     text_markup: ClassVar[bool] = False
+
+    def __init__(
+        self,
+        prog: str,
+        indent_increment: int = 2,
+        max_help_position: int = 24,
+        width: Optional[int] = None,
+        *,
+        console: Optional[rich_utils.Cmd2Console] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize Cmd2HelpFormatter."""
+        if console is None:
+            console = rich_utils.Cmd2Console(sys.stdout)
+
+        super().__init__(prog, indent_increment, max_help_position, width, console=console, **kwargs)
 
     def _format_usage(
         self,
@@ -1207,6 +1230,82 @@ class Cmd2HelpFormatter(RawTextRichHelpFormatter):
         return super()._format_args(action, default_metavar)  # type: ignore[arg-type]
 
 
+class RawDescriptionCmd2HelpFormatter(
+    RawDescriptionRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    """Cmd2 help message formatter which retains any formatting in descriptions and epilogs."""
+
+
+class RawTextCmd2HelpFormatter(
+    RawTextRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    """Cmd2 help message formatter which retains formatting of all help text."""
+
+
+class ArgumentDefaultsCmd2HelpFormatter(
+    ArgumentDefaultsRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    """Cmd2 help message formatter which adds default values to argument help."""
+
+
+class MetavarTypeCmd2HelpFormatter(
+    MetavarTypeRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    """Cmd2 help message formatter which uses the argument 'type' as the default
+    metavar value (instead of the argument 'dest').
+    """  # noqa: D205
+
+
+class TextGroup:
+    """A block of text which is formatted like an argparse argument group, including a title.
+
+    Title:
+      Here is the first row of text.
+      Here is yet another row of text.
+    """
+
+    def __init__(
+        self,
+        title: str,
+        text: RenderableType,
+        formatter_creator: Callable[[], Cmd2HelpFormatter],
+    ) -> None:
+        """TextGroup initializer.
+
+        :param title: the group's title
+        :param text: the group's text (string or object that may be rendered by Rich)
+        :param formatter_creator: callable which returns a Cmd2HelpFormatter instance
+        """
+        self.title = title
+        self.text = text
+        self.formatter_creator = formatter_creator
+
+    def __rich__(self) -> Group:
+        """Perform custom rendering."""
+        formatter = self.formatter_creator()
+
+        styled_title = Text(
+            type(formatter).group_name_formatter(f"{self.title}:"),
+            style=formatter.styles["argparse.groups"],
+        )
+
+        # Left pad the text like an argparse argument group does
+        left_padding = formatter._indent_increment
+        text_table = Table(
+            Column(overflow="fold"),
+            box=None,
+            show_header=False,
+            padding=(0, 0, 0, left_padding),
+        )
+        text_table.add_row(self.text)
+
+        return Group(styled_title, text_table)
+
+
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output."""
 
@@ -1214,10 +1313,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self,
         prog: Optional[str] = None,
         usage: Optional[str] = None,
-        description: Optional[str] = None,
-        epilog: Optional[str] = None,
+        description: Optional[RenderableType] = None,
+        epilog: Optional[RenderableType] = None,
         parents: Sequence[argparse.ArgumentParser] = (),
-        formatter_class: type[argparse.HelpFormatter] = Cmd2HelpFormatter,
+        formatter_class: type[Cmd2HelpFormatter] = Cmd2HelpFormatter,
         prefix_chars: str = '-',
         fromfile_prefix_chars: Optional[str] = None,
         argument_default: Optional[str] = None,
@@ -1247,8 +1346,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         super().__init__(
             prog=prog,
             usage=usage,
-            description=description,
-            epilog=epilog,
+            description=description,  # type: ignore[arg-type]
+            epilog=epilog,  # type: ignore[arg-type]
             parents=parents if parents else [],
             formatter_class=formatter_class,  # type: ignore[arg-type]
             prefix_chars=prefix_chars,
@@ -1260,6 +1359,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             exit_on_error=exit_on_error,  # added in Python 3.9
             **kwargs,  # added in Python 3.14
         )
+
+        # Recast to assist type checkers since these can be Rich renderables in a Cmd2HelpFormatter.
+        self.description: Optional[RenderableType] = self.description  # type: ignore[assignment]
+        self.epilog: Optional[RenderableType] = self.epilog  # type: ignore[assignment]
 
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
@@ -1290,8 +1393,18 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 formatted_message += '\n       ' + line
 
         self.print_usage(sys.stderr)
-        formatted_message = ansi.style_error(formatted_message)
-        self.exit(2, f'{formatted_message}\n\n')
+
+        # Add error style to message
+        console = self._get_formatter().console
+        with console.capture() as capture:
+            console.print(formatted_message, style="cmd2.error", crop=False)
+        formatted_message = f"{capture.get()}"
+
+        self.exit(2, f'{formatted_message}\n')
+
+    def _get_formatter(self) -> Cmd2HelpFormatter:
+        """Override _get_formatter with customizations for Cmd2HelpFormatter."""
+        return cast(Cmd2HelpFormatter, super()._get_formatter())
 
     def format_help(self) -> str:
         """Return a string containing a help message, including the program usage and information about the arguments.
@@ -1350,12 +1463,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # determine help from format above
         return formatter.format_help() + '\n'
 
-    def _print_message(self, message: str, file: Optional[IO[str]] = None) -> None:  # type: ignore[override]
-        # Override _print_message to use style_aware_write() since we use ANSI escape characters to support color
-        if message:
-            if file is None:
-                file = sys.stderr
-            ansi.style_aware_write(file, message)
+    def create_text_group(self, title: str, text: RenderableType) -> TextGroup:
+        """Create a TextGroup using this parser's formatter creator."""
+        return TextGroup(title, text, self._get_formatter)
 
 
 class Cmd2AttributeWrapper:

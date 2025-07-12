@@ -258,7 +258,7 @@ def test_set_allow_style_completion(cmd2_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = [val.name.lower() for val in cmd2.ansi.AllowStyle]
+    expected = [val.name.lower() for val in cmd2.rich_utils.AllowStyle]
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match
