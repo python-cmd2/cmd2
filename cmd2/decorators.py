@@ -192,56 +192,6 @@ def with_argument_list(
     return arg_decorator
 
 
-def _set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
-    """Recursively set prog attribute of a parser and all of its subparsers.
-
-    Does so that the root command is a command name and not sys.argv[0].
-
-    :param parser: the parser being edited
-    :param prog: new value for the parser's prog attribute
-    """
-    # Set the prog value for this parser
-    parser.prog = prog
-    req_args: list[str] = []
-
-    # Set the prog value for the parser's subcommands
-    for action in parser._actions:
-        if isinstance(action, argparse._SubParsersAction):
-            # Set the _SubParsersAction's _prog_prefix value. That way if its add_parser() method is called later,
-            # the correct prog value will be set on the parser being added.
-            action._prog_prefix = parser.prog
-
-            # The keys of action.choices are subcommand names as well as subcommand aliases. The aliases point to the
-            # same parser as the actual subcommand. We want to avoid placing an alias into a parser's prog value.
-            # Unfortunately there is nothing about an action.choices entry which tells us it's an alias. In most cases
-            # we can filter out the aliases by checking the contents of action._choices_actions. This list only contains
-            # help information and names for the subcommands and not aliases. However, subcommands without help text
-            # won't show up in that list. Since dictionaries are ordered in Python 3.6 and above and argparse inserts the
-            # subcommand name into choices dictionary before aliases, we should be OK assuming the first time we see a
-            # parser, the dictionary key is a subcommand and not alias.
-            processed_parsers = []
-
-            # Set the prog value for each subcommand's parser
-            for subcmd_name, subcmd_parser in action.choices.items():
-                # Check if we've already edited this parser
-                if subcmd_parser in processed_parsers:
-                    continue
-
-                subcmd_prog = parser.prog
-                if req_args:
-                    subcmd_prog += " " + " ".join(req_args)
-                subcmd_prog += " " + subcmd_name
-                _set_parser_prog(subcmd_parser, subcmd_prog)
-                processed_parsers.append(subcmd_parser)
-
-            # We can break since argparse only allows 1 group of subcommands per level
-            break
-
-        # Need to save required args so they can be prepended to the subcommand usage
-        if action.required:
-            req_args.append(action.dest)
-
-
 #: Function signatures for command functions that use an argparse.ArgumentParser to process user input
 #: and optionally return a boolean
 ArgparseCommandFuncOptionalBoolReturn = Callable[[CommandParent, argparse.Namespace], Optional[bool]]

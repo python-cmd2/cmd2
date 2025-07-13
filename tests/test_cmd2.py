@@ -2189,7 +2189,7 @@ def test_perror_style(base_app, capsys) -> None:
 def test_perror_no_style(base_app, capsys) -> None:
     msg = 'testing...'
     end = '\n'
-    base_app.perror(msg, apply_style=False)
+    base_app.perror(msg, style=None)
     out, err = capsys.readouterr()
     assert err == msg + end
 
@@ -2207,7 +2207,7 @@ def test_pexcept_style(base_app, capsys) -> None:
 def test_pexcept_no_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
-    base_app.pexcept(msg, apply_style=False)
+    base_app.pexcept(msg, style=None)
     out, err = capsys.readouterr()
     assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
 

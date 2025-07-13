@@ -24,10 +24,7 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 # This module has many imports, quite a few of which are only
 # infrequently utilized. To reduce the initial overhead of
 # import this module, many of these imports are lazy-loaded
-# i.e. we only import the module when we use it
-# For example, we don't import the 'traceback' module
-# until the pexcept() function is called and the debug
-# setting is True
+# i.e. we only import the module when we use it.
 import argparse
 import cmd
 import contextlib
@@ -83,6 +80,7 @@ from .argparse_custom import (
     Cmd2ArgumentParser,
     CompleterFunc,
     CompletionItem,
+    set_parser_prog,
 )
 from .clipboard import (
     get_paste_buffer,
@@ -123,10 +121,14 @@ from .parsing import (
     StatementParser,
     shlex_split,
 )
+from .rich_utils import Cmd2Console
 
 # NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
 with contextlib.suppress(ImportError):
     from IPython import start_ipython  # type: ignore[import]
+
+from rich.style import StyleType
+from rich.text import Text
 
 from .rl_utils import (
     RlType,
@@ -154,7 +156,7 @@ from .utils import (
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
-    sys.stderr.write(ansi.style_warning(rl_warning))
+    Cmd2Console(sys.stderr).print(Text(rl_warning, style="cmd2.warning"))
 else:
     from .rl_utils import (  # type: ignore[attr-defined]
         readline,
@@ -508,7 +510,7 @@ class Cmd(cmd.Cmd):
         elif transcript_files:
             self._transcript_files = transcript_files
 
-        # Set the pager(s) for use with the ppaged() method for displaying output using a pager
+        # Set the pager(s) for use when displaying output using a pager
         if sys.platform.startswith('win'):
             self.pager = self.pager_chop = 'more'
         else:
@@ -777,9 +779,7 @@ class Cmd(cmd.Cmd):
         else:
             raise TypeError(f"Invalid type for parser_builder: {type(parser_builder)}")
 
-        from .decorators import _set_parser_prog
-
-        _set_parser_prog(parser, prog)
+        set_parser_prog(parser, prog)
 
         return parser
 
@@ -929,7 +929,7 @@ class Cmd(cmd.Cmd):
 
             subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
             if not subcommand_valid:
-                raise CommandSetRegistrationError(f'Subcommand {subcommand_name!s} is not valid: {errmsg}')
+                raise CommandSetRegistrationError(f'Subcommand {subcommand_name} is not valid: {errmsg}')
 
             command_tokens = full_command_name.split()
             command_name = command_tokens[0]
@@ -942,11 +942,11 @@ class Cmd(cmd.Cmd):
                 command_func = self.cmd_func(command_name)
 
             if command_func is None:
-                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method!s}")
+                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method}")
             command_parser = self._command_parsers.get(command_func)
             if command_parser is None:
                 raise CommandSetRegistrationError(
-                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method!s}"
+                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method}"
                 )
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
@@ -1036,13 +1036,13 @@ class Cmd(cmd.Cmd):
             if command_func is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
-                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method!s}")
+                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method}")
             command_parser = self._command_parsers.get(command_func)
             if command_parser is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
                 raise CommandSetRegistrationError(
-                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method!s}"
+                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method}"
                 )
 
             for action in command_parser._actions:
@@ -1121,11 +1121,11 @@ class Cmd(cmd.Cmd):
             """Convert a string value into an rich_utils.AllowStyle."""
             try:
                 return rich_utils.AllowStyle[value.upper()]
-            except KeyError as esc:
+            except KeyError as ex:
                 raise ValueError(
                     f"must be {rich_utils.AllowStyle.ALWAYS}, {rich_utils.AllowStyle.NEVER}, or "
                     f"{rich_utils.AllowStyle.TERMINAL} (case-insensitive)"
-                ) from esc
+                ) from ex
 
         self.add_settable(
             Settable(
@@ -1179,164 +1179,256 @@ class Cmd(cmd.Cmd):
         """
         return ansi.strip_style(self.prompt)
 
+    def _can_page(self, file: IO[str]) -> bool:
+        """Return whether output can be passed through a pager.
+
+        :param file: file stream being written to
+        :return: True if paging is allowed, otherwise False
+        """
+        # Detect if we are running within a fully functional terminal.
+        # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
+        functional_terminal = (
+            self.stdin.isatty() and file.isatty() and (sys.platform.startswith('win') or os.environ.get('TERM') is not None)
+        )
+
+        # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python).
+        can_block = not (self._redirecting or self.in_pyscript() or self.in_script())
+
+        return functional_terminal and can_block
+
     def print_to(
         self,
-        dest: IO[str],
-        msg: Any,
-        *,
-        end: str = '\n',
-        style: Optional[Callable[[str], str]] = None,
+        file: IO[str],
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = None,
+        paged: bool = False,
+        chop: bool = False,
+        **kwargs: Any,
     ) -> None:
-        """Print message to a given file object.
+        """Print objects to a given file stream.
 
-        :param dest: the file object being written to
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        :param style: optional style function to format msg with (e.g. ansi.style_success)
-        """
-        final_msg = style(msg) if style is not None else msg
-        try:
-            ansi.style_aware_write(dest, f'{final_msg}{end}')
-        except BrokenPipeError:
-            # This occurs if a command's output is being piped to another
-            # process and that process closes before the command is
-            # finished. If you would like your application to print a
-            # warning message, then set the broken_pipe_warning attribute
-            # to the message you want printed.
-            if self.broken_pipe_warning:
-                sys.stderr.write(self.broken_pipe_warning)
-
-    def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
-        """Print message to self.stdout and appends a newline by default.
-
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        """
-        self.print_to(self.stdout, msg, end=end)
-
-    def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
-        """Print message to sys.stderr.
-
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
-                            where the message text already has the desired style. Defaults to True.
-        """
-        self.print_to(sys.stderr, msg, end=end, style=ansi.style_error if apply_style else None)
-
-    def psuccess(self, msg: Any = '', *, end: str = '\n') -> None:
-        """Wrap poutput, but applies ansi.style_success by default.
-
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        """
-        msg = ansi.style_success(msg)
-        self.poutput(msg, end=end)
-
-    def pwarning(self, msg: Any = '', *, end: str = '\n') -> None:
-        """Wrap perror, but applies ansi.style_warning by default.
-
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        """
-        msg = ansi.style_warning(msg)
-        self.perror(msg, end=end, apply_style=False)
-
-    def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
-        """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
-
-        :param msg: message or Exception to print
-        :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
-                            where the message text already has the desired style. Defaults to True.
-        """
-        if self.debug and sys.exc_info() != (None, None, None):
-            import traceback
-
-            traceback.print_exc()
-
-        if isinstance(msg, Exception):
-            final_msg = f"EXCEPTION of type '{type(msg).__name__}' occurred with message: {msg}"
-        else:
-            final_msg = str(msg)
-
-        if apply_style:
-            final_msg = ansi.style_error(final_msg)
-
-        if not self.debug and 'debug' in self.settables:
-            warning = "\nTo enable full traceback, run the following command: 'set debug true'"
-            final_msg += ansi.style_warning(warning)
-
-        self.perror(final_msg, end=end, apply_style=False)
-
-    def pfeedback(self, msg: Any, *, end: str = '\n') -> None:
-        """Print nonessential feedback.  Can be silenced with `quiet`.
-
-        Inclusion in redirected output is controlled by `feedback_to_output`.
-
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        """
-        if not self.quiet:
-            if self.feedback_to_output:
-                self.poutput(msg, end=end)
-            else:
-                self.perror(msg, end=end, apply_style=False)
-
-    def ppaged(self, msg: Any, *, end: str = '\n', chop: bool = False) -> None:
-        """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
-
-        Never uses a pager inside a script (Python or text) or when output is being redirected or piped or when
-        stdout or stdin are not a fully functional terminal.
-
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
+        :param file: file stream being written to
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: Applies only when paged is True.
+                     True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
                               - wrapping is ideal when you want to keep users from having to use horizontal scrolling
-
-        WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
+                     WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
+        :param kwargs: Custom keyword args to support overriding this function as well as controlling the behavior of
+                       Console.print(). Don't forget to remove any arguments not meant for Console.print()
+                       after you've processed them.
         """
-        # Attempt to detect if we are not running within a fully functional terminal.
-        # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
-        functional_terminal = False
+        # Convert any string objects in the input into rich.Text objects.
+        # This is essential for Rich to parse and correctly interpret any embedded
+        # ANSI escape sequences for styling that might be present within those strings,
+        # ensuring they're rendered as intended rather than as raw text.
+        if any(isinstance(obj, str) for obj in objects):
+            object_list = list(objects)
+            for i, obj in enumerate(object_list):
+                if isinstance(obj, str):
+                    object_list[i] = Text.from_ansi(obj)
+            objects = tuple(object_list)
 
-        if self.stdin.isatty() and self.stdout.isatty():  # noqa: SIM102
-            if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
-                functional_terminal = True
+        console = Cmd2Console(file)
+        if paged and self._can_page(file):
+            import subprocess
 
-        # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python).
-        # Also only attempt to use a pager if actually running in a real fully functional terminal.
-        if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
-            final_msg = f"{msg}{end}"
-            if rich_utils.allow_style == rich_utils.AllowStyle.NEVER:
-                final_msg = ansi.strip_style(final_msg)
+            # Generate the bytes to send to the pager
+            with console.capture() as capture:
+                kwargs["soft_wrap"] = chop
+                console.print(*objects, sep=sep, end=end, style=style, **kwargs)
+            output_bytes = capture.get().encode('utf-8', 'replace')
 
-            pager = self.pager
-            if chop:
-                pager = self.pager_chop
-
-            try:
-                # Prevent KeyboardInterrupts while in the pager. The pager application will
-                # still receive the SIGINT since it is in the same process group as us.
-                with self.sigint_protection:
-                    import subprocess
-
-                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE, stdout=self.stdout)  # noqa: S602
-                    pipe_proc.communicate(final_msg.encode('utf-8', 'replace'))
-            except BrokenPipeError:
-                # This occurs if a command's output is being piped to another process and that process closes before the
-                # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.`
-                if self.broken_pipe_warning:
-                    sys.stderr.write(self.broken_pipe_warning)
+            # Prevent KeyboardInterrupts while in the pager. The pager application will
+            # still receive the SIGINT since it is in the same process group as us.
+            with self.sigint_protection:
+                pipe_proc = subprocess.Popen(  # noqa: S602
+                    self.pager_chop if chop else self.pager,
+                    shell=True,
+                    stdin=subprocess.PIPE,
+                    stdout=file,
+                )
+                pipe_proc.communicate(output_bytes)
         else:
-            self.poutput(msg, end=end)
+            try:
+                console.print(*objects, sep=sep, end=end, style=style, **kwargs)
+            except BrokenPipeError:
+                # This occurs if a command's output is being piped to another
+                # process which closes the pipe before the command is finished
+                # writing. If you would like your application to print a
+                # warning message, then set the broken_pipe_warning attribute
+                # to the message you want printed.
+                if self.broken_pipe_warning and file != sys.stderr:
+                    Cmd2Console(sys.stderr).print(self.broken_pipe_warning)
 
-    def ppretty(self, data: Any, *, indent: int = 2, width: int = 80, depth: Optional[int] = None, end: str = '\n') -> None:
-        """Pretty print arbitrary Python data structures to self.stdout and appends a newline by default.
+    def poutput(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = None,
+        paged: bool = False,
+        chop: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Print objects to self.stdout.
+
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: Applies only when paged is True.
+                     See print_to() docstring for full description of chop.
+        :param kwargs: Custom keyword args to support overriding this function as well as controlling the behavior of
+                       Console.print(). Don't forget to remove any arguments not meant for Console.print()
+                       after you've processed them.
+        """
+        self.print_to(self.stdout, *objects, sep=sep, end=end, style=style, paged=paged, chop=chop, **kwargs)
+
+    def perror(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = "cmd2.error",
+        paged: bool = False,
+        chop: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Print objects to sys.stderr.
+
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output. Defaults to cmd2.error.
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: Applies only when paged is True.
+                     See print_to() docstring for full description of chop.
+        :param kwargs: Custom keyword args to support overriding this function as well as controlling the behavior of
+                       Console.print(). Don't forget to remove any arguments not meant for Console.print()
+                       after you've processed them.
+        """
+        self.print_to(sys.stderr, *objects, sep=sep, end=end, style=style, paged=paged, chop=chop, **kwargs)
+
+    def psuccess(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        paged: bool = False,
+        chop: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Wrap poutput, but apply cmd2.success style.
+
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: Applies only when paged is True.
+                     See print_to() docstring for full description of chop.
+        :param kwargs: Custom keyword args to support overriding this function as well as controlling the behavior of
+                       Console.print(). Don't forget to remove any arguments not meant for Console.print()
+                       after you've processed them.
+        """
+        self.poutput(*objects, sep=sep, end=end, style="cmd2.success", paged=paged, chop=chop, **kwargs)
+
+    def pwarning(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        paged: bool = False,
+        chop: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """Wrap perror, but apply cmd2.warning style.
+
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: Applies only when paged is True.
+                     See print_to() docstring for full description of chop.
+        :param kwargs: Custom keyword args to support overriding this function as well as controlling the behavior of
+                       Console.print(). Don't forget to remove any arguments not meant for Console.print()
+                       after you've processed them.
+        """
+        self.perror(*objects, sep=sep, end=end, style="cmd2.warning", paged=paged, chop=chop, **kwargs)
+
+    def pexcept(self, exception: BaseException, *, end: str = "\n", **kwargs: Any) -> None:
+        """Print exception to sys.stderr. If debug is true, print exception traceback if one exists.
+
+        :param exception: the exception to print.
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param kwargs: Custom keyword args to support overriding this function as well as controlling the behavior of
+                       Console.print(). Don't forget to remove any arguments not meant for Console.print()
+                       after you've processed them.
+        """
+        final_msg = Text()
+
+        if self.debug and sys.exc_info() != (None, None, None):
+            console = Cmd2Console(sys.stderr)
+            console.print_exception()
+        else:
+            final_msg += f"EXCEPTION of type '{type(exception).__name__}' occurred with message: {exception}"
+
+        if not self.debug and 'debug' in self.settables:
+            warning = "\nTo enable full traceback, run the following command: 'set debug true'"
+            final_msg.append(warning, style="cmd2.warning")
+
+        self.perror(final_msg, end=end, **kwargs)
+
+    def pfeedback(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = None,
+        paged: bool = False,
+        chop: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """For printing nonessential feedback. Can be silenced with `quiet`.
+
+        Inclusion in redirected output is controlled by `feedback_to_output`.
+
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output
+        :param paged: If True, pass the output through the configured pager.
+        :param chop: Applies only when paged is True.
+                     See print_to() docstring for full description of chop.
+        :param kwargs: Custom keyword args to support overriding this function as well as controlling the behavior of
+                       Console.print(). Don't forget to remove any arguments not meant for Console.print()
+                       after you've processed them.
+        """
+        if not self.quiet:
+            if self.feedback_to_output:
+                self.poutput(*objects, sep=sep, end=end, style=style, paged=paged, chop=chop, **kwargs)
+            else:
+                self.perror(*objects, sep=sep, end=end, style=style, paged=paged, chop=chop, **kwargs)
+
+    def ppretty(
+        self,
+        data: Any,
+        *,
+        indent: int = 2,
+        width: int = 80,
+        depth: Optional[int] = None,
+        end: str = '\n',
+    ) -> None:
+        """Pretty print arbitrary Python data structures to self.stdout and append a newline by default.
 
         :param data: object to print
         :param indent: the amount of indentation added for each nesting level
@@ -2263,11 +2355,13 @@ class Cmd(cmd.Cmd):
 
         except CompletionError as ex:
             # Don't print error and redraw the prompt unless the error has length
-            err_str = str(ex)
+            err_str = Text(str(ex))
             if err_str:
-                if ex.apply_style:
-                    err_str = ansi.style_error(err_str)
-                ansi.style_aware_write(sys.stdout, '\n' + err_str + '\n')
+                self.print_to(
+                    sys.stdout,
+                    Text.assemble("\n", err_str),
+                    style="cmd2.error" if ex.apply_style else None,
+                )
                 rl_force_redisplay()
             return None
         except Exception as ex:  # noqa: BLE001
@@ -2928,8 +3022,7 @@ class Cmd(cmd.Cmd):
         if self.suggest_similar_command and (suggested_command := self._suggest_similar_command(statement.command)):
             err_msg += f"\n{self.default_suggestion_message.format(suggested_command)}"
 
-        # Set apply_style to False so styles for default_error and default_suggestion_message are not overridden
-        self.perror(err_msg, apply_style=False)
+        self.perror(err_msg, style=None)
         return None
 
     def _suggest_similar_command(self, command: str) -> Optional[str]:
@@ -3481,7 +3574,7 @@ class Cmd(cmd.Cmd):
                 # Set end to blank so the help output matches how it looks when "command -h" is used
                 self.poutput(completer.format_help(args.subcommands), end='')
 
-            # If there is a help func delegate to do_help
+            # If there is a help function, then call it
             elif help_func is not None:
                 super().do_help(args.command)
 
@@ -3493,8 +3586,7 @@ class Cmd(cmd.Cmd):
             else:
                 err_msg = self.help_error.format(args.command)
 
-                # Set apply_style to False so help_error's style is not overridden
-                self.perror(err_msg, apply_style=False)
+                self.perror(err_msg, style=None)
                 self.last_result = False
 
     def print_topics(self, header: str, cmds: Optional[list[str]], cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
@@ -4956,7 +5048,7 @@ class Cmd(cmd.Cmd):
         test_results = runner.run(testcase)
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
-            ansi.style_aware_write(sys.stderr, stream.read())
+            self.perror(stream.read(), end="", style=None)
             finish_msg = f' {num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds '
             finish_msg = utils.align_center(finish_msg, fill_char='=')
             self.psuccess(finish_msg)
@@ -5213,8 +5305,7 @@ class Cmd(cmd.Cmd):
         :param message_to_print: the message reporting that the command is disabled
         :param _kwargs: not used
         """
-        # Set apply_style to False so message_to_print's style is not overridden
-        self.perror(message_to_print, apply_style=False)
+        self.perror(message_to_print, style=None)
 
     def cmdloop(self, intro: Optional[str] = None) -> int:  # type: ignore[override]
         """Deal with extra features provided by cmd2, this is an outer wrapper around _cmdloop().
