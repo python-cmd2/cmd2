@@ -624,24 +624,26 @@ class ArgparseCompleter:
                 break
         return []
 
-    def format_help(self, tokens: list[str]) -> str:
-        """Supports cmd2's help command in the retrieval of help text.
+    def print_help(self, tokens: list[str]) -> None:
+        """Supports cmd2's help command in the printing of help text.
 
         :param tokens: arguments passed to help command
-        :return: help text of the command being queried.
         """
-        # If our parser has subcommands, we must examine the tokens and check if they are subcommands
+        # If our parser has subcommands, we must examine the tokens and check if they are subcommands.
         # If so, we will let the subcommand's parser handle the rest of the tokens via another ArgparseCompleter.
-        if self._subcommand_action is not None:
-            for token_index, token in enumerate(tokens):
-                if token in self._subcommand_action.choices:
-                    parser: argparse.ArgumentParser = self._subcommand_action.choices[token]
-                    completer_type = self._cmd2_app._determine_ap_completer_type(parser)
+        if tokens and self._subcommand_action is not None:
+            parser = cast(
+                Optional[argparse.ArgumentParser],
+                self._subcommand_action.choices.get(tokens[0]),
+            )
 
-                    completer = completer_type(parser, self._cmd2_app)
-                    return completer.format_help(tokens[token_index + 1 :])
-                break
-        return self._parser.format_help()
+            if parser:
+                completer_type = self._cmd2_app._determine_ap_completer_type(parser)
+                completer = completer_type(parser, self._cmd2_app)
+                completer.print_help(tokens[1:])
+                return
+
+        self._parser.print_help()
 
     def _complete_arg(
         self,

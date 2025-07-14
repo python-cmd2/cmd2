@@ -3570,9 +3570,7 @@ class Cmd(cmd.Cmd):
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
                 completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
-
-                # Set end to blank so the help output matches how it looks when "command -h" is used
-                self.poutput(completer.format_help(args.subcommands), end='')
+                completer.print_help(args.subcommands)
 
             # If there is a help function, then call it
             elif help_func is not None:
