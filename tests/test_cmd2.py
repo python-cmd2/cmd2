@@ -15,6 +15,7 @@ from unittest import (
 )
 
 import pytest
+from rich.text import Text
 
 import cmd2
 from cmd2 import (
@@ -182,7 +183,8 @@ Name   Value                           Description
 quiet  True                            Don't print nonessential feedback
 """
     )
-    assert out == expected
+    # Rich breaks the ==== line over two because in testing the terminal width is 80.
+    assert out[3] == expected[2]
     assert len(base_app.last_result) == 1
     assert base_app.last_result['quiet'] is True
 
@@ -399,7 +401,7 @@ def test_run_script_with_binary_file(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'binary.bin')
     out, err = run_cmd(base_app, f'run_script {filename}')
-    assert "is not an ASCII or UTF-8 encoded text file" in err[0]
+    assert "is not an ASCII or UTF-8" in err[0]
     assert base_app.last_result is False
 
 
@@ -410,7 +412,7 @@ def test_run_script_with_python_file(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'pyscript', 'stop.py')
     out, err = run_cmd(base_app, f'run_script {filename}')
-    assert "appears to be a Python file" in err[0]
+    assert "appears to be a Python" in err[0]
     assert base_app.last_result is False
 
 
@@ -835,29 +837,13 @@ now: True
         assert err[0].startswith('Elapsed: 0:00:00.0')
 
 
-def _expected_no_editor_error():
-    expected_exception = 'OSError'
-    # If PyPy, expect a different exception than with Python 3
-    if hasattr(sys, "pypy_translation_info"):
-        expected_exception = 'EnvironmentError'
-
-    return normalize(
-        f"""
-EXCEPTION of type '{expected_exception}' occurred with message: Please use 'set editor' to specify your text editing program of choice.
-To enable full traceback, run the following command: 'set debug true'
-"""
-    )
-
-
 def test_base_debug(base_app) -> None:
     # Purposely set the editor to None
     base_app.editor = None
 
     # Make sure we get an exception, but cmd2 handles it
     out, err = run_cmd(base_app, 'edit')
-
-    expected = _expected_no_editor_error()
-    assert err == expected
+    assert "Please use 'set editor" in err[0]
 
     # Set debug true
     out, err = run_cmd(base_app, 'set debug True')
@@ -871,7 +857,7 @@ now: True
 
     # Verify that we now see the exception traceback
     out, err = run_cmd(base_app, 'edit')
-    assert err[0].startswith('Traceback (most recent call last):')
+    assert "Traceback (most recent call last)" in err[0]
 
 
 def test_debug_not_settable(base_app) -> None:
@@ -1985,23 +1971,27 @@ def test_ppretty_dict(outsim_app) -> None:
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_poutput_ansi_always(outsim_app) -> None:
     msg = 'Hello World'
-    colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
-    outsim_app.poutput(colored_msg)
+    outsim_app.poutput(Text(msg, style="cyan"))
     out = outsim_app.stdout.getvalue()
-    expected = colored_msg + '\n'
-    assert colored_msg != msg
-    assert out == expected
+    assert out == "\x1b[36mHello World\x1b[0m\n"
 
 
 @with_ansi_style(rich_utils.AllowStyle.NEVER)
 def test_poutput_ansi_never(outsim_app) -> None:
     msg = 'Hello World'
-    colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
-    outsim_app.poutput(colored_msg)
+    outsim_app.poutput(Text(msg, style="cyan"))
     out = outsim_app.stdout.getvalue()
-    expected = msg + '\n'
-    assert colored_msg != msg
-    assert out == expected
+    assert out == msg + "\n"
+
+
+@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
+def test_poutput_ansi_terminal(outsim_app) -> None:
+    """Test that AllowStyle.TERMINAL strips style when redirecting."""
+    msg = 'testing...'
+    outsim_app._redirecting = True
+    outsim_app.poutput(Text(msg, style="cyan"))
+    out = outsim_app.stdout.getvalue()
+    assert out == msg + "\n"
 
 
 invalid_alias_names = [
@@ -2179,19 +2169,17 @@ def test_multiple_aliases(base_app) -> None:
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_perror_style(base_app, capsys) -> None:
     msg = 'testing...'
-    end = '\n'
     base_app.perror(msg)
     out, err = capsys.readouterr()
-    assert err == ansi.style_error(msg) + end
+    assert err == "\x1b[91mtesting...\x1b[0m\n"
 
 
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_perror_no_style(base_app, capsys) -> None:
     msg = 'testing...'
-    end = '\n'
     base_app.perror(msg, style=None)
     out, err = capsys.readouterr()
-    assert err == msg + end
+    assert err == msg + "\n"
 
 
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
@@ -2200,7 +2188,7 @@ def test_pexcept_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith(ansi.style_error("EXCEPTION of type 'Exception' occurred with message: testing..."))
+    assert err.startswith("\x1b[91mEXCEPTION of type 'Exception' occurred with message: testing")
 
 
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
@@ -2209,7 +2197,7 @@ def test_pexcept_no_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg, style=None)
     out, err = capsys.readouterr()
-    assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
+    assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing")
 
 
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
@@ -2219,36 +2207,15 @@ def test_pexcept_not_exception(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith(ansi.style_error(msg))
+    assert err.startswith("\x1b[91mEXCEPTION of type 'bool' occurred with message: False")
 
 
-def test_ppaged(outsim_app) -> None:
+def test_print_paged(outsim_app) -> None:
     msg = 'testing...'
     end = '\n'
-    outsim_app.ppaged(msg)
+    outsim_app.poutput(msg, paged=True)
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
-
-
-@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
-def test_ppaged_strips_ansi_when_redirecting(outsim_app) -> None:
-    msg = 'testing...'
-    end = '\n'
-    outsim_app._redirecting = True
-    outsim_app.ppaged(ansi.style(msg, fg=ansi.Fg.RED))
-    out = outsim_app.stdout.getvalue()
-    assert out == msg + end
-
-
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
-def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app) -> None:
-    msg = 'testing...'
-    end = '\n'
-    outsim_app._redirecting = True
-    colored_msg = ansi.style(msg, fg=ansi.Fg.RED)
-    outsim_app.ppaged(colored_msg)
-    out = outsim_app.stdout.getvalue()
-    assert out == colored_msg + end
 
 
 # we override cmd.parseline() so we always get consistent

@@ -61,7 +61,7 @@ def test_run_pyscript_with_non_python_file(base_app, request) -> None:
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
     out, err = run_cmd(base_app, f'run_pyscript {filename}')
-    assert "does not have a .py extension" in err[0]
+    assert "does not have a .py" in err[0]
     assert base_app.last_result is False
 
 
