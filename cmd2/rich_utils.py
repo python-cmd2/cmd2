@@ -13,6 +13,7 @@ from rich.style import (
     Style,
     StyleType,
 )
+from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
 
@@ -109,7 +110,6 @@ class Cmd2Console(Console):
         # You can still enable these in Console.print() calls.
         super().__init__(
             file=file,
-            tab_size=4,
             markup=False,
             emoji=False,
             highlight=False,
@@ -125,3 +125,39 @@ class Cmd2Console(Console):
             super().on_broken_pipe()
 
         raise BrokenPipeError
+
+
+def from_ansi(text: str) -> Text:
+    r"""Patched version of rich.Text.from_ansi() that handles a discarded newline issue.
+
+    Text.from_ansi() currently removes the ending line break from string.
+    e.g. "Hello\n" becomes "Hello"
+
+    There is currently a pull request to fix this.
+    https://github.com/Textualize/rich/pull/3793
+
+    :param text: a string to convert to a Text object.
+    :return: the converted string
+    """
+    result = Text.from_ansi(text)
+
+    # If 'text' ends with a line break character, restore the missing newline to 'result'.
+    # Note: '\r\n' is handled as its last character is '\n'.
+    # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
+    line_break_chars = {
+        "\n",  # Line Feed
+        "\r",  # Carriage Return
+        "\v",  # Vertical Tab
+        "\f",  # Form Feed
+        "\x1c",  # File Separator
+        "\x1d",  # Group Separator
+        "\x1e",  # Record Separator
+        "\x85",  # Next Line (NEL)
+        "\u2028",  # Line Separator
+        "\u2029",  # Paragraph Separator
+    }
+    if text and text[-1] in line_break_chars:
+        # We use "\n" because Text.from_ansi() converts all line breaks chars into newlines.
+        result.append("\n")
+
+    return result

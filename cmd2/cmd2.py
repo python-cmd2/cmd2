@@ -1234,7 +1234,7 @@ class Cmd(cmd.Cmd):
             object_list = list(objects)
             for i, obj in enumerate(object_list):
                 if isinstance(obj, str):
-                    object_list[i] = Text.from_ansi(obj)
+                    object_list[i] = rich_utils.from_ansi(obj)
             objects = tuple(object_list)
 
         console = Cmd2Console(file)
