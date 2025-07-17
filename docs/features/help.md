@@ -14,8 +14,8 @@ command. The `help` command by itself displays a list of the commands available:
 
 Documented commands (use 'help -v' for verbose/'help <topic>' for details):
 ===========================================================================
-alias  help     ipy  quit          run_script  shell
-edit   history  py   run_pyscript  set         shortcuts
+alias  help     ipy    py    run_pyscript  set    shortcuts
+edit   history  macro  quit  run_script    shell
 ```
 
 The `help` command can also be used to provide detailed help for a specific command:
@@ -53,8 +53,8 @@ By default, the `help` command displays:
 
     Documented commands (use 'help -v' for verbose/'help <topic>' for details):
     ===========================================================================
-    alias  help     ipy  quit          run_script  shell
-    edit   history  py   run_pyscript  set         shortcuts
+    alias  help     ipy    py    run_pyscript  set    shortcuts
+    edit   history  macro  quit  run_script    shell
 
 If you have a large number of commands, you can optionally group your commands into categories.
 Here's the output from the example `help_categories.py`:
@@ -80,8 +80,8 @@ Here's the output from the example `help_categories.py`:
 
     Other
     =====
-    alias   edit  history  run_pyscript  set    shortcuts
-    config  help  quit     run_script    shell  version
+    alias   edit  history  py    run_pyscript  set    shortcuts
+    config  help  macro    quit  run_script    shell  version
 
 There are 2 methods of specifying command categories, using the `@with_category` decorator or with
 the `categorize()` function. Once a single command category is detected, the help output switches to
@@ -143,9 +143,9 @@ categories with per-command Help Messages:
     findleakers           Find Leakers command.
     list                  List command.
     redeploy              Redeploy command.
-    restart               Restart
+    restart               Restart command.
     sessions              Sessions command.
-    start                 Start
+    start                 Start command.
     stop                  Stop command.
     undeploy              Undeploy command.
 
@@ -164,9 +164,9 @@ categories with per-command Help Messages:
     resources             Resources command.
     serverinfo            Server Info command.
     sslconnectorciphers   SSL Connector Ciphers command is an example of a command that contains
-                        multiple lines of help information for the user. Each line of help in a
-                        contiguous set of lines will be printed and aligned in the verbose output
-                        provided with 'help --verbose'.
+                          multiple lines of help information for the user. Each line of help in a
+                          contiguous set of lines will be printed and aligned in the verbose output
+                          provided with 'help --verbose'.
     status                Status command.
     thread_dump           Thread Dump command.
     vminfo                VM Info command.
@@ -178,6 +178,7 @@ categories with per-command Help Messages:
     edit                  Run a text editor and optionally open a file with it.
     help                  List available commands or provide detailed help for a specific command.
     history               View, run, edit, save, or clear previously entered commands.
+    macro                 Manage macros.
     quit                  Exit this application.
     run_pyscript          Run Python script within this application's environment.
     run_script            Run text script.

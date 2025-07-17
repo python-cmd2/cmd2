@@ -24,7 +24,7 @@
 - [Output Redirection and Pipes](redirection.md)
 - [Scripting](scripting.md)
 - [Settings](settings.md)
-- [Shortcuts and Aliases](shortcuts_aliases.md)
+- [Shortcuts, Aliases, and Macros](shortcuts_aliases_macros.md)
 - [Startup Commands](startup_commands.md)
 - [Table Creation](table_creation.md)
 - [Transcripts](transcripts.md)

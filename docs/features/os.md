@@ -10,8 +10,8 @@ See [Output Redirection and Pipes](./redirection.md#output-redirection-and-pipes
 
     (Cmd) shell ls -al
 
-If you use the default [Shortcuts](./shortcuts_aliases.md#shortcuts) defined in `cmd2` you'll get a
-`!` shortcut for `shell`, which allows you to type:
+If you use the default [Shortcuts](./shortcuts_aliases_macros.md#shortcuts) defined in `cmd2` you'll
+get a `!` shortcut for `shell`, which allows you to type:
 
     (Cmd) !ls -al
 
@@ -89,8 +89,8 @@ shell, and execute those commands before entering the command loop:
 
     Documented commands (use 'help -v' for verbose/'help <topic>' for details):
     ===========================================================================
-    alias  help     ipy  quit          run_script  shell
-    edit   history  py   run_pyscript  set         shortcuts
+    alias  help     macro   orate  quit          run_script  set    shortcuts
+    edit   history  mumble  py     run_pyscript  say         shell  speak
 
     (Cmd)
 

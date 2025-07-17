@@ -2,15 +2,18 @@
 
 - Breaking Changes
 
-    - Removed macros
     - No longer setting parser's `prog` value in `with_argparser()` since it gets set in
       `Cmd._build_parser()`. This code had previously been restored to support backward
       compatibility in `cmd2` 2.0 family.
 
 - Enhancements
+
     - Simplified the process to set a custom parser for `cmd2's` built-in commands. See
       [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
       example for more details.
+
+    - Added `Cmd.macro_arg_complete()` which tab completes arguments to a macro. Its default
+      behavior is to perform path completion, but it can be overridden as needed.
 
 ## 2.7.0 (June 30, 2025)
 
