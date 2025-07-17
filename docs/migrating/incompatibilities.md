@@ -28,7 +28,7 @@ and arguments on whitespace. We opted for this breaking change because while
 characters in command names while simultaneously using `identchars` functionality can be somewhat
 painful. Requiring white space to delimit arguments also ensures reliable operation of many other
 useful `cmd2` features, including [Tab Completion](../features/completion.md) and
-[Shortcuts and Aliases](../features/shortcuts_aliases.md).
+[Shortcuts, Aliases, and Macros](../features/shortcuts_aliases_macros.md).
 
 If you really need this functionality in your app, you can add it back in by writing a
 [Postparsing Hook](../features/hooks.md#postparsing-hooks).

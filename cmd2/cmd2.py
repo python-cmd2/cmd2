@@ -38,6 +38,7 @@ import inspect
 import os
 import pprint
 import pydoc
+import re
 import sys
 import tempfile
 import threading
@@ -119,6 +120,8 @@ from .history import (
     single_line_format,
 )
 from .parsing import (
+    Macro,
+    MacroArg,
     Statement,
     StatementParser,
     shlex_split,
@@ -428,6 +431,9 @@ class Cmd(cmd.Cmd):
         # Commands to exclude from the history command
         self.exclude_from_history = ['eof', 'history']
 
+        # Dictionary of macro names and their values
+        self.macros: dict[str, Macro] = {}
+
         # Keeps track of typed command history in the Python shell
         self._py_history: list[str] = []
 
@@ -473,7 +479,7 @@ class Cmd(cmd.Cmd):
         self.help_error = "No help on {}"
 
         # The error that prints when a non-existent command is run
-        self.default_error = "{} is not a recognized command or alias."
+        self.default_error = "{} is not a recognized command, alias, or macro."
 
         # If non-empty, this string will be displayed if a broken pipe error occurs
         self.broken_pipe_warning = ''
@@ -544,7 +550,7 @@ class Cmd(cmd.Cmd):
         # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
         # cmd2 uses this key for sorting:
         #     command and category names
-        #     alias, settable, and shortcut names
+        #     alias, macro, settable, and shortcut names
         #     tab completion results when self.matches_sorted is False
         self.default_sort_key: Callable[[str], str] = Cmd.ALPHABETICAL_SORT_KEY
 
@@ -816,6 +822,11 @@ class Cmd(cmd.Cmd):
         if command in self.aliases:
             self.pwarning(f"Deleting alias '{command}' because it shares its name with a new command")
             del self.aliases[command]
+
+        # Check if command shares a name with a macro
+        if command in self.macros:
+            self.pwarning(f"Deleting macro '{command}' because it shares its name with a new command")
+            del self.macros[command]
 
         setattr(self, command_func_name, command_method)
 
@@ -2049,8 +2060,12 @@ class Cmd(cmd.Cmd):
 
         # Determine the completer function to use for the command's argument
         if custom_settings is None:
+            # Check if a macro was entered
+            if command in self.macros:
+                completer_func = self.path_complete
+
             # Check if a command was entered
-            if command in self.get_all_commands():
+            elif command in self.get_all_commands():
                 # Get the completer function for this command
                 func_attr = getattr(self, constants.COMPLETER_FUNC_PREFIX + command, None)
 
@@ -2076,7 +2091,8 @@ class Cmd(cmd.Cmd):
                     else:
                         completer_func = self.completedefault  # type: ignore[assignment]
 
-            # Not a recognized command. Check if it should be run as a shell command.
+            # Not a recognized macro or command
+            # Check if this command should be run as a shell command
             elif self.default_to_shell and command in utils.get_exes_in_path(command):
                 completer_func = self.path_complete
             else:
@@ -2234,8 +2250,8 @@ class Cmd(cmd.Cmd):
                         parser.add_argument(
                             'command',
                             metavar="COMMAND",
-                            help="command or alias name",
-                            choices=self._get_commands_and_aliases_for_completion(),
+                            help="command, alias, or macro name",
+                            choices=self._get_commands_aliases_and_macros_for_completion(),
                         )
                         custom_settings = utils.CustomCompletionSettings(parser)
 
@@ -2323,6 +2339,19 @@ class Cmd(cmd.Cmd):
 
         return results
 
+    # Table displayed when tab completing macros
+    _macro_completion_table = SimpleTable([Column('Value', width=80)], divider_char=None)
+
+    def _get_macro_completion_items(self) -> list[CompletionItem]:
+        """Return list of macro names and values as CompletionItems."""
+        results: list[CompletionItem] = []
+
+        for cur_key in self.macros:
+            row_data = [self.macros[cur_key].value]
+            results.append(CompletionItem(cur_key, self._macro_completion_table.generate_data_row(row_data)))
+
+        return results
+
     # Table displayed when tab completing Settables
     _settable_completion_table = SimpleTable([Column('Value', width=30), Column('Description', width=60)], divider_char=None)
 
@@ -2336,11 +2365,12 @@ class Cmd(cmd.Cmd):
 
         return results
 
-    def _get_commands_and_aliases_for_completion(self) -> list[str]:
-        """Return a list of visible commands and aliases for tab completion."""
+    def _get_commands_aliases_and_macros_for_completion(self) -> list[str]:
+        """Return a list of visible commands, aliases, and macros for tab completion."""
         visible_commands = set(self.get_visible_commands())
         alias_names = set(self.aliases)
-        return list(visible_commands | alias_names)
+        macro_names = set(self.macros)
+        return list(visible_commands | alias_names | macro_names)
 
     def get_help_topics(self) -> list[str]:
         """Return a list of help topics."""
@@ -2479,7 +2509,7 @@ class Cmd(cmd.Cmd):
 
         try:
             # Convert the line into a Statement
-            statement = self._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+            statement = self._input_line_to_statement(line, orig_rl_history_length=orig_rl_history_length)
 
             # call the postparsing hooks
             postparsing_data = plugin.PostparsingData(False, statement)
@@ -2723,6 +2753,99 @@ class Cmd(cmd.Cmd):
 
         return statement
 
+    def _input_line_to_statement(self, line: str, *, orig_rl_history_length: Optional[int] = None) -> Statement:
+        """Parse the user's input line and convert it to a Statement, ensuring that all macros are also resolved.
+
+        :param line: the line being parsed
+        :param orig_rl_history_length: Optional length of the readline history before the current command was typed.
+                                       This is used to assist in combining multiline readline history entries and is only
+                                       populated by cmd2. Defaults to None.
+        :return: parsed command line as a Statement
+        :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
+        :raises EmptyStatement: when the resulting Statement is blank
+        """
+        used_macros = []
+        orig_line = None
+
+        # Continue until all macros are resolved
+        while True:
+            # Make sure all input has been read and convert it to a Statement
+            statement = self._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+
+            # If this is the first loop iteration, save the original line and stop
+            # combining multiline history entries in the remaining iterations.
+            if orig_line is None:
+                orig_line = statement.raw
+                orig_rl_history_length = None
+
+            # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
+            if statement.command in self.macros and statement.command not in used_macros:
+                used_macros.append(statement.command)
+                resolve_result = self._resolve_macro(statement)
+                if resolve_result is None:
+                    raise EmptyStatement
+                line = resolve_result
+            else:
+                break
+
+        # This will be true when a macro was used
+        if orig_line != statement.raw:
+            # Build a Statement that contains the resolved macro line
+            # but the originally typed line for its raw member.
+            statement = Statement(
+                statement.args,
+                raw=orig_line,
+                command=statement.command,
+                arg_list=statement.arg_list,
+                multiline_command=statement.multiline_command,
+                terminator=statement.terminator,
+                suffix=statement.suffix,
+                pipe_to=statement.pipe_to,
+                output=statement.output,
+                output_to=statement.output_to,
+            )
+        return statement
+
+    def _resolve_macro(self, statement: Statement) -> Optional[str]:
+        """Resolve a macro and return the resulting string.
+
+        :param statement: the parsed statement from the command line
+        :return: the resolved macro or None on error
+        """
+        if statement.command not in self.macros:
+            raise KeyError(f"{statement.command} is not a macro")
+
+        macro = self.macros[statement.command]
+
+        # Make sure enough arguments were passed in
+        if len(statement.arg_list) < macro.minimum_arg_count:
+            plural = '' if macro.minimum_arg_count == 1 else 's'
+            self.perror(f"The macro '{statement.command}' expects at least {macro.minimum_arg_count} argument{plural}")
+            return None
+
+        # Resolve the arguments in reverse and read their values from statement.argv since those
+        # are unquoted. Macro args should have been quoted when the macro was created.
+        resolved = macro.value
+        reverse_arg_list = sorted(macro.arg_list, key=lambda ma: ma.start_index, reverse=True)
+
+        for macro_arg in reverse_arg_list:
+            if macro_arg.is_escaped:
+                to_replace = '{{' + macro_arg.number_str + '}}'
+                replacement = '{' + macro_arg.number_str + '}'
+            else:
+                to_replace = '{' + macro_arg.number_str + '}'
+                replacement = statement.argv[int(macro_arg.number_str)]
+
+            parts = resolved.rsplit(to_replace, maxsplit=1)
+            resolved = parts[0] + replacement + parts[1]
+
+        # Append extra arguments and use statement.arg_list since these arguments need their quotes preserved
+        for stmt_arg in statement.arg_list[macro.minimum_arg_count :]:
+            resolved += ' ' + stmt_arg
+
+        # Restore any terminator, suffix, redirection, etc.
+        return resolved + statement.post_command
+
     def _redirect_output(self, statement: Statement) -> utils.RedirectionSavedState:
         """Set up a command's output redirection for >, >>, and |.
 
@@ -2891,7 +3014,7 @@ class Cmd(cmd.Cmd):
         """
         # For backwards compatibility with cmd, allow a str to be passed in
         if not isinstance(statement, Statement):
-            statement = self._complete_statement(statement)
+            statement = self._input_line_to_statement(statement)
 
         func = self.cmd_func(statement.command)
         if func:
@@ -3224,6 +3347,10 @@ class Cmd(cmd.Cmd):
             "An alias is a command that enables replacement of a word by another string.",
         )
         alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description)
+        alias_parser.epilog = alias_parser.create_text_group(
+            "See Also",
+            "macro",
+        )
         alias_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
 
         return alias_parser
@@ -3273,7 +3400,7 @@ class Cmd(cmd.Cmd):
         alias_create_parser.add_argument(
             'command',
             help='what the alias resolves to',
-            choices_provider=cls._get_commands_and_aliases_for_completion,
+            choices_provider=cls._get_commands_aliases_and_macros_for_completion,
         )
         alias_create_parser.add_argument(
             'command_args',
@@ -3297,6 +3424,10 @@ class Cmd(cmd.Cmd):
 
         if args.name in self.get_all_commands():
             self.perror("Alias cannot have the same name as a command")
+            return
+
+        if args.name in self.macros:
+            self.perror("Alias cannot have the same name as a macro")
             return
 
         # Unquote redirection and terminator tokens
@@ -3406,6 +3537,264 @@ class Cmd(cmd.Cmd):
 
         for name in not_found:
             self.perror(f"Alias '{name}' not found")
+
+    #############################################################
+    # Parsers and functions for macro command and subcommands
+    #############################################################
+
+    # Top-level parser for macro
+    @staticmethod
+    def _build_macro_parser() -> Cmd2ArgumentParser:
+        macro_description = Group(
+            "Manage macros.",
+            "\n",
+            "A macro is similar to an alias, but it can contain argument placeholders.",
+        )
+        macro_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_description)
+        macro_parser.epilog = macro_parser.create_text_group(
+            "See Also",
+            "alias",
+        )
+        macro_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
+
+        return macro_parser
+
+    # Preserve quotes since we are passing strings to other commands
+    @with_argparser(_build_macro_parser, preserve_quotes=True)
+    def do_macro(self, args: argparse.Namespace) -> None:
+        """Manage macros."""
+        # Call handler for whatever subcommand was selected
+        handler = args.cmd2_handler.get()
+        handler(args)
+
+    # macro -> create
+    @classmethod
+    def _build_macro_create_parser(cls) -> Cmd2ArgumentParser:
+        macro_create_description = Group(
+            "Create or overwrite a macro.",
+            "\n",
+            "A macro is similar to an alias, but it can contain argument placeholders.",
+            "\n",
+            "Arguments are expressed when creating a macro using {#} notation where {1} means the first argument.",
+            "\n",
+            "The following creates a macro called my_macro that expects two arguments:",
+            "\n",
+            "  macro create my_macro make_dinner --meat {1} --veggie {2}",
+            "\n",
+            "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
+            "\n",
+            "  my_macro beef broccoli ---> make_dinner --meat beef --veggie broccoli",
+        )
+        macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
+
+        # Create Notes TextGroup
+        macro_create_notes = Group(
+            "To use the literal string {1} in your command, escape it this way: {{1}}.",
+            "\n",
+            "Extra arguments passed to a macro are appended to resolved command.",
+            "\n",
+            (
+                "An argument number can be repeated in a macro. In the following example the "
+                "first argument will populate both {1} instances."
+            ),
+            "\n",
+            "  macro create ft file_taxes -p {1} -q {2} -r {1}",
+            "\n",
+            "To quote an argument in the resolved command, quote it during creation.",
+            "\n",
+            "  macro create backup !cp \"{1}\" \"{1}.orig\"",
+            "\n",
+            "If you want to use redirection, pipes, or terminators in the value of the macro, then quote them.",
+            "\n",
+            "  macro create show_results print_results -type {1} \"|\" less",
+            "\n",
+            (
+                "Because macros do not resolve until after hitting Enter, tab completion "
+                "will only complete paths while typing a macro."
+            ),
+        )
+        macro_create_parser.epilog = macro_create_parser.create_text_group("Notes", macro_create_notes)
+
+        # Add arguments
+        macro_create_parser.add_argument('name', help='name of this macro')
+        macro_create_parser.add_argument(
+            'command',
+            help='what the macro resolves to',
+            choices_provider=cls._get_commands_aliases_and_macros_for_completion,
+        )
+        macro_create_parser.add_argument(
+            'command_args',
+            nargs=argparse.REMAINDER,
+            help='arguments to pass to command',
+            completer=cls.path_complete,
+        )
+
+        return macro_create_parser
+
+    @as_subcommand_to('macro', 'create', _build_macro_create_parser, help="create or overwrite a macro")
+    def _macro_create(self, args: argparse.Namespace) -> None:
+        """Create or overwrite a macro."""
+        self.last_result = False
+
+        # Validate the macro name
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
+        if not valid:
+            self.perror(f"Invalid macro name: {errmsg}")
+            return
+
+        if args.name in self.get_all_commands():
+            self.perror("Macro cannot have the same name as a command")
+            return
+
+        if args.name in self.aliases:
+            self.perror("Macro cannot have the same name as an alias")
+            return
+
+        # Unquote redirection and terminator tokens
+        tokens_to_unquote = constants.REDIRECTION_TOKENS
+        tokens_to_unquote.extend(self.statement_parser.terminators)
+        utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
+
+        # Build the macro value string
+        value = args.command
+        if args.command_args:
+            value += ' ' + ' '.join(args.command_args)
+
+        # Find all normal arguments
+        arg_list = []
+        normal_matches = re.finditer(MacroArg.macro_normal_arg_pattern, value)
+        max_arg_num = 0
+        arg_nums = set()
+
+        try:
+            while True:
+                cur_match = normal_matches.__next__()
+
+                # Get the number string between the braces
+                cur_num_str = re.findall(MacroArg.digit_pattern, cur_match.group())[0]
+                cur_num = int(cur_num_str)
+                if cur_num < 1:
+                    self.perror("Argument numbers must be greater than 0")
+                    return
+
+                arg_nums.add(cur_num)
+                max_arg_num = max(max_arg_num, cur_num)
+
+                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=False))
+        except StopIteration:
+            pass
+
+        # Make sure the argument numbers are continuous
+        if len(arg_nums) != max_arg_num:
+            self.perror(f"Not all numbers between 1 and {max_arg_num} are present in the argument placeholders")
+            return
+
+        # Find all escaped arguments
+        escaped_matches = re.finditer(MacroArg.macro_escaped_arg_pattern, value)
+
+        try:
+            while True:
+                cur_match = escaped_matches.__next__()
+
+                # Get the number string between the braces
+                cur_num_str = re.findall(MacroArg.digit_pattern, cur_match.group())[0]
+
+                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=True))
+        except StopIteration:
+            pass
+
+        # Set the macro
+        result = "overwritten" if args.name in self.macros else "created"
+        self.poutput(f"Macro '{args.name}' {result}")
+
+        self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
+        self.last_result = True
+
+    # macro -> delete
+    @classmethod
+    def _build_macro_delete_parser(cls) -> Cmd2ArgumentParser:
+        macro_delete_description = "Delete specified macros or all macros if --all is used."
+
+        macro_delete_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_delete_description)
+        macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
+        macro_delete_parser.add_argument(
+            'names',
+            nargs=argparse.ZERO_OR_MORE,
+            help='macro(s) to delete',
+            choices_provider=cls._get_macro_completion_items,
+            descriptive_header=cls._macro_completion_table.generate_header(),
+        )
+
+        return macro_delete_parser
+
+    @as_subcommand_to('macro', 'delete', _build_macro_delete_parser, help="delete macros")
+    def _macro_delete(self, args: argparse.Namespace) -> None:
+        """Delete macros."""
+        self.last_result = True
+
+        if args.all:
+            self.macros.clear()
+            self.poutput("All macros deleted")
+        elif not args.names:
+            self.perror("Either --all or macro name(s) must be specified")
+            self.last_result = False
+        else:
+            for cur_name in utils.remove_duplicates(args.names):
+                if cur_name in self.macros:
+                    del self.macros[cur_name]
+                    self.poutput(f"Macro '{cur_name}' deleted")
+                else:
+                    self.perror(f"Macro '{cur_name}' does not exist")
+
+    # macro -> list
+    macro_list_help = "list macros"
+    macro_list_description = (
+        "List specified macros in a reusable form that can be saved to a startup script\n"
+        "to preserve macros across sessions\n"
+        "\n"
+        "Without arguments, all macros will be listed."
+    )
+
+    macro_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
+    macro_list_parser.add_argument(
+        'names',
+        nargs=argparse.ZERO_OR_MORE,
+        help='macro(s) to list',
+        choices_provider=_get_macro_completion_items,
+        descriptive_header=_macro_completion_table.generate_header(),
+    )
+
+    @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
+    def _macro_list(self, args: argparse.Namespace) -> None:
+        """List some or all macros as 'macro create' commands."""
+        self.last_result = {}  # dict[macro_name, macro_value]
+
+        tokens_to_quote = constants.REDIRECTION_TOKENS
+        tokens_to_quote.extend(self.statement_parser.terminators)
+
+        to_list = utils.remove_duplicates(args.names) if args.names else sorted(self.macros, key=self.default_sort_key)
+
+        not_found: list[str] = []
+        for name in to_list:
+            if name not in self.macros:
+                not_found.append(name)
+                continue
+
+            # Quote redirection and terminator tokens for the 'macro create' command
+            tokens = shlex_split(self.macros[name].value)
+            command = tokens[0]
+            command_args = tokens[1:]
+            utils.quote_specific_tokens(command_args, tokens_to_quote)
+
+            val = command
+            if command_args:
+                val += ' ' + ' '.join(command_args)
+
+            self.poutput(f"macro create {name} {val}")
+            self.last_result[name] = val
+
+        for name in not_found:
+            self.perror(f"Macro '{name}' not found")
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         """Completes the command argument of help."""
@@ -4386,7 +4775,7 @@ class Cmd(cmd.Cmd):
             '-x',
             '--expanded',
             action='store_true',
-            help='output fully parsed commands with aliases and shortcuts expanded',
+            help='output fully parsed commands with shortcuts, aliases, and macros expanded',
         )
         history_format_group.add_argument(
             '-v',

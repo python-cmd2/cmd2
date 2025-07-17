@@ -183,7 +183,7 @@ nav:
       - features/redirection.md
       - features/scripting.md
       - features/settings.md
-      - features/shortcuts_aliases.md
+      - features/shortcuts_aliases_macros.md
       - features/startup_commands.md
       - features/table_creation.md
       - features/transcripts.md

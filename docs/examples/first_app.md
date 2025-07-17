@@ -7,7 +7,7 @@ Here's a quick walkthrough of a simple application which demonstrates 8 features
 - [Argument Processing](../features/argument_processing.md)
 - [Generating Output](../features/generating_output.md)
 - [Help](../features/help.md)
-- [Shortcuts](../features/shortcuts_aliases.md#shortcuts)
+- [Shortcuts](../features/shortcuts_aliases_macros.md#shortcuts)
 - [Multiline Commands](../features/multiline_commands.md)
 - [History](../features/history.md)
 
@@ -166,9 +166,10 @@ With those few lines of code, we created a [command](../features/commands.md), u
 ## Shortcuts
 
 `cmd2` has several capabilities to simplify repetitive user input:
-[Shortcuts and Aliases](../features/shortcuts_aliases.md). Let's add a shortcut to our application.
-Shortcuts are character strings that can be used instead of a command name. For example, `cmd2` has
-support for a shortcut `!` which runs the `shell` command. So instead of typing this:
+[Shortcuts, Aliases, and Macros](../features/shortcuts_aliases_macros.md). Let's add a shortcut to
+our application. Shortcuts are character strings that can be used instead of a command name. For
+example, `cmd2` has support for a shortcut `!` which runs the `shell` command. So instead of typing
+this:
 
 ```shell
 (Cmd) shell ls -al

@@ -9,7 +9,7 @@ to be part of the application.
 ### alias
 
 This command manages aliases via subcommands `create`, `delete`, and `list`. See
-[Aliases](shortcuts_aliases.md#aliases) for more information.
+[Aliases](shortcuts_aliases_macros.md#aliases) for more information.
 
 ### edit
 
@@ -37,6 +37,12 @@ history. See [History](history.md) for more information.
 
 This optional opt-in command enters an interactive IPython shell. See
 [IPython (optional)](./embedded_python_shells.md#ipython-optional) for more information.
+
+### macro
+
+This command manages macros via subcommands `create`, `delete`, and `list`. A macro is similar to an
+alias, but it can contain argument placeholders. See [Macros](./shortcuts_aliases_macros.md#macros)
+for more information.
 
 ### py
 
@@ -108,8 +114,8 @@ Execute a command as if at the operating system shell prompt:
 
 ### shortcuts
 
-This command lists available shortcuts. See [Shortcuts](./shortcuts_aliases.md#shortcuts) for more
-information.
+This command lists available shortcuts. See [Shortcuts](./shortcuts_aliases_macros.md#shortcuts) for
+more information.
 
 ## Remove Builtin Commands
 

@@ -2,7 +2,6 @@
 
 - Breaking Changes
 
-    - Removed macros
     - No longer setting parser's `prog` value in `with_argparser()` since it gets set in
       `Cmd._build_parser()`. This code had previously been restored to support backward
       compatibility in `cmd2` 2.0 family.

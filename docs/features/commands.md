@@ -61,7 +61,7 @@ backwards compatibility.
 - quoted arguments
 - output redirection and piping
 - multi-line commands
-- shortcut and alias expansion
+- shortcut, alias, and macro expansion
 
 In addition to parsing all of these elements from the user input, `cmd2` also has code to make all
 of these items work; it's almost transparent to you and to the commands you write in your own
