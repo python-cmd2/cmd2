@@ -2062,7 +2062,7 @@ class Cmd(cmd.Cmd):
         if custom_settings is None:
             # Check if a macro was entered
             if command in self.macros:
-                completer_func = self.path_complete
+                completer_func = self.macro_arg_complete
 
             # Check if a command was entered
             elif command in self.get_all_commands():
@@ -3542,6 +3542,27 @@ class Cmd(cmd.Cmd):
     # Parsers and functions for macro command and subcommands
     #############################################################
 
+    def macro_arg_complete(
+        self,
+        text: str,
+        line: str,
+        begidx: int,
+        endidx: int,
+    ) -> list[str]:
+        """Tab completes arguments to a macro.
+
+        Its default behavior is to call path_complete, but you can override this as needed.
+
+        The args required by this function are defined in the header of Python's cmd.py.
+
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :return: a list of possible tab completions
+        """
+        return self.path_complete(text, line, begidx, endidx)
+
     # Top-level parser for macro
     @staticmethod
     def _build_macro_parser() -> Cmd2ArgumentParser:
@@ -3579,11 +3600,11 @@ class Cmd(cmd.Cmd):
             "\n",
             "The following creates a macro called my_macro that expects two arguments:",
             "\n",
-            "  macro create my_macro make_dinner --meat {1} --veggie {2}",
+            "    macro create my_macro make_dinner --meat {1} --veggie {2}",
             "\n",
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
             "\n",
-            "  my_macro beef broccoli ---> make_dinner --meat beef --veggie broccoli",
+            "    my_macro beef broccoli ---> make_dinner --meat beef --veggie broccoli",
         )
         macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
 
@@ -3598,19 +3619,19 @@ class Cmd(cmd.Cmd):
                 "first argument will populate both {1} instances."
             ),
             "\n",
-            "  macro create ft file_taxes -p {1} -q {2} -r {1}",
+            "    macro create ft file_taxes -p {1} -q {2} -r {1}",
             "\n",
             "To quote an argument in the resolved command, quote it during creation.",
             "\n",
-            "  macro create backup !cp \"{1}\" \"{1}.orig\"",
+            "    macro create backup !cp \"{1}\" \"{1}.orig\"",
             "\n",
             "If you want to use redirection, pipes, or terminators in the value of the macro, then quote them.",
             "\n",
-            "  macro create show_results print_results -type {1} \"|\" less",
+            "    macro create show_results print_results -type {1} \"|\" less",
             "\n",
             (
-                "Because macros do not resolve until after hitting Enter, tab completion "
-                "will only complete paths while typing a macro."
+                "Since macros don't resolve until after you press Enter, their arguments tab complete as paths. "
+                "This default behavior changes if custom tab completion for macro arguments has been implemented."
             ),
         )
         macro_create_parser.epilog = macro_create_parser.create_text_group("Notes", macro_create_notes)

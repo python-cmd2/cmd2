@@ -78,8 +78,11 @@ Similar to aliases, pipes and redirectors need to be quoted in the definition of
 
     macro create lc !cat "{1}" "|" less
 
-To use the literal string `{1}` in your command, escape it this way: `{{1}}`. Because macros do not
-resolve until after hitting `<Enter>`, tab completion will only complete paths while typing a macro.
+To use the literal string `{1}` in your command, escape it this way: `{{1}}`.
+
+Since macros don't resolve until after you press `<Enter>`, their arguments tab complete as paths.
+You can change this default behavior by overriding `Cmd.macro_arg_complete()` to implement custom
+tab completion for macro arguments.
 
 For more details run: `help macro create`
 
