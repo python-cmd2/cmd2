@@ -784,9 +784,7 @@ class Cmd(cmd.Cmd):
         else:
             raise TypeError(f"Invalid type for parser_builder: {type(parser_builder)}")
 
-        from .decorators import _set_parser_prog
-
-        _set_parser_prog(parser, prog)
+        argparse_custom.set_parser_prog(parser, prog)
 
         return parser
 

@@ -290,7 +290,7 @@ class SubcommandApp(cmd2.Cmd):
     parser_bar.set_defaults(func=base_bar)
 
     # create the parser for the "helpless" subcommand
-    # This subcommand has aliases and no help text. It exists to prevent changes to _set_parser_prog() which
+    # This subcommand has aliases and no help text. It exists to prevent changes to set_parser_prog() which
     # use an approach which relies on action._choices_actions list. See comment in that function for more
     # details.
     parser_helpless = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
@@ -401,7 +401,7 @@ def test_subcommand_invalid_help(subcommand_app) -> None:
 
 
 def test_add_another_subcommand(subcommand_app) -> None:
-    """This tests makes sure _set_parser_prog() sets _prog_prefix on every _SubParsersAction so that all future calls
+    """This tests makes sure set_parser_prog() sets _prog_prefix on every _SubParsersAction so that all future calls
     to add_parser() write the correct prog value to the parser being added.
     """
     base_parser = subcommand_app._command_parsers.get(subcommand_app.do_base)
