@@ -42,6 +42,7 @@ DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     "cmd2.warning": Style(color="bright_yellow"),
     "cmd2.error": Style(color="bright_red"),
     "cmd2.help_header": Style(color="bright_green", bold=True),
+    "cmd2.example": Style(color="cyan", bold=True),
 }
 
 # Include default styles from RichHelpFormatter
