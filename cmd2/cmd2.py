@@ -69,6 +69,7 @@ from typing import (
 )
 
 from rich.console import Group
+from rich.text import Text
 
 from . import (
     ansi,
@@ -3369,37 +3370,23 @@ class Cmd(cmd.Cmd):
         alias_create_description = "Create or overwrite an alias."
         alias_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_create_description)
 
-        # Create Notes TextGroup
+        # Add Notes epilog
         alias_create_notes = Group(
             "If you want to use redirection, pipes, or terminators in the value of the alias, then quote them.",
             "\n",
+            Text("    alias create save_results print_results \">\" out.txt\n", style="cmd2.example"),
             (
                 "Since aliases are resolved during parsing, tab completion will function as it would "
                 "for the actual command the alias resolves to."
             ),
         )
-        notes_group = alias_create_parser.create_text_group("Notes", alias_create_notes)
-
-        # Create Examples TextGroup
-        alias_create_examples = Group(
-            "alias create ls !ls -lF",
-            "alias create show_log !cat \"log file.txt\"",
-            "alias create save_results print_results \">\" out.txt",
-        )
-        examples_group = alias_create_parser.create_text_group("Examples", alias_create_examples)
-
-        # Display both Notes and Examples in the epilog
-        alias_create_parser.epilog = Group(
-            notes_group,
-            "\n",
-            examples_group,
-        )
+        alias_create_parser.epilog = alias_create_parser.create_text_group("Notes", alias_create_notes)
 
         # Add arguments
         alias_create_parser.add_argument('name', help='name of this alias')
         alias_create_parser.add_argument(
             'command',
-            help='what the alias resolves to',
+            help='command, alias, or macro to run',
             choices_provider=cls._get_commands_aliases_and_macros_for_completion,
         )
         alias_create_parser.add_argument(
@@ -3600,15 +3587,19 @@ class Cmd(cmd.Cmd):
             "\n",
             "The following creates a macro called my_macro that expects two arguments:",
             "\n",
-            "    macro create my_macro make_dinner --meat {1} --veggie {2}",
+            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style="cmd2.example"),
             "\n",
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
             "\n",
-            "    my_macro beef broccoli ---> make_dinner --meat beef --veggie broccoli",
+            Text.assemble(
+                ("    my_macro beef broccoli", "cmd2.example"),
+                (" ───> ", "bold"),
+                ("make_dinner --meat beef --veggie broccoli", "cmd2.example"),
+            ),
         )
         macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
 
-        # Create Notes TextGroup
+        # Add Notes epilog
         macro_create_notes = Group(
             "To use the literal string {1} in your command, escape it this way: {{1}}.",
             "\n",
@@ -3619,15 +3610,15 @@ class Cmd(cmd.Cmd):
                 "first argument will populate both {1} instances."
             ),
             "\n",
-            "    macro create ft file_taxes -p {1} -q {2} -r {1}",
+            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style="cmd2.example"),
             "\n",
             "To quote an argument in the resolved command, quote it during creation.",
             "\n",
-            "    macro create backup !cp \"{1}\" \"{1}.orig\"",
+            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style="cmd2.example"),
             "\n",
             "If you want to use redirection, pipes, or terminators in the value of the macro, then quote them.",
             "\n",
-            "    macro create show_results print_results -type {1} \"|\" less",
+            Text("    macro create show_results print_results -type {1} \"|\" less", style="cmd2.example"),
             "\n",
             (
                 "Since macros don't resolve until after you press Enter, their arguments tab complete as paths. "
@@ -3640,7 +3631,7 @@ class Cmd(cmd.Cmd):
         macro_create_parser.add_argument('name', help='name of this macro')
         macro_create_parser.add_argument(
             'command',
-            help='what the macro resolves to',
+            help='command, alias, or macro to run',
             choices_provider=cls._get_commands_aliases_and_macros_for_completion,
         )
         macro_create_parser.add_argument(
@@ -5147,13 +5138,14 @@ class Cmd(cmd.Cmd):
 
     @classmethod
     def _build_edit_parser(cls) -> Cmd2ArgumentParser:
-        from rich.markdown import Markdown
-
         edit_description = "Run a text editor and optionally open a file with it."
         edit_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=edit_description)
         edit_parser.epilog = edit_parser.create_text_group(
             "Note",
-            Markdown("To set a new editor, run: `set editor <program>`"),
+            Text.assemble(
+                "To set a new editor, run: ",
+                ("set editor <program>", "cmd2.example"),
+            ),
         )
 
         edit_parser.add_argument(
