@@ -6,6 +6,14 @@
       `Cmd._build_parser()`. This code had previously been restored to support backward
       compatibility in `cmd2` 2.0 family.
 
+    - In an effort be consistent with the purpose of `self.stdout` and our own documentation, the
+      following changes were made.
+        - No longer redirecting `sys.stdout`.
+        - No longer capturing pyscript output written to `sys.stdout`.
+            - To assist with this change, calling `print()` within a pyscript now writes to
+              `self.stdout`. Calling `self.poutput()` within a pyscript is still preferred, but that
+              may not always be possible.
+
 - Enhancements
 
     - Simplified the process to set a custom parser for `cmd2's` built-in commands. See

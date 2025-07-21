@@ -2856,7 +2856,7 @@ class Cmd(cmd.Cmd):
 
         # Initialize the redirection saved state
         redir_saved_state = utils.RedirectionSavedState(
-            cast(TextIO, self.stdout), sys.stdout, self._cur_pipe_proc_reader, self._redirecting
+            cast(TextIO, self.stdout), self._cur_pipe_proc_reader, self._redirecting
         )
 
         # The ProcReader for this command
@@ -2912,7 +2912,7 @@ class Cmd(cmd.Cmd):
                 raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
             redir_saved_state.redirecting = True  # type: ignore[unreachable]
             cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
-            sys.stdout = self.stdout = new_stdout
+            self.stdout = new_stdout
 
         elif statement.output:
             if statement.output_to:
@@ -2926,7 +2926,7 @@ class Cmd(cmd.Cmd):
                     raise RedirectionError('Failed to redirect output') from ex
 
                 redir_saved_state.redirecting = True
-                sys.stdout = self.stdout = new_stdout
+                self.stdout = new_stdout
 
             else:
                 # Redirecting to a paste buffer
@@ -2944,7 +2944,7 @@ class Cmd(cmd.Cmd):
                 # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
                 redir_saved_state.redirecting = True
-                sys.stdout = self.stdout = new_stdout
+                self.stdout = new_stdout
 
                 if statement.output == constants.REDIRECTION_APPEND:
                     self.stdout.write(current_paste_buffer)
@@ -2972,9 +2972,8 @@ class Cmd(cmd.Cmd):
                 # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
 
-            # Restore the stdout values
+            # Restore self.stdout
             self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
-            sys.stdout = cast(TextIO, saved_redir_state.saved_sys_stdout)
 
             # Check if we need to wait for the process being piped to
             if self._cur_pipe_proc_reader is not None:
@@ -4449,12 +4448,6 @@ class Cmd(cmd.Cmd):
         # Set up sys module for the Python console
         self._reset_py_display()
 
-        cmd2_env.sys_stdout = sys.stdout
-        sys.stdout = self.stdout  # type: ignore[assignment]
-
-        cmd2_env.sys_stdin = sys.stdin
-        sys.stdin = self.stdin  # type: ignore[assignment]
-
         return cmd2_env
 
     def _restore_cmd2_env(self, cmd2_env: _SavedCmd2Env) -> None:
@@ -4462,9 +4455,6 @@ class Cmd(cmd.Cmd):
 
         :param cmd2_env: the environment settings to restore
         """
-        sys.stdout = cmd2_env.sys_stdout  # type: ignore[assignment]
-        sys.stdin = cmd2_env.sys_stdin  # type: ignore[assignment]
-
         # Set up readline for cmd2
         if rl_type != RlType.NONE:
             # Save py's history
@@ -4538,6 +4528,11 @@ class Cmd(cmd.Cmd):
 
             if self.self_in_py:
                 local_vars['self'] = self
+
+            # Since poutput() may not be available in a pyscript, like in the case when self_in_py is False,
+            # provide a version of print() which writes to self.stdout. This way, print's output can be
+            # captured and redirected.
+            local_vars['print'] = functools.partial(print, file=self.stdout)
 
             # Handle case where we were called by do_run_pyscript()
             if pyscript is not None:

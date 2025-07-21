@@ -4,10 +4,7 @@ Maintains a reasonable degree of isolation between the two.
 """
 
 import sys
-from contextlib import (
-    redirect_stderr,
-    redirect_stdout,
-)
+from contextlib import redirect_stderr
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -19,9 +16,7 @@ from typing import (
     cast,
 )
 
-from .utils import (  # namedtuple_with_defaults,
-    StdSim,
-)
+from .utils import StdSim
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2
@@ -113,7 +108,7 @@ class PyBridge:
         if echo is None:
             echo = self.cmd_echo
 
-        # This will be used to capture _cmd2_app.stdout and sys.stdout
+        # This will be used to capture _cmd2_app.stdout
         copy_cmd_stdout = StdSim(cast(Union[TextIO, StdSim], self._cmd2_app.stdout), echo=echo)
 
         # Pause the storing of stdout until onecmd_plus_hooks enables it
@@ -127,7 +122,7 @@ class PyBridge:
         stop = False
         try:
             self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
-            with redirect_stdout(cast(IO[str], copy_cmd_stdout)), redirect_stderr(cast(IO[str], copy_stderr)):
+            with redirect_stderr(cast(IO[str], copy_stderr)):
                 stop = self._cmd2_app.onecmd_plus_hooks(
                     command,
                     add_to_history=self._add_to_history,

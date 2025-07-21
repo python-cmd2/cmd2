@@ -61,7 +61,7 @@ be run by the [edit](./builtin_commands.md#edit) command.
 
 ### feedback_to_output
 
-Controls whether feedback generated with the `cmd2.Cmd.pfeedback` method is sent to `sys.stdout` or
+Controls whether feedback generated with the `cmd2.Cmd.pfeedback` method is sent to `self.stdout` or
 `sys.stderr`. If `False` the output will be sent to `sys.stderr`
 
 If `True` the output is sent to `stdout` (which is often the screen but may be

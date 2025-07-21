@@ -9,6 +9,7 @@ from unittest import (
 import pytest
 
 from cmd2 import (
+    cmd2,
     plugin,
     utils,
 )
@@ -17,14 +18,6 @@ from .conftest import (
     odd_file_names,
     run_cmd,
 )
-
-HOOK_OUTPUT = "TEST_OUTPUT"
-
-
-def cmdfinalization_hook(data: plugin.CommandFinalizationData) -> plugin.CommandFinalizationData:
-    """A cmdfinalization_hook hook which requests application exit"""
-    print(HOOK_OUTPUT)
-    return data
 
 
 def test_run_pyscript(base_app, request) -> None:
@@ -133,11 +126,23 @@ def test_run_pyscript_dir(base_app, request) -> None:
     assert out[0] == "['cmd_echo']"
 
 
-def test_run_pyscript_stdout_capture(base_app, request) -> None:
-    base_app.register_cmdfinalization_hook(cmdfinalization_hook)
+def test_run_pyscript_stdout_capture(request) -> None:
+    class HookApp(cmd2.Cmd):
+        HOOK_OUTPUT = "TEST_OUTPUT"
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.register_cmdfinalization_hook(self.cmdfinalization_hook)
+
+        def cmdfinalization_hook(self, data: plugin.CommandFinalizationData) -> plugin.CommandFinalizationData:
+            """A cmdfinalization_hook prints output."""
+            self.poutput(self.HOOK_OUTPUT)
+            return data
+
+    hook_app = HookApp()
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'stdout_capture.py')
-    out, err = run_cmd(base_app, f'run_pyscript {python_script} {HOOK_OUTPUT}')
+    out, err = run_cmd(hook_app, f'run_pyscript {python_script} {hook_app.HOOK_OUTPUT}')
 
     assert out[0] == "PASSED"
     assert out[1] == "PASSED"
