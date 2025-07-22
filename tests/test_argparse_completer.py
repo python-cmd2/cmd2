@@ -15,10 +15,7 @@ from cmd2 import (
     argparse_custom,
     with_argparser,
 )
-from cmd2.utils import (
-    StdSim,
-    align_right,
-)
+from cmd2.utils import align_right
 
 from .conftest import (
     complete_tester,
@@ -334,9 +331,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
 
 @pytest.fixture
 def ac_app():
-    app = ArgparseCompleterTester()
-    app.stdout = StdSim(app.stdout)
-    return app
+    return ArgparseCompleterTester()
 
 
 @pytest.mark.parametrize('command', ['music', 'music create', 'music create rock', 'music create jazz'])

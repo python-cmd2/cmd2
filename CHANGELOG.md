@@ -15,6 +15,10 @@
     - Added `Cmd.macro_arg_complete()` which tab completes arguments to a macro. Its default
       behavior is to perform path completion, but it can be overridden as needed.
 
+    - Bug Fixes
+        - No longer redirecting `sys.stdout` if it's a different stream than `self.stdout`. This
+          fixes issue where we overwrote an application's `sys.stdout` while redirecting.
+
 ## 2.7.0 (June 30, 2025)
 
 - Enhancements
