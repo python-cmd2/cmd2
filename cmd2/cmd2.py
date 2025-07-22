@@ -13,8 +13,8 @@ Redirection to file or paste buffer (clipboard) with > or >>
 Easy transcript-based testing of applications (see examples/example.py)
 Bash-style ``select`` available
 
-Note that redirection with > and | will only work if `self.poutput()`
-is used in place of `print`.
+Note, if self.stdout is different than sys.stdout, then redirection with > and |
+will only work if `self.poutput()` is used in place of `print`.
 
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
@@ -200,8 +200,6 @@ class _SavedCmd2Env:
         self.readline_settings = _SavedReadlineSettings()
         self.readline_module: Optional[ModuleType] = None
         self.history: list[str] = []
-        self.sys_stdout: Optional[TextIO] = None
-        self.sys_stdin: Optional[TextIO] = None
 
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
@@ -2854,9 +2852,12 @@ class Cmd(cmd.Cmd):
         """
         import subprocess
 
+        # Only redirect sys.stdout if it's the same as self.stdout
+        stdouts_match = self.stdout == sys.stdout
+
         # Initialize the redirection saved state
         redir_saved_state = utils.RedirectionSavedState(
-            cast(TextIO, self.stdout), sys.stdout, self._cur_pipe_proc_reader, self._redirecting
+            cast(TextIO, self.stdout), stdouts_match, self._cur_pipe_proc_reader, self._redirecting
         )
 
         # The ProcReader for this command
@@ -2912,7 +2913,10 @@ class Cmd(cmd.Cmd):
                 raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
             redir_saved_state.redirecting = True  # type: ignore[unreachable]
             cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
-            sys.stdout = self.stdout = new_stdout
+
+            self.stdout = new_stdout
+            if stdouts_match:
+                sys.stdout = self.stdout
 
         elif statement.output:
             if statement.output_to:
@@ -2926,7 +2930,10 @@ class Cmd(cmd.Cmd):
                     raise RedirectionError('Failed to redirect output') from ex
 
                 redir_saved_state.redirecting = True
-                sys.stdout = self.stdout = new_stdout
+
+                self.stdout = new_stdout
+                if stdouts_match:
+                    sys.stdout = self.stdout
 
             else:
                 # Redirecting to a paste buffer
@@ -2944,7 +2951,10 @@ class Cmd(cmd.Cmd):
                 # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
                 redir_saved_state.redirecting = True
-                sys.stdout = self.stdout = new_stdout
+
+                self.stdout = new_stdout
+                if stdouts_match:
+                    sys.stdout = self.stdout
 
                 if statement.output == constants.REDIRECTION_APPEND:
                     self.stdout.write(current_paste_buffer)
@@ -2974,7 +2984,8 @@ class Cmd(cmd.Cmd):
 
             # Restore the stdout values
             self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
-            sys.stdout = cast(TextIO, saved_redir_state.saved_sys_stdout)
+            if saved_redir_state.stdouts_match:
+                sys.stdout = self.stdout
 
             # Check if we need to wait for the process being piped to
             if self._cur_pipe_proc_reader is not None:
@@ -4449,12 +4460,6 @@ class Cmd(cmd.Cmd):
         # Set up sys module for the Python console
         self._reset_py_display()
 
-        cmd2_env.sys_stdout = sys.stdout
-        sys.stdout = self.stdout  # type: ignore[assignment]
-
-        cmd2_env.sys_stdin = sys.stdin
-        sys.stdin = self.stdin  # type: ignore[assignment]
-
         return cmd2_env
 
     def _restore_cmd2_env(self, cmd2_env: _SavedCmd2Env) -> None:
@@ -4462,9 +4467,6 @@ class Cmd(cmd.Cmd):
 
         :param cmd2_env: the environment settings to restore
         """
-        sys.stdout = cmd2_env.sys_stdout  # type: ignore[assignment]
-        sys.stdin = cmd2_env.sys_stdin  # type: ignore[assignment]
-
         # Set up readline for cmd2
         if rl_type != RlType.NONE:
             # Save py's history
