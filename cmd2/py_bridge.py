@@ -110,6 +110,7 @@ class PyBridge:
         if echo is None:
             echo = self.cmd_echo
 
+        # Only capture sys.stdout if it's the same stream as self.stdout
         stdouts_match = self._cmd2_app.stdout == sys.stdout
 
         # This will be used to capture _cmd2_app.stdout and sys.stdout

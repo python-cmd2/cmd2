@@ -8,23 +8,12 @@ from unittest import (
 
 import pytest
 
-from cmd2 import (
-    plugin,
-    utils,
-)
+from cmd2 import utils
 
 from .conftest import (
     odd_file_names,
     run_cmd,
 )
-
-HOOK_OUTPUT = "TEST_OUTPUT"
-
-
-def cmdfinalization_hook(data: plugin.CommandFinalizationData) -> plugin.CommandFinalizationData:
-    """A cmdfinalization_hook hook which requests application exit"""
-    print(HOOK_OUTPUT)
-    return data
 
 
 def test_run_pyscript(base_app, request) -> None:
@@ -133,14 +122,29 @@ def test_run_pyscript_dir(base_app, request) -> None:
     assert out[0] == "['cmd_echo']"
 
 
-def test_run_pyscript_stdout_capture(base_app, request) -> None:
-    base_app.register_cmdfinalization_hook(cmdfinalization_hook)
+def test_run_pyscript_capture(base_app, request) -> None:
+    base_app.self_in_py = True
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'stdout_capture.py')
-    out, err = run_cmd(base_app, f'run_pyscript {python_script} {HOOK_OUTPUT}')
+    out, err = run_cmd(base_app, f'run_pyscript {python_script}')
 
-    assert out[0] == "PASSED"
-    assert out[1] == "PASSED"
+    assert out[0] == "print"
+    assert out[1] == "poutput"
+
+
+def test_run_pyscript_capture_custom_stdout(base_app, request) -> None:
+    """sys.stdout will not be captured if it's different than self.stdout."""
+    import io
+
+    base_app.stdout = io.StringIO()
+
+    base_app.self_in_py = True
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', 'stdout_capture.py')
+    out, err = run_cmd(base_app, f'run_pyscript {python_script}')
+
+    assert "print" not in out
+    assert out[0] == "poutput"
 
 
 def test_run_pyscript_stop(base_app, request) -> None:

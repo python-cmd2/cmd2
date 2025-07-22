@@ -2,10 +2,7 @@
 
 import argparse
 import sys
-from contextlib import (
-    redirect_stderr,
-    redirect_stdout,
-)
+from contextlib import redirect_stderr
 from typing import (
     Optional,
     Union,
@@ -116,8 +113,9 @@ def normalize(block):
 
 def run_cmd(app, cmd):
     """Clear out and err StdSim buffers, run the command, and return out and err"""
-    saved_sysout = sys.stdout
-    sys.stdout = app.stdout
+
+    # Only capture sys.stdout if it's the same stream as self.stdout
+    stdouts_match = app.stdout == sys.stdout
 
     # This will be used to capture app.stdout and sys.stdout
     copy_cmd_stdout = StdSim(app.stdout)
@@ -127,11 +125,14 @@ def run_cmd(app, cmd):
 
     try:
         app.stdout = copy_cmd_stdout
-        with redirect_stdout(copy_cmd_stdout), redirect_stderr(copy_stderr):
+        if stdouts_match:
+            sys.stdout = app.stdout
+        with redirect_stderr(copy_stderr):
             app.onecmd_plus_hooks(cmd)
     finally:
         app.stdout = copy_cmd_stdout.inner_stream
-        sys.stdout = saved_sysout
+        if stdouts_match:
+            sys.stdout = app.stdout
 
     out = copy_cmd_stdout.getvalue()
     err = copy_stderr.getvalue()

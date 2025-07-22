@@ -627,38 +627,85 @@ def test_passthrough_exception_in_command(base_app) -> None:
         base_app.onecmd_plus_hooks('passthrough')
 
 
-def test_output_redirection(base_app) -> None:
+class RedirectionApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    def do_print_output(self, _: str) -> None:
+        """Print output to sys.stdout and self.stdout.."""
+        print("print")
+        self.poutput("poutput")
+
+    def do_print_feedback(self, _: str) -> None:
+        """Call pfeedback."""
+        self.pfeedback("feedback")
+
+
+@pytest.fixture
+def redirection_app():
+    return RedirectionApp()
+
+
+def test_output_redirection(redirection_app) -> None:
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
     os.close(fd)
 
     try:
         # Verify that writing to a file works
-        run_cmd(base_app, f'help > {filename}')
+        run_cmd(redirection_app, f'print_output > {filename}')
         with open(filename) as f:
-            content = f.read()
-        verify_help_text(base_app, content)
+            lines = f.read().splitlines()
+        assert lines[0] == "print"
+        assert lines[1] == "poutput"
 
         # Verify that appending to a file also works
-        run_cmd(base_app, f'help history >> {filename}')
+        run_cmd(redirection_app, f'print_output >> {filename}')
         with open(filename) as f:
-            appended_content = f.read()
-        assert appended_content.startswith(content)
-        assert len(appended_content) > len(content)
+            lines = f.read().splitlines()
+        assert lines[0] == "print"
+        assert lines[1] == "poutput"
+        assert lines[2] == "print"
+        assert lines[3] == "poutput"
     finally:
         os.remove(filename)
 
 
-def test_output_redirection_to_nonexistent_directory(base_app) -> None:
+def test_output_redirection_custom_stdout(redirection_app) -> None:
+    """sys.stdout should not redirect if it's different than self.stdout."""
+    fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
+    os.close(fd)
+
+    redirection_app.stdout = io.StringIO()
+    try:
+        # Verify that we only see output written to self.stdout
+        run_cmd(redirection_app, f'print_output > {filename}')
+        with open(filename) as f:
+            lines = f.read().splitlines()
+        assert "print" not in lines
+        assert lines[0] == "poutput"
+
+        # Verify that appending to a file also works
+        run_cmd(redirection_app, f'print_output >> {filename}')
+        with open(filename) as f:
+            lines = f.read().splitlines()
+        assert "print" not in lines
+        assert lines[0] == "poutput"
+        assert lines[1] == "poutput"
+    finally:
+        os.remove(filename)
+
+
+def test_output_redirection_to_nonexistent_directory(redirection_app) -> None:
     filename = '~/fakedir/this_does_not_exist.txt'
 
-    out, err = run_cmd(base_app, f'help > {filename}')
+    out, err = run_cmd(redirection_app, f'print_output > {filename}')
     assert 'Failed to redirect' in err[0]
 
-    out, err = run_cmd(base_app, f'help >> {filename}')
+    out, err = run_cmd(redirection_app, f'print_output >> {filename}')
     assert 'Failed to redirect' in err[0]
 
 
-def test_output_redirection_to_too_long_filename(base_app) -> None:
+def test_output_redirection_to_too_long_filename(redirection_app) -> None:
     filename = (
         '~/sdkfhksdjfhkjdshfkjsdhfkjsdhfkjdshfkjdshfkjshdfkhdsfkjhewfuihewiufhweiufhiweufhiuewhiuewhfiuwehfia'
         'ewhfiuewhfiuewhfiuewhiuewhfiuewhfiuewfhiuwehewiufhewiuhfiweuhfiuwehfiuewfhiuwehiuewfhiuewhiewuhfiueh'
@@ -667,93 +714,86 @@ def test_output_redirection_to_too_long_filename(base_app) -> None:
         'whfieuwfhieufhiuewhfeiuwfhiuefhueiwhfw'
     )
 
-    out, err = run_cmd(base_app, f'help > {filename}')
+    out, err = run_cmd(redirection_app, f'print_output > {filename}')
     assert 'Failed to redirect' in err[0]
 
-    out, err = run_cmd(base_app, f'help >> {filename}')
+    out, err = run_cmd(redirection_app, f'print_output >> {filename}')
     assert 'Failed to redirect' in err[0]
 
 
-def test_feedback_to_output_true(base_app) -> None:
-    base_app.feedback_to_output = True
-    base_app.timing = True
+def test_feedback_to_output_true(redirection_app) -> None:
+    redirection_app.feedback_to_output = True
     f, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
     os.close(f)
 
     try:
-        run_cmd(base_app, f'help > {filename}')
+        run_cmd(redirection_app, f'print_feedback > {filename}')
         with open(filename) as f:
-            content = f.readlines()
-        assert content[-1].startswith('Elapsed: ')
+            content = f.read().splitlines()
+        assert "feedback" in content
     finally:
         os.remove(filename)
 
 
-def test_feedback_to_output_false(base_app) -> None:
-    base_app.feedback_to_output = False
-    base_app.timing = True
+def test_feedback_to_output_false(redirection_app) -> None:
+    redirection_app.feedback_to_output = False
     f, filename = tempfile.mkstemp(prefix='feedback_to_output', suffix='.txt')
     os.close(f)
 
     try:
-        out, err = run_cmd(base_app, f'help > {filename}')
+        out, err = run_cmd(redirection_app, f'print_feedback > {filename}')
 
         with open(filename) as f:
-            content = f.readlines()
-        assert not content[-1].startswith('Elapsed: ')
-        assert err[0].startswith('Elapsed')
+            content = f.read().splitlines()
+        assert not content
+        assert "feedback" in err
     finally:
         os.remove(filename)
 
 
-def test_disallow_redirection(base_app) -> None:
+def test_disallow_redirection(redirection_app) -> None:
     # Set allow_redirection to False
-    base_app.allow_redirection = False
+    redirection_app.allow_redirection = False
 
     filename = 'test_allow_redirect.txt'
 
     # Verify output wasn't redirected
-    out, err = run_cmd(base_app, f'help > {filename}')
-    verify_help_text(base_app, out)
+    out, err = run_cmd(redirection_app, f'print_output > {filename}')
+    assert "print" in out
+    assert "poutput" in out
 
     # Verify that no file got created
     assert not os.path.exists(filename)
 
 
-def test_pipe_to_shell(base_app) -> None:
-    if sys.platform == "win32":
-        # Windows
-        command = 'help | sort'
-    else:
-        # Mac and Linux
-        # Get help on help and pipe it's output to the input of the word count shell command
-        command = 'help help | wc'
-
-    out, err = run_cmd(base_app, command)
-    assert out
+def test_pipe_to_shell(redirection_app) -> None:
+    out, err = run_cmd(redirection_app, "print_output | sort")
+    assert "print" in out
+    assert "poutput" in out
     assert not err
 
 
-def test_pipe_to_shell_and_redirect(base_app) -> None:
-    filename = 'out.txt'
-    if sys.platform == "win32":
-        # Windows
-        command = f'help | sort > {filename}'
-    else:
-        # Mac and Linux
-        # Get help on help and pipe it's output to the input of the word count shell command
-        command = f'help help | wc > {filename}'
+def test_pipe_to_shell_custom_stdout(redirection_app) -> None:
+    """sys.stdout should not redirect if it's different than self.stdout."""
+    redirection_app.stdout = io.StringIO()
+    out, err = run_cmd(redirection_app, "print_output | sort")
+    assert "print" not in out
+    assert "poutput" in out
+    assert not err
 
-    out, err = run_cmd(base_app, command)
+
+def test_pipe_to_shell_and_redirect(redirection_app) -> None:
+    filename = 'out.txt'
+    out, err = run_cmd(redirection_app, f"print_output | sort > {filename}")
     assert not out
     assert not err
     assert os.path.exists(filename)
     os.remove(filename)
 
 
-def test_pipe_to_shell_error(base_app) -> None:
+def test_pipe_to_shell_error(redirection_app) -> None:
     # Try to pipe command output to a shell command that doesn't exist in order to produce an error
-    out, err = run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
+    out, err = run_cmd(redirection_app, 'print_output | foobarbaz.this_does_not_exist')
     assert not out
     assert "Pipe process exited with code" in err[0]
 
@@ -773,26 +813,48 @@ else:
 
 
 @pytest.mark.skipif(not can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
-def test_send_to_paste_buffer(base_app) -> None:
+def test_send_to_paste_buffer(redirection_app) -> None:
     # Test writing to the PasteBuffer/Clipboard
-    run_cmd(base_app, 'help >')
-    paste_contents = cmd2.cmd2.get_paste_buffer()
-    verify_help_text(base_app, paste_contents)
+    run_cmd(redirection_app, 'print_output >')
+    lines = cmd2.cmd2.get_paste_buffer().splitlines()
+    assert lines[0] == "print"
+    assert lines[1] == "poutput"
 
     # Test appending to the PasteBuffer/Clipboard
-    run_cmd(base_app, 'help history >>')
-    appended_contents = cmd2.cmd2.get_paste_buffer()
-    assert appended_contents.startswith(paste_contents)
-    assert len(appended_contents) > len(paste_contents)
+    run_cmd(redirection_app, 'print_output >>')
+    lines = cmd2.cmd2.get_paste_buffer().splitlines()
+    assert lines[0] == "print"
+    assert lines[1] == "poutput"
+    assert lines[2] == "print"
+    assert lines[3] == "poutput"
 
 
-def test_get_paste_buffer_exception(base_app, mocker, capsys) -> None:
+@pytest.mark.skipif(not can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
+def test_send_to_paste_buffer_custom_stdout(redirection_app) -> None:
+    """sys.stdout should not redirect if it's different than self.stdout."""
+    redirection_app.stdout = io.StringIO()
+
+    # Verify that we only see output written to self.stdout
+    run_cmd(redirection_app, 'print_output >')
+    lines = cmd2.cmd2.get_paste_buffer().splitlines()
+    assert "print" not in lines
+    assert lines[0] == "poutput"
+
+    # Test appending to the PasteBuffer/Clipboard
+    run_cmd(redirection_app, 'print_output >>')
+    lines = cmd2.cmd2.get_paste_buffer().splitlines()
+    assert "print" not in lines
+    assert lines[0] == "poutput"
+    assert lines[1] == "poutput"
+
+
+def test_get_paste_buffer_exception(redirection_app, mocker, capsys) -> None:
     # Force get_paste_buffer to throw an exception
     pastemock = mocker.patch('pyperclip.paste')
     pastemock.side_effect = ValueError('foo')
 
     # Redirect command output to the clipboard
-    base_app.onecmd_plus_hooks('help > ')
+    redirection_app.onecmd_plus_hooks('print_output > ')
 
     # Make sure we got the exception output
     out, err = capsys.readouterr()
@@ -802,8 +864,8 @@ def test_get_paste_buffer_exception(base_app, mocker, capsys) -> None:
     assert 'foo' in err
 
 
-def test_allow_clipboard_initializer(base_app) -> None:
-    assert base_app.allow_clipboard is True
+def test_allow_clipboard_initializer(redirection_app) -> None:
+    assert redirection_app.allow_clipboard is True
     noclipcmd = cmd2.Cmd(allow_clipboard=False)
     assert noclipcmd.allow_clipboard is False
 
