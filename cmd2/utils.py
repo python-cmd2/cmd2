@@ -183,14 +183,12 @@ def is_text_file(file_path: str) -> bool:
     :return: True if the file is a non-empty text file, otherwise False
     :raises OSError: if file can't be read
     """
-    import codecs
-
     expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
     valid_text_file = False
 
     # Only need to check for utf-8 compliance since that covers ASCII, too
     try:
-        with codecs.open(expanded_path, encoding='utf-8', errors='strict') as f:
+        with open(expanded_path, encoding='utf-8', errors='strict') as f:
             # Make sure the file has only utf-8 text and is not empty
             if sum(1 for _ in f) > 0:
                 valid_text_file = True
