@@ -133,7 +133,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
             readline_lib = ctypes.CDLL(readline.__file__)
         except (AttributeError, OSError):  # pragma: no cover
             _rl_warn_reason = (
-                "this application is running in a non-standard Python environment in\n"
+                "this application is running in a non-standard Python environment in "
                 "which GNU readline is not loaded dynamically from a shared library file."
             )
         else:
@@ -144,10 +144,10 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
 if rl_type == RlType.NONE:  # pragma: no cover
     if not _rl_warn_reason:
         _rl_warn_reason = (
-            "no supported version of readline was found. To resolve this, install\n"
+            "no supported version of readline was found. To resolve this, install "
             "pyreadline3 on Windows or gnureadline on Linux/Mac."
         )
-    rl_warning = "Readline features including tab completion have been disabled because\n" + _rl_warn_reason + '\n\n'
+    rl_warning = f"Readline features including tab completion have been disabled because {_rl_warn_reason}\n\n"
 else:
     rl_warning = ''
 
