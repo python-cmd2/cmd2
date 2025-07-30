@@ -1,5 +1,5 @@
 # Run this transcript with "python example.py -t transcript_regex.txt"
-# The regex for colors shows all possible settings for colors
+# The regex for allow_style will match any setting for the previous value.
 # The regex for editor will match whatever program you use.
 # Regexes on prompts just make the trailing space obvious
 
@@ -10,19 +10,19 @@ now: 'Terminal'
 editor - was: '/.*/'
 now: 'vim'
 (Cmd) set
-Name                    Value                           Description/ +/
+Name                    Value                           Description/ */
 ====================================================================================================================
-allow_style             Terminal                        Allow ANSI text style sequences in output (valid values:/ +/
-                                                        Always, Never, Terminal)/ +/
+allow_style             Terminal                        Allow ANSI text style sequences in output (valid values:/ */
+                                                        Always, Never, Terminal)/ */
 always_show_hint        False                           Display tab completion hint even when completion suggestions
-                                                        print/ +/
-debug                   False                           Show full traceback on exception/ +/
-echo                    False                           Echo command issued into output/ +/
-editor                  vim                             Program used by 'edit'/ +/
-feedback_to_output      False                           Include nonessentials in '|', '>' results/ +/
-max_completion_items    50                              Maximum number of CompletionItems to display during tab/ +/
-                                                        completion/ +/
-maxrepeats              3                               Max number of `--repeat`s allowed/ +/
-quiet                   False                           Don't print nonessential feedback/ +/
-scripts_add_to_history  True                            Scripts and pyscripts add commands to history/ +/
-timing                  False                           Report execution times/ +/
+                                                        print/ */
+debug                   False                           Show full traceback on exception/ */
+echo                    False                           Echo command issued into output/ */
+editor                  vim                             Program used by 'edit'/ */
+feedback_to_output      False                           Include nonessentials in '|', '>' results/ */
+max_completion_items    50                              Maximum number of CompletionItems to display during tab/ */
+                                                        completion/ */
+maxrepeats              3                               Max number of `--repeat`s allowed/ */
+quiet                   False                           Don't print nonessential feedback/ */
+scripts_add_to_history  True                            Scripts and pyscripts add commands to history/ */
+timing                  False                           Report execution times/ */

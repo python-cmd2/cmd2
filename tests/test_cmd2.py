@@ -15,6 +15,7 @@ from unittest import (
 )
 
 import pytest
+from rich.text import Text
 
 import cmd2
 from cmd2 import (
@@ -933,7 +934,7 @@ now: True
 
     # Verify that we now see the exception traceback
     out, err = run_cmd(base_app, 'edit')
-    assert err[0].startswith('Traceback (most recent call last):')
+    assert 'Traceback (most recent call last)' in err[0]
 
 
 def test_debug_not_settable(base_app) -> None:
@@ -2026,43 +2027,34 @@ def test_poutput_none(outsim_app) -> None:
     assert out == expected
 
 
-def test_ppretty_dict(outsim_app) -> None:
-    data = {
-        "name": "John Doe",
-        "age": 30,
-        "address": {"street": "123 Main St", "city": "Anytown", "state": "CA"},
-        "hobbies": ["reading", "hiking", "coding"],
-    }
-    outsim_app.ppretty(data)
-    out = outsim_app.stdout.getvalue()
-    expected = """
-{ 'address': {'city': 'Anytown', 'state': 'CA', 'street': '123 Main St'},
-  'age': 30,
-  'hobbies': ['reading', 'hiking', 'coding'],
-  'name': 'John Doe'}
-"""
-    assert out == expected.lstrip()
-
-
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_poutput_ansi_always(outsim_app) -> None:
     msg = 'Hello World'
-    colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
+    colored_msg = Text(msg, style="cyan")
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
-    expected = colored_msg + '\n'
-    assert colored_msg != msg
-    assert out == expected
+    assert out == "\x1b[36mHello World\x1b[0m\n"
 
 
 @with_ansi_style(rich_utils.AllowStyle.NEVER)
 def test_poutput_ansi_never(outsim_app) -> None:
     msg = 'Hello World'
-    colored_msg = ansi.style(msg, fg=ansi.Fg.CYAN)
+    colored_msg = Text(msg, style="cyan")
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
-    assert colored_msg != msg
+    assert out == expected
+
+
+@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
+def test_poutput_ansi_terminal(outsim_app) -> None:
+    """Test that AllowStyle.TERMINAL strips style when redirecting."""
+    msg = 'testing...'
+    colored_msg = Text(msg, style="cyan")
+    outsim_app._redirecting = True
+    outsim_app.poutput(colored_msg)
+    out = outsim_app.stdout.getvalue()
+    expected = msg + '\n'
     assert out == expected
 
 
@@ -2485,17 +2477,16 @@ def test_nonexistent_macro(base_app) -> None:
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_perror_style(base_app, capsys) -> None:
     msg = 'testing...'
-    end = '\n'
     base_app.perror(msg)
     out, err = capsys.readouterr()
-    assert err == ansi.style_error(msg) + end
+    assert err == "\x1b[91mtesting...\x1b[0m\x1b[91m\n\x1b[0m"
 
 
 @with_ansi_style(rich_utils.AllowStyle.ALWAYS)
 def test_perror_no_style(base_app, capsys) -> None:
     msg = 'testing...'
     end = '\n'
-    base_app.perror(msg, apply_style=False)
+    base_app.perror(msg, style=None)
     out, err = capsys.readouterr()
     assert err == msg + end
 
@@ -2506,14 +2497,14 @@ def test_pexcept_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith(ansi.style_error("EXCEPTION of type 'Exception' occurred with message: testing..."))
+    assert err.startswith("\x1b[91mEXCEPTION of type 'Exception' occurred with message: testing")
 
 
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
+@with_ansi_style(rich_utils.AllowStyle.NEVER)
 def test_pexcept_no_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
-    base_app.pexcept(msg, apply_style=False)
+    base_app.pexcept(msg)
     out, err = capsys.readouterr()
     assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
 
@@ -2525,36 +2516,16 @@ def test_pexcept_not_exception(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith(ansi.style_error(msg))
+    assert err.startswith("\x1b[91mEXCEPTION of type 'bool' occurred with message: False")
 
 
 def test_ppaged(outsim_app) -> None:
+    """ppaged() will just call poutput() since a pager won't run while testing."""
     msg = 'testing...'
     end = '\n'
     outsim_app.ppaged(msg)
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
-
-
-@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
-def test_ppaged_strips_ansi_when_redirecting(outsim_app) -> None:
-    msg = 'testing...'
-    end = '\n'
-    outsim_app._redirecting = True
-    outsim_app.ppaged(ansi.style(msg, fg=ansi.Fg.RED))
-    out = outsim_app.stdout.getvalue()
-    assert out == msg + end
-
-
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
-def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app) -> None:
-    msg = 'testing...'
-    end = '\n'
-    outsim_app._redirecting = True
-    colored_msg = ansi.style(msg, fg=ansi.Fg.RED)
-    outsim_app.ppaged(colored_msg)
-    out = outsim_app.stdout.getvalue()
-    assert out == colored_msg + end
 
 
 # we override cmd.parseline() so we always get consistent
