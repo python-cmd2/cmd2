@@ -156,11 +156,7 @@ class Cmd2Console(Console):
 
     def on_broken_pipe(self) -> None:
         """Override which raises BrokenPipeError instead of SystemExit."""
-        import contextlib
-
-        with contextlib.suppress(SystemExit):
-            super().on_broken_pipe()
-
+        self.quiet = True
         raise BrokenPipeError
 
 

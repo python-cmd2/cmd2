@@ -2058,6 +2058,19 @@ def test_poutput_ansi_terminal(outsim_app) -> None:
     assert out == expected
 
 
+def test_broken_pipe_error(outsim_app, monkeypatch, capsys):
+    write_mock = mock.MagicMock()
+    write_mock.side_effect = BrokenPipeError
+    monkeypatch.setattr("cmd2.utils.StdSim.write", write_mock)
+
+    outsim_app.broken_pipe_warning = "The pipe broke"
+    outsim_app.poutput("My test string")
+
+    out, err = capsys.readouterr()
+    assert not out
+    assert outsim_app.broken_pipe_warning in err
+
+
 # These are invalid names for aliases and macros
 invalid_command_name = [
     '""',  # Blank name
@@ -2519,8 +2532,35 @@ def test_pexcept_not_exception(base_app, capsys) -> None:
     assert err.startswith("\x1b[91mEXCEPTION of type 'bool' occurred with message: False")
 
 
-def test_ppaged(outsim_app) -> None:
-    """ppaged() will just call poutput() since a pager won't run while testing."""
+@pytest.mark.parametrize('chop', [True, False])
+def test_ppaged_with_pager(outsim_app, monkeypatch, chop) -> None:
+    """Force ppaged() to run the pager by mocking an actual terminal state."""
+
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # This will force ppaged to call Popen to run a pager
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+    outsim_app.ppaged("Test", chop=chop)
+
+    # Verify the correct pager was run
+    expected_cmd = outsim_app.pager_chop if chop else outsim_app.pager
+    assert len(popen_mock.call_args_list) == 1
+    assert expected_cmd == popen_mock.call_args_list[0].args[0]
+
+
+def test_ppaged_no_pager(outsim_app) -> None:
+    """Since we're not in a fully-functional terminal, ppaged() will just call poutput()."""
     msg = 'testing...'
     end = '\n'
     outsim_app.ppaged(msg)

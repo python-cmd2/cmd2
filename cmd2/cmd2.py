@@ -1503,7 +1503,7 @@ class Cmd(cmd.Cmd):
         can_block = not (self._redirecting or self.in_pyscript() or self.in_script())
 
         # Check if we are outputting to a pager.
-        if functional_terminal and can_block:  # pragma: no cover
+        if functional_terminal and can_block:
             prepared_objects = rich_utils.prepare_objects_for_rich_print(*objects)
 
             # Chopping overrides soft_wrap
