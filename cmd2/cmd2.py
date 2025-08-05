@@ -24,10 +24,7 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 # This module has many imports, quite a few of which are only
 # infrequently utilized. To reduce the initial overhead of
 # import this module, many of these imports are lazy-loaded
-# i.e. we only import the module when we use it
-# For example, we don't import the 'traceback' module
-# until the pexcept() function is called and the debug
-# setting is True
+# i.e. we only import the module when we use it.
 import argparse
 import cmd
 import contextlib
@@ -36,7 +33,6 @@ import functools
 import glob
 import inspect
 import os
-import pprint
 import pydoc
 import re
 import sys
@@ -69,6 +65,7 @@ from typing import (
 )
 
 from rich.console import Group
+from rich.style import StyleType
 from rich.text import Text
 
 from . import (
@@ -127,6 +124,7 @@ from .parsing import (
     StatementParser,
     shlex_split,
 )
+from .rich_utils import Cmd2Console, RichPrintKwargs
 
 # NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
 with contextlib.suppress(ImportError):
@@ -158,7 +156,7 @@ from .utils import (
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
-    sys.stderr.write(ansi.style_warning(rl_warning))
+    Cmd2Console(sys.stderr).print(Text(rl_warning, style="cmd2.warning"))
 else:
     from .rl_utils import (  # type: ignore[attr-defined]
         readline,
@@ -416,7 +414,7 @@ class Cmd(cmd.Cmd):
         # Use as prompt for multiline commands on the 2nd+ line of input
         self.continuation_prompt: str = '> '
 
-        # Allow access to your application in embedded Python shells and scripts py via self
+        # Allow access to your application in embedded Python shells and pyscripts via self
         self.self_in_py = False
 
         # Commands to exclude from the help menu and tab completion
@@ -513,7 +511,7 @@ class Cmd(cmd.Cmd):
         elif transcript_files:
             self._transcript_files = transcript_files
 
-        # Set the pager(s) for use with the ppaged() method for displaying output using a pager
+        # Set the pager(s) for use when displaying output using a pager
         if sys.platform.startswith('win'):
             self.pager = self.pager_chop = 'more'
         else:
@@ -937,7 +935,7 @@ class Cmd(cmd.Cmd):
 
             subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
             if not subcommand_valid:
-                raise CommandSetRegistrationError(f'Subcommand {subcommand_name!s} is not valid: {errmsg}')
+                raise CommandSetRegistrationError(f'Subcommand {subcommand_name} is not valid: {errmsg}')
 
             command_tokens = full_command_name.split()
             command_name = command_tokens[0]
@@ -950,11 +948,11 @@ class Cmd(cmd.Cmd):
                 command_func = self.cmd_func(command_name)
 
             if command_func is None:
-                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method!s}")
+                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method}")
             command_parser = self._command_parsers.get(command_func)
             if command_parser is None:
                 raise CommandSetRegistrationError(
-                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method!s}"
+                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method}"
                 )
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
@@ -1044,13 +1042,13 @@ class Cmd(cmd.Cmd):
             if command_func is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
-                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method!s}")
+                raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method}")
             command_parser = self._command_parsers.get(command_func)
             if command_parser is None:  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
                 raise CommandSetRegistrationError(
-                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method!s}"
+                    f"Could not find argparser for command '{command_name}' needed by subcommand: {method}"
                 )
 
             for action in command_parser._actions:
@@ -1129,11 +1127,11 @@ class Cmd(cmd.Cmd):
             """Convert a string value into an rich_utils.AllowStyle."""
             try:
                 return rich_utils.AllowStyle[value.upper()]
-            except KeyError as esc:
+            except KeyError as ex:
                 raise ValueError(
                     f"must be {rich_utils.AllowStyle.ALWAYS}, {rich_utils.AllowStyle.NEVER}, or "
                     f"{rich_utils.AllowStyle.TERMINAL} (case-insensitive)"
-                ) from esc
+                ) from ex
 
         self.add_settable(
             Settable(
@@ -1189,170 +1187,364 @@ class Cmd(cmd.Cmd):
 
     def print_to(
         self,
-        dest: IO[str],
-        msg: Any,
-        *,
-        end: str = '\n',
-        style: Optional[Callable[[str], str]] = None,
+        file: IO[str],
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = None,
+        soft_wrap: Optional[bool] = None,
+        rich_print_kwargs: Optional[RichPrintKwargs] = None,
+        **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Print message to a given file object.
+        """Print objects to a given file stream.
 
-        :param dest: the file object being written to
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        :param style: optional style function to format msg with (e.g. ansi.style_success)
+        :param file: file stream being written to
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output
+        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
+                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
+                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
+                          If None (the default for this parameter), the output will default to no word-wrapping, as
+                          configured by the Cmd2Console.
+        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
+                       These arguments are not passed to Rich's Console.print().
         """
-        final_msg = style(msg) if style is not None else msg
+        prepared_objects = rich_utils.prepare_objects_for_rich_print(*objects)
+
         try:
-            ansi.style_aware_write(dest, f'{final_msg}{end}')
+            Cmd2Console(file).print(
+                *prepared_objects,
+                sep=sep,
+                end=end,
+                style=style,
+                soft_wrap=soft_wrap,
+                **(rich_print_kwargs if rich_print_kwargs is not None else {}),
+            )
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another
-            # process and that process closes before the command is
-            # finished. If you would like your application to print a
+            # process which closes the pipe before the command is finished
+            # writing. If you would like your application to print a
             # warning message, then set the broken_pipe_warning attribute
             # to the message you want printed.
-            if self.broken_pipe_warning:
-                sys.stderr.write(self.broken_pipe_warning)
+            if self.broken_pipe_warning and file != sys.stderr:
+                Cmd2Console(sys.stderr).print(self.broken_pipe_warning)
 
-    def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
-        """Print message to self.stdout and appends a newline by default.
+    def poutput(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = None,
+        soft_wrap: Optional[bool] = None,
+        rich_print_kwargs: Optional[RichPrintKwargs] = None,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
+        """Print objects to self.stdout.
 
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output
+        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
+                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
+                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
+                          If None (the default for this parameter), the output will default to no word-wrapping, as
+                          configured by the Cmd2Console.
+        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
+                       These arguments are not passed to Rich's Console.print().
         """
-        self.print_to(self.stdout, msg, end=end)
+        self.print_to(
+            self.stdout,
+            *objects,
+            sep=sep,
+            end=end,
+            style=style,
+            soft_wrap=soft_wrap,
+            rich_print_kwargs=rich_print_kwargs,
+        )
 
-    def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
-        """Print message to sys.stderr.
+    def perror(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = "cmd2.error",
+        soft_wrap: Optional[bool] = None,
+        rich_print_kwargs: Optional[RichPrintKwargs] = None,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
+        """Print objects to sys.stderr.
 
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
-                            where the message text already has the desired style. Defaults to True.
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output. Defaults to cmd2.error.
+        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
+                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
+                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
+                          If None (the default for this parameter), the output will default to no word-wrapping, as
+                          configured by the Cmd2Console.
+        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
+                       These arguments are not passed to Rich's Console.print().
         """
-        self.print_to(sys.stderr, msg, end=end, style=ansi.style_error if apply_style else None)
+        self.print_to(
+            sys.stderr,
+            *objects,
+            sep=sep,
+            end=end,
+            style=style,
+            soft_wrap=soft_wrap,
+            rich_print_kwargs=rich_print_kwargs,
+        )
 
-    def psuccess(self, msg: Any = '', *, end: str = '\n') -> None:
-        """Wrap poutput, but applies ansi.style_success by default.
+    def psuccess(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        soft_wrap: Optional[bool] = None,
+        rich_print_kwargs: Optional[RichPrintKwargs] = None,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
+        """Wrap poutput, but apply cmd2.success style.
 
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
+                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
+                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
+                          If None (the default for this parameter), the output will default to no word-wrapping, as
+                          configured by the Cmd2Console.
+        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
+                       These arguments are not passed to Rich's Console.print().
         """
-        msg = ansi.style_success(msg)
-        self.poutput(msg, end=end)
+        self.poutput(
+            *objects,
+            sep=sep,
+            end=end,
+            style="cmd2.success",
+            soft_wrap=soft_wrap,
+            rich_print_kwargs=rich_print_kwargs,
+        )
 
-    def pwarning(self, msg: Any = '', *, end: str = '\n') -> None:
-        """Wrap perror, but applies ansi.style_warning by default.
+    def pwarning(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        soft_wrap: Optional[bool] = None,
+        rich_print_kwargs: Optional[RichPrintKwargs] = None,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
+        """Wrap perror, but apply cmd2.warning style.
 
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
+                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
+                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
+                          If None (the default for this parameter), the output will default to no word-wrapping, as
+                          configured by the Cmd2Console.
+        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
+                       These arguments are not passed to Rich's Console.print().
         """
-        msg = ansi.style_warning(msg)
-        self.perror(msg, end=end, apply_style=False)
+        self.perror(
+            *objects,
+            sep=sep,
+            end=end,
+            style="cmd2.warning",
+            soft_wrap=soft_wrap,
+            rich_print_kwargs=rich_print_kwargs,
+        )
 
-    def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
-        """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
+    def pexcept(
+        self,
+        exception: BaseException,
+        end: str = "\n",
+        rich_print_kwargs: Optional[RichPrintKwargs] = None,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
+        """Print exception to sys.stderr. If debug is true, print exception traceback if one exists.
 
-        :param msg: message or Exception to print
-        :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
-                            where the message text already has the desired style. Defaults to True.
+        :param exception: the exception to print.
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
+                       These arguments are not passed to Rich's Console.print().
         """
+        final_msg = Text()
+
         if self.debug and sys.exc_info() != (None, None, None):
-            import traceback
-
-            traceback.print_exc()
-
-        if isinstance(msg, Exception):
-            final_msg = f"EXCEPTION of type '{type(msg).__name__}' occurred with message: {msg}"
+            console = Cmd2Console(sys.stderr)
+            console.print_exception(word_wrap=True)
         else:
-            final_msg = str(msg)
-
-        if apply_style:
-            final_msg = ansi.style_error(final_msg)
+            final_msg += f"EXCEPTION of type '{type(exception).__name__}' occurred with message: {exception}"
 
         if not self.debug and 'debug' in self.settables:
             warning = "\nTo enable full traceback, run the following command: 'set debug true'"
-            final_msg += ansi.style_warning(warning)
+            final_msg.append(warning, style="cmd2.warning")
 
-        self.perror(final_msg, end=end, apply_style=False)
+        if final_msg:
+            self.perror(
+                final_msg,
+                end=end,
+                rich_print_kwargs=rich_print_kwargs,
+            )
 
-    def pfeedback(self, msg: Any, *, end: str = '\n') -> None:
-        """Print nonessential feedback.  Can be silenced with `quiet`.
+    def pfeedback(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = None,
+        soft_wrap: Optional[bool] = None,
+        rich_print_kwargs: Optional[RichPrintKwargs] = None,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
+        """For printing nonessential feedback. Can be silenced with `quiet`.
 
         Inclusion in redirected output is controlled by `feedback_to_output`.
 
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output
+        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
+                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
+                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
+                          If None (the default for this parameter), the output will default to no word-wrapping, as
+                          configured by the Cmd2Console.
+        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
+                       These arguments are not passed to Rich's Console.print().
         """
         if not self.quiet:
             if self.feedback_to_output:
-                self.poutput(msg, end=end)
+                self.poutput(
+                    *objects,
+                    sep=sep,
+                    end=end,
+                    style=style,
+                    soft_wrap=soft_wrap,
+                    rich_print_kwargs=rich_print_kwargs,
+                )
             else:
-                self.perror(msg, end=end, apply_style=False)
+                self.perror(
+                    *objects,
+                    sep=sep,
+                    end=end,
+                    style=style,
+                    soft_wrap=soft_wrap,
+                    rich_print_kwargs=rich_print_kwargs,
+                )
 
-    def ppaged(self, msg: Any, *, end: str = '\n', chop: bool = False) -> None:
+    def ppaged(
+        self,
+        *objects: Any,
+        sep: str = " ",
+        end: str = "\n",
+        style: Optional[StyleType] = None,
+        chop: bool = False,
+        soft_wrap: Optional[bool] = None,
+        rich_print_kwargs: Optional[RichPrintKwargs] = None,
+        **kwargs: Any,  # noqa: ARG002
+    ) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
         Never uses a pager inside a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
-        :param msg: object to print
-        :param end: string appended after the end of the message, default a newline
+        :param objects: objects to print
+        :param sep: string to write between print data. Defaults to " ".
+        :param end: string to write at end of print data. Defaults to a newline.
+        :param style: optional style to apply to output
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
                               - wrapping is ideal when you want to keep users from having to use horizontal scrolling
-
-        WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
+                     WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
+        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
+                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
+                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
+                          If None (the default for this parameter), the output will default to no word-wrapping, as
+                          configured by the Cmd2Console.
+                          Note: If chop is True and a pager is used, soft_wrap is automatically set to True.
+        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
+                       These arguments are not passed to Rich's Console.print().
         """
-        # Attempt to detect if we are not running within a fully functional terminal.
+        # Detect if we are running within a fully functional terminal.
         # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
-        functional_terminal = False
+        functional_terminal = (
+            self.stdin.isatty()
+            and self.stdout.isatty()
+            and (sys.platform.startswith('win') or os.environ.get('TERM') is not None)
+        )
 
-        if self.stdin.isatty() and self.stdout.isatty():  # noqa: SIM102
-            if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
-                functional_terminal = True
+        # A pager application blocks, so only run one if not redirecting or running a script (either text or Python).
+        can_block = not (self._redirecting or self.in_pyscript() or self.in_script())
 
-        # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python).
-        # Also only attempt to use a pager if actually running in a real fully functional terminal.
-        if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
-            final_msg = f"{msg}{end}"
-            if rich_utils.allow_style == rich_utils.AllowStyle.NEVER:
-                final_msg = ansi.strip_style(final_msg)
+        # Check if we are outputting to a pager.
+        if functional_terminal and can_block:
+            prepared_objects = rich_utils.prepare_objects_for_rich_print(*objects)
 
-            pager = self.pager
+            # Chopping overrides soft_wrap
             if chop:
-                pager = self.pager_chop
+                soft_wrap = True
 
-            try:
-                # Prevent KeyboardInterrupts while in the pager. The pager application will
-                # still receive the SIGINT since it is in the same process group as us.
-                with self.sigint_protection:
-                    import subprocess
+            # Generate the bytes to send to the pager
+            console = Cmd2Console(self.stdout)
+            with console.capture() as capture:
+                console.print(
+                    *prepared_objects,
+                    sep=sep,
+                    end=end,
+                    style=style,
+                    soft_wrap=soft_wrap,
+                    **(rich_print_kwargs if rich_print_kwargs is not None else {}),
+                )
+            output_bytes = capture.get().encode('utf-8', 'replace')
 
-                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE, stdout=self.stdout)  # noqa: S602
-                    pipe_proc.communicate(final_msg.encode('utf-8', 'replace'))
-            except BrokenPipeError:
-                # This occurs if a command's output is being piped to another process and that process closes before the
-                # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.`
-                if self.broken_pipe_warning:
-                    sys.stderr.write(self.broken_pipe_warning)
+            # Prevent KeyboardInterrupts while in the pager. The pager application will
+            # still receive the SIGINT since it is in the same process group as us.
+            with self.sigint_protection:
+                import subprocess
+
+                pipe_proc = subprocess.Popen(  # noqa: S602
+                    self.pager_chop if chop else self.pager,
+                    shell=True,
+                    stdin=subprocess.PIPE,
+                    stdout=self.stdout,
+                )
+                pipe_proc.communicate(output_bytes)
+
         else:
-            self.poutput(msg, end=end)
-
-    def ppretty(self, data: Any, *, indent: int = 2, width: int = 80, depth: Optional[int] = None, end: str = '\n') -> None:
-        """Pretty print arbitrary Python data structures to self.stdout and appends a newline by default.
-
-        :param data: object to print
-        :param indent: the amount of indentation added for each nesting level
-        :param width: the desired maximum number of characters per line in the output, a best effort will be made for long data
-        :param depth: the number of nesting levels which may be printed, if data is too deep, the next level replaced by ...
-        :param end: string appended after the end of the message, default a newline
-        """
-        self.print_to(self.stdout, pprint.pformat(data, indent, width, depth), end=end)
+            self.poutput(
+                *objects,
+                sep=sep,
+                end=end,
+                style=style,
+                soft_wrap=soft_wrap,
+                rich_print_kwargs=rich_print_kwargs,
+            )
 
     # -----  Methods related to tab completion -----
 
@@ -2278,9 +2470,13 @@ class Cmd(cmd.Cmd):
             # Don't print error and redraw the prompt unless the error has length
             err_str = str(ex)
             if err_str:
-                if ex.apply_style:
-                    err_str = ansi.style_error(err_str)
-                ansi.style_aware_write(sys.stdout, '\n' + err_str + '\n')
+                self.print_to(
+                    sys.stdout,
+                    Text.assemble(
+                        "\n",
+                        (err_str, "cmd2.error" if ex.apply_style else ""),
+                    ),
+                )
                 rl_force_redisplay()
             return None
         except Exception as ex:  # noqa: BLE001
@@ -2380,13 +2576,17 @@ class Cmd(cmd.Cmd):
         # Filter out hidden and disabled commands
         return [topic for topic in all_topics if topic not in self.hidden_commands and topic not in self.disabled_commands]
 
-    def sigint_handler(self, signum: int, _: Optional[FrameType]) -> None:  # noqa: ARG002
+    def sigint_handler(
+        self,
+        signum: int,  # noqa: ARG002,
+        frame: Optional[FrameType],  # noqa: ARG002,
+    ) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
 
         If you need custom SIGINT behavior, then override this method.
 
         :param signum: signal number
-        :param _: the current stack frame or None
+        :param frame: the current stack frame or None
         """
         if self._cur_pipe_proc_reader is not None:
             # Pass the SIGINT to the current pipe process
@@ -3062,7 +3262,7 @@ class Cmd(cmd.Cmd):
             err_msg += f"\n{self.default_suggestion_message.format(suggested_command)}"
 
         # Set apply_style to False so styles for default_error and default_suggestion_message are not overridden
-        self.perror(err_msg, apply_style=False)
+        self.perror(err_msg, style=None)
         return None
 
     def _suggest_similar_command(self, command: str) -> Optional[str]:
@@ -3902,7 +4102,7 @@ class Cmd(cmd.Cmd):
                 err_msg = self.help_error.format(args.command)
 
                 # Set apply_style to False so help_error's style is not overridden
-                self.perror(err_msg, apply_style=False)
+                self.perror(err_msg, style=None)
                 self.last_result = False
 
     def print_topics(self, header: str, cmds: Optional[list[str]], cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
@@ -5356,7 +5556,7 @@ class Cmd(cmd.Cmd):
         test_results = runner.run(testcase)
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
-            ansi.style_aware_write(sys.stderr, stream.read())
+            self.perror(stream.read(), end="", style=None)
             finish_msg = f' {num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds '
             finish_msg = utils.align_center(finish_msg, fill_char='=')
             self.psuccess(finish_msg)
@@ -5613,8 +5813,7 @@ class Cmd(cmd.Cmd):
         :param message_to_print: the message reporting that the command is disabled
         :param _kwargs: not used
         """
-        # Set apply_style to False so message_to_print's style is not overridden
-        self.perror(message_to_print, apply_style=False)
+        self.perror(message_to_print, style=None)
 
     def cmdloop(self, intro: Optional[str] = None) -> int:  # type: ignore[override]
         """Deal with extra features provided by cmd2, this is an outer wrapper around _cmdloop().

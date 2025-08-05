@@ -6,13 +6,22 @@ from typing import (
     IO,
     Any,
     Optional,
+    TypedDict,
 )
 
-from rich.console import Console
+from rich.console import (
+    Console,
+    ConsoleRenderable,
+    JustifyMethod,
+    OverflowMethod,
+    RenderableType,
+    RichCast,
+)
 from rich.style import (
     Style,
     StyleType,
 )
+from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
 
@@ -88,6 +97,28 @@ def set_theme(new_theme: Cmd2Theme) -> None:
         RichHelpFormatter.styles[name] = THEME.styles[name]
 
 
+class RichPrintKwargs(TypedDict, total=False):
+    """Keyword arguments that can be passed to rich.console.Console.print() via cmd2's print methods.
+
+    See Rich's Console.print() documentation for full details on these parameters.
+    https://rich.readthedocs.io/en/stable/reference/console.html#rich.console.Console.print
+
+    Note: All fields are optional (total=False). If a key is not present in the
+    dictionary, Rich's default behavior for that argument will apply.
+    """
+
+    justify: Optional[JustifyMethod]
+    overflow: Optional[OverflowMethod]
+    no_wrap: Optional[bool]
+    markup: Optional[bool]
+    emoji: Optional[bool]
+    highlight: Optional[bool]
+    width: Optional[int]
+    height: Optional[int]
+    crop: bool
+    new_line_start: bool
+
+
 class Cmd2Console(Console):
     """Rich console with characteristics appropriate for cmd2 applications."""
 
@@ -106,11 +137,16 @@ class Cmd2Console(Console):
         elif allow_style == AllowStyle.NEVER:
             kwargs["force_terminal"] = False
 
-        # Turn off automatic markup, emoji, and highlight rendering at the console level.
-        # You can still enable these in Console.print() calls.
+        # Configure console defaults to treat output as plain, unstructured text.
+        # This involves enabling soft wrapping (no automatic word-wrap) and disabling
+        # Rich's automatic markup, emoji, and highlight processing.
+        # While these automatic features are off by default, the console fully supports
+        # rendering explicitly created Rich objects (e.g., Panel, Table).
+        # Any of these default settings or other print behaviors can be overridden
+        # in individual Console.print() calls or via cmd2's print methods.
         super().__init__(
             file=file,
-            tab_size=4,
+            soft_wrap=True,
             markup=False,
             emoji=False,
             highlight=False,
@@ -120,9 +156,60 @@ class Cmd2Console(Console):
 
     def on_broken_pipe(self) -> None:
         """Override which raises BrokenPipeError instead of SystemExit."""
-        import contextlib
-
-        with contextlib.suppress(SystemExit):
-            super().on_broken_pipe()
-
+        self.quiet = True
         raise BrokenPipeError
+
+
+def from_ansi(text: str) -> Text:
+    r"""Patched version of rich.Text.from_ansi() that handles a discarded newline issue.
+
+    Text.from_ansi() currently removes the ending line break from string.
+    e.g. "Hello\n" becomes "Hello"
+
+    There is currently a pull request to fix this.
+    https://github.com/Textualize/rich/pull/3793
+
+    :param text: a string to convert to a Text object.
+    :return: the converted string
+    """
+    result = Text.from_ansi(text)
+
+    # If 'text' ends with a line break character, restore the missing newline to 'result'.
+    # Note: '\r\n' is handled as its last character is '\n'.
+    # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
+    line_break_chars = {
+        "\n",  # Line Feed
+        "\r",  # Carriage Return
+        "\v",  # Vertical Tab
+        "\f",  # Form Feed
+        "\x1c",  # File Separator
+        "\x1d",  # Group Separator
+        "\x1e",  # Record Separator
+        "\x85",  # Next Line (NEL)
+        "\u2028",  # Line Separator
+        "\u2029",  # Paragraph Separator
+    }
+    if text and text[-1] in line_break_chars:
+        # We use "\n" because Text.from_ansi() converts all line breaks chars into newlines.
+        result.append("\n")
+
+    return result
+
+
+def prepare_objects_for_rich_print(*objects: Any) -> tuple[RenderableType, ...]:
+    """Prepare a tuple of objects for printing by Rich's Console.print().
+
+    Converts any non-Rich objects (i.e., not ConsoleRenderable or RichCast)
+    into rich.Text objects by stringifying them and processing them with
+    from_ansi(). This ensures Rich correctly interprets any embedded ANSI
+    escape sequences.
+
+    :param objects: objects to prepare
+    :return: a tuple containing the processed objects, where non-Rich objects are
+             converted to rich.Text.
+    """
+    object_list = list(objects)
+    for i, obj in enumerate(object_list):
+        if not isinstance(obj, (ConsoleRenderable, RichCast)):
+            object_list[i] = from_ansi(str(obj))
+    return tuple(object_list)
