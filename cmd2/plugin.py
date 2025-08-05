@@ -3,7 +3,6 @@
 from dataclasses import (
     dataclass,
 )
-from typing import Optional
 
 from .parsing import (
     Statement,
@@ -38,4 +37,4 @@ class CommandFinalizationData:
     """Data class containing information passed to command finalization hook methods."""
 
     stop: bool
-    statement: Optional[Statement]
+    statement: Statement | None

@@ -5,7 +5,6 @@ from enum import Enum
 from typing import (
     IO,
     Any,
-    Optional,
     TypedDict,
 )
 
@@ -61,7 +60,7 @@ DEFAULT_CMD2_STYLES.update(RichHelpFormatter.styles.copy())
 class Cmd2Theme(Theme):
     """Rich theme class used by Cmd2Console."""
 
-    def __init__(self, styles: Optional[Mapping[str, StyleType]] = None, inherit: bool = True) -> None:
+    def __init__(self, styles: Mapping[str, StyleType] | None = None, inherit: bool = True) -> None:
         """Cmd2Theme initializer.
 
         :param styles: optional mapping of style names on to styles.
@@ -107,14 +106,14 @@ class RichPrintKwargs(TypedDict, total=False):
     dictionary, Rich's default behavior for that argument will apply.
     """
 
-    justify: Optional[JustifyMethod]
-    overflow: Optional[OverflowMethod]
-    no_wrap: Optional[bool]
-    markup: Optional[bool]
-    emoji: Optional[bool]
-    highlight: Optional[bool]
-    width: Optional[int]
-    height: Optional[int]
+    justify: JustifyMethod | None
+    overflow: OverflowMethod | None
+    no_wrap: bool | None
+    markup: bool | None
+    emoji: bool | None
+    highlight: bool | None
+    width: int | None
+    height: int | None
     crop: bool
     new_line_start: bool
 

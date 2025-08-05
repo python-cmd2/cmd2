@@ -5,10 +5,6 @@ from contextlib import (
     redirect_stderr,
     redirect_stdout,
 )
-from typing import (
-    Optional,
-    Union,
-)
 from unittest import (
     mock,
 )
@@ -27,9 +23,7 @@ from cmd2.utils import (
 )
 
 
-def verify_help_text(
-    cmd2_app: cmd2.Cmd, help_output: Union[str, list[str]], verbose_strings: Optional[list[str]] = None
-) -> None:
+def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_strings: list[str] | None = None) -> None:
     """This function verifies that all expected commands are present in the help text.
 
     :param cmd2_app: instance of cmd2.Cmd
@@ -134,7 +128,7 @@ def base_app():
 odd_file_names = ['nothingweird', 'has   spaces', '"is_double_quoted"', "'is_single_quoted'"]
 
 
-def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Optional[str]:
+def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> str | None:
     """This is a convenience function to test cmd2.complete() since
     in a unit test environment there is no actual console readline
     is monitoring. Therefore we use mock to provide readline data

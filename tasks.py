@@ -12,7 +12,6 @@ import pathlib
 import re
 import shutil
 import sys
-from typing import Union
 
 import invoke
 from invoke.context import Context
@@ -26,7 +25,7 @@ TASK_ROOT_STR = str(TASK_ROOT)
 
 
 # shared function
-def rmrf(items: Union[str, list[str], set[str]], verbose: bool = True) -> None:
+def rmrf(items: str | list[str] | set[str], verbose: bool = True) -> None:
     """Silently remove a list of directories or files."""
     if isinstance(items, str):
         items = [items]

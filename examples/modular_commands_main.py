@@ -5,7 +5,6 @@ with examples of how to integrate tab completion with argparse-based commands.
 
 import argparse
 from collections.abc import Iterable
-from typing import Optional
 
 from modular_commands.commandset_basic import (  # noqa: F401
     BasicCompletionCommandSet,
@@ -26,7 +25,7 @@ from cmd2 import (
 
 
 class WithCommandSets(Cmd):
-    def __init__(self, command_sets: Optional[Iterable[CommandSet]] = None) -> None:
+    def __init__(self, command_sets: Iterable[CommandSet] | None = None) -> None:
         super().__init__(command_sets=command_sets)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 

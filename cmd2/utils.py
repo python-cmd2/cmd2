@@ -16,7 +16,7 @@ import unicodedata
 from collections.abc import Callable, Iterable
 from difflib import SequenceMatcher
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, TextIO, TypeVar, Union, cast, get_type_hints
+from typing import TYPE_CHECKING, Any, TextIO, TypeVar, Union, cast, get_type_hints
 
 from . import constants
 from .argparse_custom import ChoicesProviderFunc, CompleterFunc
@@ -95,15 +95,15 @@ class Settable:
     def __init__(
         self,
         name: str,
-        val_type: Union[type[Any], Callable[[Any], Any]],
+        val_type: type[Any] | Callable[[Any], Any],
         description: str,
         settable_object: object,
         *,
-        settable_attrib_name: Optional[str] = None,
-        onchange_cb: Optional[Callable[[str, _T, _T], Any]] = None,
-        choices: Optional[Iterable[Any]] = None,
-        choices_provider: Optional[ChoicesProviderFunc] = None,
-        completer: Optional[CompleterFunc] = None,
+        settable_attrib_name: str | None = None,
+        onchange_cb: Callable[[str, _T, _T], Any] | None = None,
+        choices: Iterable[Any] | None = None,
+        choices_provider: ChoicesProviderFunc | None = None,
+        completer: CompleterFunc | None = None,
     ) -> None:
         """Settable Initializer.
 
@@ -238,7 +238,7 @@ def alphabetical_sort(list_to_sort: Iterable[str]) -> list[str]:
     return sorted(list_to_sort, key=norm_fold)
 
 
-def try_int_or_force_to_lower_case(input_str: str) -> Union[int, str]:
+def try_int_or_force_to_lower_case(input_str: str) -> int | str:
     """Try to convert the passed-in string to an integer. If that fails, it converts it to lower case using norm_fold.
 
     :param input_str: string to convert
@@ -250,7 +250,7 @@ def try_int_or_force_to_lower_case(input_str: str) -> Union[int, str]:
         return norm_fold(input_str)
 
 
-def natural_keys(input_str: str) -> list[Union[int, str]]:
+def natural_keys(input_str: str) -> list[int | str]:
     """Convert a string into a list of integers and strings to support natural sorting (see natural_sort).
 
     For example: natural_keys('abc123def') -> ['abc', '123', 'def']
@@ -328,7 +328,7 @@ def expand_user_in_tokens(tokens: list[str]) -> None:
         tokens[index] = expand_user(tokens[index])
 
 
-def find_editor() -> Optional[str]:
+def find_editor() -> str | None:
     """Set cmd2.Cmd.DEFAULT_EDITOR. If EDITOR env variable is set, that will be used.
 
     Otherwise the function will look for a known editor in directories specified by PATH env variable.
@@ -467,7 +467,7 @@ class StdSim:
         """Get the internal contents as bytes."""
         return bytes(self.buffer.byte_buf)
 
-    def read(self, size: Optional[int] = -1) -> str:
+    def read(self, size: int | None = -1) -> str:
         """Read from the internal contents as a str and then clear them out.
 
         :param size: Number of bytes to read from the stream
@@ -549,7 +549,7 @@ class ProcReader:
     If neither are pipes, then the process will run normally and no output will be captured.
     """
 
-    def __init__(self, proc: PopenTextIO, stdout: Union[StdSim, TextIO], stderr: Union[StdSim, TextIO]) -> None:
+    def __init__(self, proc: PopenTextIO, stdout: StdSim | TextIO, stderr: StdSim | TextIO) -> None:
         """ProcReader initializer.
 
         :param proc: the Popen process being read from
@@ -631,7 +631,7 @@ class ProcReader:
                 self._write_bytes(write_stream, available)
 
     @staticmethod
-    def _write_bytes(stream: Union[StdSim, TextIO], to_write: Union[bytes, str]) -> None:
+    def _write_bytes(stream: StdSim | TextIO, to_write: bytes | str) -> None:
         """Write bytes to a stream.
 
         :param stream: the stream being written to
@@ -680,9 +680,9 @@ class RedirectionSavedState:
 
     def __init__(
         self,
-        self_stdout: Union[StdSim, TextIO],
+        self_stdout: StdSim | TextIO,
         stdouts_match: bool,
-        pipe_proc_reader: Optional[ProcReader],
+        pipe_proc_reader: ProcReader | None,
         saved_redirecting: bool,
     ) -> None:
         """RedirectionSavedState initializer.
@@ -728,14 +728,14 @@ def _remove_overridden_styles(styles_to_parse: list[str]) -> list[str]:
             self.style_dict: dict[int, str] = {}
 
             # Indexes into style_dict
-            self.reset_all: Optional[int] = None
-            self.fg: Optional[int] = None
-            self.bg: Optional[int] = None
-            self.intensity: Optional[int] = None
-            self.italic: Optional[int] = None
-            self.overline: Optional[int] = None
-            self.strikethrough: Optional[int] = None
-            self.underline: Optional[int] = None
+            self.reset_all: int | None = None
+            self.fg: int | None = None
+            self.bg: int | None = None
+            self.intensity: int | None = None
+            self.italic: int | None = None
+            self.overline: int | None = None
+            self.strikethrough: int | None = None
+            self.underline: int | None = None
 
     # Read the previous styles in order and keep track of their states
     style_state = StyleState()
@@ -798,7 +798,7 @@ def align_text(
     alignment: TextAlignment,
     *,
     fill_char: str = ' ',
-    width: Optional[int] = None,
+    width: int | None = None,
     tab_width: int = 4,
     truncate: bool = False,
 ) -> str:
@@ -920,7 +920,7 @@ def align_text(
 
 
 def align_left(
-    text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
+    text: str, *, fill_char: str = ' ', width: int | None = None, tab_width: int = 4, truncate: bool = False
 ) -> str:
     """Left align text for display within a given width. Supports characters with display widths greater than 1.
 
@@ -943,7 +943,7 @@ def align_left(
 
 
 def align_center(
-    text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
+    text: str, *, fill_char: str = ' ', width: int | None = None, tab_width: int = 4, truncate: bool = False
 ) -> str:
     """Center text for display within a given width. Supports characters with display widths greater than 1.
 
@@ -966,7 +966,7 @@ def align_center(
 
 
 def align_right(
-    text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4, truncate: bool = False
+    text: str, *, fill_char: str = ' ', width: int | None = None, tab_width: int = 4, truncate: bool = False
 ) -> str:
     """Right align text for display within a given width. Supports characters with display widths greater than 1.
 
@@ -1095,7 +1095,7 @@ def get_styles_dict(text: str) -> dict[int, str]:
     return styles
 
 
-def categorize(func: Union[Callable[..., Any], Iterable[Callable[..., Any]]], category: str) -> None:
+def categorize(func: Callable[..., Any] | Iterable[Callable[..., Any]], category: str) -> None:
     """Categorize a function.
 
     The help command output will group the passed function under the
@@ -1126,7 +1126,7 @@ def categorize(func: Union[Callable[..., Any], Iterable[Callable[..., Any]]], ca
         setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
 
 
-def get_defining_class(meth: Callable[..., Any]) -> Optional[type[Any]]:
+def get_defining_class(meth: Callable[..., Any]) -> type[Any] | None:
     """Attempt to resolve the class that defined a method.
 
     Inspired by implementation published here:
@@ -1223,8 +1223,8 @@ MIN_SIMIL_TO_CONSIDER = 0.7
 
 
 def suggest_similar(
-    requested_command: str, options: Iterable[str], similarity_function_to_use: Optional[Callable[[str, str], float]] = None
-) -> Optional[str]:
+    requested_command: str, options: Iterable[str], similarity_function_to_use: Callable[[str, str], float] | None = None
+) -> str | None:
     """Given a requested command and an iterable of possible options returns the most similar (if any is similar).
 
     :param requested_command: The command entered by the user

@@ -1,7 +1,6 @@
 """Cmd2 testing for argument parsing"""
 
 import argparse
-from typing import Optional
 
 import pytest
 
@@ -32,7 +31,7 @@ class ArgparseApp(cmd2.Cmd):
         return say_parser
 
     @cmd2.with_argparser(_say_parser_builder)
-    def do_say(self, args, *, keyword_arg: Optional[str] = None) -> None:
+    def do_say(self, args, *, keyword_arg: str | None = None) -> None:
         """Repeat what you tell me to.
 
         :param args: argparse namespace
@@ -70,7 +69,7 @@ class ArgparseApp(cmd2.Cmd):
         self.stdout.write(f'{args.custom_stuff}')
 
     @cmd2.with_argument_list
-    def do_arglist(self, arglist, *, keyword_arg: Optional[str] = None) -> None:
+    def do_arglist(self, arglist, *, keyword_arg: str | None = None) -> None:
         if isinstance(arglist, list):
             self.stdout.write('True')
         else:
@@ -92,7 +91,7 @@ class ArgparseApp(cmd2.Cmd):
         return known_parser
 
     @cmd2.with_argparser(_speak_parser_builder, with_unknown_args=True)
-    def do_speak(self, args, extra, *, keyword_arg: Optional[str] = None) -> None:
+    def do_speak(self, args, extra, *, keyword_arg: str | None = None) -> None:
         """Repeat what you tell me to."""
         words = []
         for word in extra:

@@ -10,9 +10,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     NamedTuple,
-    Optional,
     TextIO,
-    Union,
     cast,
 )
 
@@ -98,7 +96,7 @@ class PyBridge:
         attributes.insert(0, 'cmd_echo')
         return attributes
 
-    def __call__(self, command: str, *, echo: Optional[bool] = None) -> CommandResult:
+    def __call__(self, command: str, *, echo: bool | None = None) -> CommandResult:
         """Provide functionality to call application commands by calling PyBridge.
 
         ex: app('help')
@@ -114,7 +112,7 @@ class PyBridge:
         stdouts_match = self._cmd2_app.stdout == sys.stdout
 
         # This will be used to capture _cmd2_app.stdout and sys.stdout
-        copy_cmd_stdout = StdSim(cast(Union[TextIO, StdSim], self._cmd2_app.stdout), echo=echo)
+        copy_cmd_stdout = StdSim(cast(TextIO | StdSim, self._cmd2_app.stdout), echo=echo)
 
         # Pause the storing of stdout until onecmd_plus_hooks enables it
         copy_cmd_stdout.pause_storage = True

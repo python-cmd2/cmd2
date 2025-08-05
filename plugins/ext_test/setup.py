@@ -24,7 +24,7 @@ setuptools.setup(
     license='MIT',
     package_data=PACKAGE_DATA,
     packages=['cmd2_ext_test'],
-    python_requires='>=3.9',
+    python_requires='>=3.10',
     install_requires=['cmd2 >= 2, <3'],
     setup_requires=['setuptools >= 42', 'setuptools_scm >= 3.4'],
     classifiers=[
@@ -34,7 +34,6 @@ setuptools.setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
