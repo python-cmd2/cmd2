@@ -218,9 +218,9 @@ ArgparseCommandFunc = (
 
 
 def with_argparser(
-    parser: argparse.ArgumentParser
-    | Callable[[], argparse.ArgumentParser]
-    | Callable[[CommandParentType], argparse.ArgumentParser],
+    parser: argparse.ArgumentParser  # existing parser
+    | Callable[[], argparse.ArgumentParser]  # function or staticmethod
+    | Callable[[CommandParentType], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -228,7 +228,7 @@ def with_argparser(
 ) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]:
     """Decorate a ``do_*`` method to populate its ``args`` argument with the given instance of argparse.ArgumentParser.
 
-    :param parser: unique instance of ArgumentParser or a callable that returns an ArgumentParser
+    :param parser: instance of ArgumentParser or a callable that returns an ArgumentParser for this command
     :param ns_provider: An optional function that accepts a cmd2.Cmd or cmd2.CommandSet object as an argument and returns an
                         argparse.Namespace. This is useful if the Namespace needs to be prepopulated with state data that
                         affects parsing.
@@ -352,9 +352,9 @@ def with_argparser(
 def as_subcommand_to(
     command: str,
     subcommand: str,
-    parser: argparse.ArgumentParser
-    | Callable[[], argparse.ArgumentParser]
-    | Callable[[CommandParentType], argparse.ArgumentParser],
+    parser: argparse.ArgumentParser  # existing parser
+    | Callable[[], argparse.ArgumentParser]  # function or staticmethod
+    | Callable[[CommandParentType], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
     *,
     help: str | None = None,  # noqa: A002
     aliases: list[str] | None = None,
@@ -363,7 +363,7 @@ def as_subcommand_to(
 
     :param command: Command Name. Space-delimited subcommands may optionally be specified
     :param subcommand: Subcommand name
-    :param parser: argparse Parser for this subcommand
+    :param parser: instance of ArgumentParser or a callable that returns an ArgumentParser for this subcommand
     :param help: Help message for this subcommand which displays in the list of subcommands of the command we are adding to.
                  This is passed as the help argument to subparsers.add_parser().
     :param aliases: Alternative names for this subcommand. This is passed as the alias argument to
