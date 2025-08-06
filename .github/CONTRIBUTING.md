@@ -62,7 +62,7 @@ See the `dependencies` list under the `[project]` heading in [pyproject.toml](..
 
 | Prerequisite                                        | Minimum Version | Purpose                                |
 | --------------------------------------------------- | --------------- | -------------------------------------- |
-| [python](https://www.python.org/downloads/)         | `3.9`           | Python programming language            |
+| [python](https://www.python.org/downloads/)         | `3.10`          | Python programming language            |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.8`           | Cross-platform clipboard functions     |
 | [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.2.10`        | Measure the displayed width of unicode |
 
@@ -520,13 +520,11 @@ on how to do it.
 
 4. The title (also called the subject) of your PR should be descriptive of your changes and
    succinctly indicate what is being fixed
-
     - **Do not add the issue number in the PR title or commit message**
 
     - Examples: `Add test cases for Unicode support`; `Correct typo in overview documentation`
 
 5. In the body of your PR include a more detailed summary of the changes you made and why
-
     - If the PR is meant to fix an existing bug/issue, then, at the end of your PR's description,
       append the keyword `closes` and #xxxx (where xxxx is the issue number). Example:
       `closes #1337`. This tells GitHub to close the existing issue if the PR is merged.

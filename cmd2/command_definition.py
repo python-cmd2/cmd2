@@ -3,7 +3,6 @@
 from collections.abc import Callable, Mapping
 from typing import (
     TYPE_CHECKING,
-    Optional,
     TypeVar,
 )
 
@@ -23,7 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 #: Callable signature for a basic command  function
 #: Further refinements are needed to define the input parameters
-CommandFunc = Callable[..., Optional[bool]]
+CommandFunc = Callable[..., bool | None]
 
 CommandSetType = TypeVar('CommandSetType', bound=type['CommandSet'])
 
@@ -91,7 +90,7 @@ class CommandSet:
         This will be set when the CommandSet is registered and it should be
         accessed by child classes using the self._cmd property.
         """
-        self.__cmd_internal: Optional[cmd2.Cmd] = None
+        self.__cmd_internal: cmd2.Cmd | None = None
 
         self._settables: dict[str, Settable] = {}
         self._settable_prefix = self.__class__.__name__

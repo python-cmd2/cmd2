@@ -9,8 +9,6 @@ from dataclasses import (
 )
 from typing import (
     Any,
-    Optional,
-    Union,
 )
 
 from . import (
@@ -250,10 +248,10 @@ class StatementParser:
 
     def __init__(
         self,
-        terminators: Optional[Iterable[str]] = None,
-        multiline_commands: Optional[Iterable[str]] = None,
-        aliases: Optional[dict[str, str]] = None,
-        shortcuts: Optional[dict[str, str]] = None,
+        terminators: Iterable[str] | None = None,
+        multiline_commands: Iterable[str] | None = None,
+        aliases: dict[str, str] | None = None,
+        shortcuts: dict[str, str] | None = None,
     ) -> None:
         """Initialize an instance of StatementParser.
 
@@ -585,7 +583,7 @@ class StatementParser:
         return Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)
 
     def get_command_arg_list(
-        self, command_name: str, to_parse: Union[Statement, str], preserve_quotes: bool
+        self, command_name: str, to_parse: Statement | str, preserve_quotes: bool
     ) -> tuple[Statement, list[str]]:
         """Retrieve just the arguments being passed to their ``do_*`` methods as a list.
 

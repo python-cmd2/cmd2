@@ -1,13 +1,12 @@
 ## 3.0.0 (TBD)
 
 - Breaking Changes
-
+    - `cmd2` 3.0 supports Python 3.10+ (removed support for Python 3.9)
     - No longer setting parser's `prog` value in `with_argparser()` since it gets set in
       `Cmd._build_parser()`. This code had previously been restored to support backward
       compatibility in `cmd2` 2.0 family.
 
 - Enhancements
-
     - Simplified the process to set a custom parser for `cmd2's` built-in commands. See
       [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
       example for more details.
@@ -30,7 +29,6 @@
 ## 2.6.2 (June 26, 2025)
 
 - Enhancements
-
     - Added explicit support for free-threaded versions of Python, starting with version 3.14
 
 - Bug Fixes
@@ -1316,12 +1314,10 @@
 ## 0.8.5 (April 15, 2018)
 
 - Bug Fixes
-
     - Fixed a bug with all argument decorators where the wrapped function wasn't returning a value
       and thus couldn't cause the cmd2 app to quit
 
 - Enhancements
-
     - Added support for verbose help with -v where it lists a brief summary of what each command
       does
     - Added support for categorizing commands into groups within the help menu
@@ -1353,12 +1349,10 @@
 ## 0.8.3 (April 09, 2018)
 
 - Bug Fixes
-
     - Fixed `help` command not calling functions for help topics
     - Fixed not being able to use quoted paths when redirecting with `<` and `>`
 
 - Enhancements
-
     - Tab completion has been overhauled and now supports completion of strings with quotes and
       spaces.
     - Tab completion will automatically add an opening quote if a string with a space is completed.

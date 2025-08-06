@@ -1,6 +1,6 @@
 # Installation Instructions
 
-`cmd2` works on Linux, macOS, and Windows. It requires Python 3.9 or higher,
+`cmd2` works on Linux, macOS, and Windows. It requires Python 10 or higher,
 [pip](https://pypi.org/project/pip), and [setuptools](https://pypi.org/project/setuptools). If
 you've got all that, then you can just:
 
@@ -18,7 +18,7 @@ $ pip install cmd2
 
 ## Prerequisites
 
-If you have Python 3 >=3.9 installed from [python.org](https://www.python.org), you will already
+If you have Python 3 >=3.10 installed from [python.org](https://www.python.org), you will already
 have [pip](https://pypi.org/project/pip) and [setuptools](https://pypi.org/project/setuptools), but
 may need to upgrade to the latest versions:
 

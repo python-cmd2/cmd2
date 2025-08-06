@@ -2,7 +2,6 @@
 
 from typing import (
     TYPE_CHECKING,
-    Optional,
 )
 
 import cmd2
@@ -29,7 +28,7 @@ class ExternalTestMixin(_Base):
         # code placed here runs after cmd2 initializes
         self._pybridge = cmd2.py_bridge.PyBridge(self)
 
-    def app_cmd(self, command: str, echo: Optional[bool] = None) -> cmd2.CommandResult:
+    def app_cmd(self, command: str, echo: bool | None = None) -> cmd2.CommandResult:
         """
         Run the application command
 

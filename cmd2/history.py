@@ -11,8 +11,6 @@ from dataclasses import (
 )
 from typing import (
     Any,
-    Optional,
-    Union,
     overload,
 )
 
@@ -164,7 +162,7 @@ class History(list[HistoryItem]):
         """Start a new session, thereby setting the next index as the first index in the new session."""
         self.session_start_index = len(self)
 
-    def _zero_based_index(self, onebased: Union[int, str]) -> int:
+    def _zero_based_index(self, onebased: int | str) -> int:
         """Convert a one-based index to a zero-based index."""
         result = int(onebased)
         if result > 0:
@@ -177,7 +175,7 @@ class History(list[HistoryItem]):
     @overload
     def append(self, new: Statement) -> None: ...  # pragma: no cover
 
-    def append(self, new: Union[Statement, HistoryItem]) -> None:
+    def append(self, new: Statement | HistoryItem) -> None:
         """Append a new statement to the end of the History list.
 
         :param new: Statement object which will be composed into a HistoryItem
@@ -332,7 +330,7 @@ class History(list[HistoryItem]):
             del self[0:last_element]
 
     def _build_result_dictionary(
-        self, start: int, end: int, filter_func: Optional[Callable[[HistoryItem], bool]] = None
+        self, start: int, end: int, filter_func: Callable[[HistoryItem], bool] | None = None
     ) -> 'OrderedDict[int, HistoryItem]':
         """Build history search results.
 

@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python"
 authors = [{ name = "cmd2 Contributors" }]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 keywords = ["CLI", "cmd", "command", "interactive", "prompt", "Python"]
 license = { file = "LICENSE" }
 classifiers = [
@@ -19,7 +19,6 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -149,7 +148,7 @@ exclude = [
 # Same as Black.
 line-length = 127
 indent-width = 4
-target-version = "py39" # Minimum supported version of Python
+target-version = "py310" # Minimum supported version of Python
 output-format = "full"
 
 [tool.ruff.lint]
@@ -225,7 +224,6 @@ select = [
 ignore = [
     # `uv run ruff rule E501` for a description of that rule
     "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed (would be good to enable this later)
-    "B905",    # zip() without an explicit strict= parameter (strict added in Python 3.10+)
     "COM812",  # Conflicts with ruff format (see https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules)
     "COM819",  # Conflicts with ruff format
     "D203",    # 1 blank line required before class docstring (conflicts with D211)
@@ -243,7 +241,6 @@ ignore = [
     "Q003",    # Conflicts with ruff format
     "TC006",   # Add quotes to type expression in typing.cast() (not needed except for forward references)
     "TRY003",  # Avoid specifying long messages outside the exception class (force custom exceptions for everything)
-    "UP007",   # Use X | Y for type annotations (requires Python 3.10+)
     "UP017",   # Use datetime.UTC alias (requires Python 3.11+)
     "UP038",   # Use X | Y in {} call instead of (X, Y) - deprecated due to poor performance (requires Python 3.10+)
     "W191",    # Conflicts with ruff format
