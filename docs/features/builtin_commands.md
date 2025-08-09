@@ -86,7 +86,7 @@ always_show_hint        False                           Display tab completion h
 debug                   True                            Show full traceback on exception
 echo                    False                           Echo command issued into output
 editor                  vi                              Program used by 'edit'
-feedback_to_output      False                           Include nonessentials in '|', '>' results
+feedback_to_output      False                           Include nonessentials in '|' and '>' results
 max_completion_items    50                              Maximum number of CompletionItems to display during tab
                                                         completion
 quiet                   False                           Don't print nonessential feedback

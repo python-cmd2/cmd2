@@ -3,12 +3,13 @@
 
 import argparse
 
+from rich.text import Text
+
 from cmd2 import (
     Cmd,
     Cmd2ArgumentParser,
     CompletionError,
     CompletionItem,
-    ansi,
     with_argparser,
 )
 
@@ -38,10 +39,10 @@ class ArgparseCompletion(Cmd):
 
     def choices_completion_item(self) -> list[CompletionItem]:
         """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
-        fancy_item = "These things can\ncontain newlines and\n"
-        fancy_item += ansi.style("styled text!!", fg=ansi.Fg.LIGHT_YELLOW, underline=True)
+        fancy_item = Text("These things can\ncontain newlines and\n") + Text("styled text!!", style="underline bright_yellow")
+
         items = {1: "My item", 2: "Another item", 3: "Yet another item", 4: fancy_item}
-        return [CompletionItem(item_id, description) for item_id, description in items.items()]
+        return [CompletionItem(item_id, [description]) for item_id, description in items.items()]
 
     def choices_arg_tokens(self, arg_tokens: dict[str, list[str]]) -> list[str]:
         """If a choices or completer function/method takes a value called arg_tokens, then it will be
@@ -86,7 +87,7 @@ class ArgparseCompletion(Cmd):
         '--completion_item',
         choices_provider=choices_completion_item,
         metavar="ITEM_ID",
-        descriptive_header="Description",
+        descriptive_headers=["Description"],
         help="demonstrate use of CompletionItems",
     )
 

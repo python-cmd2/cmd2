@@ -6,27 +6,30 @@ See the header of argparse_custom.py for instructions on how to use these featur
 import argparse
 import inspect
 import numbers
+import sys
 from collections import (
     deque,
 )
+from collections.abc import Sequence
 from typing import (
     IO,
     TYPE_CHECKING,
     cast,
 )
 
-from .ansi import (
-    style_aware_wcswidth,
-    widest_line,
-)
 from .constants import (
     INFINITY,
 )
+from .rich_utils import Cmd2Console
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import (
         Cmd,
     )
+
+
+from rich.box import SIMPLE_HEAD
+from rich.table import Column, Table
 
 from .argparse_custom import (
     ChoicesCallable,
@@ -40,14 +43,9 @@ from .command_definition import (
 from .exceptions import (
     CompletionError,
 )
-from .table_creator import (
-    Column,
-    HorizontalAlignment,
-    SimpleTable,
-)
 
-# If no descriptive header is supplied, then this will be used instead
-DEFAULT_DESCRIPTIVE_HEADER = 'Description'
+# If no descriptive headers are supplied, then this will be used instead
+DEFAULT_DESCRIPTIVE_HEADERS: Sequence[str | Column] = ('Description',)
 
 # Name of the choice/completer function argument that, if present, will be passed a dictionary of
 # command line tokens up through the token being completed mapped to their argparse destination name.
@@ -546,8 +544,6 @@ class ArgparseCompleter:
 
         # Check if there are too many CompletionItems to display as a table
         if len(completions) <= self._cmd2_app.max_completion_items:
-            four_spaces = 4 * ' '
-
             # If a metavar was defined, use that instead of the dest field
             destination = arg_state.action.metavar if arg_state.action.metavar else arg_state.action.dest
 
@@ -560,39 +556,34 @@ class ArgparseCompleter:
                 tuple_index = min(len(destination) - 1, arg_state.count)
                 destination = destination[tuple_index]
 
-            desc_header = arg_state.action.get_descriptive_header()  # type: ignore[attr-defined]
-            if desc_header is None:
-                desc_header = DEFAULT_DESCRIPTIVE_HEADER
+            desc_headers = cast(Sequence[str | Column] | None, arg_state.action.get_descriptive_headers())  # type: ignore[attr-defined]
+            if desc_headers is None:
+                desc_headers = DEFAULT_DESCRIPTIVE_HEADERS
 
-            # Replace tabs with 4 spaces so we can calculate width
-            desc_header = desc_header.replace('\t', four_spaces)
-
-            # Calculate needed widths for the token and description columns of the table
-            token_width = style_aware_wcswidth(destination)
-            desc_width = widest_line(desc_header)
-
-            for item in completion_items:
-                token_width = max(style_aware_wcswidth(item), token_width)
-
-                # Replace tabs with 4 spaces so we can calculate width
-                item.description = item.description.replace('\t', four_spaces)
-                desc_width = max(widest_line(item.description), desc_width)
-
-            cols = []
-            dest_alignment = HorizontalAlignment.RIGHT if all_nums else HorizontalAlignment.LEFT
-            cols.append(
-                Column(
-                    destination.upper(),
-                    width=token_width,
-                    header_horiz_align=dest_alignment,
-                    data_horiz_align=dest_alignment,
+            # Build all headers for the hint table
+            headers: list[Column] = []
+            headers.append(Column(destination.upper(), justify="right" if all_nums else "left", no_wrap=True))
+            for desc_header in desc_headers:
+                header = (
+                    desc_header
+                    if isinstance(desc_header, Column)
+                    else Column(
+                        desc_header,
+                        overflow="fold",
+                    )
                 )
-            )
-            cols.append(Column(desc_header, width=desc_width))
+                headers.append(header)
 
-            hint_table = SimpleTable(cols, divider_char=self._cmd2_app.ruler)
-            table_data = [[item, item.description] for item in completion_items]
-            self._cmd2_app.formatted_completions = hint_table.generate_table(table_data, row_spacing=0)
+            # Build the hint table
+            hint_table = Table(*headers, box=SIMPLE_HEAD, show_edge=False, border_style="rule.line")
+            for item in completion_items:
+                hint_table.add_row(item, *item.descriptive_data)
+
+            # Generate the hint table string
+            console = Cmd2Console(sys.stdout)
+            with console.capture() as capture:
+                console.print(hint_table)
+            self._cmd2_app.formatted_completions = capture.get()
 
         # Return sorted list of completions
         return cast(list[str], completions)

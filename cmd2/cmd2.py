@@ -63,8 +63,14 @@ from typing import (
     cast,
 )
 
+from rich.box import SIMPLE_HEAD
 from rich.console import Group
+from rich.rule import Rule
 from rich.style import StyleType
+from rich.table import (
+    Column,
+    Table,
+)
 from rich.text import Text
 
 from . import (
@@ -140,10 +146,6 @@ from .rl_utils import (
     rl_type,
     rl_warning,
     vt100_support,
-)
-from .table_creator import (
-    Column,
-    SimpleTable,
 )
 from .utils import (
     Settable,
@@ -286,6 +288,7 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
 
+    ruler = "─"
     DEFAULT_EDITOR = utils.find_editor()
 
     # Sorting keys for strings
@@ -469,7 +472,13 @@ class Cmd(cmd.Cmd):
         self._multiline_in_progress = ''
 
         # Set the header used for the help function's listing of documented functions
-        self.doc_header = "Documented commands (use 'help -v' for verbose/'help <topic>' for details):"
+        self.doc_header = "Documented commands (use 'help -v' for verbose/'help <topic>' for details)"
+
+        # Set header for table listing help topics not related to a command.
+        self.misc_header = "Miscellaneous Help Topics"
+
+        # Set header for table listing commands that have no help info.
+        self.undoc_header = "Undocumented Commands"
 
         # The error that prints when no help information can be found
         self.help_error = "No help on {}"
@@ -1147,7 +1156,7 @@ class Cmd(cmd.Cmd):
         self.add_settable(Settable('debug', bool, "Show full traceback on exception", self))
         self.add_settable(Settable('echo', bool, "Echo command issued into output", self))
         self.add_settable(Settable('editor', str, "Program used by 'edit'", self))
-        self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|', '>' results", self))
+        self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|' and '>' results", self))
         self.add_settable(
             Settable('max_completion_items', int, "Maximum number of CompletionItems to display during tab completion", self)
         )
@@ -2108,7 +2117,7 @@ class Cmd(cmd.Cmd):
             if self.formatted_completions:
                 if not hint_printed:
                     sys.stdout.write('\n')
-                sys.stdout.write('\n' + self.formatted_completions + '\n\n')
+                sys.stdout.write('\n' + self.formatted_completions + '\n')
 
             # Otherwise use readline's formatter
             else:
@@ -2165,7 +2174,7 @@ class Cmd(cmd.Cmd):
             if self.formatted_completions:
                 if not hint_printed:
                     readline.rl.mode.console.write('\n')
-                readline.rl.mode.console.write('\n' + self.formatted_completions + '\n\n')
+                readline.rl.mode.console.write('\n' + self.formatted_completions + '\n')
 
                 # Redraw the prompt and input lines
                 rl_force_redisplay()
@@ -2515,42 +2524,33 @@ class Cmd(cmd.Cmd):
             if command not in self.hidden_commands and command not in self.disabled_commands
         ]
 
-    # Table displayed when tab completing aliases
-    _alias_completion_table = SimpleTable([Column('Value', width=80)], divider_char=None)
-
     def _get_alias_completion_items(self) -> list[CompletionItem]:
         """Return list of alias names and values as CompletionItems."""
         results: list[CompletionItem] = []
 
         for cur_key in self.aliases:
-            row_data = [self.aliases[cur_key]]
-            results.append(CompletionItem(cur_key, self._alias_completion_table.generate_data_row(row_data)))
+            descriptive_data = [self.aliases[cur_key]]
+            results.append(CompletionItem(cur_key, descriptive_data))
 
         return results
-
-    # Table displayed when tab completing macros
-    _macro_completion_table = SimpleTable([Column('Value', width=80)], divider_char=None)
 
     def _get_macro_completion_items(self) -> list[CompletionItem]:
         """Return list of macro names and values as CompletionItems."""
         results: list[CompletionItem] = []
 
         for cur_key in self.macros:
-            row_data = [self.macros[cur_key].value]
-            results.append(CompletionItem(cur_key, self._macro_completion_table.generate_data_row(row_data)))
+            descriptive_data = [self.macros[cur_key].value]
+            results.append(CompletionItem(cur_key, descriptive_data))
 
         return results
-
-    # Table displayed when tab completing Settables
-    _settable_completion_table = SimpleTable([Column('Value', width=30), Column('Description', width=60)], divider_char=None)
 
     def _get_settable_completion_items(self) -> list[CompletionItem]:
         """Return list of Settable names, values, and descriptions as CompletionItems."""
         results: list[CompletionItem] = []
 
         for cur_key in self.settables:
-            row_data = [self.settables[cur_key].get_value(), self.settables[cur_key].description]
-            results.append(CompletionItem(cur_key, self._settable_completion_table.generate_data_row(row_data)))
+            descriptive_data = [self.settables[cur_key].get_value(), self.settables[cur_key].description]
+            results.append(CompletionItem(cur_key, descriptive_data))
 
         return results
 
@@ -3651,7 +3651,7 @@ class Cmd(cmd.Cmd):
             nargs=argparse.ZERO_OR_MORE,
             help='alias(es) to delete',
             choices_provider=cls._get_alias_completion_items,
-            descriptive_header=cls._alias_completion_table.generate_header(),
+            descriptive_headers=["Value"],
         )
 
         return alias_delete_parser
@@ -3693,7 +3693,7 @@ class Cmd(cmd.Cmd):
             nargs=argparse.ZERO_OR_MORE,
             help='alias(es) to list',
             choices_provider=cls._get_alias_completion_items,
-            descriptive_header=cls._alias_completion_table.generate_header(),
+            descriptive_headers=["Value"],
         )
 
         return alias_list_parser
@@ -3939,7 +3939,7 @@ class Cmd(cmd.Cmd):
             nargs=argparse.ZERO_OR_MORE,
             help='macro(s) to delete',
             choices_provider=cls._get_macro_completion_items,
-            descriptive_header=cls._macro_completion_table.generate_header(),
+            descriptive_headers=["Value"],
         )
 
         return macro_delete_parser
@@ -3978,7 +3978,7 @@ class Cmd(cmd.Cmd):
         nargs=argparse.ZERO_OR_MORE,
         help='macro(s) to list',
         choices_provider=_get_macro_completion_items,
-        descriptive_header=_macro_completion_table.generate_header(),
+        descriptive_headers=["Value"],
     )
 
     @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
@@ -4087,9 +4087,9 @@ class Cmd(cmd.Cmd):
 
             # If there is a help func delegate to do_help
             elif help_func is not None:
-                super().do_help(args.command)
+                help_func()
 
-            # If there's no help_func __doc__ then format and output it
+            # If the command function has a docstring, then print it
             elif func is not None and func.__doc__ is not None:
                 self.poutput(pydoc.getdoc(func))
 
@@ -4104,7 +4104,7 @@ class Cmd(cmd.Cmd):
     def print_topics(self, header: str, cmds: list[str] | None, cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
         """Print groups of commands and topics in columns and an optional header.
 
-        Override of cmd's print_topics() to handle headers with newlines, ANSI style sequences, and wide characters.
+        Override of cmd's print_topics() to use Rich.
 
         :param header: string to print above commands being printed
         :param cmds: list of topics to print
@@ -4112,10 +4112,11 @@ class Cmd(cmd.Cmd):
         :param maxcol: max number of display columns to fit into
         """
         if cmds:
-            self.poutput(header)
+            header_grid = Table.grid()
+            header_grid.add_row(header, style="cmd2.help_header")
             if self.ruler:
-                divider = utils.align_left('', fill_char=self.ruler, width=ansi.widest_line(header))
-                self.poutput(divider)
+                header_grid.add_row(Rule(characters=self.ruler))
+            self.poutput(header_grid)
             self.columnize(cmds, maxcol - 1)
             self.poutput()
 
@@ -4180,12 +4181,12 @@ class Cmd(cmd.Cmd):
 
         if not cmds_cats:
             # No categories found, fall back to standard behavior
-            self.poutput(self.doc_leader)
+            self.poutput(self.doc_leader, soft_wrap=False)
             self._print_topics(self.doc_header, cmds_doc, verbose)
         else:
             # Categories found, Organize all commands by category
-            self.poutput(self.doc_leader)
-            self.poutput(self.doc_header, end="\n\n")
+            self.poutput(self.doc_leader, soft_wrap=False)
+            self.poutput(self.doc_header, end="\n\n", soft_wrap=False)
             for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
                 self._print_topics(category, cmds_cats[category], verbose)
             self._print_topics(self.default_category, cmds_doc, verbose)
@@ -4232,23 +4233,16 @@ class Cmd(cmd.Cmd):
             if not verbose:
                 self.print_topics(header, cmds, 15, 80)
             else:
-                # Find the widest command
-                widest = max([ansi.style_aware_wcswidth(command) for command in cmds])
-
-                # Define the table structure
-                name_column = Column('', width=max(widest, 20))
-                desc_column = Column('', width=80)
-
-                topic_table = SimpleTable([name_column, desc_column], divider_char=self.ruler)
-
-                # Build the topic table
-                table_str_buf = io.StringIO()
-                if header:
-                    table_str_buf.write(header + "\n")
-
-                divider = topic_table.generate_divider()
-                if divider:
-                    table_str_buf.write(divider + "\n")
+                category_grid = Table.grid()
+                category_grid.add_row(header, style="cmd2.help_header")
+                category_grid.add_row(Rule(characters=self.ruler))
+                topics_table = Table(
+                    Column("Name", no_wrap=True),
+                    Column("Description", overflow="fold"),
+                    box=SIMPLE_HEAD,
+                    border_style="rule.line",
+                    show_edge=False,
+                )
 
                 # Try to get the documentation string for each command
                 topics = self.get_help_topics()
@@ -4272,8 +4266,9 @@ class Cmd(cmd.Cmd):
                                 self.stdout = cast(TextIO, result)
                                 help_func()
                             finally:
-                                # restore internal stdout
-                                self.stdout = stdout_orig
+                                with self.sigint_protection:
+                                    # restore internal stdout
+                                    self.stdout = stdout_orig
                         doc = result.getvalue()
 
                     else:
@@ -4283,10 +4278,10 @@ class Cmd(cmd.Cmd):
                     cmd_desc = strip_doc_annotations(doc) if doc else ''
 
                     # Add this command to the table
-                    table_row = topic_table.generate_data_row([command, cmd_desc])
-                    table_str_buf.write(table_row + '\n')
+                    topics_table.add_row(command, cmd_desc)
 
-                self.poutput(table_str_buf.getvalue())
+                category_grid.add_row(topics_table)
+                self.poutput(category_grid, "")
 
     @staticmethod
     def _build_shortcuts_parser() -> Cmd2ArgumentParser:
@@ -4402,7 +4397,7 @@ class Cmd(cmd.Cmd):
             nargs=argparse.OPTIONAL,
             help='parameter to set or view',
             choices_provider=cls._get_settable_completion_items,
-            descriptive_header=cls._settable_completion_table.generate_header(),
+            descriptive_headers=["Value", "Description"],
         )
 
         return base_set_parser
@@ -4482,33 +4477,32 @@ class Cmd(cmd.Cmd):
                 return
 
             # Show one settable
-            to_show = [args.param]
+            to_show: list[str] = [args.param]
         else:
             # Show all settables
             to_show = list(self.settables.keys())
 
         # Define the table structure
-        name_label = 'Name'
-        max_name_width = max([ansi.style_aware_wcswidth(param) for param in to_show])
-        max_name_width = max(max_name_width, ansi.style_aware_wcswidth(name_label))
-
-        cols: list[Column] = [
-            Column(name_label, width=max_name_width),
-            Column('Value', width=30),
-            Column('Description', width=60),
-        ]
-
-        table = SimpleTable(cols, divider_char=self.ruler)
-        self.poutput(table.generate_header())
+        settable_table = Table(
+            Column("Name", no_wrap=True),
+            Column("Value", overflow="fold"),
+            Column("Description", overflow="fold"),
+            box=SIMPLE_HEAD,
+            border_style="rule.line",
+            show_edge=False,
+        )
 
         # Build the table and populate self.last_result
         self.last_result = {}  # dict[settable_name, settable_value]
 
         for param in sorted(to_show, key=self.default_sort_key):
             settable = self.settables[param]
-            row_data = [param, settable.get_value(), settable.description]
-            self.poutput(table.generate_data_row(row_data))
+            settable_table.add_row(param, str(settable.get_value()), settable.description)
             self.last_result[param] = settable.get_value()
+
+        self.poutput()
+        self.poutput(settable_table)
+        self.poutput()
 
     @classmethod
     def _build_shell_parser(cls) -> Cmd2ArgumentParser:

@@ -10,19 +10,22 @@ now: 'Terminal'
 editor - was: '/.*/'
 now: 'vim'
 (Cmd) set
-Name                    Value                           Description/ */
-====================================================================================================================
-allow_style             Terminal                        Allow ANSI text style sequences in output (valid values:/ */
-                                                        Always, Never, Terminal)/ */
-always_show_hint        False                           Display tab completion hint even when completion suggestions
-                                                        print/ */
-debug                   False                           Show full traceback on exception/ */
-echo                    False                           Echo command issued into output/ */
-editor                  vim                             Program used by 'edit'/ */
-feedback_to_output      False                           Include nonessentials in '|', '>' results/ */
-max_completion_items    50                              Maximum number of CompletionItems to display during tab/ */
-                                                        completion/ */
-maxrepeats              3                               Max number of `--repeat`s allowed/ */
-quiet                   False                           Don't print nonessential feedback/ */
-scripts_add_to_history  True                            Scripts and pyscripts add commands to history/ */
-timing                  False                           Report execution times/ */
+
+ Name                     Value      Description/ */
+────────────────────────────────────────────────────────────────────────────────
+ allow_style              Terminal   Allow ANSI text style sequences in output/ */
+                                     (valid values: Always, Never, Terminal)/ */
+ always_show_hint         False      Display tab completion hint even when/ */
+                                     completion suggestions print/ */
+ debug                    False      Show full traceback on exception/ */
+ echo                     False      Echo command issued into output/ */
+ editor                   vim        Program used by 'edit'/ */
+ feedback_to_output       False      Include nonessentials in '|' and '>'/ */
+                                     results/ */
+ max_completion_items     50         Maximum number of CompletionItems to/ */
+                                     display during tab completion/ */
+ maxrepeats               3          Max number of `--repeat`s allowed/ */
+ quiet                    False      Don't print nonessential feedback/ */
+ scripts_add_to_history   True       Scripts and pyscripts add commands to/ */
+                                     history/ */
+ timing                   False      Report execution times/ */

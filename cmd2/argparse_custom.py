@@ -200,8 +200,8 @@ for cases in which you need to manually access the cmd2-specific attributes.
 - ``argparse.Action.get_choices_callable()`` - See `action_get_choices_callable` for more details.
 - ``argparse.Action.set_choices_provider()`` - See `_action_set_choices_provider` for more details.
 - ``argparse.Action.set_completer()`` - See `_action_set_completer` for more details.
-- ``argparse.Action.get_descriptive_header()`` - See `_action_get_descriptive_header` for more details.
-- ``argparse.Action.set_descriptive_header()`` - See `_action_set_descriptive_header` for more details.
+- ``argparse.Action.get_descriptive_headers()`` - See `_action_get_descriptive_headers` for more details.
+- ``argparse.Action.set_descriptive_headers()`` - See `_action_set_descriptive_headers` for more details.
 - ``argparse.Action.get_nargs_range()`` - See `_action_get_nargs_range` for more details.
 - ``argparse.Action.set_nargs_range()`` - See `_action_set_nargs_range` for more details.
 - ``argparse.Action.get_suppress_tab_hint()`` - See `_action_get_suppress_tab_hint` for more details.
@@ -249,6 +249,7 @@ from rich.console import (
     Group,
     RenderableType,
 )
+from rich.protocol import is_renderable
 from rich.table import Column, Table
 from rich.text import Text
 from rich_argparse import (
@@ -349,15 +350,17 @@ class CompletionItem(str):  # noqa: SLOT000
         """Responsible for creating and returning a new instance, called before __init__ when an object is instantiated."""
         return super().__new__(cls, value)
 
-    def __init__(self, value: object, description: str = '', *args: Any) -> None:
+    def __init__(self, value: object, descriptive_data: Sequence[Any], *args: Any) -> None:
         """CompletionItem Initializer.
 
         :param value: the value being tab completed
-        :param description: description text to display
+        :param descriptive_data: descriptive data to display
         :param args: args for str __init__
         """
         super().__init__(*args)
-        self.description = description
+
+        # Make sure all objects are renderable by a Rich table.
+        self.descriptive_data = [obj if is_renderable(obj) else str(obj) for obj in descriptive_data]
 
         # Save the original value to support CompletionItems as argparse choices.
         # cmd2 has patched argparse so input is compared to this value instead of the CompletionItem instance.
@@ -483,7 +486,7 @@ class ChoicesCallable:
 ATTR_CHOICES_CALLABLE = 'choices_callable'
 
 # Descriptive header that prints when using CompletionItems
-ATTR_DESCRIPTIVE_HEADER = 'descriptive_header'
+ATTR_DESCRIPTIVE_HEADERS = 'descriptive_headers'
 
 # A tuple specifying nargs as a range (min, max)
 ATTR_NARGS_RANGE = 'nargs_range'
@@ -580,38 +583,38 @@ setattr(argparse.Action, 'set_completer', _action_set_completer)
 
 
 ############################################################################################################
-# Patch argparse.Action with accessors for descriptive_header attribute
+# Patch argparse.Action with accessors for descriptive_headers attribute
 ############################################################################################################
-def _action_get_descriptive_header(self: argparse.Action) -> str | None:
-    """Get the descriptive_header attribute of an argparse Action.
+def _action_get_descriptive_headers(self: argparse.Action) -> Sequence[str | Column] | None:
+    """Get the descriptive_headers attribute of an argparse Action.
 
-    This function is added by cmd2 as a method called ``get_descriptive_header()`` to ``argparse.Action`` class.
+    This function is added by cmd2 as a method called ``get_descriptive_headers()`` to ``argparse.Action`` class.
 
-    To call: ``action.get_descriptive_header()``
+    To call: ``action.get_descriptive_headers()``
 
     :param self: argparse Action being queried
-    :return: The value of descriptive_header or None if attribute does not exist
+    :return: The value of descriptive_headers or None if attribute does not exist
     """
-    return cast(str | None, getattr(self, ATTR_DESCRIPTIVE_HEADER, None))
+    return cast(Sequence[str | Column] | None, getattr(self, ATTR_DESCRIPTIVE_HEADERS, None))
 
 
-setattr(argparse.Action, 'get_descriptive_header', _action_get_descriptive_header)
+setattr(argparse.Action, 'get_descriptive_headers', _action_get_descriptive_headers)
 
 
-def _action_set_descriptive_header(self: argparse.Action, descriptive_header: str | None) -> None:
-    """Set the descriptive_header attribute of an argparse Action.
+def _action_set_descriptive_headers(self: argparse.Action, descriptive_headers: Sequence[str | Column] | None) -> None:
+    """Set the descriptive_headers attribute of an argparse Action.
 
-    This function is added by cmd2 as a method called ``set_descriptive_header()`` to ``argparse.Action`` class.
+    This function is added by cmd2 as a method called ``set_descriptive_headers()`` to ``argparse.Action`` class.
 
-    To call: ``action.set_descriptive_header(descriptive_header)``
+    To call: ``action.set_descriptive_headers(descriptive_headers)``
 
     :param self: argparse Action being updated
-    :param descriptive_header: value being assigned
+    :param descriptive_headers: value being assigned
     """
-    setattr(self, ATTR_DESCRIPTIVE_HEADER, descriptive_header)
+    setattr(self, ATTR_DESCRIPTIVE_HEADERS, descriptive_headers)
 
 
-setattr(argparse.Action, 'set_descriptive_header', _action_set_descriptive_header)
+setattr(argparse.Action, 'set_descriptive_headers', _action_set_descriptive_headers)
 
 
 ############################################################################################################
@@ -762,7 +765,7 @@ def _add_argument_wrapper(
     choices_provider: ChoicesProviderFunc | None = None,
     completer: CompleterFunc | None = None,
     suppress_tab_hint: bool = False,
-    descriptive_header: str | None = None,
+    descriptive_headers: list[Column | str] | None = None,
     **kwargs: Any,
 ) -> argparse.Action:
     """Wrap ActionsContainer.add_argument() which supports more settings used by cmd2.
@@ -782,8 +785,8 @@ def _add_argument_wrapper(
                               current argument's help text as a hint. Set this to True to suppress the hint. If this
                               argument's help text is set to argparse.SUPPRESS, then tab hints will not display
                               regardless of the value passed for suppress_tab_hint. Defaults to False.
-    :param descriptive_header: if the provided choices are CompletionItems, then this header will display
-                               during tab completion. Defaults to None.
+    :param descriptive_headers: if the provided choices are CompletionItems, then these are the headers
+                                of the descriptive data. Defaults to None.
 
     # Args from original function
     :param kwargs: keyword-arguments recognized by argparse._ActionsContainer.add_argument
@@ -874,7 +877,7 @@ def _add_argument_wrapper(
         new_arg.set_completer(completer)  # type: ignore[attr-defined]
 
     new_arg.set_suppress_tab_hint(suppress_tab_hint)  # type: ignore[attr-defined]
-    new_arg.set_descriptive_header(descriptive_header)  # type: ignore[attr-defined]
+    new_arg.set_descriptive_headers(descriptive_headers)  # type: ignore[attr-defined]
 
     for keyword, value in custom_attribs.items():
         attr_setter = getattr(new_arg, f'set_{keyword}', None)
