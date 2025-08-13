@@ -2168,13 +2168,13 @@ class Cmd(cmd.Cmd):
             hint_printed = False
             if self.always_show_hint and self.completion_hint:
                 hint_printed = True
-                readline.rl.mode.console.write('\n' + self.completion_hint)
+                sys.stdout.write('\n' + self.completion_hint)
 
             # Check if we already have formatted results to print
             if self.formatted_completions:
                 if not hint_printed:
-                    readline.rl.mode.console.write('\n')
-                readline.rl.mode.console.write('\n' + self.formatted_completions + '\n')
+                    sys.stdout.write('\n')
+                sys.stdout.write('\n' + self.formatted_completions + '\n')
 
                 # Redraw the prompt and input lines
                 rl_force_redisplay()

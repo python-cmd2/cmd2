@@ -20,7 +20,10 @@ from typing import (
 from .constants import (
     INFINITY,
 )
-from .rich_utils import Cmd2Console
+from .rich_utils import (
+    Cmd2Console,
+    Cmd2Style,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import (
@@ -562,7 +565,13 @@ class ArgparseCompleter:
 
             # Build all headers for the hint table
             headers: list[Column] = []
-            headers.append(Column(destination.upper(), justify="right" if all_nums else "left", no_wrap=True))
+            headers.append(
+                Column(
+                    destination.upper(),
+                    justify="right" if all_nums else "left",
+                    no_wrap=True,
+                )
+            )
             for desc_header in desc_headers:
                 header = (
                     desc_header
@@ -575,7 +584,12 @@ class ArgparseCompleter:
                 headers.append(header)
 
             # Build the hint table
-            hint_table = Table(*headers, box=SIMPLE_HEAD, show_edge=False, border_style="rule.line")
+            hint_table = Table(
+                *headers,
+                box=SIMPLE_HEAD,
+                show_edge=False,
+                border_style=Cmd2Style.RULE_LINE,
+            )
             for item in completion_items:
                 hint_table.add_row(item, *item.descriptive_data)
 
