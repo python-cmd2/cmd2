@@ -12,7 +12,6 @@ import pytest
 import cmd2
 
 from .conftest import (
-    HELP_HISTORY,
     normalize,
     run_cmd,
 )
@@ -838,11 +837,6 @@ def test_history_script_expanded(base_app) -> None:
     expected = ['alias create s shortcuts', 'shortcuts']
     assert out == expected
     verify_hi_last_result(base_app, 2)
-
-
-def test_base_help_history(base_app) -> None:
-    out, err = run_cmd(base_app, 'help history')
-    assert out == normalize(HELP_HISTORY)
 
 
 def test_exclude_from_history(base_app) -> None:

@@ -40,41 +40,6 @@ def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_s
             assert verbose_string in help_text
 
 
-# Help text for the history command
-HELP_HISTORY = """Usage: history [-h] [-r | -e | -o FILE | -t TRANSCRIPT_FILE | -c] [-s] [-x]
-               [-v] [-a]
-               [arg]
-
-View, run, edit, save, or clear previously entered commands
-
-positional arguments:
-  arg                   empty               all history items
-                        a                   one history item by number
-                        a..b, a:b, a:, ..b  items by indices (inclusive)
-                        string              items containing string
-                        /regex/             items matching regular expression
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -r, --run             run selected history items
-  -e, --edit            edit and then run selected history items
-  -o, --output_file FILE
-                        output commands to a script file, implies -s
-  -t, --transcript TRANSCRIPT_FILE
-                        output commands and results to a transcript file,
-                        implies -s
-  -c, --clear           clear all history
-
-formatting:
-  -s, --script          output commands in script format, i.e. without command
-                        numbers
-  -x, --expanded        output fully parsed commands with any shortcuts, aliases, and macros expanded
-  -v, --verbose         display history and include expanded commands if they
-                        differ from the typed command
-  -a, --all             display all commands, including ones persisted from
-                        previous sessions
-"""
-
 # Output from the shortcuts command with default built-in shortcuts
 SHORTCUTS_TXT = """Shortcuts for other commands:
 !: shell

@@ -35,37 +35,6 @@ def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_s
             assert verbose_string in help_text
 
 
-# Help text for the history command (Generated when terminal width is 80)
-HELP_HISTORY = """Usage: history [-h] [-r | -e | -o FILE | -t TRANSCRIPT_FILE | -c] [-s] [-x]
-               [-v] [-a]
-               [arg]
-
-View, run, edit, save, or clear previously entered commands.
-
-Positional Arguments:
-  arg                   empty               all history items
-                        a                   one history item by number
-                        a..b, a:b, a:, ..b  items by indices (inclusive)
-                        string              items containing string
-                        /regex/             items matching regular expression
-
-Optional Arguments:
-  -h, --help            show this help message and exit
-  -r, --run             run selected history items
-  -e, --edit            edit and then run selected history items
-  -o, --output_file FILE
-                        output commands to a script file, implies -s
-  -t, --transcript TRANSCRIPT_FILE
-                        create a transcript file by re-running the commands, implies both -r and -s
-  -c, --clear           clear all history
-
-Formatting:
-  -s, --script          output commands in script format, i.e. without command numbers
-  -x, --expanded        output fully parsed commands with shortcuts, aliases, and macros expanded
-  -v, --verbose         display history and include expanded commands if they differ from the typed command
-  -a, --all             display all commands, including ones persisted from previous sessions
-"""
-
 # Output from the shortcuts command with default built-in shortcuts
 SHORTCUTS_TXT = """Shortcuts for other commands:
 !: shell
@@ -73,25 +42,6 @@ SHORTCUTS_TXT = """Shortcuts for other commands:
 @: run_script
 @@: _relative_run_script
 """
-
-# Output from the set command
-SET_TXT = (
-    "Name                    Value                           Description                                                 \n"
-    "====================================================================================================================\n"
-    "allow_style             Terminal                        Allow ANSI text style sequences in output (valid values:    \n"
-    "                                                        Always, Never, Terminal)                                    \n"
-    "always_show_hint        False                           Display tab completion hint even when completion suggestions\n"
-    "                                                        print                                                       \n"
-    "debug                   False                           Show full traceback on exception                            \n"
-    "echo                    False                           Echo command issued into output                             \n"
-    "editor                  vim                             Program used by 'edit'                                      \n"
-    "feedback_to_output      False                           Include nonessentials in '|', '>' results                   \n"
-    "max_completion_items    50                              Maximum number of CompletionItems to display during tab     \n"
-    "                                                        completion                                                  \n"
-    "quiet                   False                           Don't print nonessential feedback                           \n"
-    "scripts_add_to_history  True                            Scripts and pyscripts add commands to history               \n"
-    "timing                  False                           Report execution times                                      \n"
-)
 
 
 def normalize(block):

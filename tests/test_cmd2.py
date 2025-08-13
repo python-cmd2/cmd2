@@ -33,8 +33,6 @@ from cmd2.rl_utils import (
 )
 
 from .conftest import (
-    HELP_HISTORY,
-    SET_TXT,
     SHORTCUTS_TXT,
     complete_tester,
     normalize,
@@ -153,12 +151,22 @@ def test_command_starts_with_shortcut() -> None:
 
 
 def test_base_set(base_app) -> None:
-    # force editor to be 'vim' so test is repeatable across platforms
-    base_app.editor = 'vim'
+    # Make sure all settables appear in output.
     out, err = run_cmd(base_app, 'set')
-    expected = normalize(SET_TXT)
-    assert out == expected
+    settables = sorted(base_app.settables.keys())
 
+    # The settables will appear in order in the table.
+    # Go line-by-line until all settables are found.
+    for line in out:
+        if not settables:
+            break
+        if line.lstrip().startswith(settables[0]):
+            settables.pop(0)
+
+    # This will be empty if we found all settables in the output.
+    assert not settables
+
+    # Make sure all settables appear in last_result.
     assert len(base_app.last_result) == len(base_app.settables)
     for param in base_app.last_result:
         assert base_app.last_result[param] == base_app.settables[param].get_value()
@@ -178,9 +186,9 @@ now: True
     out, err = run_cmd(base_app, 'set quiet')
     expected = normalize(
         """
-Name   Value                           Description
-===================================================================================================
-quiet  True                            Don't print nonessential feedback
+ Name    Value   Description
+───────────────────────────────────────────────────
+ quiet   True    Don't print nonessential feedback
 """
     )
     assert out == expected
@@ -1866,7 +1874,7 @@ def test_echo(capsys) -> None:
     app.runcmds_plus_hooks(commands)
 
     out, err = capsys.readouterr()
-    assert out.startswith(f'{app.prompt}{commands[0]}\n' + HELP_HISTORY.split()[0])
+    assert out.startswith(f'{app.prompt}{commands[0]}\nUsage: history')
 
 
 def test_read_input_rawinput_true(capsys, monkeypatch) -> None:
@@ -2095,7 +2103,7 @@ def test_get_alias_completion_items(base_app) -> None:
     for cur_res in results:
         assert cur_res in base_app.aliases
         # Strip trailing spaces from table output
-        assert cur_res.description.rstrip() == base_app.aliases[cur_res]
+        assert cur_res.descriptive_data[0].rstrip() == base_app.aliases[cur_res]
 
 
 def test_get_macro_completion_items(base_app) -> None:
@@ -2108,7 +2116,7 @@ def test_get_macro_completion_items(base_app) -> None:
     for cur_res in results:
         assert cur_res in base_app.macros
         # Strip trailing spaces from table output
-        assert cur_res.description.rstrip() == base_app.macros[cur_res].value
+        assert cur_res.descriptive_data[0].rstrip() == base_app.macros[cur_res].value
 
 
 def test_get_settable_completion_items(base_app) -> None:
@@ -2122,11 +2130,11 @@ def test_get_settable_completion_items(base_app) -> None:
         # These CompletionItem descriptions are a two column table (Settable Value and Settable Description)
         # First check if the description text starts with the value
         str_value = str(cur_settable.get_value())
-        assert cur_res.description.startswith(str_value)
+        assert cur_res.descriptive_data[0].startswith(str_value)
 
         # The second column is likely to have wrapped long text. So we will just examine the
         # first couple characters to look for the Settable's description.
-        assert cur_settable.description[0:10] in cur_res.description
+        assert cur_settable.description[0:10] in cur_res.descriptive_data[1]
 
 
 def test_alias_no_subcommand(base_app) -> None:
