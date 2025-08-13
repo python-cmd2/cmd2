@@ -12,7 +12,7 @@ now: 'vim'
 (Cmd) set
 
  Name                     Value      Description/ */
-────────────────────────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────────────────────/─*/
  allow_style              Terminal   Allow ANSI text style sequences in output/ */
                                      (valid values: Always, Never, Terminal)/ */
  always_show_hint         False      Display tab completion hint even when/ */
