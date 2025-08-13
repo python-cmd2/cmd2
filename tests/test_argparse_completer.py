@@ -15,7 +15,6 @@ from cmd2 import (
     argparse_custom,
     with_argparser,
 )
-from cmd2.utils import align_right
 
 from .conftest import (
     complete_tester,
@@ -102,17 +101,20 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     STR_METAVAR = "HEADLESS"
     TUPLE_METAVAR = ('arg1', 'others')
-    CUSTOM_DESC_HEADER = "Custom Header"
+    CUSTOM_DESC_HEADERS = ("Custom Headers",)
 
     # tuples (for sake of immutability) used in our tests (there is a mix of sorted and unsorted on purpose)
     non_negative_num_choices = (1, 2, 3, 0.5, 22)
     num_choices = (-1, 1, -2, 2.5, 0, -12)
     static_choices_list = ('static', 'choices', 'stop', 'here')
     choices_from_provider = ('choices', 'provider', 'probably', 'improved')
-    completion_item_choices = (CompletionItem('choice_1', 'A description'), CompletionItem('choice_2', 'Another description'))
+    completion_item_choices = (
+        CompletionItem('choice_1', ['A description']),
+        CompletionItem('choice_2', ['Another description']),
+    )
 
     # This tests that CompletionItems created with numerical values are sorted as numbers.
-    num_completion_items = (CompletionItem(5, "Five"), CompletionItem(1.5, "One.Five"), CompletionItem(2, "Five"))
+    num_completion_items = (CompletionItem(5, ["Five"]), CompletionItem(1.5, ["One.Five"]), CompletionItem(2, ["Five"]))
 
     def choices_provider(self) -> tuple[str]:
         """Method that provides choices"""
@@ -123,7 +125,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         items = []
         for i in range(10):
             main_str = f'main_str{i}'
-            items.append(CompletionItem(main_str, description='blah blah'))
+            items.append(CompletionItem(main_str, ['blah blah']))
         return items
 
     choices_parser = Cmd2ArgumentParser()
@@ -137,7 +139,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         "--desc_header",
         help='this arg has a descriptive header',
         choices_provider=completion_item_method,
-        descriptive_header=CUSTOM_DESC_HEADER,
+        descriptive_headers=CUSTOM_DESC_HEADERS,
     )
     choices_parser.add_argument(
         "--no_header",
@@ -718,8 +720,8 @@ def test_completion_items(ac_app) -> None:
     line_found = False
     for line in ac_app.formatted_completions.splitlines():
         # Since the CompletionItems were created from strings, the left-most column is left-aligned.
-        # Therefore choice_1 will begin the line.
-        if line.startswith('choice_1') and 'A description' in line:
+        # Therefore choice_1 will begin the line (with 1 space for padding).
+        if line.startswith(' choice_1') and 'A description' in line:
             line_found = True
             break
 
@@ -738,11 +740,10 @@ def test_completion_items(ac_app) -> None:
 
     # Look for both the value and description in the hint table
     line_found = False
-    aligned_val = align_right('1.5', width=cmd2.ansi.style_aware_wcswidth('num_completion_items'))
     for line in ac_app.formatted_completions.splitlines():
         # Since the CompletionItems were created from numbers, the left-most column is right-aligned.
-        # Therefore 1.5 will be right-aligned in a field as wide as the arg ("num_completion_items").
-        if line.startswith(aligned_val) and 'One.Five' in line:
+        # Therefore 1.5 will be right-aligned.
+        if line.startswith("                  1.5") and "One.Five" in line:
             line_found = True
             break
 
@@ -948,9 +949,9 @@ def test_completion_items_arg_header(ac_app) -> None:
     assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[0]
 
 
-def test_completion_items_descriptive_header(ac_app) -> None:
+def test_completion_items_descriptive_headers(ac_app) -> None:
     from cmd2.argparse_completer import (
-        DEFAULT_DESCRIPTIVE_HEADER,
+        DEFAULT_DESCRIPTIVE_HEADERS,
     )
 
     # This argument provided a descriptive header
@@ -960,16 +961,16 @@ def test_completion_items_descriptive_header(ac_app) -> None:
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.CUSTOM_DESC_HEADER in normalize(ac_app.formatted_completions)[0]
+    assert ac_app.CUSTOM_DESC_HEADERS[0] in normalize(ac_app.formatted_completions)[0]
 
-    # This argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADER
+    # This argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADERS
     text = ''
     line = f'choices --no_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert DEFAULT_DESCRIPTIVE_HEADER in normalize(ac_app.formatted_completions)[0]
+    assert DEFAULT_DESCRIPTIVE_HEADERS[0] in normalize(ac_app.formatted_completions)[0]
 
 
 @pytest.mark.parametrize(

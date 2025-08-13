@@ -1,5 +1,6 @@
 """Provides common utilities to support Rich in cmd2 applications."""
 
+import sys
 from collections.abc import Mapping
 from enum import Enum
 from typing import (
@@ -24,6 +25,11 @@ from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
 
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    from backports.strenum import StrEnum
+
 
 class AllowStyle(Enum):
     """Values for ``cmd2.rich_utils.allow_style``."""
@@ -44,34 +50,55 @@ class AllowStyle(Enum):
 # Controls when ANSI style sequences are allowed in output
 allow_style = AllowStyle.TERMINAL
 
-# Default styles for cmd2
-DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
-    "cmd2.success": Style(color="green"),
-    "cmd2.warning": Style(color="bright_yellow"),
-    "cmd2.error": Style(color="bright_red"),
-    "cmd2.help_header": Style(color="bright_green", bold=True),
-    "cmd2.example": Style(color="cyan", bold=True),
-}
 
-# Include default styles from RichHelpFormatter
-DEFAULT_CMD2_STYLES.update(RichHelpFormatter.styles.copy())
+class Cmd2Style(StrEnum):
+    """Names of styles defined in DEFAULT_CMD2_STYLES.
+
+    Using this enum instead of string literals prevents typos and enables IDE
+    autocompletion, which makes it easier to discover and use the available
+    styles.
+    """
+
+    ERROR = "cmd2.error"
+    EXAMPLE = "cmd2.example"
+    HELP_HEADER = "cmd2.help.header"
+    HELP_TITLE = "cmd2.help.title"
+    RULE_LINE = "cmd2.rule.line"
+    SUCCESS = "cmd2.success"
+    WARNING = "cmd2.warning"
+
+
+# Default styles used by cmd2
+DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
+    Cmd2Style.ERROR: Style(color="bright_red"),
+    Cmd2Style.EXAMPLE: Style(color="cyan", bold=True),
+    Cmd2Style.HELP_HEADER: Style(color="cyan", bold=True),
+    Cmd2Style.HELP_TITLE: Style(color="bright_green", bold=True),
+    Cmd2Style.RULE_LINE: Style(color="bright_green"),
+    Cmd2Style.SUCCESS: Style(color="green"),
+    Cmd2Style.WARNING: Style(color="bright_yellow"),
+}
 
 
 class Cmd2Theme(Theme):
     """Rich theme class used by Cmd2Console."""
 
-    def __init__(self, styles: Mapping[str, StyleType] | None = None, inherit: bool = True) -> None:
+    def __init__(self, styles: Mapping[str, StyleType] | None = None) -> None:
         """Cmd2Theme initializer.
 
         :param styles: optional mapping of style names on to styles.
                        Defaults to None for a theme with no styles.
-        :param inherit: Inherit default styles. Defaults to True.
         """
-        cmd2_styles = DEFAULT_CMD2_STYLES.copy() if inherit else {}
+        cmd2_styles = DEFAULT_CMD2_STYLES.copy()
+
+        # Include default styles from rich-argparse
+        cmd2_styles.update(RichHelpFormatter.styles.copy())
+
         if styles is not None:
             cmd2_styles.update(styles)
 
-        super().__init__(cmd2_styles, inherit=inherit)
+        # Set inherit to True to include Rich's default styles
+        super().__init__(cmd2_styles, inherit=True)
 
 
 # Current Rich theme used by Cmd2Console
