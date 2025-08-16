@@ -6,7 +6,6 @@ See the header of argparse_custom.py for instructions on how to use these featur
 import argparse
 import inspect
 import numbers
-import sys
 from collections import (
     deque,
 )
@@ -594,9 +593,9 @@ class ArgparseCompleter:
                 hint_table.add_row(item, *item.descriptive_data)
 
             # Generate the hint table string
-            console = Cmd2Console(sys.stdout)
+            console = Cmd2Console()
             with console.capture() as capture:
-                console.print(hint_table)
+                console.print(hint_table, end="")
             self._cmd2_app.formatted_completions = capture.get()
 
         # Return sorted list of completions

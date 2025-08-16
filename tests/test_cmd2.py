@@ -3083,15 +3083,6 @@ def test_transcripts_at_init() -> None:
     assert app._transcript_files == transcript_files
 
 
-def test_columnize_too_wide(outsim_app) -> None:
-    """Test calling columnize with output that wider than display_width"""
-    str_list = ["way too wide", "much wider than the first"]
-    outsim_app.columnize(str_list, display_width=5)
-
-    expected = "\n".join(str_list) + "\n"
-    assert outsim_app.stdout.getvalue() == expected
-
-
 def test_command_parser_retrieval(outsim_app: cmd2.Cmd) -> None:
     # Pass something that isn't a method
     not_a_method = "just a string"

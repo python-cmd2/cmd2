@@ -13,6 +13,7 @@ from typing import (
 
 from . import (
     constants,
+    string_utils,
     utils,
 )
 from .exceptions import (
@@ -211,8 +212,8 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
         If you want to strip quotes from the input, you can use ``argv[1:]``.
         """
         if self.command:
-            rtn = [utils.strip_quotes(self.command)]
-            rtn.extend(utils.strip_quotes(cur_token) for cur_token in self.arg_list)
+            rtn = [string_utils.strip_quotes(self.command)]
+            rtn.extend(string_utils.strip_quotes(cur_token) for cur_token in self.arg_list)
         else:
             rtn = []
 
@@ -488,7 +489,7 @@ class StatementParser:
 
             # Check if we are redirecting to a file
             if len(tokens) > output_index + 1:
-                unquoted_path = utils.strip_quotes(tokens[output_index + 1])
+                unquoted_path = string_utils.strip_quotes(tokens[output_index + 1])
                 if unquoted_path:
                     output_to = utils.expand_user(tokens[output_index + 1])
 

@@ -66,7 +66,7 @@ from typing import (
 from rich.box import SIMPLE_HEAD
 from rich.console import Group
 from rich.rule import Rule
-from rich.style import StyleType
+from rich.style import Style, StyleType
 from rich.table import (
     Column,
     Table,
@@ -80,6 +80,7 @@ from . import (
     constants,
     plugin,
     rich_utils,
+    string_utils,
     utils,
 )
 from .argparse_custom import (
@@ -129,7 +130,19 @@ from .parsing import (
     StatementParser,
     shlex_split,
 )
-from .rich_utils import Cmd2Console, Cmd2Style, RichPrintKwargs
+from .rich_utils import (
+    Cmd2Console,
+    Cmd2Style,
+    RichPrintKwargs,
+)
+from .string_utils import (
+    align_center,
+    align_left,
+    quote_string,
+    str_width,
+    strip_quotes,
+    strip_style,
+)
 
 # NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
 with contextlib.suppress(ImportError):
@@ -292,7 +305,7 @@ class Cmd(cmd.Cmd):
     DEFAULT_EDITOR = utils.find_editor()
 
     # Sorting keys for strings
-    ALPHABETICAL_SORT_KEY = utils.norm_fold
+    ALPHABETICAL_SORT_KEY = string_utils.norm_fold
     NATURAL_SORT_KEY = utils.natural_keys
 
     # List for storing transcript test file names
@@ -496,7 +509,7 @@ class Cmd(cmd.Cmd):
         if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script):
-                script_cmd = f"run_script {utils.quote_string(startup_script)}"
+                script_cmd = f"run_script {quote_string(startup_script)}"
                 if silence_startup_script:
                     script_cmd += f" {constants.REDIRECTION_OUTPUT} {os.devnull}"
                 self._startup_commands.append(script_cmd)
@@ -1189,7 +1202,7 @@ class Cmd(cmd.Cmd):
 
         :return: prompt stripped of any ANSI escape codes
         """
-        return ansi.strip_style(self.prompt)
+        return strip_style(self.prompt)
 
     def print_to(
         self,
@@ -1290,7 +1303,7 @@ class Cmd(cmd.Cmd):
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
         :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output. Defaults to cmd2.error.
+        :param style: optional style to apply to output. Defaults to Cmd2Style.ERROR.
         :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
@@ -1320,7 +1333,7 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Wrap poutput, but apply cmd2.success style.
+        """Wrap poutput, but apply Cmd2Style.SUCCESS.
 
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
@@ -1353,7 +1366,7 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Wrap perror, but apply cmd2.warning style.
+        """Wrap perror, but apply Cmd2Style.WARNING.
 
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
@@ -1627,7 +1640,7 @@ class Cmd(cmd.Cmd):
         raw_tokens = self.statement_parser.split_on_punctuation(initial_tokens)
 
         # Save the unquoted tokens
-        tokens = [utils.strip_quotes(cur_token) for cur_token in raw_tokens]
+        tokens = [strip_quotes(cur_token) for cur_token in raw_tokens]
 
         # If the token being completed had an unclosed quote, we need
         # to remove the closing quote that was added in order for it
@@ -2129,7 +2142,7 @@ class Cmd(cmd.Cmd):
                     longest_match_length = 0
 
                     for cur_match in matches_to_display:
-                        cur_length = ansi.style_aware_wcswidth(cur_match)
+                        cur_length = str_width(cur_match)
                         longest_match_length = max(longest_match_length, cur_length)
                 else:
                     matches_to_display = matches
@@ -3121,7 +3134,7 @@ class Cmd(cmd.Cmd):
                 mode = 'a' if statement.output == constants.REDIRECTION_APPEND else 'w'
                 try:
                     # Use line buffering
-                    new_stdout = cast(TextIO, open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))  # noqa: SIM115
+                    new_stdout = cast(TextIO, open(strip_quotes(statement.output_to), mode=mode, buffering=1))  # noqa: SIM115
                 except OSError as ex:
                     raise RedirectionError('Failed to redirect output') from ex
 
@@ -3798,7 +3811,7 @@ class Cmd(cmd.Cmd):
             "\n",
             Text.assemble(
                 ("    my_macro beef broccoli", Cmd2Style.EXAMPLE),
-                (" ───> ", "bold"),
+                (" ───> ", Style(bold=True)),
                 ("make_dinner --meat beef --veggie broccoli", Cmd2Style.EXAMPLE),
             ),
         )
@@ -4151,7 +4164,7 @@ class Cmd(cmd.Cmd):
                     if i >= size:
                         break
                     x = str_list[i]
-                    colwidth = max(colwidth, ansi.style_aware_wcswidth(x))
+                    colwidth = max(colwidth, str_width(x))
                 colwidths.append(colwidth)
                 totwidth += colwidth + 2
                 if totwidth > display_width:
@@ -4172,7 +4185,7 @@ class Cmd(cmd.Cmd):
             while texts and not texts[-1]:
                 del texts[-1]
             for col in range(len(texts)):
-                texts[col] = utils.align_left(texts[col], width=colwidths[col])
+                texts[col] = align_left(texts[col], width=colwidths[col])
             self.poutput("  ".join(texts))
 
     def _help_menu(self, verbose: bool = False) -> None:
@@ -4468,7 +4481,7 @@ class Cmd(cmd.Cmd):
                 # Try to update the settable's value
                 try:
                     orig_value = settable.get_value()
-                    settable.set_value(utils.strip_quotes(args.value))
+                    settable.set_value(strip_quotes(args.value))
                 except ValueError as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
@@ -5064,7 +5077,7 @@ class Cmd(cmd.Cmd):
                 self.run_editor(fname)
 
                 # self.last_result will be set by do_run_script()
-                return self.do_run_script(utils.quote_string(fname))
+                return self.do_run_script(quote_string(fname))
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -5359,9 +5372,9 @@ class Cmd(cmd.Cmd):
         if not self.editor:
             raise OSError("Please use 'set editor' to specify your text editing program of choice.")
 
-        command = utils.quote_string(os.path.expanduser(self.editor))
+        command = quote_string(os.path.expanduser(self.editor))
         if file_path:
-            command += " " + utils.quote_string(os.path.expanduser(file_path))
+            command += " " + quote_string(os.path.expanduser(file_path))
 
         self.do_shell(command)
 
@@ -5499,7 +5512,7 @@ class Cmd(cmd.Cmd):
         relative_path = os.path.join(self._current_script_dir or '', script_path)
 
         # self.last_result will be set by do_run_script()
-        return self.do_run_script(utils.quote_string(relative_path))
+        return self.do_run_script(quote_string(relative_path))
 
     def _run_transcript_tests(self, transcript_paths: list[str]) -> None:
         """Run transcript tests for provided file(s).
@@ -5531,11 +5544,11 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(ansi.style(utils.align_center(' cmd2 transcript test ', fill_char='='), bold=True))
+        self.poutput(align_center(' cmd2 transcript test ', character=self.ruler), style=Style(bold=True))
         self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}, readline-{rl_type}')
         self.poutput(f'cwd: {os.getcwd()}')
         self.poutput(f'cmd2 app: {sys.argv[0]}')
-        self.poutput(ansi.style(f'collected {num_transcripts} transcript{plural}', bold=True))
+        self.poutput(f'collected {num_transcripts} transcript{plural}', style=Style(bold=True))
 
         self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -5548,7 +5561,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self.perror(stream.read(), end="", style=None)
             finish_msg = f' {num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds '
-            finish_msg = utils.align_center(finish_msg, fill_char='=')
+            finish_msg = align_center(finish_msg, character=self.ruler)
             self.psuccess(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
@@ -5692,7 +5705,7 @@ class Cmd(cmd.Cmd):
             return
 
         try:
-            sys.stderr.write(ansi.set_title(title))
+            sys.stderr.write(ansi.set_title_str(title))
             sys.stderr.flush()
         except AttributeError:
             # Debugging in Pycharm has issues with setting terminal title

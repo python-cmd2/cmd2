@@ -33,7 +33,6 @@ dependencies = [
     "pyperclip>=1.8",
     "pyreadline3>=3.4; platform_system == 'Windows'",
     "rich-argparse>=1.7.1",
-    "wcwidth>=0.2.10",
 ]
 
 [dependency-groups]

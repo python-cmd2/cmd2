@@ -43,11 +43,11 @@ def do_echo(self, args):
 ## Error Messages
 
 When an error occurs in your program, you can display it on `sys.stderr` by calling the
-`.cmd2.Cmd.perror` method. By default this method applies `cmd2.ansi.style_error` to the output.
+`.cmd2.Cmd.perror` method. By default this method applies `Cmd2Style.ERROR` to the output.
 
 ## Warning Messages
 
-`cmd2.Cmd.pwarning` is just like `cmd2.Cmd.perror` but applies `cmd2.ansi.style_warning` to the
+`cmd2.Cmd.pwarning` is just like `cmd2.Cmd.perror` but applies `Cmd2Style.WARNING` to the
 output.
 
 ## Feedback

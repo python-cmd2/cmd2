@@ -25,6 +25,8 @@ from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
 
+from .colors import Cmd2Color
+
 if sys.version_info >= (3, 11):
     from enum import StrEnum
 else:
@@ -70,18 +72,18 @@ class Cmd2Style(StrEnum):
 
 # Default styles used by cmd2
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
-    Cmd2Style.ERROR: Style(color="bright_red"),
-    Cmd2Style.EXAMPLE: Style(color="cyan", bold=True),
-    Cmd2Style.HELP_HEADER: Style(color="cyan", bold=True),
-    Cmd2Style.HELP_TITLE: Style(color="bright_green", bold=True),
-    Cmd2Style.RULE_LINE: Style(color="bright_green"),
-    Cmd2Style.SUCCESS: Style(color="green"),
-    Cmd2Style.WARNING: Style(color="bright_yellow"),
+    Cmd2Style.ERROR: Style(color=Cmd2Color.BRIGHT_RED),
+    Cmd2Style.EXAMPLE: Style(color=Cmd2Color.CYAN, bold=True),
+    Cmd2Style.HELP_HEADER: Style(color=Cmd2Color.CYAN, bold=True),
+    Cmd2Style.HELP_TITLE: Style(color=Cmd2Color.BRIGHT_GREEN, bold=True),
+    Cmd2Style.RULE_LINE: Style(color=Cmd2Color.BRIGHT_GREEN),
+    Cmd2Style.SUCCESS: Style(color=Cmd2Color.GREEN),
+    Cmd2Style.WARNING: Style(color=Cmd2Color.BRIGHT_YELLOW),
 }
 
 
 class Cmd2Theme(Theme):
-    """Rich theme class used by Cmd2Console."""
+    """Rich theme class used by cmd2."""
 
     def __init__(self, styles: Mapping[str, StyleType] | None = None) -> None:
         """Cmd2Theme initializer.
@@ -106,7 +108,7 @@ THEME: Cmd2Theme = Cmd2Theme()
 
 
 def set_theme(new_theme: Cmd2Theme) -> None:
-    """Set the Rich theme used by Cmd2Console and rich-argparse.
+    """Set the Rich theme used by cmd2.
 
     :param new_theme: new theme to use.
     """
@@ -148,20 +150,22 @@ class RichPrintKwargs(TypedDict, total=False):
 class Cmd2Console(Console):
     """Rich console with characteristics appropriate for cmd2 applications."""
 
-    def __init__(self, file: IO[str]) -> None:
+    def __init__(self, file: IO[str] | None = None) -> None:
         """Cmd2Console initializer.
 
-        :param file: a file object where the console should write to
+        :param file: Optional file object where the console should write to. Defaults to sys.stdout.
         """
-        kwargs: dict[str, Any] = {}
+        force_terminal: bool | None = None
+        force_interactive: bool | None = None
+
         if allow_style == AllowStyle.ALWAYS:
-            kwargs["force_terminal"] = True
+            force_terminal = True
 
             # Turn off interactive mode if dest is not actually a terminal which supports it
             tmp_console = Console(file=file)
-            kwargs["force_interactive"] = tmp_console.is_interactive
+            force_interactive = tmp_console.is_interactive
         elif allow_style == AllowStyle.NEVER:
-            kwargs["force_terminal"] = False
+            force_terminal = False
 
         # Configure console defaults to treat output as plain, unstructured text.
         # This involves enabling soft wrapping (no automatic word-wrap) and disabling
@@ -172,18 +176,48 @@ class Cmd2Console(Console):
         # in individual Console.print() calls or via cmd2's print methods.
         super().__init__(
             file=file,
+            force_terminal=force_terminal,
+            force_interactive=force_interactive,
             soft_wrap=True,
             markup=False,
             emoji=False,
             highlight=False,
             theme=THEME,
-            **kwargs,
         )
 
     def on_broken_pipe(self) -> None:
         """Override which raises BrokenPipeError instead of SystemExit."""
         self.quiet = True
         raise BrokenPipeError
+
+
+def console_width() -> int:
+    """Return the width of the console."""
+    return Cmd2Console().width
+
+
+def rich_text_to_string(text: Text) -> str:
+    """Convert a Rich Text object to a string.
+
+    This function's purpose is to render a Rich Text object, including any styles (e.g., color, bold),
+    to a plain Python string with ANSI escape codes. It differs from `text.plain`, which strips
+    all formatting.
+
+    :param text: the text object to convert
+    :return: the resulting string with ANSI styles preserved.
+    """
+    console = Console(
+        force_terminal=True,
+        soft_wrap=True,
+        no_color=False,
+        markup=False,
+        emoji=False,
+        highlight=False,
+        theme=THEME,
+    )
+    with console.capture() as capture:
+        console.print(text, end="")
+    return capture.get()
 
 
 def from_ansi(text: str) -> Text:

@@ -4,4 +4,3 @@ mkdocs-material
 pyperclip
 setuptools
 setuptools-scm
-wcwidth

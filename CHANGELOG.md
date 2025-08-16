@@ -5,6 +5,7 @@
     - No longer setting parser's `prog` value in `with_argparser()` since it gets set in
       `Cmd._build_parser()`. This code had previously been restored to support backward
       compatibility in `cmd2` 2.0 family.
+    - Removed `table_creator` module in favor of `Rich` tables.
 
 - Enhancements
     - Simplified the process to set a custom parser for `cmd2's` built-in commands. See
