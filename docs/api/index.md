@@ -15,7 +15,7 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.argparse_completer](./argparse_completer.md) - classes for `argparse`-based tab completion
 - [cmd2.argparse_custom](./argparse_custom.md) - classes and functions for extending `argparse`
 - [cmd2.clipboard](./clipboard.md) - functions to copy from and paste to the clipboard/pastebuffer
-- [cmd2.colors](./colors.md) - provides a StrEnum of Rich's named colors
+- [cmd2.colors](./colors.md) - constants for all color names supported by the Rich library
 - [cmd2.command_definition](./command_definition.md) - supports the definition of commands in
   separate classes to be composed into cmd2.Cmd
 - [cmd2.constants](./constants.md) - just like it says on the tin
