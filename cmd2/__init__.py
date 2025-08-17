@@ -7,19 +7,11 @@ with contextlib.suppress(importlib_metadata.PackageNotFoundError):
     __version__ = importlib_metadata.version(__name__)
 
 from . import (
+    colors,
     plugin,
     rich_utils,
-)
-from .ansi import (
-    Bg,
-    Cursor,
-    EightBitBg,
-    EightBitFg,
-    Fg,
-    RgbBg,
-    RgbFg,
-    TextStyle,
-    style,
+    string_utils,
+    styles,
 )
 from .argparse_completer import set_default_ap_completer_type
 from .argparse_custom import (
@@ -53,6 +45,7 @@ from .exceptions import (
 )
 from .parsing import Statement
 from .py_bridge import CommandResult
+from .string_utils import stylize
 from .utils import (
     CompletionMode,
     CustomCompletionSettings,
@@ -63,16 +56,6 @@ from .utils import (
 __all__: list[str] = [  # noqa: RUF022
     'COMMAND_NAME',
     'DEFAULT_SHORTCUTS',
-    # ANSI Exports
-    'Cursor',
-    'Bg',
-    'Fg',
-    'EightBitBg',
-    'EightBitFg',
-    'RgbBg',
-    'RgbFg',
-    'TextStyle',
-    'style',
     # Argparse Exports
     'Cmd2ArgumentParser',
     'Cmd2AttributeWrapper',
@@ -98,8 +81,13 @@ __all__: list[str] = [  # noqa: RUF022
     'PassThroughException',
     'SkipPostcommandHooks',
     # modules
+    'colors',
     'plugin',
     'rich_utils',
+    'string_utils',
+    'styles',
+    # String Utils
+    'stylize',
     # Utilities
     'categorize',
     'CompletionMode',

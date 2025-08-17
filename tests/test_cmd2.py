@@ -20,12 +20,15 @@ from rich.text import Text
 import cmd2
 from cmd2 import (
     COMMAND_NAME,
-    ansi,
     clipboard,
+    colors,
     constants,
     exceptions,
     plugin,
     rich_utils,
+    string_utils,
+    styles,
+    stylize,
     utils,
 )
 from cmd2.rl_utils import (
@@ -575,8 +578,8 @@ def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatc
     run_script_mock = mock.MagicMock(name='do_run_script')
     monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
-    run_cmd(base_app, f"_relative_run_script {utils.quote_string(file_name)}")
-    run_script_mock.assert_called_once_with(utils.quote_string(file_name))
+    run_cmd(base_app, f"_relative_run_script {string_utils.quote(file_name)}")
+    run_script_mock.assert_called_once_with(string_utils.quote(file_name))
 
 
 def test_relative_run_script_requires_an_argument(base_app) -> None:
@@ -987,9 +990,9 @@ def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch) -> None
     monkeypatch.setattr("cmd2.Cmd.do_shell", shell_mock)
 
     base_app.editor = 'fooedit'
-    file_name = utils.quote_string('nothingweird.py')
-    run_cmd(base_app, f"edit {utils.quote_string(file_name)}")
-    shell_mock.assert_called_once_with(f'"fooedit" {utils.quote_string(file_name)}')
+    file_name = string_utils.quote('nothingweird.py')
+    run_cmd(base_app, f"edit {string_utils.quote(file_name)}")
+    shell_mock.assert_called_once_with(f'"fooedit" {string_utils.quote(file_name)}')
 
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch) -> None:
@@ -1221,8 +1224,7 @@ def test_escaping_prompt() -> None:
     assert rl_escape_prompt(prompt) == prompt
 
     # This prompt has color which needs to be escaped
-    color = ansi.Fg.CYAN
-    prompt = ansi.style('InColor', fg=color)
+    prompt = stylize('InColor', style=colors.CYAN)
 
     escape_start = "\x01"
     escape_end = "\x02"
@@ -1232,8 +1234,10 @@ def test_escaping_prompt() -> None:
         # PyReadline on Windows doesn't need to escape invisible characters
         assert escaped_prompt == prompt
     else:
-        assert escaped_prompt.startswith(escape_start + color + escape_end)
-        assert escaped_prompt.endswith(escape_start + ansi.Fg.RESET + escape_end)
+        cyan = "\x1b[36m"
+        reset_all = "\x1b[0m"
+        assert escaped_prompt.startswith(escape_start + cyan + escape_end)
+        assert escaped_prompt.endswith(escape_start + reset_all + escape_end)
 
     assert rl_unescape_prompt(escaped_prompt) == prompt
 
@@ -2755,7 +2759,7 @@ class AnsiApp(cmd2.Cmd):
         self.perror(args)
 
     def do_echo_error(self, args) -> None:
-        self.poutput(ansi.style(args, fg=ansi.Fg.RED))
+        self.poutput(args, style=styles.ERROR)
         # perror uses colors by default
         self.perror(args)
 
@@ -3071,7 +3075,7 @@ def test_startup_script_with_odd_file_names(startup_script) -> None:
 
     app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
     assert len(app._startup_commands) == 1
-    assert app._startup_commands[0] == f"run_script {utils.quote_string(os.path.abspath(startup_script))}"
+    assert app._startup_commands[0] == f"run_script {string_utils.quote(os.path.abspath(startup_script))}"
 
     # Restore os.path.exists
     os.path.exists = saved_exists
@@ -3081,15 +3085,6 @@ def test_transcripts_at_init() -> None:
     transcript_files = ['foo', 'bar']
     app = cmd2.Cmd(allow_cli_args=False, transcript_files=transcript_files)
     assert app._transcript_files == transcript_files
-
-
-def test_columnize_too_wide(outsim_app) -> None:
-    """Test calling columnize with output that wider than display_width"""
-    str_list = ["way too wide", "much wider than the first"]
-    outsim_app.columnize(str_list, display_width=5)
-
-    expected = "\n".join(str_list) + "\n"
-    assert outsim_app.stdout.getvalue() == expected
 
 
 def test_command_parser_retrieval(outsim_app: cmd2.Cmd) -> None:

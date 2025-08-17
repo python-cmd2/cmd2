@@ -66,7 +66,7 @@ from typing import (
 from rich.box import SIMPLE_HEAD
 from rich.console import Group
 from rich.rule import Rule
-from rich.style import StyleType
+from rich.style import Style, StyleType
 from rich.table import (
     Column,
     Table,
@@ -74,12 +74,13 @@ from rich.table import (
 from rich.text import Text
 
 from . import (
-    ansi,
     argparse_completer,
     argparse_custom,
     constants,
     plugin,
     rich_utils,
+    string_utils,
+    styles,
     utils,
 )
 from .argparse_custom import (
@@ -129,7 +130,18 @@ from .parsing import (
     StatementParser,
     shlex_split,
 )
-from .rich_utils import Cmd2Console, Cmd2Style, RichPrintKwargs
+from .rich_utils import (
+    Cmd2Console,
+    RichPrintKwargs,
+)
+from .string_utils import (
+    align_center,
+    align_left,
+    quote,
+    str_width,
+    strip_quotes,
+    strip_style,
+)
 
 # NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
 with contextlib.suppress(ImportError):
@@ -157,7 +169,7 @@ from .utils import (
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
-    Cmd2Console(sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
+    Cmd2Console(sys.stderr).print(rl_warning, style=styles.WARNING)
 else:
     from .rl_utils import (  # type: ignore[attr-defined]
         readline,
@@ -292,7 +304,7 @@ class Cmd(cmd.Cmd):
     DEFAULT_EDITOR = utils.find_editor()
 
     # Sorting keys for strings
-    ALPHABETICAL_SORT_KEY = utils.norm_fold
+    ALPHABETICAL_SORT_KEY = string_utils.norm_fold
     NATURAL_SORT_KEY = utils.natural_keys
 
     # List for storing transcript test file names
@@ -496,7 +508,7 @@ class Cmd(cmd.Cmd):
         if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script):
-                script_cmd = f"run_script {utils.quote_string(startup_script)}"
+                script_cmd = f"run_script {quote(startup_script)}"
                 if silence_startup_script:
                     script_cmd += f" {constants.REDIRECTION_OUTPUT} {os.devnull}"
                 self._startup_commands.append(script_cmd)
@@ -1189,7 +1201,7 @@ class Cmd(cmd.Cmd):
 
         :return: prompt stripped of any ANSI escape codes
         """
-        return ansi.strip_style(self.prompt)
+        return strip_style(self.prompt)
 
     def print_to(
         self,
@@ -1280,7 +1292,7 @@ class Cmd(cmd.Cmd):
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        style: StyleType | None = Cmd2Style.ERROR,
+        style: StyleType | None = styles.ERROR,
         soft_wrap: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
@@ -1290,7 +1302,7 @@ class Cmd(cmd.Cmd):
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
         :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output. Defaults to cmd2.error.
+        :param style: optional style to apply to output. Defaults to styles.ERROR.
         :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
@@ -1320,7 +1332,7 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Wrap poutput, but apply cmd2.success style.
+        """Wrap poutput, but apply styles.SUCCESS.
 
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
@@ -1339,7 +1351,7 @@ class Cmd(cmd.Cmd):
             *objects,
             sep=sep,
             end=end,
-            style=Cmd2Style.SUCCESS,
+            style=styles.SUCCESS,
             soft_wrap=soft_wrap,
             rich_print_kwargs=rich_print_kwargs,
         )
@@ -1353,7 +1365,7 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Wrap perror, but apply cmd2.warning style.
+        """Wrap perror, but apply styles.WARNING.
 
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
@@ -1372,7 +1384,7 @@ class Cmd(cmd.Cmd):
             *objects,
             sep=sep,
             end=end,
-            style=Cmd2Style.WARNING,
+            style=styles.WARNING,
             soft_wrap=soft_wrap,
             rich_print_kwargs=rich_print_kwargs,
         )
@@ -1403,7 +1415,7 @@ class Cmd(cmd.Cmd):
 
         if not self.debug and 'debug' in self.settables:
             warning = "\nTo enable full traceback, run the following command: 'set debug true'"
-            final_msg.append(warning, style=Cmd2Style.WARNING)
+            final_msg.append(warning, style=styles.WARNING)
 
         if final_msg:
             self.perror(
@@ -1627,7 +1639,7 @@ class Cmd(cmd.Cmd):
         raw_tokens = self.statement_parser.split_on_punctuation(initial_tokens)
 
         # Save the unquoted tokens
-        tokens = [utils.strip_quotes(cur_token) for cur_token in raw_tokens]
+        tokens = [strip_quotes(cur_token) for cur_token in raw_tokens]
 
         # If the token being completed had an unclosed quote, we need
         # to remove the closing quote that was added in order for it
@@ -2129,7 +2141,7 @@ class Cmd(cmd.Cmd):
                     longest_match_length = 0
 
                     for cur_match in matches_to_display:
-                        cur_length = ansi.style_aware_wcswidth(cur_match)
+                        cur_length = str_width(cur_match)
                         longest_match_length = max(longest_match_length, cur_length)
                 else:
                     matches_to_display = matches
@@ -2479,7 +2491,7 @@ class Cmd(cmd.Cmd):
                     sys.stdout,
                     Text.assemble(
                         "\n",
-                        (err_str, Cmd2Style.ERROR if ex.apply_style else ""),
+                        (err_str, styles.ERROR if ex.apply_style else ""),
                     ),
                 )
                 rl_force_redisplay()
@@ -3121,7 +3133,7 @@ class Cmd(cmd.Cmd):
                 mode = 'a' if statement.output == constants.REDIRECTION_APPEND else 'w'
                 try:
                     # Use line buffering
-                    new_stdout = cast(TextIO, open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1))  # noqa: SIM115
+                    new_stdout = cast(TextIO, open(strip_quotes(statement.output_to), mode=mode, buffering=1))  # noqa: SIM115
                 except OSError as ex:
                     raise RedirectionError('Failed to redirect output') from ex
 
@@ -3579,7 +3591,7 @@ class Cmd(cmd.Cmd):
         alias_create_notes = Group(
             "If you want to use redirection, pipes, or terminators in the value of the alias, then quote them.",
             "\n",
-            Text("    alias create save_results print_results \">\" out.txt\n", style=Cmd2Style.EXAMPLE),
+            Text("    alias create save_results print_results \">\" out.txt\n", style=styles.EXAMPLE),
             (
                 "Since aliases are resolved during parsing, tab completion will function as it would "
                 "for the actual command the alias resolves to."
@@ -3792,14 +3804,14 @@ class Cmd(cmd.Cmd):
             "\n",
             "The following creates a macro called my_macro that expects two arguments:",
             "\n",
-            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=Cmd2Style.EXAMPLE),
+            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=styles.EXAMPLE),
             "\n",
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
             "\n",
             Text.assemble(
-                ("    my_macro beef broccoli", Cmd2Style.EXAMPLE),
-                (" ───> ", "bold"),
-                ("make_dinner --meat beef --veggie broccoli", Cmd2Style.EXAMPLE),
+                ("    my_macro beef broccoli", styles.EXAMPLE),
+                (" ───> ", Style(bold=True)),
+                ("make_dinner --meat beef --veggie broccoli", styles.EXAMPLE),
             ),
         )
         macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
@@ -3815,15 +3827,15 @@ class Cmd(cmd.Cmd):
                 "first argument will populate both {1} instances."
             ),
             "\n",
-            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=Cmd2Style.EXAMPLE),
+            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=styles.EXAMPLE),
             "\n",
             "To quote an argument in the resolved command, quote it during creation.",
             "\n",
-            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=Cmd2Style.EXAMPLE),
+            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=styles.EXAMPLE),
             "\n",
             "If you want to use redirection, pipes, or terminators in the value of the macro, then quote them.",
             "\n",
-            Text("    macro create show_results print_results -type {1} \"|\" less", style=Cmd2Style.EXAMPLE),
+            Text("    macro create show_results print_results -type {1} \"|\" less", style=styles.EXAMPLE),
             "\n",
             (
                 "Since macros don't resolve until after you press Enter, their arguments tab complete as paths. "
@@ -4113,7 +4125,7 @@ class Cmd(cmd.Cmd):
         """
         if cmds:
             header_grid = Table.grid()
-            header_grid.add_row(header, style=Cmd2Style.HELP_TITLE)
+            header_grid.add_row(header, style=styles.HELP_TITLE)
             if self.ruler:
                 header_grid.add_row(Rule(characters=self.ruler))
             self.poutput(header_grid)
@@ -4151,7 +4163,7 @@ class Cmd(cmd.Cmd):
                     if i >= size:
                         break
                     x = str_list[i]
-                    colwidth = max(colwidth, ansi.style_aware_wcswidth(x))
+                    colwidth = max(colwidth, str_width(x))
                 colwidths.append(colwidth)
                 totwidth += colwidth + 2
                 if totwidth > display_width:
@@ -4172,7 +4184,7 @@ class Cmd(cmd.Cmd):
             while texts and not texts[-1]:
                 del texts[-1]
             for col in range(len(texts)):
-                texts[col] = utils.align_left(texts[col], width=colwidths[col])
+                texts[col] = align_left(texts[col], width=colwidths[col])
             self.poutput("  ".join(texts))
 
     def _help_menu(self, verbose: bool = False) -> None:
@@ -4185,8 +4197,8 @@ class Cmd(cmd.Cmd):
             self._print_topics(self.doc_header, cmds_doc, verbose)
         else:
             # Categories found, Organize all commands by category
-            self.poutput(self.doc_leader, style=Cmd2Style.HELP_HEADER, soft_wrap=False)
-            self.poutput(self.doc_header, style=Cmd2Style.HELP_HEADER, end="\n\n", soft_wrap=False)
+            self.poutput(self.doc_leader, style=styles.HELP_HEADER, soft_wrap=False)
+            self.poutput(self.doc_header, style=styles.HELP_HEADER, end="\n\n", soft_wrap=False)
             for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
                 self._print_topics(category, cmds_cats[category], verbose)
             self._print_topics(self.default_category, cmds_doc, verbose)
@@ -4234,13 +4246,13 @@ class Cmd(cmd.Cmd):
                 self.print_topics(header, cmds, 15, 80)
             else:
                 category_grid = Table.grid()
-                category_grid.add_row(header, style=Cmd2Style.HELP_TITLE)
+                category_grid.add_row(header, style=styles.HELP_TITLE)
                 category_grid.add_row(Rule(characters=self.ruler))
                 topics_table = Table(
                     Column("Name", no_wrap=True),
                     Column("Description", overflow="fold"),
                     box=SIMPLE_HEAD,
-                    border_style=Cmd2Style.RULE_LINE,
+                    border_style=styles.RULE_LINE,
                     show_edge=False,
                 )
 
@@ -4468,7 +4480,7 @@ class Cmd(cmd.Cmd):
                 # Try to update the settable's value
                 try:
                     orig_value = settable.get_value()
-                    settable.set_value(utils.strip_quotes(args.value))
+                    settable.set_value(strip_quotes(args.value))
                 except ValueError as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
@@ -4488,7 +4500,7 @@ class Cmd(cmd.Cmd):
             Column("Value", overflow="fold"),
             Column("Description", overflow="fold"),
             box=SIMPLE_HEAD,
-            border_style=Cmd2Style.RULE_LINE,
+            border_style=styles.RULE_LINE,
             show_edge=False,
         )
 
@@ -5064,7 +5076,7 @@ class Cmd(cmd.Cmd):
                 self.run_editor(fname)
 
                 # self.last_result will be set by do_run_script()
-                return self.do_run_script(utils.quote_string(fname))
+                return self.do_run_script(quote(fname))
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -5332,7 +5344,7 @@ class Cmd(cmd.Cmd):
             "Note",
             Text.assemble(
                 "To set a new editor, run: ",
-                ("set editor <program>", Cmd2Style.EXAMPLE),
+                ("set editor <program>", styles.EXAMPLE),
             ),
         )
 
@@ -5359,9 +5371,9 @@ class Cmd(cmd.Cmd):
         if not self.editor:
             raise OSError("Please use 'set editor' to specify your text editing program of choice.")
 
-        command = utils.quote_string(os.path.expanduser(self.editor))
+        command = quote(os.path.expanduser(self.editor))
         if file_path:
-            command += " " + utils.quote_string(os.path.expanduser(file_path))
+            command += " " + quote(os.path.expanduser(file_path))
 
         self.do_shell(command)
 
@@ -5499,7 +5511,7 @@ class Cmd(cmd.Cmd):
         relative_path = os.path.join(self._current_script_dir or '', script_path)
 
         # self.last_result will be set by do_run_script()
-        return self.do_run_script(utils.quote_string(relative_path))
+        return self.do_run_script(quote(relative_path))
 
     def _run_transcript_tests(self, transcript_paths: list[str]) -> None:
         """Run transcript tests for provided file(s).
@@ -5531,11 +5543,11 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(ansi.style(utils.align_center(' cmd2 transcript test ', fill_char='='), bold=True))
+        self.poutput(align_center(' cmd2 transcript test ', character=self.ruler), style=Style(bold=True))
         self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}, readline-{rl_type}')
         self.poutput(f'cwd: {os.getcwd()}')
         self.poutput(f'cmd2 app: {sys.argv[0]}')
-        self.poutput(ansi.style(f'collected {num_transcripts} transcript{plural}', bold=True))
+        self.poutput(f'collected {num_transcripts} transcript{plural}', style=Style(bold=True))
 
         self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -5548,7 +5560,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self.perror(stream.read(), end="", style=None)
             finish_msg = f' {num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds '
-            finish_msg = utils.align_center(finish_msg, fill_char='=')
+            finish_msg = align_center(finish_msg, character=self.ruler)
             self.psuccess(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
@@ -5608,14 +5620,11 @@ class Cmd(cmd.Cmd):
                 rl_set_prompt(self.prompt)
 
             if update_terminal:
-                import shutil
-
-                # Prior to Python 3.11 this can return 0, so use a fallback if needed.
-                terminal_columns = shutil.get_terminal_size().columns or constants.DEFAULT_TERMINAL_WIDTH
+                from .terminal_utils import async_alert_str
 
                 # Print a string which replaces the onscreen prompt and input lines with the alert.
-                terminal_str = ansi.async_alert_str(
-                    terminal_columns=terminal_columns,
+                terminal_str = async_alert_str(
+                    terminal_columns=rich_utils.console_width(),
                     prompt=rl_get_display_prompt(),
                     line=readline.get_line_buffer(),
                     cursor_offset=rl_get_point(),
@@ -5691,8 +5700,10 @@ class Cmd(cmd.Cmd):
         if not vt100_support:
             return
 
+        from .terminal_utils import set_title_str
+
         try:
-            sys.stderr.write(ansi.set_title(title))
+            sys.stderr.write(set_title_str(title))
             sys.stderr.flush()
         except AttributeError:
             # Debugging in Pycharm has issues with setting terminal title

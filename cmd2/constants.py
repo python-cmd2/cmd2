@@ -18,9 +18,6 @@ MULTILINE_TERMINATOR = ';'
 
 LINE_FEED = '\n'
 
-# One character ellipsis
-HORIZONTAL_ELLIPSIS = '…'
-
 DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'run_script', '@@': '_relative_run_script'}
 
 # Used as the command name placeholder in disabled command messages.
@@ -55,6 +52,3 @@ PARSER_ATTR_COMMANDSET = 'command_set'
 
 # custom attributes added to argparse Namespaces
 NS_ATTR_SUBCMD_HANDLER = '__subcmd_handler__'
-
-# For cases prior to Python 3.11 when shutil.get_terminal_size().columns can return 0.
-DEFAULT_TERMINAL_WIDTH = 80

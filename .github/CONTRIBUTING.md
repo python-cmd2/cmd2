@@ -60,11 +60,10 @@ Nearly all project configuration, including for dependencies and quality tools i
 
 See the `dependencies` list under the `[project]` heading in [pyproject.toml](../pyproject.toml).
 
-| Prerequisite                                        | Minimum Version | Purpose                                |
-| --------------------------------------------------- | --------------- | -------------------------------------- |
-| [python](https://www.python.org/downloads/)         | `3.10`          | Python programming language            |
-| [pyperclip](https://github.com/asweigart/pyperclip) | `1.8`           | Cross-platform clipboard functions     |
-| [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.2.10`        | Measure the displayed width of unicode |
+| Prerequisite                                        | Minimum Version | Purpose                            |
+| --------------------------------------------------- | --------------- | ---------------------------------- |
+| [python](https://www.python.org/downloads/)         | `3.10`          | Python programming language        |
+| [pyperclip](https://github.com/asweigart/pyperclip) | `1.8`           | Cross-platform clipboard functions |
 
 > `macOS` and `Windows` each have an extra dependency to ensure they have a viable alternative to
 > [readline](https://tiswww.case.edu/php/chet/readline/rltop.html) available.
