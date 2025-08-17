@@ -12,10 +12,10 @@ incremented according to the [Semantic Version Specification](https://semver.org
 ## Modules
 
 - [cmd2.Cmd](./cmd.md) - functions and attributes of the main class in this library
-- [cmd2.ansi](./ansi.md) - convenience classes and functions for generating ANSI escape sequences to
-  style text in the terminal
 - [cmd2.argparse_completer](./argparse_completer.md) - classes for `argparse`-based tab completion
 - [cmd2.argparse_custom](./argparse_custom.md) - classes and functions for extending `argparse`
+- [cmd2.clipboard](./clipboard.md) - functions to copy from and paste to the clipboard/pastebuffer
+- [cmd2.colors](./colors.md) - provides a StrEnum of Rich's named colors
 - [cmd2.command_definition](./command_definition.md) - supports the definition of commands in
   separate classes to be composed into cmd2.Cmd
 - [cmd2.constants](./constants.md) - just like it says on the tin
@@ -26,5 +26,10 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.plugin](./plugin.md) - data classes for hook methods
 - [cmd2.py_bridge](./py_bridge.md) - classes for bridging calls from the embedded python environment
   to the host app
-- [cmd2.table_creator](./table_creator.md) - table creation module
+- [cmd2.rich_utils](./rich_utils.md) - common utilities to support Rich in cmd2 applications
+- [cmd2.rl_utils](./rl_utils.md) - imports the proper Readline for the platform and provides utility
+  functions for it
+- [cmd2.string_utils](./string_utils.md) - string utility functions
+- [cmd2.terminal_utils](./terminal_utils.md) - support for terminal control escape sequences
+- [cmd2.transcript](./transcript.md) - functions and classes for running and validating transcripts
 - [cmd2.utils](./utils.md) - various utility classes and functions

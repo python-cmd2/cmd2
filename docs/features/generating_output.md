@@ -43,11 +43,11 @@ def do_echo(self, args):
 ## Error Messages
 
 When an error occurs in your program, you can display it on `sys.stderr` by calling the
-`.cmd2.Cmd.perror` method. By default this method applies `cmd2.styles.ERROR` to the output.
+`.cmd2.Cmd.perror` method. By default this method applies `Cmd2Style.ERROR` to the output.
 
 ## Warning Messages
 
-`cmd2.Cmd.pwarning` is just like `cmd2.Cmd.perror` but applies `cmd2.styles.WARNING` to the output.
+`cmd2.Cmd.pwarning` is just like `cmd2.Cmd.perror` but applies `Cmd2Style.WARNING` to the output.
 
 ## Feedback
 
@@ -84,7 +84,13 @@ You can add your own [ANSI escape sequences](https://en.wikipedia.org/wiki/ANSI_
 to your output which tell the terminal to change the foreground and background colors.
 
 `cmd2` provides a number of convenience functions and classes for adding color and other styles to
-text. These are all documented in [cmd2.ansi][].
+text. These are all based on [rich](https://github.com/Textualize/rich) and are documented in the
+following sectins:
+
+- [cmd2.colors][]
+- [cmd2.rich_utils][]
+- [cmd2.string_utils][]
+- [cmd2.terminal_utils][]
 
 After adding the desired escape sequences to your output, you should use one of these methods to
 present the output to the user:
