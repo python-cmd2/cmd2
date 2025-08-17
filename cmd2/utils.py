@@ -16,7 +16,7 @@ import unicodedata
 from collections.abc import Callable, Iterable
 from difflib import SequenceMatcher
 from enum import Enum
-from typing import TYPE_CHECKING, Any, TextIO, TypeVar, Union, cast, get_type_hints
+from typing import TYPE_CHECKING, Any, TextIO, TypeVar, Union, cast
 
 from . import constants
 from .argparse_custom import ChoicesProviderFunc, CompleterFunc
@@ -1245,24 +1245,21 @@ def suggest_similar(
 
 
 def get_types(func_or_method: Callable[..., Any]) -> tuple[dict[str, Any], Any]:
-    """Use typing.get_type_hints() to extract type hints for parameters and return value.
+    """Use inspect.get_annotations() to extract type hints for parameters and return value.
 
-    This exists because the inspect module doesn't have a safe way of doing this that works
-    both with and without importing annotations from __future__ until Python 3.10.
-
-    TODO: Once cmd2 only supports Python 3.10+, change to use inspect.get_annotations(eval_str=True)
+    This is a thin convenience wrapper around inspect.get_annotations() that treats the return value
+    annotation separately.
 
     :param func_or_method: Function or method to return the type hints for
-    :return tuple with first element being dictionary mapping param names to type hints
-            and second element being return type hint, unspecified, returns None
+    :return: tuple with first element being dictionary mapping param names to type hints
+            and second element being the return type hint or None if there is no return value type hint
+    :raises ValueError: if the `func_or_method` argument is not a valid object to pass to `inspect.get_annotations`
     """
     try:
-        type_hints = get_type_hints(func_or_method)  # Get dictionary of type hints
+        type_hints = inspect.get_annotations(func_or_method, eval_str=True)  # Get dictionary of type hints
     except TypeError as exc:
         raise ValueError("Argument passed to get_types should be a function or method") from exc
     ret_ann = type_hints.pop('return', None)  # Pop off the return annotation if it exists
     if inspect.ismethod(func_or_method):
         type_hints.pop('self', None)  # Pop off `self` hint for methods
-    if ret_ann is type(None):
-        ret_ann = None  # Simplify logic to just return None instead of NoneType
     return type_hints, ret_ann
