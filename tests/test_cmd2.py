@@ -20,14 +20,14 @@ from rich.text import Text
 import cmd2
 from cmd2 import (
     COMMAND_NAME,
+    Cmd2Style,
+    ColorName,
     clipboard,
-    colors,
     constants,
     exceptions,
     plugin,
     rich_utils,
     string_utils,
-    styles,
     stylize,
     utils,
 )
@@ -1224,7 +1224,7 @@ def test_escaping_prompt() -> None:
     assert rl_escape_prompt(prompt) == prompt
 
     # This prompt has color which needs to be escaped
-    prompt = stylize('InColor', style=colors.CYAN)
+    prompt = stylize('InColor', style=ColorName.CYAN)
 
     escape_start = "\x01"
     escape_end = "\x02"
@@ -2759,7 +2759,7 @@ class AnsiApp(cmd2.Cmd):
         self.perror(args)
 
     def do_echo_error(self, args) -> None:
-        self.poutput(args, style=styles.ERROR)
+        self.poutput(args, style=Cmd2Style.ERROR)
         # perror uses colors by default
         self.perror(args)
 

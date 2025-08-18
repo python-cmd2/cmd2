@@ -80,7 +80,6 @@ from . import (
     plugin,
     rich_utils,
     string_utils,
-    styles,
     utils,
 )
 from .argparse_custom import (
@@ -142,6 +141,7 @@ from .string_utils import (
     strip_quotes,
     strip_style,
 )
+from .styles import Cmd2Style
 
 # NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
 with contextlib.suppress(ImportError):
@@ -169,7 +169,7 @@ from .utils import (
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
-    Cmd2Console(sys.stderr).print(rl_warning, style=styles.WARNING)
+    Cmd2Console(sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
 else:
     from .rl_utils import (  # type: ignore[attr-defined]
         readline,
@@ -1292,7 +1292,7 @@ class Cmd(cmd.Cmd):
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        style: StyleType | None = styles.ERROR,
+        style: StyleType | None = Cmd2Style.ERROR,
         soft_wrap: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
@@ -1302,7 +1302,7 @@ class Cmd(cmd.Cmd):
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
         :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output. Defaults to styles.ERROR.
+        :param style: optional style to apply to output. Defaults to Cmd2Style.ERROR.
         :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
@@ -1332,7 +1332,7 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Wrap poutput, but apply styles.SUCCESS.
+        """Wrap poutput, but apply Cmd2Style.SUCCESS.
 
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
@@ -1351,7 +1351,7 @@ class Cmd(cmd.Cmd):
             *objects,
             sep=sep,
             end=end,
-            style=styles.SUCCESS,
+            style=Cmd2Style.SUCCESS,
             soft_wrap=soft_wrap,
             rich_print_kwargs=rich_print_kwargs,
         )
@@ -1365,7 +1365,7 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Wrap perror, but apply styles.WARNING.
+        """Wrap perror, but apply Cmd2Style.WARNING.
 
         :param objects: objects to print
         :param sep: string to write between print data. Defaults to " ".
@@ -1384,7 +1384,7 @@ class Cmd(cmd.Cmd):
             *objects,
             sep=sep,
             end=end,
-            style=styles.WARNING,
+            style=Cmd2Style.WARNING,
             soft_wrap=soft_wrap,
             rich_print_kwargs=rich_print_kwargs,
         )
@@ -1415,7 +1415,7 @@ class Cmd(cmd.Cmd):
 
         if not self.debug and 'debug' in self.settables:
             warning = "\nTo enable full traceback, run the following command: 'set debug true'"
-            final_msg.append(warning, style=styles.WARNING)
+            final_msg.append(warning, style=Cmd2Style.WARNING)
 
         if final_msg:
             self.perror(
@@ -2491,7 +2491,7 @@ class Cmd(cmd.Cmd):
                     sys.stdout,
                     Text.assemble(
                         "\n",
-                        (err_str, styles.ERROR if ex.apply_style else ""),
+                        (err_str, Cmd2Style.ERROR if ex.apply_style else ""),
                     ),
                 )
                 rl_force_redisplay()
@@ -3591,7 +3591,7 @@ class Cmd(cmd.Cmd):
         alias_create_notes = Group(
             "If you want to use redirection, pipes, or terminators in the value of the alias, then quote them.",
             "\n",
-            Text("    alias create save_results print_results \">\" out.txt\n", style=styles.EXAMPLE),
+            Text("    alias create save_results print_results \">\" out.txt\n", style=Cmd2Style.EXAMPLE),
             (
                 "Since aliases are resolved during parsing, tab completion will function as it would "
                 "for the actual command the alias resolves to."
@@ -3804,14 +3804,14 @@ class Cmd(cmd.Cmd):
             "\n",
             "The following creates a macro called my_macro that expects two arguments:",
             "\n",
-            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=styles.EXAMPLE),
+            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=Cmd2Style.EXAMPLE),
             "\n",
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
             "\n",
             Text.assemble(
-                ("    my_macro beef broccoli", styles.EXAMPLE),
+                ("    my_macro beef broccoli", Cmd2Style.EXAMPLE),
                 (" ───> ", Style(bold=True)),
-                ("make_dinner --meat beef --veggie broccoli", styles.EXAMPLE),
+                ("make_dinner --meat beef --veggie broccoli", Cmd2Style.EXAMPLE),
             ),
         )
         macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
@@ -3827,15 +3827,15 @@ class Cmd(cmd.Cmd):
                 "first argument will populate both {1} instances."
             ),
             "\n",
-            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=styles.EXAMPLE),
+            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=Cmd2Style.EXAMPLE),
             "\n",
             "To quote an argument in the resolved command, quote it during creation.",
             "\n",
-            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=styles.EXAMPLE),
+            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=Cmd2Style.EXAMPLE),
             "\n",
             "If you want to use redirection, pipes, or terminators in the value of the macro, then quote them.",
             "\n",
-            Text("    macro create show_results print_results -type {1} \"|\" less", style=styles.EXAMPLE),
+            Text("    macro create show_results print_results -type {1} \"|\" less", style=Cmd2Style.EXAMPLE),
             "\n",
             (
                 "Since macros don't resolve until after you press Enter, their arguments tab complete as paths. "
@@ -4125,7 +4125,7 @@ class Cmd(cmd.Cmd):
         """
         if cmds:
             header_grid = Table.grid()
-            header_grid.add_row(header, style=styles.HELP_TITLE)
+            header_grid.add_row(header, style=Cmd2Style.HELP_TITLE)
             if self.ruler:
                 header_grid.add_row(Rule(characters=self.ruler))
             self.poutput(header_grid)
@@ -4197,8 +4197,8 @@ class Cmd(cmd.Cmd):
             self._print_topics(self.doc_header, cmds_doc, verbose)
         else:
             # Categories found, Organize all commands by category
-            self.poutput(self.doc_leader, style=styles.HELP_HEADER, soft_wrap=False)
-            self.poutput(self.doc_header, style=styles.HELP_HEADER, end="\n\n", soft_wrap=False)
+            self.poutput(self.doc_leader, style=Cmd2Style.HELP_HEADER, soft_wrap=False)
+            self.poutput(self.doc_header, style=Cmd2Style.HELP_HEADER, end="\n\n", soft_wrap=False)
             for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
                 self._print_topics(category, cmds_cats[category], verbose)
             self._print_topics(self.default_category, cmds_doc, verbose)
@@ -4246,13 +4246,13 @@ class Cmd(cmd.Cmd):
                 self.print_topics(header, cmds, 15, 80)
             else:
                 category_grid = Table.grid()
-                category_grid.add_row(header, style=styles.HELP_TITLE)
+                category_grid.add_row(header, style=Cmd2Style.HELP_TITLE)
                 category_grid.add_row(Rule(characters=self.ruler))
                 topics_table = Table(
                     Column("Name", no_wrap=True),
                     Column("Description", overflow="fold"),
                     box=SIMPLE_HEAD,
-                    border_style=styles.RULE_LINE,
+                    border_style=Cmd2Style.RULE_LINE,
                     show_edge=False,
                 )
 
@@ -4500,7 +4500,7 @@ class Cmd(cmd.Cmd):
             Column("Value", overflow="fold"),
             Column("Description", overflow="fold"),
             box=SIMPLE_HEAD,
-            border_style=styles.RULE_LINE,
+            border_style=Cmd2Style.RULE_LINE,
             show_edge=False,
         )
 
@@ -5344,7 +5344,7 @@ class Cmd(cmd.Cmd):
             "Note",
             Text.assemble(
                 "To set a new editor, run: ",
-                ("set editor <program>", styles.EXAMPLE),
+                ("set editor <program>", Cmd2Style.EXAMPLE),
             ),
         )
 

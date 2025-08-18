@@ -7,11 +7,9 @@ with contextlib.suppress(importlib_metadata.PackageNotFoundError):
     __version__ = importlib_metadata.version(__name__)
 
 from . import (
-    colors,
     plugin,
     rich_utils,
     string_utils,
-    styles,
 )
 from .argparse_completer import set_default_ap_completer_type
 from .argparse_custom import (
@@ -22,6 +20,7 @@ from .argparse_custom import (
     set_default_argument_parser_type,
 )
 from .cmd2 import Cmd
+from .colors import ColorName
 from .command_definition import (
     CommandSet,
     with_default_category,
@@ -46,6 +45,7 @@ from .exceptions import (
 from .parsing import Statement
 from .py_bridge import CommandResult
 from .string_utils import stylize
+from .styles import Cmd2Style
 from .utils import (
     CompletionMode,
     CustomCompletionSettings,
@@ -68,6 +68,8 @@ __all__: list[str] = [  # noqa: RUF022
     'CommandResult',
     'CommandSet',
     'Statement',
+    # Color
+    "ColorName",
     # Decorators
     'with_argument_list',
     'with_argparser',
@@ -81,13 +83,13 @@ __all__: list[str] = [  # noqa: RUF022
     'PassThroughException',
     'SkipPostcommandHooks',
     # modules
-    'colors',
     'plugin',
     'rich_utils',
     'string_utils',
-    'styles',
     # String Utils
     'stylize',
+    # Styles,
+    "Cmd2Style",
     # Utilities
     'categorize',
     'CompletionMode',

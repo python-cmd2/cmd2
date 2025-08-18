@@ -24,10 +24,7 @@ from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
 
-from . import (
-    colors,
-    styles,
-)
+from .styles import DEFAULT_CMD2_STYLES
 
 
 class AllowStyle(Enum):
@@ -48,18 +45,6 @@ class AllowStyle(Enum):
 
 # Controls when ANSI style sequences are allowed in output
 allow_style = AllowStyle.TERMINAL
-
-
-# Default styles used by cmd2
-DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
-    styles.ERROR: Style(color=colors.BRIGHT_RED),
-    styles.EXAMPLE: Style(color=colors.CYAN, bold=True),
-    styles.HELP_HEADER: Style(color=colors.CYAN, bold=True),
-    styles.HELP_TITLE: Style(color=colors.BRIGHT_GREEN, bold=True),
-    styles.RULE_LINE: Style(color=colors.BRIGHT_GREEN),
-    styles.SUCCESS: Style(color=colors.GREEN),
-    styles.WARNING: Style(color=colors.BRIGHT_YELLOW),
-}
 
 
 class Cmd2Theme(Theme):

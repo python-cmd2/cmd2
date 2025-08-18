@@ -3,7 +3,7 @@
 import pytest
 
 from cmd2 import (
-    colors,
+    ColorName,
     string_utils,
 )
 from cmd2 import (
@@ -24,7 +24,7 @@ def test_set_title() -> None:
             '(Cmd) ',
             'help his',
             12,
-            string_utils.stylize('Hello World!', style=colors.MAGENTA),
+            string_utils.stylize('Hello World!', style=ColorName.MAGENTA),
             '\x1b[2K\r\x1b[35mHello World!\x1b[0m',
         ),
         (127, '\n(Cmd) ', 'help ', 5, 'foo', '\x1b[2K\x1b[1A\x1b[2K\rfoo'),

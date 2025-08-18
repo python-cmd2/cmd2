@@ -15,7 +15,7 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.argparse_completer](./argparse_completer.md) - classes for `argparse`-based tab completion
 - [cmd2.argparse_custom](./argparse_custom.md) - classes and functions for extending `argparse`
 - [cmd2.clipboard](./clipboard.md) - functions to copy from and paste to the clipboard/pastebuffer
-- [cmd2.colors](./colors.md) - constants for all color names supported by the Rich library
+- [cmd2.colors](./colors.md) - StrEnum of all color names supported by the Rich library
 - [cmd2.command_definition](./command_definition.md) - supports the definition of commands in
   separate classes to be composed into cmd2.Cmd
 - [cmd2.constants](./constants.md) - just like it says on the tin
@@ -30,6 +30,7 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.rl_utils](./rl_utils.md) - imports the proper Readline for the platform and provides utility
   functions for it
 - [cmd2.string_utils](./string_utils.md) - string utility functions
+- [cmd2.styles](./styles.md) - custom Rich styles and their corresponding names for cmd2.
 - [cmd2.terminal_utils](./terminal_utils.md) - support for terminal control escape sequences
 - [cmd2.transcript](./transcript.md) - functions and classes for running and validating transcripts
 - [cmd2.utils](./utils.md) - various utility classes and functions
