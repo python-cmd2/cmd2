@@ -3,8 +3,6 @@ r"""Support for terminal control escape sequences.
 These are used for things like setting the window title and asynchronous alerts.
 """
 
-from typing import Any
-
 from .string_utils import str_width
 
 #######################################################
@@ -59,27 +57,6 @@ def clear_line_str(clear_type: int = 2) -> str:
     if 0 <= clear_type <= 2:
         return f"{CSI}{clear_type}K"
     raise ValueError("clear_type must in an integer from 0 to 2")
-
-
-####################################################################################
-# Base classes which are not intended to be used directly
-####################################################################################
-class AnsiSequence:
-    """Base class to create ANSI sequence strings."""
-
-    def __add__(self, other: Any) -> str:
-        """Support building an ANSI sequence string when self is the left operand.
-
-        e.g. Fg.LIGHT_MAGENTA + "hello"
-        """
-        return str(self) + str(other)
-
-    def __radd__(self, other: Any) -> str:
-        """Support building an ANSI sequence string when self is the right operand.
-
-        e.g. "hello" + Fg.RESET
-        """
-        return str(other) + str(self)
 
 
 ####################################################################################
