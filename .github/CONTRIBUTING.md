@@ -60,13 +60,18 @@ Nearly all project configuration, including for dependencies and quality tools i
 
 See the `dependencies` list under the `[project]` heading in [pyproject.toml](../pyproject.toml).
 
-| Prerequisite                                        | Minimum Version | Purpose                            |
-| --------------------------------------------------- | --------------- | ---------------------------------- |
-| [python](https://www.python.org/downloads/)         | `3.10`          | Python programming language        |
-| [pyperclip](https://github.com/asweigart/pyperclip) | `1.8`           | Cross-platform clipboard functions |
+| Prerequisite                                               | Minimum Version | Purpose                                                |
+| ---------------------------------------------------------- | --------------- | ------------------------------------------------------ |
+| [python](https://www.python.org/downloads/)                | `3.10`          | Python programming language                            |
+| [pyperclip](https://github.com/asweigart/pyperclip)        | `1.8`           | Cross-platform clipboard functions                     |
+| [rich](https://github.com/Textualize/rich)                 | `14.1.0`        | Add rich text and beautiful formatting in the terminal |
+| [rich-argparse](https://github.com/hamdanal/rich-argparse) | `1.7.1`         | A rich-enabled help formatter for argparse             |
 
 > `macOS` and `Windows` each have an extra dependency to ensure they have a viable alternative to
 > [readline](https://tiswww.case.edu/php/chet/readline/rltop.html) available.
+
+> Python 3.10 depends on [backports.strenum](https://github.com/clbarnes/backports.strenum) to use
+> the `enum.StrEnum` class introduced in Python 3.11.
 
 #### Additional prerequisites to build and publish cmd2
 

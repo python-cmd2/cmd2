@@ -8,7 +8,10 @@ import threading
 import time
 
 import cmd2
-from cmd2 import stylize
+from cmd2 import (
+    Color,
+    stylize,
+)
 
 ALERTS = [
     "Watch as this application prints alerts and updates the prompt",
@@ -136,18 +139,18 @@ class AlerterApp(cmd2.Cmd):
         """
         rand_num = random.randint(1, 20)
 
-        status_color = "default"
+        status_color = Color.DEFAULT
 
         if rand_num == 1:
-            status_color = "bright_red"
+            status_color = Color.BRIGHT_RED
         elif rand_num == 2:
-            status_color = "bright_yellow"
+            status_color = Color.BRIGHT_YELLOW
         elif rand_num == 3:
-            status_color = "cyan"
+            status_color = Color.CYAN
         elif rand_num == 4:
-            status_color = "bright_green"
+            status_color = Color.BRIGHT_GREEN
         elif rand_num == 5:
-            status_color = "bright_blue"
+            status_color = Color.BRIGHT_BLUE
 
         return stylize(self.visible_prompt, style=status_color)
 
