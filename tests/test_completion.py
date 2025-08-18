@@ -8,19 +8,13 @@ import enum
 import os
 import sys
 from typing import NoReturn
-from unittest import (
-    mock,
-)
+from unittest import mock
 
 import pytest
 
 import cmd2
-from cmd2 import (
-    utils,
-)
-from examples.subcommands import (
-    SubcommandsExample,
-)
+from cmd2 import utils
+from examples.subcommands import SubcommandsExample
 
 from .conftest import (
     complete_tester,

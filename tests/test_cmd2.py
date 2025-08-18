@@ -10,9 +10,7 @@ from code import (
     InteractiveConsole,
 )
 from typing import NoReturn
-from unittest import (
-    mock,
-)
+from unittest import mock
 
 import pytest
 from rich.text import Text
@@ -26,14 +24,14 @@ from cmd2 import (
     constants,
     exceptions,
     plugin,
-    rich_utils,
-    string_utils,
     stylize,
     utils,
 )
-from cmd2.rl_utils import (
-    readline,  # This ensures gnureadline is used in macOS tests
-)
+from cmd2 import rich_utils as ru
+from cmd2 import string_utils as su
+
+# This ensures gnureadline is used in macOS tests
+from cmd2.rl_utils import readline  # type: ignore[atrr-defined]
 
 from .conftest import (
     SHORTCUTS_TXT,
@@ -51,12 +49,12 @@ def with_ansi_style(style):
 
         @functools.wraps(func)
         def cmd_wrapper(*args, **kwargs):
-            old = rich_utils.allow_style
-            rich_utils.allow_style = style
+            old = ru.allow_style
+            ru.allow_style = style
             try:
                 retval = func(*args, **kwargs)
             finally:
-                rich_utils.allow_style = old
+                ru.allow_style = old
             return retval
 
         return cmd_wrapper
@@ -235,31 +233,31 @@ def test_set_no_settables(base_app) -> None:
 @pytest.mark.parametrize(
     ('new_val', 'is_valid', 'expected'),
     [
-        (rich_utils.AllowStyle.NEVER, True, rich_utils.AllowStyle.NEVER),
-        ('neVeR', True, rich_utils.AllowStyle.NEVER),
-        (rich_utils.AllowStyle.TERMINAL, True, rich_utils.AllowStyle.TERMINAL),
-        ('TeRMInal', True, rich_utils.AllowStyle.TERMINAL),
-        (rich_utils.AllowStyle.ALWAYS, True, rich_utils.AllowStyle.ALWAYS),
-        ('AlWaYs', True, rich_utils.AllowStyle.ALWAYS),
-        ('invalid', False, rich_utils.AllowStyle.TERMINAL),
+        (ru.AllowStyle.NEVER, True, ru.AllowStyle.NEVER),
+        ('neVeR', True, ru.AllowStyle.NEVER),
+        (ru.AllowStyle.TERMINAL, True, ru.AllowStyle.TERMINAL),
+        ('TeRMInal', True, ru.AllowStyle.TERMINAL),
+        (ru.AllowStyle.ALWAYS, True, ru.AllowStyle.ALWAYS),
+        ('AlWaYs', True, ru.AllowStyle.ALWAYS),
+        ('invalid', False, ru.AllowStyle.TERMINAL),
     ],
 )
 def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     # Initialize allow_style for this test
-    rich_utils.allow_style = rich_utils.AllowStyle.TERMINAL
+    ru.allow_style = ru.AllowStyle.TERMINAL
 
     # Use the set command to alter it
     out, err = run_cmd(base_app, f'set allow_style {new_val}')
     assert base_app.last_result is is_valid
 
     # Verify the results
-    assert rich_utils.allow_style == expected
+    assert ru.allow_style == expected
     if is_valid:
         assert not err
         assert out
 
     # Reset allow_style to its default since it's an application-wide setting that can affect other unit tests
-    rich_utils.allow_style = rich_utils.AllowStyle.TERMINAL
+    ru.allow_style = ru.AllowStyle.TERMINAL
 
 
 def test_set_with_choices(base_app) -> None:
@@ -578,8 +576,8 @@ def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatc
     run_script_mock = mock.MagicMock(name='do_run_script')
     monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
-    run_cmd(base_app, f"_relative_run_script {string_utils.quote(file_name)}")
-    run_script_mock.assert_called_once_with(string_utils.quote(file_name))
+    run_cmd(base_app, f"_relative_run_script {su.quote(file_name)}")
+    run_script_mock.assert_called_once_with(su.quote(file_name))
 
 
 def test_relative_run_script_requires_an_argument(base_app) -> None:
@@ -990,9 +988,9 @@ def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch) -> None
     monkeypatch.setattr("cmd2.Cmd.do_shell", shell_mock)
 
     base_app.editor = 'fooedit'
-    file_name = string_utils.quote('nothingweird.py')
-    run_cmd(base_app, f"edit {string_utils.quote(file_name)}")
-    shell_mock.assert_called_once_with(f'"fooedit" {string_utils.quote(file_name)}')
+    file_name = su.quote('nothingweird.py')
+    run_cmd(base_app, f"edit {su.quote(file_name)}")
+    shell_mock.assert_called_once_with(f'"fooedit" {su.quote(file_name)}')
 
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch) -> None:
@@ -2039,7 +2037,7 @@ def test_poutput_none(outsim_app) -> None:
     assert out == expected
 
 
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_ansi_always(outsim_app) -> None:
     msg = 'Hello World'
     colored_msg = Text(msg, style="cyan")
@@ -2048,7 +2046,7 @@ def test_poutput_ansi_always(outsim_app) -> None:
     assert out == "\x1b[36mHello World\x1b[0m\n"
 
 
-@with_ansi_style(rich_utils.AllowStyle.NEVER)
+@with_ansi_style(ru.AllowStyle.NEVER)
 def test_poutput_ansi_never(outsim_app) -> None:
     msg = 'Hello World'
     colored_msg = Text(msg, style="cyan")
@@ -2058,7 +2056,7 @@ def test_poutput_ansi_never(outsim_app) -> None:
     assert out == expected
 
 
-@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
+@with_ansi_style(ru.AllowStyle.TERMINAL)
 def test_poutput_ansi_terminal(outsim_app) -> None:
     """Test that AllowStyle.TERMINAL strips style when redirecting."""
     msg = 'testing...'
@@ -2499,7 +2497,7 @@ def test_nonexistent_macro(base_app) -> None:
     assert exception is not None
 
 
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_perror_style(base_app, capsys) -> None:
     msg = 'testing...'
     base_app.perror(msg)
@@ -2507,7 +2505,7 @@ def test_perror_style(base_app, capsys) -> None:
     assert err == "\x1b[91mtesting...\x1b[0m\x1b[91m\n\x1b[0m"
 
 
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_perror_no_style(base_app, capsys) -> None:
     msg = 'testing...'
     end = '\n'
@@ -2516,7 +2514,7 @@ def test_perror_no_style(base_app, capsys) -> None:
     assert err == msg + end
 
 
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_pexcept_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
@@ -2525,7 +2523,7 @@ def test_pexcept_style(base_app, capsys) -> None:
     assert err.startswith("\x1b[91mEXCEPTION of type 'Exception' occurred with message: testing")
 
 
-@with_ansi_style(rich_utils.AllowStyle.NEVER)
+@with_ansi_style(ru.AllowStyle.NEVER)
 def test_pexcept_no_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
@@ -2534,7 +2532,7 @@ def test_pexcept_no_style(base_app, capsys) -> None:
     assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
 
 
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_pexcept_not_exception(base_app, capsys) -> None:
     # Pass in a msg that is not an Exception object
     msg = False
@@ -2764,7 +2762,7 @@ class AnsiApp(cmd2.Cmd):
         self.perror(args)
 
 
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_ansi_pouterr_always_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
@@ -2787,7 +2785,7 @@ def test_ansi_pouterr_always_tty(mocker, capsys) -> None:
     assert 'oopsie' in err
 
 
-@with_ansi_style(rich_utils.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_ansi_pouterr_always_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
@@ -2810,7 +2808,7 @@ def test_ansi_pouterr_always_notty(mocker, capsys) -> None:
     assert 'oopsie' in err
 
 
-@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
+@with_ansi_style(ru.AllowStyle.TERMINAL)
 def test_ansi_terminal_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
@@ -2832,7 +2830,7 @@ def test_ansi_terminal_tty(mocker, capsys) -> None:
     assert 'oopsie' in err
 
 
-@with_ansi_style(rich_utils.AllowStyle.TERMINAL)
+@with_ansi_style(ru.AllowStyle.TERMINAL)
 def test_ansi_terminal_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
@@ -2847,7 +2845,7 @@ def test_ansi_terminal_notty(mocker, capsys) -> None:
     assert out == err == 'oopsie\n'
 
 
-@with_ansi_style(rich_utils.AllowStyle.NEVER)
+@with_ansi_style(ru.AllowStyle.NEVER)
 def test_ansi_never_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
@@ -2862,7 +2860,7 @@ def test_ansi_never_tty(mocker, capsys) -> None:
     assert out == err == 'oopsie\n'
 
 
-@with_ansi_style(rich_utils.AllowStyle.NEVER)
+@with_ansi_style(ru.AllowStyle.NEVER)
 def test_ansi_never_notty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
@@ -3075,7 +3073,7 @@ def test_startup_script_with_odd_file_names(startup_script) -> None:
 
     app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
     assert len(app._startup_commands) == 1
-    assert app._startup_commands[0] == f"run_script {string_utils.quote(os.path.abspath(startup_script))}"
+    assert app._startup_commands[0] == f"run_script {su.quote(os.path.abspath(startup_script))}"
 
     # Restore os.path.exists
     os.path.exists = saved_exists

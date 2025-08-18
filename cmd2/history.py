@@ -14,7 +14,7 @@ from typing import (
     overload,
 )
 
-from . import string_utils
+from . import string_utils as su
 from .parsing import (
     Statement,
     shlex_split,
@@ -285,9 +285,9 @@ class History(list[HistoryItem]):
 
         def isin(history_item: HistoryItem) -> bool:
             """Filter function for string search of history."""
-            sloppy = string_utils.norm_fold(search)
-            inraw = sloppy in string_utils.norm_fold(history_item.raw)
-            inexpanded = sloppy in string_utils.norm_fold(history_item.expanded)
+            sloppy = su.norm_fold(search)
+            inraw = sloppy in su.norm_fold(history_item.raw)
+            inexpanded = sloppy in su.norm_fold(history_item.expanded)
             return inraw or inexpanded
 
         start = 0 if include_persisted else self.session_start_index

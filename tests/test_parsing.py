@@ -8,8 +8,8 @@ import cmd2
 from cmd2 import (
     constants,
     exceptions,
-    string_utils,
 )
+from cmd2 import string_utils as su
 from cmd2.parsing import (
     Statement,
     StatementParser,
@@ -140,7 +140,7 @@ def test_parse_single_word(parser, line) -> None:
     statement = parser.parse(line)
     assert statement.command == line
     assert statement == ''
-    assert statement.argv == [string_utils.strip_quotes(line)]
+    assert statement.argv == [su.strip_quotes(line)]
     assert not statement.arg_list
     assert statement.args == statement
     assert statement.raw == line

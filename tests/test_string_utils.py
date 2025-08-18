@@ -2,13 +2,9 @@
 
 from rich.style import Style
 
-from cmd2 import (
-    Color,
-    rich_utils,
-)
-from cmd2 import (
-    string_utils as su,
-)
+from cmd2 import Color
+from cmd2 import rich_utils as ru
+from cmd2 import string_utils as su
 
 HELLO_WORLD = 'Hello, world!'
 
@@ -33,7 +29,7 @@ def test_align_term_width() -> None:
     text = 'foo'
     character = ' '
 
-    term_width = rich_utils.console_width()
+    term_width = ru.console_width()
     expected_padding = (term_width - su.str_width(text)) * character
 
     aligned = su.align(text, "left", character=character)

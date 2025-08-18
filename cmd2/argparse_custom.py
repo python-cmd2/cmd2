@@ -294,10 +294,8 @@ from rich_argparse import (
     RichHelpFormatter,
 )
 
-from . import (
-    constants,
-    rich_utils,
-)
+from . import constants
+from . import rich_utils as ru
 from .styles import Cmd2Style
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -1115,12 +1113,12 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         max_help_position: int = 24,
         width: int | None = None,
         *,
-        console: rich_utils.Cmd2Console | None = None,
+        console: ru.Cmd2Console | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize Cmd2HelpFormatter."""
         if console is None:
-            console = rich_utils.Cmd2Console()
+            console = ru.Cmd2Console()
 
         super().__init__(prog, indent_increment, max_help_position, width, console=console, **kwargs)
 
