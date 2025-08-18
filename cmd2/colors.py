@@ -11,9 +11,28 @@ else:
 class Color(StrEnum):
     """An enumeration of all color names supported by the Rich library.
 
-    Using this enum allows for autocompletion and prevents typos when
-    referencing color names. The members can be used for both foreground
-    and background styling.
+    Using this enum allows for autocompletion and prevents typos when referencing
+    color names. The members can be used for both foreground and background colors.
+
+    Aside from DEFAULT, these colors come from the rich.color.ANSI_COLOR_NAMES dictionary.
+
+    The following colors are the 16 whose appearance is determined by the terminal.
+        - BLACK
+        - BLUE
+        - BRIGHT_BLACK
+        - BRIGHT_BLUE
+        - BRIGHT_CYAN
+        - BRIGHT_GREEN
+        - BRIGHT_MAGENTA
+        - BRIGHT_RED
+        - BRIGHT_WHITE
+        - BRIGHT_YELLOW
+        - CYAN
+        - GREEN
+        - MAGENTA
+        - RED
+        - WHITE
+        - YELLOW
     """
 
     DEFAULT = "default"  # Represents the terminal's default foreground or background color.
@@ -79,13 +98,13 @@ class Color(StrEnum):
     GOLD1 = "gold1"
     GOLD3 = "gold3"
     GRAY0 = "gray0"
-    GRAY100 = "gray100"
+    GRAY3 = "gray3"
+    GRAY7 = "gray7"
     GRAY11 = "gray11"
     GRAY15 = "gray15"
     GRAY19 = "gray19"
     GRAY23 = "gray23"
     GRAY27 = "gray27"
-    GRAY3 = "gray3"
     GRAY30 = "gray30"
     GRAY35 = "gray35"
     GRAY37 = "gray37"
@@ -100,7 +119,6 @@ class Color(StrEnum):
     GRAY63 = "gray63"
     GRAY66 = "gray66"
     GRAY69 = "gray69"
-    GRAY7 = "gray7"
     GRAY70 = "gray70"
     GRAY74 = "gray74"
     GRAY78 = "gray78"
@@ -109,19 +127,20 @@ class Color(StrEnum):
     GRAY85 = "gray85"
     GRAY89 = "gray89"
     GRAY93 = "gray93"
+    GRAY100 = "gray100"
     GREEN = "green"
     GREEN1 = "green1"
     GREEN3 = "green3"
     GREEN4 = "green4"
     GREEN_YELLOW = "green_yellow"
     GREY0 = "grey0"
-    GREY100 = "grey100"
+    GREY3 = "grey3"
+    GREY7 = "grey7"
     GREY11 = "grey11"
     GREY15 = "grey15"
     GREY19 = "grey19"
     GREY23 = "grey23"
     GREY27 = "grey27"
-    GREY3 = "grey3"
     GREY30 = "grey30"
     GREY35 = "grey35"
     GREY37 = "grey37"
@@ -136,7 +155,6 @@ class Color(StrEnum):
     GREY63 = "grey63"
     GREY66 = "grey66"
     GREY69 = "grey69"
-    GREY7 = "grey7"
     GREY70 = "grey70"
     GREY74 = "grey74"
     GREY78 = "grey78"
@@ -145,6 +163,7 @@ class Color(StrEnum):
     GREY85 = "grey85"
     GREY89 = "grey89"
     GREY93 = "grey93"
+    GREY100 = "grey100"
     HONEYDEW2 = "honeydew2"
     HOT_PINK = "hot_pink"
     HOT_PINK2 = "hot_pink2"
