@@ -18,8 +18,8 @@ from typing import (
     cast,
 )
 
+from . import string_utils as su
 from . import utils
-from .string_utils import strip_style
 
 if TYPE_CHECKING:  # pragma: no cover
     from cmd2 import (
@@ -74,13 +74,13 @@ class Cmd2TestCase(unittest.TestCase):
 
         line_num = 0
         finished = False
-        line = strip_style(next(transcript))
+        line = su.strip_style(next(transcript))
         line_num += 1
         while not finished:
             # Scroll forward to where actual commands begin
             while not line.startswith(self.cmdapp.visible_prompt):
                 try:
-                    line = strip_style(next(transcript))
+                    line = su.strip_style(next(transcript))
                 except StopIteration:
                     finished = True
                     break
@@ -106,14 +106,14 @@ class Cmd2TestCase(unittest.TestCase):
             result = self.cmdapp.stdout.read()
             stop_msg = 'Command indicated application should quit, but more commands in transcript'
             # Read the expected result from transcript
-            if strip_style(line).startswith(self.cmdapp.visible_prompt):
+            if su.strip_style(line).startswith(self.cmdapp.visible_prompt):
                 message = f'\nFile {fname}, line {line_num}\nCommand was:\n{command}\nExpected: (nothing)\nGot:\n{result}\n'
                 assert not result.strip(), message  # noqa: S101
                 # If the command signaled the application to quit there should be no more commands
                 assert not stop, stop_msg  # noqa: S101
                 continue
             expected_parts = []
-            while not strip_style(line).startswith(self.cmdapp.visible_prompt):
+            while not su.strip_style(line).startswith(self.cmdapp.visible_prompt):
                 expected_parts.append(line)
                 try:
                     line = next(transcript)

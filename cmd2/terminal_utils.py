@@ -3,7 +3,7 @@ r"""Support for terminal control escape sequences.
 These are used for things like setting the window title and asynchronous alerts.
 """
 
-from .string_utils import str_width
+from . import string_utils as su
 
 #######################################################
 # Common ANSI escape sequence constants
@@ -108,14 +108,14 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     # That will be included in the input lines calculations since that is where the cursor is.
     num_prompt_terminal_lines = 0
     for prompt_line in prompt_lines[:-1]:
-        prompt_line_width = str_width(prompt_line)
+        prompt_line_width = su.str_width(prompt_line)
         num_prompt_terminal_lines += int(prompt_line_width / terminal_columns) + 1
 
     # Now calculate how many terminal lines are take up by the input
     last_prompt_line = prompt_lines[-1]
-    last_prompt_line_width = str_width(last_prompt_line)
+    last_prompt_line_width = su.str_width(last_prompt_line)
 
-    input_width = last_prompt_line_width + str_width(line)
+    input_width = last_prompt_line_width + su.str_width(line)
 
     num_input_terminal_lines = int(input_width / terminal_columns) + 1
 

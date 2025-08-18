@@ -12,13 +12,27 @@ import re
 import subprocess
 import sys
 import threading
-from collections.abc import Callable, Iterable
+from collections.abc import (
+    Callable,
+    Iterable,
+)
 from difflib import SequenceMatcher
 from enum import Enum
-from typing import TYPE_CHECKING, Any, TextIO, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    TextIO,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from . import constants
-from .argparse_custom import ChoicesProviderFunc, CompleterFunc
+from . import string_utils as su
+from .argparse_custom import (
+    ChoicesProviderFunc,
+    CompleterFunc,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2  # noqa: F401
@@ -188,9 +202,7 @@ def alphabetical_sort(list_to_sort: Iterable[str]) -> list[str]:
     :param list_to_sort: the list being sorted
     :return: the sorted list
     """
-    from .string_utils import norm_fold
-
-    return sorted(list_to_sort, key=norm_fold)
+    return sorted(list_to_sort, key=su.norm_fold)
 
 
 def try_int_or_force_to_lower_case(input_str: str) -> int | str:
@@ -199,12 +211,10 @@ def try_int_or_force_to_lower_case(input_str: str) -> int | str:
     :param input_str: string to convert
     :return: the string as an integer or a lower case version of the string.
     """
-    from .string_utils import norm_fold
-
     try:
         return int(input_str)
     except ValueError:
-        return norm_fold(input_str)
+        return su.norm_fold(input_str)
 
 
 def natural_keys(input_str: str) -> list[int | str]:
@@ -238,11 +248,9 @@ def quote_specific_tokens(tokens: list[str], tokens_to_quote: list[str]) -> None
     :param tokens: token list being edited
     :param tokens_to_quote: the tokens, which if present in tokens, to quote
     """
-    from .string_utils import quote
-
     for i, token in enumerate(tokens):
         if token in tokens_to_quote:
-            tokens[i] = quote(token)
+            tokens[i] = su.quote(token)
 
 
 def unquote_specific_tokens(tokens: list[str], tokens_to_unquote: list[str]) -> None:
@@ -251,10 +259,8 @@ def unquote_specific_tokens(tokens: list[str], tokens_to_unquote: list[str]) -> 
     :param tokens: token list being edited
     :param tokens_to_unquote: the tokens, which if present in tokens, to unquote
     """
-    from .string_utils import strip_quotes
-
     for i, token in enumerate(tokens):
-        unquoted_token = strip_quotes(token)
+        unquoted_token = su.strip_quotes(token)
         if unquoted_token in tokens_to_unquote:
             tokens[i] = unquoted_token
 
@@ -264,12 +270,10 @@ def expand_user(token: str) -> str:
 
     :param token: the string to expand
     """
-    from .string_utils import is_quoted, strip_quotes
-
     if token:
-        if is_quoted(token):
+        if su.is_quoted(token):
             quote_char = token[0]
-            token = strip_quotes(token)
+            token = su.strip_quotes(token)
         else:
             quote_char = ''
 

@@ -9,11 +9,7 @@ standard Python library's string methods do not properly support.
 from rich.align import AlignMethod
 from rich.style import StyleType
 
-from .rich_utils import (
-    console_width,
-    rich_text_to_string,
-    string_to_rich_text,
-)
+from . import rich_utils as ru
 
 
 def align(
@@ -33,11 +29,11 @@ def align(
 
     """
     if width is None:
-        width = console_width()
+        width = ru.console_width()
 
-    text = string_to_rich_text(val)
+    text = ru.string_to_rich_text(val)
     text.align(align, width=width, character=character)
-    return rich_text_to_string(text)
+    return ru.rich_text_to_string(text)
 
 
 def align_left(
@@ -92,9 +88,9 @@ def stylize(val: str, style: StyleType) -> str:
     :param style: style instance or style definition to apply.
     :return: the stylized string
     """
-    text = string_to_rich_text(val)
+    text = ru.string_to_rich_text(val)
     text.stylize(style)
-    return rich_text_to_string(text)
+    return ru.rich_text_to_string(text)
 
 
 def strip_style(val: str) -> str:
@@ -103,7 +99,7 @@ def strip_style(val: str) -> str:
     :param val: string which may contain ANSI style sequences
     :return: the same string with any ANSI style sequences removed
     """
-    text = string_to_rich_text(val)
+    text = ru.string_to_rich_text(val)
     return text.plain
 
 
@@ -116,7 +112,7 @@ def str_width(val: str) -> int:
     :param val: the string being measured
     :return: width of the string when printed to the terminal
     """
-    text = string_to_rich_text(val)
+    text = ru.string_to_rich_text(val)
     return text.cell_len
 
 
