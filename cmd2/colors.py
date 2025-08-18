@@ -8,7 +8,7 @@ else:
     from backports.strenum import StrEnum
 
 
-class ColorName(StrEnum):
+class Color(StrEnum):
     """An enumeration of all color names supported by the Rich library.
 
     Using this enum allows for autocompletion and prevents typos when

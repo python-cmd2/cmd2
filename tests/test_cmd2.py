@@ -21,7 +21,7 @@ import cmd2
 from cmd2 import (
     COMMAND_NAME,
     Cmd2Style,
-    ColorName,
+    Color,
     clipboard,
     constants,
     exceptions,
@@ -1224,7 +1224,7 @@ def test_escaping_prompt() -> None:
     assert rl_escape_prompt(prompt) == prompt
 
     # This prompt has color which needs to be escaped
-    prompt = stylize('InColor', style=ColorName.CYAN)
+    prompt = stylize('InColor', style=Color.CYAN)
 
     escape_start = "\x01"
     escape_end = "\x02"

@@ -3,7 +3,7 @@
 from rich.style import Style
 
 from cmd2 import (
-    ColorName,
+    Color,
     rich_utils,
 )
 from cmd2 import (
@@ -59,7 +59,7 @@ def test_align_left_wide_text() -> None:
 def test_align_left_with_style() -> None:
     character = '-'
 
-    styled_text = su.stylize('table', style=ColorName.BRIGHT_BLUE)
+    styled_text = su.stylize('table', style=Color.BRIGHT_BLUE)
     width = 8
 
     aligned = su.align_left(styled_text, width=width, character=character)
@@ -85,7 +85,7 @@ def test_align_center_wide_text() -> None:
 def test_align_center_with_style() -> None:
     character = '-'
 
-    styled_text = su.stylize('table', style=ColorName.BRIGHT_BLUE)
+    styled_text = su.stylize('table', style=Color.BRIGHT_BLUE)
     width = 8
 
     aligned = su.align_center(styled_text, width=width, character=character)
@@ -111,7 +111,7 @@ def test_align_right_wide_text() -> None:
 def test_align_right_with_style() -> None:
     character = '-'
 
-    styled_text = su.stylize('table', style=ColorName.BRIGHT_BLUE)
+    styled_text = su.stylize('table', style=Color.BRIGHT_BLUE)
     width = 8
 
     aligned = su.align_right(styled_text, width=width, character=character)
@@ -122,8 +122,8 @@ def test_stylize() -> None:
     styled_str = su.stylize(
         HELLO_WORLD,
         style=Style(
-            color=ColorName.GREEN,
-            bgcolor=ColorName.BLUE,
+            color=Color.GREEN,
+            bgcolor=Color.BLUE,
             bold=True,
             underline=True,
         ),
@@ -134,7 +134,7 @@ def test_stylize() -> None:
 
 def test_strip_style() -> None:
     base_str = HELLO_WORLD
-    styled_str = su.stylize(base_str, style=ColorName.GREEN)
+    styled_str = su.stylize(base_str, style=Color.GREEN)
     assert base_str != styled_str
     assert base_str == su.strip_style(styled_str)
 
@@ -142,7 +142,7 @@ def test_strip_style() -> None:
 def test_str_width() -> None:
     # Include a full-width character
     base_str = HELLO_WORLD + "深"
-    styled_str = su.stylize(base_str, style=ColorName.GREEN)
+    styled_str = su.stylize(base_str, style=Color.GREEN)
     expected_width = len(HELLO_WORLD) + 2
     assert su.str_width(base_str) == su.str_width(styled_str) == expected_width
 

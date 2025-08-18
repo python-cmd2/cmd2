@@ -30,7 +30,7 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.rl_utils](./rl_utils.md) - imports the proper Readline for the platform and provides utility
   functions for it
 - [cmd2.string_utils](./string_utils.md) - string utility functions
-- [cmd2.styles](./styles.md) - custom Rich styles and their corresponding names for cmd2.
+- [cmd2.styles](./styles.md) - cmd2-specific Rich styles and a StrEnum of their corresponding names
 - [cmd2.terminal_utils](./terminal_utils.md) - support for terminal control escape sequences
 - [cmd2.transcript](./transcript.md) - functions and classes for running and validating transcripts
 - [cmd2.utils](./utils.md) - various utility classes and functions

@@ -17,7 +17,7 @@ if sys.version_info >= (3, 11):
 else:
     from backports.strenum import StrEnum
 
-from .colors import ColorName
+from .colors import Color
 
 
 class Cmd2Style(StrEnum):
@@ -41,11 +41,11 @@ class Cmd2Style(StrEnum):
 
 # Default styles used by cmd2. Tightly coupled with the Cmd2Style enum.
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
-    Cmd2Style.ERROR: Style(color=ColorName.BRIGHT_RED),
-    Cmd2Style.EXAMPLE: Style(color=ColorName.CYAN, bold=True),
-    Cmd2Style.HELP_HEADER: Style(color=ColorName.CYAN, bold=True),
-    Cmd2Style.HELP_TITLE: Style(color=ColorName.BRIGHT_GREEN, bold=True),
-    Cmd2Style.RULE_LINE: Style(color=ColorName.BRIGHT_GREEN),
-    Cmd2Style.SUCCESS: Style(color=ColorName.GREEN),
-    Cmd2Style.WARNING: Style(color=ColorName.BRIGHT_YELLOW),
+    Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
+    Cmd2Style.EXAMPLE: Style(color=Color.CYAN, bold=True),
+    Cmd2Style.HELP_HEADER: Style(color=Color.CYAN, bold=True),
+    Cmd2Style.HELP_TITLE: Style(color=Color.BRIGHT_GREEN, bold=True),
+    Cmd2Style.RULE_LINE: Style(color=Color.BRIGHT_GREEN),
+    Cmd2Style.SUCCESS: Style(color=Color.GREEN),
+    Cmd2Style.WARNING: Style(color=Color.BRIGHT_YELLOW),
 }

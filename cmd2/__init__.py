@@ -20,7 +20,7 @@ from .argparse_custom import (
     set_default_argument_parser_type,
 )
 from .cmd2 import Cmd
-from .colors import ColorName
+from .colors import Color
 from .command_definition import (
     CommandSet,
     with_default_category,
@@ -68,8 +68,8 @@ __all__: list[str] = [  # noqa: RUF022
     'CommandResult',
     'CommandSet',
     'Statement',
-    # Color
-    "ColorName",
+    # Colors
+    "Color",
     # Decorators
     'with_argument_list',
     'with_argparser',
