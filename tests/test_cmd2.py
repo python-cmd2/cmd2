@@ -49,12 +49,12 @@ def with_ansi_style(style):
 
         @functools.wraps(func)
         def cmd_wrapper(*args, **kwargs):
-            old = ru.allow_style
-            ru.allow_style = style
+            old = ru.ALLOW_STYLE
+            ru.ALLOW_STYLE = style
             try:
                 retval = func(*args, **kwargs)
             finally:
-                ru.allow_style = old
+                ru.ALLOW_STYLE = old
             return retval
 
         return cmd_wrapper
@@ -244,20 +244,20 @@ def test_set_no_settables(base_app) -> None:
 )
 def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     # Initialize allow_style for this test
-    ru.allow_style = ru.AllowStyle.TERMINAL
+    ru.ALLOW_STYLE = ru.AllowStyle.TERMINAL
 
     # Use the set command to alter it
     out, err = run_cmd(base_app, f'set allow_style {new_val}')
     assert base_app.last_result is is_valid
 
     # Verify the results
-    assert ru.allow_style == expected
+    assert expected == ru.ALLOW_STYLE
     if is_valid:
         assert not err
         assert out
 
     # Reset allow_style to its default since it's an application-wide setting that can affect other unit tests
-    ru.allow_style = ru.AllowStyle.TERMINAL
+    ru.ALLOW_STYLE = ru.AllowStyle.TERMINAL
 
 
 def test_set_with_choices(base_app) -> None:

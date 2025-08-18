@@ -28,7 +28,7 @@ from .styles import DEFAULT_CMD2_STYLES
 
 
 class AllowStyle(Enum):
-    """Values for ``cmd2.rich_utils.allow_style``."""
+    """Values for ``cmd2.rich_utils.ALLOW_STYLE``."""
 
     ALWAYS = 'Always'  # Always output ANSI style sequences
     NEVER = 'Never'  # Remove ANSI style sequences from all output
@@ -44,7 +44,7 @@ class AllowStyle(Enum):
 
 
 # Controls when ANSI style sequences are allowed in output
-allow_style = AllowStyle.TERMINAL
+ALLOW_STYLE = AllowStyle.TERMINAL
 
 
 class Cmd2Theme(Theme):
@@ -123,13 +123,13 @@ class Cmd2Console(Console):
         force_terminal: bool | None = None
         force_interactive: bool | None = None
 
-        if allow_style == AllowStyle.ALWAYS:
+        if ALLOW_STYLE == AllowStyle.ALWAYS:
             force_terminal = True
 
             # Turn off interactive mode if dest is not actually a terminal which supports it
             tmp_console = Console(file=file)
             force_interactive = tmp_console.is_interactive
-        elif allow_style == AllowStyle.NEVER:
+        elif ALLOW_STYLE == AllowStyle.NEVER:
             force_terminal = False
 
         # Configure console defaults to treat output as plain, unstructured text.

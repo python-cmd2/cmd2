@@ -1172,12 +1172,12 @@ class Cmd(cmd.Cmd):
     @property
     def allow_style(self) -> ru.AllowStyle:
         """Read-only property needed to support do_set when it reads allow_style."""
-        return ru.allow_style
+        return ru.ALLOW_STYLE
 
     @allow_style.setter
     def allow_style(self, new_val: ru.AllowStyle) -> None:
         """Setter property needed to support do_set when it updates allow_style."""
-        ru.allow_style = new_val
+        ru.ALLOW_STYLE = new_val
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported."""
