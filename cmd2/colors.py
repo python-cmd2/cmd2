@@ -16,26 +16,23 @@ class Color(StrEnum):
 
     Aside from DEFAULT, these colors come from the rich.color.ANSI_COLOR_NAMES dictionary.
 
-    The following colors are the 16 whose appearance is determined by the terminal.
-        - BLACK
-        - BLUE
-        - BRIGHT_BLACK
-        - BRIGHT_BLUE
-        - BRIGHT_CYAN
-        - BRIGHT_GREEN
-        - BRIGHT_MAGENTA
-        - BRIGHT_RED
-        - BRIGHT_WHITE
-        - BRIGHT_YELLOW
-        - CYAN
-        - GREEN
-        - MAGENTA
-        - RED
-        - WHITE
-        - YELLOW
+    Note: The terminal color settings determines the appearance of the follow 16 colors.
+
+    |                |               |
+    |----------------|---------------|
+    | BLACK          | BRIGHT_WHITE  |
+    | BLUE           | BRIGHT_YELLOW |
+    | BRIGHT_BLACK   | CYAN          |
+    | BRIGHT_BLUE    | GREEN         |
+    | BRIGHT_CYAN    | MAGENTA       |
+    | BRIGHT_GREEN   | RED           |
+    | BRIGHT_MAGENTA | WHITE         |
+    | BRIGHT_RED     | YELLOW        |
     """
 
-    DEFAULT = "default"  # Represents the terminal's default foreground or background color.
+    DEFAULT = "default"
+    """Represents the terminal's default foreground or background color."""
+
     AQUAMARINE1 = "aquamarine1"
     AQUAMARINE3 = "aquamarine3"
     BLACK = "black"
