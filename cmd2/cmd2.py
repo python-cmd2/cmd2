@@ -3254,13 +3254,12 @@ class Cmd(cmd.Cmd):
         if self.default_to_shell:
             if 'shell' not in self.exclude_from_history:
                 self.history.append(statement)
-
             return self.do_shell(statement.command_and_args)
+
         err_msg = self.default_error.format(statement.command)
         if self.suggest_similar_command and (suggested_command := self._suggest_similar_command(statement.command)):
             err_msg += f"\n{self.default_suggestion_message.format(suggested_command)}"
 
-        # Set apply_style to False so styles for default_error and default_suggestion_message are not overridden
         self.perror(err_msg, style=None)
         return None
 
@@ -4099,8 +4098,6 @@ class Cmd(cmd.Cmd):
             # If there is no help information then print an error
             else:
                 err_msg = self.help_error.format(args.command)
-
-                # Set apply_style to False so help_error's style is not overridden
                 self.perror(err_msg, style=None)
                 self.last_result = False
 
