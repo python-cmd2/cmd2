@@ -1245,7 +1245,10 @@ class HelpApp(cmd2.Cmd):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.doc_leader = "I now present you a list of help topics."
+        self.doc_leader = "I now present you with a list of help topics."
+        self.doc_header = "My very custom doc header."
+        self.misc_header = "Various topics found here."
+        self.undoc_header = "Why did no one document these?"
 
     def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
@@ -1358,6 +1361,16 @@ def test_columnize_empty_list(capsys) -> None:
     help_app.columnize(no_strs)
     out, err = capsys.readouterr()
     assert "<empty>" in out
+
+
+def test_columnize_too_wide(capsys) -> None:
+    help_app = HelpApp()
+    commands = ["kind_of_long_string", "a_slightly_longer_string"]
+    help_app.columnize(commands, display_width=10)
+    out, err = capsys.readouterr()
+
+    expected = "kind_of_long_string     \na_slightly_longer_string\n"
+    assert expected == out
 
 
 class HelpCategoriesApp(cmd2.Cmd):

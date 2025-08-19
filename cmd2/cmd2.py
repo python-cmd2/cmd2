@@ -4043,6 +4043,14 @@ class Cmd(cmd.Cmd):
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
 
     def _build_command_info(self) -> tuple[dict[str, list[str]], list[str], list[str], list[str]]:
+        """Categorizes and sorts visible commands and help topics for display.
+
+        :return: tuple containing:
+                  - dictionary mapping category names to lists of command names
+                  - list of documented command names
+                  - list of undocumented command names
+                  - list of help topic names that are not also commands
+        """
         # Get a sorted list of help topics
         help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
 
@@ -4268,7 +4276,8 @@ class Cmd(cmd.Cmd):
             # The output is wider than display_width. Print 1 column with each string on its own row.
             nrows = len(str_list)
             ncols = 1
-            colwidths = [1]
+            max_width = max(su.str_width(s) for s in str_list)
+            colwidths = [max_width]
         for row in range(nrows):
             texts = []
             for col in range(ncols):
