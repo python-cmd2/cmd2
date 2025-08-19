@@ -33,7 +33,7 @@ class Cmd2Style(StrEnum):
     ERROR = "cmd2.error"
     EXAMPLE = "cmd2.example"
     HELP_HEADER = "cmd2.help.header"
-    HELP_TITLE = "cmd2.help.title"
+    HELP_LEADER = "cmd2.help.leader"
     RULE_LINE = "cmd2.rule.line"
     SUCCESS = "cmd2.success"
     WARNING = "cmd2.warning"
@@ -43,8 +43,8 @@ class Cmd2Style(StrEnum):
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
     Cmd2Style.EXAMPLE: Style(color=Color.CYAN, bold=True),
-    Cmd2Style.HELP_HEADER: Style(color=Color.CYAN, bold=True),
-    Cmd2Style.HELP_TITLE: Style(color=Color.BRIGHT_GREEN, bold=True),
+    Cmd2Style.HELP_HEADER: Style(color=Color.BRIGHT_GREEN, bold=True),
+    Cmd2Style.HELP_LEADER: Style(color=Color.CYAN, bold=True),
     Cmd2Style.RULE_LINE: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.SUCCESS: Style(color=Color.GREEN),
     Cmd2Style.WARNING: Style(color=Color.BRIGHT_YELLOW),

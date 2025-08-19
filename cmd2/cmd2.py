@@ -475,14 +475,21 @@ class Cmd(cmd.Cmd):
         # The multiline command currently being typed which is used to tab complete multiline commands.
         self._multiline_in_progress = ''
 
-        # Set the header used for the help function's listing of documented functions
-        self.doc_header = "Documented commands (use 'help -v' for verbose/'help <topic>' for details)"
+        # Set text which prints right before all of the help topics are listed.
+        self.doc_leader = ""
+
+        # Set header for table listing documented commands.
+        self.doc_header = "Documented Commands"
 
         # Set header for table listing help topics not related to a command.
         self.misc_header = "Miscellaneous Help Topics"
 
         # Set header for table listing commands that have no help info.
         self.undoc_header = "Undocumented Commands"
+
+        # If any command has been categorized, then all other commands that haven't been categorized
+        # will display under this section in the help output.
+        self.default_category = "Uncategorized Commands"
 
         # The error that prints when no help information can be found
         self.help_error = "No help on {}"
@@ -550,10 +557,6 @@ class Cmd(cmd.Cmd):
         # during specific states of the application. This dictionary's keys are the command names and its
         # values are DisabledCommand objects.
         self.disabled_commands: dict[str, DisabledCommand] = {}
-
-        # If any command has been categorized, then all other commands that haven't been categorized
-        # will display under this section in the help output.
-        self.default_category = 'Uncategorized'
 
         # The default key for sorting string results. Its default value performs a case-insensitive alphabetical sort.
         # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
@@ -4039,6 +4042,45 @@ class Cmd(cmd.Cmd):
         completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
 
+    def _build_command_info(self) -> tuple[dict[str, list[str]], list[str], list[str], list[str]]:
+        """Categorizes and sorts visible commands and help topics for display.
+
+        :return: tuple containing:
+                  - dictionary mapping category names to lists of command names
+                  - list of documented command names
+                  - list of undocumented command names
+                  - list of help topic names that are not also commands
+        """
+        # Get a sorted list of help topics
+        help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
+
+        # Get a sorted list of visible command names
+        visible_commands = sorted(self.get_visible_commands(), key=self.default_sort_key)
+        cmds_doc: list[str] = []
+        cmds_undoc: list[str] = []
+        cmds_cats: dict[str, list[str]] = {}
+        for command in visible_commands:
+            func = cast(CommandFunc, self.cmd_func(command))
+            has_help_func = False
+            has_parser = func in self._command_parsers
+
+            if command in help_topics:
+                # Prevent the command from showing as both a command and help topic in the output
+                help_topics.remove(command)
+
+                # Non-argparse commands can have help_functions for their documentation
+                has_help_func = not has_parser
+
+            if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
+                category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
+                cmds_cats.setdefault(category, [])
+                cmds_cats[category].append(command)
+            elif func.__doc__ or has_help_func or has_parser:
+                cmds_doc.append(command)
+            else:
+                cmds_undoc.append(command)
+        return cmds_cats, cmds_doc, cmds_undoc, help_topics
+
     @classmethod
     def _build_help_parser(cls) -> Cmd2ArgumentParser:
         help_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
@@ -4074,7 +4116,24 @@ class Cmd(cmd.Cmd):
         self.last_result = True
 
         if not args.command or args.verbose:
-            self._help_menu(args.verbose)
+            cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
+
+            if self.doc_leader:
+                self.poutput()
+                self.poutput(self.doc_leader, style=Cmd2Style.HELP_LEADER, soft_wrap=False)
+            self.poutput()
+
+            if not cmds_cats:
+                # No categories found, fall back to standard behavior
+                self._print_documented_command_topics(self.doc_header, cmds_doc, args.verbose)
+            else:
+                # Categories found, Organize all commands by category
+                for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
+                    self._print_documented_command_topics(category, cmds_cats[category], args.verbose)
+                self._print_documented_command_topics(self.default_category, cmds_doc, args.verbose)
+
+            self.print_topics(self.misc_header, help_topics, 15, 80)
+            self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
         else:
             # Getting help for a specific command
@@ -4111,14 +4170,77 @@ class Cmd(cmd.Cmd):
         :param cmdlen: unused, even by cmd's version
         :param maxcol: max number of display columns to fit into
         """
-        if cmds:
-            header_grid = Table.grid()
-            header_grid.add_row(header, style=Cmd2Style.HELP_TITLE)
-            if self.ruler:
-                header_grid.add_row(Rule(characters=self.ruler))
-            self.poutput(header_grid)
-            self.columnize(cmds, maxcol - 1)
-            self.poutput()
+        if not cmds:
+            return
+
+        header_grid = Table.grid()
+        header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
+        if self.ruler:
+            header_grid.add_row(Rule(characters=self.ruler))
+        self.poutput(header_grid)
+        self.columnize(cmds, maxcol - 1)
+        self.poutput()
+
+    def _print_documented_command_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
+        """Print topics which are documented commands, switching between verbose or traditional output."""
+        import io
+
+        if not cmds:
+            return
+
+        if not verbose:
+            self.print_topics(header, cmds, 15, 80)
+            return
+
+        category_grid = Table.grid()
+        category_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
+        category_grid.add_row(Rule(characters=self.ruler))
+        topics_table = Table(
+            Column("Name", no_wrap=True),
+            Column("Description", overflow="fold"),
+            box=SIMPLE_HEAD,
+            border_style=Cmd2Style.RULE_LINE,
+            show_edge=False,
+        )
+
+        # Try to get the documentation string for each command
+        topics = self.get_help_topics()
+        for command in cmds:
+            if (cmd_func := self.cmd_func(command)) is None:
+                continue
+
+            doc: str | None
+
+            # Non-argparse commands can have help_functions for their documentation
+            if command in topics:
+                help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
+                result = io.StringIO()
+
+                # try to redirect system stdout
+                with contextlib.redirect_stdout(result):
+                    # save our internal stdout
+                    stdout_orig = self.stdout
+                    try:
+                        # redirect our internal stdout
+                        self.stdout = cast(TextIO, result)
+                        help_func()
+                    finally:
+                        with self.sigint_protection:
+                            # restore internal stdout
+                            self.stdout = stdout_orig
+                doc = result.getvalue()
+
+            else:
+                doc = cmd_func.__doc__
+
+            # Attempt to locate the first documentation block
+            cmd_desc = strip_doc_annotations(doc) if doc else ''
+
+            # Add this command to the table
+            topics_table.add_row(command, cmd_desc)
+
+        category_grid.add_row(topics_table)
+        self.poutput(category_grid, "")
 
     def columnize(self, str_list: list[str] | None, display_width: int = 80) -> None:
         """Display a list of single-line strings as a compact set of columns.
@@ -4132,9 +4254,6 @@ class Cmd(cmd.Cmd):
             self.poutput("<empty>")
             return
 
-        nonstrings = [i for i in range(len(str_list)) if not isinstance(str_list[i], str)]
-        if nonstrings:
-            raise TypeError(f"str_list[i] not a string for i in {nonstrings}")
         size = len(str_list)
         if size == 1:
             self.poutput(str_list[0])
@@ -4162,7 +4281,8 @@ class Cmd(cmd.Cmd):
             # The output is wider than display_width. Print 1 column with each string on its own row.
             nrows = len(str_list)
             ncols = 1
-            colwidths = [1]
+            max_width = max(su.str_width(s) for s in str_list)
+            colwidths = [max_width]
         for row in range(nrows):
             texts = []
             for col in range(ncols):
@@ -4174,114 +4294,6 @@ class Cmd(cmd.Cmd):
             for col in range(len(texts)):
                 texts[col] = su.align_left(texts[col], width=colwidths[col])
             self.poutput("  ".join(texts))
-
-    def _help_menu(self, verbose: bool = False) -> None:
-        """Show a list of commands which help can be displayed for."""
-        cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
-
-        if not cmds_cats:
-            # No categories found, fall back to standard behavior
-            self.poutput(self.doc_leader, soft_wrap=False)
-            self._print_topics(self.doc_header, cmds_doc, verbose)
-        else:
-            # Categories found, Organize all commands by category
-            self.poutput(self.doc_leader, style=Cmd2Style.HELP_HEADER, soft_wrap=False)
-            self.poutput(self.doc_header, style=Cmd2Style.HELP_HEADER, end="\n\n", soft_wrap=False)
-            for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
-                self._print_topics(category, cmds_cats[category], verbose)
-            self._print_topics(self.default_category, cmds_doc, verbose)
-
-        self.print_topics(self.misc_header, help_topics, 15, 80)
-        self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
-
-    def _build_command_info(self) -> tuple[dict[str, list[str]], list[str], list[str], list[str]]:
-        # Get a sorted list of help topics
-        help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
-
-        # Get a sorted list of visible command names
-        visible_commands = sorted(self.get_visible_commands(), key=self.default_sort_key)
-        cmds_doc: list[str] = []
-        cmds_undoc: list[str] = []
-        cmds_cats: dict[str, list[str]] = {}
-        for command in visible_commands:
-            func = cast(CommandFunc, self.cmd_func(command))
-            has_help_func = False
-            has_parser = func in self._command_parsers
-
-            if command in help_topics:
-                # Prevent the command from showing as both a command and help topic in the output
-                help_topics.remove(command)
-
-                # Non-argparse commands can have help_functions for their documentation
-                has_help_func = not has_parser
-
-            if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
-                category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
-                cmds_cats.setdefault(category, [])
-                cmds_cats[category].append(command)
-            elif func.__doc__ or has_help_func or has_parser:
-                cmds_doc.append(command)
-            else:
-                cmds_undoc.append(command)
-        return cmds_cats, cmds_doc, cmds_undoc, help_topics
-
-    def _print_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
-        """Print topics, switching between verbose or traditional output."""
-        import io
-
-        if cmds:
-            if not verbose:
-                self.print_topics(header, cmds, 15, 80)
-            else:
-                category_grid = Table.grid()
-                category_grid.add_row(header, style=Cmd2Style.HELP_TITLE)
-                category_grid.add_row(Rule(characters=self.ruler))
-                topics_table = Table(
-                    Column("Name", no_wrap=True),
-                    Column("Description", overflow="fold"),
-                    box=SIMPLE_HEAD,
-                    border_style=Cmd2Style.RULE_LINE,
-                    show_edge=False,
-                )
-
-                # Try to get the documentation string for each command
-                topics = self.get_help_topics()
-                for command in cmds:
-                    if (cmd_func := self.cmd_func(command)) is None:
-                        continue
-
-                    doc: str | None
-
-                    # Non-argparse commands can have help_functions for their documentation
-                    if command in topics:
-                        help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
-                        result = io.StringIO()
-
-                        # try to redirect system stdout
-                        with contextlib.redirect_stdout(result):
-                            # save our internal stdout
-                            stdout_orig = self.stdout
-                            try:
-                                # redirect our internal stdout
-                                self.stdout = cast(TextIO, result)
-                                help_func()
-                            finally:
-                                with self.sigint_protection:
-                                    # restore internal stdout
-                                    self.stdout = stdout_orig
-                        doc = result.getvalue()
-
-                    else:
-                        doc = cmd_func.__doc__
-
-                    # Attempt to locate the first documentation block
-                    cmd_desc = strip_doc_annotations(doc) if doc else ''
-
-                    # Add this command to the table
-                    topics_table.add_row(command, cmd_desc)
-
-                category_grid.add_row(topics_table)
-                self.poutput(category_grid, "")
 
     @staticmethod
     def _build_shortcuts_parser() -> Cmd2ArgumentParser:
