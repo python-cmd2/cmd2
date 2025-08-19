@@ -1245,6 +1245,7 @@ class HelpApp(cmd2.Cmd):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.doc_leader = "I now present you a list of help topics."
 
     def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
@@ -1266,6 +1267,10 @@ class HelpApp(cmd2.Cmd):
         tabs
         """
 
+    def help_physics(self):
+        """A miscellaneous help topic."""
+        self.poutput("Here is some help on physics.")
+
     parser_cmd_parser = cmd2.Cmd2ArgumentParser(description="This is the description.")
 
     @cmd2.with_argparser(parser_cmd_parser)
@@ -1278,6 +1283,18 @@ def help_app():
     return HelpApp()
 
 
+def test_help_headers(capsys) -> None:
+    help_app = HelpApp()
+    help_app.onecmd_plus_hooks('help')
+    out, err = capsys.readouterr()
+
+    assert help_app.doc_leader in out
+    assert help_app.doc_header in out
+    assert help_app.misc_header in out
+    assert help_app.undoc_header in out
+    assert help_app.last_result is True
+
+
 def test_custom_command_help(help_app) -> None:
     out, err = run_cmd(help_app, 'help squat')
     expected = normalize('This command does diddly squat...')
@@ -1288,6 +1305,7 @@ def test_custom_command_help(help_app) -> None:
 def test_custom_help_menu(help_app) -> None:
     out, err = run_cmd(help_app, 'help')
     verify_help_text(help_app, out)
+    assert help_app.last_result is True
 
 
 def test_help_undocumented(help_app) -> None:
@@ -1310,10 +1328,36 @@ def test_help_multiline_docstring(help_app) -> None:
     assert help_app.last_result is True
 
 
+def test_miscellaneous_help_topic(help_app) -> None:
+    out, err = run_cmd(help_app, 'help physics')
+    expected = normalize("Here is some help on physics.")
+    assert out == expected
+    assert help_app.last_result is True
+
+
 def test_help_verbose_uses_parser_description(help_app: HelpApp) -> None:
     out, err = run_cmd(help_app, 'help --verbose')
     expected_verbose = utils.strip_doc_annotations(help_app.do_parser_cmd.__doc__)
     verify_help_text(help_app, out, verbose_strings=[expected_verbose])
+
+
+def test_help_verbose_with_fake_command(capsys) -> None:
+    """Verify that only actual command functions appear in verbose output."""
+    help_app = HelpApp()
+
+    cmds = ["alias", "fake_command"]
+    help_app._print_documented_command_topics(help_app.doc_header, cmds, verbose=True)
+    out, err = capsys.readouterr()
+    assert cmds[0] in out
+    assert cmds[1] not in out
+
+
+def test_columnize_empty_list(capsys) -> None:
+    help_app = HelpApp()
+    no_strs = []
+    help_app.columnize(no_strs)
+    out, err = capsys.readouterr()
+    assert "<empty>" in out
 
 
 class HelpCategoriesApp(cmd2.Cmd):
