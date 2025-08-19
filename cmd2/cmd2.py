@@ -4190,56 +4190,57 @@ class Cmd(cmd.Cmd):
 
         if not verbose:
             self.print_topics(header, cmds, 15, 80)
-        else:
-            category_grid = Table.grid()
-            category_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-            category_grid.add_row(Rule(characters=self.ruler))
-            topics_table = Table(
-                Column("Name", no_wrap=True),
-                Column("Description", overflow="fold"),
-                box=SIMPLE_HEAD,
-                border_style=Cmd2Style.RULE_LINE,
-                show_edge=False,
-            )
+            return
 
-            # Try to get the documentation string for each command
-            topics = self.get_help_topics()
-            for command in cmds:
-                if (cmd_func := self.cmd_func(command)) is None:
-                    continue
+        category_grid = Table.grid()
+        category_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
+        category_grid.add_row(Rule(characters=self.ruler))
+        topics_table = Table(
+            Column("Name", no_wrap=True),
+            Column("Description", overflow="fold"),
+            box=SIMPLE_HEAD,
+            border_style=Cmd2Style.RULE_LINE,
+            show_edge=False,
+        )
 
-                doc: str | None
+        # Try to get the documentation string for each command
+        topics = self.get_help_topics()
+        for command in cmds:
+            if (cmd_func := self.cmd_func(command)) is None:
+                continue
 
-                # Non-argparse commands can have help_functions for their documentation
-                if command in topics:
-                    help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
-                    result = io.StringIO()
+            doc: str | None
 
-                    # try to redirect system stdout
-                    with contextlib.redirect_stdout(result):
-                        # save our internal stdout
-                        stdout_orig = self.stdout
-                        try:
-                            # redirect our internal stdout
-                            self.stdout = cast(TextIO, result)
-                            help_func()
-                        finally:
-                            with self.sigint_protection:
-                                # restore internal stdout
-                                self.stdout = stdout_orig
-                    doc = result.getvalue()
+            # Non-argparse commands can have help_functions for their documentation
+            if command in topics:
+                help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
+                result = io.StringIO()
 
-                else:
-                    doc = cmd_func.__doc__
+                # try to redirect system stdout
+                with contextlib.redirect_stdout(result):
+                    # save our internal stdout
+                    stdout_orig = self.stdout
+                    try:
+                        # redirect our internal stdout
+                        self.stdout = cast(TextIO, result)
+                        help_func()
+                    finally:
+                        with self.sigint_protection:
+                            # restore internal stdout
+                            self.stdout = stdout_orig
+                doc = result.getvalue()
 
-                # Attempt to locate the first documentation block
-                cmd_desc = strip_doc_annotations(doc) if doc else ''
+            else:
+                doc = cmd_func.__doc__
 
-                # Add this command to the table
-                topics_table.add_row(command, cmd_desc)
+            # Attempt to locate the first documentation block
+            cmd_desc = strip_doc_annotations(doc) if doc else ''
 
-            category_grid.add_row(topics_table)
-            self.poutput(category_grid, "")
+            # Add this command to the table
+            topics_table.add_row(command, cmd_desc)
+
+        category_grid.add_row(topics_table)
+        self.poutput(category_grid, "")
 
     def columnize(self, str_list: list[str] | None, display_width: int = 80) -> None:
         """Display a list of single-line strings as a compact set of columns.
