@@ -7,17 +7,14 @@ from dataclasses import (
     dataclass,
     field,
 )
-from typing import (
-    Any,
-)
+from typing import Any
 
 from . import (
     constants,
     utils,
 )
-from .exceptions import (
-    Cmd2ShlexError,
-)
+from . import string_utils as su
+from .exceptions import Cmd2ShlexError
 
 
 def shlex_split(str_to_split: str) -> list[str]:
@@ -211,8 +208,8 @@ class Statement(str):  # type: ignore[override]  # noqa: SLOT000
         If you want to strip quotes from the input, you can use ``argv[1:]``.
         """
         if self.command:
-            rtn = [utils.strip_quotes(self.command)]
-            rtn.extend(utils.strip_quotes(cur_token) for cur_token in self.arg_list)
+            rtn = [su.strip_quotes(self.command)]
+            rtn.extend(su.strip_quotes(cur_token) for cur_token in self.arg_list)
         else:
             rtn = []
 
@@ -488,7 +485,7 @@ class StatementParser:
 
             # Check if we are redirecting to a file
             if len(tokens) > output_index + 1:
-                unquoted_path = utils.strip_quotes(tokens[output_index + 1])
+                unquoted_path = su.strip_quotes(tokens[output_index + 1])
                 if unquoted_path:
                     output_to = utils.expand_user(tokens[output_index + 1])
 

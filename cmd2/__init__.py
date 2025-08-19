@@ -9,17 +9,7 @@ with contextlib.suppress(importlib_metadata.PackageNotFoundError):
 from . import (
     plugin,
     rich_utils,
-)
-from .ansi import (
-    Bg,
-    Cursor,
-    EightBitBg,
-    EightBitFg,
-    Fg,
-    RgbBg,
-    RgbFg,
-    TextStyle,
-    style,
+    string_utils,
 )
 from .argparse_completer import set_default_ap_completer_type
 from .argparse_custom import (
@@ -30,6 +20,7 @@ from .argparse_custom import (
     set_default_argument_parser_type,
 )
 from .cmd2 import Cmd
+from .colors import Color
 from .command_definition import (
     CommandSet,
     with_default_category,
@@ -53,6 +44,8 @@ from .exceptions import (
 )
 from .parsing import Statement
 from .py_bridge import CommandResult
+from .string_utils import stylize
+from .styles import Cmd2Style
 from .utils import (
     CompletionMode,
     CustomCompletionSettings,
@@ -63,16 +56,6 @@ from .utils import (
 __all__: list[str] = [  # noqa: RUF022
     'COMMAND_NAME',
     'DEFAULT_SHORTCUTS',
-    # ANSI Exports
-    'Cursor',
-    'Bg',
-    'Fg',
-    'EightBitBg',
-    'EightBitFg',
-    'RgbBg',
-    'RgbFg',
-    'TextStyle',
-    'style',
     # Argparse Exports
     'Cmd2ArgumentParser',
     'Cmd2AttributeWrapper',
@@ -85,6 +68,8 @@ __all__: list[str] = [  # noqa: RUF022
     'CommandResult',
     'CommandSet',
     'Statement',
+    # Colors
+    "Color",
     # Decorators
     'with_argument_list',
     'with_argparser',
@@ -100,6 +85,11 @@ __all__: list[str] = [  # noqa: RUF022
     # modules
     'plugin',
     'rich_utils',
+    'string_utils',
+    # String Utils
+    'stylize',
+    # Styles,
+    "Cmd2Style",
     # Utilities
     'categorize',
     'CompletionMode',

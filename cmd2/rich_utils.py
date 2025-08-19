@@ -1,6 +1,5 @@
 """Provides common utilities to support Rich in cmd2 applications."""
 
-import sys
 from collections.abc import Mapping
 from enum import Enum
 from typing import (
@@ -25,14 +24,11 @@ from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
 
-if sys.version_info >= (3, 11):
-    from enum import StrEnum
-else:
-    from backports.strenum import StrEnum
+from .styles import DEFAULT_CMD2_STYLES
 
 
 class AllowStyle(Enum):
-    """Values for ``cmd2.rich_utils.allow_style``."""
+    """Values for ``cmd2.rich_utils.ALLOW_STYLE``."""
 
     ALWAYS = 'Always'  # Always output ANSI style sequences
     NEVER = 'Never'  # Remove ANSI style sequences from all output
@@ -48,40 +44,11 @@ class AllowStyle(Enum):
 
 
 # Controls when ANSI style sequences are allowed in output
-allow_style = AllowStyle.TERMINAL
-
-
-class Cmd2Style(StrEnum):
-    """Names of styles defined in DEFAULT_CMD2_STYLES.
-
-    Using this enum instead of string literals prevents typos and enables IDE
-    autocompletion, which makes it easier to discover and use the available
-    styles.
-    """
-
-    ERROR = "cmd2.error"
-    EXAMPLE = "cmd2.example"
-    HELP_HEADER = "cmd2.help.header"
-    HELP_TITLE = "cmd2.help.title"
-    RULE_LINE = "cmd2.rule.line"
-    SUCCESS = "cmd2.success"
-    WARNING = "cmd2.warning"
-
-
-# Default styles used by cmd2
-DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
-    Cmd2Style.ERROR: Style(color="bright_red"),
-    Cmd2Style.EXAMPLE: Style(color="cyan", bold=True),
-    Cmd2Style.HELP_HEADER: Style(color="cyan", bold=True),
-    Cmd2Style.HELP_TITLE: Style(color="bright_green", bold=True),
-    Cmd2Style.RULE_LINE: Style(color="bright_green"),
-    Cmd2Style.SUCCESS: Style(color="green"),
-    Cmd2Style.WARNING: Style(color="bright_yellow"),
-}
+ALLOW_STYLE = AllowStyle.TERMINAL
 
 
 class Cmd2Theme(Theme):
-    """Rich theme class used by Cmd2Console."""
+    """Rich theme class used by cmd2."""
 
     def __init__(self, styles: Mapping[str, StyleType] | None = None) -> None:
         """Cmd2Theme initializer.
@@ -106,7 +73,7 @@ THEME: Cmd2Theme = Cmd2Theme()
 
 
 def set_theme(new_theme: Cmd2Theme) -> None:
-    """Set the Rich theme used by Cmd2Console and rich-argparse.
+    """Set the Rich theme used by cmd2.
 
     :param new_theme: new theme to use.
     """
@@ -148,20 +115,22 @@ class RichPrintKwargs(TypedDict, total=False):
 class Cmd2Console(Console):
     """Rich console with characteristics appropriate for cmd2 applications."""
 
-    def __init__(self, file: IO[str]) -> None:
+    def __init__(self, file: IO[str] | None = None) -> None:
         """Cmd2Console initializer.
 
-        :param file: a file object where the console should write to
+        :param file: Optional file object where the console should write to. Defaults to sys.stdout.
         """
-        kwargs: dict[str, Any] = {}
-        if allow_style == AllowStyle.ALWAYS:
-            kwargs["force_terminal"] = True
+        force_terminal: bool | None = None
+        force_interactive: bool | None = None
+
+        if ALLOW_STYLE == AllowStyle.ALWAYS:
+            force_terminal = True
 
             # Turn off interactive mode if dest is not actually a terminal which supports it
             tmp_console = Console(file=file)
-            kwargs["force_interactive"] = tmp_console.is_interactive
-        elif allow_style == AllowStyle.NEVER:
-            kwargs["force_terminal"] = False
+            force_interactive = tmp_console.is_interactive
+        elif ALLOW_STYLE == AllowStyle.NEVER:
+            force_terminal = False
 
         # Configure console defaults to treat output as plain, unstructured text.
         # This involves enabling soft wrapping (no automatic word-wrap) and disabling
@@ -172,12 +141,13 @@ class Cmd2Console(Console):
         # in individual Console.print() calls or via cmd2's print methods.
         super().__init__(
             file=file,
+            force_terminal=force_terminal,
+            force_interactive=force_interactive,
             soft_wrap=True,
             markup=False,
             emoji=False,
             highlight=False,
             theme=THEME,
-            **kwargs,
         )
 
     def on_broken_pipe(self) -> None:
@@ -186,8 +156,39 @@ class Cmd2Console(Console):
         raise BrokenPipeError
 
 
-def from_ansi(text: str) -> Text:
-    r"""Patched version of rich.Text.from_ansi() that handles a discarded newline issue.
+def console_width() -> int:
+    """Return the width of the console."""
+    return Cmd2Console().width
+
+
+def rich_text_to_string(text: Text) -> str:
+    """Convert a Rich Text object to a string.
+
+    This function's purpose is to render a Rich Text object, including any styles (e.g., color, bold),
+    to a plain Python string with ANSI escape codes. It differs from `text.plain`, which strips
+    all formatting.
+
+    :param text: the text object to convert
+    :return: the resulting string with ANSI styles preserved.
+    """
+    console = Console(
+        force_terminal=True,
+        soft_wrap=True,
+        no_color=False,
+        markup=False,
+        emoji=False,
+        highlight=False,
+        theme=THEME,
+    )
+    with console.capture() as capture:
+        console.print(text, end="")
+    return capture.get()
+
+
+def string_to_rich_text(text: str) -> Text:
+    r"""Create a Text object from a string which can contain ANSI escape codes.
+
+    This wraps rich.Text.from_ansi() to handle a discarded newline issue.
 
     Text.from_ansi() currently removes the ending line break from string.
     e.g. "Hello\n" becomes "Hello"
@@ -237,5 +238,5 @@ def prepare_objects_for_rich_print(*objects: Any) -> tuple[RenderableType, ...]:
     object_list = list(objects)
     for i, obj in enumerate(object_list):
         if not isinstance(obj, (ConsoleRenderable, RichCast)):
-            object_list[i] = from_ansi(str(obj))
+            object_list[i] = string_to_rich_text(str(obj))
     return tuple(object_list)

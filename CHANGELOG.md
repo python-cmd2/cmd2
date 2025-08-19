@@ -5,17 +5,26 @@
     - No longer setting parser's `prog` value in `with_argparser()` since it gets set in
       `Cmd._build_parser()`. This code had previously been restored to support backward
       compatibility in `cmd2` 2.0 family.
+    - Removed table_creator.py in favor of `Rich` tables.
+    - Moved string styling functionality from ansi.py to string_utils.py.
+    - Moved all string-related functions from utils.py to string_utils.py.
+    - Removed all text style Enums from ansi.py in favor of `Rich` styles.
+    - Renamed ansi.py to terminal_utils.py to reflect the functions left in it.
 
 - Enhancements
     - Simplified the process to set a custom parser for `cmd2's` built-in commands. See
       [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
       example for more details.
-
     - Added `Cmd.macro_arg_complete()` which tab completes arguments to a macro. Its default
       behavior is to perform path completion, but it can be overridden as needed.
-
     - All print methods (`poutput()`, `perror()`, `ppaged()`, etc.) have the ability to print Rich
       objects.
+    - Added string_utils.py which contains all string utility functions. This includes quoting and
+      alignment functions from utils.py. This also includes style-related functions from ansi.py.
+      This also includes style-related functions from ansi.py.
+    - Added colors.py which contains a StrEnum of all color names supported by Rich.
+    - Added styles.py which contains a StrEnum of all cmd2-specific style names and their respective
+      style definitions.
 
 - Bug Fixes
     - No longer redirecting `sys.stdout` if it's a different stream than `self.stdout`. This fixes

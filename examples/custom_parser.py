@@ -8,9 +8,10 @@ from typing import NoReturn
 
 from cmd2 import (
     Cmd2ArgumentParser,
-    ansi,
     cmd2,
     set_default_argument_parser_type,
+    styles,
+    stylize,
 )
 
 
@@ -34,8 +35,11 @@ class CustomParser(Cmd2ArgumentParser):
 
         self.print_usage(sys.stderr)
 
-        # Format errors with style_warning()
-        formatted_message = ansi.style_warning(formatted_message)
+        # Format errors with warning style
+        formatted_message = stylize(
+            formatted_message,
+            style=styles.WARNING,
+        )
         self.exit(2, f'{formatted_message}\n\n')
 
 

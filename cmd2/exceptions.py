@@ -40,7 +40,7 @@ class CompletionError(Exception):
     def __init__(self, *args: Any, apply_style: bool = True) -> None:
         """Initialize CompletionError instance.
 
-        :param apply_style: If True, then ansi.style_error will be applied to the message text when printed.
+        :param apply_style: If True, then styles.ERROR will be applied to the message text when printed.
                             Set to False in cases where the message text already has the desired style.
                             Defaults to True.
         """

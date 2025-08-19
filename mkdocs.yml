@@ -200,9 +200,10 @@ nav:
   - API Reference:
       - api/index.md
       - api/cmd.md
-      - api/ansi.md
       - api/argparse_completer.md
       - api/argparse_custom.md
+      - api/clipboard.md
+      - api/colors.md
       - api/command_definition.md
       - api/constants.md
       - api/decorators.md
@@ -211,7 +212,12 @@ nav:
       - api/parsing.md
       - api/plugin.md
       - api/py_bridge.md
-      - api/table_creator.md
+      - api/rich_utils.md
+      - api/rl_utils.md
+      - api/string_utils.md
+      - api/styles.md
+      - api/terminal_utils.md
+      - api/transcript.md
       - api/utils.md
   - Meta:
       - doc_conventions.md

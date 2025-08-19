@@ -6,7 +6,6 @@ See the header of argparse_custom.py for instructions on how to use these featur
 import argparse
 import inspect
 import numbers
-import sys
 from collections import (
     deque,
 )
@@ -20,16 +19,12 @@ from typing import (
 from .constants import (
     INFINITY,
 )
-from .rich_utils import (
-    Cmd2Console,
-    Cmd2Style,
-)
+from .rich_utils import Cmd2Console
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import (
         Cmd,
     )
-
 
 from rich.box import SIMPLE_HEAD
 from rich.table import Column, Table
@@ -46,6 +41,7 @@ from .command_definition import (
 from .exceptions import (
     CompletionError,
 )
+from .styles import Cmd2Style
 
 # If no descriptive headers are supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADERS: Sequence[str | Column] = ('Description',)
@@ -594,9 +590,9 @@ class ArgparseCompleter:
                 hint_table.add_row(item, *item.descriptive_data)
 
             # Generate the hint table string
-            console = Cmd2Console(sys.stdout)
+            console = Cmd2Console()
             with console.capture() as capture:
-                console.print(hint_table)
+                console.print(hint_table, end="")
             self._cmd2_app.formatted_completions = capture.get()
 
         # Return sorted list of completions

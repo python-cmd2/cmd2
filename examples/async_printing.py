@@ -9,8 +9,8 @@ import time
 
 import cmd2
 from cmd2 import (
-    Fg,
-    style,
+    Color,
+    stylize,
 )
 
 ALERTS = [
@@ -139,20 +139,20 @@ class AlerterApp(cmd2.Cmd):
         """
         rand_num = random.randint(1, 20)
 
-        status_color = Fg.RESET
+        status_color = Color.DEFAULT
 
         if rand_num == 1:
-            status_color = Fg.LIGHT_RED
+            status_color = Color.BRIGHT_RED
         elif rand_num == 2:
-            status_color = Fg.LIGHT_YELLOW
+            status_color = Color.BRIGHT_YELLOW
         elif rand_num == 3:
-            status_color = Fg.CYAN
+            status_color = Color.CYAN
         elif rand_num == 4:
-            status_color = Fg.LIGHT_GREEN
+            status_color = Color.BRIGHT_GREEN
         elif rand_num == 5:
-            status_color = Fg.LIGHT_BLUE
+            status_color = Color.BRIGHT_BLUE
 
-        return style(self.visible_prompt, fg=status_color)
+        return stylize(self.visible_prompt, style=status_color)
 
     def _alerter_thread_func(self) -> None:
         """Prints alerts and updates the prompt any time the prompt is showing."""

@@ -8,7 +8,7 @@ from unittest import (
 
 import pytest
 
-from cmd2 import utils
+from cmd2.string_utils import quote
 
 from .conftest import (
     odd_file_names,
@@ -63,7 +63,7 @@ def test_run_pyscript_with_odd_file_names(base_app, python_script) -> None:
     input_mock = mock.MagicMock(name='input', return_value='1')
     builtins.input = input_mock
 
-    out, err = run_cmd(base_app, f"run_pyscript {utils.quote_string(python_script)}")
+    out, err = run_cmd(base_app, f"run_pyscript {quote(python_script)}")
     err = ''.join(err)
     assert f"Error reading script file '{python_script}'" in err
     assert base_app.last_result is False

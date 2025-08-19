@@ -294,11 +294,9 @@ from rich_argparse import (
     RichHelpFormatter,
 )
 
-from . import (
-    constants,
-    rich_utils,
-)
-from .rich_utils import Cmd2Style
+from . import constants
+from .rich_utils import Cmd2Console
+from .styles import Cmd2Style
 
 if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import (
@@ -1115,12 +1113,12 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         max_help_position: int = 24,
         width: int | None = None,
         *,
-        console: rich_utils.Cmd2Console | None = None,
+        console: Cmd2Console | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize Cmd2HelpFormatter."""
         if console is None:
-            console = rich_utils.Cmd2Console(sys.stdout)
+            console = Cmd2Console()
 
         super().__init__(prog, indent_increment, max_help_position, width, console=console, **kwargs)
 
@@ -1483,7 +1481,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # Add error style to message
         console = self._get_formatter().console
         with console.capture() as capture:
-            console.print(formatted_message, style=Cmd2Style.ERROR, crop=False)
+            console.print(formatted_message, style=Cmd2Style.ERROR)
         formatted_message = f"{capture.get()}"
 
         self.exit(2, f'{formatted_message}\n')
