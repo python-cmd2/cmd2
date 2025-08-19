@@ -188,36 +188,18 @@ def rich_text_to_string(text: Text) -> str:
 def string_to_rich_text(text: str) -> Text:
     r"""Create a Text object from a string which can contain ANSI escape codes.
 
-    This wraps rich.Text.from_ansi() to handle a discarded newline issue.
+    This function is a workaround for a bug where rich.Text.from_ansi() incorrectly
+    removes a trailing newline. The official fix is pending.
 
-    Text.from_ansi() currently removes the ending line break from string.
-    e.g. "Hello\n" becomes "Hello"
-
-    There is currently a pull request to fix this.
-    https://github.com/Textualize/rich/pull/3793
+    See: https://github.com/Textualize/rich/pull/3793
 
     :param text: a string to convert to a Text object.
-    :return: the converted string
+    :return: the string converted to a Text object
     """
     result = Text.from_ansi(text)
 
-    # If 'text' ends with a line break character, restore the missing newline to 'result'.
-    # Note: '\r\n' is handled as its last character is '\n'.
-    # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
-    line_break_chars = {
-        "\n",  # Line Feed
-        "\r",  # Carriage Return
-        "\v",  # Vertical Tab
-        "\f",  # Form Feed
-        "\x1c",  # File Separator
-        "\x1d",  # Group Separator
-        "\x1e",  # Record Separator
-        "\x85",  # Next Line (NEL)
-        "\u2028",  # Line Separator
-        "\u2029",  # Paragraph Separator
-    }
-    if text and text[-1] in line_break_chars:
-        # We use "\n" because Text.from_ansi() converts all line breaks chars into newlines.
+    # Handle case where Text.from_ansi() removed the trailing newline.
+    if text.endswith("\n"):
         result.append("\n")
 
     return result
