@@ -1,4 +1,4 @@
-"""Provides common utilities to support Rich in cmd2 applications."""
+"""Provides common utilities to support Rich in cmd2-based applications."""
 
 from collections.abc import Mapping
 from enum import Enum
@@ -17,7 +17,6 @@ from rich.console import (
     RichCast,
 )
 from rich.style import (
-    Style,
     StyleType,
 )
 from rich.text import Text
@@ -47,47 +46,41 @@ class AllowStyle(Enum):
 ALLOW_STYLE = AllowStyle.TERMINAL
 
 
-class Cmd2Theme(Theme):
-    """Rich theme class used by cmd2."""
+def _create_default_theme() -> Theme:
+    """Create a default theme for cmd2-based applications.
 
-    def __init__(self, styles: Mapping[str, StyleType] | None = None) -> None:
-        """Cmd2Theme initializer.
-
-        :param styles: optional mapping of style names on to styles.
-                       Defaults to None for a theme with no styles.
-        """
-        cmd2_styles = DEFAULT_CMD2_STYLES.copy()
-
-        # Include default styles from rich-argparse
-        cmd2_styles.update(RichHelpFormatter.styles.copy())
-
-        if styles is not None:
-            cmd2_styles.update(styles)
-
-        # Set inherit to True to include Rich's default styles
-        super().__init__(cmd2_styles, inherit=True)
+    This theme combines the default styles from cmd2, rich-argparse, and Rich.
+    """
+    app_styles = DEFAULT_CMD2_STYLES.copy()
+    app_styles.update(RichHelpFormatter.styles.copy())
+    return Theme(app_styles, inherit=True)
 
 
-# Current Rich theme used by Cmd2Console
-THEME: Cmd2Theme = Cmd2Theme()
-
-
-def set_theme(new_theme: Cmd2Theme) -> None:
+def set_theme(styles: Mapping[str, StyleType] | None = None) -> None:
     """Set the Rich theme used by cmd2.
 
-    :param new_theme: new theme to use.
+    :param styles: optional mapping of style names to styles
     """
-    global THEME  # noqa: PLW0603
-    THEME = new_theme
+    global APP_THEME  # noqa: PLW0603
 
-    # Make sure the new theme has all style names included in a Cmd2Theme.
-    missing_names = Cmd2Theme().styles.keys() - THEME.styles.keys()
-    for name in missing_names:
-        THEME.styles[name] = Style()
+    # Start with a fresh copy of the default styles.
+    app_styles: dict[str, StyleType] = {}
+    app_styles.update(_create_default_theme().styles)
 
-    # Update rich-argparse styles
-    for name in RichHelpFormatter.styles.keys() & THEME.styles.keys():
-        RichHelpFormatter.styles[name] = THEME.styles[name]
+    # Incorporate custom styles.
+    if styles is not None:
+        app_styles.update(styles)
+
+    APP_THEME = Theme(app_styles)
+
+    # Synchronize rich-argparse styles with the main application theme.
+    for name in RichHelpFormatter.styles.keys() & APP_THEME.styles.keys():
+        RichHelpFormatter.styles[name] = APP_THEME.styles[name]
+
+
+# The main theme for cmd2-based applications.
+# You can change it with set_theme().
+APP_THEME = _create_default_theme()
 
 
 class RichPrintKwargs(TypedDict, total=False):
@@ -113,7 +106,7 @@ class RichPrintKwargs(TypedDict, total=False):
 
 
 class Cmd2Console(Console):
-    """Rich console with characteristics appropriate for cmd2 applications."""
+    """Rich console with characteristics appropriate for cmd2-based applications."""
 
     def __init__(self, file: IO[str] | None = None) -> None:
         """Cmd2Console initializer.
@@ -147,7 +140,7 @@ class Cmd2Console(Console):
             markup=False,
             emoji=False,
             highlight=False,
-            theme=THEME,
+            theme=APP_THEME,
         )
 
     def on_broken_pipe(self) -> None:
@@ -178,7 +171,7 @@ def rich_text_to_string(text: Text) -> str:
         markup=False,
         emoji=False,
         highlight=False,
-        theme=THEME,
+        theme=APP_THEME,
     )
     with console.capture() as capture:
         console.print(text, end="")
