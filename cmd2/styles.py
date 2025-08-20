@@ -30,13 +30,13 @@ class Cmd2Style(StrEnum):
     added here must have a corresponding style definition there.
     """
 
-    ERROR = "cmd2.error"
-    EXAMPLE = "cmd2.example"
-    HELP_HEADER = "cmd2.help.header"
-    HELP_LEADER = "cmd2.help.leader"
-    RULE_LINE = "cmd2.rule.line"
-    SUCCESS = "cmd2.success"
-    WARNING = "cmd2.warning"
+    ERROR = "cmd2.error"  # Error text (used by perror())
+    EXAMPLE = "cmd2.example"  # Command line examples in help text
+    HELP_HEADER = "cmd2.help.header"  # Help table header text
+    HELP_LEADER = "cmd2.help.leader"  # Text right before the help tables are listed
+    RULE_LINE = "rule.line"  # Rich style for horizontal rules
+    SUCCESS = "cmd2.success"  # Success text (used by psuccess())
+    WARNING = "cmd2.warning"  # Warning text (used by pwarning())
 
 
 # Default styles used by cmd2. Tightly coupled with the Cmd2Style enum.
