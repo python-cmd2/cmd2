@@ -188,10 +188,8 @@ def rich_text_to_string(text: Text) -> str:
 def string_to_rich_text(text: str) -> Text:
     r"""Create a Text object from a string which can contain ANSI escape codes.
 
-    This wraps rich.Text.from_ansi() to handle a discarded newline issue.
-
-    Text.from_ansi() currently removes the ending line break from string.
-    e.g. "Hello\n" becomes "Hello"
+    This wraps rich.Text.from_ansi() to handle an issue where it removes the
+    trailing line break from a string (e.g. "Hello\n" becomes "Hello").
 
     There is currently a pull request to fix this.
     https://github.com/Textualize/rich/pull/3793
@@ -201,8 +199,9 @@ def string_to_rich_text(text: str) -> Text:
     """
     result = Text.from_ansi(text)
 
-    # If 'text' ends with a line break character, restore the missing newline to 'result'.
-    # Note: '\r\n' is handled as its last character is '\n'.
+    # If the original string ends with a recognized line break character,
+    # then restore the missing newline. We use "\n" because Text.from_ansi()
+    # converts all line breaks into newlines.
     # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
     line_break_chars = {
         "\n",  # Line Feed
@@ -217,7 +216,6 @@ def string_to_rich_text(text: str) -> Text:
         "\u2029",  # Paragraph Separator
     }
     if text and text[-1] in line_break_chars:
-        # We use "\n" because Text.from_ansi() converts all line breaks chars into newlines.
         result.append("\n")
 
     return result
