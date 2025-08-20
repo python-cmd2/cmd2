@@ -59,6 +59,9 @@ def _create_default_theme() -> Theme:
 def set_theme(styles: Mapping[str, StyleType] | None = None) -> None:
     """Set the Rich theme used by cmd2.
 
+    Call set_theme() with no arguments to reset to the default theme.
+    This will clear any custom styles that were previously applied.
+
     :param styles: optional mapping of style names to styles
     """
     global APP_THEME  # noqa: PLW0603
