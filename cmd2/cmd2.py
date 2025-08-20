@@ -292,7 +292,6 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
 
-    ruler = "─"
     DEFAULT_EDITOR = utils.find_editor()
 
     # Sorting keys for strings
@@ -475,7 +474,10 @@ class Cmd(cmd.Cmd):
         # The multiline command currently being typed which is used to tab complete multiline commands.
         self._multiline_in_progress = ''
 
-        # Set text which prints right before all of the help topics are listed.
+        # Characters used to draw a horizontal rule. Should not be blank.
+        self.ruler = "─"
+
+        # Set text which prints right before all of the help tables are listed.
         self.doc_leader = ""
 
         # Set header for table listing documented commands.
@@ -4175,8 +4177,7 @@ class Cmd(cmd.Cmd):
 
         header_grid = Table.grid()
         header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-        if self.ruler:
-            header_grid.add_row(Rule(characters=self.ruler))
+        header_grid.add_row(Rule(characters=self.ruler))
         self.poutput(header_grid)
         self.columnize(cmds, maxcol - 1)
         self.poutput()
