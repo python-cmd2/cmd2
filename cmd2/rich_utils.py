@@ -178,6 +178,10 @@ def rich_text_to_string(text: Text) -> str:
     return capture.get()
 
 
+# If True, Rich still has the bug addressed in string_to_rich_text().
+_from_ansi_has_newline_bug = Text.from_ansi("\n").plain == ""
+
+
 def string_to_rich_text(text: str) -> Text:
     r"""Create a Text object from a string which can contain ANSI escape codes.
 
@@ -192,24 +196,25 @@ def string_to_rich_text(text: str) -> Text:
     """
     result = Text.from_ansi(text)
 
-    # If the original string ends with a recognized line break character,
-    # then restore the missing newline. We use "\n" because Text.from_ansi()
-    # converts all line breaks into newlines.
-    # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
-    line_break_chars = {
-        "\n",  # Line Feed
-        "\r",  # Carriage Return
-        "\v",  # Vertical Tab
-        "\f",  # Form Feed
-        "\x1c",  # File Separator
-        "\x1d",  # Group Separator
-        "\x1e",  # Record Separator
-        "\x85",  # Next Line (NEL)
-        "\u2028",  # Line Separator
-        "\u2029",  # Paragraph Separator
-    }
-    if text and text[-1] in line_break_chars:
-        result.append("\n")
+    if _from_ansi_has_newline_bug:
+        # If the original string ends with a recognized line break character,
+        # then restore the missing newline. We use "\n" because Text.from_ansi()
+        # converts all line breaks into newlines.
+        # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
+        line_break_chars = {
+            "\n",  # Line Feed
+            "\r",  # Carriage Return
+            "\v",  # Vertical Tab
+            "\f",  # Form Feed
+            "\x1c",  # File Separator
+            "\x1d",  # Group Separator
+            "\x1e",  # Record Separator
+            "\x85",  # Next Line (NEL)
+            "\u2028",  # Line Separator
+            "\u2029",  # Paragraph Separator
+        }
+        if text and text[-1] in line_break_chars:
+            result.append("\n")
 
     return result
 
