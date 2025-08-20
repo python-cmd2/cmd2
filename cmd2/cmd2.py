@@ -5544,7 +5544,10 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(su.align_center(' cmd2 transcript test ', character=self.ruler), style=Style(bold=True))
+        self.poutput(
+            Rule("cmd2 transcript test", style=Style.null()),
+            style=Style(bold=True),
+        )
         self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}, readline-{rl_type}')
         self.poutput(f'cwd: {os.getcwd()}')
         self.poutput(f'cmd2 app: {sys.argv[0]}')
@@ -5560,9 +5563,8 @@ class Cmd(cmd.Cmd):
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
             self.perror(stream.read(), end="", style=None)
-            finish_msg = f' {num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds '
-            finish_msg = su.align_center(finish_msg, character=self.ruler)
-            self.psuccess(finish_msg)
+            finish_msg = f'{num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds'
+            self.psuccess(Rule(finish_msg, style=Style.null()))
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()
