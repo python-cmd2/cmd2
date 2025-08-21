@@ -12,6 +12,8 @@
 10) How to make custom attributes settable at runtime.
 """
 
+import pathlib
+
 from rich.style import Style
 
 import cmd2
@@ -25,10 +27,13 @@ class BasicApp(cmd2.Cmd):
     CUSTOM_CATEGORY = 'My Custom Commands'
 
     def __init__(self) -> None:
+        # Startup script that defines a couple aliases for running shell commands
+        alias_script = pathlib.Path(__file__).absolute().parent / '.cmd2rc'
+
         super().__init__(
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
-            startup_script='scripts/startup.txt',
+            startup_script=alias_script,
             include_ipy=True,
         )
 

@@ -11,9 +11,6 @@ application, if you are looking for that then see
 Here is the list of examples in alphabetical order by filename along with a brief description of
 each:
 
-- [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/main/examples/alias_startup.py)
-    - Demonstrates how to add custom command aliases and how to run an initialization script at
-      startup
 - [arg_decorators.py](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_decorators.py)
     - Demonstrates how to use the `cmd2.with_argparser` decorator to specify command arguments using
       [argparse](https://docs.python.org/3/library/argparse.html)
@@ -62,7 +59,7 @@ each:
 - [hooks.py](https://github.com/python-cmd2/cmd2/blob/main/examples/hooks.py)
     - Shows how to use various `cmd2` application lifecycle hooks
 - [initialization.py](https://github.com/python-cmd2/cmd2/blob/main/examples/initialization.py)
-    - Shows how to colorize output, use multiline command, add persistent history, and more
+    - Shows how to colorize output, use multiline command, add persistent history, and much more
 - [migrating.py](https://github.com/python-cmd2/cmd2/blob/main/examples/migrating.py)
     - A simple `cmd` application that you can migrate to `cmd2` by changing one line
 - [modular_commands_basic.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_commands_basic.py)
