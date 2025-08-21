@@ -297,17 +297,5 @@ def rl_in_search_mode() -> bool:  # pragma: no cover
 
 
 __all__ = [
-    'RlType',
     'readline',
-    'rl_escape_prompt',
-    'rl_force_redisplay',
-    'rl_get_display_prompt',
-    'rl_get_point',
-    'rl_get_prompt',
-    'rl_in_search_mode',
-    'rl_set_prompt',
-    'rl_type',
-    'rl_unescape_prompt',
-    'rl_warning',
-    'vt100_support',
 ]
