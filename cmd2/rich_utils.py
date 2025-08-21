@@ -128,13 +128,11 @@ class Cmd2Console(Console):
         elif ALLOW_STYLE == AllowStyle.NEVER:
             force_terminal = False
 
-        # Configure console defaults to treat output as plain, unstructured text.
-        # This involves enabling soft wrapping (no automatic word-wrap) and disabling
-        # Rich's automatic markup, emoji, and highlight processing.
-        # While these automatic features are off by default, the console fully supports
-        # rendering explicitly created Rich objects (e.g., Panel, Table).
-        # Any of these default settings or other print behaviors can be overridden
-        # in individual Console.print() calls or via cmd2's print methods.
+        # The console's defaults are configured to handle pre-formatted text. It enables soft wrap,
+        # which prevents automatic word-wrapping, and disables Rich's automatic processing for
+        # markup, emoji, and highlighting. While these features are off by default, the console
+        # can still fully render explicit Rich objects like Panels and Tables. These defaults can
+        # be overridden in calls to Cmd2Console.print() and cmd2's print methods.
         super().__init__(
             file=file,
             force_terminal=force_terminal,
