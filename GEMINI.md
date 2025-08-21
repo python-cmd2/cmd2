@@ -29,7 +29,7 @@ To run unit tests use the following command:
 make test
 ```
 
-To make sure the documentation builds properly use the following command:
+To make sure the documentation builds properly, use the following command:
 
 ```bash
 make docs-test
