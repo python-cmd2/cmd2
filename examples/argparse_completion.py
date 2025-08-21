@@ -3,11 +3,13 @@
 
 import argparse
 
+from rich.style import Style
 from rich.text import Text
 
 from cmd2 import (
     Cmd,
     Cmd2ArgumentParser,
+    Color,
     CompletionError,
     CompletionItem,
     with_argparser,
@@ -18,8 +20,8 @@ food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
 
 
 class ArgparseCompletion(Cmd):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self) -> None:
+        super().__init__(include_ipy=True)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
     def choices_provider(self) -> list[str]:
@@ -39,7 +41,10 @@ class ArgparseCompletion(Cmd):
 
     def choices_completion_item(self) -> list[CompletionItem]:
         """Return CompletionItem instead of strings. These give more context to what's being tab completed."""
-        fancy_item = Text("These things can\ncontain newlines and\n") + Text("styled text!!", style="underline bright_yellow")
+        fancy_item = Text.assemble(
+            "These things can\ncontain newlines and\n",
+            Text("styled text!!", style=Style(color=Color.BRIGHT_YELLOW, underline=True)),
+        )
 
         items = {1: "My item", 2: "Another item", 3: "Yet another item", 4: fancy_item}
         return [CompletionItem(item_id, [description]) for item_id, description in items.items()]
