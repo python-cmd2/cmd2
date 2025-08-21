@@ -115,17 +115,15 @@ def test_align_right_with_style() -> None:
 
 
 def test_stylize() -> None:
-    styled_str = su.stylize(
-        HELLO_WORLD,
-        style=Style(
-            color=Color.GREEN,
-            bgcolor=Color.BLUE,
-            bold=True,
-            underline=True,
-        ),
-    )
-
+    # Test string with no existing style
+    style = Style(color=Color.GREEN, bgcolor=Color.BLUE, bold=True, underline=True)
+    styled_str = su.stylize(HELLO_WORLD, style=style)
     assert styled_str == "\x1b[1;4;32;44mHello, world!\x1b[0m"
+
+    # Add style to already-styled string
+    updated_style = Style.combine([style, Style(strike=True)])
+    restyled_string = su.stylize(styled_str, style=updated_style)
+    assert restyled_string == "\x1b[1;4;9;32;44mHello, world!\x1b[0m"
 
 
 def test_strip_style() -> None:

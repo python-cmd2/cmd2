@@ -82,22 +82,23 @@ def align_right(
 
 
 def stylize(val: str, style: StyleType) -> str:
-    """Apply ANSI style to a string.
+    """Apply an ANSI style to a string, preserving any existing styles.
 
     :param val: string to be styled
     :param style: style instance or style definition to apply.
     :return: the stylized string
     """
+    # Convert to a Rich Text object to parse and preserve existing ANSI styles.
     text = ru.string_to_rich_text(val)
     text.stylize(style)
     return ru.rich_text_to_string(text)
 
 
 def strip_style(val: str) -> str:
-    """Strip ANSI style sequences from a string.
+    """Strip all ANSI styles from a string.
 
-    :param val: string which may contain ANSI style sequences
-    :return: the same string with any ANSI style sequences removed
+    :param val: string to be stripped
+    :return: the stripped string
     """
     text = ru.string_to_rich_text(val)
     return text.plain
