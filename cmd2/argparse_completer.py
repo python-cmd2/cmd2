@@ -19,7 +19,7 @@ from typing import (
 from .constants import (
     INFINITY,
 )
-from .rich_utils import Cmd2Console
+from .rich_utils import Cmd2GeneralConsole
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import (
@@ -590,7 +590,7 @@ class ArgparseCompleter:
                 hint_table.add_row(item, *item.descriptive_data)
 
             # Generate the hint table string
-            console = Cmd2Console()
+            console = Cmd2GeneralConsole()
             with console.capture() as capture:
                 console.print(hint_table, end="")
             self._cmd2_app.formatted_completions = capture.get()
