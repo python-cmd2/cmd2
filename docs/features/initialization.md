@@ -2,7 +2,7 @@
 
 Here is a basic example `cmd2` application which demonstrates many capabilities which you may wish to utilize while initializing the app:
 
-!!! example
+!!! example "examples/initialization.py"
 
     ```py
     {%
