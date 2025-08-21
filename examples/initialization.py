@@ -12,11 +12,12 @@
 10) How to make custom attributes settable at runtime.
 """
 
+from rich.style import Style
+
 import cmd2
 from cmd2 import (
-    Bg,
-    Fg,
-    style,
+    Color,
+    stylize,
 )
 
 
@@ -32,7 +33,10 @@ class BasicApp(cmd2.Cmd):
         )
 
         # Prints an intro banner once upon application startup
-        self.intro = style('Welcome to cmd2!', fg=Fg.RED, bg=Bg.WHITE, bold=True)
+        self.intro = stylize(
+            'Welcome to cmd2!',
+            style=Style(color=Color.RED, bgcolor=Color.WHITE, bold=True),
+        )
 
         # Show this as the prompt when asking for input
         self.prompt = 'myapp> '
@@ -47,24 +51,34 @@ class BasicApp(cmd2.Cmd):
         self.default_category = 'cmd2 Built-in Commands'
 
         # Color to output text in with echo command
-        self.foreground_color = Fg.CYAN.name.lower()
+        self.foreground_color = Color.CYAN.value
 
         # Make echo_fg settable at runtime
-        fg_colors = [c.name.lower() for c in Fg]
+        fg_colors = [c.value for c in Color]
         self.add_settable(
-            cmd2.Settable('foreground_color', str, 'Foreground color to use with echo command', self, choices=fg_colors)
+            cmd2.Settable(
+                'foreground_color',
+                str,
+                'Foreground color to use with echo command',
+                self,
+                choices=fg_colors,
+            )
         )
 
     @cmd2.with_category(CUSTOM_CATEGORY)
-    def do_intro(self, _) -> None:
+    def do_intro(self, _: cmd2.Statement) -> None:
         """Display the intro banner."""
         self.poutput(self.intro)
 
     @cmd2.with_category(CUSTOM_CATEGORY)
-    def do_echo(self, arg) -> None:
+    def do_echo(self, arg: cmd2.Statement) -> None:
         """Example of a multiline command."""
-        fg_color = Fg[self.foreground_color.upper()]
-        self.poutput(style(arg, fg=fg_color))
+        self.poutput(
+            stylize(
+                arg,
+                style=Style(color=self.foreground_color),
+            )
+        )
 
 
 if __name__ == '__main__':

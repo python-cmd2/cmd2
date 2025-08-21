@@ -105,10 +105,6 @@ examples.
 
 ## Tutorials
 
-- PyOhio 2019 presentation:
-    - [video](https://www.youtube.com/watch?v=pebeWrTqIIw)
-    - [slides](https://github.com/python-cmd2/talks/blob/master/PyOhio_2019/cmd2-PyOhio_2019.pdf)
-    - [example code](https://github.com/python-cmd2/talks/tree/master/PyOhio_2019/examples)
 - [Cookiecutter](https://github.com/cookiecutter/cookiecutter) Templates from community
     - Basic cookiecutter template for cmd2 application :
       https://github.com/jayrod/cookiecutter-python-cmd2

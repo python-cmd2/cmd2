@@ -41,5 +41,5 @@ to `cmd2.Cmd.poutput`, `cmd2.Cmd.perror`, and `cmd2.Cmd.pfeedback`. These method
 of the built in [Settings](../features/settings.md) to allow the user to view or suppress feedback
 (i.e. progress or status output). They also properly handle ansi colored output according to user
 preference. Speaking of colored output, you can use any color library you want, or use the included
-`cmd2.ansi.style` function. These and other related topics are covered in
+`cmd2.string_utils.stylize` function. These and other related topics are covered in
 [Generating Output](../features/generating_output.md).

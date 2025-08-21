@@ -25,9 +25,6 @@ each:
 - [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
     - Shows how to asynchronously print alerts, update the prompt in realtime, and change the window
       title
-- [basic.py](https://github.com/python-cmd2/cmd2/blob/main/examples/basic.py)
-    - Shows how to add a command, add help for it, and create persistent command history for your
-      application
 - [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
     - Show how to enable custom tab completion by assigning a completer function to `do_*` commands
 - [cmd2_as_argument.py](https://github.com/python-cmd2/cmd2/blob/main/examples/cmd_as_argument.py)
@@ -81,9 +78,6 @@ each:
     - Shows how to use output pagination within `cmd2` apps via the `ppaged` method
 - [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/main/examples/persistent_history.py)
     - Shows how to enable persistent history in your `cmd2` application
-- [pirate.py](https://github.com/python-cmd2/cmd2/blob/main/examples/pirate.py)
-    - Demonstrates many features including colorized output, multiline commands, shorcuts,
-      defaulting to shell, etc.
 - [pretty_print.py](https://github.com/python-cmd2/cmd2/blob/main/examples/pretty_print.py)
     - Demonstrates use of cmd2.Cmd.ppretty() for pretty-printing arbitrary Python data structures
       like dictionaries.
