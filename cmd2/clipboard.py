@@ -2,7 +2,7 @@
 
 import typing
 
-import pyperclip  # type: ignore[import]
+import pyperclip  # type: ignore[import-untyped]
 
 
 def get_paste_buffer() -> str:

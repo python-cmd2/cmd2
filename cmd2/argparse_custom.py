@@ -1433,7 +1433,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             description=description,  # type: ignore[arg-type]
             epilog=epilog,  # type: ignore[arg-type]
             parents=parents if parents else [],
-            formatter_class=formatter_class,  # type: ignore[arg-type]
+            formatter_class=formatter_class,
             prefix_chars=prefix_chars,
             fromfile_prefix_chars=fromfile_prefix_chars,
             argument_default=argument_default,
@@ -1498,7 +1498,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         formatter = self._get_formatter()
 
         # usage
-        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)  # type: ignore[arg-type]
+        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)
 
         # description
         formatter.add_text(self.description)

@@ -24,11 +24,11 @@ from enum import (
 
 # Prefer statically linked gnureadline if installed due to compatibility issues with libedit
 try:
-    import gnureadline as readline  # type: ignore[import]
+    import gnureadline as readline  # type: ignore[import-not-found]
 except ImportError:
     # Note: If this actually fails, you should install gnureadline on Linux/Mac or pyreadline3 on Windows.
     with contextlib.suppress(ImportError):
-        import readline  # type: ignore[no-redef]
+        import readline
 
 
 class RlType(Enum):
@@ -279,7 +279,7 @@ def rl_in_search_mode() -> bool:  # pragma: no cover
         readline_state = ctypes.c_int.in_dll(readline_lib, "rl_readline_state").value
         return bool(in_search_mode & readline_state)
     if rl_type == RlType.PYREADLINE:
-        from pyreadline3.modes.emacs import (  # type: ignore[import]
+        from pyreadline3.modes.emacs import (  # type: ignore[import-not-found]
             EmacsMode,
         )
 
@@ -294,3 +294,8 @@ def rl_in_search_mode() -> bool:  # pragma: no cover
         )
         return readline.rl.mode.process_keyevent_queue[-1] in search_funcs
     return False
+
+
+__all__ = [
+    'readline',
+]
