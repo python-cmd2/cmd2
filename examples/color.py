@@ -27,7 +27,7 @@ class CmdLineApp(cmd2.Cmd):
 
         for color_member in Color:
             style = Style(bgcolor=color_member.value) if args.background else Style(color=color_member.value)
-            self.poutput(f"{color_member.name}", style=style)
+            self.poutput(f"{color_member.name}", style=style, soft_wrap=False)
 
 
 if __name__ == '__main__':
