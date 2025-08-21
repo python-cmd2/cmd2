@@ -25,15 +25,23 @@ class CmdLineApp(cmd2.Cmd):
 
     rainbow_parser = cmd2.Cmd2ArgumentParser()
     rainbow_parser.add_argument('-b', '--background', action='store_true', help='show background colors as well')
+    rainbow_parser.add_argument('-p', '--paged', action='store_true', help='display output using a pager')
 
     @cmd2.with_argparser(rainbow_parser)
     def do_taste_the_rainbow(self, args: argparse.Namespace) -> None:
         """Show all of the colors available within cmd2's Color StrEnum class."""
 
+        color_names = []
         for color_member in Color:
             style = Style(bgcolor=color_member) if args.background else Style(color=color_member)
             styled_name = stylize(color_member.name, style=style)
-            self.poutput(styled_name)
+            if args.paged:
+                color_names.append(styled_name)
+            else:
+                self.poutput(styled_name)
+
+        if args.paged:
+            self.ppaged('\n'.join(color_names))
 
 
 if __name__ == '__main__':
