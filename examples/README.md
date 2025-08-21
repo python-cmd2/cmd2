@@ -32,8 +32,8 @@ each:
     - Show how to enable custom tab completion by assigning a completer function to `do_*` commands
 - [cmd2_as_argument.py](https://github.com/python-cmd2/cmd2/blob/main/examples/cmd_as_argument.py)
     - Demonstrates how to accept and parse command-line arguments when invoking a cmd2 application
-- [colors.py](https://github.com/python-cmd2/cmd2/blob/main/examples/colors.py)
-    - Show various ways of using colorized output within a cmd2 application
+- [color.py](https://github.com/python-cmd2/cmd2/blob/main/examples/color.py)
+    - Show the numerous colors available to use in your cmd2 applications
 - [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
     - Demonstrates how to create your own custom `Cmd2ArgumentParser`
 - [decorator_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/decorator_example.py)
