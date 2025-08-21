@@ -12,6 +12,21 @@ from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
 
 
+def test_cmd2_base_console() -> None:
+    # Test the keyword arguments which are not allowed.
+    with pytest.raises(TypeError) as excinfo:
+        ru.Cmd2BaseConsole(force_terminal=True)
+    assert 'force_terminal' in str(excinfo.value)
+
+    with pytest.raises(TypeError) as excinfo:
+        ru.Cmd2BaseConsole(force_interactive=True)
+    assert 'force_interactive' in str(excinfo.value)
+
+    with pytest.raises(TypeError) as excinfo:
+        ru.Cmd2BaseConsole(theme=None)
+    assert 'theme' in str(excinfo.value)
+
+
 def test_string_to_rich_text() -> None:
     # Line breaks recognized by str.splitlines().
     # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
@@ -56,7 +71,7 @@ def test_rich_text_to_string(rich_text: Text, string: str) -> None:
     assert ru.rich_text_to_string(rich_text) == string
 
 
-def test_set_style() -> None:
+def test_set_theme() -> None:
     # Save a cmd2, rich-argparse, and rich-specific style.
     cmd2_style_key = Cmd2Style.ERROR
     argparse_style_key = "argparse.args"
