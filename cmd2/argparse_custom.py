@@ -1311,7 +1311,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
             if isinstance(action.nargs, int) and action.nargs > 1:
                 return '{}{{{}}}'.format('%s' % metavar_formatter(1), action.nargs)  # noqa: UP031
 
-        return super()._format_args(action, default_metavar)  # type: ignore[arg-type]
+        return super()._format_args(action, default_metavar)
 
 
 class RawDescriptionCmd2HelpFormatter(
@@ -1433,7 +1433,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             description=description,  # type: ignore[arg-type]
             epilog=epilog,  # type: ignore[arg-type]
             parents=parents if parents else [],
-            formatter_class=formatter_class,  # type: ignore[arg-type]
+            formatter_class=formatter_class,
             prefix_chars=prefix_chars,
             fromfile_prefix_chars=fromfile_prefix_chars,
             argument_default=argument_default,

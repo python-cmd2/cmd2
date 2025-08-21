@@ -137,7 +137,7 @@ from .styles import Cmd2Style
 
 # NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
 with contextlib.suppress(ImportError):
-    from IPython import start_ipython  # type: ignore[import]
+    from IPython import start_ipython
 
 from .rl_utils import (
     RlType,
@@ -163,7 +163,7 @@ from .utils import (
 if rl_type == RlType.NONE:  # pragma: no cover
     Cmd2Console(sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
 else:
-    from .rl_utils import (  # type: ignore[attr-defined]
+    from .rl_utils import (
         readline,
         rl_force_redisplay,
     )
@@ -3094,11 +3094,11 @@ class Cmd(cmd.Cmd):
                     kwargs['executable'] = shell
 
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # type: ignore[call-overload]  # noqa: S602
+            proc = subprocess.Popen(  # noqa: S602
                 statement.pipe_to,
                 stdin=subproc_stdin,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
+                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                 shell=True,
                 **kwargs,
             )
@@ -3115,7 +3115,7 @@ class Cmd(cmd.Cmd):
                 subproc_stdin.close()
                 new_stdout.close()
                 raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
-            redir_saved_state.redirecting = True  # type: ignore[unreachable]
+            redir_saved_state.redirecting = True
             cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
 
             self.stdout = new_stdout
@@ -4435,7 +4435,7 @@ class Cmd(cmd.Cmd):
             arg_name,
             metavar=arg_name,
             help=settable.description,
-            choices=settable.choices,  # type: ignore[arg-type]
+            choices=settable.choices,
             choices_provider=settable.choices_provider,
             completer=settable.completer,
         )
@@ -4569,7 +4569,7 @@ class Cmd(cmd.Cmd):
             proc = subprocess.Popen(  # noqa: S602
                 expanded_command,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
+                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                 shell=True,
                 **kwargs,
             )
@@ -4889,18 +4889,18 @@ class Cmd(cmd.Cmd):
 
         # Detect whether IPython is installed
         try:
-            import traitlets.config.loader as traitlets_loader  # type: ignore[import]
+            import traitlets.config.loader as traitlets_loader
 
             # Allow users to install ipython from a cmd2 prompt when needed and still have ipy command work
             try:
                 _dummy = start_ipython  # noqa: F823
             except NameError:
-                from IPython import start_ipython  # type: ignore[import]
+                from IPython import start_ipython
 
-            from IPython.terminal.interactiveshell import (  # type: ignore[import]
+            from IPython.terminal.interactiveshell import (
                 TerminalInteractiveShell,
             )
-            from IPython.terminal.ipapp import (  # type: ignore[import]
+            from IPython.terminal.ipapp import (
                 TerminalIPythonApp,
             )
         except ImportError:
