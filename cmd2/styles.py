@@ -34,7 +34,7 @@ class Cmd2Style(StrEnum):
     EXAMPLE = "cmd2.example"  # Command line examples in help text
     HELP_HEADER = "cmd2.help.header"  # Help table header text
     HELP_LEADER = "cmd2.help.leader"  # Text right before the help tables are listed
-    RULE_LINE = "rule.line"  # Rich style for horizontal rules
+    RULE_LINE = "rule.line"  # Built-in Rich style for horizontal rules
     SUCCESS = "cmd2.success"  # Success text (used by psuccess())
     WARNING = "cmd2.warning"  # Warning text (used by pwarning())
 
