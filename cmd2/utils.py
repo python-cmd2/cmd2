@@ -697,7 +697,7 @@ def categorize(func: Callable[..., Any] | Iterable[Callable[..., Any]], category
         for item in func:
             setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
     elif inspect.ismethod(func):
-        setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)  # type: ignore[attr-defined]
+        setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)
     else:
         setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
 
@@ -716,7 +716,7 @@ def get_defining_class(meth: Callable[..., Any]) -> type[Any] | None:
     if inspect.ismethod(meth) or (
         inspect.isbuiltin(meth) and hasattr(meth, '__self__') and hasattr(meth.__self__, '__class__')
     ):
-        for cls in inspect.getmro(meth.__self__.__class__):  # type: ignore[attr-defined]
+        for cls in inspect.getmro(meth.__self__.__class__):
             if meth.__name__ in cls.__dict__:
                 return cls
         meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing

@@ -1261,7 +1261,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
     def _determine_metavar(
         self,
         action: argparse.Action,
-        default_metavar: str | tuple[str, ...],
+        default_metavar: str,
     ) -> str | tuple[str, ...]:
         """Determine what to use as the metavar value of an action."""
         if action.metavar is not None:
@@ -1278,7 +1278,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
     def _metavar_formatter(
         self,
         action: argparse.Action,
-        default_metavar: str | tuple[str, ...],
+        default_metavar: str,
     ) -> Callable[[int], tuple[str, ...]]:
         metavar = self._determine_metavar(action, default_metavar)
 
@@ -1289,7 +1289,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
 
         return format_tuple
 
-    def _format_args(self, action: argparse.Action, default_metavar: str | tuple[str, ...]) -> str:
+    def _format_args(self, action: argparse.Action, default_metavar: str) -> str:
         """Handle ranged nargs and make other output less verbose."""
         metavar = self._determine_metavar(action, default_metavar)
         metavar_formatter = self._metavar_formatter(action, default_metavar)
@@ -1498,7 +1498,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         formatter = self._get_formatter()
 
         # usage
-        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)  # type: ignore[arg-type]
+        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)
 
         # description
         formatter.add_text(self.description)

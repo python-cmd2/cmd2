@@ -1,4 +1,4 @@
-"""Module efines the ArgparseCompleter class which provides argparse-based tab completion to cmd2 apps.
+"""Module defines the ArgparseCompleter class which provides argparse-based tab completion to cmd2 apps.
 
 See the header of argparse_custom.py for instructions on how to use these features.
 """
@@ -726,7 +726,7 @@ class ArgparseCompleter:
                 if not arg_choices.is_completer:
                     choices_func = arg_choices.choices_provider
                     if isinstance(choices_func, ChoicesProviderFuncWithTokens):
-                        completion_items = choices_func(*args, **kwargs)  # type: ignore[arg-type]
+                        completion_items = choices_func(*args, **kwargs)
                     else:  # pragma: no cover
                         # This won't hit because runtime checking doesn't check function argument types and will always
                         # resolve true above. Mypy, however, does see the difference and gives an error that can't be

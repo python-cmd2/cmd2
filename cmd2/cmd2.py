@@ -1068,7 +1068,7 @@ class Cmd(cmd.Cmd):
 
             for action in command_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    action.remove_parser(subcommand_name)  # type: ignore[arg-type,attr-defined]
+                    action.remove_parser(subcommand_name)  # type: ignore[attr-defined]
                     break
 
     @property
@@ -3351,7 +3351,7 @@ class Cmd(cmd.Cmd):
                         parser.add_argument(
                             'arg',
                             suppress_tab_hint=True,
-                            choices=choices,  # type: ignore[arg-type]
+                            choices=choices,
                             choices_provider=choices_provider,
                             completer=completer,
                         )
@@ -4566,7 +4566,7 @@ class Cmd(cmd.Cmd):
         # still receive the SIGINT since it is in the same process group as us.
         with self.sigint_protection:
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
-            proc = subprocess.Popen(  # type: ignore[call-overload]  # noqa: S602
+            proc = subprocess.Popen(  # noqa: S602
                 expanded_command,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
                 stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,  # type: ignore[unreachable]
@@ -4574,7 +4574,7 @@ class Cmd(cmd.Cmd):
                 **kwargs,
             )
 
-            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)  # type: ignore[arg-type]
+            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
@@ -4656,9 +4656,9 @@ class Cmd(cmd.Cmd):
                 # Save off the current completer and set a new one in the Python console
                 # Make sure it tab completes from its locals() dictionary
                 cmd2_env.readline_settings.completer = readline.get_completer()
-                interp.runcode("from rlcompleter import Completer")  # type: ignore[arg-type]
-                interp.runcode("import readline")  # type: ignore[arg-type]
-                interp.runcode("readline.set_completer(Completer(locals()).complete)")  # type: ignore[arg-type]
+                interp.runcode(compile("from rlcompleter import Completer", "<stdin>", "exec"))
+                interp.runcode(compile("import readline", "<stdin>", "exec"))
+                interp.runcode(compile("readline.set_completer(Completer(locals()).complete)", "<stdin>", "exec"))
 
         # Set up sys module for the Python console
         self._reset_py_display()
