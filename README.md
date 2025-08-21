@@ -39,7 +39,7 @@ menagerie of simple command line tools created by strangers on github and the gu
 Unfortunately, when CLIs become significantly complex the ease of command discoverability tends to
 fade quickly. On the other hand, Web and traditional desktop GUIs are first in class when it comes
 to easily discovering functionality. The price we pay for beautifully colored displays is complexity
-required to aggregate disperate applications into larger systems. `cmd2` fills the niche between
+required to aggregate disparate applications into larger systems. `cmd2` fills the niche between
 high [ease of command discovery](https://clig.dev/#ease-of-discovery) applications and smart
 workflow automation systems.
 
@@ -105,16 +105,16 @@ examples.
 
 ## Tutorials
 
-- [Cookiecutter](https://github.com/cookiecutter/cookiecutter) Templates from community
-    - Basic cookiecutter template for cmd2 application :
-      https://github.com/jayrod/cookiecutter-python-cmd2
-    - Advanced cookiecutter template with external plugin support :
-      https://github.com/jayrod/cookiecutter-python-cmd2-ext-plug
 - [cmd2 example applications](https://github.com/python-cmd2/cmd2/tree/main/examples)
     - Basic cmd2 examples to demonstrate how to use various features
 - [Advanced Examples](https://github.com/jayrod/cmd2-example-apps)
     - More complex examples that demonstrate more featuers about how to put together a complete
       application
+- [Cookiecutter](https://github.com/cookiecutter/cookiecutter) Templates from community
+    - Basic cookiecutter template for cmd2 application :
+      https://github.com/jayrod/cookiecutter-python-cmd2
+    - Advanced cookiecutter template with external plugin support :
+      https://github.com/jayrod/cookiecutter-python-cmd2-ext-plug
 
 ## Hello World
 
@@ -157,7 +157,6 @@ reproduce the bug. At a minimum, please state the following:
 
 | Application Name                                                | Description                                                                                                                     | Organization or Author                                                |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| [Pobshell](https://github.com/pdalloz/pobshell)                 | A Bash‑like shell for live Python objects: `cd`, `ls`, `cat`, `find` and _CLI piping_ for object code, str values & more        | [Peter Dalloz](https://www.linkedin.com/in/pdalloz)                   |
 | [CephFS Shell](https://github.com/ceph/ceph)                    | The Ceph File System, or CephFS, is a POSIX-compliant file system built on top of Ceph’s distributed object store               | [ceph](https://ceph.com/)                                             |
 | [garak](https://github.com/NVIDIA/garak)                        | LLM vulnerability scanner that checks if an LLM can be made to fail in a way we don't want                                      | [NVIDIA](https://github.com/NVIDIA)                                   |
 | [medusa](https://github.com/Ch0pin/medusa)                      | Binary instrumentation framework that that automates processes for the dynamic analysis of Android and iOS Applications         | [Ch0pin](https://github.com/Ch0pin)                                   |
@@ -172,6 +171,7 @@ reproduce the bug. At a minimum, please state the following:
 | [tomcatmanager](https://github.com/tomcatmanager/tomcatmanager) | A command line tool and python library for managing a tomcat server                                                             | [tomcatmanager](https://github.com/tomcatmanager)                     |
 | [Falcon Toolkit](https://github.com/CrowdStrike/Falcon-Toolkit) | Unleash the power of the CrowdStrike Falcon Platform at the CLI                                                                 | [CrowdStrike](https://github.com/CrowdStrike)                         |
 | [EXPLIoT](https://gitlab.com/expliot_framework/expliot)         | Internet of Things Security Testing and Exploitation framework                                                                  | [expliot_framework](https://gitlab.com/expliot_framework/)            |
+| [Pobshell](https://github.com/pdalloz/pobshell)                 | A Bash‑like shell for live Python objects: `cd`, `ls`, `cat`, `find` and _CLI piping_ for object code, str values & more        | [Peter Dalloz](https://www.linkedin.com/in/pdalloz)                   |
 
 Possibly defunct but still good examples
 
