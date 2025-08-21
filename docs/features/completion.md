@@ -96,8 +96,7 @@ Tab completion of argument values can be configured by using one of three parame
 - `completer`
 
 See the [arg_decorators](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_decorators.py)
-or [colors](https://github.com/python-cmd2/cmd2/blob/main/examples/colors.py) example for a
-demonstration of how to use the `choices` parameter. See the
+example for a demonstration of how to use the `choices` parameter. See the
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 example for a demonstration of how to use the `choices_provider` parameter. See the
 [arg_decorators](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_decorators.py) or
