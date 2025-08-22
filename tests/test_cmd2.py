@@ -1355,22 +1355,35 @@ def test_help_verbose_with_fake_command(capsys) -> None:
     assert cmds[1] not in out
 
 
-def test_columnize_empty_list(capsys) -> None:
-    help_app = HelpApp()
+def test_render_columns_no_strs(help_app: HelpApp) -> None:
     no_strs = []
-    help_app.columnize(no_strs)
-    out, err = capsys.readouterr()
-    assert "<empty>" in out
+    result = help_app.render_columns(no_strs)
+    assert result == ""
 
 
-def test_columnize_too_wide(capsys) -> None:
-    help_app = HelpApp()
+def test_render_columns_one_str(help_app: HelpApp) -> None:
+    one_str = ["one_string"]
+    result = help_app.render_columns(one_str)
+    assert result == "one_string"
+
+
+def test_render_columns_too_wide(help_app: HelpApp) -> None:
     commands = ["kind_of_long_string", "a_slightly_longer_string"]
-    help_app.columnize(commands, display_width=10)
+    result = help_app.render_columns(commands, display_width=10)
+
+    expected = "kind_of_long_string     \na_slightly_longer_string"
+    assert result == expected
+
+
+def test_columnize(capsys: pytest.CaptureFixture[str]) -> None:
+    help_app = HelpApp()
+    items = ["one", "two"]
+    help_app.columnize(items)
     out, err = capsys.readouterr()
 
-    expected = "kind_of_long_string     \na_slightly_longer_string\n"
-    assert expected == out
+    # poutput() adds a newline at the end.
+    expected = "one  two\n"
+    assert out == expected
 
 
 class HelpCategoriesApp(cmd2.Cmd):
