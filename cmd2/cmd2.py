@@ -130,7 +130,7 @@ from .parsing import (
     shlex_split,
 )
 from .rich_utils import (
-    Cmd2Console,
+    Cmd2GeneralConsole,
     RichPrintKwargs,
 )
 from .styles import Cmd2Style
@@ -161,7 +161,7 @@ from .utils import (
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
-    Cmd2Console(sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
+    Cmd2GeneralConsole(sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
 else:
     from .rl_utils import (
         readline,
@@ -1221,7 +1221,7 @@ class Cmd(cmd.Cmd):
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
                           If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2Console.
+                          configured by the Cmd2GeneralConsole.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
@@ -1230,7 +1230,7 @@ class Cmd(cmd.Cmd):
         prepared_objects = ru.prepare_objects_for_rich_print(*objects)
 
         try:
-            Cmd2Console(file).print(
+            Cmd2GeneralConsole(file).print(
                 *prepared_objects,
                 sep=sep,
                 end=end,
@@ -1245,7 +1245,7 @@ class Cmd(cmd.Cmd):
             # warning message, then set the broken_pipe_warning attribute
             # to the message you want printed.
             if self.broken_pipe_warning and file != sys.stderr:
-                Cmd2Console(sys.stderr).print(self.broken_pipe_warning)
+                Cmd2GeneralConsole(sys.stderr).print(self.broken_pipe_warning)
 
     def poutput(
         self,
@@ -1267,7 +1267,7 @@ class Cmd(cmd.Cmd):
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
                           If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2Console.
+                          configured by the Cmd2GeneralConsole.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
@@ -1303,7 +1303,7 @@ class Cmd(cmd.Cmd):
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
                           If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2Console.
+                          configured by the Cmd2GeneralConsole.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
@@ -1337,7 +1337,7 @@ class Cmd(cmd.Cmd):
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
                           If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2Console.
+                          configured by the Cmd2GeneralConsole.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
@@ -1370,7 +1370,7 @@ class Cmd(cmd.Cmd):
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
                           If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2Console.
+                          configured by the Cmd2GeneralConsole.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
@@ -1404,7 +1404,7 @@ class Cmd(cmd.Cmd):
         final_msg = Text()
 
         if self.debug and sys.exc_info() != (None, None, None):
-            console = Cmd2Console(sys.stderr)
+            console = Cmd2GeneralConsole(sys.stderr)
             console.print_exception(word_wrap=True)
         else:
             final_msg += f"EXCEPTION of type '{type(exception).__name__}' occurred with message: {exception}"
@@ -1442,7 +1442,7 @@ class Cmd(cmd.Cmd):
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
                           If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2Console.
+                          configured by the Cmd2GeneralConsole.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
@@ -1498,7 +1498,7 @@ class Cmd(cmd.Cmd):
                           terminal width; instead, any text that doesn't fit will run onto the following line(s),
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
                           If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2Console.
+                          configured by the Cmd2GeneralConsole.
                           Note: If chop is True and a pager is used, soft_wrap is automatically set to True.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
@@ -1525,7 +1525,7 @@ class Cmd(cmd.Cmd):
                 soft_wrap = True
 
             # Generate the bytes to send to the pager
-            console = Cmd2Console(self.stdout)
+            console = Cmd2GeneralConsole(self.stdout)
             with console.capture() as capture:
                 console.print(
                     *prepared_objects,

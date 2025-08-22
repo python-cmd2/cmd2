@@ -16,9 +16,7 @@ from rich.console import (
     RenderableType,
     RichCast,
 )
-from rich.style import (
-    StyleType,
-)
+from rich.style import StyleType
 from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
@@ -108,14 +106,33 @@ class RichPrintKwargs(TypedDict, total=False):
     new_line_start: bool
 
 
-class Cmd2Console(Console):
-    """Rich console with characteristics appropriate for cmd2-based applications."""
+class Cmd2BaseConsole(Console):
+    """A base class for Rich consoles in cmd2-based applications."""
 
-    def __init__(self, file: IO[str] | None = None) -> None:
-        """Cmd2Console initializer.
+    def __init__(self, file: IO[str] | None = None, **kwargs: Any) -> None:
+        """Cmd2BaseConsole initializer.
 
-        :param file: Optional file object where the console should write to. Defaults to sys.stdout.
+        :param file: optional file object where the console should write to. Defaults to sys.stdout.
         """
+        # Don't allow force_terminal or force_interactive to be passed in, as their
+        # behavior is controlled by the ALLOW_STYLE setting.
+        if "force_terminal" in kwargs:
+            raise TypeError(
+                "Passing 'force_terminal' is not allowed. Its behavior is controlled by the 'ALLOW_STYLE' setting."
+            )
+        if "force_interactive" in kwargs:
+            raise TypeError(
+                "Passing 'force_interactive' is not allowed. Its behavior is controlled by the 'ALLOW_STYLE' setting."
+            )
+
+        # Don't allow a theme to be passed in, as it is controlled by the global APP_THEME.
+        # Use cmd2.rich_utils.set_theme() to set the global theme or use a temporary
+        # theme with console.use_theme().
+        if "theme" in kwargs:
+            raise TypeError(
+                "Passing 'theme' is not allowed. Its behavior is controlled by the global APP_THEME and set_theme()."
+            )
+
         force_terminal: bool | None = None
         force_interactive: bool | None = None
 
@@ -128,20 +145,12 @@ class Cmd2Console(Console):
         elif ALLOW_STYLE == AllowStyle.NEVER:
             force_terminal = False
 
-        # The console's defaults are configured to handle pre-formatted text. It enables soft wrap,
-        # which prevents automatic word-wrapping, and disables Rich's automatic processing for
-        # markup, emoji, and highlighting. While these features are off by default, the console
-        # can still fully render explicit Rich objects like Panels and Tables. These defaults can
-        # be overridden in calls to Cmd2Console.print() and cmd2's print methods.
         super().__init__(
             file=file,
             force_terminal=force_terminal,
             force_interactive=force_interactive,
-            soft_wrap=True,
-            markup=False,
-            emoji=False,
-            highlight=False,
             theme=APP_THEME,
+            **kwargs,
         )
 
     def on_broken_pipe(self) -> None:
@@ -150,9 +159,37 @@ class Cmd2Console(Console):
         raise BrokenPipeError
 
 
+class Cmd2GeneralConsole(Cmd2BaseConsole):
+    """Rich console for general-purpose printing in cmd2-based applications."""
+
+    def __init__(self, file: IO[str] | None = None) -> None:
+        """Cmd2GeneralConsole initializer.
+
+        :param file: optional file object where the console should write to. Defaults to sys.stdout.
+        """
+        # This console is configured for general-purpose printing. It enables soft wrap
+        # and disables Rich's automatic processing for markup, emoji, and highlighting.
+        # These defaults can be overridden in calls to the console's or cmd2's print methods.
+        super().__init__(
+            file=file,
+            soft_wrap=True,
+            markup=False,
+            emoji=False,
+            highlight=False,
+        )
+
+
+class Cmd2RichArgparseConsole(Cmd2BaseConsole):
+    """Rich console for rich-argparse output in cmd2-based applications.
+
+    This class ensures long lines in help text are not truncated by avoiding soft_wrap,
+    which conflicts with rich-argparse's explicit no_wrap and overflow settings.
+    """
+
+
 def console_width() -> int:
     """Return the width of the console."""
-    return Cmd2Console().width
+    return Cmd2BaseConsole().width
 
 
 def rich_text_to_string(text: Text) -> str:
