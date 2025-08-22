@@ -1,9 +1,8 @@
 """Provides string utility functions.
 
 This module offers a collection of string utility functions built on the Rich library.
-These utilities are designed to correctly handle strings with complex formatting, such as
-ANSI escape codes and full-width characters (like those used in CJK languages), which the
-standard Python library's string methods do not properly support.
+These utilities are designed to correctly handle strings with ANSI escape codes and
+full-width characters (like those used in CJK languages).
 """
 
 from rich.align import AlignMethod
@@ -107,7 +106,7 @@ def strip_style(val: str) -> str:
 def str_width(val: str) -> int:
     """Return the display width of a string.
 
-    This is intended for single line strings.
+    This is intended for single-line strings.
     Replace tabs with spaces before calling this.
 
     :param val: the string being measured

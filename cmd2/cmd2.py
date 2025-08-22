@@ -4243,22 +4243,26 @@ class Cmd(cmd.Cmd):
         category_grid.add_row(topics_table)
         self.poutput(category_grid, "")
 
-    def columnize(self, str_list: list[str] | None, display_width: int = 80) -> None:
-        """Display a list of single-line strings as a compact set of columns.
+    def render_columns(self, str_list: list[str] | None, display_width: int = 80) -> str:
+        """Render a list of single-line strings as a compact set of columns.
 
-        Override of cmd's columnize() to handle strings with ANSI style sequences and wide characters.
+        This method correctly handles strings containing ANSI escape codes and
+        full-width characters (like those used in CJK languages). Each column is
+        only as wide as necessary and columns are separated by two spaces.
 
-        Each column is only as wide as necessary.
-        Columns are separated by two spaces (one was not legible enough).
+        :param str_list: list of single-line strings to display
+        :param display_width: max number of display columns to fit into
+        :return: a string containing the columnized output
         """
         if not str_list:
-            self.poutput("<empty>")
-            return
+            return ""
 
         size = len(str_list)
         if size == 1:
-            self.poutput(str_list[0])
-            return
+            return str_list[0]
+
+        rows: list[str] = []
+
         # Try every row count from 1 upwards
         for nrows in range(1, len(str_list)):
             ncols = (size + nrows - 1) // nrows
@@ -4294,7 +4298,22 @@ class Cmd(cmd.Cmd):
                 del texts[-1]
             for col in range(len(texts)):
                 texts[col] = su.align_left(texts[col], width=colwidths[col])
-            self.poutput("  ".join(texts))
+            rows.append("  ".join(texts))
+
+        return "\n".join(rows)
+
+    def columnize(self, str_list: list[str] | None, display_width: int = 80) -> None:
+        """Display a list of single-line strings as a compact set of columns.
+
+        Override of cmd's columnize() that uses the render_columns() method.
+        The method correctly handles strings with ANSI style sequences and
+        full-width characters (like those used in CJK languages).
+
+        :param str_list: list of single-line strings to display
+        :param display_width: max number of display columns to fit into
+        """
+        columnized_strs = self.render_columns(str_list, display_width)
+        self.poutput(columnized_strs)
 
     @staticmethod
     def _build_shortcuts_parser() -> Cmd2ArgumentParser:
