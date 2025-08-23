@@ -27,7 +27,8 @@ ARGPARSE_SUBCOMMANDS = 'Argparse Subcommands'
 
 
 class ArgparsingApp(cmd2.Cmd):
-    def __init__(self, color) -> None:
+    def __init__(self, color: str) -> None:
+        """Cmd2 application for demonstrating the use of argparse for command argument parsing."""
         super().__init__(include_ipy=True)
         self.intro = stylize(
             'cmd2 has awesome decorators to make it easy to use Argparse to parse command arguments', style=color
@@ -54,16 +55,15 @@ class ArgparsingApp(cmd2.Cmd):
             return
 
         if args.unit == 'KB':
-            size /= 1024
+            size //= 1024
         elif args.unit == 'MB':
-            size /= 1024 * 1024
+            size //= 1024 * 1024
         else:
             args.unit = 'bytes'
         size = round(size, 2)
 
-        if args.comma:
-            size = f'{size:,}'
-        self.poutput(f'{size} {args.unit}')
+        size_str = f'{size:,}' if args.comma else f'{size}'
+        self.poutput(f'{size_str} {args.unit}')
 
     # do_pow parser
     pow_parser = cmd2.Cmd2ArgumentParser()
@@ -89,7 +89,7 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(argprint_parser)
     @cmd2.with_category(ARGPARSE_PRINTING)
-    def do_print_args(self, args) -> None:
+    def do_print_args(self, args: argparse.Namespace) -> None:
         """Print the arpgarse argument list this command was called with."""
         self.poutput(f'print_args was called with the following\n\targuments: {args!r}')
 
@@ -100,7 +100,7 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(unknownprint_parser, with_unknown_args=True)
     @cmd2.with_category(ARGPARSE_PRINTING)
-    def do_print_unknown(self, args, unknown) -> None:
+    def do_print_unknown(self, args: argparse.Namespace, unknown: list[str]) -> None:
         """Print the arpgarse argument list this command was called with, including unknown arguments."""
         self.poutput(f'print_unknown was called with the following arguments\n\tknown: {args!r}\n\tunknown: {unknown}')
 
@@ -158,15 +158,15 @@ class ArgparsingApp(cmd2.Cmd):
     sport2_arg = parser_sport2.add_argument('sport', help='Enter name of a sport', choices=sport_item_strs)
 
     # subcommand functions for the base command
-    def base_foo(self, args) -> None:
+    def base_foo(self, args: argparse.Namespace) -> None:
         """Foo subcommand of base command."""
         self.poutput(args.x * args.y)
 
-    def base_bar(self, args) -> None:
+    def base_bar(self, args: argparse.Namespace) -> None:
         """Bar subcommand of base command."""
         self.poutput(f'(({args.z}))')
 
-    def base_sport(self, args) -> None:
+    def base_sport(self, args: argparse.Namespace) -> None:
         """Sport subcommand of base command."""
         self.poutput(f'Sport is {args.sport}')
 
@@ -177,7 +177,7 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(base_parser)
     @cmd2.with_category(ARGPARSE_SUBCOMMANDS)
-    def do_base(self, args) -> None:
+    def do_base(self, args: argparse.Namespace) -> None:
         """Base command help."""
         func = getattr(args, 'func', None)
         if func is not None:
@@ -189,7 +189,7 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(base2_parser)
     @cmd2.with_category(ARGPARSE_SUBCOMMANDS)
-    def do_alternate(self, args) -> None:
+    def do_alternate(self, args: argparse.Namespace) -> None:
         """Alternate command help."""
         func = getattr(args, 'func', None)
         if func is not None:
