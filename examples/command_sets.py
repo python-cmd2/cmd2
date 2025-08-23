@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""This example revolves around the CommandSet feature for modularizing commands.
+"""Example revolving around the CommandSet feature for modularizing commands.
 
 It attempts to cover basic usage as well as more complex usage including dynamic loading and unloading of CommandSets, using
 CommandSets to add subcommands, as well as how to categorize command in CommandSets. Here we have kept the implementation for
@@ -32,28 +32,30 @@ COMMANDSET_SUBCOMMAND = "Subcommands with CommandSet"
 @with_default_category(COMMANDSET_BASIC)
 class AutoLoadCommandSet(CommandSet):
     def __init__(self) -> None:
+        """CommandSet class for auto-loading commands at startup."""
         super().__init__()
 
     def do_hello(self, _: cmd2.Statement) -> None:
-        """Prints hello."""
+        """Print hello."""
         self._cmd.poutput('Hello')
 
     def do_world(self, _: cmd2.Statement) -> None:
-        """Prints World."""
+        """Print World."""
         self._cmd.poutput('World')
 
 
 @with_default_category(COMMANDSET_DYNAMIC)
 class LoadableFruits(CommandSet):
     def __init__(self) -> None:
+        """CommandSet class for dynamically loading commands related to fruits."""
         super().__init__()
 
     def do_apple(self, _: cmd2.Statement) -> None:
-        """Prints Apple."""
+        """Print Apple."""
         self._cmd.poutput('Apple')
 
     def do_banana(self, _: cmd2.Statement) -> None:
-        """Prints Banana"""
+        """Print Banana."""
         self._cmd.poutput('Banana')
 
     banana_description = "Cut a banana"
@@ -69,14 +71,15 @@ class LoadableFruits(CommandSet):
 @with_default_category(COMMANDSET_DYNAMIC)
 class LoadableVegetables(CommandSet):
     def __init__(self) -> None:
+        """CommandSet class for dynamically loading commands related to vegetables."""
         super().__init__()
 
     def do_arugula(self, _: cmd2.Statement) -> None:
-        "Prints Arguula."
+        "Print Arguula."
         self._cmd.poutput('Arugula')
 
     def do_bokchoy(self, _: cmd2.Statement) -> None:
-        """Prints Bok Choy."""
+        """Print Bok Choy."""
         self._cmd.poutput('Bok Choy')
 
     bokchoy_description = "Cut some bokchoy"
@@ -85,6 +88,7 @@ class LoadableVegetables(CommandSet):
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser, help=bokchoy_description.lower())
     def cut_bokchoy(self, ns: argparse.Namespace) -> None:
+        """Cut bokchoy."""
         self._cmd.poutput('Bok Choy: ' + ns.style)
 
 
@@ -92,6 +96,7 @@ class CommandSetApp(cmd2.Cmd):
     """CommandSets are automatically loaded. Nothing needs to be done."""
 
     def __init__(self) -> None:
+        """Cmd2 application for demonstrating the CommandSet features."""
         # This prevents all CommandSets from auto-loading, which is necessary if you don't want some to load at startup
         super().__init__(auto_load_commands=False)
 
@@ -109,6 +114,7 @@ class CommandSetApp(cmd2.Cmd):
     @with_argparser(load_parser)
     @with_category(COMMANDSET_LOAD_UNLOAD)
     def do_load(self, ns: argparse.Namespace) -> None:
+        """Load a CommandSet at runtime."""
         if ns.cmds == 'fruits':
             try:
                 self.register_command_set(self._fruits)
@@ -126,6 +132,7 @@ class CommandSetApp(cmd2.Cmd):
     @with_argparser(load_parser)
     @with_category(COMMANDSET_LOAD_UNLOAD)
     def do_unload(self, ns: argparse.Namespace) -> None:
+        """Unload a CommandSet at runtime."""
         if ns.cmds == 'fruits':
             self.unregister_command_set(self._fruits)
             self.poutput('Fruits unloaded')
