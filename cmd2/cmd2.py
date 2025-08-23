@@ -1260,19 +1260,7 @@ class Cmd(cmd.Cmd):
     ) -> None:
         """Print objects to self.stdout.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        For details on the parameters, refer to the `print_to` method documentation.
         """
         self.print_to(
             self.stdout,
@@ -1296,19 +1284,9 @@ class Cmd(cmd.Cmd):
     ) -> None:
         """Print objects to sys.stderr.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
         :param style: optional style to apply to output. Defaults to Cmd2Style.ERROR.
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+
+        For details on the other parameters, refer to the `print_to` method documentation.
         """
         self.print_to(
             sys.stderr,
@@ -1331,18 +1309,7 @@ class Cmd(cmd.Cmd):
     ) -> None:
         """Wrap poutput, but apply Cmd2Style.SUCCESS.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        For details on the parameters, refer to the `print_to` method documentation.
         """
         self.poutput(
             *objects,
@@ -1364,18 +1331,7 @@ class Cmd(cmd.Cmd):
     ) -> None:
         """Wrap perror, but apply Cmd2Style.WARNING.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        For details on the parameters, refer to the `print_to` method documentation.
         """
         self.perror(
             *objects,
@@ -1393,20 +1349,19 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Print exception to sys.stderr. If debug is true, print exception traceback if one exists.
+        """Print an exception to sys.stderr.
 
-        :param exception: the exception to print.
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        If `debug` is true, a full exception traceback is also printed, if one exists.
+
+        :param exception: the exception to be printed.
+
+        For details on the other parameters, refer to the `print_to` method documentation.
         """
         final_msg = Text()
 
         if self.debug and sys.exc_info() != (None, None, None):
             console = Cmd2GeneralConsole(sys.stderr)
-            console.print_exception(word_wrap=True)
+            console.print_exception(word_wrap=True, max_frames=0)
         else:
             final_msg += f"EXCEPTION of type '{type(exception).__name__}' occurred with message: {exception}"
 
@@ -1431,23 +1386,12 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """For printing nonessential feedback. Can be silenced with `quiet`.
+        """Print nonessential feedback.
 
-        Inclusion in redirected output is controlled by `feedback_to_output`.
+        The output can be silenced with the `quiet` setting and its inclusion in redirected output
+        is controlled by the `feedback_to_output` setting.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        For details on the parameters, refer to the `print_to` method documentation.
         """
         if not self.quiet:
             if self.feedback_to_output:
@@ -1480,15 +1424,12 @@ class Cmd(cmd.Cmd):
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
+        """Print output using a pager.
 
-        Never uses a pager inside a script (Python or text) or when output is being redirected or piped or when
-        stdout or stdin are not a fully functional terminal.
+        A pager is used when the terminal is interactive and may exit immediately if the output
+        fits on the screen. A pager is not used inside a script (Python or text) or when output is
+        redirected or piped, and in these cases, output is sent to `poutput`.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
@@ -1500,13 +1441,12 @@ class Cmd(cmd.Cmd):
                           similar to the built-in print() function. Set to False to enable automatic word-wrapping.
                           If None (the default for this parameter), the output will default to no word-wrapping, as
                           configured by the Cmd2GeneralConsole.
+
                           Note: If chop is True and a pager is used, soft_wrap is automatically set to True.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+
+        For details on the other parameters, refer to the `print_to` method documentation.
         """
-        # Detect if we are running within a fully functional terminal.
+        # Detect if we are running within an interactive terminal.
         # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
         functional_terminal = (
             self.stdin.isatty()
