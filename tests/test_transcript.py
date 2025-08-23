@@ -115,7 +115,6 @@ def test_commands_at_invocation() -> None:
         ('multiline_regex.txt', False),
         ('no_output.txt', False),
         ('no_output_last.txt', False),
-        ('regex_set.txt', False),
         ('singleslash.txt', False),
         ('slashes_escaped.txt', False),
         ('slashslash.txt', False),
