@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""A simple example demonstrating modular subcommand loading through CommandSets.
+"""This example revolves around the CommandSet feature for modularizing commands.
 
-In this example, there are loadable CommandSets defined. Each CommandSet has 1 subcommand defined that will be
-attached to the 'cut' command.
+It attempts to cover basic usage as well as more complex usage including dynamic loading and unloading of CommandSets, using
+CommandSets to add subcommands, as well as how to categorize command in CommandSets. Here we have kept the implementation for
+most commands trivial because the intent is to focus on the CommandSet feature set.
 
-The cut command is implemented with the `do_cut` function that has been tagged as an argparse command.
+The `AutoLoadCommandSet` is a basic command set which is loaded automatically at application startup and stays loaded until
+application exit. Ths is the simplest case of simply modularizing command definitions to different classes and/or files.
 
-The `load` and `unload` command will load and unload the CommandSets. The available top level commands as well as
-subcommands to the `cut` command will change depending on which CommandSets are loaded.
+The `LoadableFruits` and `LoadableVegetables` CommandSets are dynamically loadable and un-loadable at runtime using the `load`
+and `unload` commands. This demonstrates the ability to load and unload CommandSets based on application state. Each of these
+also loads a subcommand of the `cut` command.
 """
 
 import argparse
@@ -20,14 +23,38 @@ from cmd2 import (
     with_default_category,
 )
 
+COMMANDSET_BASIC = "Basic CommandSet"
+COMMANDSET_DYNAMIC = "Dynamic CommandSet"
+COMMANDSET_LOAD_UNLOAD = "Loading and Unloading CommandSets"
+COMMANDSET_SUBCOMMAND = "Subcommands with CommandSet"
 
-@with_default_category('Fruits')
+
+@with_default_category(COMMANDSET_BASIC)
+class AutoLoadCommandSet(CommandSet):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def do_hello(self, _: cmd2.Statement) -> None:
+        """Prints hello."""
+        self._cmd.poutput('Hello')
+
+    def do_world(self, _: cmd2.Statement) -> None:
+        """Prints World."""
+        self._cmd.poutput('World')
+
+
+@with_default_category(COMMANDSET_DYNAMIC)
 class LoadableFruits(CommandSet):
     def __init__(self) -> None:
         super().__init__()
 
     def do_apple(self, _: cmd2.Statement) -> None:
+        """Prints Apple."""
         self._cmd.poutput('Apple')
+
+    def do_banana(self, _: cmd2.Statement) -> None:
+        """Prints Banana"""
+        self._cmd.poutput('Banana')
 
     banana_description = "Cut a banana"
     banana_parser = cmd2.Cmd2ArgumentParser(description=banana_description)
@@ -39,38 +66,48 @@ class LoadableFruits(CommandSet):
         self._cmd.poutput('cutting banana: ' + ns.direction)
 
 
-@with_default_category('Vegetables')
+@with_default_category(COMMANDSET_DYNAMIC)
 class LoadableVegetables(CommandSet):
     def __init__(self) -> None:
         super().__init__()
 
     def do_arugula(self, _: cmd2.Statement) -> None:
+        "Prints Arguula."
         self._cmd.poutput('Arugula')
+
+    def do_bokchoy(self, _: cmd2.Statement) -> None:
+        """Prints Bok Choy."""
+        self._cmd.poutput('Bok Choy')
 
     bokchoy_description = "Cut some bokchoy"
     bokchoy_parser = cmd2.Cmd2ArgumentParser(description=bokchoy_description)
     bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
 
     @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser, help=bokchoy_description.lower())
-    def cut_bokchoy(self, _: argparse.Namespace) -> None:
-        self._cmd.poutput('Bok Choy')
+    def cut_bokchoy(self, ns: argparse.Namespace) -> None:
+        self._cmd.poutput('Bok Choy: ' + ns.style)
 
 
-class ExampleApp(cmd2.Cmd):
+class CommandSetApp(cmd2.Cmd):
     """CommandSets are automatically loaded. Nothing needs to be done."""
 
-    def __init__(self, *args, **kwargs) -> None:
-        # gotta have this or neither the plugin or cmd2 will initialize
-        super().__init__(*args, auto_load_commands=False, **kwargs)
+    def __init__(self) -> None:
+        # This prevents all CommandSets from auto-loading, which is necessary if you don't want some to load at startup
+        super().__init__(auto_load_commands=False)
 
+        self.register_command_set(AutoLoadCommandSet())
+
+        # Store the dyanmic CommandSet classes for ease of loading and unloading
         self._fruits = LoadableFruits()
         self._vegetables = LoadableVegetables()
+
+        self.intro = 'The CommandSet feature allows defining commands in multiple files and the dynamic load/unload at runtime'
 
     load_parser = cmd2.Cmd2ArgumentParser()
     load_parser.add_argument('cmds', choices=['fruits', 'vegetables'])
 
     @with_argparser(load_parser)
-    @with_category('Command Loading')
+    @with_category(COMMANDSET_LOAD_UNLOAD)
     def do_load(self, ns: argparse.Namespace) -> None:
         if ns.cmds == 'fruits':
             try:
@@ -87,6 +124,7 @@ class ExampleApp(cmd2.Cmd):
                 self.poutput('Vegetables already loaded')
 
     @with_argparser(load_parser)
+    @with_category(COMMANDSET_LOAD_UNLOAD)
     def do_unload(self, ns: argparse.Namespace) -> None:
         if ns.cmds == 'fruits':
             self.unregister_command_set(self._fruits)
@@ -100,8 +138,9 @@ class ExampleApp(cmd2.Cmd):
     cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     @with_argparser(cut_parser)
+    @with_category(COMMANDSET_SUBCOMMAND)
     def do_cut(self, ns: argparse.Namespace) -> None:
-        # Call handler for whatever subcommand was selected
+        """Intended to be used with dyanmically loaded subcommands specifically."""
         handler = ns.cmd2_handler.get()
         if handler is not None:
             handler(ns)
@@ -112,5 +151,5 @@ class ExampleApp(cmd2.Cmd):
 
 
 if __name__ == '__main__':
-    app = ExampleApp()
+    app = CommandSetApp()
     app.cmdloop()

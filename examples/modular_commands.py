@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-"""A complex example demonstrating a variety of methods to load CommandSets using a mix of command decorators
-with examples of how to integrate tab completion with argparse-based commands.
+"""A complex example demonstrating a variety of methods to load CommandSets using a mix of command decorators.
+
+Includes examples of how to integrate tab completion with argparse-based commands.
 """
 
 import argparse
@@ -26,6 +27,7 @@ from cmd2 import (
 
 class WithCommandSets(Cmd):
     def __init__(self, command_sets: Iterable[CommandSet] | None = None) -> None:
+        """Cmd2 application to demonstrate a variety of methods for loading CommandSets."""
         super().__init__(command_sets=command_sets)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
@@ -54,7 +56,7 @@ class WithCommandSets(Cmd):
 
     @with_argparser(example_parser)
     def do_example(self, _: argparse.Namespace) -> None:
-        """The example command."""
+        """An example command."""
         self.poutput("I do nothing")
 
 

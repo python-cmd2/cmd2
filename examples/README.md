@@ -25,6 +25,10 @@ each:
     - Demonstrates how to accept and parse command-line arguments when invoking a cmd2 application
 - [color.py](https://github.com/python-cmd2/cmd2/blob/main/examples/color.py)
     - Show the numerous colors available to use in your cmd2 applications
+- [command_sets.py](https://github.com/python-cmd2/cmd2/blob/main/examples/command_sets.py)
+    - Example that demonstrates the `CommandSet` features for modularizing commands and demonstrates
+      all main capabilities including basic CommandSets, dynamic loading an unloading, using
+      subcommands, etc.
 - [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
     - Demonstrates how to create your own custom `Cmd2ArgumentParser`
 - [default_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/default_categories.py)
@@ -52,15 +56,9 @@ each:
     - Shows how to use various `cmd2` application lifecycle hooks
 - [migrating.py](https://github.com/python-cmd2/cmd2/blob/main/examples/migrating.py)
     - A simple `cmd` application that you can migrate to `cmd2` by changing one line
-- [modular_commands_basic.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_commands_basic.py)
-    - Demonstrates based `CommandSet` usage
-- [modular_commands_dynamic.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_commands_dynamic.py)
-    - Demonstrates dynamic `CommandSet` loading and unloading
-- [modular_commands_main.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_commands_main.py)
+- [modular_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_commands.py)
     - Complex example demonstrating a variety of methods to load `CommandSets` using a mix of
       command decorators
-- [modular_subcommands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_subcommands.py)
-    - Shows how to dynamically add and remove subcommands at runtime using `CommandSets`
 - [paged_output.py](https://github.com/python-cmd2/cmd2/blob/main/examples/paged_output.py)
     - Shows how to use output pagination within `cmd2` apps via the `ppaged` method
 - [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/main/examples/persistent_history.py)
