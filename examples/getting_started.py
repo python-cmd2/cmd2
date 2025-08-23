@@ -50,7 +50,7 @@ class BasicApp(cmd2.Cmd):
         # Prints an intro banner once upon application startup
         self.intro = stylize(
             'Welcome to cmd2!',
-            style=Style(color=Color.RED, bgcolor=Color.WHITE, bold=True),
+            style=Style(color=Color.GREEN1, bgcolor=Color.GRAY0, bold=True),
         )
 
         # Show this as the prompt when asking for input
