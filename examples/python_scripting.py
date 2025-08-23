@@ -20,10 +20,14 @@ This application and the "examples/scripts/conditional.py" script serve as an
 example for one way in which this can be done.
 """
 
+import argparse
 import os
 
 import cmd2
-from cmd2 import ansi
+from cmd2 import (
+    Color,
+    stylize,
+)
 
 
 class CmdLineApp(cmd2.Cmd):
@@ -38,7 +42,7 @@ class CmdLineApp(cmd2.Cmd):
     def _set_prompt(self) -> None:
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.prompt = ansi.style(f'{self.cwd} $ ', fg=ansi.Fg.CYAN)
+        self.prompt = stylize(f'{self.cwd} $ ', style=Color.CYAN)
 
     def postcmd(self, stop: bool, _line: str) -> bool:
         """Hook method executed just after a command dispatch is finished.
@@ -52,7 +56,7 @@ class CmdLineApp(cmd2.Cmd):
         return stop
 
     @cmd2.with_argument_list
-    def do_cd(self, arglist) -> None:
+    def do_cd(self, arglist: list[str]) -> None:
         """Change directory.
         Usage:
             cd <new_dir>.
@@ -88,7 +92,7 @@ class CmdLineApp(cmd2.Cmd):
         self.last_result = data
 
     # Enable tab completion for cd command
-    def complete_cd(self, text, line, begidx, endidx):
+    def complete_cd(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
         # Tab complete only directories
         return self.path_complete(text, line, begidx, endidx, path_filter=os.path.isdir)
 
@@ -96,7 +100,7 @@ class CmdLineApp(cmd2.Cmd):
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
     @cmd2.with_argparser(dir_parser, with_unknown_args=True)
-    def do_dir(self, _args, unknown) -> None:
+    def do_dir(self, _args: argparse.Namespace, unknown: list[str]) -> None:
         """List contents of current directory."""
         # No arguments for this command
         if unknown:

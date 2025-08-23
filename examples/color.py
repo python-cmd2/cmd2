@@ -7,12 +7,10 @@ Execute the taste_the_rainbow command to see the colors available.
 import argparse
 
 from rich.style import Style
+from rich.text import Text
 
 import cmd2
-from cmd2 import (
-    Color,
-    stylize,
-)
+from cmd2 import Color
 
 
 class CmdLineApp(cmd2.Cmd):
@@ -31,17 +29,19 @@ class CmdLineApp(cmd2.Cmd):
     def do_taste_the_rainbow(self, args: argparse.Namespace) -> None:
         """Show all of the colors available within cmd2's Color StrEnum class."""
 
-        color_names = []
-        for color_member in Color:
-            style = Style(bgcolor=color_member) if args.background else Style(color=color_member)
-            styled_name = stylize(color_member.name, style=style)
-            if args.paged:
-                color_names.append(styled_name)
-            else:
-                self.poutput(styled_name)
+        def create_style(color: Color) -> Style:
+            """Create a foreground or background color Style."""
+            if args.background:
+                return Style(bgcolor=color)
+            return Style(color=color)
+
+        styled_names = [Text(color.name, style=create_style(color)) for color in Color]
+        output = Text("\n").join(styled_names)
 
         if args.paged:
-            self.ppaged('\n'.join(color_names))
+            self.ppaged(output)
+        else:
+            self.poutput(output)
 
 
 if __name__ == '__main__':

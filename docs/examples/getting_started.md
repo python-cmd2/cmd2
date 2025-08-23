@@ -1,6 +1,6 @@
-# First Application
+# Getting Started
 
-Here's a quick walkthrough of a simple application which demonstrates 8 features of `cmd2`:
+Here's a quick walkthrough of a simple application which demonstrates 10 features of `cmd2`:
 
 - [Settings](../features/settings.md)
 - [Commands](../features/commands.md)
@@ -14,17 +14,17 @@ Here's a quick walkthrough of a simple application which demonstrates 8 features
 If you don't want to type as we go, here is the complete source (you can click to expand and then
 click the **Copy** button in the top-right):
 
-??? example
+!!! example "getting_started.py"
 
     ```py
     {%
-        include "../../examples/first_app.py"
+        include "../../examples/getting_started.py"
     %}
     ```
 
 ## Basic Application
 
-First we need to create a new `cmd2` application. Create a new file `first_app.py` with the
+First we need to create a new `cmd2` application. Create a new file `getting_started.py` with the
 following contents:
 
 ```py
@@ -47,7 +47,7 @@ We have a new class `FirstApp` which is a subclass of [cmd2.Cmd][]. When we tell
 file like this:
 
 ```shell
-$ python first_app.py
+$ python getting_started.py
 ```
 
 it creates an instance of our class, and calls the `cmd2.Cmd.cmdloop` method. This method accepts
@@ -77,7 +77,7 @@ In that initializer, the first thing to do is to make sure we initialize `cmd2`.
 run the script, and enter the `set` command to see the settings, like this:
 
 ```shell
-$ python first_app.py
+$ python getting_started.py
 (Cmd) set
 ```
 
@@ -88,8 +88,8 @@ you will see our `maxrepeats` setting show up with it's default value of `3`.
 Now we will create our first command, called `speak` which will echo back whatever we tell it to
 say. We are going to use an [argument processor](../features/argument_processing.md) so the `speak`
 command can shout and talk piglatin. We will also use some built in methods for
-[generating output](../features/generating_output.md). Add this code to `first_app.py`, so that the
-`speak_parser` attribute and the `do_speak()` method are part of the `CmdLineApp()` class:
+[generating output](../features/generating_output.md). Add this code to `getting_started.py`, so
+that the `speak_parser` attribute and the `do_speak()` method are part of the `CmdLineApp()` class:
 
 ```py
 speak_parser = cmd2.Cmd2ArgumentParser()

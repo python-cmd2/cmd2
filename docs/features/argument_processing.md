@@ -14,10 +14,10 @@ following for you:
 
 These features are all provided by the `@with_argparser` decorator which is importable from `cmd2`.
 
-See the either the [argprint](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_print.py)
-or [decorator](https://github.com/python-cmd2/cmd2/blob/main/examples/decorator_example.py) example
-to learn more about how to use the various `cmd2` argument processing decorators in your `cmd2`
-applications.
+See the
+[argparse_example](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
+example to learn more about how to use the various `cmd2` argument processing decorators in your
+`cmd2` applications.
 
 `cmd2` provides the following [decorators](../api/decorators.md) for assisting with parsing
 arguments passed to commands:
@@ -286,8 +286,9 @@ argparse sub-parsers.
 You may add multiple layers of subcommands for your command. `cmd2` will automatically traverse and
 tab complete subcommands for all commands using argparse.
 
-See the [subcommands](https://github.com/python-cmd2/cmd2/blob/main/examples/subcommands.py) example
-to learn more about how to use subcommands in your `cmd2` application.
+See the
+[argparse_example](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
+example to learn more about how to use subcommands in your `cmd2` application.
 
 ## Argparse Extensions
 

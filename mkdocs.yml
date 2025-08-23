@@ -189,7 +189,7 @@ nav:
       - features/transcripts.md
   - Examples:
       - examples/index.md
-      - examples/first_app.md
+      - examples/getting_started.md
       - examples/alternate_event_loops.md
       - examples/examples.md
   - Plugins:

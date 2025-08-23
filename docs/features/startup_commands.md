@@ -16,7 +16,7 @@ program. `cmd2` interprets each argument as a separate command, so you should en
 in quotation marks if it is more than a one-word command. You can use either single or double quotes
 for this purpose.
 
-    $ python examples/example.py "say hello" "say Gracie" quit
+    $ python examples/transcript_example.py "say hello" "say Gracie" quit
     hello
     Gracie
 
@@ -47,8 +47,8 @@ class StartupApp(cmd2.Cmd):
 ```
 
 This text file should contain a [Command Script](./scripting.md#command-scripts). See the
-[AliasStartup](https://github.com/python-cmd2/cmd2/blob/main/examples/alias_startup.py) example for
-a demonstration.
+[initialization](https://github.com/python-cmd2/cmd2/blob/main/examples/initialization.py) example
+for a demonstration.
 
 You can silence a startup script's output by setting `silence_startup_script` to True:
 

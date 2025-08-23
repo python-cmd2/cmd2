@@ -269,7 +269,7 @@ uv venv --python 3.12
 Then you can run commands in this isolated virtual environment using `uv` like so:
 
 ```sh
-uv run examples/basic.py
+uv run examples/hello_cmd2.py
 ```
 
 Alternatively you can activate the virtual environment using the OS-specific command such as this on
@@ -329,7 +329,7 @@ environment is set up and working properly.
 You can also run the example app and see a prompt that says "(Cmd)" running the command:
 
 ```sh
-$ uv run examples/example.py
+$ uv run examples/getting_started.py
 ```
 
 You can type `help` to get help or `quit` to quit. If you see that, then congratulations – you're

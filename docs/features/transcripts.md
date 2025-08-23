@@ -40,7 +40,7 @@ testing as your `cmd2` application changes.
 
 ## Creating Manually
 
-Here's a transcript created from `python examples/example.py`:
+Here's a transcript created from `python examples/transcript_example.py`:
 
 ```text
 (Cmd) say -r 3 Goodnight, Gracie
@@ -155,7 +155,7 @@ Once you have created a transcript, it's easy to have your application play it b
 output. From within the `examples/` directory:
 
 ```text
-$ python example.py --test transcript_regex.txt
+$ python transcript_example.py --test transcript_regex.txt
 .
 ----------------------------------------------------------------------
 Ran 1 test in 0.013s
