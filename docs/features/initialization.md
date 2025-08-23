@@ -2,11 +2,11 @@
 
 Here is a basic example `cmd2` application which demonstrates many capabilities which you may wish to utilize while initializing the app:
 
-!!! example "examples/initialization.py"
+!!! example "examples/getting_started.py"
 
     ```py
     {%
-        include "../../examples/initialization.py"
+        include "../../examples/getting_started.py"
     %}
     ```
 

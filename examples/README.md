@@ -11,14 +11,11 @@ application, if you are looking for that then see
 Here is the list of examples in alphabetical order by filename along with a brief description of
 each:
 
-- [arg_decorators.py](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_decorators.py)
-    - Demonstrates how to use the `cmd2.with_argparser` decorator to specify command arguments using
-      [argparse](https://docs.python.org/3/library/argparse.html)
-- [arg_print.py](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_print.py)
-    - Demonstrates how arguments and options get parsed and passed to commands and shows how
-      shortcuts work
 - [argparse_completion.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
     - Shows how to integrate tab-completion with argparse-based commands
+- [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
+    - Demonstrates how to use the `cmd2.with_argparser` decorator to specify command arguments using
+      [argparse](https://docs.python.org/3/library/argparse.html)
 - [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
     - Shows how to asynchronously print alerts, update the prompt in realtime, and change the window
       title
@@ -30,8 +27,6 @@ each:
     - Show the numerous colors available to use in your cmd2 applications
 - [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
     - Demonstrates how to create your own custom `Cmd2ArgumentParser`
-- [decorator_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/decorator_example.py)
-    - Shows how to use cmd2's various argparse decorators to processes command-line arguments
 - [default_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/default_categories.py)
     - Demonstrates usage of `@with_default_category` decorator to group and categorize commands and
       `CommandSet` use
@@ -43,13 +38,10 @@ each:
 - [event_loops.py](https://github.com/python-cmd2/cmd2/blob/main/examples/event_loops.py)
     - Shows how to integrate a `cmd2` application with an external event loop which isn't managed by
       `cmd2`
-- [example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/example.py)
-    - This example is intended to demonstrate `cmd2's` build-in transcript testing capability
 - [exit_code.py](https://github.com/python-cmd2/cmd2/blob/main/examples/exit_code.py)
     - Show how to emit a non-zero exit code from your `cmd2` application when it exits
-- [first_app.py](https://github.com/python-cmd2/cmd2/blob/main/examples/first_app.py)
-    - Short application that demonstrates 8 key features: Settings, Commands, Argument Parsing,
-      Generating Output, Help, Shortcuts, Multiple Commands, and History
+- [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
+    - Short application that demonstrates many key features of cmd2
 - [hello_cmd2.py](https://github.com/python-cmd2/cmd2/blob/main/examples/hello_cmd2.py)
     - Completely bare-bones `cmd2` application suitable for rapid testing and debugging of `cmd2`
       itself
@@ -58,8 +50,6 @@ each:
       command
 - [hooks.py](https://github.com/python-cmd2/cmd2/blob/main/examples/hooks.py)
     - Shows how to use various `cmd2` application lifecycle hooks
-- [initialization.py](https://github.com/python-cmd2/cmd2/blob/main/examples/initialization.py)
-    - Shows how to colorize output, use multiline command, add persistent history, and much more
 - [migrating.py](https://github.com/python-cmd2/cmd2/blob/main/examples/migrating.py)
     - A simple `cmd` application that you can migrate to `cmd2` by changing one line
 - [modular_commands_basic.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_commands_basic.py)
@@ -90,13 +80,11 @@ each:
 - [remove_settable.py](https://github.com/python-cmd2/cmd2/blob/main/examples/remove_settable.py)
     - Shows how to remove any of the built-in cmd2 `Settables` you do not want in your cmd2
       application
-- [subcommands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/subcommands.py)
-    - Shows how to use `argparse` to easily support sub-commands within your cmd2 commands
-- [table_creation.py](https://github.com/python-cmd2/cmd2/blob/main/examples/table_creation.py)
-    - Contains various examples of using cmd2's table creation capabilities
 - [tmux_launch.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_launch.sh)
     - Shell script that launches two applications using tmux in different windows/tabs
 - [tmux_split.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_split.sh)
     - Shell script that launches two applications using tmux in a split pane view
+- [transcript_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/transcript_example.py)
+    - This example is intended to demonstrate `cmd2's` build-in transcript testing capability
 - [unicode_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/unicode_commands.py)
     - Shows that cmd2 supports unicode everywhere, including within command names

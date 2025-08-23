@@ -2,10 +2,10 @@
 """A sample application for cmd2.
 
 Thanks to cmd2's built-in transcript testing capability, it also serves as a
-test suite for example.py when used with the transcript_regex.txt transcript.
+test suite for transcript_example.py when used with the transcript_regex.txt transcript.
 
-Running `python example.py -t transcript_regex.txt` will run all the commands in
-the transcript against example.py, verifying that the output produced matches
+Running `python transcript_example.py -t transcript_regex.txt` will run all the commands in
+the transcript against transcript_example.py, verifying that the output produced matches
 the transcript.
 """
 

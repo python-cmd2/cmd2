@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """A sample application for cmd2.
 
-This example is very similar to example.py, but had additional
+This example is very similar to transcript_example.py, but had additional
 code in main() that shows how to accept a command from
 the command line at invocation:
 

@@ -329,7 +329,7 @@ environment is set up and working properly.
 You can also run the example app and see a prompt that says "(Cmd)" running the command:
 
 ```sh
-$ uv run examples/example.py
+$ uv run examples/getting_started.py
 ```
 
 You can type `help` to get help or `quit` to quit. If you see that, then congratulations – you're

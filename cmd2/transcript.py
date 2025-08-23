@@ -34,7 +34,7 @@ class Cmd2TestCase(unittest.TestCase):
     that will execute the commands in a transcript file and expect the
     results shown.
 
-    See example.py
+    See transcript_example.py
     """
 
     cmdapp: Optional['Cmd'] = None

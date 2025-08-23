@@ -1,4 +1,4 @@
-# Run this transcript with "python decorator_example.py -t exampleSession.txt"
+# Run this transcript with "python transcript_example.py -t exampleSession.txt"
 # Anything between two forward slashes, /, is interpreted as a regular expression (regex).
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious

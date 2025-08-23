@@ -11,8 +11,8 @@ if this library is a good fit for your needs.
 
 - [Installation Instructions](installation.md) - how to install `cmd2` and associated optional
   dependencies
-- [First Application](../examples/first_app.md) - a sample application showing 8 key features of
-  `cmd2`
+- [Getting Started Application](../examples/getting_started.md) - a sample application showing many
+  key features of `cmd2`
 - [Integrate cmd2 Into Your Project](integrating.md) - adding `cmd2` to your project
 - [Alternatives](alternatives.md) - other python packages that might meet your needs
 - [Resources](resources.md) - related links and other materials

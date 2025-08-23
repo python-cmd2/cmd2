@@ -1,4 +1,4 @@
-# Run this transcript with "python example.py -t transcript_regex.txt"
+# Run this transcript with "python transcript_example.py -t transcript_regex.txt"
 # The regex for allow_style will match any setting for the previous value.
 # The regex for editor will match whatever program you use.
 # Regexes on prompts just make the trailing space obvious

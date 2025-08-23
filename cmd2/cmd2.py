@@ -10,7 +10,7 @@ Special-character shortcut commands (beyond cmd's "?" and "!")
 Settable environment parameters
 Parsing commands with `argparse` argument parsers (flags)
 Redirection to file or paste buffer (clipboard) with > or >>
-Easy transcript-based testing of applications (see examples/example.py)
+Easy transcript-based testing of applications (see examples/transcript_example.py)
 Bash-style ``select`` available
 
 Note, if self.stdout is different than sys.stdout, then redirection with > and |

@@ -10,6 +10,7 @@
  8) Displaying an intro banner upon starting your application
  9) Using a custom prompt
 10) How to make custom attributes settable at runtime.
+11) Shortcuts for commands
 """
 
 import pathlib
@@ -30,11 +31,15 @@ class BasicApp(cmd2.Cmd):
         # Startup script that defines a couple aliases for running shell commands
         alias_script = pathlib.Path(__file__).absolute().parent / '.cmd2rc'
 
+        # Create a shortcut for one of our commands
+        shortcuts = cmd2.DEFAULT_SHORTCUTS
+        shortcuts.update({'&': 'intro'})
         super().__init__(
+            include_ipy=True,
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
+            shortcuts=shortcuts,
             startup_script=alias_script,
-            include_ipy=True,
         )
 
         # Prints an intro banner once upon application startup

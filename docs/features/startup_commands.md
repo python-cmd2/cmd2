@@ -16,7 +16,7 @@ program. `cmd2` interprets each argument as a separate command, so you should en
 in quotation marks if it is more than a one-word command. You can use either single or double quotes
 for this purpose.
 
-    $ python examples/example.py "say hello" "say Gracie" quit
+    $ python examples/transcript_example.py "say hello" "say Gracie" quit
     hello
     Gracie
 
