@@ -131,6 +131,7 @@ from .parsing import (
     shlex_split,
 )
 from .rich_utils import (
+    Cmd2ExceptionConsole,
     Cmd2GeneralConsole,
     RichPrintKwargs,
 )
@@ -1207,7 +1208,7 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1218,11 +1219,8 @@ class Cmd(cmd.Cmd):
         :param sep: string to write between print data. Defaults to " ".
         :param end: string to write at end of print data. Defaults to a newline.
         :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
+        :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to
+                          fit the terminal width. Defaults to True.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
@@ -1254,7 +1252,7 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1278,7 +1276,7 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = Cmd2Style.ERROR,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1303,7 +1301,7 @@ class Cmd(cmd.Cmd):
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1325,7 +1323,7 @@ class Cmd(cmd.Cmd):
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1345,36 +1343,51 @@ class Cmd(cmd.Cmd):
     def pexcept(
         self,
         exception: BaseException,
-        end: str = "\n",
-        rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print an exception to sys.stderr.
 
-        If `debug` is true, a full exception traceback is also printed, if one exists.
+        If `debug` is true, a full traceback is also printed, if one exists.
 
         :param exception: the exception to be printed.
-
-        For details on the other parameters, refer to the `print_to` method documentation.
+        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
+                       method and still call `super()` without encountering unexpected keyword argument errors.
         """
-        final_msg = Text()
+        console = Cmd2ExceptionConsole(sys.stderr)
 
+        # Only print a traceback if we're in debug mode and one exists.
         if self.debug and sys.exc_info() != (None, None, None):
-            console = Cmd2GeneralConsole(sys.stderr)
-            console.print_exception(word_wrap=True, max_frames=0)
-        else:
-            final_msg += f"EXCEPTION of type '{type(exception).__name__}' occurred with message: {exception}"
+            console.print_exception(
+                width=console.width,
+                show_locals=True,
+                max_frames=0,  # 0 means full traceback.
+                word_wrap=True,  # Wrap long lines of code instead of truncate
+            )
+            console.print()
+            return
+
+        # Otherwise highlight and print the exception.
+        from rich.highlighter import ReprHighlighter
+
+        highlighter = ReprHighlighter()
+
+        final_msg = Text.assemble(
+            ("EXCEPTION of type ", Cmd2Style.ERROR),
+            (f"{type(exception).__name__}", Cmd2Style.EXCEPTION_TYPE),
+            (" occurred with message: ", Cmd2Style.ERROR),
+            highlighter(str(exception)),
+        )
 
         if not self.debug and 'debug' in self.settables:
-            warning = "\nTo enable full traceback, run the following command: 'set debug true'"
-            final_msg.append(warning, style=Cmd2Style.WARNING)
-
-        if final_msg:
-            self.perror(
-                final_msg,
-                end=end,
-                rich_print_kwargs=rich_print_kwargs,
+            help_msg = Text.assemble(
+                "\n\n",
+                ("To enable full traceback, run the following command: ", Cmd2Style.WARNING),
+                ("set debug true", Cmd2Style.COMMAND_LINE),
             )
+            final_msg.append(help_msg)
+
+        console.print(final_msg)
+        console.print()
 
     def pfeedback(
         self,
@@ -1382,7 +1395,7 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1420,7 +1433,7 @@ class Cmd(cmd.Cmd):
         end: str = "\n",
         style: StyleType | None = None,
         chop: bool = False,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1436,13 +1449,11 @@ class Cmd(cmd.Cmd):
                      False -> causes lines longer than the screen width to wrap to the next line
                               - wrapping is ideal when you want to keep users from having to use horizontal scrolling
                      WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
+        :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to
+                          fit the terminal width. Defaults to True.
 
-                          Note: If chop is True and a pager is used, soft_wrap is automatically set to True.
+                          Note: If chop is True and a pager is used, soft_wrap is automatically set to True to
+                          prevent wrapping and allow for horizontal scrolling.
 
         For details on the other parameters, refer to the `print_to` method documentation.
         """
@@ -3527,7 +3538,7 @@ class Cmd(cmd.Cmd):
         alias_create_notes = Group(
             "If you want to use redirection, pipes, or terminators in the value of the alias, then quote them.",
             "\n",
-            Text("    alias create save_results print_results \">\" out.txt\n", style=Cmd2Style.EXAMPLE),
+            Text("    alias create save_results print_results \">\" out.txt\n", style=Cmd2Style.COMMAND_LINE),
             (
                 "Since aliases are resolved during parsing, tab completion will function as it would "
                 "for the actual command the alias resolves to."
@@ -3740,14 +3751,14 @@ class Cmd(cmd.Cmd):
             "\n",
             "The following creates a macro called my_macro that expects two arguments:",
             "\n",
-            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=Cmd2Style.EXAMPLE),
+            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=Cmd2Style.COMMAND_LINE),
             "\n",
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
             "\n",
             Text.assemble(
-                ("    my_macro beef broccoli", Cmd2Style.EXAMPLE),
+                ("    my_macro beef broccoli", Cmd2Style.COMMAND_LINE),
                 (" ───> ", Style(bold=True)),
-                ("make_dinner --meat beef --veggie broccoli", Cmd2Style.EXAMPLE),
+                ("make_dinner --meat beef --veggie broccoli", Cmd2Style.COMMAND_LINE),
             ),
         )
         macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
@@ -3763,15 +3774,15 @@ class Cmd(cmd.Cmd):
                 "first argument will populate both {1} instances."
             ),
             "\n",
-            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=Cmd2Style.EXAMPLE),
+            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=Cmd2Style.COMMAND_LINE),
             "\n",
             "To quote an argument in the resolved command, quote it during creation.",
             "\n",
-            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=Cmd2Style.EXAMPLE),
+            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=Cmd2Style.COMMAND_LINE),
             "\n",
             "If you want to use redirection, pipes, or terminators in the value of the macro, then quote them.",
             "\n",
-            Text("    macro create show_results print_results -type {1} \"|\" less", style=Cmd2Style.EXAMPLE),
+            Text("    macro create show_results print_results -type {1} \"|\" less", style=Cmd2Style.COMMAND_LINE),
             "\n",
             (
                 "Since macros don't resolve until after you press Enter, their arguments tab complete as paths. "
@@ -5316,7 +5327,7 @@ class Cmd(cmd.Cmd):
             "Note",
             Text.assemble(
                 "To set a new editor, run: ",
-                ("set editor <program>", Cmd2Style.EXAMPLE),
+                ("set editor <program>", Cmd2Style.COMMAND_LINE),
             ),
         )
 

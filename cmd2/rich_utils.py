@@ -45,7 +45,7 @@ ALLOW_STYLE = AllowStyle.TERMINAL
 
 
 def _create_default_theme() -> Theme:
-    """Create a default theme for cmd2-based applications.
+    """Create a default theme for the application.
 
     This theme combines the default styles from cmd2, rich-argparse, and Rich.
     """
@@ -79,8 +79,7 @@ def set_theme(styles: Mapping[str, StyleType] | None = None) -> None:
         RichHelpFormatter.styles[name] = APP_THEME.styles[name]
 
 
-# The main theme for cmd2-based applications.
-# You can change it with set_theme().
+# The application-wide theme. You can change it with set_theme().
 APP_THEME = _create_default_theme()
 
 
@@ -107,12 +106,22 @@ class RichPrintKwargs(TypedDict, total=False):
 
 
 class Cmd2BaseConsole(Console):
-    """A base class for Rich consoles in cmd2-based applications."""
+    """Base class for all cmd2 Rich consoles.
 
-    def __init__(self, file: IO[str] | None = None, **kwargs: Any) -> None:
+    This class handles the core logic for managing Rich behavior based on
+    cmd2's global settings, such as `ALLOW_STYLE` and `APP_THEME`.
+    """
+
+    def __init__(
+        self,
+        file: IO[str] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Cmd2BaseConsole initializer.
 
-        :param file: optional file object where the console should write to. Defaults to sys.stdout.
+        :param file: optional file object where the console should write to.
+                     Defaults to sys.stdout.
+        :param kwargs: keyword arguments passed to the parent Console class.
         """
         # Don't allow force_terminal or force_interactive to be passed in, as their
         # behavior is controlled by the ALLOW_STYLE setting.
@@ -160,12 +169,13 @@ class Cmd2BaseConsole(Console):
 
 
 class Cmd2GeneralConsole(Cmd2BaseConsole):
-    """Rich console for general-purpose printing in cmd2-based applications."""
+    """Rich console for general-purpose printing."""
 
     def __init__(self, file: IO[str] | None = None) -> None:
         """Cmd2GeneralConsole initializer.
 
-        :param file: optional file object where the console should write to. Defaults to sys.stdout.
+        :param file: optional file object where the console should write to.
+                     Defaults to sys.stdout.
         """
         # This console is configured for general-purpose printing. It enables soft wrap
         # and disables Rich's automatic processing for markup, emoji, and highlighting.
@@ -180,10 +190,17 @@ class Cmd2GeneralConsole(Cmd2BaseConsole):
 
 
 class Cmd2RichArgparseConsole(Cmd2BaseConsole):
-    """Rich console for rich-argparse output in cmd2-based applications.
+    """Rich console for rich-argparse output.
 
     This class ensures long lines in help text are not truncated by avoiding soft_wrap,
     which conflicts with rich-argparse's explicit no_wrap and overflow settings.
+    """
+
+
+class Cmd2ExceptionConsole(Cmd2BaseConsole):
+    """Rich console for printing exceptions.
+
+    Ensures that long exception messages word wrap for readability by keeping soft_wrap disabled.
     """
 
 
