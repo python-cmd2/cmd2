@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""A simple example cmd2 application demonstrating the following:
+"""A simple example cmd2 application demonstrating many common features.
+
+Features demonstrated include all of the following:
  1) Colorizing/stylizing output
  2) Using multiline commands
  3) Persistent history
@@ -25,9 +27,12 @@ from cmd2 import (
 
 
 class BasicApp(cmd2.Cmd):
+    """Cmd2 application to demonstrate many common features."""
+
     CUSTOM_CATEGORY = 'My Custom Commands'
 
     def __init__(self) -> None:
+        """Initialize the cmd2 application."""
         # Startup script that defines a couple aliases for running shell commands
         alias_script = pathlib.Path(__file__).absolute().parent / '.cmd2rc'
 
@@ -39,7 +44,7 @@ class BasicApp(cmd2.Cmd):
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
             shortcuts=shortcuts,
-            startup_script=alias_script,
+            startup_script=str(alias_script),
         )
 
         # Prints an intro banner once upon application startup
@@ -82,7 +87,7 @@ class BasicApp(cmd2.Cmd):
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_echo(self, arg: cmd2.Statement) -> None:
-        """Example of a multiline command."""
+        """Multiline command."""
         self.poutput(
             stylize(
                 arg,
