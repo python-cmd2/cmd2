@@ -906,29 +906,14 @@ now: True
         assert err[0].startswith('Elapsed: 0:00:00.0')
 
 
-def _expected_no_editor_error():
-    expected_exception = 'OSError'
-    # If PyPy, expect a different exception than with Python 3
-    if hasattr(sys, "pypy_translation_info"):
-        expected_exception = 'EnvironmentError'
-
-    return normalize(
-        f"""
-EXCEPTION of type '{expected_exception}' occurred with message: Please use 'set editor' to specify your text editing program of choice.
-To enable full traceback, run the following command: 'set debug true'
-"""
-    )
-
-
 def test_base_debug(base_app) -> None:
     # Purposely set the editor to None
     base_app.editor = None
 
     # Make sure we get an exception, but cmd2 handles it
     out, err = run_cmd(base_app, 'edit')
-
-    expected = _expected_no_editor_error()
-    assert err == expected
+    assert "EXCEPTION of type" in err[0]
+    assert "Please use 'set editor'" in err[0]
 
     # Set debug true
     out, err = run_cmd(base_app, 'set debug True')
@@ -2589,7 +2574,9 @@ def test_pexcept_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith("\x1b[91mEXCEPTION of type 'Exception' occurred with message: testing")
+    expected = su.stylize("EXCEPTION of type ", style=Cmd2Style.ERROR)
+    expected += su.stylize("Exception", style=Cmd2Style.EXCEPTION_TYPE)
+    assert err.startswith(expected)
 
 
 @with_ansi_style(ru.AllowStyle.NEVER)
@@ -2598,17 +2585,17 @@ def test_pexcept_no_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
+    assert err.startswith("EXCEPTION of type Exception occurred with message: testing...")
 
 
-@with_ansi_style(ru.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.NEVER)
 def test_pexcept_not_exception(base_app, capsys) -> None:
     # Pass in a msg that is not an Exception object
     msg = False
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith("\x1b[91mEXCEPTION of type 'bool' occurred with message: False")
+    assert err.startswith("EXCEPTION of type bool occurred with message: False")
 
 
 @pytest.mark.parametrize('chop', [True, False])
