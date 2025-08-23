@@ -16,18 +16,17 @@ from typing import (
     cast,
 )
 
-from .constants import (
-    INFINITY,
-)
+from .constants import INFINITY
 from .rich_utils import Cmd2GeneralConsole
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .cmd2 import (
-        Cmd,
-    )
+    from .cmd2 import Cmd
 
 from rich.box import SIMPLE_HEAD
-from rich.table import Column, Table
+from rich.table import (
+    Column,
+    Table,
+)
 
 from .argparse_custom import (
     ChoicesCallable,
@@ -35,12 +34,8 @@ from .argparse_custom import (
     CompletionItem,
     generate_range_error,
 )
-from .command_definition import (
-    CommandSet,
-)
-from .exceptions import (
-    CompletionError,
-)
+from .command_definition import CommandSet
+from .exceptions import CompletionError
 from .styles import Cmd2Style
 
 # If no descriptive headers are supplied, then this will be used instead
@@ -583,8 +578,7 @@ class ArgparseCompleter:
             hint_table = Table(
                 *headers,
                 box=SIMPLE_HEAD,
-                show_edge=False,
-                border_style=Cmd2Style.RULE_LINE,
+                border_style=Cmd2Style.TABLE_BORDER,
             )
             for item in completion_items:
                 hint_table.add_row(item, *item.descriptive_data)

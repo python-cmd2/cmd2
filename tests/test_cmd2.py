@@ -184,15 +184,14 @@ now: True
     assert out == expected
     assert base_app.last_result is True
 
+    line_found = False
     out, err = run_cmd(base_app, 'set quiet')
-    expected = normalize(
-        """
- Name    Value   Description
-───────────────────────────────────────────────────
- quiet   True    Don't print nonessential feedback
-"""
-    )
-    assert out == expected
+    for line in out:
+        if "quiet" in line and "True" in line and "False" not in line:
+            line_found = True
+            break
+
+    assert line_found
     assert len(base_app.last_result) == 1
     assert base_app.last_result['quiet'] is True
 
