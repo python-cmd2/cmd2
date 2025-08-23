@@ -279,7 +279,7 @@ def rl_in_search_mode() -> bool:  # pragma: no cover
         readline_state = ctypes.c_int.in_dll(readline_lib, "rl_readline_state").value
         return bool(in_search_mode & readline_state)
     if rl_type == RlType.PYREADLINE:
-        from pyreadline3.modes.emacs import (  # type: ignore[import-not-found]
+        from pyreadline3.modes.emacs import (  # type: ignore[import]
             EmacsMode,
         )
 
@@ -287,7 +287,7 @@ def rl_in_search_mode() -> bool:  # pragma: no cover
         if not isinstance(readline.rl.mode, EmacsMode):
             return False
 
-        # While in search mode, the current keyevent function is set one of the following.
+        # While in search mode, the current keyevent function is set to one of the following.
         search_funcs = (
             readline.rl.mode._process_incremental_search_keyevent,
             readline.rl.mode._process_non_incremental_search_keyevent,

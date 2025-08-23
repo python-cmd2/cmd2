@@ -720,8 +720,8 @@ def test_completion_items(ac_app) -> None:
     line_found = False
     for line in ac_app.formatted_completions.splitlines():
         # Since the CompletionItems were created from strings, the left-most column is left-aligned.
-        # Therefore choice_1 will begin the line (with 1 space for padding).
-        if line.startswith(' choice_1') and 'A description' in line:
+        # Therefore choice_1 will begin the line (with 2 spaces for padding).
+        if line.startswith('  choice_1') and 'A description' in line:
             line_found = True
             break
 
@@ -743,7 +743,7 @@ def test_completion_items(ac_app) -> None:
     for line in ac_app.formatted_completions.splitlines():
         # Since the CompletionItems were created from numbers, the left-most column is right-aligned.
         # Therefore 1.5 will be right-aligned.
-        if line.startswith("                  1.5") and "One.Five" in line:
+        if line.startswith("                   1.5") and "One.Five" in line:
             line_found = True
             break
 
@@ -908,7 +908,7 @@ def test_completion_items_arg_header(ac_app) -> None:
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert "DESC_HEADER" in normalize(ac_app.formatted_completions)[0]
+    assert "DESC_HEADER" in normalize(ac_app.formatted_completions)[1]
 
     # Test when metavar is a string
     text = ''
@@ -917,7 +917,7 @@ def test_completion_items_arg_header(ac_app) -> None:
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.STR_METAVAR in normalize(ac_app.formatted_completions)[0]
+    assert ac_app.STR_METAVAR in normalize(ac_app.formatted_completions)[1]
 
     # Test when metavar is a tuple
     text = ''
@@ -927,7 +927,7 @@ def test_completion_items_arg_header(ac_app) -> None:
 
     # We are completing the first argument of this flag. The first element in the tuple should be the column header.
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.TUPLE_METAVAR[0].upper() in normalize(ac_app.formatted_completions)[0]
+    assert ac_app.TUPLE_METAVAR[0].upper() in normalize(ac_app.formatted_completions)[1]
 
     text = ''
     line = f'choices --tuple_metavar token_1 {text}'
@@ -936,7 +936,7 @@ def test_completion_items_arg_header(ac_app) -> None:
 
     # We are completing the second argument of this flag. The second element in the tuple should be the column header.
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[0]
+    assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[1]
 
     text = ''
     line = f'choices --tuple_metavar token_1 token_2 {text}'
@@ -946,7 +946,7 @@ def test_completion_items_arg_header(ac_app) -> None:
     # We are completing the third argument of this flag. It should still be the second tuple element
     # in the column header since the tuple only has two strings in it.
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[0]
+    assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[1]
 
 
 def test_completion_items_descriptive_headers(ac_app) -> None:
@@ -961,7 +961,7 @@ def test_completion_items_descriptive_headers(ac_app) -> None:
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.CUSTOM_DESC_HEADERS[0] in normalize(ac_app.formatted_completions)[0]
+    assert ac_app.CUSTOM_DESC_HEADERS[0] in normalize(ac_app.formatted_completions)[1]
 
     # This argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADERS
     text = ''
@@ -970,7 +970,7 @@ def test_completion_items_descriptive_headers(ac_app) -> None:
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert DEFAULT_DESCRIPTIVE_HEADERS[0] in normalize(ac_app.formatted_completions)[0]
+    assert DEFAULT_DESCRIPTIVE_HEADERS[0] in normalize(ac_app.formatted_completions)[1]
 
 
 @pytest.mark.parametrize(

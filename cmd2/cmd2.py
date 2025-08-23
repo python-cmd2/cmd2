@@ -63,8 +63,9 @@ from typing import (
     cast,
 )
 
-from rich.box import SIMPLE_HEAD
+import rich.box
 from rich.console import Group
+from rich.padding import Padding
 from rich.rule import Rule
 from rich.style import Style, StyleType
 from rich.table import (
@@ -130,6 +131,7 @@ from .parsing import (
     shlex_split,
 )
 from .rich_utils import (
+    Cmd2ExceptionConsole,
     Cmd2GeneralConsole,
     RichPrintKwargs,
 )
@@ -1206,7 +1208,7 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1217,11 +1219,8 @@ class Cmd(cmd.Cmd):
         :param sep: string to write between print data. Defaults to " ".
         :param end: string to write at end of print data. Defaults to a newline.
         :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
+        :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to
+                          fit the terminal width. Defaults to True.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
@@ -1253,25 +1252,13 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print objects to self.stdout.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        For details on the parameters, refer to the `print_to` method documentation.
         """
         self.print_to(
             self.stdout,
@@ -1289,25 +1276,15 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = Cmd2Style.ERROR,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print objects to sys.stderr.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
         :param style: optional style to apply to output. Defaults to Cmd2Style.ERROR.
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+
+        For details on the other parameters, refer to the `print_to` method documentation.
         """
         self.print_to(
             sys.stderr,
@@ -1324,24 +1301,13 @@ class Cmd(cmd.Cmd):
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Wrap poutput, but apply Cmd2Style.SUCCESS.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        For details on the parameters, refer to the `print_to` method documentation.
         """
         self.poutput(
             *objects,
@@ -1357,24 +1323,13 @@ class Cmd(cmd.Cmd):
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Wrap perror, but apply Cmd2Style.WARNING.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        For details on the parameters, refer to the `print_to` method documentation.
         """
         self.perror(
             *objects,
@@ -1388,37 +1343,51 @@ class Cmd(cmd.Cmd):
     def pexcept(
         self,
         exception: BaseException,
-        end: str = "\n",
-        rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Print exception to sys.stderr. If debug is true, print exception traceback if one exists.
+        """Print an exception to sys.stderr.
 
-        :param exception: the exception to print.
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        If `debug` is true, a full traceback is also printed, if one exists.
+
+        :param exception: the exception to be printed.
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
         """
-        final_msg = Text()
+        console = Cmd2ExceptionConsole(sys.stderr)
 
+        # Only print a traceback if we're in debug mode and one exists.
         if self.debug and sys.exc_info() != (None, None, None):
-            console = Cmd2GeneralConsole(sys.stderr)
-            console.print_exception(word_wrap=True)
-        else:
-            final_msg += f"EXCEPTION of type '{type(exception).__name__}' occurred with message: {exception}"
+            console.print_exception(
+                width=console.width,
+                show_locals=True,
+                max_frames=0,  # 0 means full traceback.
+                word_wrap=True,  # Wrap long lines of code instead of truncate
+            )
+            console.print()
+            return
+
+        # Otherwise highlight and print the exception.
+        from rich.highlighter import ReprHighlighter
+
+        highlighter = ReprHighlighter()
+
+        final_msg = Text.assemble(
+            ("EXCEPTION of type ", Cmd2Style.ERROR),
+            (f"{type(exception).__name__}", Cmd2Style.EXCEPTION_TYPE),
+            (" occurred with message: ", Cmd2Style.ERROR),
+            highlighter(str(exception)),
+        )
 
         if not self.debug and 'debug' in self.settables:
-            warning = "\nTo enable full traceback, run the following command: 'set debug true'"
-            final_msg.append(warning, style=Cmd2Style.WARNING)
-
-        if final_msg:
-            self.perror(
-                final_msg,
-                end=end,
-                rich_print_kwargs=rich_print_kwargs,
+            help_msg = Text.assemble(
+                "\n\n",
+                ("To enable full traceback, run the following command: ", Cmd2Style.WARNING),
+                ("set debug true", Cmd2Style.COMMAND_LINE),
             )
+            final_msg.append(help_msg)
+
+        console.print(final_msg)
+        console.print()
 
     def pfeedback(
         self,
@@ -1426,27 +1395,16 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """For printing nonessential feedback. Can be silenced with `quiet`.
+        """Print nonessential feedback.
 
-        Inclusion in redirected output is controlled by `feedback_to_output`.
+        The output can be silenced with the `quiet` setting and its inclusion in redirected output
+        is controlled by the `feedback_to_output` setting.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        For details on the parameters, refer to the `print_to` method documentation.
         """
         if not self.quiet:
             if self.feedback_to_output:
@@ -1475,37 +1433,31 @@ class Cmd(cmd.Cmd):
         end: str = "\n",
         style: StyleType | None = None,
         chop: bool = False,
-        soft_wrap: bool | None = None,
+        soft_wrap: bool = True,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
+        """Print output using a pager.
 
-        Never uses a pager inside a script (Python or text) or when output is being redirected or piped or when
-        stdout or stdin are not a fully functional terminal.
+        A pager is used when the terminal is interactive and may exit immediately if the output
+        fits on the screen. A pager is not used inside a script (Python or text) or when output is
+        redirected or piped, and in these cases, output is sent to `poutput`.
 
-        :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
-        :param style: optional style to apply to output
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
                               - wrapping is ideal when you want to keep users from having to use horizontal scrolling
                      WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
-        :param soft_wrap: Enable soft wrap mode. If True, text lines will not be automatically word-wrapped to fit the
-                          terminal width; instead, any text that doesn't fit will run onto the following line(s),
-                          similar to the built-in print() function. Set to False to enable automatic word-wrapping.
-                          If None (the default for this parameter), the output will default to no word-wrapping, as
-                          configured by the Cmd2GeneralConsole.
-                          Note: If chop is True and a pager is used, soft_wrap is automatically set to True.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
-        :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
-                       method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+        :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to
+                          fit the terminal width. Defaults to True.
+
+                          Note: If chop is True and a pager is used, soft_wrap is automatically set to True to
+                          prevent wrapping and allow for horizontal scrolling.
+
+        For details on the other parameters, refer to the `print_to` method documentation.
         """
-        # Detect if we are running within a fully functional terminal.
+        # Detect if we are running within an interactive terminal.
         # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
         functional_terminal = (
             self.stdin.isatty()
@@ -2125,7 +2077,7 @@ class Cmd(cmd.Cmd):
             if self.formatted_completions:
                 if not hint_printed:
                     sys.stdout.write('\n')
-                sys.stdout.write('\n' + self.formatted_completions + '\n')
+                sys.stdout.write(self.formatted_completions)
 
             # Otherwise use readline's formatter
             else:
@@ -2182,7 +2134,7 @@ class Cmd(cmd.Cmd):
             if self.formatted_completions:
                 if not hint_printed:
                     sys.stdout.write('\n')
-                sys.stdout.write('\n' + self.formatted_completions + '\n')
+                sys.stdout.write(self.formatted_completions)
 
                 # Redraw the prompt and input lines
                 rl_force_redisplay()
@@ -3586,7 +3538,7 @@ class Cmd(cmd.Cmd):
         alias_create_notes = Group(
             "If you want to use redirection, pipes, or terminators in the value of the alias, then quote them.",
             "\n",
-            Text("    alias create save_results print_results \">\" out.txt\n", style=Cmd2Style.EXAMPLE),
+            Text("    alias create save_results print_results \">\" out.txt\n", style=Cmd2Style.COMMAND_LINE),
             (
                 "Since aliases are resolved during parsing, tab completion will function as it would "
                 "for the actual command the alias resolves to."
@@ -3799,14 +3751,14 @@ class Cmd(cmd.Cmd):
             "\n",
             "The following creates a macro called my_macro that expects two arguments:",
             "\n",
-            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=Cmd2Style.EXAMPLE),
+            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=Cmd2Style.COMMAND_LINE),
             "\n",
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
             "\n",
             Text.assemble(
-                ("    my_macro beef broccoli", Cmd2Style.EXAMPLE),
+                ("    my_macro beef broccoli", Cmd2Style.COMMAND_LINE),
                 (" ───> ", Style(bold=True)),
-                ("make_dinner --meat beef --veggie broccoli", Cmd2Style.EXAMPLE),
+                ("make_dinner --meat beef --veggie broccoli", Cmd2Style.COMMAND_LINE),
             ),
         )
         macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
@@ -3822,15 +3774,15 @@ class Cmd(cmd.Cmd):
                 "first argument will populate both {1} instances."
             ),
             "\n",
-            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=Cmd2Style.EXAMPLE),
+            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=Cmd2Style.COMMAND_LINE),
             "\n",
             "To quote an argument in the resolved command, quote it during creation.",
             "\n",
-            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=Cmd2Style.EXAMPLE),
+            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=Cmd2Style.COMMAND_LINE),
             "\n",
             "If you want to use redirection, pipes, or terminators in the value of the macro, then quote them.",
             "\n",
-            Text("    macro create show_results print_results -type {1} \"|\" less", style=Cmd2Style.EXAMPLE),
+            Text("    macro create show_results print_results -type {1} \"|\" less", style=Cmd2Style.COMMAND_LINE),
             "\n",
             (
                 "Since macros don't resolve until after you press Enter, their arguments tab complete as paths. "
@@ -4121,8 +4073,13 @@ class Cmd(cmd.Cmd):
             cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
 
             if self.doc_leader:
+                # Indent doc_leader to align with the help tables.
                 self.poutput()
-                self.poutput(self.doc_leader, style=Cmd2Style.HELP_LEADER, soft_wrap=False)
+                self.poutput(
+                    Padding.indent(self.doc_leader, 1),
+                    style=Cmd2Style.HELP_LEADER,
+                    soft_wrap=False,
+                )
             self.poutput()
 
             if not cmds_cats:
@@ -4167,6 +4124,9 @@ class Cmd(cmd.Cmd):
 
         Override of cmd's print_topics() to use Rich.
 
+        The output for both the header and the commands is indented by one space to align
+        with the tables printed by the `help -v` command.
+
         :param header: string to print above commands being printed
         :param cmds: list of topics to print
         :param cmdlen: unused, even by cmd's version
@@ -4177,9 +4137,13 @@ class Cmd(cmd.Cmd):
 
         header_grid = Table.grid()
         header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-        header_grid.add_row(Rule(characters=self.ruler))
-        self.poutput(header_grid)
-        self.columnize(cmds, maxcol - 1)
+        header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
+        self.poutput(Padding.indent(header_grid, 1))
+
+        # Subtract 1 from maxcol to account for indentation.
+        maxcol = min(maxcol, ru.console_width()) - 1
+        columnized_cmds = self.render_columns(cmds, maxcol)
+        self.poutput(Padding.indent(columnized_cmds, 1), soft_wrap=False)
         self.poutput()
 
     def _print_documented_command_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
@@ -4193,15 +4157,17 @@ class Cmd(cmd.Cmd):
             self.print_topics(header, cmds, 15, 80)
             return
 
-        category_grid = Table.grid()
-        category_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-        category_grid.add_row(Rule(characters=self.ruler))
+        # Indent header to align with the help tables.
+        self.poutput(
+            Padding.indent(header, 1),
+            style=Cmd2Style.HELP_HEADER,
+            soft_wrap=False,
+        )
         topics_table = Table(
             Column("Name", no_wrap=True),
             Column("Description", overflow="fold"),
-            box=SIMPLE_HEAD,
-            border_style=Cmd2Style.RULE_LINE,
-            show_edge=False,
+            box=rich.box.HORIZONTALS,
+            border_style=Cmd2Style.TABLE_BORDER,
         )
 
         # Try to get the documentation string for each command
@@ -4240,25 +4206,29 @@ class Cmd(cmd.Cmd):
             # Add this command to the table
             topics_table.add_row(command, cmd_desc)
 
-        category_grid.add_row(topics_table)
-        self.poutput(category_grid, "")
+        self.poutput(topics_table)
+        self.poutput()
 
-    def columnize(self, str_list: list[str] | None, display_width: int = 80) -> None:
-        """Display a list of single-line strings as a compact set of columns.
+    def render_columns(self, str_list: list[str] | None, display_width: int = 80) -> str:
+        """Render a list of single-line strings as a compact set of columns.
 
-        Override of cmd's columnize() to handle strings with ANSI style sequences and wide characters.
+        This method correctly handles strings containing ANSI escape codes and
+        full-width characters (like those used in CJK languages). Each column is
+        only as wide as necessary and columns are separated by two spaces.
 
-        Each column is only as wide as necessary.
-        Columns are separated by two spaces (one was not legible enough).
+        :param str_list: list of single-line strings to display
+        :param display_width: max number of display columns to fit into
+        :return: a string containing the columnized output
         """
         if not str_list:
-            self.poutput("<empty>")
-            return
+            return ""
 
         size = len(str_list)
         if size == 1:
-            self.poutput(str_list[0])
-            return
+            return str_list[0]
+
+        rows: list[str] = []
+
         # Try every row count from 1 upwards
         for nrows in range(1, len(str_list)):
             ncols = (size + nrows - 1) // nrows
@@ -4294,7 +4264,22 @@ class Cmd(cmd.Cmd):
                 del texts[-1]
             for col in range(len(texts)):
                 texts[col] = su.align_left(texts[col], width=colwidths[col])
-            self.poutput("  ".join(texts))
+            rows.append("  ".join(texts))
+
+        return "\n".join(rows)
+
+    def columnize(self, str_list: list[str] | None, display_width: int = 80) -> None:
+        """Display a list of single-line strings as a compact set of columns.
+
+        Override of cmd's columnize() that uses the render_columns() method.
+        The method correctly handles strings with ANSI style sequences and
+        full-width characters (like those used in CJK languages).
+
+        :param str_list: list of single-line strings to display
+        :param display_width: max number of display columns to fit into
+        """
+        columnized_strs = self.render_columns(str_list, display_width)
+        self.poutput(columnized_strs)
 
     @staticmethod
     def _build_shortcuts_parser() -> Cmd2ArgumentParser:
@@ -4500,9 +4485,8 @@ class Cmd(cmd.Cmd):
             Column("Name", no_wrap=True),
             Column("Value", overflow="fold"),
             Column("Description", overflow="fold"),
-            box=SIMPLE_HEAD,
-            border_style=Cmd2Style.RULE_LINE,
-            show_edge=False,
+            box=rich.box.SIMPLE_HEAD,
+            border_style=Cmd2Style.TABLE_BORDER,
         )
 
         # Build the table and populate self.last_result
@@ -4513,9 +4497,7 @@ class Cmd(cmd.Cmd):
             settable_table.add_row(param, str(settable.get_value()), settable.description)
             self.last_result[param] = settable.get_value()
 
-        self.poutput()
         self.poutput(settable_table)
-        self.poutput()
 
     @classmethod
     def _build_shell_parser(cls) -> Cmd2ArgumentParser:
@@ -5345,7 +5327,7 @@ class Cmd(cmd.Cmd):
             "Note",
             Text.assemble(
                 "To set a new editor, run: ",
-                ("set editor <program>", Cmd2Style.EXAMPLE),
+                ("set editor <program>", Cmd2Style.COMMAND_LINE),
             ),
         )
 

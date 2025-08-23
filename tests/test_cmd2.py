@@ -184,15 +184,14 @@ now: True
     assert out == expected
     assert base_app.last_result is True
 
+    line_found = False
     out, err = run_cmd(base_app, 'set quiet')
-    expected = normalize(
-        """
- Name    Value   Description
-───────────────────────────────────────────────────
- quiet   True    Don't print nonessential feedback
-"""
-    )
-    assert out == expected
+    for line in out:
+        if "quiet" in line and "True" in line and "False" not in line:
+            line_found = True
+            break
+
+    assert line_found
     assert len(base_app.last_result) == 1
     assert base_app.last_result['quiet'] is True
 
@@ -907,29 +906,14 @@ now: True
         assert err[0].startswith('Elapsed: 0:00:00.0')
 
 
-def _expected_no_editor_error():
-    expected_exception = 'OSError'
-    # If PyPy, expect a different exception than with Python 3
-    if hasattr(sys, "pypy_translation_info"):
-        expected_exception = 'EnvironmentError'
-
-    return normalize(
-        f"""
-EXCEPTION of type '{expected_exception}' occurred with message: Please use 'set editor' to specify your text editing program of choice.
-To enable full traceback, run the following command: 'set debug true'
-"""
-    )
-
-
 def test_base_debug(base_app) -> None:
     # Purposely set the editor to None
     base_app.editor = None
 
     # Make sure we get an exception, but cmd2 handles it
     out, err = run_cmd(base_app, 'edit')
-
-    expected = _expected_no_editor_error()
-    assert err == expected
+    assert "EXCEPTION of type" in err[0]
+    assert "Please use 'set editor'" in err[0]
 
     # Set debug true
     out, err = run_cmd(base_app, 'set debug True')
@@ -1355,22 +1339,35 @@ def test_help_verbose_with_fake_command(capsys) -> None:
     assert cmds[1] not in out
 
 
-def test_columnize_empty_list(capsys) -> None:
-    help_app = HelpApp()
+def test_render_columns_no_strs(help_app: HelpApp) -> None:
     no_strs = []
-    help_app.columnize(no_strs)
-    out, err = capsys.readouterr()
-    assert "<empty>" in out
+    result = help_app.render_columns(no_strs)
+    assert result == ""
 
 
-def test_columnize_too_wide(capsys) -> None:
-    help_app = HelpApp()
+def test_render_columns_one_str(help_app: HelpApp) -> None:
+    one_str = ["one_string"]
+    result = help_app.render_columns(one_str)
+    assert result == "one_string"
+
+
+def test_render_columns_too_wide(help_app: HelpApp) -> None:
     commands = ["kind_of_long_string", "a_slightly_longer_string"]
-    help_app.columnize(commands, display_width=10)
+    result = help_app.render_columns(commands, display_width=10)
+
+    expected = "kind_of_long_string     \na_slightly_longer_string"
+    assert result == expected
+
+
+def test_columnize(capsys: pytest.CaptureFixture[str]) -> None:
+    help_app = HelpApp()
+    items = ["one", "two"]
+    help_app.columnize(items)
     out, err = capsys.readouterr()
 
-    expected = "kind_of_long_string     \na_slightly_longer_string\n"
-    assert expected == out
+    # poutput() adds a newline at the end.
+    expected = "one  two\n"
+    assert out == expected
 
 
 class HelpCategoriesApp(cmd2.Cmd):
@@ -2577,7 +2574,9 @@ def test_pexcept_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith("\x1b[91mEXCEPTION of type 'Exception' occurred with message: testing")
+    expected = su.stylize("EXCEPTION of type ", style=Cmd2Style.ERROR)
+    expected += su.stylize("Exception", style=Cmd2Style.EXCEPTION_TYPE)
+    assert err.startswith(expected)
 
 
 @with_ansi_style(ru.AllowStyle.NEVER)
@@ -2586,17 +2585,17 @@ def test_pexcept_no_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith("EXCEPTION of type 'Exception' occurred with message: testing...")
+    assert err.startswith("EXCEPTION of type Exception occurred with message: testing...")
 
 
-@with_ansi_style(ru.AllowStyle.ALWAYS)
+@with_ansi_style(ru.AllowStyle.NEVER)
 def test_pexcept_not_exception(base_app, capsys) -> None:
     # Pass in a msg that is not an Exception object
     msg = False
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith("\x1b[91mEXCEPTION of type 'bool' occurred with message: False")
+    assert err.startswith("EXCEPTION of type bool occurred with message: False")
 
 
 @pytest.mark.parametrize('chop', [True, False])

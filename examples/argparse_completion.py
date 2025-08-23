@@ -49,7 +49,7 @@ class ArgparseCompletion(Cmd):
             Text("styled text!!", style=Style(color=Color.BRIGHT_YELLOW, underline=True)),
         )
 
-        table_item = Table("Left Column", "Right Column", box=SIMPLE_HEAD, border_style=Cmd2Style.RULE_LINE)
+        table_item = Table("Left Column", "Right Column", box=SIMPLE_HEAD, border_style=Cmd2Style.TABLE_BORDER)
         table_item.add_row("Yes, it's true.", "CompletionItems can")
         table_item.add_row("even display description", "data in tables!")
 
