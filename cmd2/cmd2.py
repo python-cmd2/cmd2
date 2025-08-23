@@ -63,8 +63,9 @@ from typing import (
     cast,
 )
 
-from rich.box import SIMPLE_HEAD
+import rich.box
 from rich.console import Group
+from rich.padding import Padding
 from rich.rule import Rule
 from rich.style import Style, StyleType
 from rich.table import (
@@ -2125,7 +2126,7 @@ class Cmd(cmd.Cmd):
             if self.formatted_completions:
                 if not hint_printed:
                     sys.stdout.write('\n')
-                sys.stdout.write('\n' + self.formatted_completions + '\n')
+                sys.stdout.write(self.formatted_completions)
 
             # Otherwise use readline's formatter
             else:
@@ -2182,7 +2183,7 @@ class Cmd(cmd.Cmd):
             if self.formatted_completions:
                 if not hint_printed:
                     sys.stdout.write('\n')
-                sys.stdout.write('\n' + self.formatted_completions + '\n')
+                sys.stdout.write(self.formatted_completions)
 
                 # Redraw the prompt and input lines
                 rl_force_redisplay()
@@ -4121,8 +4122,13 @@ class Cmd(cmd.Cmd):
             cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
 
             if self.doc_leader:
+                # Indent doc_leader to align with the help tables.
                 self.poutput()
-                self.poutput(self.doc_leader, style=Cmd2Style.HELP_LEADER, soft_wrap=False)
+                self.poutput(
+                    Padding.indent(self.doc_leader, 1),
+                    style=Cmd2Style.HELP_LEADER,
+                    soft_wrap=False,
+                )
             self.poutput()
 
             if not cmds_cats:
@@ -4167,6 +4173,9 @@ class Cmd(cmd.Cmd):
 
         Override of cmd's print_topics() to use Rich.
 
+        The output for both the header and the commands is indented by one space to align
+        with the tables printed by the `help -v` command.
+
         :param header: string to print above commands being printed
         :param cmds: list of topics to print
         :param cmdlen: unused, even by cmd's version
@@ -4177,9 +4186,13 @@ class Cmd(cmd.Cmd):
 
         header_grid = Table.grid()
         header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-        header_grid.add_row(Rule(characters=self.ruler))
-        self.poutput(header_grid)
-        self.columnize(cmds, maxcol - 1)
+        header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
+        self.poutput(Padding.indent(header_grid, 1))
+
+        # Subtract 1 from maxcol to account for indentation.
+        maxcol = min(maxcol, ru.console_width()) - 1
+        columnized_cmds = self.render_columns(cmds, maxcol)
+        self.poutput(Padding.indent(columnized_cmds, 1), soft_wrap=False)
         self.poutput()
 
     def _print_documented_command_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
@@ -4193,15 +4206,17 @@ class Cmd(cmd.Cmd):
             self.print_topics(header, cmds, 15, 80)
             return
 
-        category_grid = Table.grid()
-        category_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-        category_grid.add_row(Rule(characters=self.ruler))
+        # Indent header to align with the help tables.
+        self.poutput(
+            Padding.indent(header, 1),
+            style=Cmd2Style.HELP_HEADER,
+            soft_wrap=False,
+        )
         topics_table = Table(
             Column("Name", no_wrap=True),
             Column("Description", overflow="fold"),
-            box=SIMPLE_HEAD,
-            border_style=Cmd2Style.RULE_LINE,
-            show_edge=False,
+            box=rich.box.HORIZONTALS,
+            border_style=Cmd2Style.TABLE_BORDER,
         )
 
         # Try to get the documentation string for each command
@@ -4240,8 +4255,8 @@ class Cmd(cmd.Cmd):
             # Add this command to the table
             topics_table.add_row(command, cmd_desc)
 
-        category_grid.add_row(topics_table)
-        self.poutput(category_grid, "")
+        self.poutput(topics_table)
+        self.poutput()
 
     def render_columns(self, str_list: list[str] | None, display_width: int = 80) -> str:
         """Render a list of single-line strings as a compact set of columns.
@@ -4519,9 +4534,8 @@ class Cmd(cmd.Cmd):
             Column("Name", no_wrap=True),
             Column("Value", overflow="fold"),
             Column("Description", overflow="fold"),
-            box=SIMPLE_HEAD,
-            border_style=Cmd2Style.RULE_LINE,
-            show_edge=False,
+            box=rich.box.SIMPLE_HEAD,
+            border_style=Cmd2Style.TABLE_BORDER,
         )
 
         # Build the table and populate self.last_result
@@ -4532,9 +4546,7 @@ class Cmd(cmd.Cmd):
             settable_table.add_row(param, str(settable.get_value()), settable.description)
             self.last_result[param] = settable.get_value()
 
-        self.poutput()
         self.poutput(settable_table)
-        self.poutput()
 
     @classmethod
     def _build_shell_parser(cls) -> Cmd2ArgumentParser:

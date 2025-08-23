@@ -36,6 +36,7 @@ class Cmd2Style(StrEnum):
     HELP_LEADER = "cmd2.help.leader"  # Text right before the help tables are listed
     RULE_LINE = "rule.line"  # Rich style for horizontal rules
     SUCCESS = "cmd2.success"  # Success text (used by psuccess())
+    TABLE_BORDER = "cmd2.table_border"  # Applied to cmd2's table borders
     WARNING = "cmd2.warning"  # Warning text (used by pwarning())
 
 
@@ -47,5 +48,6 @@ DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.HELP_LEADER: Style(color=Color.CYAN, bold=True),
     Cmd2Style.RULE_LINE: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.SUCCESS: Style(color=Color.GREEN),
+    Cmd2Style.TABLE_BORDER: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.WARNING: Style(color=Color.BRIGHT_YELLOW),
 }
