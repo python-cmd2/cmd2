@@ -5,98 +5,43 @@ While you can use any Python library for displaying tabular data within a cmd2 a
 we recommend using rich since that is built into cmd2.
 
 Data comes from World Population Review: https://worldpopulationreview.com/
+and https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(nominal)
 """
 
 from rich.table import Table
 
 import cmd2
 
-CITY_HEADERS = ['Country Flag', 'City', 'Country', '2025 Population']
-
+CITY_HEADERS = ['Flag', 'City', 'Country', '2025 Population']
 CITY_DATA = [
-    [
-        "🇯🇵",
-        "Tokyo (東京)",
-        "Japan",
-        37_036_200,
-    ],
-    [
-        "🇮🇳",
-        "Delhi",
-        "India",
-        34_665_600,
-    ],
-    [
-        "🇨🇳",
-        "Shanghai (上海)",
-        "China",
-        30_482_100,
-    ],
-    [
-        "🇧🇩",
-        "Dhaka",
-        "Bangladesh",
-        24_652_900,
-    ],
-    [
-        "🇪🇬",
-        "Cairo (القاهرة)",
-        "Egypt",
-        23_074_200,
-    ],
-    [
-        "🇪🇬",
-        "São Paulo",
-        "Brazil",
-        22_990_000,
-    ],
+    ["🇯🇵", "Tokyo (東京)", "Japan", 37_036_200],
+    ["🇮🇳", "Delhi", "India", 34_665_600],
+    ["🇨🇳", "Shanghai (上海)", "China", 30_482_100],
+    ["🇧🇩", "Dhaka", "Bangladesh", 24_652_900],
+    ["🇪🇬", "Cairo (القاهرة)", "Egypt", 23_074_200],
+    ["🇪🇬", "São Paulo", "Brazil", 22_990_000],
 ]
 
-COUNTRY_HEADERS = ['Flag', 'Country', '2025 Population', 'Area (M km^2)', 'Density (/km^2)']
-
+COUNTRY_HEADERS = [
+    'Flag',
+    'Country',
+    '2025 Population',
+    'Area (M km^2)',
+    'Density (/km^2)',
+    'GDP (million US$)',
+    'GDP per capita (US$)',
+]
 COUNTRY_DATA = [
-    [
-        "🇮🇳",
-        "India",
-        1_463_870_000,
-        3.3,
-        492,
-    ],
-    [
-        "🇨🇳",
-        "China",
-        1_416_100_000,
-        9.7,
-        150,
-    ],
-    [
-        "🇺🇸",
-        "United States",
-        347_276_000,
-        9.4,
-        38,
-    ],
-    [
-        "🇮🇩",
-        "Indonesia",
-        285_721_000,
-        1.9,
-        152,
-    ],
-    [
-        "🇵🇰",
-        "Pakistan",
-        255_220_000,
-        0.9,
-        331,
-    ],
-    [
-        "🇳🇬",
-        "Nigeria",
-        237_528_000,
-        0.9,
-        261,
-    ],
+    ["🇮🇳", "India", 1_463_870_000, 3.3, 492, 4_187_017, 2_878],
+    ["🇨🇳", "China (中国)", 1_416_100_000, 9.7, 150, 19_231_705, 13_687],
+    ["🇺🇸", "United States", 347_276_000, 9.4, 38, 30_507_217, 89_105],
+    ["🇮🇩", "Indonesia", 285_721_000, 1.9, 152, 1_429_743, 5_027],
+    ["🇵🇰", "Pakistan", 255_220_000, 0.9, 331, 373_072, 1_484],
+    ["🇳🇬", "Nigeria", 237_528_000, 0.9, 261, 188_271, 807],
+    ["🇧🇷", "Brazil", 212_812_000, 8.5, 25, 2_125_958, 9_964],
+    ["🇧🇩", "Bangladesh", 175_687_000, 0.1, 1_350, 467_218, 2_689],
+    ["🇷🇺", "Russia (россия)", 143_997_000, 17.1, 9, 2_076_396, 14_258],
+    ["🇪🇹", "Ethiopia (እትዮጵያ)", 135_472_000, 1.1, 120, 117_457, 1_066],
 ]
 
 
@@ -136,12 +81,12 @@ class TableApp(cmd2.Cmd):
     def do_countries(self, _: cmd2.Statement) -> None:
         """Display the countries with the largest population."""
         table = Table(show_footer=False)
-        table.title = "Largest Countries by Population 2025"
-        table.caption = "Data from https://worldpopulationreview.com/"
+        table.title = "10 Largest Countries by Population 2025"
+        table.caption = "Data from https://worldpopulationreview.com/ and Wikipedia"
 
         for header in COUNTRY_HEADERS:
             justify = "left"
-            if 'Population' in header or 'Density' in header:
+            if any(term in header for term in ['Population', 'Density', 'GDP']):
                 justify = "right"
             if 'Area' in header:
                 justify = "center"
