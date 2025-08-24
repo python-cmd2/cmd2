@@ -65,7 +65,6 @@ from typing import (
 
 import rich.box
 from rich.console import Group
-from rich.padding import Padding
 from rich.rule import Rule
 from rich.style import Style, StyleType
 from rich.table import (
@@ -4076,9 +4075,8 @@ class Cmd(cmd.Cmd):
                 # Indent doc_leader to align with the help tables.
                 self.poutput()
                 self.poutput(
-                    Padding.indent(self.doc_leader, 1),
+                    ru.indent(self.doc_leader, 1),
                     style=Cmd2Style.HELP_LEADER,
-                    soft_wrap=False,
                 )
             self.poutput()
 
@@ -4139,13 +4137,13 @@ class Cmd(cmd.Cmd):
         header_grid = Table.grid()
         header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
         header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
-        self.poutput(Padding.indent(header_grid, 1))
+        self.poutput(ru.indent(header_grid, 1))
 
         # Print the topics in columns.
         # Subtract 1 from maxcol to account for indentation.
         maxcol = min(maxcol, ru.console_width()) - 1
         columnized_cmds = self.render_columns(cmds, maxcol)
-        self.poutput(Padding.indent(columnized_cmds, 1), soft_wrap=False)
+        self.poutput(ru.indent(columnized_cmds, 1))
         self.poutput()
 
     def _print_documented_command_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
@@ -4160,11 +4158,7 @@ class Cmd(cmd.Cmd):
             return
 
         # Indent header to align with the help tables.
-        self.poutput(
-            Padding.indent(header, 1),
-            style=Cmd2Style.HELP_HEADER,
-            soft_wrap=False,
-        )
+        self.poutput(ru.indent(header, 1), style=Cmd2Style.HELP_HEADER)
         topics_table = Table(
             Column("Name", no_wrap=True),
             Column("Description", overflow="fold"),

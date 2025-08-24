@@ -284,7 +284,7 @@ from rich.console import (
     RenderableType,
 )
 from rich.protocol import is_renderable
-from rich.table import Column, Table
+from rich.table import Column
 from rich.text import Text
 from rich_argparse import (
     ArgumentDefaultsRichHelpFormatter,
@@ -295,6 +295,7 @@ from rich_argparse import (
 )
 
 from . import constants
+from . import rich_utils as ru
 from .rich_utils import Cmd2RichArgparseConsole
 from .styles import Cmd2Style
 
@@ -1377,17 +1378,10 @@ class TextGroup:
             style=formatter.styles["argparse.groups"],
         )
 
-        # Left pad the text like an argparse argument group does
-        left_padding = formatter._indent_increment
-        text_table = Table(
-            Column(overflow="fold"),
-            box=None,
-            show_header=False,
-            padding=(0, 0, 0, left_padding),
-        )
-        text_table.add_row(self.text)
+        # Indent text like an argparse argument group does
+        indented_text = ru.indent(self.text, formatter._indent_increment)
 
-        return Group(styled_title, text_table)
+        return Group(styled_title, indented_text)
 
 
 class Cmd2ArgumentParser(argparse.ArgumentParser):
