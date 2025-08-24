@@ -20,6 +20,10 @@ CITY_DATA = [
     ["🇧🇩", "Dhaka", "Bangladesh", 24_652_900],
     ["🇪🇬", "Cairo (القاهرة)", "Egypt", 23_074_200],
     ["🇪🇬", "São Paulo", "Brazil", 22_990_000],
+    ["🇲🇽", "Mexico City", "Mexico", 22_752_400],
+    ["🇨🇳", "Beijing (北京)", "China", 22_596_500],
+    ["🇮🇳", "Mumbai", "India", 22_089_000],
+    ["🇯🇵", "Osaka (大阪)", "Japan", 18_921_600],
 ]
 
 COUNTRY_HEADERS = [
@@ -64,7 +68,7 @@ class TableApp(cmd2.Cmd):
     def do_cities(self, _: cmd2.Statement) -> None:
         """Display the cities with the largest population."""
         table = Table(show_footer=False)
-        table.title = "Largest Cities by Population 2025"
+        table.title = "10 Largest Cities by Population 2025"
         table.caption = "Data from https://worldpopulationreview.com/"
 
         for header in CITY_HEADERS:
