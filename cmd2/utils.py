@@ -304,7 +304,7 @@ def find_editor() -> str | None:
     editor = os.environ.get('EDITOR')
     if not editor:
         if sys.platform[:3] == 'win':
-            editors = ['code.cmd', 'notepad++.exe', 'notepad.exe']
+            editors = ['edit', 'code.cmd', 'notepad++.exe', 'notepad.exe']
         else:
             editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'joe', 'code', 'subl', 'gedit', 'kate']
 
