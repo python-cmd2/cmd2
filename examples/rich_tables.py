@@ -11,6 +11,7 @@ and https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(nominal)
 from rich.table import Table
 
 import cmd2
+from cmd2.colors import Color
 
 CITY_HEADERS = ['Flag', 'City', 'Country', '2025 Population']
 CITY_DATA = [
@@ -102,16 +103,16 @@ class TableApp(cmd2.Cmd):
             table.add_row(*str_row)
 
         # Make Population column blue
-        table.columns[2].header_style = "bold blue"
-        table.columns[2].style = "blue"
+        table.columns[2].header_style = Color.BRIGHT_BLUE
+        table.columns[2].style = Color.BLUE
 
         # Make Density column red
-        table.columns[4].header_style = "bold red"
-        table.columns[4].style = "red"
+        table.columns[4].header_style = Color.BRIGHT_RED
+        table.columns[4].style = Color.RED
 
         # Make GDB per capita column green
-        table.columns[6].header_style = "bold green"
-        table.columns[6].style = "green"
+        table.columns[6].header_style = Color.BRIGHT_GREEN
+        table.columns[6].style = Color.GREEN
 
         self.poutput(table)
 
