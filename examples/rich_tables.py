@@ -26,6 +26,8 @@ CITY_DATA = [
     ["🇮🇳", "Mumbai", "India", 22_089_000],
     ["🇯🇵", "Osaka (大阪)", "Japan", 18_921_600],
 ]
+CITY_TITLE = "10 Largest Cities by Population 2025"
+CITY_CAPTION = "Data from https://worldpopulationreview.com/"
 
 COUNTRY_HEADERS = [
     'Flag',
@@ -48,6 +50,8 @@ COUNTRY_DATA = [
     ["🇷🇺", "Russia (россия)", 143_997_000, 17.1, 9, 2_076_396, 14_258],
     ["🇪🇹", "Ethiopia (እትዮጵያ)", 135_472_000, 1.1, 120, 117_457, 1_066],
 ]
+COUNTRY_TITLE = "10 Largest Countries by Population 2025"
+COUNTRY_CAPTION = "Data from https://worldpopulationreview.com/ and Wikipedia"
 
 
 class TableApp(cmd2.Cmd):
@@ -68,9 +72,7 @@ class TableApp(cmd2.Cmd):
     @cmd2.with_category(TABLE_CATEGORY)
     def do_cities(self, _: cmd2.Statement) -> None:
         """Display the cities with the largest population."""
-        table = Table()
-        table.title = "10 Largest Cities by Population 2025"
-        table.caption = "Data from https://worldpopulationreview.com/"
+        table = Table(title=CITY_TITLE, caption=CITY_CAPTION)
 
         for header in CITY_HEADERS:
             table.add_column(header)
@@ -85,9 +87,7 @@ class TableApp(cmd2.Cmd):
     @cmd2.with_category(TABLE_CATEGORY)
     def do_countries(self, _: cmd2.Statement) -> None:
         """Display the countries with the largest population."""
-        table = Table()
-        table.title = "10 Largest Countries by Population 2025"
-        table.caption = "Data from https://worldpopulationreview.com/ and Wikipedia"
+        table = Table(title=COUNTRY_TITLE, caption=COUNTRY_CAPTION)
 
         for header in COUNTRY_HEADERS:
             justify = "right"
