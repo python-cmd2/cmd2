@@ -68,7 +68,7 @@ class TableApp(cmd2.Cmd):
     @cmd2.with_category(TABLE_CATEGORY)
     def do_cities(self, _: cmd2.Statement) -> None:
         """Display the cities with the largest population."""
-        table = Table(show_footer=False)
+        table = Table()
         table.title = "10 Largest Cities by Population 2025"
         table.caption = "Data from https://worldpopulationreview.com/"
 
@@ -85,7 +85,7 @@ class TableApp(cmd2.Cmd):
     @cmd2.with_category(TABLE_CATEGORY)
     def do_countries(self, _: cmd2.Statement) -> None:
         """Display the countries with the largest population."""
-        table = Table(show_footer=False)
+        table = Table()
         table.title = "10 Largest Countries by Population 2025"
         table.caption = "Data from https://worldpopulationreview.com/ and Wikipedia"
 
