@@ -90,23 +90,27 @@ class TableApp(cmd2.Cmd):
         table.caption = "Data from https://worldpopulationreview.com/ and Wikipedia"
 
         for header in COUNTRY_HEADERS:
+            header_style = None
+            style = None
             match header:
-                case s if "2025 Population" in s:
+                case population if "2025 Population" in population:
                     justify = "right"
                     header_style = Color.BRIGHT_BLUE
                     style = Color.BLUE
-                case s if "Density" in s:
+                case density if "Density" in density:
                     justify = "right"
                     header_style = Color.BRIGHT_RED
                     style = Color.RED
-                case s if "per capita" in s:
+                case percap if "per capita" in percap:
                     justify = "right"
                     header_style = Color.BRIGHT_GREEN
                     style = Color.GREEN
+                case area if 'Area' in area:
+                    justify = "right"
+                case gdp if 'GDP' in gdp:
+                    justify = "right"
                 case _:
                     justify = "left"
-                    style = None
-                    header_style = None
 
             table.add_column(header, justify=justify, header_style=header_style, style=style)
 
