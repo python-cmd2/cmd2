@@ -4135,11 +4135,13 @@ class Cmd(cmd.Cmd):
         if not cmds:
             return
 
+        # Add a row that looks like a table header.
         header_grid = Table.grid()
         header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
         header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
         self.poutput(Padding.indent(header_grid, 1))
 
+        # Print the topics in columns.
         # Subtract 1 from maxcol to account for indentation.
         maxcol = min(maxcol, ru.console_width()) - 1
         columnized_cmds = self.render_columns(cmds, maxcol)
@@ -4166,7 +4168,7 @@ class Cmd(cmd.Cmd):
         topics_table = Table(
             Column("Name", no_wrap=True),
             Column("Description", overflow="fold"),
-            box=rich.box.HORIZONTALS,
+            box=ru.TOP_AND_HEAD,
             border_style=Cmd2Style.TABLE_BORDER,
         )
 
