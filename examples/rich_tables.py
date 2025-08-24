@@ -31,7 +31,7 @@ COUNTRY_HEADERS = [
     'Country',
     '2025 Population',
     'Area (M km^2)',
-    'Density (/km^2)',
+    'Population Density (/km^2)',
     'GDP (million US$)',
     'GDP per capita (US$)',
 ]
@@ -100,6 +100,18 @@ class TableApp(cmd2.Cmd):
             # Convert integers or floats to strings, since rich tables can not render int/float
             str_row = [f"{item:,}" if isinstance(item, int) else str(item) for item in row]
             table.add_row(*str_row)
+
+        # Make Population column blue
+        table.columns[2].header_style = "bold blue"
+        table.columns[2].style = "blue"
+
+        # Make Density column red
+        table.columns[4].header_style = "bold red"
+        table.columns[4].style = "red"
+
+        # Make GDB per capita column green
+        table.columns[6].header_style = "bold green"
+        table.columns[6].style = "green"
 
         self.poutput(table)
 
