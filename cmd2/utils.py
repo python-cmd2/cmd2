@@ -306,7 +306,7 @@ def find_editor() -> str | None:
         if sys.platform[:3] == 'win':
             editors = ['code.cmd', 'notepad++.exe', 'notepad.exe']
         else:
-            editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'joe', 'code', 'subl', 'atom', 'gedit', 'geany', 'kate']
+            editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'joe', 'code', 'subl', 'gedit', 'kate']
 
         # Get a list of every directory in the PATH environment variable and ignore symbolic links
         env_path = os.getenv('PATH')
