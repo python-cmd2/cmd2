@@ -90,29 +90,30 @@ class TableApp(cmd2.Cmd):
         table.caption = "Data from https://worldpopulationreview.com/ and Wikipedia"
 
         for header in COUNTRY_HEADERS:
-            justify = "left"
-            if any(term in header for term in ['Population', 'Density', 'GDP']):
-                justify = "right"
-            if 'Area' in header:
-                justify = "center"
-            table.add_column(header, justify=justify)
+            match header:
+                case s if "2025 Population" in s:
+                    justify = "right"
+                    header_style = Color.BRIGHT_BLUE
+                    style = Color.BLUE
+                case s if "Density" in s:
+                    justify = "right"
+                    header_style = Color.BRIGHT_RED
+                    style = Color.RED
+                case s if "per capita" in s:
+                    justify = "right"
+                    header_style = Color.BRIGHT_GREEN
+                    style = Color.GREEN
+                case _:
+                    justify = "left"
+                    style = None
+                    header_style = None
+
+            table.add_column(header, justify=justify, header_style=header_style, style=style)
 
         for row in COUNTRY_DATA:
             # Convert integers or floats to strings, since rich tables can not render int/float
             str_row = [f"{item:,}" if isinstance(item, int) else str(item) for item in row]
             table.add_row(*str_row)
-
-        # Make Population column blue
-        table.columns[2].header_style = Color.BRIGHT_BLUE
-        table.columns[2].style = Color.BLUE
-
-        # Make Density column red
-        table.columns[4].header_style = Color.BRIGHT_RED
-        table.columns[4].style = Color.RED
-
-        # Make GDB per capita column green
-        table.columns[6].header_style = Color.BRIGHT_GREEN
-        table.columns[6].style = Color.GREEN
 
         self.poutput(table)
 
