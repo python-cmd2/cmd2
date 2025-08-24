@@ -109,6 +109,8 @@ class TableApp(cmd2.Cmd):
                     justify = "right"
                 case gdp if 'GDP' in gdp:
                     justify = "right"
+                case flag if 'Flag' in flag:
+                    justify = "center"
                 case _:
                     justify = "left"
 
