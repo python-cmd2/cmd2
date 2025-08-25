@@ -17,7 +17,12 @@ from rich.console import (
     RenderableType,
     RichCast,
 )
+from rich.padding import Padding
 from rich.style import StyleType
+from rich.table import (
+    Column,
+    Table,
+)
 from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
@@ -286,6 +291,30 @@ def string_to_rich_text(text: str) -> Text:
             result.append("\n")
 
     return result
+
+
+def indent(renderable: RenderableType, level: int) -> Padding:
+    """Indent a Rich renderable.
+
+    When soft-wrapping is enabled, a Rich console is unable to properly print a
+    Padding object of indented text, as it truncates long strings instead of wrapping
+    them. This function provides a workaround for this issue, ensuring that indented
+    text is printed correctly regardless of the soft-wrap setting.
+
+    For non-text objects, this function merely serves as a convenience
+    wrapper around Padding.indent().
+
+    :param renderable: a Rich renderable to indent.
+    :param level: number of characters to indent.
+    :return: a Padding object containing the indented content.
+    """
+    if isinstance(renderable, (str, Text)):
+        # Wrap text in a grid to handle the wrapping.
+        text_grid = Table.grid(Column(overflow="fold"))
+        text_grid.add_row(renderable)
+        renderable = text_grid
+
+    return Padding.indent(renderable, level)
 
 
 def prepare_objects_for_rich_print(*objects: Any) -> tuple[RenderableType, ...]:

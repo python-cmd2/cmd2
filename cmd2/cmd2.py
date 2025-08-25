@@ -65,7 +65,6 @@ from typing import (
 
 import rich.box
 from rich.console import Group
-from rich.padding import Padding
 from rich.rule import Rule
 from rich.style import Style, StyleType
 from rich.table import (
@@ -4076,9 +4075,8 @@ class Cmd(cmd.Cmd):
                 # Indent doc_leader to align with the help tables.
                 self.poutput()
                 self.poutput(
-                    Padding.indent(self.doc_leader, 1),
+                    ru.indent(self.doc_leader, 1),
                     style=Cmd2Style.HELP_LEADER,
-                    soft_wrap=False,
                 )
             self.poutput()
 
@@ -4135,17 +4133,20 @@ class Cmd(cmd.Cmd):
         if not cmds:
             return
 
-        # Add a row that looks like a table header.
-        header_grid = Table.grid()
-        header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-        header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
-        self.poutput(Padding.indent(header_grid, 1))
+        # Print a row that looks like a table header.
+        if header:
+            header_grid = Table.grid()
+            header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
+            header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
+            self.poutput(ru.indent(header_grid, 1))
+
+        # Subtract 2 from the max column width to account for the
+        # one-space indentation and a one-space right margin.
+        maxcol = min(maxcol, ru.console_width()) - 2
 
         # Print the topics in columns.
-        # Subtract 1 from maxcol to account for indentation.
-        maxcol = min(maxcol, ru.console_width()) - 1
         columnized_cmds = self.render_columns(cmds, maxcol)
-        self.poutput(Padding.indent(columnized_cmds, 1), soft_wrap=False)
+        self.poutput(ru.indent(columnized_cmds, 1))
         self.poutput()
 
     def _print_documented_command_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
@@ -4160,11 +4161,7 @@ class Cmd(cmd.Cmd):
             return
 
         # Indent header to align with the help tables.
-        self.poutput(
-            Padding.indent(header, 1),
-            style=Cmd2Style.HELP_HEADER,
-            soft_wrap=False,
-        )
+        self.poutput(ru.indent(header, 1), style=Cmd2Style.HELP_HEADER)
         topics_table = Table(
             Column("Name", no_wrap=True),
             Column("Description", overflow="fold"),
@@ -5529,7 +5526,7 @@ class Cmd(cmd.Cmd):
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
         self.poutput(
-            Rule("cmd2 transcript test", style=Style.null()),
+            Rule("cmd2 transcript test", characters=self.ruler, style=Style.null()),
             style=Style(bold=True),
         )
         self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}, readline-{rl_type}')
@@ -5548,7 +5545,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self.perror(stream.read(), end="", style=None)
             finish_msg = f'{num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds'
-            self.psuccess(Rule(finish_msg, style=Style.null()))
+            self.psuccess(Rule(finish_msg, characters=self.ruler, style=Style.null()))
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()
