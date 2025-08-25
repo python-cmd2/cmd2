@@ -399,7 +399,7 @@ class CompletionItem(str):  # noqa: SLOT000
         renderable_data = [obj if is_renderable(obj) else str(obj) for obj in descriptive_data]
 
         # Convert objects with ANSI styles to Rich Text for correct display width.
-        self.descriptive_data = ru.prepare_objects_for_rich_rendering(*renderable_data)
+        self.descriptive_data = ru.prepare_objects_for_rendering(*renderable_data)
 
         # Save the original value to support CompletionItems as argparse choices.
         # cmd2 has patched argparse so input is compared to this value instead of the CompletionItem instance.

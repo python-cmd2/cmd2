@@ -44,6 +44,7 @@ from .exceptions import (
 )
 from .parsing import Statement
 from .py_bridge import CommandResult
+from .rich_utils import RichPrintKwargs
 from .string_utils import stylize
 from .styles import Cmd2Style
 from .utils import (
@@ -86,6 +87,8 @@ __all__: list[str] = [  # noqa: RUF022
     'plugin',
     'rich_utils',
     'string_utils',
+    # Rich Utils
+    'RichPrintKwargs',
     # String Utils
     'stylize',
     # Styles,

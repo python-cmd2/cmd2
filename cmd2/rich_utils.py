@@ -299,7 +299,7 @@ def indent(renderable: RenderableType, level: int) -> Padding:
     return Padding.indent(renderable, level)
 
 
-def prepare_objects_for_rich_rendering(*objects: Any) -> tuple[Any, ...]:
+def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
     """Prepare a tuple of objects for printing by Rich's Console.print().
 
     This function converts any non-Rich object whose string representation contains

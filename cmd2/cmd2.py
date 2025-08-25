@@ -1225,7 +1225,7 @@ class Cmd(cmd.Cmd):
                        method and still call `super()` without encountering unexpected keyword argument errors.
                        These arguments are not passed to Rich's Console.print().
         """
-        prepared_objects = ru.prepare_objects_for_rich_rendering(*objects)
+        prepared_objects = ru.prepare_objects_for_rendering(*objects)
 
         try:
             Cmd2GeneralConsole(file).print(
@@ -1469,7 +1469,7 @@ class Cmd(cmd.Cmd):
 
         # Check if we are outputting to a pager.
         if functional_terminal and can_block:
-            prepared_objects = ru.prepare_objects_for_rich_rendering(*objects)
+            prepared_objects = ru.prepare_objects_for_rendering(*objects)
 
             # Chopping overrides soft_wrap
             if chop:

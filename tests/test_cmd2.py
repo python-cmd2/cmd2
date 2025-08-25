@@ -20,6 +20,7 @@ from cmd2 import (
     COMMAND_NAME,
     Cmd2Style,
     Color,
+    RichPrintKwargs,
     clipboard,
     constants,
     exceptions,
@@ -2131,6 +2132,106 @@ def test_poutput_ansi_terminal(outsim_app) -> None:
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
     assert out == expected
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_poutput_highlight(outsim_app):
+    rich_print_kwargs = RichPrintKwargs(highlight=True)
+    outsim_app.poutput(
+        "My IP Address is 192.168.1.100.",
+        rich_print_kwargs=rich_print_kwargs,
+    )
+    out = outsim_app.stdout.getvalue()
+    assert out == "My IP Address is \x1b[1;92m192.168.1.100\x1b[0m.\n"
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_poutput_markup(outsim_app):
+    rich_print_kwargs = RichPrintKwargs(markup=True)
+    outsim_app.poutput(
+        "The leaves are [green]green[/green].",
+        rich_print_kwargs=rich_print_kwargs,
+    )
+    out = outsim_app.stdout.getvalue()
+    assert out == "The leaves are \x1b[32mgreen\x1b[0m.\n"
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_poutput_emoji(outsim_app):
+    rich_print_kwargs = RichPrintKwargs(emoji=True)
+    outsim_app.poutput(
+        "Look at the emoji :1234:.",
+        rich_print_kwargs=rich_print_kwargs,
+    )
+    out = outsim_app.stdout.getvalue()
+    assert out == "Look at the emoji 🔢.\n"
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_poutput_justify_and_width(outsim_app):
+    rich_print_kwargs = RichPrintKwargs(justify="right", width=10)
+
+    # Use a styled-string when justifying to check if its display width is correct.
+    outsim_app.poutput(
+        su.stylize("Hello", style="blue"),
+        rich_print_kwargs=rich_print_kwargs,
+    )
+    out = outsim_app.stdout.getvalue()
+    assert out == "     \x1b[34mHello\x1b[0m\n"
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_poutput_no_wrap_and_overflow(outsim_app):
+    rich_print_kwargs = RichPrintKwargs(no_wrap=True, overflow="ellipsis", width=10)
+
+    outsim_app.poutput(
+        "This is longer than width.",
+        soft_wrap=False,
+        rich_print_kwargs=rich_print_kwargs,
+    )
+    out = outsim_app.stdout.getvalue()
+    assert out.startswith("This is l…\n")
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_poutput_pretty_print(outsim_app):
+    """Test that cmd2 passes objects through so they can be pretty-printed when highlighting is enabled."""
+    rich_print_kwargs = RichPrintKwargs(highlight=True)
+    dictionary = {1: 'hello', 2: 'person', 3: 'who', 4: 'codes'}
+
+    outsim_app.poutput(
+        dictionary,
+        rich_print_kwargs=rich_print_kwargs,
+    )
+    out = outsim_app.stdout.getvalue()
+    assert out.startswith("\x1b[1m{\x1b[0m\x1b[1;36m1\x1b[0m: \x1b[32m'hello'\x1b[0m")
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_poutput_all_keyword_args(outsim_app):
+    """Test that all fields in RichPrintKwargs are recognized by Rich's Console.print()."""
+    rich_print_kwargs = RichPrintKwargs(
+        justify="center",
+        overflow="ellipsis",
+        no_wrap=True,
+        markup=True,
+        emoji=True,
+        highlight=True,
+        width=40,
+        height=50,
+        crop=False,
+        new_line_start=True,
+    )
+
+    outsim_app.poutput(
+        "My string",
+        rich_print_kwargs=rich_print_kwargs,
+    )
+
+    # Verify that something printed which means Console.print() didn't
+    # raise a TypeError for an unexpected keyword argument.
+    out = outsim_app.stdout.getvalue()
+    assert "My string" in out
 
 
 def test_broken_pipe_error(outsim_app, monkeypatch, capsys):
