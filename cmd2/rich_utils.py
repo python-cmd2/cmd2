@@ -306,17 +306,27 @@ def indent(renderable: RenderableType, level: int) -> Padding:
 def prepare_objects_for_rich_print(*objects: Any) -> tuple[RenderableType, ...]:
     """Prepare a tuple of objects for printing by Rich's Console.print().
 
-    Converts any non-Rich objects (i.e., not ConsoleRenderable or RichCast)
-    into rich.Text objects by stringifying them and processing them with
-    from_ansi(). This ensures Rich correctly interprets any embedded ANSI
-    escape sequences.
+    This function converts any non-Rich object whose string representation contains
+    ANSI style codes into a rich.Text object. This ensures correct display width
+    calculation, as Rich can then properly parse and account for the non-printing
+    ANSI codes. All other objects are left untouched, allowing Rich's native
+    renderers to handle them.
 
     :param objects: objects to prepare
-    :return: a tuple containing the processed objects, where non-Rich objects are
-             converted to rich.Text.
+    :return: a tuple containing the processed objects.
     """
     object_list = list(objects)
     for i, obj in enumerate(object_list):
-        if not isinstance(obj, (ConsoleRenderable, RichCast)):
-            object_list[i] = string_to_rich_text(str(obj))
+        # If the object is a recognized renderable, we don't need to do anything. Rich will handle it.
+        if isinstance(obj, (ConsoleRenderable, RichCast)):
+            continue
+
+        # Check if the object's string representation contains ANSI styles, and if so,
+        # replace it with a Rich Text object for correct width calculation.
+        obj_str = str(obj)
+        obj_text = string_to_rich_text(obj_str)
+
+        if obj_text.plain != obj_str:
+            object_list[i] = obj_text
+
     return tuple(object_list)

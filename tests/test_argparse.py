@@ -425,7 +425,7 @@ def test_subcmd_decorator(subcommand_app) -> None:
 
     # Test subcommand that has no help option
     out, err = run_cmd(subcommand_app, 'test_subcmd_decorator helpless_subcmd')
-    assert "'subcommand': 'helpless_subcmd'" in out[0]
+    assert "'subcommand': 'helpless_subcmd'" in out[1]
 
     out, err = run_cmd(subcommand_app, 'help test_subcmd_decorator helpless_subcmd')
     assert out[0] == 'Usage: test_subcmd_decorator helpless_subcmd'
