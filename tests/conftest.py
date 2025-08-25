@@ -10,12 +10,9 @@ from unittest import (
 import pytest
 
 import cmd2
-from cmd2.rl_utils import (
-    readline,
-)
-from cmd2.utils import (
-    StdSim,
-)
+from cmd2 import rich_utils as ru
+from cmd2.rl_utils import readline
+from cmd2.utils import StdSim
 
 
 def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_strings: list[str] | None = None) -> None:
@@ -86,6 +83,25 @@ def run_cmd(app, cmd):
 @pytest.fixture
 def base_app():
     return cmd2.Cmd(include_py=True, include_ipy=True)
+
+
+def with_ansi_style(style):
+    def arg_decorator(func):
+        import functools
+
+        @functools.wraps(func)
+        def cmd_wrapper(*args, **kwargs):
+            old = ru.ALLOW_STYLE
+            ru.ALLOW_STYLE = style
+            try:
+                retval = func(*args, **kwargs)
+            finally:
+                ru.ALLOW_STYLE = old
+            return retval
+
+        return cmd_wrapper
+
+    return arg_decorator
 
 
 # These are odd file names for testing quoting of them

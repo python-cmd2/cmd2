@@ -41,26 +41,8 @@ from .conftest import (
     odd_file_names,
     run_cmd,
     verify_help_text,
+    with_ansi_style,
 )
-
-
-def with_ansi_style(style):
-    def arg_decorator(func):
-        import functools
-
-        @functools.wraps(func)
-        def cmd_wrapper(*args, **kwargs):
-            old = ru.ALLOW_STYLE
-            ru.ALLOW_STYLE = style
-            try:
-                retval = func(*args, **kwargs)
-            finally:
-                ru.ALLOW_STYLE = old
-            return retval
-
-        return cmd_wrapper
-
-    return arg_decorator
 
 
 def create_outsim_app():
