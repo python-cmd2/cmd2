@@ -8,7 +8,6 @@ from typing import (
     TypedDict,
 )
 
-from rich.box import Box
 from rich.console import (
     Console,
     ConsoleRenderable,
@@ -109,19 +108,6 @@ class RichPrintKwargs(TypedDict, total=False):
     height: int | None
     crop: bool
     new_line_start: bool
-
-
-# Custom Rich Box for tables which has a top border and a head row separator.
-TOP_AND_HEAD: Box = Box(
-    " ── \n"  # top
-    "    \n"
-    " ── \n"  # head_row
-    "    \n"
-    "    \n"
-    "    \n"
-    "    \n"
-    "    \n"
-)
 
 
 class Cmd2BaseConsole(Console):

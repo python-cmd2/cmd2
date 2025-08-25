@@ -2076,7 +2076,7 @@ class Cmd(cmd.Cmd):
             if self.formatted_completions:
                 if not hint_printed:
                     sys.stdout.write('\n')
-                sys.stdout.write(self.formatted_completions)
+                sys.stdout.write('\n' + self.formatted_completions + '\n')
 
             # Otherwise use readline's formatter
             else:
@@ -2133,7 +2133,7 @@ class Cmd(cmd.Cmd):
             if self.formatted_completions:
                 if not hint_printed:
                     sys.stdout.write('\n')
-                sys.stdout.write(self.formatted_completions)
+                sys.stdout.write('\n' + self.formatted_completions + '\n')
 
                 # Redraw the prompt and input lines
                 rl_force_redisplay()
@@ -4072,12 +4072,8 @@ class Cmd(cmd.Cmd):
             cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
 
             if self.doc_leader:
-                # Indent doc_leader to align with the help tables.
                 self.poutput()
-                self.poutput(
-                    ru.indent(self.doc_leader, 1),
-                    style=Cmd2Style.HELP_LEADER,
-                )
+                self.poutput(self.doc_leader, style=Cmd2Style.HELP_LEADER)
             self.poutput()
 
             if not cmds_cats:
@@ -4122,9 +4118,6 @@ class Cmd(cmd.Cmd):
 
         Override of cmd's print_topics() to use Rich.
 
-        The output for both the header and the commands is indented by one space to align
-        with the tables printed by the `help -v` command.
-
         :param header: string to print above commands being printed
         :param cmds: list of topics to print
         :param cmdlen: unused, even by cmd's version
@@ -4137,16 +4130,11 @@ class Cmd(cmd.Cmd):
         if header:
             header_grid = Table.grid()
             header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-            header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
-            self.poutput(ru.indent(header_grid, 1))
+            header_grid.add_row(Rule(characters=self.ruler))
+            self.poutput(header_grid)
 
-        # Subtract 2 from the max column width to account for the
-        # one-space indentation and a one-space right margin.
-        maxcol = min(maxcol, ru.console_width()) - 2
-
-        # Print the topics in columns.
-        columnized_cmds = self.render_columns(cmds, maxcol)
-        self.poutput(ru.indent(columnized_cmds, 1))
+        # Subtract 1 from maxcol to account for a one-space right margin.
+        self.columnize(cmds, maxcol - 1)
         self.poutput()
 
     def _print_documented_command_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
@@ -4160,13 +4148,17 @@ class Cmd(cmd.Cmd):
             self.print_topics(header, cmds, 15, 80)
             return
 
-        # Indent header to align with the help tables.
-        self.poutput(ru.indent(header, 1), style=Cmd2Style.HELP_HEADER)
+        # Create a grid to hold the header and the topics table
+        category_grid = Table.grid()
+        category_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
+        category_grid.add_row(Rule(characters=self.ruler))
+
         topics_table = Table(
             Column("Name", no_wrap=True),
             Column("Description", overflow="fold"),
-            box=ru.TOP_AND_HEAD,
+            box=rich.box.SIMPLE_HEAD,
             border_style=Cmd2Style.TABLE_BORDER,
+            show_edge=False,
         )
 
         # Try to get the documentation string for each command
@@ -4205,7 +4197,8 @@ class Cmd(cmd.Cmd):
             # Add this command to the table
             topics_table.add_row(command, cmd_desc)
 
-        self.poutput(topics_table)
+        category_grid.add_row(topics_table)
+        self.poutput(category_grid)
         self.poutput()
 
     def render_columns(self, str_list: list[str] | None, display_width: int = 80) -> str:
@@ -4486,6 +4479,7 @@ class Cmd(cmd.Cmd):
             Column("Description", overflow="fold"),
             box=rich.box.SIMPLE_HEAD,
             border_style=Cmd2Style.TABLE_BORDER,
+            show_edge=False,
         )
 
         # Build the table and populate self.last_result
@@ -4496,7 +4490,9 @@ class Cmd(cmd.Cmd):
             settable_table.add_row(param, str(settable.get_value()), settable.description)
             self.last_result[param] = settable.get_value()
 
+        self.poutput()
         self.poutput(settable_table)
+        self.poutput()
 
     @classmethod
     def _build_shell_parser(cls) -> Cmd2ArgumentParser:

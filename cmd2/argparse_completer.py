@@ -578,6 +578,7 @@ class ArgparseCompleter:
             hint_table = Table(
                 *headers,
                 box=SIMPLE_HEAD,
+                show_edge=False,
                 border_style=Cmd2Style.TABLE_BORDER,
             )
             for item in completion_items:
