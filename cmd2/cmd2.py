@@ -4133,15 +4133,18 @@ class Cmd(cmd.Cmd):
         if not cmds:
             return
 
-        # Add a row that looks like a table header.
-        header_grid = Table.grid()
-        header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-        header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
-        self.poutput(ru.indent(header_grid, 1))
+        # Print a row that looks like a table header.
+        if header:
+            header_grid = Table.grid()
+            header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
+            header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
+            self.poutput(ru.indent(header_grid, 1))
+
+        # Subtract 2 from the max column width to account for the
+        # one-space indentation and a one-space right margin.
+        maxcol = min(maxcol, ru.console_width()) - 2
 
         # Print the topics in columns.
-        # Subtract 1 from maxcol to account for indentation.
-        maxcol = min(maxcol, ru.console_width()) - 1
         columnized_cmds = self.render_columns(cmds, maxcol)
         self.poutput(ru.indent(columnized_cmds, 1))
         self.poutput()
@@ -5523,7 +5526,7 @@ class Cmd(cmd.Cmd):
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
         self.poutput(
-            Rule("cmd2 transcript test", style=Style.null()),
+            Rule("cmd2 transcript test", characters=self.ruler, style=Style.null()),
             style=Style(bold=True),
         )
         self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}, readline-{rl_type}')
@@ -5542,7 +5545,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self.perror(stream.read(), end="", style=None)
             finish_msg = f'{num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds'
-            self.psuccess(Rule(finish_msg, style=Style.null()))
+            self.psuccess(Rule(finish_msg, characters=self.ruler, style=Style.null()))
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()

@@ -1,7 +1,9 @@
 """Unit testing for cmd2/rich_utils.py module"""
 
 import pytest
+import rich.box
 from rich.style import Style
+from rich.table import Table
 from rich.text import Text
 
 from cmd2 import (
@@ -57,6 +59,45 @@ def test_string_to_rich_text() -> None:
     # Test empty string
     input_string = ""
     assert ru.string_to_rich_text(input_string).plain == input_string
+
+
+def test_indented_text() -> None:
+    console = ru.Cmd2GeneralConsole()
+
+    # With an indention of 10, text will be evenly split across two lines.
+    console.width = 20
+    text = "A" * 20
+    level = 10
+    indented_text = ru.indent(text, level)
+
+    with console.capture() as capture:
+        console.print(indented_text)
+    result = capture.get().splitlines()
+
+    padding = " " * level
+    expected_line = padding + ("A" * 10)
+    assert result[0] == expected_line
+    assert result[1] == expected_line
+
+
+def test_indented_table() -> None:
+    console = ru.Cmd2GeneralConsole()
+
+    level = 2
+    table = Table("Column", box=rich.box.ASCII)
+    table.add_row("Some Data")
+    indented_table = ru.indent(table, level)
+
+    with console.capture() as capture:
+        console.print(indented_table)
+    result = capture.get().splitlines()
+
+    padding = " " * level
+    assert result[0].startswith(padding + "+-----------+")
+    assert result[1].startswith(padding + "| Column    |")
+    assert result[2].startswith(padding + "|-----------|")
+    assert result[3].startswith(padding + "| Some Data |")
+    assert result[4].startswith(padding + "+-----------+")
 
 
 @pytest.mark.parametrize(
