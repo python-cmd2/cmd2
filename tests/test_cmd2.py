@@ -2092,21 +2092,32 @@ def test_poutput_none(outsim_app) -> None:
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
-def test_poutput_ansi_always(outsim_app) -> None:
-    msg = 'Hello World'
-    colored_msg = Text(msg, style="cyan")
-    outsim_app.poutput(colored_msg)
+@pytest.mark.parametrize(
+    # Test a Rich Text and a string.
+    ('styled_msg', 'expected'),
+    [
+        (Text("A Text object", style="cyan"), "\x1b[36mA Text object\x1b[0m\n"),
+        (su.stylize("A str object", style="blue"), "\x1b[34mA str object\x1b[0m\n"),
+    ],
+)
+def test_poutput_ansi_always(styled_msg, expected, outsim_app) -> None:
+    outsim_app.poutput(styled_msg)
     out = outsim_app.stdout.getvalue()
-    assert out == "\x1b[36mHello World\x1b[0m\n"
+    assert out == expected
 
 
 @with_ansi_style(ru.AllowStyle.NEVER)
-def test_poutput_ansi_never(outsim_app) -> None:
-    msg = 'Hello World'
-    colored_msg = Text(msg, style="cyan")
-    outsim_app.poutput(colored_msg)
+@pytest.mark.parametrize(
+    # Test a Rich Text and a string.
+    ('styled_msg', 'expected'),
+    [
+        (Text("A Text object", style="cyan"), "A Text object\n"),
+        (su.stylize("A str object", style="blue"), "A str object\n"),
+    ],
+)
+def test_poutput_ansi_never(styled_msg, expected, outsim_app) -> None:
+    outsim_app.poutput(styled_msg)
     out = outsim_app.stdout.getvalue()
-    expected = msg + '\n'
     assert out == expected
 
 

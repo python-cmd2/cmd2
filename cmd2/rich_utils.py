@@ -14,9 +14,9 @@ from rich.console import (
     JustifyMethod,
     OverflowMethod,
     RenderableType,
-    RichCast,
 )
 from rich.padding import Padding
+from rich.protocol import rich_cast
 from rich.style import StyleType
 from rich.table import (
     Column,
@@ -39,10 +39,6 @@ class AllowStyle(Enum):
     def __str__(self) -> str:
         """Return value instead of enum name for printing in cmd2's set command."""
         return str(self.value)
-
-    def __repr__(self) -> str:
-        """Return quoted value instead of enum description for printing in cmd2's set command."""
-        return repr(self.value)
 
 
 # Controls when ANSI style sequences are allowed in output
@@ -303,7 +299,7 @@ def indent(renderable: RenderableType, level: int) -> Padding:
     return Padding.indent(renderable, level)
 
 
-def prepare_objects_for_rich_print(*objects: Any) -> tuple[RenderableType, ...]:
+def prepare_objects_for_rich_rendering(*objects: Any) -> tuple[Any, ...]:
     """Prepare a tuple of objects for printing by Rich's Console.print().
 
     This function converts any non-Rich object whose string representation contains
@@ -316,17 +312,22 @@ def prepare_objects_for_rich_print(*objects: Any) -> tuple[RenderableType, ...]:
     :return: a tuple containing the processed objects.
     """
     object_list = list(objects)
+
     for i, obj in enumerate(object_list):
-        # If the object is a recognized renderable, we don't need to do anything. Rich will handle it.
-        if isinstance(obj, (ConsoleRenderable, RichCast)):
+        # Resolve the object's final renderable form, including those
+        # with a __rich__ method that might return a string.
+        renderable = rich_cast(obj)
+
+        # This object implements the Rich console protocol, so no preprocessing is needed.
+        if isinstance(renderable, ConsoleRenderable):
             continue
 
         # Check if the object's string representation contains ANSI styles, and if so,
         # replace it with a Rich Text object for correct width calculation.
-        obj_str = str(obj)
-        obj_text = string_to_rich_text(obj_str)
+        renderable_as_str = str(renderable)
+        renderable_as_text = string_to_rich_text(renderable_as_str)
 
-        if obj_text.plain != obj_str:
-            object_list[i] = obj_text
+        if renderable_as_text.plain != renderable_as_str:
+            object_list[i] = renderable_as_text
 
     return tuple(object_list)

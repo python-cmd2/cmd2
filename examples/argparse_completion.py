@@ -3,7 +3,7 @@
 
 import argparse
 
-from rich.box import SIMPLE_HEAD
+import rich.box
 from rich.style import Style
 from rich.table import Table
 from rich.text import Text
@@ -49,7 +49,12 @@ class ArgparseCompletion(Cmd):
             Text("styled text!!", style=Style(color=Color.BRIGHT_YELLOW, underline=True)),
         )
 
-        table_item = Table("Left Column", "Right Column", box=SIMPLE_HEAD, border_style=Cmd2Style.TABLE_BORDER)
+        table_item = Table(
+            "Left Column",
+            "Right Column",
+            box=rich.box.ROUNDED,
+            border_style=Cmd2Style.TABLE_BORDER,
+        )
         table_item.add_row("Yes, it's true.", "CompletionItems can")
         table_item.add_row("even display description", "data in tables!")
 

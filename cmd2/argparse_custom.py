@@ -194,7 +194,7 @@ This means a long string which exceeds the width of its column will be
 truncated with an ellipsis at the end. You can override this and other settings
 when you create the ``Column``.
 
-``descriptive_data`` items can include Rich objects, including styled text.
+``descriptive_data`` items can include Rich objects, including styled Text and Tables.
 
 To avoid printing a excessive information to the screen at once when a user
 presses tab, there is a maximum threshold for the number of CompletionItems
@@ -388,13 +388,18 @@ class CompletionItem(str):  # noqa: SLOT000
         """CompletionItem Initializer.
 
         :param value: the value being tab completed
-        :param descriptive_data: descriptive data to display
+        :param descriptive_data: a list of descriptive data to display in the columns that follow
+                                 the completion value. The number of items in this list must equal
+                                 the number of descriptive headers defined for the argument.
         :param args: args for str __init__
         """
         super().__init__(*args)
 
         # Make sure all objects are renderable by a Rich table.
-        self.descriptive_data = [obj if is_renderable(obj) else str(obj) for obj in descriptive_data]
+        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in descriptive_data]
+
+        # Convert objects with ANSI styles to Rich Text for correct display width.
+        self.descriptive_data = ru.prepare_objects_for_rich_rendering(*renderable_data)
 
         # Save the original value to support CompletionItems as argparse choices.
         # cmd2 has patched argparse so input is compared to this value instead of the CompletionItem instance.

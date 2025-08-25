@@ -1225,7 +1225,7 @@ class Cmd(cmd.Cmd):
                        method and still call `super()` without encountering unexpected keyword argument errors.
                        These arguments are not passed to Rich's Console.print().
         """
-        prepared_objects = ru.prepare_objects_for_rich_print(*objects)
+        prepared_objects = ru.prepare_objects_for_rich_rendering(*objects)
 
         try:
             Cmd2GeneralConsole(file).print(
@@ -1469,7 +1469,7 @@ class Cmd(cmd.Cmd):
 
         # Check if we are outputting to a pager.
         if functional_terminal and can_block:
-            prepared_objects = ru.prepare_objects_for_rich_print(*objects)
+            prepared_objects = ru.prepare_objects_for_rich_rendering(*objects)
 
             # Chopping overrides soft_wrap
             if chop:
@@ -2508,7 +2508,11 @@ class Cmd(cmd.Cmd):
         results: list[CompletionItem] = []
 
         for cur_key in self.settables:
-            descriptive_data = [self.settables[cur_key].get_value(), self.settables[cur_key].description]
+            settable = self.settables[cur_key]
+            descriptive_data = [
+                str(settable.get_value()),
+                settable.description,
+            ]
             results.append(CompletionItem(cur_key, descriptive_data))
 
         return results
@@ -4157,8 +4161,8 @@ class Cmd(cmd.Cmd):
             Column("Name", no_wrap=True),
             Column("Description", overflow="fold"),
             box=rich.box.SIMPLE_HEAD,
-            border_style=Cmd2Style.TABLE_BORDER,
             show_edge=False,
+            border_style=Cmd2Style.TABLE_BORDER,
         )
 
         # Try to get the documentation string for each command
@@ -4478,8 +4482,8 @@ class Cmd(cmd.Cmd):
             Column("Value", overflow="fold"),
             Column("Description", overflow="fold"),
             box=rich.box.SIMPLE_HEAD,
-            border_style=Cmd2Style.TABLE_BORDER,
             show_edge=False,
+            border_style=Cmd2Style.TABLE_BORDER,
         )
 
         # Build the table and populate self.last_result
@@ -4487,7 +4491,11 @@ class Cmd(cmd.Cmd):
 
         for param in sorted(to_show, key=self.default_sort_key):
             settable = self.settables[param]
-            settable_table.add_row(param, str(settable.get_value()), settable.description)
+            settable_table.add_row(
+                param,
+                str(settable.get_value()),
+                settable.description,
+            )
             self.last_result[param] = settable.get_value()
 
         self.poutput()
