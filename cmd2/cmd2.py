@@ -4079,14 +4079,23 @@ class Cmd(cmd.Cmd):
                 self.poutput(self.doc_leader, style=Cmd2Style.HELP_LEADER)
             self.poutput()
 
-            if not cmds_cats:
-                # No categories found, fall back to standard behavior
-                self._print_documented_command_topics(self.doc_header, cmds_doc, args.verbose)
-            else:
-                # Categories found, Organize all commands by category
-                for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
-                    self._print_documented_command_topics(category, cmds_cats[category], args.verbose)
-                self._print_documented_command_topics(self.default_category, cmds_doc, args.verbose)
+            # Print any categories first and then the default category.
+            sorted_categories = sorted(cmds_cats.keys(), key=self.default_sort_key)
+            all_cmds = {category: cmds_cats[category] for category in sorted_categories}
+            all_cmds[self.doc_header] = cmds_doc
+
+            # Used to provide verbose table separation for better readability.
+            previous_table_printed = False
+
+            for category, commands in all_cmds.items():
+                if previous_table_printed:
+                    self.poutput()
+
+                self._print_documented_command_topics(category, commands, args.verbose)
+                previous_table_printed = bool(commands) and args.verbose
+
+            if previous_table_printed and (help_topics or cmds_undoc):
+                self.poutput()
 
             self.print_topics(self.misc_header, help_topics, 15, 80)
             self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
@@ -4102,7 +4111,7 @@ class Cmd(cmd.Cmd):
                 completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
                 completer.print_help(args.subcommands, self.stdout)
 
-            # If there is a help func delegate to do_help
+            # If the command has a custom help function, then call it
             elif help_func is not None:
                 help_func()
 
