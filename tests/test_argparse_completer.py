@@ -5,6 +5,7 @@ import numbers
 from typing import cast
 
 import pytest
+from rich.text import Text
 
 import cmd2
 import cmd2.string_utils as su
@@ -115,7 +116,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         CompletionItem('choice_1', ['Description 1']),
         # Make this the longest description so we can test display width.
         CompletionItem('choice_2', [su.stylize("String with style", style=cmd2.Color.BLUE)]),
-        CompletionItem('choice_3', [su.stylize("Text with style", style=cmd2.Color.RED)]),
+        CompletionItem('choice_3', [Text("Text with style", style=cmd2.Color.RED)]),
     )
 
     # This tests that CompletionItems created with numerical values are sorted as numbers.
@@ -739,7 +740,7 @@ def test_completion_items(ac_app) -> None:
     assert lines[3].endswith("\x1b[34mString with style\x1b[0m ")
 
     # Verify that the styled Rich Text also rendered.
-    assert lines[4].endswith("\x1b[31mText with style\x1b[0m   ")
+    assert lines[4].endswith("\x1b[31mText with style  \x1b[0m ")
 
     # Now test CompletionItems created from numbers
     text = ''
