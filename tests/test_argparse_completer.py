@@ -7,6 +7,7 @@ from typing import cast
 import pytest
 
 import cmd2
+import cmd2.string_utils as su
 from cmd2 import (
     Cmd2ArgumentParser,
     CompletionError,
@@ -15,11 +16,13 @@ from cmd2 import (
     argparse_custom,
     with_argparser,
 )
+from cmd2 import rich_utils as ru
 
 from .conftest import (
     complete_tester,
     normalize,
     run_cmd,
+    with_ansi_style,
 )
 
 # Data and functions for testing standalone choice_provider and completer
@@ -109,12 +112,18 @@ class ArgparseCompleterTester(cmd2.Cmd):
     static_choices_list = ('static', 'choices', 'stop', 'here')
     choices_from_provider = ('choices', 'provider', 'probably', 'improved')
     completion_item_choices = (
-        CompletionItem('choice_1', ['A description']),
-        CompletionItem('choice_2', ['Another description']),
+        CompletionItem('choice_1', ['Description 1']),
+        # Make this the longest description so we can test display width.
+        CompletionItem('choice_2', [su.stylize("String with style", style=cmd2.Color.BLUE)]),
+        CompletionItem('choice_3', [su.stylize("Text with style", style=cmd2.Color.RED)]),
     )
 
     # This tests that CompletionItems created with numerical values are sorted as numbers.
-    num_completion_items = (CompletionItem(5, ["Five"]), CompletionItem(1.5, ["One.Five"]), CompletionItem(2, ["Five"]))
+    num_completion_items = (
+        CompletionItem(5, ["Five"]),
+        CompletionItem(1.5, ["One.Five"]),
+        CompletionItem(2, ["Five"]),
+    )
 
     def choices_provider(self) -> tuple[str]:
         """Method that provides choices"""
@@ -704,6 +713,7 @@ def test_autocomp_blank_token(ac_app) -> None:
     assert sorted(completions) == sorted(ArgparseCompleterTester.completions_for_pos_2)
 
 
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_completion_items(ac_app) -> None:
     # First test CompletionItems created from strings
     text = ''
@@ -716,16 +726,20 @@ def test_completion_items(ac_app) -> None:
     assert len(ac_app.completion_matches) == len(ac_app.completion_item_choices)
     assert len(ac_app.display_matches) == len(ac_app.completion_item_choices)
 
-    # Look for both the value and description in the hint table
-    line_found = False
-    for line in ac_app.formatted_completions.splitlines():
-        # Since the CompletionItems were created from strings, the left-most column is left-aligned.
-        # Therefore choice_1 will begin the line (with 1 space for padding).
-        if line.startswith(' choice_1') and 'A description' in line:
-            line_found = True
-            break
+    lines = ac_app.formatted_completions.splitlines()
 
-    assert line_found
+    # Since the CompletionItems were created from strings, the left-most column is left-aligned.
+    # Therefore choice_1 will begin the line (with 1 space for padding).
+    assert lines[2].startswith(' choice_1')
+    assert lines[2].strip().endswith('Description 1')
+
+    # Verify that the styled string was converted to a Rich Text object so that
+    # Rich could correctly calculate its display width. Since it was the longest
+    # description in the table, we should only see one space of padding after it.
+    assert lines[3].endswith("\x1b[34mString with style\x1b[0m ")
+
+    # Verify that the styled Rich Text also rendered.
+    assert lines[4].endswith("\x1b[31mText with style\x1b[0m   ")
 
     # Now test CompletionItems created from numbers
     text = ''
@@ -738,16 +752,12 @@ def test_completion_items(ac_app) -> None:
     assert len(ac_app.completion_matches) == len(ac_app.num_completion_items)
     assert len(ac_app.display_matches) == len(ac_app.num_completion_items)
 
-    # Look for both the value and description in the hint table
-    line_found = False
-    for line in ac_app.formatted_completions.splitlines():
-        # Since the CompletionItems were created from numbers, the left-most column is right-aligned.
-        # Therefore 1.5 will be right-aligned.
-        if line.startswith("                  1.5") and "One.Five" in line:
-            line_found = True
-            break
+    lines = ac_app.formatted_completions.splitlines()
 
-    assert line_found
+    # Since the CompletionItems were created from numbers, the left-most column is right-aligned.
+    # Therefore 1.5 will be right-aligned.
+    assert lines[2].startswith("                  1.5")
+    assert lines[2].strip().endswith('One.Five')
 
 
 @pytest.mark.parametrize(
