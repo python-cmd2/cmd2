@@ -3508,9 +3508,9 @@ class Cmd(cmd.Cmd):
     # Top-level parser for alias
     @staticmethod
     def _build_alias_parser() -> Cmd2ArgumentParser:
-        alias_description = Group(
+        alias_description = Text.assemble(
             "Manage aliases.",
-            "\n",
+            "\n\n",
             "An alias is a command that enables replacement of a word by another string.",
         )
         alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description)
@@ -3537,10 +3537,11 @@ class Cmd(cmd.Cmd):
         alias_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_create_description)
 
         # Add Notes epilog
-        alias_create_notes = Group(
+        alias_create_notes = Text.assemble(
             "If you want to use redirection, pipes, or terminators in the value of the alias, then quote them.",
-            "\n",
-            Text("    alias create save_results print_results \">\" out.txt\n", style=Cmd2Style.COMMAND_LINE),
+            "\n\n",
+            ("    alias create save_results print_results \">\" out.txt\n", Cmd2Style.COMMAND_LINE),
+            "\n\n",
             (
                 "Since aliases are resolved during parsing, tab completion will function as it would "
                 "for the actual command the alias resolves to."
@@ -3639,12 +3640,12 @@ class Cmd(cmd.Cmd):
     # alias -> list
     @classmethod
     def _build_alias_list_parser(cls) -> Cmd2ArgumentParser:
-        alias_list_description = Group(
+        alias_list_description = Text.assemble(
             (
                 "List specified aliases in a reusable form that can be saved to a startup "
                 "script to preserve aliases across sessions."
             ),
-            "\n",
+            "\n\n",
             "Without arguments, all aliases will be listed.",
         )
 
@@ -3719,9 +3720,9 @@ class Cmd(cmd.Cmd):
     # Top-level parser for macro
     @staticmethod
     def _build_macro_parser() -> Cmd2ArgumentParser:
-        macro_description = Group(
+        macro_description = Text.assemble(
             "Manage macros.",
-            "\n",
+            "\n\n",
             "A macro is similar to an alias, but it can contain argument placeholders.",
         )
         macro_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_description)
@@ -3744,48 +3745,46 @@ class Cmd(cmd.Cmd):
     # macro -> create
     @classmethod
     def _build_macro_create_parser(cls) -> Cmd2ArgumentParser:
-        macro_create_description = Group(
+        macro_create_description = Text.assemble(
             "Create or overwrite a macro.",
-            "\n",
+            "\n\n",
             "A macro is similar to an alias, but it can contain argument placeholders.",
-            "\n",
+            "\n\n",
             "Arguments are expressed when creating a macro using {#} notation where {1} means the first argument.",
-            "\n",
+            "\n\n",
             "The following creates a macro called my_macro that expects two arguments:",
-            "\n",
-            Text("    macro create my_macro make_dinner --meat {1} --veggie {2}", style=Cmd2Style.COMMAND_LINE),
-            "\n",
+            "\n\n",
+            ("    macro create my_macro make_dinner --meat {1} --veggie {2}", Cmd2Style.COMMAND_LINE),
+            "\n\n",
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
-            "\n",
-            Text.assemble(
-                ("    my_macro beef broccoli", Cmd2Style.COMMAND_LINE),
-                (" ───> ", Style(bold=True)),
-                ("make_dinner --meat beef --veggie broccoli", Cmd2Style.COMMAND_LINE),
-            ),
+            "\n\n",
+            ("    my_macro beef broccoli", Cmd2Style.COMMAND_LINE),
+            (" ───> ", Style(bold=True)),
+            ("make_dinner --meat beef --veggie broccoli", Cmd2Style.COMMAND_LINE),
         )
         macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
 
         # Add Notes epilog
-        macro_create_notes = Group(
+        macro_create_notes = Text.assemble(
             "To use the literal string {1} in your command, escape it this way: {{1}}.",
-            "\n",
+            "\n\n",
             "Extra arguments passed to a macro are appended to resolved command.",
-            "\n",
+            "\n\n",
             (
                 "An argument number can be repeated in a macro. In the following example the "
                 "first argument will populate both {1} instances."
             ),
-            "\n",
-            Text("    macro create ft file_taxes -p {1} -q {2} -r {1}", style=Cmd2Style.COMMAND_LINE),
-            "\n",
+            "\n\n",
+            ("    macro create ft file_taxes -p {1} -q {2} -r {1}", Cmd2Style.COMMAND_LINE),
+            "\n\n",
             "To quote an argument in the resolved command, quote it during creation.",
-            "\n",
-            Text("    macro create backup !cp \"{1}\" \"{1}.orig\"", style=Cmd2Style.COMMAND_LINE),
-            "\n",
+            "\n\n",
+            ("    macro create backup !cp \"{1}\" \"{1}.orig\"", Cmd2Style.COMMAND_LINE),
+            "\n\n",
             "If you want to use redirection, pipes, or terminators in the value of the macro, then quote them.",
-            "\n",
-            Text("    macro create show_results print_results -type {1} \"|\" less", style=Cmd2Style.COMMAND_LINE),
-            "\n",
+            "\n\n",
+            ("    macro create show_results print_results -type {1} \"|\" less", Cmd2Style.COMMAND_LINE),
+            "\n\n",
             (
                 "Since macros don't resolve until after you press Enter, their arguments tab complete as paths. "
                 "This default behavior changes if custom tab completion for macro arguments has been implemented."
@@ -3926,11 +3925,10 @@ class Cmd(cmd.Cmd):
 
     # macro -> list
     macro_list_help = "list macros"
-    macro_list_description = (
-        "List specified macros in a reusable form that can be saved to a startup script\n"
-        "to preserve macros across sessions\n"
-        "\n"
-        "Without arguments, all macros will be listed."
+    macro_list_description = Text.assemble(
+        "List specified macros in a reusable form that can be saved to a startup script to preserve macros across sessions.",
+        "\n\n",
+        "Without arguments, all macros will be listed.",
     )
 
     macro_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
@@ -4385,9 +4383,9 @@ class Cmd(cmd.Cmd):
     def _build_base_set_parser(cls) -> Cmd2ArgumentParser:
         # When tab completing value, we recreate the set command parser with a value argument specific to
         # the settable being edited. To make this easier, define a base parser with all the common elements.
-        set_description = Group(
+        set_description = Text.assemble(
             "Set a settable parameter or show current settings of parameters.",
-            "\n",
+            "\n\n",
             (
                 "Call without arguments for a list of all settable parameters with their values. "
                 "Call with just param to view that parameter's value."
@@ -5380,9 +5378,9 @@ class Cmd(cmd.Cmd):
 
     @classmethod
     def _build_base_run_script_parser(cls) -> Cmd2ArgumentParser:
-        run_script_description = Group(
+        run_script_description = Text.assemble(
             "Run text script.",
-            "\n",
+            "\n\n",
             "Scripts should contain one command per line, entered as you would in the console.",
         )
 
