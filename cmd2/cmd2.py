@@ -2487,9 +2487,9 @@ class Cmd(cmd.Cmd):
         """Return list of alias names and values as CompletionItems."""
         results: list[CompletionItem] = []
 
-        for cur_key in self.aliases:
-            descriptive_data = [self.aliases[cur_key]]
-            results.append(CompletionItem(cur_key, descriptive_data))
+        for name, value in self.aliases.items():
+            descriptive_data = [value]
+            results.append(CompletionItem(name, descriptive_data))
 
         return results
 
@@ -2497,9 +2497,9 @@ class Cmd(cmd.Cmd):
         """Return list of macro names and values as CompletionItems."""
         results: list[CompletionItem] = []
 
-        for cur_key in self.macros:
-            descriptive_data = [self.macros[cur_key].value]
-            results.append(CompletionItem(cur_key, descriptive_data))
+        for name, macro in self.macros.items():
+            descriptive_data = [macro.value]
+            results.append(CompletionItem(name, descriptive_data))
 
         return results
 
@@ -2507,13 +2507,12 @@ class Cmd(cmd.Cmd):
         """Return list of Settable names, values, and descriptions as CompletionItems."""
         results: list[CompletionItem] = []
 
-        for cur_key in self.settables:
-            settable = self.settables[cur_key]
+        for name, settable in self.settables.items():
             descriptive_data = [
                 str(settable.get_value()),
                 settable.description,
             ]
-            results.append(CompletionItem(cur_key, descriptive_data))
+            results.append(CompletionItem(name, descriptive_data))
 
         return results
 
