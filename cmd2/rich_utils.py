@@ -40,6 +40,10 @@ class AllowStyle(Enum):
         """Return value instead of enum name for printing in cmd2's set command."""
         return str(self.value)
 
+    def __repr__(self) -> str:
+        """Return quoted value instead of enum description for printing in cmd2's set command."""
+        return repr(self.value)
+
 
 # Controls when ANSI style sequences are allowed in output
 ALLOW_STYLE = AllowStyle.TERMINAL
