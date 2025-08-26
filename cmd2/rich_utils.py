@@ -1,5 +1,6 @@
 """Provides common utilities to support Rich in cmd2-based applications."""
 
+import re
 from collections.abc import Mapping
 from enum import Enum
 from typing import (
@@ -28,13 +29,18 @@ from rich_argparse import RichHelpFormatter
 
 from .styles import DEFAULT_CMD2_STYLES
 
+# A compiled regular expression to detect ANSI escape sequences.
+# The `[a-zA-Z]` at the end of the regex allows it to match all types of
+# escape sequences, including those for styling, cursor movement, etc.
+_ANSI_ESCAPE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")
+
 
 class AllowStyle(Enum):
     """Values for ``cmd2.rich_utils.ALLOW_STYLE``."""
 
-    ALWAYS = 'Always'  # Always output ANSI style sequences
-    NEVER = 'Never'  # Remove ANSI style sequences from all output
-    TERMINAL = 'Terminal'  # Remove ANSI style sequences if the output is not going to the terminal
+    ALWAYS = "Always"  # Always output ANSI style sequences
+    NEVER = "Never"  # Remove ANSI style sequences from all output
+    TERMINAL = "Terminal"  # Remove ANSI style sequences if the output is not going to the terminal
 
     def __str__(self) -> str:
         """Return value instead of enum name for printing in cmd2's set command."""
@@ -234,7 +240,7 @@ def rich_text_to_string(text: Text) -> str:
     """Convert a Rich Text object to a string.
 
     This function's purpose is to render a Rich Text object, including any styles (e.g., color, bold),
-    to a plain Python string with ANSI escape codes. It differs from `text.plain`, which strips
+    to a plain Python string with ANSI style sequences. It differs from `text.plain`, which strips
     all formatting.
 
     :param text: the text object to convert
@@ -259,7 +265,7 @@ _from_ansi_has_newline_bug = Text.from_ansi("\n").plain == ""
 
 
 def string_to_rich_text(text: str) -> Text:
-    r"""Create a Text object from a string which can contain ANSI escape codes.
+    r"""Create a Text object from a string which can contain ANSI style sequences.
 
     This wraps rich.Text.from_ansi() to handle an issue where it removes the
     trailing line break from a string (e.g. "Hello\n" becomes "Hello").
@@ -323,9 +329,9 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
     """Prepare a tuple of objects for printing by Rich's Console.print().
 
     This function converts any non-Rich object whose string representation contains
-    ANSI style codes into a rich.Text object. This ensures correct display width
-    calculation, as Rich can then properly parse and account for the non-printing
-    ANSI codes. All other objects are left untouched, allowing Rich's native
+    ANSI escape sequences into a rich.Text object. This ensures correct display width
+    calculation, as Rich can then properly parse and account for these non-printing
+    codes. All other objects are left untouched, allowing Rich's native
     renderers to handle them.
 
     :param objects: objects to prepare
@@ -342,12 +348,10 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
         if isinstance(renderable, ConsoleRenderable):
             continue
 
-        # Check if the object's string representation contains ANSI styles, and if so,
-        # replace it with a Rich Text object for correct width calculation.
         renderable_as_str = str(renderable)
-        renderable_as_text = string_to_rich_text(renderable_as_str)
 
-        if renderable_as_text.plain != renderable_as_str:
-            object_list[i] = renderable_as_text
+        # Check for any ANSI escape sequences in the string.
+        if _ANSI_ESCAPE_SEQUENCE_RE.search(renderable_as_str):
+            object_list[i] = string_to_rich_text(renderable_as_str)
 
     return tuple(object_list)

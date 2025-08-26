@@ -1,14 +1,19 @@
 """Provides string utility functions.
 
 This module offers a collection of string utility functions built on the Rich library.
-These utilities are designed to correctly handle strings with ANSI escape codes and
+These utilities are designed to correctly handle strings with ANSI style sequences and
 full-width characters (like those used in CJK languages).
 """
+
+import re
 
 from rich.align import AlignMethod
 from rich.style import StyleType
 
 from . import rich_utils as ru
+
+# A compiled regular expression to detect ANSI style sequences.
+_ANSI_STYLE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;?]*m")
 
 
 def align(
@@ -94,13 +99,15 @@ def stylize(val: str, style: StyleType) -> str:
 
 
 def strip_style(val: str) -> str:
-    """Strip all ANSI styles from a string.
+    """Strip all ANSI style sequences from a string.
+
+    This function uses a regular expression to efficiently remove ANSI style
+    sequences, which are a subset of ANSI escape sequences used for text formatting.
 
     :param val: string to be stripped
     :return: the stripped string
     """
-    text = ru.string_to_rich_text(val)
-    return text.plain
+    return _ANSI_STYLE_SEQUENCE_RE.sub("", val)
 
 
 def str_width(val: str) -> int:
@@ -163,4 +170,4 @@ def norm_fold(val: str) -> str:
     """
     import unicodedata
 
-    return unicodedata.normalize('NFC', val).casefold()
+    return unicodedata.normalize("NFC", val).casefold()
