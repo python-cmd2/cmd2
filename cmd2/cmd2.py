@@ -5626,11 +5626,9 @@ class Cmd(cmd.Cmd):
                     cursor_offset=rl_get_point(),
                     alert_msg=alert_msg,
                 )
-                if rl_type == RlType.GNU:
-                    sys.stderr.write(terminal_str)
-                    sys.stderr.flush()
-                elif rl_type == RlType.PYREADLINE:
-                    readline.rl.mode.console.write(terminal_str)
+
+                sys.stdout.write(terminal_str)
+                sys.stdout.flush()
 
                 # Redraw the prompt and input lines below the alert
                 rl_force_redisplay()
@@ -5688,9 +5686,6 @@ class Cmd(cmd.Cmd):
     def set_window_title(title: str) -> None:  # pragma: no cover
         """Set the terminal window title.
 
-        NOTE: This function writes to stderr. Therefore, if you call this during a command run by a pyscript,
-              the string which updates the title will appear in that command's CommandResult.stderr data.
-
         :param title: the new window title
         """
         if not vt100_support:
@@ -5699,8 +5694,8 @@ class Cmd(cmd.Cmd):
         from .terminal_utils import set_title_str
 
         try:
-            sys.stderr.write(set_title_str(title))
-            sys.stderr.flush()
+            sys.stdout.write(set_title_str(title))
+            sys.stdout.flush()
         except AttributeError:
             # Debugging in Pycharm has issues with setting terminal title
             pass
