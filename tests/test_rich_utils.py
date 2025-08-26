@@ -139,3 +139,23 @@ def test_set_theme() -> None:
 
     assert ru.APP_THEME.styles[rich_style_key] != orig_rich_style
     assert ru.APP_THEME.styles[rich_style_key] == theme[rich_style_key]
+
+
+def test_ansi_escape_sequence_re() -> None:
+    import cmd2.terminal_utils as tu
+
+    # Test a CSI sequence
+    cursor_contol = tu.Cursor.UP(1)
+    assert ru._ANSI_ESCAPE_SEQUENCE_RE.search(cursor_contol)
+
+    # Test an OSC sequence
+    set_title = tu.set_title_str("Hello")
+    assert ru._ANSI_ESCAPE_SEQUENCE_RE.search(set_title)
+
+    # Test DEC cursor save
+    cursor_save = "\x1b\x37"
+    assert ru._ANSI_ESCAPE_SEQUENCE_RE.search(cursor_save)
+
+    # Test DEC cursor restore
+    cursor_restore = "\x1b\x38"
+    assert ru._ANSI_ESCAPE_SEQUENCE_RE.search(cursor_restore)

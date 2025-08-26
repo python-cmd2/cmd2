@@ -30,9 +30,19 @@ from rich_argparse import RichHelpFormatter
 from .styles import DEFAULT_CMD2_STYLES
 
 # A compiled regular expression to detect ANSI escape sequences.
-# The `[a-zA-Z]` at the end of the regex allows it to match all types of
-# escape sequences, including those for styling, cursor movement, etc.
-_ANSI_ESCAPE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;?]*[a-zA-Z]")
+_ANSI_ESCAPE_SEQUENCE_RE = re.compile(
+    r"""
+    \x1b              # Match the Escape character (ESC)
+    (?:               # Start of non-capturing group for the different sequence types
+        \[[0-9;?]*[a-zA-Z]  # Match a CSI sequence (e.g., \x1b[31m)
+    |                 # OR
+        \].*?(?:\x07|\x1b\x5c)  # Match an OSC sequence (e.g., \x1b]2;Hello\x07)
+    |                 # OR
+        \x37|\x38     # Match DEC cursor save/restore sequences
+    )                 # End of non-capturing group
+""",
+    re.VERBOSE,
+)
 
 
 class AllowStyle(Enum):
