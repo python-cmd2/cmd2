@@ -126,11 +126,13 @@ class Settable:
         self.choices_provider = choices_provider
         self.completer = completer
 
-    def get_value(self) -> Any:
+    @property
+    def value(self) -> Any:
         """Get the value of the settable attribute."""
         return getattr(self.settable_obj, self.settable_attrib_name)
 
-    def set_value(self, value: Any) -> None:
+    @value.setter
+    def value(self, value: Any) -> None:
         """Set the settable attribute on the specified destination object.
 
         :param value: new value to set
@@ -144,7 +146,7 @@ class Settable:
             raise ValueError(f"invalid choice: {new_value!r} (choose from {choices_str})")
 
         # Try to update the settable's value
-        orig_value = self.get_value()
+        orig_value = self.value
         setattr(self.settable_obj, self.settable_attrib_name, new_value)
 
         # Check if we need to call an onchange callback

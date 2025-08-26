@@ -153,7 +153,7 @@ def test_base_set(base_app) -> None:
     # Make sure all settables appear in last_result.
     assert len(base_app.last_result) == len(base_app.settables)
     for param in base_app.last_result:
-        assert base_app.last_result[param] == base_app.settables[param].get_value()
+        assert base_app.last_result[param] == base_app.settables[param].value
 
 
 def test_set(base_app) -> None:
@@ -2279,7 +2279,7 @@ def test_get_settable_completion_items(base_app) -> None:
 
         # These CompletionItem descriptions are a two column table (Settable Value and Settable Description)
         # First check if the description text starts with the value
-        str_value = str(cur_settable.get_value())
+        str_value = str(cur_settable.value)
         assert cur_res.descriptive_data[0].startswith(str_value)
 
         # The second column is likely to have wrapped long text. So we will just examine the

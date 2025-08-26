@@ -2509,7 +2509,7 @@ class Cmd(cmd.Cmd):
 
         for name, settable in self.settables.items():
             descriptive_data = [
-                str(settable.get_value()),
+                str(settable.value),
                 settable.description,
             ]
             results.append(CompletionItem(name, descriptive_data))
@@ -4460,12 +4460,12 @@ class Cmd(cmd.Cmd):
             if args.value:
                 # Try to update the settable's value
                 try:
-                    orig_value = settable.get_value()
-                    settable.set_value(su.strip_quotes(args.value))
+                    orig_value = settable.value
+                    settable.value = su.strip_quotes(args.value)
                 except ValueError as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
-                    self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {settable.get_value()!r}")
+                    self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {settable.value!r}")
                     self.last_result = True
                 return
 
@@ -4492,10 +4492,10 @@ class Cmd(cmd.Cmd):
             settable = self.settables[param]
             settable_table.add_row(
                 param,
-                str(settable.get_value()),
+                str(settable.value),
                 settable.description,
             )
-            self.last_result[param] = settable.get_value()
+            self.last_result[param] = settable.value
 
         self.poutput()
         self.poutput(settable_table)

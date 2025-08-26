@@ -10,6 +10,8 @@
     - Moved all string-related functions from utils.py to string_utils.py.
     - Removed all text style Enums from ansi.py in favor of `Rich` styles.
     - Renamed ansi.py to terminal_utils.py to reflect the functions left in it.
+    - Replaced `utils.Settable.get_value()` and `utils.Settable.set_value()` in favor of a Python
+      property called `Settable.value`.
 
 - Enhancements
     - Simplified the process to set a custom parser for `cmd2's` built-in commands. See
