@@ -5,15 +5,10 @@ These utilities are designed to correctly handle strings with ANSI style sequenc
 full-width characters (like those used in CJK languages).
 """
 
-import re
-
 from rich.align import AlignMethod
 from rich.style import StyleType
 
 from . import rich_utils as ru
-
-# A compiled regular expression to detect ANSI style sequences.
-_ANSI_STYLE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;?]*m")
 
 
 def align(
@@ -107,7 +102,7 @@ def strip_style(val: str) -> str:
     :param val: string to be stripped
     :return: the stripped string
     """
-    return _ANSI_STYLE_SEQUENCE_RE.sub("", val)
+    return ru.ANSI_STYLE_SEQUENCE_RE.sub("", val)
 
 
 def str_width(val: str) -> int:

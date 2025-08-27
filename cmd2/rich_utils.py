@@ -29,20 +29,8 @@ from rich_argparse import RichHelpFormatter
 
 from .styles import DEFAULT_CMD2_STYLES
 
-# A compiled regular expression to detect ANSI escape sequences.
-_ANSI_ESCAPE_SEQUENCE_RE = re.compile(
-    r"""
-    \x1b              # Match the Escape character (ESC)
-    (?:               # Start of non-capturing group for the different sequence types
-        \[[0-9;?]*[a-zA-Z]  # Match a CSI sequence (e.g., \x1b[31m)
-    |                 # OR
-        \].*?(?:\x07|\x1b\x5c)  # Match an OSC sequence (e.g., \x1b]2;Hello\x07)
-    |                 # OR
-        \x37|\x38     # Match DEC cursor save/restore sequences
-    )                 # End of non-capturing group
-""",
-    re.VERBOSE,
-)
+# A compiled regular expression to detect ANSI style sequences.
+ANSI_STYLE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;?]*m")
 
 
 class AllowStyle(Enum):
@@ -339,7 +327,7 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
     """Prepare a tuple of objects for printing by Rich's Console.print().
 
     This function converts any non-Rich object whose string representation contains
-    ANSI escape sequences into a rich.Text object. This ensures correct display width
+    ANSI style sequences into a rich.Text object. This ensures correct display width
     calculation, as Rich can then properly parse and account for these non-printing
     codes. All other objects are left untouched, allowing Rich's native
     renderers to handle them.
@@ -360,8 +348,8 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
 
         renderable_as_str = str(renderable)
 
-        # Check for any ANSI escape sequences in the string.
-        if _ANSI_ESCAPE_SEQUENCE_RE.search(renderable_as_str):
+        # Check for any ANSI style sequences in the string.
+        if ANSI_STYLE_SEQUENCE_RE.search(renderable_as_str):
             object_list[i] = string_to_rich_text(renderable_as_str)
 
     return tuple(object_list)
