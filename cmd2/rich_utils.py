@@ -263,7 +263,7 @@ _from_ansi_has_newline_bug = Text.from_ansi("\n").plain == ""
 
 
 def string_to_rich_text(text: str) -> Text:
-    r"""Create a Text object from a string which can contain ANSI style sequences.
+    r"""Create a Rich Text object from a string which can contain ANSI style sequences.
 
     This wraps rich.Text.from_ansi() to handle an issue where it removes the
     trailing line break from a string (e.g. "Hello\n" becomes "Hello").
@@ -327,7 +327,7 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
     """Prepare a tuple of objects for printing by Rich's Console.print().
 
     This function converts any non-Rich object whose string representation contains
-    ANSI style sequences into a rich.Text object. This ensures correct display width
+    ANSI style sequences into a Rich Text object. This ensures correct display width
     calculation, as Rich can then properly parse and account for these non-printing
     codes. All other objects are left untouched, allowing Rich's native
     renderers to handle them.

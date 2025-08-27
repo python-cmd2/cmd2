@@ -1196,7 +1196,7 @@ class Cmd(cmd.Cmd):
         Used by transcript testing to make it easier and more reliable when users are doing things like
         coloring the prompt.
 
-        :return: the stripped prompt.
+        :return: the stripped prompt
         """
         return su.strip_style(self.prompt)
 

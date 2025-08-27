@@ -96,9 +96,6 @@ def stylize(val: str, style: StyleType) -> str:
 def strip_style(val: str) -> str:
     """Strip all ANSI style sequences from a string.
 
-    This function uses a regular expression to efficiently remove ANSI style
-    sequences, which are a subset of ANSI escape sequences used for text formatting.
-
     :param val: string to be stripped
     :return: the stripped string
     """
