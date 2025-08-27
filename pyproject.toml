@@ -10,14 +10,14 @@ authors = [{ name = "cmd2 Contributors" }]
 readme = "README.md"
 requires-python = ">=3.10"
 keywords = ["CLI", "cmd", "command", "interactive", "prompt", "Python"]
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Operating System :: OS Independent",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
