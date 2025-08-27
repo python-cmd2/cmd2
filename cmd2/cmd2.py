@@ -4148,7 +4148,8 @@ class Cmd(cmd.Cmd):
             self.poutput(header_grid)
 
         # Subtract 1 from maxcol to account for a one-space right margin.
-        self.columnize(cmds, maxcol - 1)
+        maxcol = min(maxcol, ru.console_width()) - 1
+        self.columnize(cmds, maxcol)
         self.poutput()
 
     def _print_documented_command_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
