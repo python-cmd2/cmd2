@@ -65,6 +65,7 @@ from typing import (
 
 import rich.box
 from rich.console import Group
+from rich.highlighter import ReprHighlighter
 from rich.rule import Rule
 from rich.style import Style, StyleType
 from rich.table import (
@@ -1365,18 +1366,21 @@ class Cmd(cmd.Cmd):
             console.print()
             return
 
-        # Otherwise highlight and print the exception.
-        from rich.highlighter import ReprHighlighter
+        # Print the exception in the same style Rich uses after a traceback.
+        exception_str = str(exception)
 
-        highlighter = ReprHighlighter()
+        if exception_str:
+            highlighter = ReprHighlighter()
 
-        final_msg = Text.assemble(
-            ("EXCEPTION of type ", Cmd2Style.ERROR),
-            (f"{type(exception).__name__}", Cmd2Style.EXCEPTION_TYPE),
-            (" occurred with message: ", Cmd2Style.ERROR),
-            highlighter(str(exception)),
-        )
+            final_msg = Text.assemble(
+                (f"{type(exception).__name__}: ", "traceback.exc_type"),
+                highlighter(exception_str),
+            )
+        else:
+            final_msg = Text(f"{type(exception).__name__}", style="traceback.exc_type")
 
+        # If not in debug mode and the 'debug' setting is available,
+        # inform the user how to enable full tracebacks.
         if not self.debug and 'debug' in self.settables:
             help_msg = Text.assemble(
                 "\n\n",
