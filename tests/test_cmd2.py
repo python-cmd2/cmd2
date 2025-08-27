@@ -895,8 +895,8 @@ def test_base_debug(base_app) -> None:
 
     # Make sure we get an exception, but cmd2 handles it
     out, err = run_cmd(base_app, 'edit')
-    assert "EXCEPTION of type" in err[0]
-    assert "Please use 'set editor'" in err[0]
+    assert "ValueError: Please use 'set editor'" in err[0]
+    assert "To enable full traceback" in err[3]
 
     # Set debug true
     out, err = run_cmd(base_app, 'set debug True')
@@ -918,11 +918,20 @@ def test_debug_not_settable(base_app) -> None:
     base_app.debug = False
     base_app.remove_settable('debug')
 
-    # Cause an exception
-    out, err = run_cmd(base_app, 'bad "quote')
+    # Cause an exception by setting editor to None and running edit
+    base_app.editor = None
+    out, err = run_cmd(base_app, 'edit')
 
     # Since debug is unsettable, the user will not be given the option to enable a full traceback
-    assert err == ['Invalid syntax: No closing quotation']
+    assert err == ["ValueError: Please use 'set editor' to specify your text editing program of", 'choice.']
+
+
+def test_blank_exception(mocker, base_app):
+    mocker.patch("cmd2.Cmd.do_help", side_effect=Exception)
+    out, err = run_cmd(base_app, 'help')
+
+    # When an exception has no message, the first error line is just its type.
+    assert err[0] == "Exception"
 
 
 def test_remove_settable_keyerror(base_app) -> None:
@@ -2668,8 +2677,7 @@ def test_pexcept_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    expected = su.stylize("EXCEPTION of type ", style=Cmd2Style.ERROR)
-    expected += su.stylize("Exception", style=Cmd2Style.EXCEPTION_TYPE)
+    expected = su.stylize("Exception: ", style="traceback.exc_type")
     assert err.startswith(expected)
 
 
@@ -2679,17 +2687,7 @@ def test_pexcept_no_style(base_app, capsys) -> None:
 
     base_app.pexcept(msg)
     out, err = capsys.readouterr()
-    assert err.startswith("EXCEPTION of type Exception occurred with message: testing...")
-
-
-@with_ansi_style(ru.AllowStyle.NEVER)
-def test_pexcept_not_exception(base_app, capsys) -> None:
-    # Pass in a msg that is not an Exception object
-    msg = False
-
-    base_app.pexcept(msg)
-    out, err = capsys.readouterr()
-    assert err.startswith("EXCEPTION of type bool occurred with message: False")
+    assert err.startswith("Exception: testing...")
 
 
 @pytest.mark.parametrize('chop', [True, False])
