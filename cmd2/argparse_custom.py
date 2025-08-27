@@ -398,7 +398,7 @@ class CompletionItem(str):  # noqa: SLOT000
         # Make sure all objects are renderable by a Rich table.
         renderable_data = [obj if is_renderable(obj) else str(obj) for obj in descriptive_data]
 
-        # Convert strings containing ANSI style sequences into Rich Text objects for correct display width.
+        # Convert strings containing ANSI style sequences to Rich Text objects for correct display width.
         self.descriptive_data = ru.prepare_objects_for_rendering(*renderable_data)
 
         # Save the original value to support CompletionItems as argparse choices.
