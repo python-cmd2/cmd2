@@ -1191,12 +1191,12 @@ class Cmd(cmd.Cmd):
 
     @property
     def visible_prompt(self) -> str:
-        """Read-only property to get the visible prompt with any ANSI style escape codes stripped.
+        """Read-only property to get the visible prompt with any ANSI style sequences stripped.
 
-        Used by transcript testing to make it easier and more reliable when users are doing things like coloring the
-        prompt using ANSI color codes.
+        Used by transcript testing to make it easier and more reliable when users are doing things like
+        coloring the prompt.
 
-        :return: prompt stripped of any ANSI escape codes
+        :return: the stripped prompt
         """
         return su.strip_style(self.prompt)
 
@@ -4214,7 +4214,7 @@ class Cmd(cmd.Cmd):
     def render_columns(self, str_list: list[str] | None, display_width: int = 80) -> str:
         """Render a list of single-line strings as a compact set of columns.
 
-        This method correctly handles strings containing ANSI escape codes and
+        This method correctly handles strings containing ANSI style sequences and
         full-width characters (like those used in CJK languages). Each column is
         only as wide as necessary and columns are separated by two spaces.
 
