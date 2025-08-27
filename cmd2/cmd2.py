@@ -5358,10 +5358,10 @@ class Cmd(cmd.Cmd):
         """Run a text editor and optionally open a file with it.
 
         :param file_path: optional path of the file to edit. Defaults to None.
-        :raises EnvironmentError: if self.editor is not set
+        :raises ValueError: if self.editor is not set
         """
         if not self.editor:
-            raise OSError("Please use 'set editor' to specify your text editing program of choice.")
+            raise ValueError("Please use 'set editor' to specify your text editing program of choice.")
 
         command = su.quote(os.path.expanduser(self.editor))
         if file_path:
