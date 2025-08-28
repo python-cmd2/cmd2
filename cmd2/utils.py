@@ -83,25 +83,32 @@ class Settable:
     ) -> None:
         """Settable Initializer.
 
-        :param name: name of the instance attribute being made settable
-        :param val_type: callable used to cast the string value from the command line into its proper type and
-                         even validate its value. Setting this to bool provides tab completion for true/false and
-                         validation using to_bool(). The val_type function should raise an exception if it fails.
-                         This exception will be caught and printed by Cmd.do_set().
-        :param description: string describing this setting
-        :param settable_object: object to which the instance attribute belongs (e.g. self)
-        :param settable_attrib_name: name which displays to the user in the output of the set command.
-                                     Defaults to `name` if not specified.
-        :param onchange_cb: optional function or method to call when the value of this settable is altered
-                            by the set command. (e.g. onchange_cb=self.debug_changed)
+        :param name: The user-facing name for this setting in the CLI.
+        :param val_type: A callable used to cast the string value from the CLI into its
+                         proper type and validate it. This function should raise an
+                         exception (like ValueError or TypeError) if the conversion or
+                         validation fails, which will be caught and displayed to the user
+                         by the set command. For example, setting this to int ensures the
+                         input is a valid integer. Specifying bool automatically provides
+                         tab completion for 'true' and 'false' and uses a built-in function
+                         for conversion and validation.
+        :param description: A concise string that describes the purpose of this setting.
+        :param settable_object: The object that owns the attribute being made settable (e.g. self).
+        :param settable_attrib_name: The name of the attribute on the settable_object that
+                                     will be modified. This defaults to the value of the name
+                                     parameter if not specified.
+        :param onchange_cb: An optional function or method to call when the value of this
+                            setting is altered by the set command. The callback is invoked
+                            only if the new value is different from the old one.
 
-                            Cmd.do_set() passes the following 3 arguments to onchange_cb:
-                                param_name: str - name of the changed parameter
-                                old_value: Any - the value before being changed
-                                new_value: Any - the value after being changed
+                            It receives three arguments:
+                                param_name: str - name of the parameter
+                                old_value: Any - the parameter's old value
+                                new_value: Any - the parameter's new value
 
-        The following optional settings provide tab completion for a parameter's values. They correspond to the
-        same settings in argparse-based tab completion. A maximum of one of these should be provided.
+        The following optional settings provide tab completion for a parameter's values.
+        They correspond to the same settings in argparse-based tab completion. A maximum
+        of one of these should be provided.
 
         :param choices: iterable of accepted values
         :param choices_provider: function that provides choices for this argument
