@@ -73,6 +73,7 @@ from rich.table import (
     Table,
 )
 from rich.text import Text
+from rich.traceback import Traceback
 
 from . import (
     argparse_completer,
@@ -1357,12 +1358,14 @@ class Cmd(cmd.Cmd):
 
         # Only print a traceback if we're in debug mode and one exists.
         if self.debug and sys.exc_info() != (None, None, None):
-            console.print_exception(
-                width=console.width,
+            traceback = Traceback(
+                width=None,  # Use all available width
+                code_width=None,  # Use all available width
                 show_locals=True,
                 max_frames=0,  # 0 means full traceback.
                 word_wrap=True,  # Wrap long lines of code instead of truncate
             )
+            console.print(traceback)
             console.print()
             return
 
