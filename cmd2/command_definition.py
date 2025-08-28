@@ -102,8 +102,17 @@ class CommandSet:
         Using this property ensures that self.__cmd_internal has been set
         and it tells type checkers that it's no longer a None type.
 
-        Override this property if you need to change its return type to a
-        child class of Cmd.
+        Override this property to specify a more specific return type for static
+        type checking. The typing.cast function can be used to assert to the
+        type checker that the parent cmd2.Cmd instance is of a more specific
+        subclass, enabling better autocompletion and type safety in the child class.
+
+        For example:
+
+            @property
+            def _cmd(self) -> CustomCmdApp:
+                return cast(CustomCmdApp, super()._cmd)
+
 
         :raises CommandSetRegistrationError: if CommandSet is not registered.
         """
