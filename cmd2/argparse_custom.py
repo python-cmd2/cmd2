@@ -1375,7 +1375,11 @@ class TextGroup:
         self.formatter_creator = formatter_creator
 
     def __rich__(self) -> Group:
-        """Perform custom rendering."""
+        """Return a renderable Rich Group object for the class instance.
+
+        This method formats the title and indents the text to match argparse
+        group styling, making the object displayable by a Rich console.
+        """
         formatter = self.formatter_creator()
 
         styled_title = Text(
