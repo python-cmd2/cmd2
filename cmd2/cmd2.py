@@ -987,46 +987,34 @@ class Cmd(cmd.Cmd):
 
             target_parser = find_subcommand(command_parser, subcommand_names)
 
+            # Create the subcommand parser and configure it
             subcmd_parser = self._build_parser(cmdset, subcmd_parser_builder, f'{command_name} {subcommand_name}')
             if subcmd_parser.description is None and method.__doc__:
                 subcmd_parser.description = strip_doc_annotations(method.__doc__)
 
+            # Set the subcommand handler
+            defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
+            subcmd_parser.set_defaults(**defaults)
+
+            # Set what instance the handler is bound to
+            setattr(subcmd_parser, constants.PARSER_ATTR_COMMANDSET, cmdset)
+
+            # Find the argparse action that handles subcommands
             for action in target_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
                     # Get the kwargs for add_parser()
                     add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
 
-                    # Set subcmd_parser as the parent to the parser we're creating to get its arguments
-                    add_parser_kwargs['parents'] = [subcmd_parser]
+                    # Use add_parser to register the subcommand name and any aliases
+                    action.add_parser(subcommand_name, **add_parser_kwargs)
 
-                    # argparse only copies actions from a parent and not the following settings.
-                    # To retain these settings, we will copy them from subcmd_parser and pass them
-                    # as ArgumentParser constructor arguments to add_parser().
-                    add_parser_kwargs['prog'] = subcmd_parser.prog
-                    add_parser_kwargs['usage'] = subcmd_parser.usage
-                    add_parser_kwargs['description'] = subcmd_parser.description
-                    add_parser_kwargs['epilog'] = subcmd_parser.epilog
-                    add_parser_kwargs['formatter_class'] = subcmd_parser.formatter_class
-                    add_parser_kwargs['prefix_chars'] = subcmd_parser.prefix_chars
-                    add_parser_kwargs['fromfile_prefix_chars'] = subcmd_parser.fromfile_prefix_chars
-                    add_parser_kwargs['argument_default'] = subcmd_parser.argument_default
-                    add_parser_kwargs['conflict_handler'] = subcmd_parser.conflict_handler
-                    add_parser_kwargs['allow_abbrev'] = subcmd_parser.allow_abbrev
+                    # Replace the parser created by add_parser() with our pre-configured one
+                    action._name_parser_map[subcommand_name] = subcmd_parser
 
-                    # Set add_help to False and use whatever help option subcmd_parser already has
-                    add_parser_kwargs['add_help'] = False
+                    # Also remap any aliases to our pre-configured parser
+                    for alias in add_parser_kwargs.get("aliases", []):
+                        action._name_parser_map[alias] = subcmd_parser
 
-                    attached_parser = action.add_parser(subcommand_name, **add_parser_kwargs)
-
-                    # Set the subcommand handler
-                    defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
-                    attached_parser.set_defaults(**defaults)
-
-                    # Copy value for custom ArgparseCompleter type, which will be None if not present on subcmd_parser
-                    attached_parser.set_ap_completer_type(subcmd_parser.get_ap_completer_type())  # type: ignore[attr-defined]
-
-                    # Set what instance the handler is bound to
-                    setattr(attached_parser, constants.PARSER_ATTR_COMMANDSET, cmdset)
                     break
 
     def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
