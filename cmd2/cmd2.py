@@ -4069,7 +4069,7 @@ class Cmd(cmd.Cmd):
 
             if self.doc_leader:
                 self.poutput()
-                self.poutput(self.doc_leader, style=Cmd2Style.HELP_LEADER)
+                self.poutput(Text(self.doc_leader, style=Cmd2Style.HELP_LEADER))
             self.poutput()
 
             # Print any categories first and then the default category.
