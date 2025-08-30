@@ -20,13 +20,15 @@ class ThemedApp(cmd2.Cmd):
         self.doc_leader = "Welcome to this glorious help ..."
 
         # Create a custom theme
+        # Colors can come from the cmd2.color.Color StrEnum class, be RGB hex values, or
+        # be any of the rich standard colors: https://rich.readthedocs.io/en/stable/appendix/colors.html
         custom_theme = {
-            Cmd2Style.SUCCESS: Style(color=Color.GREEN),
+            Cmd2Style.SUCCESS: Style(color=Color.GREEN),  # Use color from cmd2 Color class
             Cmd2Style.WARNING: Style(color=Color.ORANGE1),
             Cmd2Style.ERROR: Style(color=Color.PINK1),
             Cmd2Style.HELP_HEADER: Style(color=Color.CYAN, bgcolor="#44475a"),
-            Cmd2Style.HELP_LEADER: Style(color="#f8f8f2", bgcolor="#282a36"),
-            Cmd2Style.TABLE_BORDER: Style(color=Color.LIGHT_SKY_BLUE1),
+            Cmd2Style.HELP_LEADER: Style(color="#f8f8f2", bgcolor="#282a36"),  # use RGX hex colors
+            Cmd2Style.TABLE_BORDER: Style(color="turquoise2"),  # use a rich standard color
             "argparse.args": Style(color=Color.AQUAMARINE3, underline=True),
             "inspect.attr": Style(color=Color.DARK_GOLDENROD, bold=True),
         }
