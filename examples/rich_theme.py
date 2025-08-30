@@ -27,7 +27,7 @@ class ThemedApp(cmd2.Cmd):
             Cmd2Style.WARNING: Style(color=Color.ORANGE1),
             Cmd2Style.ERROR: Style(color=Color.PINK1),
             Cmd2Style.HELP_HEADER: Style(color=Color.CYAN, bgcolor="#44475a"),
-            Cmd2Style.HELP_LEADER: Style(color="#f8f8f2", bgcolor="#282a36"),  # use RGX hex colors
+            Cmd2Style.HELP_LEADER: Style(color="#f8f8f2", bgcolor="#282a36"),  # use RGB hex colors
             Cmd2Style.TABLE_BORDER: Style(color="turquoise2"),  # use a rich standard color
             "argparse.args": Style(color=Color.AQUAMARINE3, underline=True),
             "inspect.attr": Style(color=Color.DARK_GOLDENROD, bold=True),
