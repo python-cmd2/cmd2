@@ -4135,7 +4135,7 @@ class Cmd(cmd.Cmd):
         if header:
             header_grid = Table.grid()
             header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-            header_grid.add_row(Rule(characters=self.ruler))
+            header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
             self.poutput(header_grid)
 
         # Subtract 1 from maxcol to account for a one-space right margin.
@@ -4157,7 +4157,7 @@ class Cmd(cmd.Cmd):
         # Create a grid to hold the header and the topics table
         category_grid = Table.grid()
         category_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
-        category_grid.add_row(Rule(characters=self.ruler))
+        category_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
 
         topics_table = Table(
             Column("Name", no_wrap=True),
