@@ -21,11 +21,11 @@ class ThemedApp(cmd2.Cmd):
 
         # Create a custom theme
         custom_theme = {
-            Cmd2Style.SUCCESS: Style(color=Color.CYAN),
-            Cmd2Style.WARNING: Style(color=Color.MAGENTA),
-            Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
-            Cmd2Style.HELP_HEADER: Style(color=Color.YELLOW),
-            Cmd2Style.HELP_LEADER: Style(color=Color.DARK_VIOLET, bgcolor=Color.BRIGHT_WHITE),
+            Cmd2Style.SUCCESS: Style(color=Color.GREEN),
+            Cmd2Style.WARNING: Style(color=Color.ORANGE1),
+            Cmd2Style.ERROR: Style(color=Color.PINK1),
+            Cmd2Style.HELP_HEADER: Style(color=Color.CYAN, bgcolor="#44475a"),
+            Cmd2Style.HELP_LEADER: Style(color="#f8f8f2", bgcolor="#282a36"),
             Cmd2Style.TABLE_BORDER: Style(color=Color.LIGHT_SKY_BLUE1),
             "argparse.args": Style(color=Color.AQUAMARINE3, underline=True),
             "inspect.attr": Style(color=Color.DARK_GOLDENROD, bold=True),
@@ -35,10 +35,12 @@ class ThemedApp(cmd2.Cmd):
     @cmd2.with_category("Theme Commands")
     def do_theme_show(self, _: cmd2.Statement):
         """Showcases the custom theme by printing messages with different styles."""
+        # NOTE: Using soft_wrap=False will ensure display looks correct when background colors are part of the style
         self.poutput("This is a basic output message.")
-        self.psuccess("This is a success message.")
-        self.pwarning("This is a warning message.")
-        self.perror("This is an error message.")
+        self.psuccess("This is a success message.", soft_wrap=False)
+        self.pwarning("This is a warning message.", soft_wrap=False)
+        self.perror("This is an error message.", soft_wrap=False)
+        self.pexcept(ValueError("This is a dummy ValueError exception."))
 
 
 if __name__ == "__main__":
