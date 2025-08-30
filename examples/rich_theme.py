@@ -31,8 +31,8 @@ class ThemedApp(cmd2.Cmd):
         """Showcases the custom theme by printing messages with different styles."""
         self.poutput("This is a basic output message.")
         self.psuccess("This is a success message.")
-        self.warning("This is a warning message.")
-        self.error("This is an error message.")
+        self.pwarning("This is a warning message.")
+        self.perror("This is an error message.")
 
 
 if __name__ == "__main__":
