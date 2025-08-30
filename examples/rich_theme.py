@@ -25,7 +25,7 @@ class ThemedApp(cmd2.Cmd):
             Cmd2Style.WARNING: Style(color=Color.MAGENTA),
             Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
             Cmd2Style.HELP_HEADER: Style(color=Color.YELLOW),
-            Cmd2Style.HELP_LEADER: Style(color=Color.VIOLET),
+            Cmd2Style.HELP_LEADER: Style(color=Color.DARK_VIOLET, bgcolor=Color.BRIGHT_WHITE),
             Cmd2Style.TABLE_BORDER: Style(color=Color.LIGHT_SKY_BLUE1),
             "argparse.args": Style(color=Color.AQUAMARINE3, underline=True),
             "inspect.attr": Style(color=Color.DARK_GOLDENROD, bold=True),
