@@ -16,14 +16,17 @@ class ThemedApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
         self.intro = "This is a themed application. Try the 'theme_show' command."
 
+        # Set text which prints right before all of the help tables are listed.
+        self.doc_leader = "Welcome to this glorious help ..."
+
         # Create a custom theme
         custom_theme = {
             Cmd2Style.SUCCESS: Style(color=Color.CYAN),
             Cmd2Style.WARNING: Style(color=Color.MAGENTA),
             Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
             Cmd2Style.HELP_HEADER: Style(color=Color.YELLOW),
-            Cmd2Style.HELP_LEADER: Style(color=Color.PURPLE),
-            Cmd2Style.TABLE_BORDER: Style(color=Color.BLUE),
+            Cmd2Style.HELP_LEADER: Style(color=Color.VIOLET),
+            Cmd2Style.TABLE_BORDER: Style(color=Color.LIGHT_SKY_BLUE1),
             "argparse.args": Style(color=Color.AQUAMARINE3, underline=True),
             "inspect.attr": Style(color=Color.DARK_GOLDENROD, bold=True),
         }
