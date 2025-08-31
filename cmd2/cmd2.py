@@ -4134,7 +4134,7 @@ class Cmd(cmd.Cmd):
         # Print a row that looks like a table header.
         if header:
             header_grid = Table.grid()
-            header_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
+            header_grid.add_row(Text(header, style=Cmd2Style.HELP_HEADER))
             header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
             self.poutput(header_grid)
 
@@ -4156,7 +4156,7 @@ class Cmd(cmd.Cmd):
 
         # Create a grid to hold the header and the topics table
         category_grid = Table.grid()
-        category_grid.add_row(header, style=Cmd2Style.HELP_HEADER)
+        category_grid.add_row(Text(header, style=Cmd2Style.HELP_HEADER))
         category_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
 
         topics_table = Table(
