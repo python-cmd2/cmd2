@@ -14,8 +14,9 @@ each:
 - [argparse_completion.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
     - Shows how to integrate tab-completion with argparse-based commands
 - [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
-    - Demonstrates how to use the `cmd2.with_argparser` decorator to specify command arguments using
-      [argparse](https://docs.python.org/3/library/argparse.html)
+    - Comprehensive example demonstrating various aspects of using
+      [argparse](https://docs.python.org/3/library/argparse.html) for command argument processing
+      via the `cmd2.with_argparser` decorator
 - [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
     - Shows how to asynchronously print alerts, update the prompt in realtime, and change the window
       title
