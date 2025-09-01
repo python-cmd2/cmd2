@@ -78,6 +78,10 @@ each:
 - [remove_settable.py](https://github.com/python-cmd2/cmd2/blob/main/examples/remove_settable.py)
     - Shows how to remove any of the built-in cmd2 `Settables` you do not want in your cmd2
       application
+- [rich_tables.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_tables.py)
+    - Example of using Rich Tables within a cmd2 application for displaying tabular data
+- [rich_theme.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_theme.py)
+    - Demonstrates how to create a custom theme for a cmd2 application
 - [tmux_launch.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_launch.sh)
     - Shell script that launches two applications using tmux in different windows/tabs
 - [tmux_split.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_split.sh)
