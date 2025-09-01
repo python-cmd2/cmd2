@@ -106,98 +106,41 @@ class ArgparsingApp(cmd2.Cmd):
 
     ## ------ Examples demonstrating how to use argparse subcommands -----
 
-    sport_item_strs = ('Bat', 'Basket', 'Basketball', 'Football', 'Space Ball')
-
     # create the top-level parser for the base command
-    base_parser = cmd2.Cmd2ArgumentParser()
-    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+    calculate_parser = cmd2.Cmd2ArgumentParser(description="Perform simple mathematical calculations.")
+    calculate_subparsers = calculate_parser.add_subparsers(title='operation', help='Available operations', required=True)
 
-    # create the parser for the "foo" subcommand
-    parser_foo = base_subparsers.add_parser('foo', help='foo help')
-    parser_foo.add_argument('-x', type=int, default=1, help='integer')
-    parser_foo.add_argument('y', type=float, help='float')
-    parser_foo.add_argument('input_file', type=str, help='Input File')
+    # create the parser for the "add" subcommand
+    add_description = "Add two numbers"
+    add_parser = cmd2.Cmd2ArgumentParser("add", description=add_description)
+    add_parser.add_argument('num1', type=int, help='The first number')
+    add_parser.add_argument('num2', type=int, help='The second number')
 
-    # create the parser for the "bar" subcommand
-    parser_bar = base_subparsers.add_parser('bar', help='bar help')
+    # create the parser for the "add" subcommand
+    subtract_description = "Subtract two numbers"
+    subtract_parser = cmd2.Cmd2ArgumentParser("subtract", description=subtract_description)
+    subtract_parser.add_argument('num1', type=int, help='The first number')
+    subtract_parser.add_argument('num2', type=int, help='The second number')
 
-    bar_subparsers = parser_bar.add_subparsers(title='layer3', help='help for 3rd layer of commands')
-    parser_bar.add_argument('z', help='string')
+    # subcommand functions for the calculate command
+    @cmd2.as_subcommand_to('calculate', 'add', add_parser, help=add_description.lower())
+    def add(self, args: argparse.Namespace) -> None:
+        """add subcommand of calculate command."""
+        result = args.num1 + args.num2
+        self.poutput(f"{args.num1} + {args.num2} = {result}")
 
-    bar_subparsers.add_parser('apple', help='apple help')
-    bar_subparsers.add_parser('artichoke', help='artichoke help')
-    bar_subparsers.add_parser('cranberries', help='cranberries help')
+    @cmd2.as_subcommand_to('calculate', 'subtract', subtract_parser, help=subtract_description.lower())
+    def subtract(self, args: argparse.Namespace) -> None:
+        """subtract subcommand of calculate command."""
+        result = args.num1 - args.num2
+        self.poutput(f"{args.num1} - {args.num2} = {result}")
 
-    # create the parser for the "sport" subcommand
-    parser_sport = base_subparsers.add_parser('sport', help='sport help')
-    sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport', choices=sport_item_strs)
-
-    # create the top-level parser for the alternate command
-    # The alternate command doesn't provide its own help flag
-    base2_parser = cmd2.Cmd2ArgumentParser(add_help=False)
-    base2_subparsers = base2_parser.add_subparsers(title='subcommands', help='subcommand help')
-
-    # create the parser for the "foo" subcommand
-    parser_foo2 = base2_subparsers.add_parser('foo', help='foo help')
-    parser_foo2.add_argument('-x', type=int, default=1, help='integer')
-    parser_foo2.add_argument('y', type=float, help='float')
-    parser_foo2.add_argument('input_file', type=str, help='Input File')
-
-    # create the parser for the "bar" subcommand
-    parser_bar2 = base2_subparsers.add_parser('bar', help='bar help')
-
-    bar2_subparsers = parser_bar2.add_subparsers(title='layer3', help='help for 3rd layer of commands')
-    parser_bar2.add_argument('z', help='string')
-
-    bar2_subparsers.add_parser('apple', help='apple help')
-    bar2_subparsers.add_parser('artichoke', help='artichoke help')
-    bar2_subparsers.add_parser('cranberries', help='cranberries help')
-
-    # create the parser for the "sport" subcommand
-    parser_sport2 = base2_subparsers.add_parser('sport', help='sport help')
-    sport2_arg = parser_sport2.add_argument('sport', help='Enter name of a sport', choices=sport_item_strs)
-
-    # subcommand functions for the base command
-    def base_foo(self, args: argparse.Namespace) -> None:
-        """Foo subcommand of base command."""
-        self.poutput(args.x * args.y)
-
-    def base_bar(self, args: argparse.Namespace) -> None:
-        """Bar subcommand of base command."""
-        self.poutput(f'(({args.z}))')
-
-    def base_sport(self, args: argparse.Namespace) -> None:
-        """Sport subcommand of base command."""
-        self.poutput(f'Sport is {args.sport}')
-
-    # Set handler functions for the subcommands
-    parser_foo.set_defaults(func=base_foo)
-    parser_bar.set_defaults(func=base_bar)
-    parser_sport.set_defaults(func=base_sport)
-
-    @cmd2.with_argparser(base_parser)
+    @cmd2.with_argparser(calculate_parser)
     @cmd2.with_category(ARGPARSE_SUBCOMMANDS)
-    def do_base(self, args: argparse.Namespace) -> None:
-        """Base command help."""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # No subcommand was provided, so call help
-            self.do_help('base')
-
-    @cmd2.with_argparser(base2_parser)
-    @cmd2.with_category(ARGPARSE_SUBCOMMANDS)
-    def do_alternate(self, args: argparse.Namespace) -> None:
-        """Alternate command help."""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # No subcommand was provided, so call help
-            self.do_help('alternate')
+    def do_calculate(self, args: argparse.Namespace) -> None:
+        """Calculate a simple mathematical operation on two integers."""
+        handler = args.cmd2_handler.get()
+        handler(args)
 
 
 if __name__ == '__main__':
