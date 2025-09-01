@@ -108,7 +108,7 @@ class ArgparsingApp(cmd2.Cmd):
 
     # create the top-level parser for the base command
     calculate_parser = cmd2.Cmd2ArgumentParser(description="Perform simple mathematical calculations.")
-    calculate_subparsers = calculate_parser.add_subparsers(title='operation', help='Available operations')
+    calculate_subparsers = calculate_parser.add_subparsers(title='operation', help='Available operations', required=True)
 
     # create the parser for the "add" subcommand
     add_description = "Add two numbers"
@@ -137,14 +137,10 @@ class ArgparsingApp(cmd2.Cmd):
 
     @cmd2.with_argparser(calculate_parser)
     @cmd2.with_category(ARGPARSE_SUBCOMMANDS)
-    def do_calculate(self, ns: argparse.Namespace) -> None:
+    def do_calculate(self, args: argparse.Namespace) -> None:
         """Calculate a simple mathematical operation on two integers."""
-        handler = ns.cmd2_handler.get()
-        if handler is not None:
-            handler(ns)
-        else:
-            # No subcommand was provided, so call help
-            self.do_help('calculate')
+        handler = args.cmd2_handler.get()
+        handler(args)
 
 
 if __name__ == '__main__':
