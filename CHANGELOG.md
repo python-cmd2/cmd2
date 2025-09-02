@@ -1,36 +1,53 @@
-## 3.0.0 (TBD)
+## 3.0.0 (TBD, 2025)
+
+### Summary
+
+`cmd2` now has a dependency on [rich](https://github.com/Textualize/rich) for rich text and pretty
+formatting in the terminal. Previously, `cmd2` had a large amount of custom code for this purpose
+that predated the existence of `rich`. This opens the door to even more beautiful `cmd2`
+applications. To get the most out of the new capabilities, we encourage you to spend a little bit of
+time reading the [rich documentation](https://rich.readthedocs.io/).
+
+### Details
 
 - Breaking Changes
-    - `cmd2` 3.0 supports Python 3.10+ (removed support for Python 3.9)
-    - No longer setting parser's `prog` value in `with_argparser()` since it gets set in
-      `Cmd._build_parser()`. This code had previously been restored to support backward
-      compatibility in `cmd2` 2.0 family.
-    - Removed table_creator.py in favor of `Rich` tables.
-    - Moved string styling functionality from ansi.py to string_utils.py.
-    - Moved all string-related functions from utils.py to string_utils.py.
-    - Removed all text style Enums from ansi.py in favor of `Rich` styles.
-    - Renamed ansi.py to terminal_utils.py to reflect the functions left in it.
-    - Replaced `utils.Settable.get_value()` and `utils.Settable.set_value()` in favor of a Python
-      property called `Settable.value`.
+    - Refactored and modernized styling and utility modules:
+        - Removed the legacy `table_creator.py` module in favor of `rich` tables (see the
+          [rich_tables.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_tables.py)
+          example for more info)
+        - Moved all string-related functions from `utils.py` to a new `string_utils.py` module
+        - Consolidated all string styling functions from `ansi.py` into `string_utils.py`
+        - Replaced all text style enums from `ansi.py` with modern `rich` styles
+        - Renamed `ansi.py` to `terminal_utils.py` to better reflect its purpose
+    - Dropped support for Python 3.9. `cmd2` now requires Python 3.10 or later
+    - Replaced `Settable.get_value()` and `Settable.set_value()` methods with a more Pythonic
+      `value` property
+    - Removed redundant setting of a parser's `prog` value in the `with_argparser()` decorator, as
+      this is now handled centrally in `Cmd._build_parser()`
 
 - Enhancements
-    - Simplified the process to set a custom parser for `cmd2's` built-in commands. See
+    - Enhanced all print methods (`poutput()`, `perror()`, `ppaged()`, etc.) to natively render
+      `rich` objects, enabling beautiful and complex output
+    - Simplified the process for setting a custom parser for `cmd2`'s built-in commands. See the
       [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
-      example for more details.
-    - Added `Cmd.macro_arg_complete()` which tab completes arguments to a macro. Its default
-      behavior is to perform path completion, but it can be overridden as needed.
-    - All print methods (`poutput()`, `perror()`, `ppaged()`, etc.) have the ability to print Rich
-      objects.
-    - Added string_utils.py which contains all string utility functions. This includes quoting and
-      alignment functions from utils.py. This also includes style-related functions from ansi.py.
-      This also includes style-related functions from ansi.py.
-    - Added colors.py which contains a StrEnum of all color names supported by Rich.
-    - Added styles.py which contains a StrEnum of all cmd2-specific style names and their respective
-      style definitions.
+      example for an updated guide
+    - Introduced `Cmd.macro_arg_complete()` for tab-completing macro arguments, with default path
+      completion that can be easily customized
+    - Added `colors.py` and `styles.py` to provide easy access to `rich` color names and manage
+      `cmd2`-specific style definitions using `StrEnum` (see the
+      [colors.py](https://github.com/python-cmd2/cmd2/blob/main/examples/color.py) example for a
+      demonstration of all colors available to your `cmd2` application)
+    - Added ability to create a custom theme for a `cmd2` application using `rich_utils.set_theme`
+      (see the [rich_theme.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_theme.py)
+      example for more info)
+    - Consolidated multiple redundant examples into a few more comprehensive ones, see:
+        - [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
+        - [command_sets.py](https://github.com/python-cmd2/cmd2/blob/main/examples/command_sets.py)
+        - [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
 
 - Bug Fixes
-    - No longer redirecting `sys.stdout` if it's a different stream than `self.stdout`. This fixes
-      issue where we overwrote an application's `sys.stdout` while redirecting.
+    - Fixed a redirection bug where `cmd2` could unintentionally overwrite an application's
+      `sys.stdout`
 
 ## 2.7.0 (June 30, 2025)
 
