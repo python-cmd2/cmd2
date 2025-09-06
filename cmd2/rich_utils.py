@@ -20,6 +20,7 @@ from rich.console import (
     RenderableType,
 )
 from rich.padding import Padding
+from rich.pretty import is_expandable
 from rich.protocol import rich_cast
 from rich.segment import Segment
 from rich.style import StyleType
@@ -289,11 +290,14 @@ def indent(renderable: RenderableType, level: int) -> Padding:
 def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
     """Prepare a tuple of objects for printing by Rich's Console.print().
 
-    This function converts any non-Rich object whose string representation contains
-    ANSI style sequences into a Rich Text object. This ensures correct display width
-    calculation, as Rich can then properly parse and account for these non-printing
-    codes. All other objects are left untouched, allowing Rich's native
-    renderers to handle them.
+    This function processes objects to ensure they are rendered correctly by Rich.
+    It inspects each object and, if its string representation contains ANSI style
+    sequences, it converts the object to a Rich Text object. This ensures Rich can
+    properly parse the non-printing codes for accurate display width calculation.
+
+    Objects that already implement the Rich console protocol or are expandable
+    by its pretty printer are left untouched, as they can be handled directly by
+    Rich's native renderers.
 
     :param objects: objects to prepare
     :return: a tuple containing the processed objects.
@@ -305,13 +309,12 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
         # with a __rich__ method that might return a string.
         renderable = rich_cast(obj)
 
-        # This object implements the Rich console protocol, so no preprocessing is needed.
-        if isinstance(renderable, ConsoleRenderable):
+        # No preprocessing is needed for Rich-compatible or expandable objects.
+        if isinstance(renderable, ConsoleRenderable) or is_expandable(renderable):
             continue
 
+        # Check for ANSI style sequences in its string representation.
         renderable_as_str = str(renderable)
-
-        # Check for any ANSI style sequences in the string.
         if ANSI_STYLE_SEQUENCE_RE.search(renderable_as_str):
             object_list[i] = Text.from_ansi(renderable_as_str)
 
