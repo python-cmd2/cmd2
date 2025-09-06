@@ -95,6 +95,8 @@ def base_app() -> cmd2.Cmd:
 
 
 def with_ansi_style(style: ru.AllowStyle) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    """Decorator which sets ru.ALLOW_STYLE before a function runs and restores it when it's done."""
+
     def arg_decorator(func: Callable[P, T]) -> Callable[P, T]:
         import functools
 
