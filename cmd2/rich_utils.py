@@ -1,7 +1,10 @@
 """Provides common utilities to support Rich in cmd2-based applications."""
 
 import re
-from collections.abc import Mapping
+from collections.abc import (
+    Iterable,
+    Mapping,
+)
 from enum import Enum
 from typing import (
     IO,
@@ -18,6 +21,7 @@ from rich.console import (
 )
 from rich.padding import Padding
 from rich.protocol import rich_cast
+from rich.segment import Segment
 from rich.style import StyleType
 from rich.table import (
     Column,
@@ -258,47 +262,6 @@ def rich_text_to_string(text: Text) -> str:
     return capture.get()
 
 
-# If True, Rich still has the bug addressed in string_to_rich_text().
-_from_ansi_has_newline_bug = Text.from_ansi("\n").plain == ""
-
-
-def string_to_rich_text(text: str) -> Text:
-    r"""Create a Rich Text object from a string which can contain ANSI style sequences.
-
-    This wraps rich.Text.from_ansi() to handle an issue where it removes the
-    trailing line break from a string (e.g. "Hello\n" becomes "Hello").
-
-    There is currently a pull request to fix this.
-    https://github.com/Textualize/rich/pull/3793
-
-    :param text: a string to convert to a Text object.
-    :return: the converted string
-    """
-    result = Text.from_ansi(text)
-
-    if _from_ansi_has_newline_bug:
-        # If the original string ends with a recognized line break character,
-        # then restore the missing newline. We use "\n" because Text.from_ansi()
-        # converts all line breaks into newlines.
-        # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
-        line_break_chars = {
-            "\n",  # Line Feed
-            "\r",  # Carriage Return
-            "\v",  # Vertical Tab
-            "\f",  # Form Feed
-            "\x1c",  # File Separator
-            "\x1d",  # Group Separator
-            "\x1e",  # Record Separator
-            "\x85",  # Next Line (NEL)
-            "\u2028",  # Line Separator
-            "\u2029",  # Paragraph Separator
-        }
-        if text and text[-1] in line_break_chars:
-            result.append("\n")
-
-    return result
-
-
 def indent(renderable: RenderableType, level: int) -> Padding:
     """Indent a Rich renderable.
 
@@ -350,6 +313,136 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
 
         # Check for any ANSI style sequences in the string.
         if ANSI_STYLE_SEQUENCE_RE.search(renderable_as_str):
-            object_list[i] = string_to_rich_text(renderable_as_str)
+            object_list[i] = Text.from_ansi(renderable_as_str)
 
     return tuple(object_list)
+
+
+###################################################################################
+# Rich Library Monkey Patches
+#
+# These patches fix specific bugs in the Rich library. They are conditional and
+# will only be applied if the bug is detected. When the bugs are fixed in a
+# future Rich release, these patches and their corresponding tests should be
+# removed.
+###################################################################################
+
+###################################################################################
+# Text.from_ansi() monkey patch
+###################################################################################
+
+# Save original Text.from_ansi() so we can call it in our wrapper
+_orig_text_from_ansi = Text.from_ansi
+
+
+@classmethod  # type: ignore[misc]
+def _from_ansi_wrapper(cls: type[Text], text: str, *args: Any, **kwargs: Any) -> Text:  # noqa: ARG001
+    r"""Wrap Text.from_ansi() to fix its trailing newline bug.
+
+    This wrapper handles an issue where Text.from_ansi() removes the
+    trailing line break from a string (e.g. "Hello\n" becomes "Hello").
+
+    There is currently a pull request on Rich to fix this.
+    https://github.com/Textualize/rich/pull/3793
+    """
+    result = _orig_text_from_ansi(text, *args, **kwargs)
+
+    # If the original string ends with a recognized line break character,
+    # then restore the missing newline. We use "\n" because Text.from_ansi()
+    # converts all line breaks into newlines.
+    # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
+    line_break_chars = {
+        "\n",  # Line Feed
+        "\r",  # Carriage Return
+        "\v",  # Vertical Tab
+        "\f",  # Form Feed
+        "\x1c",  # File Separator
+        "\x1d",  # Group Separator
+        "\x1e",  # Record Separator
+        "\x85",  # Next Line (NEL)
+        "\u2028",  # Line Separator
+        "\u2029",  # Paragraph Separator
+    }
+    if text and text[-1] in line_break_chars:
+        result.append("\n")
+
+    return result
+
+
+def _from_ansi_has_newline_bug() -> bool:
+    """Check if Test.from_ansi() strips the trailing line break from a string."""
+    return Text.from_ansi("\n") == Text.from_ansi("")
+
+
+# Only apply the monkey patch if the bug is present
+if _from_ansi_has_newline_bug():
+    Text.from_ansi = _from_ansi_wrapper  # type: ignore[assignment]
+
+
+###################################################################################
+# Segment.apply_style() monkey patch
+###################################################################################
+
+# Save original Segment.apply_style() so we can call it in our wrapper
+_orig_segment_apply_style = Segment.apply_style
+
+
+@classmethod  # type: ignore[misc]
+def _apply_style_wrapper(cls: type[Segment], *args: Any, **kwargs: Any) -> Iterable["Segment"]:
+    r"""Wrap Segment.apply_style() to fix bug with styling newlines.
+
+    This wrapper handles an issue where Segment.apply_style() includes newlines
+    within styled Segments. As a result, when printing text using a background color
+    and soft wrapping, the background color incorrectly carries over onto the following line.
+
+    You can reproduce this behavior by calling console.print() using a background color
+    and soft wrapping.
+
+    For example:
+        console.print("line_1", style="blue on white", soft_wrap=True)
+
+    When soft wrapping is disabled, console.print() splits Segments into their individual
+    lines, which separates the newlines from the styled text. Therefore, the background color
+    issue does not occur in that mode.
+
+    This function copies that behavior to fix this the issue even when soft wrapping is enabled.
+
+    There is currently a pull request on Rich to fix this.
+    https://github.com/Textualize/rich/pull/3839
+    """
+    styled_segments = list(_orig_segment_apply_style(*args, **kwargs))
+    newline_segment = cls.line()
+
+    # If the final segment is a newline, it will be stripped by Segment.split_lines().
+    # Save an unstyled newline to restore later.
+    end_segment = newline_segment if styled_segments and styled_segments[-1].text == "\n" else None
+
+    # Use Segment.split_lines() to separate the styled text from the newlines.
+    # This way the ANSI reset code will appear before any newline.
+    sanitized_segments: list[Segment] = []
+
+    lines = list(Segment.split_lines(styled_segments))
+    for index, line in enumerate(lines):
+        sanitized_segments.extend(line)
+        if index < len(lines) - 1:
+            sanitized_segments.append(newline_segment)
+
+    if end_segment is not None:
+        sanitized_segments.append(end_segment)
+
+    return sanitized_segments
+
+
+def _rich_has_styled_newline_bug() -> bool:
+    """Check if newlines are styled when soft wrapping."""
+    console = Console(force_terminal=True)
+    with console.capture() as capture:
+        console.print("line_1", style="blue on white", soft_wrap=True)
+
+    # Check if we see a styled newline in the output
+    return "\x1b[34;47m\n\x1b[0m" in capture.get()
+
+
+# Only apply the monkey patch if the bug is present
+if _rich_has_styled_newline_bug():
+    Segment.apply_style = _apply_style_wrapper  # type: ignore[assignment]
