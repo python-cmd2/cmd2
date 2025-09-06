@@ -2136,33 +2136,21 @@ def test_poutput_ansi_terminal(outsim_app) -> None:
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_highlight(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(highlight=True)
-    outsim_app.poutput(
-        "My IP Address is 192.168.1.100.",
-        rich_print_kwargs=rich_print_kwargs,
-    )
+    outsim_app.poutput("My IP Address is 192.168.1.100.", highlight=True)
     out = outsim_app.stdout.getvalue()
     assert out == "My IP Address is \x1b[1;92m192.168.1.100\x1b[0m.\n"
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_markup(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(markup=True)
-    outsim_app.poutput(
-        "The leaves are [green]green[/green].",
-        rich_print_kwargs=rich_print_kwargs,
-    )
+    outsim_app.poutput("The leaves are [green]green[/green].", markup=True)
     out = outsim_app.stdout.getvalue()
     assert out == "The leaves are \x1b[32mgreen\x1b[0m.\n"
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_emoji(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(emoji=True)
-    outsim_app.poutput(
-        "Look at the emoji :1234:.",
-        rich_print_kwargs=rich_print_kwargs,
-    )
+    outsim_app.poutput("Look at the emoji :1234:.", emoji=True)
     out = outsim_app.stdout.getvalue()
     assert out == "Look at the emoji 🔢.\n"
 
@@ -2196,13 +2184,9 @@ def test_poutput_no_wrap_and_overflow(outsim_app):
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_pretty_print(outsim_app):
     """Test that cmd2 passes objects through so they can be pretty-printed when highlighting is enabled."""
-    rich_print_kwargs = RichPrintKwargs(highlight=True)
     dictionary = {1: 'hello', 2: 'person', 3: 'who', 4: 'codes'}
 
-    outsim_app.poutput(
-        dictionary,
-        rich_print_kwargs=rich_print_kwargs,
-    )
+    outsim_app.poutput(dictionary, highlight=True)
     out = outsim_app.stdout.getvalue()
     assert out.startswith("\x1b[1m{\x1b[0m\x1b[1;36m1\x1b[0m: \x1b[32m'hello'\x1b[0m")
 
@@ -2214,9 +2198,6 @@ def test_poutput_all_keyword_args(outsim_app):
         justify="center",
         overflow="ellipsis",
         no_wrap=True,
-        markup=True,
-        emoji=True,
-        highlight=True,
         width=40,
         height=50,
         crop=False,
