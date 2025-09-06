@@ -1365,6 +1365,9 @@ def test_columnize(capsys: pytest.CaptureFixture[str]) -> None:
 class HelpCategoriesApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
 
+    SOME_CATEGORY = "Some Category"
+    CUSTOM_CATEGORY = "Custom Category"
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
@@ -1373,10 +1376,11 @@ class HelpCategoriesApp(cmd2.Cmd):
         """This command does diddly"""
 
     # This command will be in the "Some Category" section of the help menu even though it has no docstring
-    @cmd2.with_category("Some Category")
+    @cmd2.with_category(SOME_CATEGORY)
     def do_cat_nodoc(self, arg) -> None:
         pass
 
+    # This command will show in the category labeled with self.default_category
     def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
 
@@ -1386,7 +1390,7 @@ class HelpCategoriesApp(cmd2.Cmd):
     def do_edit(self, arg) -> None:
         """This overrides the edit command and does nothing."""
 
-    cmd2.categorize((do_squat, do_edit), 'Custom Category')
+    cmd2.categorize((do_squat, do_edit), CUSTOM_CATEGORY)
 
     # This command will be in the "undocumented" section of the help menu
     def do_undoc(self, arg) -> None:
@@ -1403,11 +1407,21 @@ def test_help_cat_base(helpcat_app) -> None:
     assert helpcat_app.last_result is True
     verify_help_text(helpcat_app, out)
 
+    help_text = ''.join(out)
+    assert helpcat_app.CUSTOM_CATEGORY in help_text
+    assert helpcat_app.SOME_CATEGORY in help_text
+    assert helpcat_app.default_category in help_text
+
 
 def test_help_cat_verbose(helpcat_app) -> None:
     out, err = run_cmd(helpcat_app, 'help --verbose')
     assert helpcat_app.last_result is True
     verify_help_text(helpcat_app, out)
+
+    help_text = ''.join(out)
+    assert helpcat_app.CUSTOM_CATEGORY in help_text
+    assert helpcat_app.SOME_CATEGORY in help_text
+    assert helpcat_app.default_category in help_text
 
 
 class SelectApp(cmd2.Cmd):

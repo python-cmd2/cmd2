@@ -492,8 +492,8 @@ class Cmd(cmd.Cmd):
         # Set header for table listing commands that have no help info.
         self.undoc_header = "Undocumented Commands"
 
-        # If any command has been categorized, then all other commands that haven't been categorized
-        # will display under this section in the help output.
+        # If any command has been categorized, then all other documented commands that
+        # haven't been categorized will display under this section in the help output.
         self.default_category = "Uncategorized Commands"
 
         # The error that prints when no help information can be found
@@ -4072,10 +4072,13 @@ class Cmd(cmd.Cmd):
                 self.poutput(Text(self.doc_leader, style=Cmd2Style.HELP_LEADER))
             self.poutput()
 
-            # Print any categories first and then the default category.
+            # Print any categories first and then the remaining documented commands.
             sorted_categories = sorted(cmds_cats.keys(), key=self.default_sort_key)
             all_cmds = {category: cmds_cats[category] for category in sorted_categories}
-            all_cmds[self.doc_header] = cmds_doc
+            if all_cmds:
+                all_cmds[self.default_category] = cmds_doc
+            else:
+                all_cmds[self.doc_header] = cmds_doc
 
             # Used to provide verbose table separation for better readability.
             previous_table_printed = False
