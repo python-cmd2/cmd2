@@ -2,6 +2,8 @@
 
 import pytest
 import rich.box
+from rich.console import Console
+from rich.segment import Segment
 from rich.style import Style
 from rich.table import Table
 from rich.text import Text
@@ -11,7 +13,6 @@ from cmd2 import (
     Color,
 )
 from cmd2 import rich_utils as ru
-from cmd2 import string_utils as su
 
 
 def test_cmd2_base_console() -> None:
@@ -27,38 +28,6 @@ def test_cmd2_base_console() -> None:
     with pytest.raises(TypeError) as excinfo:
         ru.Cmd2BaseConsole(theme=None)
     assert 'theme' in str(excinfo.value)
-
-
-def test_string_to_rich_text() -> None:
-    # Line breaks recognized by str.splitlines().
-    # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
-    line_breaks = {
-        "\n",  # Line Feed
-        "\r",  # Carriage Return
-        "\r\n",  # Carriage Return + Line Feed
-        "\v",  # Vertical Tab
-        "\f",  # Form Feed
-        "\x1c",  # File Separator
-        "\x1d",  # Group Separator
-        "\x1e",  # Record Separator
-        "\x85",  # Next Line (NEL)
-        "\u2028",  # Line Separator
-        "\u2029",  # Paragraph Separator
-    }
-
-    # Test all line breaks
-    for lb in line_breaks:
-        input_string = f"Text{lb}"
-        expected_output = input_string.replace(lb, "\n")
-        assert ru.string_to_rich_text(input_string).plain == expected_output
-
-    # Test string without trailing line break
-    input_string = "No trailing\nline break"
-    assert ru.string_to_rich_text(input_string).plain == input_string
-
-    # Test empty string
-    input_string = ""
-    assert ru.string_to_rich_text(input_string).plain == input_string
 
 
 def test_indented_text() -> None:
@@ -105,7 +74,7 @@ def test_indented_table() -> None:
     [
         (Text("Hello"), "Hello"),
         (Text("Hello\n"), "Hello\n"),
-        (Text("Hello", style="blue"), su.stylize("Hello", style="blue")),
+        (Text("Hello", style="blue"), "\x1b[34mHello\x1b[0m"),
     ],
 )
 def test_rich_text_to_string(rich_text: Text, string: str) -> None:
@@ -139,3 +108,171 @@ def test_set_theme() -> None:
 
     assert ru.APP_THEME.styles[rich_style_key] != orig_rich_style
     assert ru.APP_THEME.styles[rich_style_key] == theme[rich_style_key]
+
+
+def test_from_ansi_wrapper() -> None:
+    # Check if we are still patching Text.from_ansi(). If this check fails, then Rich
+    # has fixed the bug. Therefore, we can remove this test function and ru._from_ansi_wrapper.
+    assert Text.from_ansi.__func__ is ru._from_ansi_wrapper.__func__  # type: ignore[attr-defined]
+
+    # Line breaks recognized by str.splitlines().
+    # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
+    line_breaks = {
+        "\n",  # Line Feed
+        "\r",  # Carriage Return
+        "\r\n",  # Carriage Return + Line Feed
+        "\v",  # Vertical Tab
+        "\f",  # Form Feed
+        "\x1c",  # File Separator
+        "\x1d",  # Group Separator
+        "\x1e",  # Record Separator
+        "\x85",  # Next Line (NEL)
+        "\u2028",  # Line Separator
+        "\u2029",  # Paragraph Separator
+    }
+
+    # Test all line breaks
+    for lb in line_breaks:
+        input_string = f"Text{lb}"
+        expected_output = input_string.replace(lb, "\n")
+        assert Text.from_ansi(input_string).plain == expected_output
+
+    # Test string without trailing line break
+    input_string = "No trailing\nline break"
+    assert Text.from_ansi(input_string).plain == input_string
+
+    # Test empty string
+    input_string = ""
+    assert Text.from_ansi(input_string).plain == input_string
+
+
+@pytest.mark.parametrize(
+    # Print with style and verify that everything but newline characters have style.
+    ('objects', 'expected', 'sep', 'end'),
+    [
+        # Print nothing
+        ((), "\n", " ", "\n"),
+        # Empty string
+        (("",), "\n", " ", "\n"),
+        # Multple empty strings
+        (("", ""), '\x1b[34;47m \x1b[0m\n', " ", "\n"),
+        # Basic string
+        (
+            ("str_1",),
+            "\x1b[34;47mstr_1\x1b[0m\n",
+            " ",
+            "\n",
+        ),
+        # String which ends with newline
+        (
+            ("str_1\n",),
+            "\x1b[34;47mstr_1\x1b[0m\n\n",
+            " ",
+            "\n",
+        ),
+        # String which ends with multiple newlines
+        (
+            ("str_1\n\n",),
+            "\x1b[34;47mstr_1\x1b[0m\n\n\n",
+            " ",
+            "\n",
+        ),
+        # Mutiple lines
+        (
+            ("str_1\nstr_2",),
+            "\x1b[34;47mstr_1\x1b[0m\n\x1b[34;47mstr_2\x1b[0m\n",
+            " ",
+            "\n",
+        ),
+        # Multiple strings
+        (
+            ("str_1", "str_2"),
+            "\x1b[34;47mstr_1 str_2\x1b[0m\n",
+            " ",
+            "\n",
+        ),
+        # Multiple strings with newline between them.
+        (
+            ("str_1\n", "str_2"),
+            "\x1b[34;47mstr_1\x1b[0m\n\x1b[34;47m str_2\x1b[0m\n",
+            " ",
+            "\n",
+        ),
+        # Multiple strings and non-space value for sep
+        (
+            ("str_1", "str_2"),
+            "\x1b[34;47mstr_1(sep)str_2\x1b[0m\n",
+            "(sep)",
+            "\n",
+        ),
+        # Multiple strings and sep is a newline
+        (
+            ("str_1", "str_2"),
+            "\x1b[34;47mstr_1\x1b[0m\n\x1b[34;47mstr_2\x1b[0m\n",
+            "\n",
+            "\n",
+        ),
+        # Multiple strings and sep has newlines
+        (
+            ("str_1", "str_2"),
+            "\x1b[34;47mstr_1(sep1)\x1b[0m\n\x1b[34;47m(sep2)str_2\x1b[0m\n",
+            "(sep1)\n(sep2)",
+            "\n",
+        ),
+        # Non-newline value for end.
+        (
+            ("str_1", "str_2"),
+            "\x1b[34;47mstr_1(sep1)\x1b[0m\n\x1b[34;47m(sep2)str_2\x1b[0m\x1b[34;47m(end)\x1b[0m",
+            "(sep1)\n(sep2)",
+            "(end)",
+        ),
+        # end has newlines.
+        (
+            ("str_1", "str_2"),
+            "\x1b[34;47mstr_1(sep1)\x1b[0m\n\x1b[34;47m(sep2)str_2\x1b[0m\x1b[34;47m(end1)\x1b[0m\n\x1b[34;47m(end2)\x1b[0m",
+            "(sep1)\n(sep2)",
+            "(end1)\n(end2)",
+        ),
+        # Empty sep and end values
+        (
+            ("str_1", "str_2"),
+            "\x1b[34;47mstr_1str_2\x1b[0m",
+            "",
+            "",
+        ),
+    ],
+)
+def test_apply_style_wrapper(objects: tuple[str], expected: str, sep: str, end: str) -> None:
+    # Check if we are still patching Segment.apply_style(). If this check fails, then Rich
+    # has fixed the bug. Therefore, we can remove this test function and ru._apply_style_wrapper.
+    assert Segment.apply_style.__func__ is ru._apply_style_wrapper.__func__  # type: ignore[attr-defined]
+
+    console = Console(force_terminal=True)
+
+    try:
+        # Since our patch was meant to fix behavior seen when soft wrapping,
+        # we will first test in that condition.
+        with console.capture() as capture:
+            console.print(*objects, sep=sep, end=end, style="blue on white", soft_wrap=True)
+        result = capture.get()
+        assert result == expected
+
+        # Now print with soft wrapping disabled. Since none of our input strings are long enough
+        # to auto wrap, the results should be the same as our soft-wrapping output.
+        with console.capture() as capture:
+            console.print(*objects, sep=sep, end=end, style="blue on white", soft_wrap=False)
+        result = capture.get()
+        assert result == expected
+
+        # Now remove our patch and disable soft wrapping. This will prove that our patch produces
+        # the same result as unpatched Rich
+        Segment.apply_style = ru._orig_segment_apply_style  # type: ignore[assignment]
+
+        with console.capture() as capture:
+            console.print(*objects, sep=sep, end=end, style="blue on white", soft_wrap=False)
+        result = capture.get()
+        assert result == expected
+
+    finally:
+        # Restore the patch
+        Segment.apply_style = ru._apply_style_wrapper  # type: ignore[assignment]

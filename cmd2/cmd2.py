@@ -1205,8 +1205,8 @@ class Cmd(cmd.Cmd):
 
         :param file: file stream being written to
         :param objects: objects to print
-        :param sep: string to write between print data. Defaults to " ".
-        :param end: string to write at end of print data. Defaults to a newline.
+        :param sep: string to write between printed text. Defaults to " ".
+        :param end: string to write at end of printed text. Defaults to a newline.
         :param style: optional style to apply to output
         :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to
                           fit the terminal width. Defaults to True.

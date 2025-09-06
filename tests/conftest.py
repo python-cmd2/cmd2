@@ -2,10 +2,15 @@
 
 import argparse
 import sys
+from collections.abc import Callable
 from contextlib import redirect_stderr
-from unittest import (
-    mock,
+from typing import (
+    ParamSpec,
+    TextIO,
+    TypeVar,
+    cast,
 )
+from unittest import mock
 
 import pytest
 
@@ -13,6 +18,10 @@ import cmd2
 from cmd2 import rich_utils as ru
 from cmd2.rl_utils import readline
 from cmd2.utils import StdSim
+
+# For type hinting decorators
+P = ParamSpec('P')
+T = TypeVar('T')
 
 
 def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_strings: list[str] | None = None) -> None:
@@ -41,7 +50,7 @@ SHORTCUTS_TXT = """Shortcuts for other commands:
 """
 
 
-def normalize(block):
+def normalize(block: str) -> list[str]:
     """Normalize a block of text to perform comparison.
 
     Strip newlines from the very beginning and very end  Then split into separate lines and strip trailing whitespace
@@ -52,26 +61,26 @@ def normalize(block):
     return [line.rstrip() for line in block.splitlines()]
 
 
-def run_cmd(app, cmd):
+def run_cmd(app: cmd2.Cmd, cmd: str) -> tuple[list[str], list[str]]:
     """Clear out and err StdSim buffers, run the command, and return out and err"""
 
     # Only capture sys.stdout if it's the same stream as self.stdout
     stdouts_match = app.stdout == sys.stdout
 
     # This will be used to capture app.stdout and sys.stdout
-    copy_cmd_stdout = StdSim(app.stdout)
+    copy_cmd_stdout = StdSim(cast(TextIO, app.stdout))
 
     # This will be used to capture sys.stderr
     copy_stderr = StdSim(sys.stderr)
 
     try:
-        app.stdout = copy_cmd_stdout
+        app.stdout = cast(TextIO, copy_cmd_stdout)
         if stdouts_match:
             sys.stdout = app.stdout
-        with redirect_stderr(copy_stderr):
+        with redirect_stderr(cast(TextIO, copy_stderr)):
             app.onecmd_plus_hooks(cmd)
     finally:
-        app.stdout = copy_cmd_stdout.inner_stream
+        app.stdout = cast(TextIO, copy_cmd_stdout.inner_stream)
         if stdouts_match:
             sys.stdout = app.stdout
 
@@ -81,16 +90,16 @@ def run_cmd(app, cmd):
 
 
 @pytest.fixture
-def base_app():
+def base_app() -> cmd2.Cmd:
     return cmd2.Cmd(include_py=True, include_ipy=True)
 
 
-def with_ansi_style(style):
-    def arg_decorator(func):
+def with_ansi_style(style: ru.AllowStyle) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    def arg_decorator(func: Callable[P, T]) -> Callable[P, T]:
         import functools
 
         @functools.wraps(func)
-        def cmd_wrapper(*args, **kwargs):
+        def cmd_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
             old = ru.ALLOW_STYLE
             ru.ALLOW_STYLE = style
             try:
@@ -108,7 +117,7 @@ def with_ansi_style(style):
 odd_file_names = ['nothingweird', 'has   spaces', '"is_double_quoted"', "'is_single_quoted'"]
 
 
-def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> str | None:
+def complete_tester(text: str, line: str, begidx: int, endidx: int, app: cmd2.Cmd) -> str | None:
     """This is a convenience function to test cmd2.complete() since
     in a unit test environment there is no actual console readline
     is monitoring. Therefore we use mock to provide readline data
@@ -124,13 +133,13 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> str 
              These matches also have been sorted by complete()
     """
 
-    def get_line():
+    def get_line() -> str:
         return line
 
-    def get_begidx():
+    def get_begidx() -> int:
         return begidx
 
-    def get_endidx():
+    def get_endidx() -> int:
         return endidx
 
     # Run the readline tab completion function with readline mocks in place

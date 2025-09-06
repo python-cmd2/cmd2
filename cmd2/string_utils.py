@@ -7,6 +7,7 @@ full-width characters (like those used in CJK languages).
 
 from rich.align import AlignMethod
 from rich.style import StyleType
+from rich.text import Text
 
 from . import rich_utils as ru
 
@@ -30,7 +31,7 @@ def align(
     if width is None:
         width = ru.console_width()
 
-    text = ru.string_to_rich_text(val)
+    text = Text.from_ansi(val)
     text.align(align, width=width, character=character)
     return ru.rich_text_to_string(text)
 
@@ -88,7 +89,7 @@ def stylize(val: str, style: StyleType) -> str:
     :return: the stylized string
     """
     # Convert to a Rich Text object to parse and preserve existing ANSI styles.
-    text = ru.string_to_rich_text(val)
+    text = Text.from_ansi(val)
     text.stylize(style)
     return ru.rich_text_to_string(text)
 
@@ -111,7 +112,7 @@ def str_width(val: str) -> int:
     :param val: the string being measured
     :return: width of the string when printed to the terminal
     """
-    text = ru.string_to_rich_text(val)
+    text = Text.from_ansi(val)
     return text.cell_len
 
 
