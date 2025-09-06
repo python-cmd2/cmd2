@@ -1198,22 +1198,39 @@ class Cmd(cmd.Cmd):
         end: str = "\n",
         style: StyleType | None = None,
         soft_wrap: bool = True,
+        emoji: bool = False,
+        markup: bool = False,
+        highlight: bool = False,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print objects to a given file stream.
+
+        This method is configured for general-purpose printing. By default, it enables
+        soft wrap and disables Rich's automatic detection for markup, emoji, and highlighting.
+        These defaults can be overridden by passing explicit keyword arguments.
 
         :param file: file stream being written to
         :param objects: objects to print
         :param sep: string to write between printed text. Defaults to " ".
         :param end: string to write at end of printed text. Defaults to a newline.
         :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to
-                          fit the terminal width. Defaults to True.
+        :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be
+                          word-wrapped or cropped to fit the terminal width. Defaults to True.
+        :param emoji: If True, Rich will replace emoji codes (e.g., :smiley:) with their
+                      corresponding Unicode characters. Defaults to False.
+        :param markup: If True, Rich will interpret strings with tags (e.g., [bold]hello[/bold])
+                       as styled output. Defaults to False.
+        :param highlight: If True, Rich will automatically apply highlighting to elements within
+                          strings, such as common Python data types like numbers, booleans, or None.
+                          This is particularly useful when pretty printing objects like lists and
+                          dictionaries to display them in color. Defaults to False.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
                        These arguments are not passed to Rich's Console.print().
+
+        See the Rich documentation for more details on emoji codes, markup tags, and highlighting.
         """
         prepared_objects = ru.prepare_objects_for_rendering(*objects)
 
@@ -1224,6 +1241,9 @@ class Cmd(cmd.Cmd):
                 end=end,
                 style=style,
                 soft_wrap=soft_wrap,
+                emoji=emoji,
+                markup=markup,
+                highlight=highlight,
                 **(rich_print_kwargs if rich_print_kwargs is not None else {}),
             )
         except BrokenPipeError:
@@ -1242,6 +1262,9 @@ class Cmd(cmd.Cmd):
         end: str = "\n",
         style: StyleType | None = None,
         soft_wrap: bool = True,
+        emoji: bool = False,
+        markup: bool = False,
+        highlight: bool = False,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1256,6 +1279,9 @@ class Cmd(cmd.Cmd):
             end=end,
             style=style,
             soft_wrap=soft_wrap,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
             rich_print_kwargs=rich_print_kwargs,
         )
 
@@ -1266,6 +1292,9 @@ class Cmd(cmd.Cmd):
         end: str = "\n",
         style: StyleType | None = Cmd2Style.ERROR,
         soft_wrap: bool = True,
+        emoji: bool = False,
+        markup: bool = False,
+        highlight: bool = False,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1282,6 +1311,9 @@ class Cmd(cmd.Cmd):
             end=end,
             style=style,
             soft_wrap=soft_wrap,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
             rich_print_kwargs=rich_print_kwargs,
         )
 
@@ -1291,6 +1323,9 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         soft_wrap: bool = True,
+        emoji: bool = False,
+        markup: bool = False,
+        highlight: bool = False,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1304,6 +1339,9 @@ class Cmd(cmd.Cmd):
             end=end,
             style=Cmd2Style.SUCCESS,
             soft_wrap=soft_wrap,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
             rich_print_kwargs=rich_print_kwargs,
         )
 
@@ -1313,6 +1351,9 @@ class Cmd(cmd.Cmd):
         sep: str = " ",
         end: str = "\n",
         soft_wrap: bool = True,
+        emoji: bool = False,
+        markup: bool = False,
+        highlight: bool = False,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1326,6 +1367,9 @@ class Cmd(cmd.Cmd):
             end=end,
             style=Cmd2Style.WARNING,
             soft_wrap=soft_wrap,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
             rich_print_kwargs=rich_print_kwargs,
         )
 
@@ -1390,6 +1434,9 @@ class Cmd(cmd.Cmd):
         end: str = "\n",
         style: StyleType | None = None,
         soft_wrap: bool = True,
+        emoji: bool = False,
+        markup: bool = False,
+        highlight: bool = False,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1408,6 +1455,9 @@ class Cmd(cmd.Cmd):
                     end=end,
                     style=style,
                     soft_wrap=soft_wrap,
+                    emoji=emoji,
+                    markup=markup,
+                    highlight=highlight,
                     rich_print_kwargs=rich_print_kwargs,
                 )
             else:
@@ -1417,6 +1467,9 @@ class Cmd(cmd.Cmd):
                     end=end,
                     style=style,
                     soft_wrap=soft_wrap,
+                    emoji=emoji,
+                    markup=markup,
+                    highlight=highlight,
                     rich_print_kwargs=rich_print_kwargs,
                 )
 
@@ -1428,6 +1481,9 @@ class Cmd(cmd.Cmd):
         style: StyleType | None = None,
         chop: bool = False,
         soft_wrap: bool = True,
+        emoji: bool = False,
+        markup: bool = False,
+        highlight: bool = False,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1479,6 +1535,9 @@ class Cmd(cmd.Cmd):
                     end=end,
                     style=style,
                     soft_wrap=soft_wrap,
+                    emoji=emoji,
+                    markup=markup,
+                    highlight=highlight,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
             output_bytes = capture.get().encode('utf-8', 'replace')
@@ -1503,6 +1562,9 @@ class Cmd(cmd.Cmd):
                 end=end,
                 style=style,
                 soft_wrap=soft_wrap,
+                emoji=emoji,
+                markup=markup,
+                highlight=highlight,
                 rich_print_kwargs=rich_print_kwargs,
             )
 

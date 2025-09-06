@@ -110,9 +110,6 @@ class RichPrintKwargs(TypedDict, total=False):
     justify: JustifyMethod | None
     overflow: OverflowMethod | None
     no_wrap: bool | None
-    markup: bool | None
-    emoji: bool | None
-    highlight: bool | None
     width: int | None
     height: int | None
     crop: bool
@@ -216,9 +213,11 @@ class Cmd2RichArgparseConsole(Cmd2BaseConsole):
         :param file: optional file object where the console should write to.
                      Defaults to sys.stdout.
         """
-        # Disable Rich's automatic detection for markup, emoji, and highlighting.
-        # rich-argparse does markup and highlighting without involving the console
-        # so these won't affect its internal functionality.
+        # Since this console is used to print error messages which may not have
+        # been pre-formatted by rich-argparse, disable Rich's automatic detection
+        # for markup, emoji, and highlighting. rich-argparse does markup and
+        # highlighting without involving the console so these won't affect its
+        # internal functionality.
         super().__init__(
             file=file,
             markup=False,
@@ -236,7 +235,7 @@ class Cmd2ExceptionConsole(Cmd2BaseConsole):
 
 def console_width() -> int:
     """Return the width of the console."""
-    return Cmd2BaseConsole().width
+    return Console().width
 
 
 def rich_text_to_string(text: Text) -> str:

@@ -31,10 +31,9 @@ def test_cmd2_base_console() -> None:
 
 
 def test_indented_text() -> None:
-    console = ru.Cmd2GeneralConsole()
+    console = Console(width=20)
 
     # With an indention of 10, text will be evenly split across two lines.
-    console.width = 20
     text = "A" * 20
     level = 10
     indented_text = ru.indent(text, level)
@@ -50,7 +49,7 @@ def test_indented_text() -> None:
 
 
 def test_indented_table() -> None:
-    console = ru.Cmd2GeneralConsole()
+    console = Console()
 
     level = 2
     table = Table("Column", box=rich.box.ASCII)
