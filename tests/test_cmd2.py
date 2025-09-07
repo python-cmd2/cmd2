@@ -1069,13 +1069,51 @@ def test_cmdloop_without_rawinput() -> None:
 
 
 def test_cmdfinalizations_runs(base_app, monkeypatch) -> None:
-    """Make sure _run_cmdfinalization_hooks is run on after each command."""
-    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
-        m = mock.MagicMock(name='cmdfinalization')
-        monkeypatch.setattr("cmd2.Cmd._run_cmdfinalization_hooks", m)
+    """Make sure _run_cmdfinalization_hooks is run after each command."""
+    termios_settings = [
+        27394,
+        3,
+        19200,
+        536872399,
+        38400,
+        38400,
+        [
+            b'\x04',
+            b'\xff',
+            b'\xff',
+            b'\x7f',
+            b'\x17',
+            b'\x15',
+            b'\x12',
+            b'\x00',
+            b'\x03',
+            b'\x1c',
+            b'\x1a',
+            b'\x19',
+            b'\x11',
+            b'\x13',
+            b'\x16',
+            b'\x0f',
+            b'\x01',
+            b'\x00',
+            b'\x14',
+            b'\x00',
+        ],
+    ]
+
+    base_app._initial_termios_settings = termios_settings
+    with (
+        mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)),
+        mock.patch('sys.stdin.fileno', mock.MagicMock(name='fileno', return_value=0)),
+    ):
+        monkeypatch.setattr(base_app.stdin, "fileno", lambda: 0)
+        monkeypatch.setattr(base_app.stdin, "isatty", lambda: True)
+
+        cmd_fin = mock.MagicMock(name='cmdfinalization')
+        monkeypatch.setattr("cmd2.Cmd._run_cmdfinalization_hooks", cmd_fin)
 
         base_app.onecmd_plus_hooks('help')
-        m.assert_called_once()
+        cmd_fin.assert_called_once()
 
 
 def test_sigint_handler(base_app) -> None:
