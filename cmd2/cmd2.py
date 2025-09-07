@@ -508,6 +508,18 @@ class Cmd(cmd.Cmd):
         # Commands that will run at the beginning of the command loop
         self._startup_commands: list[str] = []
 
+        # Store initial termios settings to restore after each command.
+        # This is a faster way of accomplishing what "stty sane" does.
+        self._initial_termios_settings = None
+        if not sys.platform.startswith('win') and self.stdin.isatty():
+            try:
+                import termios
+
+                self._initial_termios_settings = termios.tcgetattr(self.stdin.fileno())
+            except (ImportError, termios.error):
+                # This can happen if termios isn't available or stdin is a pseudo-TTY
+                pass
+
         # If a startup script is provided and exists, then execute it in the startup commands
         if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
