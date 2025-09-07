@@ -1070,38 +1070,6 @@ def test_cmdloop_without_rawinput() -> None:
 
 def test_cmdfinalizations_runs(base_app, monkeypatch) -> None:
     """Make sure _run_cmdfinalization_hooks is run after each command."""
-    termios_settings = [
-        27394,
-        3,
-        19200,
-        536872399,
-        38400,
-        38400,
-        [
-            b'\x04',
-            b'\xff',
-            b'\xff',
-            b'\x7f',
-            b'\x17',
-            b'\x15',
-            b'\x12',
-            b'\x00',
-            b'\x03',
-            b'\x1c',
-            b'\x1a',
-            b'\x19',
-            b'\x11',
-            b'\x13',
-            b'\x16',
-            b'\x0f',
-            b'\x01',
-            b'\x00',
-            b'\x14',
-            b'\x00',
-        ],
-    ]
-
-    base_app._initial_termios_settings = termios_settings
     with (
         mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)),
         mock.patch('sys.stdin.fileno', mock.MagicMock(name='fileno', return_value=0)),
@@ -1114,6 +1082,56 @@ def test_cmdfinalizations_runs(base_app, monkeypatch) -> None:
 
         base_app.onecmd_plus_hooks('help')
         cmd_fin.assert_called_once()
+
+
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
+@pytest.mark.parametrize(
+    ('is_tty', 'settings_set', 'raised_exception', 'should_call'),
+    [
+        (True, True, None, True),
+        (True, True, 'termios_error', True),
+        (True, True, 'unsupported_operation', True),
+        (False, True, None, False),
+        (True, False, None, False),
+    ],
+)
+def test_restore_termios_settings(base_app, monkeypatch, is_tty, settings_set, raised_exception, should_call):
+    """Test that terminal settings are restored after a command and that errors are suppressed."""
+    import io
+    import termios  # Mock termios since it's imported within the method
+
+    termios_mock = mock.MagicMock()
+    # The error attribute needs to be the actual exception for isinstance checks
+    termios_mock.error = termios.error
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    # Set the exception to be raised by tcsetattr
+    if raised_exception == 'termios_error':
+        termios_mock.tcsetattr.side_effect = termios.error("test termios error")
+    elif raised_exception == 'unsupported_operation':
+        termios_mock.tcsetattr.side_effect = io.UnsupportedOperation("test io error")
+
+    # Set initial termios settings so the logic will run
+    if settings_set:
+        termios_settings = ["dummy settings"]
+        base_app._initial_termios_settings = termios_settings
+    else:
+        base_app._initial_termios_settings = None
+        termios_settings = None  # for the assert
+
+    # Mock stdin to make it look like a TTY
+    monkeypatch.setattr(base_app.stdin, "isatty", lambda: is_tty)
+    monkeypatch.setattr(base_app.stdin, "fileno", lambda: 0)
+
+    # Run a command to trigger _run_cmdfinalization_hooks
+    # This should not raise an exception
+    base_app.onecmd_plus_hooks('help')
+
+    # Verify that tcsetattr was called with the correct arguments
+    if should_call:
+        termios_mock.tcsetattr.assert_called_once_with(0, termios_mock.TCSANOW, termios_settings)
+    else:
+        termios_mock.tcsetattr.assert_not_called()
 
 
 def test_sigint_handler(base_app) -> None:
