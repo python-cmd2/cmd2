@@ -513,12 +513,13 @@ class Cmd(cmd.Cmd):
         self._initial_termios_settings = None
         if not sys.platform.startswith('win') and self.stdin.isatty():
             try:
+                import io
                 import termios
 
                 self._initial_termios_settings = termios.tcgetattr(self.stdin.fileno())
-            except (ImportError, termios.error):
+            except (ImportError, io.UnsupportedOperation, termios.error):
                 # This can happen if termios isn't available or stdin is a pseudo-TTY
-                pass
+                self._initial_termios_settings = None
 
         # If a startup script is provided and exists, then execute it in the startup commands
         if startup_script:
@@ -2834,14 +2835,15 @@ class Cmd(cmd.Cmd):
 
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement | None) -> bool:
         """Run the command finalization hooks."""
-        with self.sigint_protection:
-            if not sys.platform.startswith('win') and self.stdin.isatty():
-                # Before the next command runs, fix any terminal problems like those
-                # caused by certain binary characters having been printed to it.
-                import subprocess
+        if self._initial_termios_settings is not None and self.stdin.isatty():
+            import io
+            import termios
 
-                proc = subprocess.Popen(['stty', 'sane'])  # noqa: S607
-                proc.communicate()
+            # Before the next command runs, fix any terminal problems like those
+            # caused by certain binary characters having been printed to it.
+            with self.sigint_protection, contextlib.suppress(io.UnsupportedOperation, termios.error):
+                # This can fail if stdin is a pseudo-TTY, in which case we just ignore it
+                termios.tcsetattr(self.stdin.fileno(), termios.TCSANOW, self._initial_termios_settings)
 
         data = plugin.CommandFinalizationData(stop, statement)
         for func in self._cmdfinalization_hooks:

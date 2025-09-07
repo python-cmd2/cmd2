@@ -1068,16 +1068,14 @@ def test_cmdloop_without_rawinput() -> None:
     assert out == expected
 
 
-@pytest.mark.skipif(sys.platform.startswith('win'), reason="stty sane only run on Linux/Mac")
-def test_stty_sane(base_app, monkeypatch) -> None:
-    """Make sure stty sane is run on Linux/Mac after each command if stdin is a terminal"""
+def test_cmdfinalizations_runs(base_app, monkeypatch) -> None:
+    """Make sure _run_cmdfinalization_hooks is run on after each command."""
     with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
-        # Mock out the subprocess.Popen call so we don't actually run stty sane
-        m = mock.MagicMock(name='Popen')
-        monkeypatch.setattr("subprocess.Popen", m)
+        m = mock.MagicMock(name='cmdfinalization')
+        monkeypatch.setattr("cmd2.Cmd._run_cmdfinalization_hooks", m)
 
         base_app.onecmd_plus_hooks('help')
-        m.assert_called_once_with(['stty', 'sane'])
+        m.assert_called_once()
 
 
 def test_sigint_handler(base_app) -> None:
