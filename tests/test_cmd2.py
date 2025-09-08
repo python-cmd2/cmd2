@@ -1068,16 +1068,70 @@ def test_cmdloop_without_rawinput() -> None:
     assert out == expected
 
 
-@pytest.mark.skipif(sys.platform.startswith('win'), reason="stty sane only run on Linux/Mac")
-def test_stty_sane(base_app, monkeypatch) -> None:
-    """Make sure stty sane is run on Linux/Mac after each command if stdin is a terminal"""
-    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
-        # Mock out the subprocess.Popen call so we don't actually run stty sane
-        m = mock.MagicMock(name='Popen')
-        monkeypatch.setattr("subprocess.Popen", m)
+def test_cmdfinalizations_runs(base_app, monkeypatch) -> None:
+    """Make sure _run_cmdfinalization_hooks is run after each command."""
+    with (
+        mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)),
+        mock.patch('sys.stdin.fileno', mock.MagicMock(name='fileno', return_value=0)),
+    ):
+        monkeypatch.setattr(base_app.stdin, "fileno", lambda: 0)
+        monkeypatch.setattr(base_app.stdin, "isatty", lambda: True)
+
+        cmd_fin = mock.MagicMock(name='cmdfinalization')
+        monkeypatch.setattr("cmd2.Cmd._run_cmdfinalization_hooks", cmd_fin)
 
         base_app.onecmd_plus_hooks('help')
-        m.assert_called_once_with(['stty', 'sane'])
+        cmd_fin.assert_called_once()
+
+
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
+@pytest.mark.parametrize(
+    ('is_tty', 'settings_set', 'raised_exception', 'should_call'),
+    [
+        (True, True, None, True),
+        (True, True, 'termios_error', True),
+        (True, True, 'unsupported_operation', True),
+        (False, True, None, False),
+        (True, False, None, False),
+    ],
+)
+def test_restore_termios_settings(base_app, monkeypatch, is_tty, settings_set, raised_exception, should_call):
+    """Test that terminal settings are restored after a command and that errors are suppressed."""
+    import io
+    import termios  # Mock termios since it's imported within the method
+
+    termios_mock = mock.MagicMock()
+    # The error attribute needs to be the actual exception for isinstance checks
+    termios_mock.error = termios.error
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    # Set the exception to be raised by tcsetattr
+    if raised_exception == 'termios_error':
+        termios_mock.tcsetattr.side_effect = termios.error("test termios error")
+    elif raised_exception == 'unsupported_operation':
+        termios_mock.tcsetattr.side_effect = io.UnsupportedOperation("test io error")
+
+    # Set initial termios settings so the logic will run
+    if settings_set:
+        termios_settings = ["dummy settings"]
+        base_app._initial_termios_settings = termios_settings
+    else:
+        base_app._initial_termios_settings = None
+        termios_settings = None  # for the assert
+
+    # Mock stdin to make it look like a TTY
+    monkeypatch.setattr(base_app.stdin, "isatty", lambda: is_tty)
+    monkeypatch.setattr(base_app.stdin, "fileno", lambda: 0)
+
+    # Run a command to trigger _run_cmdfinalization_hooks
+    # This should not raise an exception
+    base_app.onecmd_plus_hooks('help')
+
+    # Verify that tcsetattr was called with the correct arguments
+    if should_call:
+        termios_mock.tcsetattr.assert_called_once_with(0, termios_mock.TCSANOW, termios_settings)
+    else:
+        termios_mock.tcsetattr.assert_not_called()
 
 
 def test_sigint_handler(base_app) -> None:
@@ -2136,33 +2190,21 @@ def test_poutput_ansi_terminal(outsim_app) -> None:
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_highlight(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(highlight=True)
-    outsim_app.poutput(
-        "My IP Address is 192.168.1.100.",
-        rich_print_kwargs=rich_print_kwargs,
-    )
+    outsim_app.poutput("My IP Address is 192.168.1.100.", highlight=True)
     out = outsim_app.stdout.getvalue()
     assert out == "My IP Address is \x1b[1;92m192.168.1.100\x1b[0m.\n"
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_markup(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(markup=True)
-    outsim_app.poutput(
-        "The leaves are [green]green[/green].",
-        rich_print_kwargs=rich_print_kwargs,
-    )
+    outsim_app.poutput("The leaves are [green]green[/green].", markup=True)
     out = outsim_app.stdout.getvalue()
     assert out == "The leaves are \x1b[32mgreen\x1b[0m.\n"
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_emoji(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(emoji=True)
-    outsim_app.poutput(
-        "Look at the emoji :1234:.",
-        rich_print_kwargs=rich_print_kwargs,
-    )
+    outsim_app.poutput("Look at the emoji :1234:.", emoji=True)
     out = outsim_app.stdout.getvalue()
     assert out == "Look at the emoji 🔢.\n"
 
@@ -2196,13 +2238,9 @@ def test_poutput_no_wrap_and_overflow(outsim_app):
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_pretty_print(outsim_app):
     """Test that cmd2 passes objects through so they can be pretty-printed when highlighting is enabled."""
-    rich_print_kwargs = RichPrintKwargs(highlight=True)
     dictionary = {1: 'hello', 2: 'person', 3: 'who', 4: 'codes'}
 
-    outsim_app.poutput(
-        dictionary,
-        rich_print_kwargs=rich_print_kwargs,
-    )
+    outsim_app.poutput(dictionary, highlight=True)
     out = outsim_app.stdout.getvalue()
     assert out.startswith("\x1b[1m{\x1b[0m\x1b[1;36m1\x1b[0m: \x1b[32m'hello'\x1b[0m")
 
@@ -2214,9 +2252,6 @@ def test_poutput_all_keyword_args(outsim_app):
         justify="center",
         overflow="ellipsis",
         no_wrap=True,
-        markup=True,
-        emoji=True,
-        highlight=True,
         width=40,
         height=50,
         crop=False,

@@ -44,6 +44,8 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
         - [command_sets.py](https://github.com/python-cmd2/cmd2/blob/main/examples/command_sets.py)
         - [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
+    - Optimized performance of terminal fixup during command finalization by replacing `stty sane`
+      with `termios.tcsetattr`
 
 - Bug Fixes
     - Fixed a redirection bug where `cmd2` could unintentionally overwrite an application's
