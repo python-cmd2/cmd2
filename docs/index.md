@@ -25,13 +25,13 @@ app = App()
 app.cmdloop()
 ```
 
-## Getting Started
+<!-- Getting Started -->
 
 {%
    include-markdown "./overview/index.md"
 %}
 
-## Migrating from cmd
+<!-- Migrating from cmd -->
 
 {%
    include-markdown "./migrating/index.md"

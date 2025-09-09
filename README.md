@@ -127,9 +127,8 @@ import cmd2
 class FirstApp(cmd2.Cmd):
     """A simple cmd2 application."""
 
-
-def do_hello_world(self, _: cmd2.Statement):
-    self.poutput('Hello World')
+    def do_hello_world(self, _: cmd2.Statement):
+        self.poutput('Hello World')
 
 
 if __name__ == '__main__':
