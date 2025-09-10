@@ -270,7 +270,7 @@ def test_complete_exception(cmd2_app, capsys) -> None:
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    out, err = capsys.readouterr()
+    _out, err = capsys.readouterr()
 
     assert first_match is None
     assert "IndexError" in err
@@ -278,7 +278,7 @@ def test_complete_exception(cmd2_app, capsys) -> None:
 
 def test_complete_macro(base_app, request) -> None:
     # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake run_pyscript {1}')
+    out, _err = run_cmd(base_app, 'macro create fake run_pyscript {1}')
     assert out == normalize("Macro 'fake' created")
 
     # Macros do path completion
@@ -1178,7 +1178,7 @@ def test_complete_set_value_invalid_settable(cmd2_app, capsys) -> None:
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is None
 
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
     assert "fake is not a settable parameter" in out
 
 

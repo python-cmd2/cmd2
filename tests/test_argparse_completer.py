@@ -348,16 +348,16 @@ def ac_app():
 
 @pytest.mark.parametrize('command', ['music', 'music create', 'music create rock', 'music create jazz'])
 def test_help(ac_app, command) -> None:
-    out1, err1 = run_cmd(ac_app, f'{command} -h')
-    out2, err2 = run_cmd(ac_app, f'help {command}')
+    out1, _err1 = run_cmd(ac_app, f'{command} -h')
+    out2, _err2 = run_cmd(ac_app, f'help {command}')
     assert out1 == out2
 
 
 def test_bad_subcommand_help(ac_app) -> None:
     # These should give the same output because the second one isn't using a
     # real subcommand, so help will be called on the music command instead.
-    out1, err1 = run_cmd(ac_app, 'help music')
-    out2, err2 = run_cmd(ac_app, 'help music fake')
+    out1, _err1 = run_cmd(ac_app, 'help music')
+    out2, _err2 = run_cmd(ac_app, 'help music fake')
     assert out1 == out2
 
 
@@ -907,7 +907,7 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys)
 
     complete_tester(text, line, begidx, endidx, ac_app)
 
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
     assert is_error == all(x in out for x in ["Error: argument", "expected"])
 
 
@@ -1016,7 +1016,7 @@ def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys) -> None
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
     if has_hint:
         assert "Hint:\n" in out
     else:
@@ -1030,7 +1030,7 @@ def test_autocomp_hint_no_help_text(ac_app, capsys) -> None:
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
 
     assert first_match is None
     assert out != '''\nHint:\n  NO_HELP_POS\n\n'''
@@ -1051,7 +1051,7 @@ def test_completion_error(ac_app, capsys, args, text) -> None:
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
 
     assert first_match is None
     assert f"{text} broke something" in out
@@ -1113,7 +1113,7 @@ def test_complete_mutex_group(ac_app, command_and_args, text, output_contains, f
 
     assert first_match == complete_tester(text, line, begidx, endidx, ac_app)
 
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
     assert output_contains in out
 
 
