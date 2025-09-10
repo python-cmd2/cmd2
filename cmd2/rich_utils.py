@@ -133,6 +133,7 @@ class Cmd2BaseConsole(Console):
         :param file: optional file object where the console should write to.
                      Defaults to sys.stdout.
         :param kwargs: keyword arguments passed to the parent Console class.
+        :raises TypeError: if disallowed keyword argument is passed in.
         """
         # Don't allow force_terminal or force_interactive to be passed in, as their
         # behavior is controlled by the ALLOW_STYLE setting.
