@@ -87,30 +87,30 @@ def test_apcustom_usage() -> None:
 
 
 def test_apcustom_nargs_help_format(cust_app) -> None:
-    out, err = run_cmd(cust_app, 'help range')
+    out, _err = run_cmd(cust_app, 'help range')
     assert 'Usage: range [-h] [--arg0 ARG0] [--arg1 ARG1{2}] [--arg2 ARG2{3+}]' in out[0]
     assert '             [--arg3 ARG3{2..3}] [--arg4 [ARG4 [...]]] [--arg5 ARG5 [...]]' in out[1]
 
 
 def test_apcustom_nargs_range_validation(cust_app) -> None:
     # nargs = (3,)  # noqa: ERA001
-    out, err = run_cmd(cust_app, 'range --arg2 one two')
+    _out, err = run_cmd(cust_app, 'range --arg2 one two')
     assert 'Error: argument --arg2: expected at least 3 arguments' in err[2]
 
-    out, err = run_cmd(cust_app, 'range --arg2 one two three')
+    _out, err = run_cmd(cust_app, 'range --arg2 one two three')
     assert not err
 
-    out, err = run_cmd(cust_app, 'range --arg2 one two three four')
+    _out, err = run_cmd(cust_app, 'range --arg2 one two three four')
     assert not err
 
     # nargs = (2,3)  # noqa: ERA001
-    out, err = run_cmd(cust_app, 'range --arg3 one')
+    _out, err = run_cmd(cust_app, 'range --arg3 one')
     assert 'Error: argument --arg3: expected 2 to 3 arguments' in err[2]
 
-    out, err = run_cmd(cust_app, 'range --arg3 one two')
+    _out, err = run_cmd(cust_app, 'range --arg3 one two')
     assert not err
 
-    out, err = run_cmd(cust_app, 'range --arg2 one two three')
+    _out, err = run_cmd(cust_app, 'range --arg2 one two three')
     assert not err
 
 
@@ -284,7 +284,7 @@ def test_completion_items_as_choices(capsys) -> None:
         args = parser.parse_args(['3'])
 
     # Confirm error text contains correct value type of str
-    out, err = capsys.readouterr()
+    _out, err = capsys.readouterr()
     assert "invalid choice: '3' (choose from '1', '2')" in err
 
     ##############################################################
@@ -306,5 +306,5 @@ def test_completion_items_as_choices(capsys) -> None:
         args = parser.parse_args(['3'])
 
     # Confirm error text contains correct value type of int
-    out, err = capsys.readouterr()
+    _out, err = capsys.readouterr()
     assert 'invalid choice: 3 (choose from 1, 2)' in err

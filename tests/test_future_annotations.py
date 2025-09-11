@@ -17,6 +17,6 @@ def test_hooks_work_with_future_annotations() -> None:
             return data
 
     hook_app = HookApp()
-    out, err = run_cmd(hook_app, '')
+    out, _err = run_cmd(hook_app, '')
     expected = normalize('')
     assert out == expected

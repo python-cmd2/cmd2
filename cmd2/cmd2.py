@@ -6024,7 +6024,7 @@ class Cmd(cmd.Cmd):
         type_hints, ret_ann = get_types(func)
         if not type_hints:
             raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: {data_type}")
-        param_name, par_ann = next(iter(type_hints.items()))
+        _param_name, par_ann = next(iter(type_hints.items()))
         # validate the parameter has the right annotation
         if par_ann != data_type:
             raise TypeError(f'argument 1 of {func.__name__} has incompatible type {par_ann}, expected {data_type}')

@@ -961,7 +961,7 @@ def test_skip_postcmd_hooks(capsys) -> None:
 
     # Cause a SkipPostcommandHooks exception and verify no postcmd stuff runs but cmdfinalization_hook still does
     app.onecmd_plus_hooks('skip_postcmd_hooks')
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
     assert "In do_skip_postcmd_hooks" in out
     assert app.called_postcmd == 0
     assert app.called_cmdfinalization == 1

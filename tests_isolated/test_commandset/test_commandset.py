@@ -123,7 +123,7 @@ class CommandSetB(CommandSetBase):
 def test_autoload_commands(command_sets_app) -> None:
     # verifies that, when autoload is enabled, CommandSets and registered functions all show up
 
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_app._build_command_info()
+    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = command_sets_app._build_command_info()
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
@@ -184,7 +184,7 @@ def test_command_synonyms() -> None:
 
     # Make sure the alias command still exists, has the same parser, and works.
     assert alias_parser is app._command_parsers.get(cmd2.Cmd.do_alias)
-    out, err = run_cmd(app, 'alias --help')
+    out, _err = run_cmd(app, 'alias --help')
     assert normalize(alias_parser.format_help())[0] in out
 
 
@@ -199,7 +199,7 @@ def test_custom_construct_commandsets() -> None:
     # Verifies that a custom initialized CommandSet loads correctly when passed into the constructor
     app = WithCommandSets(command_sets=[command_set_b])
 
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = app._build_command_info()
+    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = app._build_command_info()
     assert 'Command Set B' in cmds_cats
 
     # Verifies that the same CommandSet cannot be loaded twice
@@ -246,11 +246,11 @@ def test_load_commands(command_sets_manual, capsys) -> None:
     assert 'Apple!' in out.stdout
 
     # Make sure registration callbacks ran
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
     assert "in on_register now" in out
     assert "in on_registered now" in out
 
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
@@ -266,13 +266,13 @@ def test_load_commands(command_sets_manual, capsys) -> None:
     # uninstall the command set and verify it is now also no longer accessible
     command_sets_manual.unregister_command_set(cmd_set)
 
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
 
     assert 'Alone' not in cmds_cats
     assert 'Fruits' not in cmds_cats
 
     # Make sure unregistration callbacks ran
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
     assert "in on_unregister now" in out
     assert "in on_unregistered now" in out
 
@@ -282,7 +282,7 @@ def test_load_commands(command_sets_manual, capsys) -> None:
     # reinstall the command set and verify it is accessible
     command_sets_manual.register_command_set(cmd_set)
 
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
@@ -335,7 +335,7 @@ def test_load_commandset_errors(command_sets_manual, capsys) -> None:
         command_sets_manual.register_command_set(cmd_set)
 
     # verify that the commands weren't installed
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
 
     assert 'Alone' not in cmds_cats
     assert 'Fruits' not in cmds_cats
@@ -349,7 +349,7 @@ def test_load_commandset_errors(command_sets_manual, capsys) -> None:
 
     # now install a command set and verify the commands are now present
     command_sets_manual.register_command_set(cmd_set)
-    out, err = capsys.readouterr()
+    _out, err = capsys.readouterr()
 
     # verify aliases and macros are deleted with warning if they conflict with a command
     assert "Deleting alias 'banana'" in err
@@ -524,7 +524,7 @@ def test_subcommands(command_sets_manual) -> None:
         command_sets_manual.register_command_set(fruit_cmds)
 
     # verify that the commands weren't installed
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
     assert 'cut' in cmds_doc
     assert 'Fruits' not in cmds_cats
 
@@ -542,7 +542,7 @@ def test_subcommands(command_sets_manual) -> None:
     # verify that command set install without problems
     command_sets_manual.register_command_set(fruit_cmds)
     command_sets_manual.register_command_set(veg_cmds)
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
     assert 'Fruits' in cmds_cats
 
     text = ''
@@ -570,7 +570,7 @@ def test_subcommands(command_sets_manual) -> None:
 
     # verify that command set uninstalls without problems
     command_sets_manual.unregister_command_set(fruit_cmds)
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
     assert 'Fruits' not in cmds_cats
 
     # verify a double-unregister raises exception
@@ -587,7 +587,7 @@ def test_subcommands(command_sets_manual) -> None:
 
     command_sets_manual.enable_command('cut')
 
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
     assert 'Fruits' in cmds_cats
 
     text = ''
@@ -615,7 +615,7 @@ def test_subcommands(command_sets_manual) -> None:
 
     # verify that command set uninstalls without problems
     command_sets_manual.unregister_command_set(fruit_cmds)
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = command_sets_manual._build_command_info()
     assert 'Fruits' not in cmds_cats
 
     # verify a double-unregister raises exception
@@ -752,7 +752,7 @@ def static_subcommands_app():
 
 
 def test_static_subcommands(static_subcommands_app) -> None:
-    cmds_cats, cmds_doc, cmds_undoc, help_topics = static_subcommands_app._build_command_info()
+    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = static_subcommands_app._build_command_info()
     assert 'Fruits' in cmds_cats
 
     text = ''
@@ -929,7 +929,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys) -> None:
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
 
     assert first_match is None
     assert command_sets_manual.completion_matches == []
@@ -952,7 +952,7 @@ def test_cross_commandset_completer(command_sets_manual, capsys) -> None:
     endidx = len(line)
     begidx = endidx
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
-    out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
 
     assert first_match is None
     assert command_sets_manual.completion_matches == []
@@ -1145,7 +1145,7 @@ Parameter 'arbitrary_value' not supported (type 'set' for list of parameters).
 
     with pytest.raises(
         ValueError,
-        match="Cannot force settable prefixes. CommandSet WithSettablesNoPrefix does not have a settable prefix defined.",
+        match=r"Cannot force settable prefixes. CommandSet WithSettablesNoPrefix does not have a settable prefix defined.",
     ):
         app.always_prefix_settables = True
 
