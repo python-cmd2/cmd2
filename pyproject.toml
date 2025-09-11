@@ -243,7 +243,6 @@ ignore = [
     "TC006",   # Add quotes to type expression in typing.cast() (not needed except for forward references)
     "TRY003",  # Avoid specifying long messages outside the exception class (force custom exceptions for everything)
     "UP017",   # Use datetime.UTC alias (requires Python 3.11+)
-    "UP038",   # Use X | Y in {} call instead of (X, Y) - deprecated due to poor performance (requires Python 3.10+)
     "W191",    # Conflicts with ruff format
 ]
 
