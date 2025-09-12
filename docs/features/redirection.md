@@ -38,8 +38,8 @@ something like the following:
     (Cmd) help | grep py | wc > output.txt
 
 The above runs the **help** command, pipes its output to **grep** searching for any lines containing
-_py_, then pipes the output of grep to the **wc** "word count" command, and finally writes redirects
-the output of that to a file called _output.txt_.
+_py_, then pipes the output of grep to the **wc** "word count" command, and finally redirects the
+output of that to a file called _output.txt_.
 
 ## Disabling Redirection
 

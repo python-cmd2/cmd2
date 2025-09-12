@@ -17,8 +17,8 @@ However, there are some limitations to this way of using `cmd2`, mainly that `cm
 loop of a program. This can be unnecessarily restrictive and can prevent using libraries which
 depend on controlling their own event loop.
 
-Many Python concurrency libraries involve or require an event loop which they are in control of such
-as [asyncio](https://docs.python.org/3/library/asyncio.html), [gevent](http://www.gevent.org/),
+Many Python concurrency libraries involve or require an event loop which they are in control of,
+such as [asyncio](https://docs.python.org/3/library/asyncio.html), [gevent](http://www.gevent.org/),
 [Twisted](https://twistedmatrix.com), etc.
 
 `cmd2` applications can be executed in a fashion where `cmd2` doesn't own the main loop for the
@@ -44,7 +44,8 @@ if __name__ == '__main__':
     app.postloop()
 ```
 
-The `cmd2.Cmd.runcmds_plus_hooks()` method runs multiple commands via `cmd2.Cmd.onecmd_plus_hooks`.
+The `cmd2.Cmd.runcmds_plus_hooks()` method runs multiple commands via
+`cmd2.Cmd.onecmd_plus_hooks()`.
 
 The `cmd2.Cmd.onecmd_plus_hooks()` method will do the following to execute a single command in a
 normal fashion:

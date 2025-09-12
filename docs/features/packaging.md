@@ -8,20 +8,20 @@ ecosystem.
 
 ## Publishing to the Python Package Index (PyPI)
 
-The easiest way is to use to follow the tutorial for
+The easiest way is to follow the tutorial for
 [Packaging Python Projects](https://packaging.python.org/en/latest/tutorials/packaging-projects/).
-This will show you how to package your application as a Python package and uploadi to the Python
+This will show you how to package your application as a Python package and upload it to the Python
 Package Index ([PyPI](https://pypi.org/)). Once published there, users will be able to install it
 using idiomatic Python packaging tools such as [pip](https://pip.pypa.io/) or
 [uv](https://github.com/astral-sh/uv).
 
-Small tweaks on this process can allow you to publish to private PyPI mirror such as one hosted on
+Small tweaks on this process can allow you to publish to private PyPI mirrors such as one hosted on
 [AWS CodeArtifact](https://aws.amazon.com/codeartifact/).
 
 ## Packaging your application in a container using Docker
 
-Packing your Python application in a [Docker](https://www.docker.com/) container is a great when it
-comes to cross-platform portability and convenience since your this container will inlude all
+Packing your Python application in a [Docker](https://www.docker.com/) container is great when it
+comes to cross-platform portability and convenience since this container will include all
 dependencies for your application and run them in an isolated environment which won't conflict with
 operating system dependencies.
 

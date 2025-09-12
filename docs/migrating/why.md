@@ -39,7 +39,7 @@ and capabilities, without you having to do anything:
 - Users can load script files, which contain a series of commands to be executed.
 - Users can create [Shortcuts, Aliases, and Macros](../features/shortcuts_aliases_macros.md) to
   reduce the typing required for repetitive commands.
-- Embedded python shell allows a user to execute python code from within your `cmd2` app. How meta.
+- Embedded Python shell allows a user to execute Python code from within your `cmd2` app. How meta.
 - [Clipboard Integration](../features/clipboard.md) allows you to save command output to the
   operating system clipboard.
 - A built-in [Timer](../features/misc.md#Timer) can show how long it takes a command to execute

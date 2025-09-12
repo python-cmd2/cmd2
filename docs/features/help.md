@@ -44,7 +44,7 @@ Occasionally there might be an unusual circumstance where providing static help 
 enough and you want to provide dynamic information in the help text for a command. To meet this
 need, if a `help_foo` method is defined to match the `do_foo` method, then that method will be used
 to provide the help for command **foo**. This dynamic help is only supported for commands which do
-not use an `argparse` decorator because didn't want different output for `help cmd` than for
+not use an `argparse` decorator because we didn't want different output for `help cmd` than for
 `cmd -h`.
 
 ## Categorizing Commands
@@ -85,7 +85,7 @@ Here's the output from the example `help_categories.py`:
 
 There are 2 methods of specifying command categories, using the `@with_category` decorator or with
 the `categorize()` function. Once a single command category is detected, the help output switches to
-a categorized mode of display. All commands with an explicit category defined default to the
+a categorized mode of display. All commands without an explicit category defined default to the
 category `Other`.
 
 Using the `@with_category` decorator:
@@ -132,7 +132,7 @@ categorize((do_undeploy,
 ```
 
 The `help` command also has a verbose option (`help -v` or `help --verbose`) that combines the help
-categories with per-command Help Messages:
+categories with per-command help messages:
 
     Documented commands (use 'help -v' for verbose/'help <topic>' for details):
 

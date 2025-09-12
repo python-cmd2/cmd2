@@ -85,8 +85,8 @@ instance, `ArgparseCompleter` sets it to False when displaying completion hints.
 
 ## Tab Completion Using argparse Decorators {: #argparse-based }
 
-When using one the argparse-based [cmd2.decorators](../api/decorators.md), `cmd2` provides automatic
-tab completion of flag names.
+When using one of the argparse-based [cmd2.decorators](../api/decorators.md), `cmd2` provides
+automatic tab completion of flag names.
 
 Tab completion of argument values can be configured by using one of three parameters to
 `argparse.ArgumentParser.add_argument`
@@ -95,25 +95,26 @@ Tab completion of argument values can be configured by using one of three parame
 - `choices_provider`
 - `completer`
 
-See the [arg_decorators](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_decorators.py)
+See the
+[argparse_example](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
 example for a demonstration of how to use the `choices` parameter. See the
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 example for a demonstration of how to use the `choices_provider` parameter. See the
-[arg_decorators](https://github.com/python-cmd2/cmd2/blob/main/examples/arg_decorators.py) or
+[argparse_example](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py) or
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 example for a demonstration of how to use the `completer` parameter.
 
 When tab completing flags or argument values for a `cmd2` command using one of these decorators,
 `cmd2` keeps track of state so that once a flag has already previously been provided, it won't
-attempt to tab complete it again. When no completion results exists, a hint for the current argument
+attempt to tab complete it again. When no completion results exist, a hint for the current argument
 will be displayed to help the user.
 
 ## CompletionItem For Providing Extra Context
 
 When tab completing things like a unique ID from a database, it can often be beneficial to provide
 the user with some extra context about the item being completed, such as a description. To
-facilitate this, `cmd2` defines the `cmd2.argparse_custom.CompletionItem` class which can be
-returned from any of the 3 completion parameters: `choices`, `choices_provider`, and `completer`.
+facilitate this, `cmd2` defines the `cmd2.CompletionItem` class which can be returned from any of
+the 3 completion parameters: `choices`, `choices_provider`, and `completer`.
 
 See the
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)

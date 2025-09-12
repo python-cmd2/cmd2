@@ -14,7 +14,7 @@ for the simple use case of statically setting the prompt.
 When a user types a [Multiline Command](./multiline_commands.md) it may span more than one line of
 input. The prompt for the first line of input is specified by the `cmd2.Cmd.prompt` instance
 attribute. The prompt for subsequent lines of input is defined by the `cmd2.Cmd.continuation_prompt`
-attribute.See the
+attribute. See the
 [getting_started](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py) example
 for a demonstration of customizing the continuation prompt.
 

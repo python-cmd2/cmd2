@@ -89,7 +89,7 @@ editor                  vi                              Program used by 'edit'
 feedback_to_output      False                           Include nonessentials in '|' and '>' results
 max_completion_items    50                              Maximum number of CompletionItems to display during tab
                                                         completion
-quiet                   False                           Don't print nonessential feedback
+quiet                   False                           Don't print non-essential feedback
 scripts_add_to_history  True                            Scripts and pyscripts add commands to history
 timing                  False                           Report execution times
 ```

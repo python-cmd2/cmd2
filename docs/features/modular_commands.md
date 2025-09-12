@@ -4,8 +4,8 @@
 
 Cmd2 also enables developers to modularize their command definitions into `CommandSet` objects.
 CommandSets represent a logical grouping of commands within an cmd2 application. By default, all
-CommandSets will be discovered and loaded automatically when the cmd2.Cmd class is instantiated with
-this mixin. This also enables the developer to dynamically add/remove commands from the cmd2
+CommandSets will be discovered and loaded automatically when the `cmd2.Cmd` class is instantiated
+with this mixin. This also enables the developer to dynamically add/remove commands from the cmd2
 application. This could be useful for loadable plugins that add additional capabilities.
 Additionally, it allows for object-oriented encapsulation and garbage collection of state that is
 specific to a CommandSet.
@@ -39,8 +39,8 @@ CommandSets group multiple commands together. The plugin will inspect functions 
 with `do_`, help functions with `help_`, and completer functions with `complete_`.
 
 A new decorator `with_default_category` is provided to categorize all commands within a CommandSet
-in the same command category. Individual commands in a CommandSet may be override the default
-category by specifying a specific category with `cmd2.with_category`.
+in the same command category. Individual commands in a CommandSet may override the default category
+by specifying a specific category with `cmd2.with_category`.
 
 CommandSet command methods will always expect the same parameters as when defined in a `cmd2.Cmd`
 sub-class, except that `self` will now refer to the `CommandSet` instead of the cmd2 instance. The
@@ -78,7 +78,7 @@ class ExampleApp(cmd2.Cmd):
 
 ### Manual CommandSet Construction
 
-If a CommandSet class requires parameters to be provided to the constructor, you man manually
+If a CommandSet class requires parameters to be provided to the constructor, you may manually
 construct CommandSets and pass in the constructor to Cmd2.
 
 ```py
@@ -121,10 +121,9 @@ def main():
 ### Dynamic Commands
 
 You can also dynamically load and unload commands by installing and removing CommandSets at runtime.
-For example, if you could support runtime loadable plugins or add/remove commands based on your
-state.
+For example, you can support runtime loadable plugins or add/remove commands based on your state.
 
-You may need to disable command auto-loading if you need dynamically load commands at runtime.
+You may need to disable command auto-loading if you need to dynamically load commands at runtime.
 
 ```py
 import argparse
@@ -239,13 +238,13 @@ code around these similar actions rather than organizing your code around simila
 managed.
 
 Subcommand injection allows you to inject subcommands into a base command to present an interface
-that is sensible to a user while still organizing your code in whatever structure make more logical
+that is sensible to a user while still organizing your code in whatever structure makes more logical
 sense to the developer.
 
 ### Example
 
 This example is a variation on the Dynamic Commands example above. A `cut` command is introduced as
-a base command and each CommandSet
+a base command and each CommandSet adds a subcommand to it.
 
 ```py
 import argparse

@@ -36,7 +36,7 @@ in a similar fashion to aliases in the Bash shell.
 The syntax to create an alias is: `alias create name command [args]`, e.g.
 `alias create ls !ls -lF`.
 
-Redirectors and pipes should be quoted in alias definition to prevent the `alias create` command
+Redirectors and pipes should be quoted in the alias definition to prevent the `alias create` command
 from being redirected:
 
     alias create save_results print_results ">" out.txt
@@ -63,16 +63,16 @@ Note: Aliases cannot have the same name as a command or macro
 
 `cmd2` provides a feature that is similar to aliases called macros. The major difference between
 macros and aliases is that macros can contain argument placeholders. Arguments are expressed when
-creating a macro using {#} notation where {1} means the first argument.
+creating a macro using `{#}` notation, where `{1}` means the first argument.
 
-The following creates a macro called my[macro]{#macro} that expects two arguments:
+The following creates a macro called `my_macro` that expects two arguments:
 
-    macro create my[macro]{#macro} make[dinner]{#dinner} -meat {1} -veggie {2}
+    macro create my_macro make_dinner -meat {1} -veggie {2}
 
 When the macro is called, the provided arguments are resolved and the assembled command is run. For
 example:
 
-    my[macro]{#macro} beef broccoli ---> make[dinner]{#dinner} -meat beef -veggie broccoli
+    my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli
 
 Similar to aliases, pipes and redirectors need to be quoted in the definition of a macro:
 

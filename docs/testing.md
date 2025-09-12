@@ -6,7 +6,7 @@ This covers special considerations when writing unit tests for a cmd2 applicatio
 
 ## Testing Commands
 
-The [External Test Plugin](plugins/external_test.md) provides a mixin class with an function that
+The [External Test Plugin](plugins/external_test.md) provides a mixin class with a function that
 allows external calls to application commands. The `cmd2_ext_test.ExternalTestMixin.app_cmd`
 function captures and returns stdout, stderr, and the command-specific result data.
 
@@ -18,8 +18,8 @@ If you need to mock anything in your cmd2 application, and most specifically in 
 [spec=True](https://docs.python.org/3/library/unittest.mock.html#patch), or whatever equivalent is
 provided in the mocking library you're using.
 
-In order to automatically load functions as commands cmd2 performs a number of reflection calls to
-look up attributes of classes defined in your cmd2 application. Many mocking libraries will
+In order to automatically load functions as commands, `cmd2` performs a number of reflection calls
+to look up attributes of classes defined in your cmd2 application. Many mocking libraries will
 automatically create mock objects to match any attribute being requested, regardless of whether
 they're present in the object being mocked. This behavior can incorrectly instruct cmd2 to treat a
 function or attribute as something it needs to recognize and process. To prevent this, you should

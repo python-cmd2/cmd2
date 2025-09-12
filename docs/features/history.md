@@ -54,8 +54,8 @@ that saved input. The examples to follow all assume that you have entered the fo
     (Cmd) alias create four !echo four
     Alias 'four' created
 
-In it's simplest form, the `history` command displays previously entered commands. With no
-additional arguments, it displays all previously entered commands:
+In its simplest form, the `history` command displays previously entered commands. With no additional
+arguments, it displays all previously entered commands:
 
     (Cmd) history
         1  alias create one !echo one
@@ -68,7 +68,7 @@ If you give a positive integer as an argument, then it only displays the specifi
     (Cmd) history 4
         4  alias create four !echo four
 
-If you give a negative integer _N_ as an argument, then it display the _Nth_ last command. For
+If you give a negative integer _N_ as an argument, then it displays the _Nth_ last command. For
 example, if you give `-1` it will display the last command you entered. If you give `-2` it will
 display the next to last command you entered, and so forth:
 
@@ -110,9 +110,9 @@ an argument:
 > can insert the pseudo-argument '--' which tells parse[args]{#args}() that everything after that is
 > a positional argument:
 
-There is no zeroth command, so don't ask for it. If you are a python programmer, you've probably
+There is no zeroth command, so don't ask for it. If you are a Python programmer, you've probably
 noticed this looks a lot like the slice syntax for lists and arrays. It is, with the exception that
-the first history command is 1, where the first element in a python array is 0.
+the first history command is 1, where the first element in a Python array is 0.
 
 Besides selecting previous commands by number, you can also search for them. You can use a simple
 string search:
@@ -193,7 +193,7 @@ commands with line numbers to a file, you can do it with output redirection:
 
     (Cmd) history 1:4 > history.txt
 
-You might use `-s` or `--script` on it's own if you want to display history commands to the screen
+You might use `-s` or `--script` on its own if you want to display history commands to the screen
 without line numbers, so you can copy them to the clipboard:
 
     (Cmd) history -s 1:3

@@ -6,7 +6,7 @@ See [Output Redirection and Pipes](./redirection.md#output-redirection-and-pipes
 
 ## Executing OS commands from within `cmd2`
 
-`cmd2` includes a `shell` command which executes it's arguments in the operating system shell:
+`cmd2` includes a `shell` command which executes its arguments in the operating system shell:
 
     (Cmd) shell ls -al
 
@@ -82,7 +82,7 @@ the text file using your `cmd2` program (from a Windows command prompt):
     c:\cmd2> type somecmds.txt | python.exe examples/transcript_example.py
     omesay ordsway
 
-By default, `cmd2` programs also look for commands pass as arguments from the operating system
+By default, `cmd2` programs also look for commands passed as arguments from the operating system
 shell, and execute those commands before entering the command loop:
 
     $ python examples/transcript_example.py help
@@ -99,7 +99,7 @@ example, you might have a command inside your `cmd2` program which itself accept
 maybe even option strings. Say you wanted to run the `speak` command from the operating system
 shell, but have it say it in pig latin:
 
-    $ python example/transcript_example.py speak -p hello there
+    $ python examples/transcript_example.py speak -p hello there
     python transcript_example.py speak -p hello there
     usage: speak [-h] [-p] [-s] [-r REPEAT] words [words ...]
     speak: error: the following arguments are required: words
@@ -112,7 +112,7 @@ Uh-oh, that's not what we wanted. `cmd2` treated `-p`, `hello`, and `there` as c
 exist in that program, thus the syntax errors.
 
 There is an easy way around this, which is demonstrated in `examples/cmd_as_argument.py`. By setting
-`allow_cli_args=False` you can so your own argument parsing of the command line:
+`allow_cli_args=False` you can do your own argument parsing of the command line:
 
     $ python examples/cmd_as_argument.py speak -p hello there
     ellohay heretay
@@ -122,7 +122,7 @@ Check the source code of this example, especially the `main()` function, to see 
 Alternatively you can simply wrap the command plus arguments in quotes (either single or double
 quotes):
 
-    $ python example/transcript_example.py "speak -p hello there"
+    $ python examples/transcript_example.py "speak -p hello there"
     ellohay heretay
     (Cmd)
 
@@ -148,6 +148,6 @@ quits while returning an exit code:
 
 Here is another example using `quit`:
 
-    $ python example/transcript_example.py "speak -p hello there" quit
+    $ python examples/transcript_example.py "speak -p hello there" quit
     ellohay heretay
     $

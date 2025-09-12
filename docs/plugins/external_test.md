@@ -56,7 +56,7 @@ def example_app():
 Now write your tests that validate your application using the
 `cmd2_ext_test.ExternalTestMixin.app_cmd` function to access the cmd2 application's commands. This
 allows invocation of the application's commands in the same format as a user would type. The results
-from calling a command matches what is returned from running an python script with cmd2's
+from calling a command matches what is returned from running a Python script with cmd2's
 [run_pyscript](../features/builtin_commands.md#run_pyscript) command, which provides `stdout`,
 `stderr`, and the command's result data.
 

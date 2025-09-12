@@ -85,7 +85,7 @@ to your output which tell the terminal to change the foreground and background c
 
 `cmd2` provides a number of convenience functions and classes for adding color and other styles to
 text. These are all based on [rich](https://github.com/Textualize/rich) and are documented in the
-following sectins:
+following sections:
 
 - [cmd2.colors][]
 - [cmd2.rich_utils][]

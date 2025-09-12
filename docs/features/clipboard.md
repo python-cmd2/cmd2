@@ -12,9 +12,8 @@ clipboard by ending the command with a greater than symbol:
 mycommand args >
 ```
 
-Think of it as though you are redirecting output to an unnamed, ephemeral place, you know, like the
-clipboard. You can also append output to the current contents of the clipboard by ending the command
-with two greater than symbols:
+Think of it as redirecting output to an unnamed, ephemeral place: the clipboard. You can also append
+output to the current contents of the clipboard by ending the command with two greater than symbols:
 
 ```text
 mycommand arg1 arg2 >>
