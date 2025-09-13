@@ -6,8 +6,8 @@ Turn the timer setting on, and `cmd2` will show the wall time it takes for each 
 
 ## Exiting
 
-`cmd2` applications can be exited by using the `quit` command. Pressing `Ctrl-D` on an empty line
-will also exit the application, which is common behavior for many shell applications.
+Like many shell applications, `cmd2` applications can be exited by pressing `Ctrl-D` on an empty
+line, or by executing the `quit` command.
 
 ## select
 

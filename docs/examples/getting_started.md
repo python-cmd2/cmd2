@@ -267,9 +267,9 @@ persist between invocations of your application, you'll need to do a little work
 
 Users can access command history using two methods:
 
-- the [readline](https://docs.python.org/3/library/readline.html) library which provides a Python
+- The [readline](https://docs.python.org/3/library/readline.html) library which provides a Python
   interface to the [GNU readline library](https://en.wikipedia.org/wiki/GNU_Readline)
-- the `history` command which is built-in to `cmd2`
+- The `history` command which is built-in to `cmd2`
 
 From the prompt in a `cmd2`-based application, you can press `Control-p` to move to the previously
 entered command, and `Control-n` to move to the next command. You can also search through the
@@ -280,10 +280,10 @@ details, including all the available commands, and instructions for customizing 
 The `history` command allows a user to view the command history, and select commands from history by
 number, range, string search, or regular expression. With the selected commands, users can:
 
-- re-run the commands
-- edit the selected commands in a text editor, and run them after the text editor exits
-- save the commands to a file
-- run the commands, saving both the commands and their output to a file
+- Re-run the commands
+- Edit the selected commands in a text editor, and run them after the text editor exits
+- Save the commands to a file
+- Run the commands, saving both the commands and their output to a file
 
 Learn more about the `history` command by typing `history -h` at any `cmd2` input prompt, or by
 exploring [Command History For Users](../features/history.md#for-users).
