@@ -1,8 +1,8 @@
 # Clipboard Integration
 
 Nearly every operating system has some notion of a short-term storage area which can be accessed by
-any program. Usually this is called the clipboard, but sometimes people refer to it as the paste
-buffer.
+any program. Usually this is called the :clipboard: clipboard, but sometimes people refer to it as
+the paste buffer.
 
 `cmd2` integrates with the operating system clipboard using the
 [pyperclip](https://github.com/asweigart/pyperclip) module. Command output can be sent to the
@@ -32,10 +32,4 @@ If you would like your `cmd2` based application to be able to use the clipboard 
 alternative ways, you can use the following methods (which work uniformly on Windows, macOS, and
 Linux).
 
-<!-- prettier-ignore-start -->
 ::: cmd2.clipboard
-handler: python
-options:
-show_root_heading: false
-show_source: false
-<!-- prettier-ignore-end -->

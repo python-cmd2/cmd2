@@ -1,7 +1,9 @@
 # Minimum Required Changes
 
-`cmd2.Cmd` subclasses `Cmd.cmd` from the standard library, and overrides most of the methods. Most
-apps based on the standard library can be migrated to `cmd2` in just a couple of minutes.
+[cmd2.Cmd][] subclasses [cmd.Cmd](https://docs.python.org/3/library/cmd.html#cmd.Cmd) from the
+standard library, and overrides all of the methods other than `Cmd.emptyline` (`cmd2` never calls
+this method). Most apps based on the standard library can be migrated to `cmd2` in just a couple of
+minutes.
 
 ## Import and Inheritance
 
@@ -41,6 +43,6 @@ application, you may be able to remove them. See [Exiting](../features/misc.md#e
 If you are distributing your application, you'll also need to ensure that `cmd2` is properly
 installed. You will need to add the following dependency to your `pyproject.toml` or `setup.py`:
 
-    'cmd2>=2,<3'
+    'cmd2>=2.7'
 
 See [Integrate cmd2 Into Your Project](../overview/integrating.md) for more details.

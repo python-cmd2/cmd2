@@ -7,19 +7,18 @@ leveraging other `cmd2` features. The three ideas here will get you started. Bro
 ## Argument Parsing
 
 For all but the simplest of commands, it's probably easier to use
-[argparse](https://docs.python.org/3/library/argparse.html) to parse user input. `cmd2` provides a
-`@with_argparser()` decorator which associates an `ArgumentParser` object with one of your commands.
-Using this method will:
+[argparse](https://docs.python.org/3/library/argparse.html) to parse user input than to do it
+manually yourself for each command. `cmd2` provides a `@with_argparser()` decorator which associates
+an `ArgumentParser` object with one of your commands. Using this method will:
 
 1.  Pass your command a
     [Namespace](https://docs.python.org/3/library/argparse.html#argparse.Namespace) containing the
-    arguments instead of a string of text.
-2.  Properly handle quoted string input from your users.
-3.  Create a help message for you based on the `ArgumentParser`.
-4.  Give you a big head start adding [Tab Completion](../features/completion.md) to your
-    application.
+    arguments instead of a string of text
+2.  Properly handle quoted string input from your users
+3.  Create a help message for you based on the `ArgumentParser`
+4.  Give you a big head start adding [Tab Completion](../features/completion.md) to your application
 5.  Make it much easier to implement subcommands (i.e. `git` has a bunch of subcommands such as
-    `git pull`, `git diff`, etc).
+    `git pull`, `git diff`, etc)
 
 There's a lot more about [Argument Processing](../features/argument_processing.md) if you want to
 dig in further.
@@ -41,6 +40,7 @@ If your program generates output by printing directly to `sys.stdout`, you shoul
 to `cmd2.Cmd.poutput`, `cmd2.Cmd.perror`, and `cmd2.Cmd.pfeedback`. These methods work with several
 of the built in [Settings](../features/settings.md) to allow the user to view or suppress feedback
 (i.e. progress or status output). They also properly handle ANSI colored output according to user
-preference. `cmd2`'s dependency on `rich` makes it easy to add color and style to your output. See
-the [Colored Output](../features/generating_output.md#colored-output) section for more details.
-These and other related topics are covered in [Generating Output](../features/generating_output.md).
+preference. `cmd2`'s dependency on :simple-rich: [rich](https://github.com/Textualize/rich) makes it
+easy to add color and style to your output. See the
+[Colored Output](../features/generating_output.md#colored-output) section for more details. These
+and other related topics are covered in [Generating Output](../features/generating_output.md).

@@ -4,15 +4,20 @@
 [argparse](https://docs.python.org/3/library/argparse.html) python module. `cmd2` handles the
 following for you:
 
-1. Parsing input and quoted strings like the Unix shell
-1. Parse the resulting argument list using an instance of `argparse.ArgumentParser` that you provide
-1. Passes the resulting `argparse.Namespace` object to your command function. The `Namespace`
-   includes the `Statement` object that was created when parsing the command line. It can be
-   retrieved by calling `cmd2_statement.get()` on the `Namespace`.
+1. Parsing input and quoted strings in a manner similar to how POSIX shells do it
+1. Parse the resulting argument list using an instance of
+   [argparse.ArgumentParser](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser)
+   that you provide
+1. Passes the resulting
+   [argparse.Namespace](https://docs.python.org/3/library/argparse.html#argparse.Namespace) object
+   to your command function. The `Namespace` includes the [Statement][cmd2.Statement] object that
+   was created when parsing the command line. It can be retrieved by calling `cmd2_statement.get()`
+   on the `Namespace`.
 1. Adds the usage message from the argument parser to your command's help.
 1. Checks if the `-h/--help` option is present, and if so, displays the help message for the command
 
-These features are all provided by the `@with_argparser` decorator which is imported from `cmd2`.
+These features are all provided by the [@with_argparser][cmd2.with_argparser] decorator which is
+imported from `cmd2`.
 
 See the
 [argparse_example](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
@@ -31,11 +36,11 @@ command which might have its own argument parsing.
 
 ## Argument Parsing
 
-For each command in the `cmd2` subclass which requires argument parsing, create a unique instance of
-`argparse.ArgumentParser()` which can parse the input appropriately for the command. Then decorate
-the command method with the `@with_argparser` decorator, passing the argument parser as the first
-parameter to the decorator. This changes the second argument to the command method, which will
-contain the results of `ArgumentParser.parse_args()`.
+For each command in the `cmd2.Cmd` subclass which requires argument parsing, create a unique
+instance of `argparse.ArgumentParser()` which can parse the input appropriately for the command.
+Then decorate the command method with the `@with_argparser` decorator, passing the argument parser
+as the first parameter to the decorator. This changes the second argument to the command method,
+which will contain the results of `ArgumentParser.parse_args()`.
 
 Here's what it looks like:
 
@@ -65,8 +70,8 @@ def do_speak(self, opts):
 
     `cmd2` sets the `prog` variable in the argument parser based on the name of the method it is decorating. This will override anything you specify in `prog` variable when creating the argument parser.
 
-As of the 3.0.0 release, `cmd2` sets `prog` when the instance-specific parser is created, which is
-later than it did previously.
+    As of the 3.0.0 release, `cmd2` sets `prog` when the instance-specific parser is created, which is
+    later than it did previously.
 
 ## Help Messages
 
@@ -84,7 +89,7 @@ argparser.add_argument('tag', help='tag')
 argparser.add_argument('content', nargs='+', help='content to surround with tag')
 @with_argparser(argparser)
 def do_tag(self, args):
-    """create a html tag"""
+    """Create an HTML tag"""
     self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
     self.stdout.write('\n')
 ```
@@ -94,7 +99,7 @@ the `help tag` command displays:
 ```text
 usage: tag [-h] tag content [content ...]
 
-create an HTML tag
+Create an HTML tag
 
 positional arguments:
   tag         tag
@@ -168,13 +173,13 @@ This command cannot generate tags with no content, like <br/>
 
 !!! warning
 
-    If a command **foo** is decorated with one of cmd2's argparse decorators, then **help_foo** will not be invoked when `help foo` is called. The [argparse](https://docs.python.org/3/library/argparse.html) module provides a rich API which can be used to tweak every aspect of the displayed help and we encourage `cmd2` developers to utilize that.
+    If a command **foo** is decorated with `cmd2`'s `with_argparse` decorator, then **help_foo** will not be invoked when `help foo` is called. The [argparse](https://docs.python.org/3/library/argparse.html) module provides a rich API which can be used to tweak every aspect of the displayed help and we encourage `cmd2` developers to utilize that.
 
 ## Argument List
 
 The default behavior of `cmd2` is to pass the user input directly to your `do_*` methods as a
-string. The object passed to your method is actually a `Statement` object, which has additional
-attributes that may be helpful, including `arg_list` and `argv`:
+string. The object passed to your method is actually a [Statement][cmd2.Statement] object, which has
+additional attributes that may be helpful, including `arg_list` and `argv`:
 
 ```py
 class CmdLineApp(cmd2.Cmd):
@@ -200,8 +205,8 @@ class CmdLineApp(cmd2.Cmd):
 
 If you don't want to access the additional attributes on the string passed to your `do_*` method you
 can still have `cmd2` apply shell parsing rules to the user input and pass you a list of arguments
-instead of a string. Apply the `@with_argument_list` decorator to those methods that should receive
-an argument list instead of a string:
+instead of a string. Apply the [@with_argument_list][cmd2.with_argument_list] decorator to those
+methods that should receive an argument list instead of a string:
 
 ```py
 from cmd2 import with_argument_list
@@ -272,7 +277,7 @@ def settings_ns_provider(self) -> argparse.Namespace:
     return ns
 ```
 
-To use this function with the argparse decorators, do the following:
+To use this function with the `@2ith_argparser` decorator, do the following:
 
 ```py
 @with_argparser(my_parser, ns_provider=settings_ns_provider)
@@ -293,6 +298,8 @@ See the
 [argparse_example](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
 example to learn more about how to use subcommands in your `cmd2` application.
 
+The [@as_subcommand_to][cmd2.as_subcommand_to] decorator makes adding subcommands easy.
+
 ## Argparse Extensions
 
 `cmd2` augments the standard `argparse.nargs` with range tuple capability:
@@ -300,7 +307,7 @@ example to learn more about how to use subcommands in your `cmd2` application.
 - `nargs=(5,)` - accept 5 or more items
 - `nargs=(8, 12)` - accept 8 to 12 items
 
-`cmd2` also provides the `cmd2.argparse_custom.Cmd2ArgumentParser` class which inherits from
+`cmd2` also provides the [Cmd2ArgumentParser][cmd2.Cmd2ArgumentParser] class which inherits from
 `argparse.ArgumentParser` and improves error and help output.
 
 ## Decorator Order
@@ -338,8 +345,8 @@ example demonstrates both above cases in a concrete fashion.
 
 ## Reserved Argument Names
 
-`cmd2` argparse decorators add the following attributes to argparse Namespaces. To avoid naming
-collisions, do not use any of the names for your argparse arguments.
+`cmd2`'s `@with_argparser` decorator adds the following attributes to argparse Namespaces. To avoid
+naming collisions, do not use any of the names for your argparse arguments.
 
 - `cmd2_statement` - `cmd2.Cmd2AttributeWrapper` object containing the `cmd2.Statement` object that
   was created when parsing the command line.

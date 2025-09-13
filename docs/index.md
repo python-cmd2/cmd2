@@ -1,7 +1,7 @@
 # cmd2
 
-A Python package for building powerful command-line interpreter (CLI) programs. Extends the Python
-Standard Library's [cmd](https://docs.python.org/3/library/cmd.html) package.
+A :simple-python: Python package for building powerful command-line interpreter (CLI) programs.
+Extends the Python Standard Library's [cmd](https://docs.python.org/3/library/cmd.html) package.
 
 The basic use of `cmd2` is identical to that of [cmd](https://docs.python.org/3/library/cmd.html).
 

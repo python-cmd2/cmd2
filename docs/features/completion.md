@@ -35,11 +35,12 @@ complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.pa
 
 ## Included Tab Completion Functions
 
-`cmd2` provides the following tab completion functions
+[cmd2.Cmd][] provides the following tab completion functions
 
-- `cmd2.Cmd.basic_complete` - helper method for tab completion against a list
+- [basic_complete][cmd2.Cmd.basic_complete] - helper method for tab completion against a list
 
-- `cmd2.Cmd.path_complete` - helper method provides flexible tab completion of file system paths
+- [path_complete][cmd2.Cmd.path_complete] - helper method provides flexible tab completion of file
+  system paths
 
     > - See the
     >   [paged_output](https://github.com/python-cmd2/cmd2/blob/main/examples/paged_output.py)
@@ -48,18 +49,18 @@ complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.pa
     >   [python_scripting](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
     >   example for a more full-featured use case
 
-- `cmd2.Cmd.delimiter_complete` - helper method for tab completion against a list but each match is
-  split on a delimiter
+- [delimiter_complete][cmd2.Cmd.delimiter_complete] - helper method for tab completion against a
+  list but each match is split on a delimiter
 
     > - See the
     >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
     >   example for a demonstration of how to use this feature
 
-- `cmd2.Cmd.flag_based_complete` - helper method for tab completion based on a particular flag
-  preceding the token being completed
+- [flag_based_complete][cmd2.Cmd.flag_based_complete] - helper method for tab completion based on a
+  particular flag preceding the token being completed
 
-- `cmd2.Cmd.index_based_complete` - helper method for tab completion based on a fixed position in
-  the input string
+- [index_based_complete][cmd2.Cmd.index_based_complete] - helper method for tab completion based on
+  a fixed position in the input string
 
     > - See the
     >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
@@ -83,10 +84,10 @@ error occurs in which it is more desirable to display a message than a stack tra
 has a member called `apply_style`. Set this False if the error style should not be applied. For
 instance, `ArgparseCompleter` sets it to False when displaying completion hints.
 
-## Tab Completion Using argparse Decorators {: #argparse-based }
+## Tab Completion Using argparse Decorator {: #argparse-based }
 
-When using one of the argparse-based [cmd2.decorators](../api/decorators.md), `cmd2` provides
-automatic tab completion of flag names.
+When using `cmd2`'s [@with_argparser][cmd2.with_argparser] decorator, `cmd2` provides automatic tab
+completion of flag names.
 
 Tab completion of argument values can be configured by using one of three parameters to
 `argparse.ArgumentParser.add_argument`
