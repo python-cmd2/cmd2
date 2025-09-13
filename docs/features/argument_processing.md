@@ -65,8 +65,7 @@ def do_speak(self, opts):
 
     `cmd2` sets the `prog` variable in the argument parser based on the name of the method it is decorating. This will override anything you specify in `prog` variable when creating the argument parser.
 
-    As of the 3.0.0 release, `cmd2` now sets `prog` later than it did previously.  `prog` now gets set when the instance-specific parser deep-copy is created. Previously, it was set in the `with_argparser` decorator itself.
-
+As of the 3.0.0 release, `cmd2` sets `prog` when the instance-specific parser is created, which is later than it did previously.
 ## Help Messages
 
 By default, `cmd2` uses the docstring of the command method when a user asks for help on the
