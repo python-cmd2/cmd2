@@ -2,8 +2,8 @@
 
 ## Python (optional)
 
-If the `cmd2.Cmd` class is instantiated with `include_py=True`, then the optional `py` command will
-be present and run an interactive Python shell:
+If the [cmd2.Cmd][] class is instantiated with `include_py=True`, then the optional `py` command
+will be present and run an interactive Python shell:
 
 ```py
 from cmd2 import Cmd
@@ -33,10 +33,12 @@ All of these parameters are also available to Python scripts which run in your a
 - has the ability to pass command-line arguments to the scripts invoked
 
 This command provides a more complex and powerful scripting capability than that provided by the
-simple text file scripts. Python scripts can include conditional control flow logic. See the
-**python_scripting.py** `cmd2` application and the **script_conditional.py** script in the
-`examples` source code directory for an example of how to achieve this in your own applications. See
-[Scripting](./scripting.md) for an explanation of both scripting methods in **cmd2** applications.
+simple text file scripts. Python scripts can include conditional control flow logic. See
+[python_scripting.py](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
+`cmd2` and the
+[conditional.py](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/conditional.py)
+script for an example of how to achieve this in your own applications. See
+[Scripting](./scripting.md) for an explanation of both scripting methods in `cmd2` applications.
 
 A simple example of using `run_pyscript` is shown below along with the
 [arg_printer](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/arg_printer.py) script:

@@ -78,8 +78,8 @@ user. These include the following example cases:
 - A previous command line argument that determines the data set being completed is invalid
 - Tab completion hints
 
-`cmd2` provides the `cmd2.exceptions.CompletionError` exception class for this capability. If an
-error occurs in which it is more desirable to display a message than a stack trace, then raise a
+`cmd2` provides the [CompletionError][cmd2.CompletionError] exception class for this capability. If
+an error occurs in which it is more desirable to display a message than a stack trace, then raise a
 `CompletionError`. By default, the message displays in red like an error. However, `CompletionError`
 has a member called `apply_style`. Set this False if the error style should not be applied. For
 instance, `ArgparseCompleter` sets it to False when displaying completion hints.
@@ -90,7 +90,7 @@ When using `cmd2`'s [@with_argparser][cmd2.with_argparser] decorator, `cmd2` pro
 completion of flag names.
 
 Tab completion of argument values can be configured by using one of three parameters to
-`argparse.ArgumentParser.add_argument`
+[argparse.ArgumentParser.add_argument](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument)
 
 - `choices`
 - `choices_provider`
@@ -105,17 +105,17 @@ example for a demonstration of how to use the `choices_provider` parameter. See 
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 example for a demonstration of how to use the `completer` parameter.
 
-When tab completing flags or argument values for a `cmd2` command using one of these decorators,
-`cmd2` keeps track of state so that once a flag has already previously been provided, it won't
-attempt to tab complete it again. When no completion results exist, a hint for the current argument
-will be displayed to help the user.
+When tab completing flags or argument values for a `cmd2` command using the `@with_argparser`
+decorator, `cmd2` keeps track of state so that once a flag has already previously been provided, it
+won't attempt to tab complete it again. When no completion results exist, a hint for the current
+argument will be displayed to help the user.
 
 ## CompletionItem For Providing Extra Context
 
 When tab completing things like a unique ID from a database, it can often be beneficial to provide
 the user with some extra context about the item being completed, such as a description. To
-facilitate this, `cmd2` defines the `cmd2.CompletionItem` class which can be returned from any of
-the 3 completion parameters: `choices`, `choices_provider`, and `completer`.
+facilitate this, `cmd2` defines the [CompletionItem][cmd2.CompletionItem] class which can be
+returned from any of the 3 completion parameters: `choices`, `choices_provider`, and `completer`.
 
 See the
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
@@ -124,8 +124,8 @@ demonstration of how this is used.
 
 ## Custom Completion with `read_input()`
 
-`cmd2` provides `cmd2.Cmd.read_input` as an alternative to Python's `input()` function. `read_input`
-supports configurable tab completion and up-arrow history at the prompt. See
+`cmd2` provides [cmd2.Cmd.read_input][] as an alternative to Python's `input()` function.
+`read_input` supports configurable tab completion and up-arrow history at the prompt. See
 [read_input](https://github.com/python-cmd2/cmd2/blob/main/examples/read_input.py) example for a
 demonstration.
 

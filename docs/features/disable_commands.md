@@ -2,14 +2,21 @@
 
 `cmd2` allows a developer to:
 
-- remove commands included in `cmd2`
-- prevent commands from appearing in the help menu (hide commands)
-- disable and re-enable commands at runtime
+- Remove commands included in `cmd2`
+- Prevent commands from appearing in the help menu (hide commands)
+- Disable and re-enable commands at runtime
+
+See
+[remove_builtin_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/remove_builtin_commands.py)
+for and example of removing or hiding built-in commands.
+
+See [command_sets.py](https://github.com/python-cmd2/cmd2/blob/main/examples/command_sets.py) for an
+example of dynamically enabling and dis-abling custom commands at runtime.
 
 ## Remove A Command
 
 When a command has been removed, the command method has been deleted from the object. The command
-doesn't show up in help, and it can't be executed. This approach is appropriate if you never want a
+doesn't show up in help and it can't be executed. This approach is appropriate if you never want a
 built-in command to be part of your application. Delete the command method in your initialization
 code:
 
@@ -26,9 +33,9 @@ code:
 
 ## Hide A Command
 
-When a command is hidden, it won't show up in the help menu, but if the user knows it's there and
-types the command, it will be executed. You hide a command by adding it to the `hidden_commands`
-list:
+When a command is hidden, it won't show up in the help menu and it won't tab-complete, but if the
+user knows it's there and types the command, it will be executed. You hide a command by adding it to
+the `hidden_commands` list:
 
 ```py
 class HiddenCommands(cmd2.Cmd):
@@ -101,3 +108,6 @@ Similarly, you can re-enable all the commands in a category:
 ```py
 self.enable_category('Server Information')
 ```
+
+See [help_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/help_categories.py)
+for an example of enabling and disabling and entire category of commands dynamically at runtime.

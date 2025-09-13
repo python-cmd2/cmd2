@@ -35,7 +35,7 @@ history. See [History](history.md) for more information.
 
 ### ipy (optional)
 
-This optional opt-in command enters an interactive IPython shell. See
+This optional opt-in command enters an interactive :simple-jupyter: IPython shell. See
 [IPython (optional)](./embedded_python_shells.md#ipython-optional) for more information.
 
 ### macro
