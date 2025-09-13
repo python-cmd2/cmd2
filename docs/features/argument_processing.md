@@ -61,10 +61,6 @@ def do_speak(self, opts):
         self.poutput(arg)
 ```
 
-!!! note
-
-    `cmd2` sets the `prog` variable in the argument parser based on the name of the method it is decorating. This will override anything you specify in `prog` variable when creating the argument parser.
-
 ## Help Messages
 
 By default, `cmd2` uses the docstring of the command method when a user asks for help on the
