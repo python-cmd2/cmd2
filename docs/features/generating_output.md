@@ -19,6 +19,11 @@ output you generate must be sent to `self.stdout`. You can use the methods descr
 everything will work fine. [cmd2.Cmd][] also includes a number of output related methods which you
 may use to enhance the output your application produces.
 
+Since `cmd2` has a dependency on the [rich](https://github.com/Textualize/rich) library, all of
+`cmd2`'s output methods can natively render `rich`
+[renderable objects](https://rich.readthedocs.io/en/latest/protocol.html), enabling beautiful and
+complex output.
+
 ## Ordinary Output
 
 The `cmd2.Cmd.poutput` method is similar to the Python
@@ -92,6 +97,16 @@ following sections:
 - [cmd2.string_utils][]
 - [cmd2.terminal_utils][]
 
+The [color.py](https://github.com/python-cmd2/cmd2/blob/main/examples/color.py) example demonstrates
+all colors available to your `cmd2` application.
+
+### Custom Themes
+
+`cmd2` uses a `rich` `Theme` object to define styles for various UI elements. You can define your
+own custom theme using `cmd2.rich_utils.set_theme`. See the
+[rich_theme.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_theme.py) example for
+more information.
+
 After adding the desired escape sequences to your output, you should use one of these methods to
 present the output to the user:
 
@@ -110,9 +125,9 @@ to control whether these escape codes are passed through to the terminal or not.
 If you would like to generate output which is left, center, or right aligned within a specified
 width or the terminal width, the following functions can help:
 
-- `cmd2.utils.align_left`
-- `cmd2.utils.align_center`
-- `cmd2.utils.align_right`
+- `cmd2.string_utils.align_left`
+- `cmd2.string_utils.align_center`
+- `cmd2.string_utils.align_right`
 
 These functions differ from Python's string justifying functions in that they support characters
 with display widths greater than 1. Additionally, ANSI style sequences are safely ignored and do not

@@ -41,6 +41,6 @@ If your program generates output by printing directly to `sys.stdout`, you shoul
 to `cmd2.Cmd.poutput`, `cmd2.Cmd.perror`, and `cmd2.Cmd.pfeedback`. These methods work with several
 of the built in [Settings](../features/settings.md) to allow the user to view or suppress feedback
 (i.e. progress or status output). They also properly handle ANSI colored output according to user
-preference. Speaking of colored output, you can use any color library you want, or use the included
-`cmd2.string_utils.stylize` function. These and other related topics are covered in
-[Generating Output](../features/generating_output.md).
+preference. `cmd2`'s dependency on `rich` makes it easy to add color and style to your output. See
+the [Colored Output](../features/generating_output.md#colored-output) section for more details.
+These and other related topics are covered in [Generating Output](../features/generating_output.md).
