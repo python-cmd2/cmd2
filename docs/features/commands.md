@@ -28,9 +28,9 @@ if __name__ == '__main__':
     sys.exit(c.cmdloop())
 ```
 
-This application subclasses `cmd2.Cmd` but has no code of it's own, so all functionality (and
-there's quite a bit) is inherited. Lets create a simple command in this application called `echo`
-which outputs any arguments given to it. Add this method to the class:
+This application subclasses `cmd2.Cmd` but has no code of its own, so all functionality (and there's
+quite a bit) is inherited. Let's create a simple command in this application called `echo` which
+outputs any arguments given to it. Add this method to the class:
 
 ```py
 def do_echo(self, line):
@@ -55,7 +55,7 @@ A command is passed one argument: a string which contains all the rest of the us
 in `cmd2` this string is actually a `Statement` object, which is a subclass of `str` to retain
 backwards compatibility.
 
-`cmd2` has a much more sophsticated parsing engine than what's included in the
+`cmd2` has a much more sophisticated parsing engine than what's included in the
 [cmd](https://docs.python.org/3/library/cmd.html) module. This parsing handles:
 
 - quoted arguments
@@ -105,7 +105,7 @@ terminator
 this attribute will tell you which one the user typed.
 
 For many simple commands, like the `echo` command above, you can ignore the `Statement` object and
-all of it's attributes and just use the passed value as a string. You might choose to use the `argv`
+all of its attributes and just use the passed value as a string. You might choose to use the `argv`
 attribute to do more sophisticated argument processing. Before you go too far down that path, you
 should check out the [Argument Processing](./argument_processing.md) functionality included with
 `cmd2`.
@@ -149,7 +149,7 @@ def do_bail(self, line):
     """Exit the application"""
     self.perror("fatal error, exiting")
     self.exit_code = 2
-    return true
+    return True
 
 if __name__ == '__main__':
     import sys
@@ -174,8 +174,8 @@ Raising `SystemExit(code)` or calling `sys.exit(code)` in a command or hook func
 
 You may choose to catch and handle any exceptions which occur in a command method. If the command
 method raises an exception, `cmd2` will catch it and display it for you. The
-[debug setting](./settings.md#debug) controls how the exception is displayed. If `debug` is `false`,
-which is the default, `cmd2` will display the exception name and message. If `debug` is `true`,
+[debug setting](./settings.md#debug) controls how the exception is displayed. If `debug` is `False`,
+which is the default, `cmd2` will display the exception name and message. If `debug` is `True`,
 `cmd2` will display a traceback, and then display the exception name and message.
 
 There are a few exceptions which commands can raise that do not print as described above:
@@ -186,7 +186,7 @@ There are a few exceptions which commands can raise that do not print as describ
 - `KeyboardInterrupt` - raised if running in a text script and `stop` isn't already True to stop the
   script
 
-All other `BaseExceptions` are not caught by `cmd2` and will be raised
+All other `BaseExceptions` are not caught by `cmd2` and will be raised.
 
 ## Disabling or Hiding Commands
 

@@ -66,7 +66,7 @@ during the command loop:
   application, after `cmd2.Cmd.preloop` is called
 - `cmd2.Cmd.prompt` - see [Prompt](./prompt.md) for more information
 - `cmd2.Cmd.continuation_prompt` - The prompt issued to solicit input for the 2nd and subsequent
-  lines of a `multiline command [Multiline Commands](./multiline_commands.md)
+  lines of a [Multiline Command](./multiline_commands.md)
 - `cmd2.Cmd.echo` - if `True` write the prompt and the command into the output stream
 
 In addition, several arguments to `cmd2.Cmd.__init__` also affect the command loop behavior:
@@ -154,7 +154,7 @@ is set to `False` by default.
 
 The hook method must return a `cmd2.plugin.PostparsingData` object, and it is very convenient to
 just return the object passed into the hook method. The hook method may modify the attributes of the
-object to influence the behavior of the application. If `params.stop` is set to true, a fatal
+object to influence the behavior of the application. If `params.stop` is set to `True`, a fatal
 failure is triggered prior to execution of the command, and the application exits.
 
 To modify the user input, you create a new `cmd2.Statement` object and return it in
@@ -189,7 +189,7 @@ If a postparsing hook returns a `cmd2.plugin.PostparsingData` object with the
 Precommand hooks can modify the user input, but cannot request the application terminate. If your
 hook needs to be able to exit the application, you should implement it as a postparsing hook.
 
-Once output is redirected and the timer started, all the hooks registered with
+Once output is redirected and the timer is started, all the hooks registered with
 `cmd2.Cmd.register_precmd_hook` are called. Here's how to do it:
 
 ```py
@@ -250,8 +250,8 @@ full backward compatibility with `cmd.Cmd`.
 If any postcommand hook (registered or `self.postcmd`) returns a `cmd2.plugin.PostcommandData`
 object with the stop attribute set to `True`, subsequent postcommand hooks will still be called, as
 will the command finalization hooks, but once those hooks have all been called, the application will
-terminate. Likewise, if :`self.postcmd` returns `True`, the command finalization hooks will be
-called before the application terminates.
+terminate. Likewise, if `self.postcmd` returns `True`, the command finalization hooks will be called
+before the application terminates.
 
 Any postcommand hook can change the value of the `stop` attribute before returning it, and the
 modified value will be passed to the next postcommand hook. The value returned by the final
@@ -260,7 +260,7 @@ value. If your hook blindly returns `False`, a prior hook's request to exit the 
 be honored. It's best to return the value you were passed unless you have a compelling reason to do
 otherwise.
 
-To purposefully and silently skip postcommand hooks, commands can raise any of of the following
+To purposefully and silently skip postcommand hooks, commands can raise any of the following
 exceptions.
 
 - `cmd2.exceptions.SkipPostcommandHooks`

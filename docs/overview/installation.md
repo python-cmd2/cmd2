@@ -1,6 +1,6 @@
 # Installation Instructions
 
-`cmd2` works on Linux, macOS, and Windows. It requires Python 10 or higher,
+`cmd2` works on Linux, macOS, and Windows. It requires Python 3.10 or higher,
 [pip](https://pypi.org/project/pip), and [setuptools](https://pypi.org/project/setuptools). If
 you've got all that, then you can just:
 
@@ -18,9 +18,9 @@ $ pip install cmd2
 
 ## Prerequisites
 
-If you have Python 3 >=3.10 installed from [python.org](https://www.python.org), you will already
-have [pip](https://pypi.org/project/pip) and [setuptools](https://pypi.org/project/setuptools), but
-may need to upgrade to the latest versions:
+If you have Python >=3.10 installed from [python.org](https://www.python.org), you will already have
+[pip](https://pypi.org/project/pip) and [setuptools](https://pypi.org/project/setuptools), but may
+need to upgrade to the latest versions:
 
 On Linux or OS X:
 
@@ -93,11 +93,11 @@ identical to GNU Readline. `cmd2` will disable all tab-completion support if an 
 of `readline` is found.
 
 When installed using `pip`, `uv`, or similar Python packaging tool on either `macOS` or `Windows`,
-`cmd2` will automatically install a compatiable version of readline.
+`cmd2` will automatically install a compatible version of readline.
 
-Most `Linux` OSes come with a compatible version of readline. However, if you are using a tool like
-`uv` to install Python on your system and configure a virtual environment, `uv` installed versions
-of Python come with `libEdit`.
+Most Linux operating systems come with a compatible version of readline. However, if you are using a
+tool like `uv` to install Python on your system and configure a virtual environment, `uv` installed
+versions of Python come with `libedit`.
 
 macOS comes with the [libedit](http://thrysoee.dk/editline/) library which is similar, but not
 identical, to GNU Readline. Tab completion for `cmd2` applications is only tested against GNU

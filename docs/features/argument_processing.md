@@ -9,10 +9,10 @@ following for you:
 1. Passes the resulting `argparse.Namespace` object to your command function. The `Namespace`
    includes the `Statement` object that was created when parsing the command line. It can be
    retrieved by calling `cmd2_statement.get()` on the `Namespace`.
-1. Adds the usage message from the argument parser to your command.
-1. Checks if the `-h/--help` option is present, and if so, display the help message for the command
+1. Adds the usage message from the argument parser to your command's help.
+1. Checks if the `-h/--help` option is present, and if so, displays the help message for the command
 
-These features are all provided by the `@with_argparser` decorator which is importable from `cmd2`.
+These features are all provided by the `@with_argparser` decorator which is imported from `cmd2`.
 
 See the
 [argparse_example](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
@@ -49,7 +49,7 @@ argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
 argparser.add_argument('word', nargs='?', help='word to say')
 
 @with_argparser(argparser)
-def do_speak(self, opts)
+def do_speak(self, opts):
     """Repeats what you tell me to."""
     arg = opts.word
     if opts.piglatin:
@@ -91,7 +91,7 @@ the `help tag` command displays:
 ```text
 usage: tag [-h] tag content [content ...]
 
-create a html tag
+create an HTML tag
 
 positional arguments:
   tag         tag
@@ -101,13 +101,13 @@ optional arguments:
   -h, --help  show this help message and exit
 ```
 
-If you would prefer you can set the `description` while instantiating the `argparse.ArgumentParser`
+If you would prefer, you can set the `description` while instantiating the `argparse.ArgumentParser`
 and leave the docstring on your method empty:
 
 ```py
 from cmd2 import Cmd2ArgumentParser, with_argparser
 
-argparser = Cmd2ArgumentParser(description='create an html tag')
+argparser = Cmd2ArgumentParser(description='create an HTML tag')
 argparser.add_argument('tag', help='tag')
 argparser.add_argument('content', nargs='+', help='content to surround with tag')
 @with_argparser(argparser)
@@ -121,7 +121,7 @@ Now when the user enters `help tag` they see:
 ```text
 usage: tag [-h] tag content [content ...]
 
-create an html tag
+create an HTML tag
 
 positional arguments:
   tag         tag
@@ -136,7 +136,7 @@ To add additional text to the end of the generated help message, use the `epilog
 ```py
 from cmd2 import Cmd2ArgumentParser, with_argparser
 
-argparser = Cmd2ArgumentParser(description='create an html tag',
+argparser = Cmd2ArgumentParser(description='create an HTML tag',
                                 epilog='This command cannot generate tags with no content, like <br/>.')
 argparser.add_argument('tag', help='tag')
 argparser.add_argument('content', nargs='+', help='content to surround with tag')
@@ -151,7 +151,7 @@ Which yields:
 ```text
 usage: tag [-h] tag content [content ...]
 
-create an html tag
+create an HTML tag
 
 positional arguments:
   tag         tag
@@ -195,7 +195,7 @@ class CmdLineApp(cmd2.Cmd):
             self.poutput(arg)
 ```
 
-If you don't want to access the additional attributes on the string passed to you`do_*` method you
+If you don't want to access the additional attributes on the string passed to your `do_*` method you
 can still have `cmd2` apply shell parsing rules to the user input and pass you a list of arguments
 instead of a string. Apply the `@with_argument_list` decorator to those methods that should receive
 an argument list instead of a string:
@@ -320,7 +320,7 @@ def do_foo(self, args: argparse.Namespace) -> None:
 ```
 
 However, if you do NOT want the custom decorator runtime behavior to occur even in the case of an
-`argparse` error, then that decorator needs to go **before** the `arpgarse` one, e.g.:
+`argparse` error, then that decorator needs to go **before** the `argparse` one, e.g.:
 
 ```py
 @my_decorator
@@ -338,9 +338,9 @@ example demonstrates both above cases in a concrete fashion.
 `cmd2` argparse decorators add the following attributes to argparse Namespaces. To avoid naming
 collisions, do not use any of the names for your argparse arguments.
 
-- `cmd2_statement` - `cmd2.Cmd2AttributeWrapper` object containing `cmd2.Statement` object that was
-  created when parsing the command line.
+- `cmd2_statement` - `cmd2.Cmd2AttributeWrapper` object containing the `cmd2.Statement` object that
+  was created when parsing the command line.
 - `cmd2_handler` - `cmd2.Cmd2AttributeWrapper` object containing a subcommand handler function or
   `None` if one was not set.
-- `__subcmd_handler__` - used by cmd2 to identify the handler for a subcommand created with
+- `__subcmd_handler__` - used by cmd2 to identify the handler for a subcommand created with the
   `@cmd2.as_subcommand_to` decorator.

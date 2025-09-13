@@ -1,7 +1,7 @@
 # Next Steps
 
-Once your current application is using `cmd2`, you can start to expand the functionality by levering
-other `cmd2` features. The three ideas here will get you started. Browse the rest of the
+Once your current application is using `cmd2`, you can start to expand the functionality by
+leveraging other `cmd2` features. The three ideas here will get you started. Browse the rest of the
 [Features](../features/index.md) to see what else `cmd2` can help you do.
 
 ## Argument Parsing
@@ -16,7 +16,8 @@ Using this method will:
     arguments instead of a string of text.
 2.  Properly handle quoted string input from your users.
 3.  Create a help message for you based on the `ArgumentParser`.
-4.  Give you a big headstart adding [Tab Completion](../features/completion.md) to your application.
+4.  Give you a big head start adding [Tab Completion](../features/completion.md) to your
+    application.
 5.  Make it much easier to implement subcommands (i.e. `git` has a bunch of subcommands such as
     `git pull`, `git diff`, etc).
 
@@ -25,7 +26,7 @@ dig in further.
 
 ## Help
 
-If you have lot of commands in your application, `cmd2` can categorize those commands using a one
+If you have a lot of commands in your application, `cmd2` can categorize those commands using a one
 line decorator `@with_category()`. When a user types `help` the available commands will be organized
 by the category you specified.
 
@@ -39,7 +40,7 @@ what the code actually does.
 If your program generates output by printing directly to `sys.stdout`, you should consider switching
 to `cmd2.Cmd.poutput`, `cmd2.Cmd.perror`, and `cmd2.Cmd.pfeedback`. These methods work with several
 of the built in [Settings](../features/settings.md) to allow the user to view or suppress feedback
-(i.e. progress or status output). They also properly handle ansi colored output according to user
+(i.e. progress or status output). They also properly handle ANSI colored output according to user
 preference. Speaking of colored output, you can use any color library you want, or use the included
 `cmd2.string_utils.stylize` function. These and other related topics are covered in
 [Generating Output](../features/generating_output.md).

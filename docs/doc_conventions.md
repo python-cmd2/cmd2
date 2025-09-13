@@ -7,9 +7,9 @@ described by [Write The Docs](http://www.writethedocs.org)
 
 In addition:
 
-- We have gone to great lengths to retain compatibility with the standard library cmd, the
-  documentation should make it easy for developers to understand how to move from cmd to cmd2, and
-  what benefits that will provide
+- We have gone to great lengths to retain compatibility with the standard library `cmd`, the
+  documentation should make it easy for developers to understand how to move from `cmd` to `cmd2`,
+  and what benefits that will provide
 - We should provide both descriptive and reference documentation.
 - API reference documentation should be generated from docstrings in the code
 - Documentation should include rich hyperlinking to other areas of the documentation, and to the API
@@ -18,7 +18,7 @@ In addition:
 ## Style Checker
 
 We strongly encourage all developers to use [Prettier](https://prettier.io/) for formatting all
-**Markdown** and YAML files. The easiest way to do this is to integrated it with your IDE and
+**Markdown** and YAML files. The easiest way to do this is to integrate it with your IDE and
 configure your IDE to format on save. You can also install `prettier` either using `npm` or OS
 package manager such as `brew` or `apt`.
 
@@ -28,7 +28,7 @@ All source files in the documentation must:
 
 - have all lower case file names
 - if the name has multiple words, separate them with an underscore
-- end in '.rst'
+- end in '.md'
 
 ## Indenting
 
@@ -42,7 +42,7 @@ html.
 
 ## Titles and Headings
 
-Reference the [Markdown Basic Syntax](https://www.markdownguide.org/basic-syntax/) for synatx basics
+Reference the [Markdown Basic Syntax](https://www.markdownguide.org/basic-syntax/) for syntax basics
 or [The Markdown Guide](https://www.markdownguide.org/) for a more complete reference.
 
 ## Inline Code
@@ -50,7 +50,7 @@ or [The Markdown Guide](https://www.markdownguide.org/) for a more complete refe
 Code blocks can be created in two ways:
 
 - Indent the block - this will show as a monospace code block, but won't include highighting
-- use the triple backticks followed by the code language, e.e. `python` and close with triple
+- use the triple backticks followed by the code language, e.g. `python` and close with triple
   backticks
 
 If you want to show non-Python code, like shell commands, then use a different language such as
@@ -65,7 +65,7 @@ See the [Links](https://www.markdownguide.org/basic-syntax/) Markdown syntax doc
 The API documentation is mostly pulled from docstrings in the source code using the MkDocs
 [mkdocstrings](https://mkdocstrings.github.io/) plugin.
 
-When using `mkdocstinrgs`, it must be preceded by a blank line before and after, i.e.:
+When using `mkdocstrings`, it must be preceded by a blank line before and after, i.e.:
 
 ```markdown
 ::: cmd2.history.History

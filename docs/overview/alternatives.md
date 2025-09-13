@@ -16,7 +16,7 @@ However, programming a `textual` application is not as straightforward as using 
 Several Python packages exist for building interactive command-line applications approximately
 similar in concept to [cmd](https://docs.python.org/3/library/cmd.html) applications. None of them
 share `cmd2`'s close ties to [cmd](https://docs.python.org/3/library/cmd.html), but they may be
-worth investigating nonetheless. Two of the most mature and full featured are:
+worth investigating nonetheless. Two of the most mature and full-featured are:
 
 - [Python Prompt Toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit)
 - [Click](https://click.palletsprojects.com)

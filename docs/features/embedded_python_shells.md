@@ -17,7 +17,7 @@ The Python shell can run CLI commands from you application using the object name
 `cmd2` application while maintaining isolation from the full `Cmd` instance. For example, any
 application command can be run with `app("command ...")`.
 
-You may optionally enable full access to to your application by setting `self.self_in_py` to `True`.
+You may optionally enable full access to your application by setting `self.self_in_py` to `True`.
 Enabling this flag adds `self` to the python session, which is a reference to your `cmd2`
 application. This can be useful for debugging your application.
 
@@ -32,8 +32,8 @@ All of these parameters are also available to Python scripts which run in your a
 - supports tab completion of file system paths
 - has the ability to pass command-line arguments to the scripts invoked
 
-This command provides a more complicated and more powerful scripting capability than that provided
-by the simple text file scripts. Python scripts can include conditional control flow logic. See the
+This command provides a more complex and powerful scripting capability than that provided by the
+simple text file scripts. Python scripts can include conditional control flow logic. See the
 **python_scripting.py** `cmd2` application and the **script_conditional.py** script in the
 `examples` source code directory for an example of how to achieve this in your own applications. See
 [Scripting](./scripting.md) for an explanation of both scripting methods in **cmd2** applications.

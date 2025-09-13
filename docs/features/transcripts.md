@@ -7,7 +7,7 @@ responses from commands that produce dynamic or variable output.
 
 ## Creating From History
 
-A transcript can automatically generated based upon commands previously executed in the _history_
+A transcript can be automatically generated based upon commands previously executed in the _history_
 using `history -t`:
 
 ```text
@@ -23,7 +23,7 @@ This is by far the easiest way to generate a transcript.
 
 !!! warning
 
-    Make sure you use the **poutput()** method in your `cmd2` application for generating command output. This method of the `cmd2.Cmd` class ensure that output is properly redirected when redirecting to a file, piping to a shell command, and when generating a transcript.
+    Make sure you use the **poutput()** method in your `cmd2` application for generating command output. This method of the `cmd2.Cmd` class ensures that output is properly redirected when redirecting to a file, piping to a shell command, and when generating a transcript.
 
 ## Creating From A Script File
 
@@ -117,7 +117,7 @@ characters like `.`, `^` and `$`, so you may want to double check the
 [Python regular expression documentation](https://docs.python.org/3/library/re.html).
 
 If your output has slashes in it, you will need to escape those slashes so the stuff between them is
-not interpred as a regular expression. In this transcript:
+not interpreted as a regular expression. In this transcript:
 
 ```text
 (Cmd) say cd /usr/local/lib/python3.11/site-packages

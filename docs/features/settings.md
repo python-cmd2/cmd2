@@ -9,7 +9,7 @@ can modify them at runtime using the [set](./builtin_commands.md#set) command. D
 
 ## Builtin Settings
 
-`cmd2` has a number of builtin settings. These settings control the behavior of certain application
+`cmd2` has a number of built-in settings. These settings control the behavior of certain application
 features and [Buildin Commands](./builtin_commands.md). Users can use the
 [set](./builtin_commands.md#set) command to show all settings and to modify the value of any
 setting.
@@ -136,7 +136,7 @@ It's 13 C - are you a penguin?
 
 ## Hide Builtin Settings
 
-You may want to prevent a user from modifying a builtin setting. A setting must appear in the
+You may want to prevent a user from modifying a built-in setting. A setting must appear in the
 `cmd2.Cmd.settable` dictionary in order for it to be available to the
 [set](./builtin_commands.md#set) command.
 

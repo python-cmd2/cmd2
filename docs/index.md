@@ -1,6 +1,6 @@
 # cmd2
 
-A python package for building powerful command-line interpreter (CLI) programs. Extends the Python
+A Python package for building powerful command-line interpreter (CLI) programs. Extends the Python
 Standard Library's [cmd](https://docs.python.org/3/library/cmd.html) package.
 
 The basic use of `cmd2` is identical to that of [cmd](https://docs.python.org/3/library/cmd.html).
@@ -16,7 +16,7 @@ class App(Cmd):
 
 2.  Instantiate `App` and start the command loop:
 
-```py title="Instatiating and starting a cmd2 app" linenums="1" hl_lines="5-6"
+```py title="Instantiating and starting a cmd2 app" linenums="1" hl_lines="5-6"
 from cmd2 import Cmd
 class App(Cmd):
    # customized attributes and methods here

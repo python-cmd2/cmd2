@@ -81,15 +81,15 @@ $ python getting_started.py
 (Cmd) set
 ```
 
-you will see our `maxrepeats` setting show up with it's default value of `3`.
+you will see our `maxrepeats` setting show up with its default value of `3`.
 
 ## Create A Command
 
 Now we will create our first command, called `speak` which will echo back whatever we tell it to
 say. We are going to use an [argument processor](../features/argument_processing.md) so the `speak`
-command can shout and talk piglatin. We will also use some built in methods for
+command can shout and talk pig latin. We will also use some built in methods for
 [generating output](../features/generating_output.md). Add this code to `getting_started.py`, so
-that the `speak_parser` attribute and the `do_speak()` method are part of the `CmdLineApp()` class:
+that the `speak_parser` attribute and the `do_speak()` method are part of the `FirstApp()` class:
 
 ```py
 speak_parser = cmd2.Cmd2ArgumentParser()
@@ -146,13 +146,13 @@ At the end of the method, we use our `maxrepeats` setting as an upper limit to t
 we will print the output.
 
 The last thing you'll notice is that we used the `self.poutput()` method to display our output.
-`poutput()` is a method provided by `cmd2`, which I strongly recommend you use anytime you want to
+`poutput()` is a method provided by `cmd2`, which I strongly recommend you use any time you want to
 [generate output](../features/generating_output.md). It provides the following benefits:
 
 1.  Allows the user to redirect output to a text file or pipe it to a shell process
-1.  Gracefully handles `BrokenPipeWarning` exceptions for redirected output
+1.  Gracefully handles `BrokenPipeError` exceptions for redirected output
 1.  Makes the output show up in a [transcript](../features/transcripts.md)
-1.  Honors the setting to [strip embedded ansi sequences](../features/settings.md#allow_style)
+1.  Honors the setting to [strip embedded ANSI sequences](../features/settings.md#allow_style)
     (typically used for background and foreground colors)
 
 Go run the script again, and try out the `speak` command. Try typing `help speak`, and you will see
@@ -215,7 +215,7 @@ Some use cases benefit from the ability to have commands that span more than one
 you might want the ability for your user to type in a SQL command, which can often span lines and
 which are terminated with a semicolon. Let's add a
 [multiline command](../features/multiline_commands.md) to our application. First we'll create a new
-command called `orate`. This code shows both the definition of our `speak`command, and the`orate`
+command called `orate`. This code shows both the definition of our `speak` command, and the `orate`
 command:
 
 ```py
@@ -267,9 +267,9 @@ persist between invocations of your application, you'll need to do a little work
 
 Users can access command history using two methods:
 
-- the [readline](https://docs.python.org/3/library/readline.html) library which provides a python
+- The [readline](https://docs.python.org/3/library/readline.html) library which provides a Python
   interface to the [GNU readline library](https://en.wikipedia.org/wiki/GNU_Readline)
-- the `history` command which is built-in to `cmd2`
+- The `history` command which is built-in to `cmd2`
 
 From the prompt in a `cmd2`-based application, you can press `Control-p` to move to the previously
 entered command, and `Control-n` to move to the next command. You can also search through the
@@ -280,10 +280,10 @@ details, including all the available commands, and instructions for customizing 
 The `history` command allows a user to view the command history, and select commands from history by
 number, range, string search, or regular expression. With the selected commands, users can:
 
-- re-run the commands
-- edit the selected commands in a text editor, and run them after the text editor exits
-- save the commands to a file
-- run the commands, saving both the commands and their output to a file
+- Re-run the commands
+- Edit the selected commands in a text editor, and run them after the text editor exits
+- Save the commands to a file
+- Run the commands, saving both the commands and their output to a file
 
 Learn more about the `history` command by typing `history -h` at any `cmd2` input prompt, or by
 exploring [Command History For Users](../features/history.md#for-users).

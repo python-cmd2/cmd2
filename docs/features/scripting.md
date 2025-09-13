@@ -6,8 +6,8 @@ supports two similar mechanisms: command scripts and python scripts.
 
 ## Command Scripts
 
-A command script contains a sequence of commands typed at the the prompt of a `cmd2` based
-application. Unlike operating system shell scripts, command scripts can't contain logic or loops.
+A command script contains a sequence of commands typed at the prompt of a `cmd2` based application.
+Unlike operating system shell scripts, command scripts can't contain logic or loops.
 
 ### Creating Command Scripts
 
@@ -18,8 +18,8 @@ Command scripts can be created in several ways:
   file
 - saving previously entered commands to a script file using [history -s](./history.md#for-users)
 
-If you create create a text file from scratch, just include one command per line, exactly as you
-would type it inside a `cmd2` application.
+If you create a text file from scratch, just include one command per line, exactly as you would type
+it inside a `cmd2` application.
 
 ### Running Command Scripts
 
@@ -110,10 +110,10 @@ for more information.
 
 If the cmd2 application follows the
 [unix_design_philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) a scriptor will have the
-most flexibility to piece together workflows using different commands. If the designers' application
-is more complete and less likely to be augmented in the future a scripter may opt for simple serial
-scripts with little control flow. In either case, choices made by the designer will have effects on
-scripters.
+most flexibility to piece together workflows using different commands. If the designer\'s
+application is more complete and less likely to be augmented in the future a scripter may opt for
+simple serial scripts with little control flow. In either case, choices made by the designer will
+have effects on scripters.
 
 The following diagram illustrates the different boundaries to keep in mind.
 
@@ -137,11 +137,11 @@ flowchart LR
 
 !!! note
 
-    As a designer it is preferable to design from the inside to out. Your code will be infinitely far easier to unit test than at the higher level. While there are regression testing extensions for cmd2 UnitTesting will always be faster for development.
+    As a designer it is preferable to design from the inside out. Your code will be infinitely far easier to unit test than at the higher level. While there are regression testing extensions for cmd2, unit testing will always be faster for development.
 
 !!! warning
 
-    It is bad design or a high level py_script to know about let alone access low level class libraries of an application. Resist this urge at all costs, unless it's necessary.
+    It is bad design for a high level pyscript to know about let alone access low level class libraries of an application. Resist this urge at all costs, unless it\'s necessary.
 
 ### Developing a Basic API
 
@@ -221,8 +221,8 @@ When executing the `speak` command without parameters you see the following erro
     Usage: speak [-h] [-p] [-s] [-r REPEAT] words [...]
     Error: the following arguments are required: words
 
-Even though this is a fully qualified CMD2 error the py[script]{#script} must look for this error
-and perform error checking.:
+Even though this is a fully qualified CMD2 error the pyscript must look for this error and perform
+error checking.:
 
 ```py
 app('speak')
@@ -256,7 +256,7 @@ if not result:
     (Cmd) run_pyscript script.py
     Something went wrong
 
-In python development is good practice to fail and exit quickly after user input.:
+In Python development, it is good practice to fail and exit quickly after user input.:
 
 ```py
 import sys
@@ -297,8 +297,8 @@ control flow. In the next section we will show how to take advantage of `cmd_res
 ### Developing an Advanced API
 
 Until now the application designer has paid little attention to scripters and their needs. Wouldn't
-it be nice if while creating py*scripts one did not have to parse data from `stdout`? We can
-accommodate the weary scripter by adding one small line at the end of our `do*\*` commands.
+it be nice if while creating pyscripts one did not have to parse data from `stdout`? We can
+accommodate the weary scripter by adding one small line at the end of our `do_*` commands.
 
 `self.last_result = <value>`
 
@@ -359,13 +359,13 @@ potentially lead to violation of the
 When possible, a dataclass is a lightweight solution perfectly suited for data manipulation. Lets
 dive into an example.
 
-The following fictitional application has two commands: `build` and `status`. We can pretend that
-the build action happens somewhere else in the world at an REST API endpoint and has significant
-computational cost. The status command for all intents and purposes will only show the current
+The following fictional application has two commands: `build` and `status`. We can pretend that the
+build action happens somewhere else in the world at an REST API endpoint and has significant
+computational cost. The status command for all intents and purposes, will only show the current
 status of a build task. The application has provided all that is needed for a user to start a build
-and then determine it's status. The problem however is that with a long running process the user may
+and then determine its status. The problem however is that with a long running process the user may
 want to wait for it to finish. A designer may be tempted to create a command to start a build and
-then poll for status until finished but this scenario is better solved as an extensible script.
+then poll for status until finished, but this scenario is better solved as an extensible script.
 
 app.py:
 
@@ -419,7 +419,7 @@ class FirstApp(cmd2.Cmd):
         self._status_cache[args.name] = status
 
         self.poutput(
-            f"Build {args.name.upper()} successfully stared with id : {status.id}"
+            f"Build {args.name.upper()} successfully started with id : {status.id}"
         )
         self.last_result = status
 

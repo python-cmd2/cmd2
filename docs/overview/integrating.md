@@ -18,7 +18,7 @@ inadvertently get installed with an incompatible future version of `cmd2`.
 
 If you would like to use [Tab Completion](../features/completion.md), then you need a compatible
 version of [readline](https://tiswww.case.edu/php/chet/readline/rltop.html) installed on your
-operating system (OS). `cmd2` forces a sane install of `readline` on both `Windows` and `MacOS`, but
+operating system (OS). `cmd2` forces a sane install of `readline` on both `Windows` and `macOS`, but
 does not do so on `Linux`. If for some reason, you have a Linux OS that has the
 [Editline Library (libedit)](https://www.thrysoee.dk/editline/) installed instead of `readline`, you
 will need to manually add a dependency on `gnureadline`. Make sure to include the following

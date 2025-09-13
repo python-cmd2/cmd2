@@ -6,7 +6,8 @@ Turn the timer setting on, and `cmd2` will show the wall time it takes for each 
 
 ## Exiting
 
-Mention quit, and EOF handling built into `cmd2`.
+Like many shell applications, `cmd2` applications can be exited by pressing `Ctrl-D` on an empty
+line, or by executing the `quit` command.
 
 ## select
 

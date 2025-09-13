@@ -6,11 +6,11 @@ however there are a few incompatibilities.
 ## Cmd.emptyline()
 
 The [Cmd.emptyline()](https://docs.python.org/3/library/cmd.html#cmd.Cmd.emptyline) function is
-called when an empty line is entered in response to the prompt. By default, in
-[cmd](https://docs.python.org/3/library/cmd.html) if this method is not overridden, it repeats and
-executes the last nonempty command entered. However, no end user we have encountered views this as
-expected or desirable default behavior. `cmd2` completely ignores empty lines and the base class
-`cmd.emptyline()` method never gets called and thus the empty line behavior cannot be overridden.
+called when an empty line is entered in response to the prompt. By default, in `cmd` if this method
+is not overridden, it repeats and executes the last nonempty command entered. However, no end user
+we have encountered views this as expected or desirable default behavior. `cmd2` completely ignores
+empty lines and the base class `cmd.emptyline()` method never gets called and thus the empty line
+behavior cannot be overridden.
 
 ## Cmd.identchars
 

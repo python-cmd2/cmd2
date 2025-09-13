@@ -9,5 +9,5 @@ If you're thinking of migrating your [cmd](https://docs.python.org/3/library/cmd
   [cmd](https://docs.python.org/3/library/cmd.html).
 - [Minimum Required Changes](minimum.md) - the minimum changes required to move from
   [cmd](https://docs.python.org/3/library/cmd.html) to `cmd2`. Start your migration here.
-- [Next Steps](next_steps.md) - Once you've migrated, here a list of things you can do next to add
-  even more functionality to your app.
+- [Next Steps](next_steps.md) - Once you've migrated, here is a list of things you can do next to
+  add even more functionality to your app.
