@@ -39,7 +39,7 @@ command which might have its own argument parsing.
 For each command in the `cmd2.Cmd` subclass which requires argument parsing, create a unique
 instance of `argparse.ArgumentParser()` which can parse the input appropriately for the command.
 Then decorate the command method with the `@with_argparser` decorator, passing the argument parser
-as the first parameter to the decorator. This changes the second argument to the command method,
+as the first parameter to the decorator. This changes the second argument of the command method,
 which will contain the results of `ArgumentParser.parse_args()`.
 
 Here's what it looks like:
@@ -68,10 +68,11 @@ def do_speak(self, opts):
 
 !!! note
 
-    `cmd2` sets the `prog` variable in the argument parser based on the name of the method it is decorating. This will override anything you specify in `prog` variable when creating the argument parser.
+    `cmd2` sets the `prog` variable in the argument parser based on the name of the method it is decorating.
+    This will override anything you specify in `prog` variable when creating the argument parser.
 
-    As of the 3.0.0 release, `cmd2` sets `prog` when the instance-specific parser is created, which is
-    later than it did previously.
+    As of the 3.0.0 release, `cmd2` sets `prog` when the instance-specific parser is created, which is later
+    than in previous versions.
 
 ## Help Messages
 
@@ -110,7 +111,7 @@ optional arguments:
 ```
 
 If you would prefer, you can set the `description` while instantiating the `argparse.ArgumentParser`
-and leave the docstring on your method empty:
+and leave the docstring on your method blank:
 
 ```py
 from cmd2 import Cmd2ArgumentParser, with_argparser
@@ -226,8 +227,8 @@ class CmdLineApp(cmd2.Cmd):
 
 ## Unknown Positional Arguments
 
-If you want all unknown arguments to be passed to your command as a list of strings, then decorate
-the command method with the `@with_argparser(..., with_unknown_args=True)` decorator.
+To pass all unknown arguments to be passed to your command as a list of strings, then decorate the
+command method with the `@with_argparser(..., with_unknown_args=True)` decorator.
 
 Here's what it looks like:
 
@@ -256,8 +257,8 @@ def do_dir(self, args, unknown):
 
 ## Using A Custom Namespace
 
-In some cases, it may be necessary to write custom `argparse` code that is dependent on state data
-of your application. To support this ability while still allowing use of the decorators,
+In some cases, it may be necessary to write custom `argparse` code that is dependent on your
+application's state data. To support this ability while still allowing use of the decorators,
 `@with_argparser` has an optional argument called `ns_provider`.
 
 `ns_provider` is a Callable that accepts a `cmd2.Cmd` object as an argument and returns an
@@ -283,8 +284,8 @@ To use this function with the `@with_argparser` decorator, do the following:
 @with_argparser(my_parser, ns_provider=settings_ns_provider)
 ```
 
-The Namespace is passed by the decorators to the `argparse` parsing functions which gives your
-custom code access to the state data it needs for its parsing logic.
+The Namespace is passed by the decorators to the `argparse` parsing functions, giving your custom
+code access to the state data it needs for its parsing logic.
 
 ## Subcommands
 
@@ -313,9 +314,9 @@ The [@as_subcommand_to][cmd2.as_subcommand_to] decorator makes adding subcommand
 ## Decorator Order
 
 If you are using custom decorators in combination with `@cmd2.with_argparser`, then the order of
-your custom decorator(s) relative to the `cmd2` decorator matters when it comes to runtime behavior
-and `argparse` errors. There is nothing `cmd2`-specific here, this is just a side-effect of how
-decorators work in Python. To learn more about how decorators work, see
+your custom decorator(s) relative to the `cmd2` decorator affects runtime behavior and `argparse`
+errors. There is nothing `cmd2`-specific here, this is just a side-effect of how decorators work in
+Python. To learn more about how decorators work, see
 [decorator_primer](https://realpython.com/primer-on-python-decorators).
 
 If you want your custom decorator's runtime behavior to occur in the case of an `argparse` error,
@@ -329,8 +330,8 @@ def do_foo(self, args: argparse.Namespace) -> None:
     pass
 ```
 
-However, if you do NOT want the custom decorator runtime behavior to occur even in the case of an
-`argparse` error, then that decorator needs to go **before** the `argparse` one, e.g.:
+However, if you do NOT want the custom decorator runtime behavior to occur during an `argparse`
+error, then that decorator needs to go **before** the `argparse` one, e.g.:
 
 ```py
 @my_decorator
