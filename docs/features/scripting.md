@@ -151,7 +151,7 @@ flowchart LR
 `cmd2` out of the box allows scripters to take advantage of all exposed `do_*` commands. As a
 scripter one can easily interact with the application via `stdout` and `stderr`.
 
-As a baseline lets start off with the the following `cmd2` application called `FirstApp`
+As a baseline let's start off with the the following `cmd2` application called `FirstApp`
 
 ```py
 #!/usr/bin/env python
@@ -198,7 +198,7 @@ if __name__ == '__main__':
     sys.exit(c.cmdloop())
 ```
 
-Lets start off on the wrong foot:
+Let's start off on the wrong foot:
 
 ```py
 app('speak'
@@ -360,7 +360,7 @@ potentially lead to violation of the
 [open_closed_principle](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle).
 
 When possible, a frozen dataclass is a lightweight solution perfectly suited for data manipulation.
-Lets dive into an example.
+Let's dive into an example.
 
 The following fictional application has two commands: `build` and `status`. We can pretend that the
 build action happens somewhere else in the world at a REST API endpoint and has significant

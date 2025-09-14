@@ -11,7 +11,7 @@ default, the following shortcuts are defined:
 - **`@`** - run script file
 - **`@@`** - run script file; filename is relative to current script location
 
-To define more shortcuts, stat with the [cmd2.DEFAULT_SHORTCUTS][] constant which is a dictionary
+To define more shortcuts, start with the [cmd2.DEFAULT_SHORTCUTS][] constant which is a dictionary
 and then add more shortcuts to it by updating it with a dictionary of additional shortcuts in the
 format `{'shortcut': 'command_name'}` where you omit `do_` from the command name:
 
