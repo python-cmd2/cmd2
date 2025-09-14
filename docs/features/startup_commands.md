@@ -26,7 +26,7 @@ application and easily used in automation.
 
 !!! note
 
-    If you wish to disable cmd2's consumption of command-line arguments, you can do so by setting the `allow_cli_args` argument of your `cmd2.Cmd` class instance to `False`. This would be useful, for example, if you wish to use something like [Argparse](https://docs.python.org/3/library/argparse.html) to parse the overall command line arguments for your application:
+    If you wish to disable cmd2's consumption of command-line arguments, you can do so by setting the `allow_cli_args` argument of your [cmd2.Cmd][] class instance to `False`. This would be useful, for example, if you wish to use something like [argparse](https://docs.python.org/3/library/argparse.html) to parse the overall command line arguments for your application:
 
     ```py
     from cmd2 import Cmd
@@ -47,8 +47,8 @@ class StartupApp(cmd2.Cmd):
 ```
 
 This text file should contain a [Command Script](./scripting.md#command-scripts). See the
-[initialization](https://github.com/python-cmd2/cmd2/blob/main/examples/initialization.py) example
-for a demonstration.
+[getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
+example for a demonstration.
 
 You can silence a startup script's output by setting `silence_startup_script` to True:
 
@@ -56,5 +56,7 @@ You can silence a startup script's output by setting `silence_startup_script` to
 cmd2.Cmd.__init__(self, startup_script='.cmd2rc', silence_startup_script=True)
 ```
 
-Anything written to stderr will still print. Additionally, a startup script cannot be silenced if
-`allow_redirection` is False since silencing works by redirecting a script's output to `os.devnull`.
+!!! warning
+
+    Anything written to `stderr` will still print for a "silenced" startup script. Additionally, a startup script cannot be silenced if
+    `allow_redirection` is False since silencing works by redirecting a script's output to `os.devnull`.

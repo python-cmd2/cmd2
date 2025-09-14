@@ -11,13 +11,14 @@ default, the following shortcuts are defined:
 - **`@`** - run script file
 - **`@@`** - run script file; filename is relative to current script location
 
-To define more shortcuts, update the dict `App.shortcuts` with the `{'shortcut': 'command_name'}`
-(omit `do_`):
+To define more shortcuts, stat with the [cmd2.DEFAULT_SHORTCUTS][] constant which is a dictionary
+and then add more shortcuts to it by updating it with a dictionary of additional shortcuts in the
+format `{'shortcut': 'command_name'}` where you omit `do_` from the command name:
 
 ```py
 class App(Cmd):
     def __init__(self):
-        shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
+        shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({'*': 'sneeze', '~': 'squirm'})
         cmd2.Cmd.__init__(self, shortcuts=shortcuts)
 ```
@@ -26,7 +27,9 @@ class App(Cmd):
 
     Shortcuts need to be created by updating the `shortcuts` dictionary attribute prior to calling the `cmd2.Cmd` super class `__init__()` method. Moreover, that super class init method needs to be called after updating the `shortcuts` attribute This warning applies in general to many other attributes which are not settable at runtime.
 
-Note: Command, alias, and macro names cannot start with a shortcut
+!!! tip
+
+    Command, alias, and macro names cannot start with a shortcut
 
 ## Aliases
 
@@ -94,4 +97,6 @@ For more details on listing macros run: `help macro list`
 
 For more details on deleting macros run: `help macro delete`
 
-Note: Macros cannot have the same name as a command or alias
+!!! warning
+
+    Macros cannot have the same name as a command or alias

@@ -33,10 +33,10 @@ the first script.
 
 ### Comments
 
-Any command line input where the first non-whitespace character is a `\#` will be treated as a
-comment. This means any `\#` character appearing later in the command will be treated as a literal.
-The same applies to a `\#` in the middle of a multiline command, even if it is the first character
-on a line.
+Any command line input where the first non-whitespace character is a `#` will be treated as a
+comment. This means any `#` character appearing later in the command will be treated as a literal.
+The same applies to a `#` in the middle of a multiline command, even if it is the first character on
+a line.
 
 Comments are useful in scripts, but would be pointless within an interactive session.
 
@@ -48,7 +48,8 @@ Comments are useful in scripts, but would be pointless within an interactive ses
 If you require logic flow, loops, branching, or other advanced features, you can write a python
 script which executes in the context of your `cmd2` app. This script is run using the
 [run_pyscript](./builtin_commands.md#run_pyscript) command. Here's a simple example that uses the
-[arg_printer](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/arg_printer.py) script:
+[arg_printer.py](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/arg_printer.py)
+pyscript:
 
     (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar 'baz 23'
     Running Python script 'arg_printer.py' which was called with 3 arguments
@@ -70,12 +71,13 @@ be run by pyscript and "designer" as the `cmd2` application author.
 ### Basics
 
 Without any work on the part of the designer, a scripter can take advantage of piecing together
-workflows using simple `app` calls. The result of a `run_pyscript` app call yields a `CommandResult`
-object exposing four members: `Stdout`, `Stderr`, `Stop`, and `Data`.
+workflows using simple `app` calls. The result of a `run_pyscript` app call yields a
+[CommandResult][cmd2.CommandResult] object exposing four members: `stdout`, `stderr`, `stop`, and
+`data`.
 
-`Stdout` and `Stderr` are fairly straightforward representations of normal data streams and
-accurately reflect what is seen by the user during normal cmd2 interaction. `Stop` contains
-information about how the invoked command has ended its lifecycle. Lastly `Data` contains any
+`stdout` and `stderr` are fairly straightforward representations of normal data streams and
+accurately reflect what is seen by the user during normal cmd2 interaction. `stop` contains
+information about how the invoked command has ended its lifecycle. Lastly `data` contains any
 information the designer sets via `self.last_result` or `self._cmd.last_result` if called from
 inside a CommandSet.
 
@@ -101,19 +103,20 @@ second = 'second'
 app(f'command {first} -t {second})
 ```
 
-See [python_scripting](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
+See
+[python_scripting.py](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
 example and associated
-[conditional](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/conditional.py) script
-for more information.
+[conditional.py](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/conditional.py)
+script for more information.
 
 ### Design principles
 
-If the cmd2 application follows the
-[unix_design_philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) a scriptor will have the
-most flexibility to piece together workflows using different commands. If the designer\'s
-application is more complete and less likely to be augmented in the future a scripter may opt for
-simple serial scripts with little control flow. In either case, choices made by the designer will
-have effects on scripters.
+If your cmd2 application follows the
+[unix_design_philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) a scripter will have the
+most flexibility to piece together workflows using different commands. If the designer's application
+is more complete and less likely to be augmented in the future a scripter may opt for simple serial
+scripts with little control flow. In either case, choices made by the designer will have effects on
+scripters.
 
 The following diagram illustrates the different boundaries to keep in mind.
 
@@ -141,14 +144,14 @@ flowchart LR
 
 !!! warning
 
-    It is bad design for a high level pyscript to know about let alone access low level class libraries of an application. Resist this urge at all costs, unless it\'s necessary.
+    It is bad design for a high level pyscript to know about, let alone access, low level class libraries of an application. Resist this urge at all costs, unless it's necessary.
 
 ### Developing a Basic API
 
-CMD2 out of the box allows scripters to take advantage of all exposed `do_*` commands. As a scripter
-one can easily interact with the application via `stdout` and `stderr`.
+`cmd2` out of the box allows scripters to take advantage of all exposed `do_*` commands. As a
+scripter one can easily interact with the application via `stdout` and `stderr`.
 
-As a baseline lets start off with the familiar FirstApp
+As a baseline lets start off with the the following `cmd2` application called `FirstApp`
 
 ```py
 #!/usr/bin/env python
@@ -221,7 +224,7 @@ When executing the `speak` command without parameters you see the following erro
     Usage: speak [-h] [-p] [-s] [-r REPEAT] words [...]
     Error: the following arguments are required: words
 
-Even though this is a fully qualified CMD2 error the pyscript must look for this error and perform
+Even though this is a fully qualified `cmd2` error the pyscript must look for this error and perform
 error checking.:
 
 ```py
@@ -304,7 +307,7 @@ accommodate the weary scripter by adding one small line at the end of our `do_*`
 
 Adding the above line supercharges a cmd2 application and opens a new world of possibilities.
 
-!!! note
+!!! tip
 
     When setting results for a command function inside of a CommandSet use the private cmd instance:
 
@@ -356,11 +359,11 @@ immutable over mutable types and never provide direct access to class members as
 potentially lead to violation of the
 [open_closed_principle](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle).
 
-When possible, a dataclass is a lightweight solution perfectly suited for data manipulation. Lets
-dive into an example.
+When possible, a frozen dataclass is a lightweight solution perfectly suited for data manipulation.
+Lets dive into an example.
 
 The following fictional application has two commands: `build` and `status`. We can pretend that the
-build action happens somewhere else in the world at an REST API endpoint and has significant
+build action happens somewhere else in the world at a REST API endpoint and has significant
 computational cost. The status command for all intents and purposes, will only show the current
 status of a build task. The application has provided all that is needed for a user to start a build
 and then determine its status. The problem however is that with a long running process the user may

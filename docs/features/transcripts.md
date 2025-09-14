@@ -2,7 +2,7 @@
 
 A transcript is both the input and output of a successful session of a `cmd2`-based app which is
 saved to a text file. With no extra work on your part, your app can play back these transcripts as a
-unit test. Transcripts can contain regular expressions, which provide the flexibility to match
+regression test. Transcripts can contain regular expressions, which provide the flexibility to match
 responses from commands that produce dynamic or variable output.
 
 ## Creating From History
@@ -23,7 +23,7 @@ This is by far the easiest way to generate a transcript.
 
 !!! warning
 
-    Make sure you use the **poutput()** method in your `cmd2` application for generating command output. This method of the `cmd2.Cmd` class ensures that output is properly redirected when redirecting to a file, piping to a shell command, and when generating a transcript.
+    Make sure you use the **poutput()** method in your `cmd2` application for generating command output. This method of the [cmd2.Cmd][] class ensures that output is properly redirected when redirecting to a file, piping to a shell command, and when generating a transcript.
 
 ## Creating From A Script File
 

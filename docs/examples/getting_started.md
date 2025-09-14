@@ -1,6 +1,8 @@
 # Getting Started
 
-Here's a quick walkthrough of a simple application which demonstrates 10 features of `cmd2`:
+Here's a quick walkthrough of a the simple
+[getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
+example application which demonstrates many features of `cmd2`:
 
 - [Settings](../features/settings.md)
 - [Commands](../features/commands.md)
@@ -29,36 +31,36 @@ following contents:
 
 ```py
 #!/usr/bin/env python
-"""A simple cmd2 application."""
+"""A basic cmd2 application."""
 import cmd2
 
 
-class FirstApp(cmd2.Cmd):
-    """A simple cmd2 application."""
+class BasicApp(cmd2.Cmd):
+    """Cmd2 application to demonstrate many common features."""
 
 
 if __name__ == '__main__':
     import sys
-    c = FirstApp()
-    sys.exit(c.cmdloop())
+    app = BasicApp()
+    sys.exit(app.cmdloop())
 ```
 
-We have a new class `FirstApp` which is a subclass of [cmd2.Cmd][]. When we tell python to run our
+We have a new class `BasicApp` which is a subclass of [cmd2.Cmd][]. When we tell Python to run our
 file like this:
 
 ```shell
 $ python getting_started.py
 ```
 
-it creates an instance of our class, and calls the `cmd2.Cmd.cmdloop` method. This method accepts
-user input and runs commands based on that input. Because we subclassed `cmd2.Cmd`, our new app
-already has a bunch of features built in.
+The application creates an instance of our class, and calls the [cmd2.Cmd.cmdloop][] method. This
+method accepts user input and runs commands based on that input. Because we subclassed `cmd2.Cmd`,
+our new app already has a bunch of features built in.
 
 Congratulations, you have a working `cmd2` app. You can run it, and then type `quit` to exit.
 
 ## Create a New Setting
 
-Before we create our first command, we are going to add a setting to this app. `cmd2` includes
+Before we create our first command, we are going to add a new setting to this app. `cmd2` includes
 robust support for [Settings](../features/settings.md). You configure settings during object
 initialization, so we need to add an initializer to our class:
 
@@ -89,7 +91,7 @@ Now we will create our first command, called `speak` which will echo back whatev
 say. We are going to use an [argument processor](../features/argument_processing.md) so the `speak`
 command can shout and talk pig latin. We will also use some built in methods for
 [generating output](../features/generating_output.md). Add this code to `getting_started.py`, so
-that the `speak_parser` attribute and the `do_speak()` method are part of the `FirstApp()` class:
+that the `speak_parser` attribute and the `do_speak()` method are part of the `BasicApp()` class:
 
 ```py
 speak_parser = cmd2.Cmd2ArgumentParser()

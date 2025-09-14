@@ -44,25 +44,25 @@ if __name__ == '__main__':
     app.postloop()
 ```
 
-The `cmd2.Cmd.runcmds_plus_hooks()` method runs multiple commands via
-`cmd2.Cmd.onecmd_plus_hooks()`.
+The [cmd2.Cmd.runcmds_plus_hooks][] method runs multiple commands where each single command is
+executed via [cmd2.Cmd.onecmd_plus_hooks][].
 
-The `cmd2.Cmd.onecmd_plus_hooks()` method will do the following to execute a single command in a
+The [cmd2.Cmd.onecmd_plus_hooks][] method will do the following to execute a single command in a
 normal fashion:
 
-1.  Parse user input into a `cmd2.Statement` object
-1.  Call methods registered with `cmd2.Cmd.register_postparsing_hook()`
+1.  Parse user input into a [cmd2.Statement][] object
+1.  Call methods registered with [cmd2.Cmd.register_postparsing_hook][]
 1.  Redirect output, if user asked for it and it's allowed
 1.  Start timer
-1.  Call methods registered with `cmd2.Cmd.register_precmd_hook`
-1.  Call `cmd2.Cmd.precmd` - for backwards compatibility with `cmd.Cmd`
+1.  Call methods registered with [cmd2.Cmd.register_precmd_hook][]
+1.  Call [cmd2.Cmd.precmd][] - for backwards compatibility with `cmd`
 1.  Add statement to [History](../features/history.md)
 1.  Call `do_command` method
-1.  Call methods registered with `cmd2.Cmd.register_postcmd_hook()`
-1.  Call `cmd2.Cmd.postcmd` - for backwards compatibility with `cmd.Cmd`
+1.  Call methods registered with [cmd2.Cmd.register_postcmd_hook][]
+1.  Call [cmd2.Cmd.postcmd][] - for backwards compatibility with `cmd`
 1.  Stop timer and display the elapsed time
 1.  Stop redirecting output if it was redirected
-1.  Call methods registered with `cmd2.Cmd.register_cmdfinalization_hook()`
+1.  Call methods registered with [cmd2.Cmd.register_cmdfinalization_hook][]
 
 Running in this fashion enables the ability to integrate with an external event loop. However, how
 to integrate with any specific event loop is beyond the scope of this documentation. Please note

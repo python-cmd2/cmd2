@@ -6,7 +6,7 @@ extend basic `cmd2` functionality and can be used by multiple applications.
 There are many ways to add functionality to `cmd2` using a plugin. Most plugins will be implemented
 as a mixin. A mixin is a class that encapsulates and injects code into another class. Developers who
 use a plugin in their `cmd2` project will inject the plugin's code into their subclass of
-`cmd2.Cmd`.
+[cmd2.Cmd][].
 
 ## Mixin and Initialization
 
@@ -38,15 +38,17 @@ class Example(cmd2_myplugin.MyPlugin, cmd2.Cmd):
         # all plugins have initialized
 ```
 
-Note how the plugin must be inherited (or mixed in) before `cmd2.Cmd`. This is required for two
-reasons:
+!!! warning
 
-- The `cmd.Cmd.__init__` method in the Python standard library does not call `super().__init__()`.
-  Because of this oversight, if you don't inherit from `MyPlugin` first, the `MyPlugin.__init__()`
-  method will never be called.
-- You may want your plugin to be able to override methods from `cmd2.Cmd`. If you mixin the plugin
-  after `cmd2.Cmd`, the Python method resolution order will call [cmd2.Cmd][] methods before it
-  calls those in your plugin.
+    The plugin must be inherited (or mixed in) before `cmd2.Cmd`. This is required for two
+    reasons:
+
+    - The `cmd.Cmd.__init__` method in the Python standard library does not call `super().__init__()`.
+    Because of this oversight, if you don't inherit from `MyPlugin` first, the `MyPlugin.__init__()`
+    method will never be called.
+    - You may want your plugin to be able to override methods from `cmd2.Cmd`. If you mixin the plugin
+    after `cmd2.Cmd`, the Python method resolution order will call [cmd2.Cmd][] methods before it
+    calls those in your plugin.
 
 ## Add commands
 
@@ -77,7 +79,7 @@ class MyPlugin:
         self.add_settable(cmd2.Settable('mysetting', str, 'short help message for mysetting', self))
 ```
 
-You can hide settings from the user by calling `cmd2.Cmd.remove_settable`. See
+You can hide settings from the user by calling [cmd2.Cmd.remove_settable][]. See
 [Settings](./settings.md) for more information.
 
 ## Decorators
@@ -97,8 +99,9 @@ Hooks are a much better approach.
 ## Hooks
 
 Plugins can register hook methods, which are called by [cmd2.Cmd][] during various points in the
-application and command processing lifecycle. Plugins should not override any of the deprecated hook
-methods, instead they should register their hooks as described in the [Hooks](./hooks.md) section.
+application and command processing lifecycle. Plugins should not override any of the `cmd` base
+class hook methods, instead they should register their hooks as described in the [Hooks](./hooks.md)
+section.
 
 You should name your hooks so that they begin with the name of your plugin. Hook methods get mixed
 into the `cmd2` application and this naming convention helps avoid unintentional method overriding.
@@ -134,4 +137,5 @@ will know what's available.
 
 ## Examples
 
-See <https://github.com/python-cmd2/cmd2-plugin-template> for more info.
+See [cmd2 Plugin Template](https://github.com/python-cmd2/cmd2/tree/main/plugins/template) for more
+info.

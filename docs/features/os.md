@@ -15,8 +15,14 @@ get a `!` shortcut for `shell`, which allows you to type:
 
     (Cmd) !ls -al
 
-NOTE: `cmd2` provides user-friendly tab completion throughout the process of running a shell
-command - first for the shell command name itself, and then for file paths in the argument section.
+!!! note
+
+    `cmd2` provides user-friendly tab completion throughout the process of running a shell command -
+    first for the shell command name itself, and then for file paths in the argument section.
+
+    However, a `cmd2` application effectively **becomes** the shell, so if you have _extra_ shell
+    completion configured for your particular shell such as `bash`, `zsh`, `fish`, etc. then this
+    will not be available within `cmd2`.
 
 ## Editors
 
@@ -36,16 +42,18 @@ system.
 
 ## Terminal pagers
 
-Output of any command can be displayed one page at a time using the `cmd2.Cmd.ppaged` method.
+Output of any command can be displayed one page at a time using the [cmd2.Cmd.ppaged][] method.
 
 Alternatively, a terminal pager can be invoked directly using the ability to run shell commands with
 the `!` shortcut like so:
 
     (Cmd) !less foo.txt
 
-NOTE: Once you are in a terminal pager, that program temporarily has control of your terminal,
-**NOT** `cmd2`. Typically you can use either the arrow keys or `<PageUp>`/`<PageDown>` keys to
-scroll around or type `q` to quit the pager and return control to your `cmd2` application.
+!!! warning
+
+    Once you are in a terminal pager, that program temporarily has control of your terminal,
+    **NOT** `cmd2`. Typically you can use either the arrow keys or `<PageUp>`/`<PageDown>` keys to
+    scroll around or type `q` to quit the pager and return control to your `cmd2` application.
 
 ## Exit codes
 
@@ -87,10 +95,10 @@ shell, and execute those commands before entering the command loop:
 
     $ python examples/transcript_example.py help
 
-    Documented commands (use 'help -v' for verbose/'help <topic>' for details):
-    ===========================================================================
-    alias  help     macro   orate  quit          run_script  set    shortcuts
-    edit   history  mumble  py     run_pyscript  say         shell  speak
+    Documented Commands
+    ───────────────────
+    alias  help     macro   orate  run_pyscript  say  shell      speak
+    edit   history  mumble  quit   run_script    set  shortcuts
 
     (Cmd)
 
@@ -111,8 +119,9 @@ shell, but have it say it in pig latin:
 Uh-oh, that's not what we wanted. `cmd2` treated `-p`, `hello`, and `there` as commands, which don't
 exist in that program, thus the syntax errors.
 
-There is an easy way around this, which is demonstrated in `examples/cmd_as_argument.py`. By setting
-`allow_cli_args=False` you can do your own argument parsing of the command line:
+There is an easy way around this, which is demonstrated in
+[cmd_as_argument.py](https://github.com/python-cmd2/cmd2/blob/main/examples/cmd_as_argument.py)
+example. By setting `allow_cli_args=False` you can do your own argument parsing of the command line:
 
     $ python examples/cmd_as_argument.py speak -p hello there
     ellohay heretay

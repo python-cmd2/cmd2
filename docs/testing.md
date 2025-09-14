@@ -2,7 +2,7 @@
 
 ## Overview
 
-This covers special considerations when writing unit tests for a cmd2 application.
+This covers special considerations when writing unit or integration tests for a cmd2 application.
 
 ## Testing Commands
 
@@ -13,7 +13,7 @@ function captures and returns stdout, stderr, and the command-specific result da
 ## Mocking
 
 If you need to mock anything in your cmd2 application, and most specifically in sub-classes of
-`cmd2.Cmd` or `cmd2.command_definition.CommandSet`, you must use
+[cmd2.Cmd][] or [cmd2.CommandSet][], you must use
 [Autospeccing](https://docs.python.org/3/library/unittest.mock.html#autospeccing),
 [spec=True](https://docs.python.org/3/library/unittest.mock.html#patch), or whatever equivalent is
 provided in the mocking library you're using.
@@ -24,8 +24,8 @@ automatically create mock objects to match any attribute being requested, regard
 they're present in the object being mocked. This behavior can incorrectly instruct cmd2 to treat a
 function or attribute as something it needs to recognize and process. To prevent this, you should
 always mock with [Autospeccing](https://docs.python.org/3/library/unittest.mock.html#autospeccing)
-or [spec=True](https://docs.python.org/3/library/unittest.mock.html#patch enabled. If you don't have
-autospeccing on, your unit tests will fail with an error message like:
+or [spec=True](https://docs.python.org/3/library/unittest.mock.html#patch) enabled. If you don't
+have autospeccing on, your unit tests will fail with an error message like:
 
 ```sh
 cmd2.exceptions.CommandSetRegistrationError: Subcommand
