@@ -14,9 +14,9 @@ Each time a command is executed (this gets complex, see
 [cmd2.Statement][] is appended to `cmd2.Cmd.history`.
 
 `cmd2` adds the option of making this history persistent via optional arguments to
-`cmd2.Cmd.__init__`. If you pass a filename in the `persistent_history_file` argument, the contents
-of `cmd2.Cmd.history` will be written as compressed JSON to that history file. We chose this format
-instead of plain text to preserve the complete `cmd2.Statement` object for each command.
+[cmd2.Cmd.\_\_init\_\_][]. If you pass a filename in the `persistent_history_file` argument, the
+contents of `cmd2.Cmd.history` will be written as compressed JSON to that history file. We chose
+this format instead of plain text to preserve the complete `cmd2.Statement` object for each command.
 
 !!! note
 
@@ -25,21 +25,22 @@ instead of plain text to preserve the complete `cmd2.Statement` object for each 
     However, this design choice causes an inconsistency between the `readline` history and the `cmd2` history when you enter an invalid command: it is saved to the `readline` history, but not to the `cmd2` history.
 
 The `cmd2.Cmd.history` attribute, the `cmd2.history.History` class, and the
-`cmd2.history.HistoryItem` class are all part of the public API for `cmd2.Cmd`. You could use these
-classes to implement write your own `history` command (see below for documentation on how the
-included `history` command works).
+[cmd2.history.HistoryItem][] class are all part of the public API for `cmd2.Cmd`. You could use
+these classes to implement your own `history` command (see below for documentation on how the
+built-in `history` command works).
 
 ## For Users
 
-You can use the up and down arrow keys to move through the history of previously entered commands.
+You can use the :arrow_up: up and :arrow_down: down arrow keys to move through the history of
+previously entered commands.
 
 If the `readline` module is installed, you can press `Control-p` to move to the previously entered
 command, and `Control-n` to move to the next command. You can also search through the command
 history using `Control-r`.
 
-Eric Johnson hosts a nice [readline cheat sheet](http://readline.kablamo.org/emacs.html), or you can
-dig into the [GNU Readline User Manual](http://man7.org/linux/man-pages/man3/readline.3.html) for
-all the details, including instructions for customizing the key bindings.
+You can refer to the [readline cheat sheet](http://readline.kablamo.org/emacs.html) or you can dig
+into the [GNU Readline User Manual](http://man7.org/linux/man-pages/man3/readline.3.html) for all
+the details, including instructions for customizing the key bindings.
 
 `cmd2` makes a third type of history access available with the `history` command. Each time the user
 enters a command, `cmd2` saves the input. The `history` command lets you do interesting things with
