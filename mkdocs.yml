@@ -219,6 +219,8 @@ nav:
       - api/terminal_utils.md
       - api/transcript.md
       - api/utils.md
+  - Version Upgrades:
+      - upgrades.md
   - Meta:
       - doc_conventions.md
 

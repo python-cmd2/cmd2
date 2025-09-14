@@ -63,9 +63,9 @@ This command runs a Python script file inside the `cmd2` application. See
 This command runs commands in a script file that is encoded as either ASCII or UTF-8 text. See
 [Command Scripts](./scripting.md#command-scripts) for more information.
 
-### \_relative_run_script (hidden)
+### \_relative_run_script
 
-This command is hidden from the help that's visible to end users. It runs a script like
+**This command is hidden from the help that's visible to end users.** It runs a script like
 [run_script](#run_script) but does so using a path relative to the script that is currently
 executing. This is useful when you have scripts that run other scripts. See
 [Running Command Scripts](../features/scripting.md#running-command-scripts) for more information.

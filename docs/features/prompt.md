@@ -34,19 +34,16 @@ text at the prompt. To use this functionality, the application must be running i
 supports [VT100](https://en.wikipedia.org/wiki/VT100) control characters and `readline`. Linux, Mac,
 and Windows 10 and greater all support these.
 
-::: cmd2.Cmd.async_alert
-
-::: cmd2.Cmd.async_update_prompt
-
-::: cmd2.Cmd.async_refresh_prompt
-
-::: cmd2.Cmd.need_prompt_refresh
+- [cmd2.Cmd.async_alert][]
+- [cmd2.Cmd.async_update_prompt][]
+- [cmd2.Cmd.async_refresh_prompt][]
+- [cmd2.Cmd.need_prompt_refresh][]
 
 `cmd2` also provides a function to change the title of the terminal window. This feature requires
 the application be running in a terminal that supports VT100 control characters. Linux, Mac, and
 Windows 10 and greater all support these.
 
-::: cmd2.Cmd.set_window_title
+- [cmd2.Cmd.set_window_title][]
 
 The easiest way to understand these functions is to see the
 [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
