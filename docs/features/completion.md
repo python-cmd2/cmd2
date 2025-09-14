@@ -84,7 +84,7 @@ an error occurs in which it is more desirable to display a message than a stack 
 has a member called `apply_style`. Set this False if the error style should not be applied. For
 instance, `ArgparseCompleter` sets it to False when displaying completion hints.
 
-## Tab Completion Using argparse Decorator {: #argparse-based }
+## Tab Completion Using the argparse Decorator {: #argparse-based }
 
 When using `cmd2`'s [@with_argparser][cmd2.with_argparser] decorator, `cmd2` provides automatic tab
 completion of flag names.

@@ -73,34 +73,34 @@ already parsed.
 
 A `Statement` object is a subclass of `str` that contains the following attributes:
 
-command
+**command**
 
 : Name of the command called. You already know this because of the method `cmd2` called, but it can
 sometimes be nice to have it in a string, i.e. if you want your error messages to contain the
 command name.
 
-args
+**args**
 
 : A string containing the arguments to the command with output redirection or piping to shell
 commands removed. It turns out that the "string" value of the `Statement` object has all the output
 redirection and piping clauses removed as well. Quotes remain in the string.
 
-command_and_args
+**command_and_args**
 
 : A string of just the command and the arguments, with output redirection or piping to shell
 commands removed.
 
-argv
+**argv**
 
 : A list of arguments a-la `sys.argv`, including the command as `argv[0]` and the subsequent
 arguments as additional items in the list. Quotes around arguments will be stripped as will any
 output redirection or piping portions of the command.
 
-raw
+**raw**
 
 : Full input exactly as typed by the user.
 
-terminator
+**terminator**
 
 : Character used to end a multiline command. You can configure multiple termination characters, and
 this attribute will tell you which one the user typed.

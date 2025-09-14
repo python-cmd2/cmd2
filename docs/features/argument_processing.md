@@ -227,8 +227,8 @@ class CmdLineApp(cmd2.Cmd):
 
 ## Unknown Positional Arguments
 
-To pass all unknown arguments to be passed to your command as a list of strings, then decorate the
-command method with the `@with_argparser(..., with_unknown_args=True)` decorator.
+To pass all unknown arguments to your command as a list of strings, then decorate the command method
+with the `@with_argparser(..., with_unknown_args=True)` decorator.
 
 Here's what it looks like:
 
