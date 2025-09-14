@@ -89,7 +89,7 @@ you will see our `maxrepeats` setting show up with its default value of `3`.
 
 Now we will create our first command, called `speak`, which will echo back whatever we tell it to
 say. We are going to use an [argument processor](../features/argument_processing.md) so the `speak`
-command can shout and talk pig latin. We will also use some built in methods for
+command can shout and talk Pig Latin. We will also use some built in methods for
 [generating output](../features/generating_output.md). Add this code to `getting_started.py`, so
 that the `speak_parser` attribute and the `do_speak()` method are part of the `BasicApp()` class:
 
