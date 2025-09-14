@@ -2,9 +2,9 @@
 
 These pages document the public API for `cmd2`. If a method, class, function, attribute, or constant
 is not documented here, consider it private and subject to change. There are many classes, methods,
-functions, and constants in the source code which do not begin with an underscore but are not
+functions, and constants in the source code that do not begin with an underscore but are not
 documented here. When looking at the source code for this library, you cannot safely assume that
-because something doesn't start with an underscore, it is a public API.
+something is a public API just because it doesn't start with an underscore.
 
 If a release of this library changes any of the items documented here, the version number will be
 incremented according to the [Semantic Version Specification](https://semver.org).
@@ -18,7 +18,7 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.colors](./colors.md) - StrEnum of all color names supported by the Rich library
 - [cmd2.command_definition](./command_definition.md) - supports the definition of commands in
   separate classes to be composed into cmd2.Cmd
-- [cmd2.constants](./constants.md) - just like it says on the tin
+- [cmd2.constants](./constants.md) - constants used in `cmd2`
 - [cmd2.decorators](./decorators.md) - decorators for `cmd2` commands
 - [cmd2.exceptions](./exceptions.md) - custom `cmd2` exceptions
 - [cmd2.history](./history.md) - classes for storing the history of previously entered commands

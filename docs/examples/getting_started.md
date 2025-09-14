@@ -1,6 +1,6 @@
 # Getting Started
 
-Here's a quick walkthrough of a the simple
+Here's a quick walkthrough of the simple
 [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
 example application which demonstrates many features of `cmd2`:
 
@@ -54,7 +54,7 @@ $ python getting_started.py
 
 The application creates an instance of our class, and calls the [cmd2.Cmd.cmdloop][] method. This
 method accepts user input and runs commands based on that input. Because we subclassed `cmd2.Cmd`,
-our new app already has a bunch of features built in.
+our new app already has a bunch of built-in features.
 
 Congratulations, you have a working `cmd2` app. You can run it, and then type `quit` to exit.
 
@@ -87,7 +87,7 @@ you will see our `maxrepeats` setting show up with its default value of `3`.
 
 ## Create A Command
 
-Now we will create our first command, called `speak` which will echo back whatever we tell it to
+Now we will create our first command, called `speak`, which will echo back whatever we tell it to
 say. We are going to use an [argument processor](../features/argument_processing.md) so the `speak`
 command can shout and talk pig latin. We will also use some built in methods for
 [generating output](../features/generating_output.md). Add this code to `getting_started.py`, so

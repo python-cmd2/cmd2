@@ -1,9 +1,9 @@
 # Alternate Event Loops
 
-Throughout this documentation we have focused on the **90%** use case, that is the use case we
-believe around **90+%** of our user base is looking for. This focuses on ease of use and the best
-out-of-the-box experience where developers get the most functionality for the least amount of
-effort. We are talking about running `cmd2` applications with the `cmdloop()` method:
+Throughout this documentation, we have focused on the 90% use case, which we believe applies to over
+90% of our user base. This focuses on ease of use and the best out-of-the-box experience, where
+developers get the most functionality for the least amount of effort. We are talking about running
+`cmd2` applications with the `cmdloop()` method:
 
 ```py
 from cmd2 import Cmd
@@ -21,8 +21,8 @@ Many Python concurrency libraries involve or require an event loop which they ar
 such as [asyncio](https://docs.python.org/3/library/asyncio.html), [gevent](http://www.gevent.org/),
 [Twisted](https://twistedmatrix.com), etc.
 
-`cmd2` applications can be executed in a fashion where `cmd2` doesn't own the main loop for the
-program by using code like the following:
+`cmd2` applications can be executed in a way where `cmd2` doesn't own the main loop for the program
+by using code like the following:
 
 ```py
 import cmd2
@@ -64,9 +64,9 @@ normal fashion:
 1.  Stop redirecting output if it was redirected
 1.  Call methods registered with [cmd2.Cmd.register_cmdfinalization_hook][]
 
-Running in this fashion enables the ability to integrate with an external event loop. However, how
-to integrate with any specific event loop is beyond the scope of this documentation. Please note
-that running in this fashion comes with several disadvantages, including:
+Running in this way enables the ability to integrate with an external event loop. However, how to
+integrate with any specific event loop is beyond the scope of this documentation. Please note that
+running in this fashion comes with several disadvantages, including:
 
 - Requires the developer to write more code
 - Does not support transcript testing
