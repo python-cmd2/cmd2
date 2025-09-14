@@ -27,6 +27,7 @@
 - [Shortcuts, Aliases, and Macros](shortcuts_aliases_macros.md)
 - [Startup Commands](startup_commands.md)
 - [Table Creation](table_creation.md)
+- [Theme](theme.md)
 - [Transcripts](transcripts.md)
 <!--intro-end-->
 </div>

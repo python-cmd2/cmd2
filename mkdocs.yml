@@ -186,6 +186,7 @@ nav:
       - features/shortcuts_aliases_macros.md
       - features/startup_commands.md
       - features/table_creation.md
+      - features/theme.md
       - features/transcripts.md
   - Examples:
       - examples/index.md
