@@ -124,7 +124,7 @@ import argparse
 
 There's a bit to unpack here, so let's walk through it. We created `speak_parser`, which uses the
 [argparse](https://docs.python.org/3/library/argparse.html) module from the Python standard library
-to parse command line input from a user. There is nothing thus far that is specific to `cmd2`.
+to parse command line input from a user. So far, there is nothing specific to `cmd2`.
 
 There is also a new method called `do_speak()`. In both
 [cmd](https://docs.python.org/3/library/cmd.html) and `cmd2`, methods that start with `do_` become
@@ -137,12 +137,12 @@ Note the `cmd2.decorators.with_argparser` decorator on the `do_speak()` method. 
     the user input doesn't meet the requirements defined by the argparser, then an error will be
     displayed for the user.
 1.  It alters our `do_speak` method so that instead of receiving the raw user input as a parameter,
-    we receive the namespace from the argparser.
+    we receive the namespace from the argument parser.
 1.  It creates a help message for us based on the argparser.
 
 You can see in the body of the method how we use the namespace from the argparser (passed in as the
-variable `args`). We build an array of words which we will output, honoring both the `--piglatin`
-and `--shout` options.
+variable `args`). We build a list of words which we will output, honoring both the `--piglatin` and
+`--shout` options.
 
 At the end of the method, we use our `maxrepeats` setting as an upper limit to the number of times
 we will print the output.
@@ -198,9 +198,9 @@ def __init__(self):
 
 Shortcuts are passed to the `cmd2` initializer, and if you want the built-in shortcuts of `cmd2` you
 have to pass them. These shortcuts are defined as a dictionary, with the key being the shortcut, and
-the value containing the command. When using the default shortcuts and also adding your own, it's a
-good idea to use the `.update()` method to modify the dictionary. This way if you add a shortcut
-that happens to already be in the default set, yours will override, and you won't get any errors at
+the value containing the command. When using the default shortcuts and adding your own, it's a good
+idea to use the `.update()` method to modify the dictionary. This way, if you add a shortcut that
+happens to already be in the default set, yours will override, and you won't get any errors at
 runtime.
 
 Run your app again, and type:
@@ -209,16 +209,15 @@ Run your app again, and type:
 (Cmd) shortcuts
 ```
 
-to see the list of all of the shortcuts, including the one for speak that we just created.
+to see the list of all the shortcuts, including the one for speak that we just created.
 
 ## Multiline Commands
 
-Some use cases benefit from the ability to have commands that span more than one line. For example,
-you might want the ability for your user to type in a SQL command, which can often span lines and
-which are terminated with a semicolon. Let's add a
-[multiline command](../features/multiline_commands.md) to our application. First we'll create a new
-command called `orate`. This code shows both the definition of our `speak` command, and the `orate`
-command:
+Some use cases benefit from commands that span more than one line. For example, you might want the
+ability for your user to type in a SQL command, which can often span lines and which are terminated
+with a semicolon. Let's add a [multiline command](../features/multiline_commands.md) to our
+application. First we'll create a new command called `orate`. This code shows both the definition of
+our `speak` command, and the `orate` command:
 
 ```py
 @cmd2.with_argparser(speak_parser)
