@@ -277,7 +277,7 @@ def settings_ns_provider(self) -> argparse.Namespace:
     return ns
 ```
 
-To use this function with the `@2ith_argparser` decorator, do the following:
+To use this function with the `@with_argparser` decorator, do the following:
 
 ```py
 @with_argparser(my_parser, ns_provider=settings_ns_provider)

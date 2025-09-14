@@ -75,8 +75,8 @@ When using `mkdocstrings`, it must be preceded by a blank line before and after,
 
 ### Links to API Reference
 
-To reference a class, method, or function, do the following use block quotes around it followed by
-empty block quotes. So to reference `cmd2.Cmd`, you using `[cmd2.Cmd][]`.
+To reference a class, method, or function, use block quotes around the name of the full namespace
+path for it followed by empty block quotes. So to reference `cmd2.Cmd`, you use `[cmd2.Cmd][]`.
 
 If you want to change the name to use something shorter than the full namespace resolution you can
 put the full path in the 2nd set of block quotes instead of leaving it empty and put the shorter
