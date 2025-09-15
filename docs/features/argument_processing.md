@@ -80,6 +80,12 @@ By default, `cmd2` uses the docstring of the command method when a user asks for
 command. When you use the `@with_argparser` decorator, the docstring for the `do_*` method is used
 to set the description for the `argparse.ArgumentParser`.
 
+!!! tip "description and epilog fields are rich objects"
+
+    While the `help` text itself is simply a string, both the `description` and `epilog` can contain
+    [rich](https://github.com/Textualize/rich) objects. For the `description` and `epilog` fields, you can pass
+    in any `rich` object, including Text, Tables, Markdown.
+
 With this code:
 
 ```py
@@ -174,7 +180,32 @@ This command cannot generate tags with no content, like <br/>
 
 !!! warning
 
-    If a command **foo** is decorated with `cmd2`'s `with_argparse` decorator, then **help_foo** will not be invoked when `help foo` is called. The [argparse](https://docs.python.org/3/library/argparse.html) module provides a rich API which can be used to tweak every aspect of the displayed help and we encourage `cmd2` developers to utilize that.
+    If a command **foo** is decorated with `cmd2`'s `with_argparse` decorator, then **help_foo** will not be
+    invoked when `help foo` is called. The [argparse](https://docs.python.org/3/library/argparse.html) module
+    provides a rich API which can be used to tweak every aspect of the displayed help and we encourage `cmd2`
+    developers to utilize that.
+
+### Argparse HelpFormatter classes
+
+`cmd2` has 5 different Argparse HelpFormatter classes, all of which are based on the
+`RichHelpFormatter` class from [rich-argparse](https://github.com/hamdanal/rich-argparse). The
+benefit is that your `cmd2` applications now have more aesthetically pleasing help which includes
+color to make it quicker and easier to visually parse help text. This works for all supported
+versions of Python.
+
+- [Cmd2HelpFormatter][cmd2.argparse_custom.Cmd2HelpFormatter] - default help formatter class
+- [ArgumentDefaultsCmd2HelpFormatter][cmd2.argparse_custom.ArgumentDefaultsCmd2HelpFormatter] - adds
+  default values to argument help
+- [MetavarTypeCmd2HelpFormatter][cmd2.argparse_custom.MetavarTypeCmd2HelpFormatter] - uses the
+  argument 'type' as the default metavar value (instead of the argument 'dest')
+- [RawDescriptionCmd2HelpFormatter][cmd2.argparse_custom.RawDescriptionCmd2HelpFormatter] - retains
+  any formatting in descriptions and epilogs
+- [RawTextCmd2HelpFormatter][cmd2.argparse_custom.RawTextCmd2HelpFormatter] - retains formatting of
+  all help text
+
+The default `Cmd2HelpFormatter` class inherits from `argparse.HelpFormatter`. If you want a
+different behavior, then pass the desired class to the `formatter_class` argument of your argparse
+parser, e.g. `formatter_class=ArgumentDefaultsCmd2HelpFormatter` to your parser.
 
 ## Argument List
 
