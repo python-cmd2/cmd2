@@ -65,7 +65,7 @@ Previously `cmd2` default styles were in the `cmd2.ansi` module.
 See
 [argparse_completion.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 for an example on how you can leverage these default styles in your `cmd2` application to maintain a
-consistent look in feel.
+consistent look and feel.
 
 #### string_utils
 
