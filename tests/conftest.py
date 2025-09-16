@@ -177,15 +177,19 @@ class ExternalTestMixin(_Base):
     """A cmd2 plugin (mixin class) that exposes an interface to execute application commands from python"""
 
     def __init__(self, *args, **kwargs):
-        """
+        """Initializes the ExternalTestMixin.
+
+        This class is intended to be used in multiple inheritance alongside `cmd2.Cmd` for an application class.
+        When doing this multiple inheritance, it is imperative that this mixin class come first.
 
         :type self: cmd2.Cmd
-        :param args:
-        :param kwargs:
+        :param args: arguments to pass to the superclass
+        :param kwargs: keyword arguments to pass to the superclass
         """
         # code placed here runs before cmd2 initializes
         super().__init__(*args, **kwargs)
-        assert isinstance(self, cmd2.Cmd)
+        if not isinstance(self, cmd2.Cmd):
+            raise TypeError('The ExternalTestMixin class is intended to be used in multiple inhertance with cmd2.Cmd')
         # code placed here runs after cmd2 initializes
         self._pybridge = cmd2.py_bridge.PyBridge(self)
 
@@ -197,19 +201,19 @@ class ExternalTestMixin(_Base):
         :param echo: Flag whether the command's output should be echoed to stdout/stderr
         :return: A CommandResult object that captures stdout, stderr, and the command's result object
         """
-        assert isinstance(self, cmd2.Cmd)
-        assert isinstance(self, ExternalTestMixin)
         try:
             self._in_py = True
-
             return self._pybridge(command, echo=echo)
 
         finally:
             self._in_py = False
 
     def fixture_setup(self):
-        """
-        Replicates the behavior of `cmdloop()` preparing the state of the application
+        """Replicates the behavior of `cmdloop()` to prepare the application state for testing.
+
+        This method runs all preloop hooks and the preloop method to ensure the
+        application is in the correct state before running a test.
+
         :type self: cmd2.Cmd
         """
 
@@ -218,8 +222,10 @@ class ExternalTestMixin(_Base):
         self.preloop()
 
     def fixture_teardown(self):
-        """
-        Replicates the behavior of `cmdloop()` tearing down the application
+        """Replicates the behavior of `cmdloop()` to tear down the application after a test.
+
+        This method runs all postloop hooks and the postloop method to clean up
+        the application state and ensure test isolation.
 
         :type self: cmd2.Cmd
         """
