@@ -189,7 +189,7 @@ class ExternalTestMixin(_Base):
         # code placed here runs before cmd2 initializes
         super().__init__(*args, **kwargs)
         if not isinstance(self, cmd2.Cmd):
-            raise TypeError('The ExternalTestMixin class is intended to be used in multiple inhertance with cmd2.Cmd')
+            raise TypeError('The ExternalTestMixin class is intended to be used in multiple inheritance with cmd2.Cmd')
         # code placed here runs after cmd2 initializes
         self._pybridge = cmd2.py_bridge.PyBridge(self)
 
