@@ -285,7 +285,7 @@ def validatetag(context: Context) -> None:
     git_tag = result.stdout.rstrip()
 
     # Validate that the Git tag appears to be a valid version number
-    ver_regex = re.compile(r'(\d+)\.(\d+)\.(\d+)')
+    ver_regex = re.compile(r'(\d+)\.(\d+)\.(\d+)(a|b|rc)(\d+)')
     match = ver_regex.fullmatch(git_tag)
     if match is None:
         print(f'Tag {git_tag!r} does not appear to be a valid version number')
