@@ -36,7 +36,7 @@ In Markdown all indenting is significant. Use 4 spaces per indenting level.
 
 ## Wrapping
 
-Hard wrap all text so that line lengths are no greater than 120 characters. It makes everything
+Hard wrap all text so that line lengths are no greater than 100 characters. It makes everything
 easier when editing documentation, and has no impact on reading documentation because we render to
 html.
 
@@ -75,9 +75,13 @@ When using `mkdocstrings`, it must be preceded by a blank line before and after,
 
 ### Links to API Reference
 
-To reference a method or function, do the following:
+To reference a class, method, or function, use block quotes around the name of the full namespace
+path for it followed by empty block quotes. So to reference `cmd2.Cmd`, you use `[cmd2.Cmd][]`.
 
-TODO: Figure out how to do this
+If you want to change the name to use something shorter than the full namespace resolution you can
+put the full path in the 2nd set of block quotes instead of leaving it empty and put the shorter
+name in the one on the left. So you could also use `[Cmd][cmd2.Cmd]` to link to the API
+documentation for `cmd2.Cmd`.
 
 ## Referencing cmd2
 

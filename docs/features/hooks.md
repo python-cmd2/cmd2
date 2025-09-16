@@ -54,22 +54,23 @@ called, the `cmd2.Cmd.postloop` method is called.
 Preloop and postloop hook methods are not passed any parameters and any return value is ignored.
 
 The approach of registering hooks instead of overriding methods allows multiple hooks to be called
-before the command loop begins or ends. Plugin authors should review [Hooks](./hooks.md) for best
-practices writing hooks.
+before the command loop begins or ends. Plugin authors should review this page carefully in full for
+best practices writing hooks.
 
 ## Application Lifecycle Attributes
 
-There are numerous attributes on `cmd2.Cmd` which affect application behavior upon entering or
+There are numerous attributes on [cmd2.Cmd][] which affect application behavior upon entering or
 during the command loop:
 
-- `cmd2.Cmd.intro` - if provided this serves as the intro banner printed once at start of
+- [cmd2.Cmd.intro][] - if provided this serves as the intro banner printed once at start of
   application, after `cmd2.Cmd.preloop` is called
-- `cmd2.Cmd.prompt` - see [Prompt](./prompt.md) for more information
-- `cmd2.Cmd.continuation_prompt` - The prompt issued to solicit input for the 2nd and subsequent
+- [cmd2.Cmd.prompt][] - see [Prompt](./prompt.md) for more information
+- [cmd2.Cmd.continuation_prompt][] - The prompt issued to solicit input for the 2nd and subsequent
   lines of a [Multiline Command](./multiline_commands.md)
-- `cmd2.Cmd.echo` - if `True` write the prompt and the command into the output stream
+- [cmd2.Cmd.echo][] - if `True` write the prompt and the command into the output stream
 
-In addition, several arguments to `cmd2.Cmd.__init__` also affect the command loop behavior:
+In addition, several arguments to [cmd2.Cmd.\_\_init\_\_][cmd2.Cmd.__init__] also affect the command
+loop behavior:
 
 - `allow_cli_args` - allows commands to be specified on the operating system command line which are
   executed before the command processing loop begins
@@ -84,25 +85,25 @@ application exits:
 
 1. Output the prompt
 1. Accept user input
-1. Parse user input into a `cmd2.Statement` object
-1. Call methods registered with `cmd2.Cmd.register_postparsing_hook()`
+1. Parse user input into a [cmd2.Statement][] object
+1. Call methods registered with [cmd2.Cmd.register_postparsing_hook][]
 1. Redirect output, if user asked for it and it's allowed
 1. Start timer
-1. Call methods registered with `cmd2.Cmd.register_precmd_hook`
-1. Call `cmd2.Cmd.precmd` - for backwards compatibility with `cmd.Cmd`
+1. Call methods registered with [cmd2.Cmd.register_precmd_hook][]
+1. Call [cmd2.Cmd.precmd][] - for backwards compatibility with `cmd.Cmd`
 1. Add statement to [History](./history.md)
 1. Call `do_command` method
-1. Call methods registered with `cmd2.Cmd.register_postcmd_hook()`
-1. Call `cmd2.Cmd.postcmd` - for backwards compatibility with `cmd.Cmd`
+1. Call methods registered with [cmd2.Cmd.register_postcmd_hook][]
+1. Call [cmd2.Cmd.postcmd][] - for backwards compatibility with `cmd.Cmd`
 1. Stop timer and display the elapsed time
 1. Stop redirecting output if it was redirected
-1. Call methods registered with `cmd2.Cmd.register_cmdfinalization_hook()`
+1. Call methods registered with [cmd2.Cmd.register_cmdfinalization_hook][]
 
 By registering hook methods, multiple steps allow you to run code during, and control the flow of
 the command processing loop. Be aware that plugins also utilize these hooks, so there may be code
-running that is not part of your application. Methods registered for a hook are called in the order
-they were registered. You can register a function more than once, and it will be called each time it
-was registered.
+running that is not directly part of your application code. Methods registered for a hook are called
+in the order they were registered. You can register a function more than once, and it will be called
+each time it was registered.
 
 Postparsing, precommand, and postcommand hook methods share some common ways to influence the
 command processing loop.
@@ -146,7 +147,7 @@ class App(cmd2.Cmd):
 a `TypeError` if it has the wrong number of parameters. It will also raise a `TypeError` if the
 passed parameter and return value are not annotated as `PostparsingData`.
 
-The hook method will be passed one parameter, a `cmd2.plugin.PostparsingData` object which we will
+The hook method will be passed one parameter, a [cmd2.plugin.PostparsingData][] object which we will
 refer to as `params`. `params` contains two attributes. `params.statement` is a `cmd2.Statement`
 object which describes the parsed user input. There are many useful attributes in the
 `cmd2.Statement` object, including `.raw` which contains exactly what the user typed. `params.stop`
@@ -162,10 +163,10 @@ To modify the user input, you create a new `cmd2.Statement` object and return it
 be dragons. Instead, use the various attributes in a `cmd2.Statement` object to construct a new
 string, and then parse that string to create a new `cmd2.Statement` object.
 
-`cmd2.Cmd` uses an instance of `cmd2.parsing.StatementParser` to parse user input. This instance has
-been configured with the proper command terminators, multiline commands, and other parsing related
-settings. This instance is available as the `cmd2.Cmd.statement_parser` attribute. Here's a simple
-example which shows the proper technique:
+`cmd2.Cmd` uses an instance of [cmd2.parsing.StatementParser][] to parse user input. This instance
+has been configured with the proper command terminators, multiline commands, and other parsing
+related settings. This instance is available as the `cmd2.Cmd.statement_parser` attribute. Here's a
+simple example which shows the proper technique:
 
 ```py
 def myhookmethod(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
@@ -211,8 +212,8 @@ parameters and return value are not annotated as `PrecommandData`.
 You may choose to modify the user input by creating a new `cmd2.Statement` with different properties
 (see above). If you do so, assign your new `cmd2.Statement` object to `data.statement`.
 
-The precommand hook must return a `cmd2.plugin.PrecommandData` object. You don't have to create this
-object from scratch, you can just return the one passed into the hook.
+The precommand hook must return a [cmd2.plugin.PrecommandData][] object. You don't have to create
+this object from scratch, you can just return the one passed into the hook.
 
 After all registered precommand hooks have been called, `cmd2.Cmd.precmd` will be called. To retain
 full backward compatibility with `cmd.Cmd`, this method is passed a `cmd2.Statement`, not a
@@ -236,7 +237,7 @@ class App(cmd2.Cmd):
         return data
 ```
 
-Your hook will be passed a `cmd2.plugin.PostcommandData` object, which has a
+Your hook will be passed a [cmd2.plugin.PostcommandData][] object, which has a
 `cmd2.plugin.PostcommandData.statement` attribute that describes the command which was executed. If
 your postcommand hook method gets called, you are guaranteed that the command method was called, and
 that it didn't raise an exception.
@@ -263,8 +264,8 @@ otherwise.
 To purposefully and silently skip postcommand hooks, commands can raise any of the following
 exceptions.
 
-- `cmd2.exceptions.SkipPostcommandHooks`
-- `cmd2.exceptions.Cmd2ArgparseError`
+- [cmd2.exceptions.SkipPostcommandHooks][]
+- [cmd2.exceptions.Cmd2ArgparseError][]
 
 ## Command Finalization Hooks
 
@@ -282,7 +283,7 @@ class App(cmd2.Cmd):
 ```
 
 Command Finalization hooks must check whether the `cmd2.plugin.CommandFinalizationData.statement`
-attribute of the passed `cmd2.plugin.CommandFinalizationData` object contains a value. There are
+attribute of the passed [cmd2.plugin.CommandFinalizationData][] object contains a value. There are
 certain circumstances where these hooks may be called before the user input has been parsed, so you
 can't always rely on having a `cmd2.plugin.CommandFinalizationData.statement`.
 

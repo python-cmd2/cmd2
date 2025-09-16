@@ -9,9 +9,9 @@ UNIX-style options and flags). Though some people may prefer
 [argparse](https://docs.python.org/3/library/argparse.html).
 
 The [textual](https://textual.textualize.io/) module is capable of building sophisticated
-full-screen terminal user interfaces that are not limited to simple text input and output; they can
-paint the screen with options that are selected from using the cursor keys and even mouse clicks.
-However, programming a `textual` application is not as straightforward as using `cmd2`.
+full-screen terminal user interfaces (TUIs) that are not limited to simple text input and output;
+they can paint the screen with options that are selected from using the cursor keys and even mouse
+clicks. However, programming a `textual` application is not as straightforward as using `cmd2`.
 
 Several Python packages exist for building interactive command-line applications approximately
 similar in concept to [cmd](https://docs.python.org/3/library/cmd.html) applications. None of them
@@ -36,6 +36,9 @@ Getting a working command-interpreter application based on either
 than `cmd2`. `cmd2` focuses on providing an excellent out-of-the-box experience with as many useful
 features as possible built in for free with as little work required on the developer's part as
 possible. We believe that `cmd2` provides developers the easiest way to write a command-line
-interpreter, while allowing a good experience for end users. If you are seeking a visually richer
-end-user experience and don't mind investing more development time, we would recommend checking out
-[Python Prompt Toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit).
+interpreter, while allowing a good experience for end users.
+
+If you are seeking a visually richer end-user experience and don't mind investing more development
+time, we would recommend checking out [Textual](https://github.com/Textualize/textual) as this can
+be used to build very sophisticated user interfaces in a terminal that are more akin to feature-rich
+web GUIs.

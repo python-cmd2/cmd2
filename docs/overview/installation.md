@@ -1,8 +1,8 @@
 # Installation Instructions
 
-`cmd2` works on Linux, macOS, and Windows. It requires Python 3.10 or higher,
-[pip](https://pypi.org/project/pip), and [setuptools](https://pypi.org/project/setuptools). If
-you've got all that, then you can just:
+`cmd2` works on :simple-linux: Linux, :simple-apple: macOS, and :fontawesome-brands-windows:
+Windows. It requires Python 3.10 or higher, [pip](https://pypi.org/project/pip), and
+[setuptools](https://pypi.org/project/setuptools). If you've got all that, then you can just:
 
 ```shell
 $ pip install cmd2
@@ -15,6 +15,10 @@ $ pip install cmd2
     ```shell
     $ sudo pip install <package_name>
     ```
+
+!!! info
+
+    You can also use an alternative Python package manager such as :simple-astral: [uv](https://github.com/astral-sh/uv), but doing so is beyond the scope of this installation guide. The `cmd2` developers love and highly recommend `uv` and use it for the development of `cmd2` itself. But chances are if you are a sophisticated enough Python developer to be using `uv`, you don't need us to tell you how to use it :smile:
 
 ## Prerequisites
 
@@ -37,7 +41,7 @@ C:\> python -m pip install -U pip setuptools
 ## Install from PyPI {: #pip_install }
 
 [pip](https://pypi.org/project/pip) is the recommended installer. Installing packages from
-[PyPI](https://pypi.org) with pip is easy:
+:simple-pypi: [PyPI](https://pypi.org) with pip is easy:
 
 ```shell
 $ pip install cmd2
@@ -47,8 +51,8 @@ This will install the required 3rd-party dependencies, if necessary.
 
 ## Install from GitHub {: #github }
 
-The latest version of `cmd2` can be installed directly from the main branch on GitHub using
-[pip](https://pypi.org/project/pip):
+The latest version of `cmd2` can be installed directly from the main branch on :simple-github:
+GitHub using [pip](https://pypi.org/project/pip):
 
 ```shell
 $ pip install -U git+git://github.com/python-cmd2/cmd2.git
@@ -57,7 +61,7 @@ $ pip install -U git+git://github.com/python-cmd2/cmd2.git
 ## Install from Debian or Ubuntu repos
 
 We recommend installing from [pip](https://pypi.org/project/pip), but if you wish to install from
-Debian or Ubuntu repos this can be done with apt-get.
+:simple-debian: Debian or :simple-ubuntu: Ubuntu repos this can be done with apt-get.
 
 For Python 3:
 
@@ -67,7 +71,7 @@ This will also install the required 3rd-party dependencies.
 
 !!! warning
 
-    Versions of `cmd2` before 1.0.0 should be considered to be of unstable "beta" quality and should not be relied upon for production use. If you cannot get a version >= 0.8.9 from your OS repository, then we recommend installing from either pip or GitHub - see [Pip Install](installation.md#pip_install) or [Install from GitHub](installation.md#github).
+    Versions of `cmd2` before 2.0.0 should be considered to be of unstable "beta" quality and should not be relied upon for production use. If you cannot get a version >= 2.0.0 from your OS repository, then we recommend installing from either PyPI or GitHub - see [Pip Install](installation.md#pip_install) or [Install from GitHub](installation.md#github).
 
 ## Upgrading cmd2
 
@@ -87,17 +91,27 @@ If you wish to permanently uninstall `cmd2`, this can also easily be done with
 
 ## readline Considerations
 
-Tab completion for `cmd2` applications is only tested against GNU Readline. It does not work
-properly with the [libedit](http://thrysoee.dk/editline/) library which is similar, but not
-identical to GNU Readline. `cmd2` will disable all tab-completion support if an incompatible version
-of `readline` is found.
+`cmd2` heavily relies on Python's built-in
+[readline](https://docs.python.org/3/library/readline.html) module for its tab completion
+capabilities. Tab completion for `cmd2` applications is only tested against :simple-gnu:
+[GNU Readline](https://tiswww.case.edu/php/chet/readline/rltop.html) or libraries fully compatible
+with it. It does not work properly with the :simple-netbsd: NetBSD
+[Editline](http://thrysoee.dk/editline/) library (`libedit`) which is similar, but not identical to
+GNU Readline. `cmd2` will disable all tab-completion support if an incompatible version of
+`readline` is found.
 
 When installed using `pip`, `uv`, or similar Python packaging tool on either `macOS` or `Windows`,
 `cmd2` will automatically install a compatible version of readline.
 
 Most Linux operating systems come with a compatible version of readline. However, if you are using a
 tool like `uv` to install Python on your system and configure a virtual environment, `uv` installed
-versions of Python come with `libedit`.
+versions of Python come with `libedit`. If you are using `cmd2` on Linux with a version of Python
+installed via `uv`, you will likely need to manually add the `gnureadline` Python module to your
+`uv` virtual environment.
+
+```sh
+uv pip install gnureadline
+```
 
 macOS comes with the [libedit](http://thrysoee.dk/editline/) library which is similar, but not
 identical, to GNU Readline. Tab completion for `cmd2` applications is only tested against GNU

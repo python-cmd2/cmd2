@@ -1,8 +1,8 @@
 # Scripting
 
-Operating system shells have long had the ability to execute a sequence of commands saved in a text
-file. These script files make long sequences of commands easier to repeatedly execute. `cmd2`
-supports two similar mechanisms: command scripts and python scripts.
+Operating system shells have long been able to execute a sequence of commands saved in a text file.
+These script files simplify the repeated execution of long command sequences. `cmd2` supports two
+similar mechanisms: command scripts and python scripts.
 
 ## Command Scripts
 
@@ -25,7 +25,7 @@ it inside a `cmd2` application.
 
 Command script files can be executed using the built-in
 [run_script](./builtin_commands.md#run_script) command or the `@` shortcut (if your application is
-using the default shortcuts). Both ASCII and UTF-8 encoded unicode text files are supported. The
+using the default shortcuts). Both ASCII and UTF-8 encoded Unicode text files are supported. The
 [run_script](./builtin_commands.md#run_script) command supports tab completion of file system paths.
 There is a variant [\_relative_run_script](./builtin_commands.md#_relative_run_script) command or
 `@@` shortcut (if using the default shortcuts) for use within a script which uses paths relative to
@@ -33,12 +33,11 @@ the first script.
 
 ### Comments
 
-Any command line input where the first non-whitespace character is a `\#` will be treated as a
-comment. This means any `\#` character appearing later in the command will be treated as a literal.
-The same applies to a `\#` in the middle of a multiline command, even if it is the first character
-on a line.
+A command line is a comment if the first non-whitespace character is a `#`. This means any `#`
+character appearing later in the command will be treated as a literal. The same applies to a `#` in
+the middle of a multiline command, even if it is the first character on a line.
 
-Comments are useful in scripts, but would be pointless within an interactive session.
+Comments are useful in scripts, but are generally not used within an interactive session.
 
     (Cmd) # this is a comment
     (Cmd) command # this is not a comment
@@ -48,7 +47,8 @@ Comments are useful in scripts, but would be pointless within an interactive ses
 If you require logic flow, loops, branching, or other advanced features, you can write a python
 script which executes in the context of your `cmd2` app. This script is run using the
 [run_pyscript](./builtin_commands.md#run_pyscript) command. Here's a simple example that uses the
-[arg_printer](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/arg_printer.py) script:
+[arg_printer.py](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/arg_printer.py)
+pyscript:
 
     (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar 'baz 23'
     Running Python script 'arg_printer.py' which was called with 3 arguments
@@ -61,23 +61,23 @@ as shown above it has the ability to pass command-line arguments to the scripts 
 
 ## Developing a cmd2 API
 
-If you as an app designer have not explicitly disabled the `run_pyscript` command it must be assumed
-that your application is structured for use in higher level python scripting. The following sections
-are meant as guidelines and highlight possible pitfalls with both production and consumption of API
-functionality. For clarity when speaking of "scripter" we are referring to those writing scripts to
-be run by pyscript and "designer" as the `cmd2` application author.
+If you as an app designer have not explicitly disabled the `run_pyscript` command, you should assume
+your application will be used for higher-level Python scripting. The following sections are meant as
+guidelines and highlight possible pitfalls with both production and consumption of API
+functionality. For clarity, a "scripter" writes pyscripts, and a "designer" is the `cmd2`
+application author.
 
 ### Basics
 
 Without any work on the part of the designer, a scripter can take advantage of piecing together
-workflows using simple `app` calls. The result of a `run_pyscript` app call yields a `CommandResult`
-object exposing four members: `Stdout`, `Stderr`, `Stop`, and `Data`.
+workflows using simple `app` calls. The result of a `run_pyscript` app call yields a
+[CommandResult][cmd2.CommandResult] object exposing four members: `stdout`, `stderr`, `stop`, and
+`data`.
 
-`Stdout` and `Stderr` are fairly straightforward representations of normal data streams and
-accurately reflect what is seen by the user during normal cmd2 interaction. `Stop` contains
-information about how the invoked command has ended its lifecycle. Lastly `Data` contains any
-information the designer sets via `self.last_result` or `self._cmd.last_result` if called from
-inside a CommandSet.
+`stdout` and `stderr` are fairly straightforward representations of normal data streams and
+accurately reflect what the user sees during normal cmd2 interaction. `stop` contains information
+about how the invoked command has ended its lifecycle. Lastly `data` contains any information the
+designer sets via `self.last_result` or `self._cmd.last_result` if called from inside a CommandSet.
 
 Python scripts executed with [run_pyscript](./builtin_commands.md#run_pyscript) can run `cmd2`
 application commands by using the syntax:
@@ -92,7 +92,7 @@ where:
   attribute
 - `command` and `args` are entered exactly like they would be entered by a user of your application.
 
-Using fstrings tends to be the most straight forward and easily readable way to provide parameters.:
+Using f-strings tends to be the most straightforward and easily readable way to provide parameters.:
 
 ```py
 first = 'first'
@@ -101,19 +101,20 @@ second = 'second'
 app(f'command {first} -t {second})
 ```
 
-See [python_scripting](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
+See
+[python_scripting.py](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
 example and associated
-[conditional](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/conditional.py) script
-for more information.
+[conditional.py](https://github.com/python-cmd2/cmd2/blob/main/examples/scripts/conditional.py)
+script for more information.
 
 ### Design principles
 
-If the cmd2 application follows the
-[unix_design_philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) a scriptor will have the
-most flexibility to piece together workflows using different commands. If the designer\'s
-application is more complete and less likely to be augmented in the future a scripter may opt for
-simple serial scripts with little control flow. In either case, choices made by the designer will
-have effects on scripters.
+If your cmd2 application follows the
+[Unix design philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) a scripter will have the
+most flexibility to create workflows using different commands. If the designer's application is more
+complete and less likely to be augmented in the future, a scripter can use simple serial scripts
+with little control flow. In either case, choices made by the designer will have effects on
+scripters.
 
 The following diagram illustrates the different boundaries to keep in mind.
 
@@ -137,18 +138,18 @@ flowchart LR
 
 !!! note
 
-    As a designer it is preferable to design from the inside out. Your code will be infinitely far easier to unit test than at the higher level. While there are regression testing extensions for cmd2, unit testing will always be faster for development.
+    As a designer, you should design from the inside out. Your code will be much easier to unit test than at the higher level. While there are regression testing extensions for cmd2, unit testing will always be faster for development.
 
 !!! warning
 
-    It is bad design for a high level pyscript to know about let alone access low level class libraries of an application. Resist this urge at all costs, unless it\'s necessary.
+    It is bad design for a high-level pyscript to know about, let alone access, low-level class libraries of an application. Resist this urge as much as possible, unless it's necessary.
 
 ### Developing a Basic API
 
-CMD2 out of the box allows scripters to take advantage of all exposed `do_*` commands. As a scripter
-one can easily interact with the application via `stdout` and `stderr`.
+By default, `cmd2` allows scripters to take advantage of all exposed `do_*` commands. As a scripter,
+you can easily interact with the application via `stdout` and `stderr`.
 
-As a baseline lets start off with the familiar FirstApp
+As a baseline, let's start with the following `cmd2` application called `FirstApp`
 
 ```py
 #!/usr/bin/env python
@@ -195,7 +196,7 @@ if __name__ == '__main__':
     sys.exit(c.cmdloop())
 ```
 
-Lets start off on the wrong foot:
+Let's start with an example of what not to do:
 
 ```py
 app('speak'
@@ -209,11 +210,11 @@ SyntaxError: unexpected EOF while parsing
 SyntaxError: unexpected EOF while parsing
 ```
 
-cmd2 pyscripts require **valid** python code as a first step.
+`cmd2` pyscripts require **valid** Python code as a first step.
 
 !!! warning
 
-    It is a common misconception that all application exceptions will "bubble" up from below. Unfortunately or fortunately this is not the case. `cmd2` sinkholes all application exceptions and there are no means to handle them.
+    It is a common misconception that all application exceptions will propagate up from below. This is not the case. `cmd2` catches all application exceptions and there are no means to handle them.
 
 When executing the `speak` command without parameters you see the following error:
 
@@ -221,8 +222,8 @@ When executing the `speak` command without parameters you see the following erro
     Usage: speak [-h] [-p] [-s] [-r REPEAT] words [...]
     Error: the following arguments are required: words
 
-Even though this is a fully qualified CMD2 error the pyscript must look for this error and perform
-error checking.:
+Even though this is a fully qualified `cmd2` error, the pyscript must check for this error and
+perform error checking.:
 
 ```py
 app('speak')
@@ -244,7 +245,7 @@ print(result)
     (Cmd) run_pyscript script.py
     CommandResult(stdout='', stderr='Usage: speak [-h] [-p] [-s] [-r REPEAT] words [...]\nError: the following arguments are required: words\n\n', stop=False, data=None)
 
-Now we can see that there has been an error. Let's re write the script to perform error checking.:
+Now we can see that there has been an error. Let's rewrite the script to perform error checking.:
 
 ```py
 result = app('speak')
@@ -256,7 +257,7 @@ if not result:
     (Cmd) run_pyscript script.py
     Something went wrong
 
-In Python development, it is good practice to fail and exit quickly after user input.:
+In Python development, it is good practice to fail fast after user input.:
 
 ```py
 import sys
@@ -273,8 +274,8 @@ print("Continuing along..")
     (Cmd) run_pyscript script.py
     Continuing along..
 
-We changed the input to be a valid `speak` command but no output. Again we must inspect the
-`CommandResult`:
+We changed the input to be a valid `speak` command, but there was no output. Again we must inspect
+the `CommandResult`:
 
 ```py
 import sys
@@ -291,20 +292,20 @@ print(result.stdout)
     (Cmd) run_pyscript script.py
     TRUTH!!!
 
-By just using `stdout` and `stderr` it is possible to string together commands with rudimentary
-control flow. In the next section we will show how to take advantage of `cmd_result` data.
+By just using `stdout` and `stderr` it is possible to chain commands with rudimentary control flow.
+In the next section we will show how to use `cmd_result` data.
 
 ### Developing an Advanced API
 
-Until now the application designer has paid little attention to scripters and their needs. Wouldn't
-it be nice if while creating pyscripts one did not have to parse data from `stdout`? We can
-accommodate the weary scripter by adding one small line at the end of our `do_*` commands.
+So far, we haven't focused on the scripter's needs. Wouldn't it be nice if while creating pyscripts
+you did not have to parse data from `stdout`? We can accommodate the scripter by adding one small
+line at the end of our `do_*` commands.
 
 `self.last_result = <value>`
 
-Adding the above line supercharges a cmd2 application and opens a new world of possibilities.
+Adding the above line enhances a cmd2 application and opens a new world of possibilities.
 
-!!! note
+!!! tip
 
     When setting results for a command function inside of a CommandSet use the private cmd instance:
 
@@ -312,7 +313,7 @@ Adding the above line supercharges a cmd2 application and opens a new world of p
     self._cmd.last_result = <value>
     ```
 
-In the following command example we return an array containing directory elements.:
+In the following command example we return a list containing directory elements.:
 
 ```py
 dir_parser = cmd2.Cmd2ArgumentParser()
@@ -350,22 +351,22 @@ Results:
     Cmd) run_pyscript script.py
     ['.venv', 'app.py', 'script.py']
 
-As a rule of thumb it is safer for the designer to return simple scalar types as command results
-instead of complex objects. If there is benefit in providing class objects designers should choose
-immutable over mutable types and never provide direct access to class members as this could
-potentially lead to violation of the
-[open_closed_principle](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle).
+As a rule of thumb, designers should return simple scalar types as command results instead of
+complex objects. If it is beneficial in providing class objects designers should choose immutable
+over mutable types and never provide direct access to class members as this could potentially lead
+to violation of the
+[open-closed_principle](https://en.wikipedia.org/wiki/Open%E2%80%93closed_principle).
 
-When possible, a dataclass is a lightweight solution perfectly suited for data manipulation. Lets
-dive into an example.
+When possible, a frozen dataclass is a lightweight solution ideal for data manipulation. Let's look
+at an example.
 
-The following fictional application has two commands: `build` and `status`. We can pretend that the
-build action happens somewhere else in the world at an REST API endpoint and has significant
-computational cost. The status command for all intents and purposes, will only show the current
-status of a build task. The application has provided all that is needed for a user to start a build
-and then determine its status. The problem however is that with a long running process the user may
-want to wait for it to finish. A designer may be tempted to create a command to start a build and
-then poll for status until finished, but this scenario is better solved as an extensible script.
+The following application has two commands: `build` and `status`. Let's assume that the build action
+happens somewhere else in the world at a REST API endpoint and has significant computational cost.
+The status command, will only show the current status of a build task. The application has provided
+everything that is needed for a user to start a build and then determine its status. However, the
+problem is that with a long running process the user may want to wait for it to finish. A designer
+may be tempted to create a command to start a build and then poll for status until finished, but
+this scenario is better solved as a script.
 
 app.py:
 
@@ -443,7 +444,7 @@ if __name__ == "__main__":
     sys.exit(c.cmdloop())
 ```
 
-The below is a possible solution via pyscript:
+Below is a possible solution via pyscript:
 
 ```py
 import sys
@@ -452,7 +453,7 @@ import time
 # start build
 result = app('build tower')
 
-# If there was an error then quit now
+# If there was an error then exit
 if not result:
     print('Build failed')
     sys.exit()
@@ -462,7 +463,7 @@ build = result.data
 
 print(f"Build {build.name} : {build.status}")
 
-# Poll status (it would be wise to NOT hang here)
+# Poll status
 while True:
 
     # Perform status check
@@ -475,7 +476,7 @@ while True:
 
     build_status = result.data
 
-    # If the status shows complete then we are done
+    # If the status shows complete then the script is done
     if build_status.status in ['finished', 'canceled']:
         print(f"Build {build.name} has completed")
         break

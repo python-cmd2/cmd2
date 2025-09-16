@@ -12,7 +12,7 @@ Here is a basic example `cmd2` application which demonstrates many capabilities 
 
 ## Cmd class initializer
 
-A `cmd2.Cmd` instance or subclass instance is an interactive CLI application framework. There is no good reason to instantiate `Cmd` itself; rather, it's useful as a superclass of a class you define yourself in order to inherit `Cmd`'s methods and encapsulate action methods.
+A [cmd2.Cmd][] instance or subclass instance is an interactive CLI application framework. There is no good reason to instantiate `Cmd` itself; rather, it's useful as a superclass of a class you define yourself in order to inherit `Cmd`'s methods and encapsulate action methods.
 
 Certain things must be initialized within the `__init__()` method of your class derived from `cmd2.Cmd`(all arguments to `__init__()` are optional):
 

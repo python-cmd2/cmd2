@@ -35,11 +35,12 @@ complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.pa
 
 ## Included Tab Completion Functions
 
-`cmd2` provides the following tab completion functions
+[cmd2.Cmd][] provides the following tab completion functions
 
-- `cmd2.Cmd.basic_complete` - helper method for tab completion against a list
+- [basic_complete][cmd2.Cmd.basic_complete] - helper method for tab completion against a list
 
-- `cmd2.Cmd.path_complete` - helper method provides flexible tab completion of file system paths
+- [path_complete][cmd2.Cmd.path_complete] - helper method provides flexible tab completion of file
+  system paths
 
     > - See the
     >   [paged_output](https://github.com/python-cmd2/cmd2/blob/main/examples/paged_output.py)
@@ -48,18 +49,18 @@ complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.pa
     >   [python_scripting](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
     >   example for a more full-featured use case
 
-- `cmd2.Cmd.delimiter_complete` - helper method for tab completion against a list but each match is
-  split on a delimiter
+- [delimiter_complete][cmd2.Cmd.delimiter_complete] - helper method for tab completion against a
+  list but each match is split on a delimiter
 
     > - See the
     >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
     >   example for a demonstration of how to use this feature
 
-- `cmd2.Cmd.flag_based_complete` - helper method for tab completion based on a particular flag
-  preceding the token being completed
+- [flag_based_complete][cmd2.Cmd.flag_based_complete] - helper method for tab completion based on a
+  particular flag preceding the token being completed
 
-- `cmd2.Cmd.index_based_complete` - helper method for tab completion based on a fixed position in
-  the input string
+- [index_based_complete][cmd2.Cmd.index_based_complete] - helper method for tab completion based on
+  a fixed position in the input string
 
     > - See the
     >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
@@ -77,19 +78,19 @@ user. These include the following example cases:
 - A previous command line argument that determines the data set being completed is invalid
 - Tab completion hints
 
-`cmd2` provides the `cmd2.exceptions.CompletionError` exception class for this capability. If an
-error occurs in which it is more desirable to display a message than a stack trace, then raise a
+`cmd2` provides the [CompletionError][cmd2.CompletionError] exception class for this capability. If
+an error occurs in which it is more desirable to display a message than a stack trace, then raise a
 `CompletionError`. By default, the message displays in red like an error. However, `CompletionError`
 has a member called `apply_style`. Set this False if the error style should not be applied. For
 instance, `ArgparseCompleter` sets it to False when displaying completion hints.
 
-## Tab Completion Using argparse Decorators {: #argparse-based }
+## Tab Completion Using the argparse Decorator {: #argparse-based }
 
-When using one of the argparse-based [cmd2.decorators](../api/decorators.md), `cmd2` provides
-automatic tab completion of flag names.
+When using `cmd2`'s [@with_argparser][cmd2.with_argparser] decorator, `cmd2` provides automatic tab
+completion of flag names.
 
 Tab completion of argument values can be configured by using one of three parameters to
-`argparse.ArgumentParser.add_argument`
+[argparse.ArgumentParser.add_argument](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument)
 
 - `choices`
 - `choices_provider`
@@ -104,17 +105,17 @@ example for a demonstration of how to use the `choices_provider` parameter. See 
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
 example for a demonstration of how to use the `completer` parameter.
 
-When tab completing flags or argument values for a `cmd2` command using one of these decorators,
-`cmd2` keeps track of state so that once a flag has already previously been provided, it won't
-attempt to tab complete it again. When no completion results exist, a hint for the current argument
-will be displayed to help the user.
+When tab completing flags or argument values for a `cmd2` command using the `@with_argparser`
+decorator, `cmd2` keeps track of state so that once a flag has already previously been provided, it
+won't attempt to tab complete it again. When no completion results exist, a hint for the current
+argument will be displayed to help the user.
 
 ## CompletionItem For Providing Extra Context
 
 When tab completing things like a unique ID from a database, it can often be beneficial to provide
 the user with some extra context about the item being completed, such as a description. To
-facilitate this, `cmd2` defines the `cmd2.CompletionItem` class which can be returned from any of
-the 3 completion parameters: `choices`, `choices_provider`, and `completer`.
+facilitate this, `cmd2` defines the [CompletionItem][cmd2.CompletionItem] class which can be
+returned from any of the 3 completion parameters: `choices`, `choices_provider`, and `completer`.
 
 See the
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
@@ -123,8 +124,8 @@ demonstration of how this is used.
 
 ## Custom Completion with `read_input()`
 
-`cmd2` provides `cmd2.Cmd.read_input` as an alternative to Python's `input()` function. `read_input`
-supports configurable tab completion and up-arrow history at the prompt. See
+`cmd2` provides [cmd2.Cmd.read_input][] as an alternative to Python's `input()` function.
+`read_input` supports configurable tab completion and up-arrow history at the prompt. See
 [read_input](https://github.com/python-cmd2/cmd2/blob/main/examples/read_input.py) example for a
 demonstration.
 

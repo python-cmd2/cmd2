@@ -186,6 +186,7 @@ nav:
       - features/shortcuts_aliases_macros.md
       - features/startup_commands.md
       - features/table_creation.md
+      - features/theme.md
       - features/transcripts.md
   - Examples:
       - examples/index.md
@@ -219,6 +220,8 @@ nav:
       - api/terminal_utils.md
       - api/transcript.md
       - api/utils.md
+  - Version Upgrades:
+      - upgrades.md
   - Meta:
       - doc_conventions.md
 

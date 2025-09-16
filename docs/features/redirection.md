@@ -58,7 +58,9 @@ output of that to a file called _output.txt_.
 
 ## Limitations of Redirection
 
-Some limitations apply to redirection and piping within `cmd2` applications:
+!!! warning
 
-- Can only pipe to shell commands, not other `cmd2` application commands
-- **stdout** gets redirected/piped, **stderr** does not
+    Some limitations apply to redirection and piping within `cmd2` applications:
+
+    - Can only pipe to shell commands, not other `cmd2` application commands
+    - **stdout** gets redirected/piped, **stderr** does not

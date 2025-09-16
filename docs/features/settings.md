@@ -1,11 +1,10 @@
 # Settings
 
-Settings provide a mechanism for a user to control the behavior of a `cmd2` based application. A
-setting is stored in an instance attribute on your subclass of `cmd2.Cmd` and must also appear in
-the `cmd2.Cmd.settable` dictionary. Developers may set default values for these settings and users
-can modify them at runtime using the [set](./builtin_commands.md#set) command. Developers can
-[Create New Settings](#create-new-settings) and can also
-[Hide Builtin Settings](#hide-builtin-settings) from the user.
+Settings provide a mechanism for a user to control the behavior of a `cmd2` based application.
+Settings are stored in a protected instance attribute on your subclass of [cmd2.Cmd][]. Developers
+may set default values for these settings and users can view and modify them at runtime using the
+[set](./builtin_commands.md#set) command. Developers can [Create New Settings](#create-new-settings)
+and can also [Hide Builtin Settings](#hide-builtin-settings) from the user.
 
 ## Builtin Settings
 
@@ -97,17 +96,19 @@ Your application can define user-settable parameters which your code can referen
 initialization code:
 
 1.  Create an instance attribute with a default value
-1.  Create a `Settable` object which describes your setting
-1.  Pass the `Settable` object to `cmd2.Cmd.add_settable`
+1.  Create a [Settable][cmd2.Settable] object which describes your setting
+1.  Pass the `Settable` object to the [add_settable][cmd2.Cmd.add_settable] method
 
 Here's an example, from
 [examples/environment.py](https://github.com/python-cmd2/cmd2/blob/main/examples/environment.py):
 
-```py
-{%
-  include "../../examples/environment.py"
-%}
-```
+!!! example "examples/environment.py"
+
+    ```py
+    {%
+      include "../../examples/environment.py"
+    %}
+    ```
 
 If you want to be notified when a setting changes (as we do above), then be sure to supply a method
 to the `onchange_cb` parameter of the `cmd2.utils.Settable`. This method will be called after the
@@ -136,14 +137,10 @@ It's 13 C - are you a penguin?
 
 ## Hide Builtin Settings
 
-You may want to prevent a user from modifying a built-in setting. A setting must appear in the
-`cmd2.Cmd.settable` dictionary in order for it to be available to the
-[set](./builtin_commands.md#set) command.
-
-Let's say that you never want end users of your program to be able to enable full debug tracebacks
-to print out if an error occurs. You might want to hide the [debug](#debug) setting. To do so,
-remove it from the `cmd2.Cmd.settable` dictionary after you initialize your object. The
-`cmd2.Cmd.remove_settable` convenience method makes this easy:
+You may want to prevent a user from modifying a built-in setting. Let's say that you never want end
+users of your program to be able to enable full debug tracebacks to print out if an error occurs.
+You might want to hide the [debug](#debug) setting. The [cmd2.Cmd.remove_settable][] method makes
+this easy:
 
 ```py
 class MyApp(cmd2.Cmd):

@@ -2,36 +2,41 @@
 
 ## Shortcuts
 
-Command shortcuts for long command names and common commands can make life more convenient for your
-users. Shortcuts are used without a space separating them from their arguments, like `!ls`. By
-default, the following shortcuts are defined:
+Command shortcuts for long command names and common commands can be more convenient for your users.
+Shortcuts are used without a space separating them from their arguments, like `!ls`. By default, the
+following shortcuts are defined:
 
 - **`?`** - help
 - **`!`** - shell: run as OS-level command
 - **`@`** - run script file
 - **`@@`** - run script file; filename is relative to current script location
 
-To define more shortcuts, update the dict `App.shortcuts` with the `{'shortcut': 'command_name'}`
-(omit `do_`):
+To define more shortcuts, start with the [cmd2.DEFAULT_SHORTCUTS][] constant, which is a dictionary,
+and then add more shortcuts to it by updating it with a dictionary of additional shortcuts in the
+format `{'shortcut': 'command_name'}` where you omit `do_` from the command name:
 
 ```py
 class App(Cmd):
     def __init__(self):
-        shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
+        shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({'*': 'sneeze', '~': 'squirm'})
         cmd2.Cmd.__init__(self, shortcuts=shortcuts)
 ```
 
 !!! warning
 
-    Shortcuts need to be created by updating the `shortcuts` dictionary attribute prior to calling the `cmd2.Cmd` super class `__init__()` method. Moreover, that super class init method needs to be called after updating the `shortcuts` attribute This warning applies in general to many other attributes which are not settable at runtime.
+    Shortcuts need to be created by updating the `shortcuts` dictionary attribute before calling the `cmd2.Cmd` super class `__init__()` method. Moreover, that super class init method needs to be called after updating the `shortcuts` attribute.
 
-Note: Command, alias, and macro names cannot start with a shortcut
+    This warning applies in general to many other attributes which are not settable at runtime.
+
+!!! note
+
+    Command, alias, and macro names cannot start with a shortcut
 
 ## Aliases
 
-In addition to shortcuts, `cmd2` provides a full alias feature via the `alias` command. Aliases work
-in a similar fashion to aliases in the Bash shell.
+In addition to shortcuts, `cmd2` provides an alias feature via the `alias` command. Aliases work
+like aliases in the Bash shell.
 
 The syntax to create an alias is: `alias create name command [args]`, e.g.
 `alias create ls !ls -lF`.
@@ -41,13 +46,13 @@ from being redirected:
 
     alias create save_results print_results ">" out.txt
 
-Tab completion recognizes an alias, and completes as if its actual value was on the command line.
+Tab completion recognizes an alias, and completes as if the aliased command was on the command line.
 
 For more details run: `help alias create`
 
 Use `alias list` to see all or some of your aliases. The output of this command displays your
-aliases using the same command that was used to create them. Therefore you can place this output in
-a `cmd2` startup script to recreate your aliases each time you start the application
+aliases in a format that can be used to create them. Therefore you can place this output in a `cmd2`
+startup script to recreate your aliases each time you start the application
 
 > Ex: `alias list`
 
@@ -57,7 +62,9 @@ Use `alias delete` to remove aliases
 
 For more details run: `help alias delete`
 
-Note: Aliases cannot have the same name as a command or macro
+!!! note
+
+    Aliases cannot have the same name as a command or macro
 
 ## Macros
 
@@ -69,8 +76,8 @@ The following creates a macro called `my_macro` that expects two arguments:
 
     macro create my_macro make_dinner -meat {1} -veggie {2}
 
-When the macro is called, the provided arguments are resolved and the assembled command is run. For
-example:
+When the macro is called, the provided arguments are substituted and the assembled command is run.
+For example:
 
     my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli
 
@@ -94,4 +101,6 @@ For more details on listing macros run: `help macro list`
 
 For more details on deleting macros run: `help macro delete`
 
-Note: Macros cannot have the same name as a command or alias
+!!! note
+
+    Macros cannot have the same name as a command or alias

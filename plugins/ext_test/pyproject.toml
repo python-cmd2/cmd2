@@ -133,7 +133,6 @@ ignore = [
     "S101",    # Use of `assert` detected -- DO NOT FIX
     "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes -- FIX ME
     "SLF001",  # Private member accessed: `_Iterator` -- FIX ME
-    "UP038",   # Use `X | Y` in `{}` call instead of `(X, Y)` -- DO NOT FIX
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
