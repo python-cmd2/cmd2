@@ -5,6 +5,7 @@ import sys
 from collections.abc import Callable
 from contextlib import redirect_stderr
 from typing import (
+    TYPE_CHECKING,
     ParamSpec,
     TextIO,
     TypeVar,
@@ -164,3 +165,77 @@ def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) ->
                     return find_subcommand(choice, subcmd_names)
             break
     raise ValueError(f"Could not find subcommand '{subcmd_names}'")
+
+
+if TYPE_CHECKING:
+    _Base = cmd2.Cmd
+else:
+    _Base = object
+
+
+class ExternalTestMixin(_Base):
+    """A cmd2 plugin (mixin class) that exposes an interface to execute application commands from python"""
+
+    def __init__(self, *args, **kwargs):
+        """Initializes the ExternalTestMixin.
+
+        This class is intended to be used in multiple inheritance alongside `cmd2.Cmd` for an application class.
+        When doing this multiple inheritance, it is imperative that this mixin class come first.
+
+        :type self: cmd2.Cmd
+        :param args: arguments to pass to the superclass
+        :param kwargs: keyword arguments to pass to the superclass
+        """
+        # code placed here runs before cmd2 initializes
+        super().__init__(*args, **kwargs)
+        if not isinstance(self, cmd2.Cmd):
+            raise TypeError('The ExternalTestMixin class is intended to be used in multiple inheritance with cmd2.Cmd')
+        # code placed here runs after cmd2 initializes
+        self._pybridge = cmd2.py_bridge.PyBridge(self)
+
+    def app_cmd(self, command: str, echo: bool | None = None) -> cmd2.CommandResult:
+        """
+        Run the application command
+
+        :param command: The application command as it would be written on the cmd2 application prompt
+        :param echo: Flag whether the command's output should be echoed to stdout/stderr
+        :return: A CommandResult object that captures stdout, stderr, and the command's result object
+        """
+        try:
+            self._in_py = True
+            return self._pybridge(command, echo=echo)
+
+        finally:
+            self._in_py = False
+
+    def fixture_setup(self):
+        """Replicates the behavior of `cmdloop()` to prepare the application state for testing.
+
+        This method runs all preloop hooks and the preloop method to ensure the
+        application is in the correct state before running a test.
+
+        :type self: cmd2.Cmd
+        """
+
+        for func in self._preloop_hooks:
+            func()
+        self.preloop()
+
+    def fixture_teardown(self):
+        """Replicates the behavior of `cmdloop()` to tear down the application after a test.
+
+        This method runs all postloop hooks and the postloop method to clean up
+        the application state and ensure test isolation.
+
+        :type self: cmd2.Cmd
+        """
+        for func in self._postloop_hooks:
+            func()
+        self.postloop()
+
+
+class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
+    """Class for testing custom help_* methods which override docstring help."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
