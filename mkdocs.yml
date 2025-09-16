@@ -195,7 +195,7 @@ nav:
       - examples/examples.md
   - Plugins:
       - plugins/index.md
-      - plugins/external_test.md
+      - plugins/plugin_template.md
   - Testing:
       - testing.md
   - API Reference:

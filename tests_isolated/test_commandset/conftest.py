@@ -5,22 +5,74 @@ from contextlib import (
     redirect_stderr,
     redirect_stdout,
 )
-from unittest import (
-    mock,
-)
+from typing import TYPE_CHECKING
+from unittest import mock
 
 import pytest
-from cmd2_ext_test import (
-    ExternalTestMixin,
-)
 
 import cmd2
-from cmd2.rl_utils import (
-    readline,
-)
-from cmd2.utils import (
-    StdSim,
-)
+from cmd2.rl_utils import readline
+from cmd2.utils import StdSim
+
+if TYPE_CHECKING:
+    _Base = cmd2.Cmd
+else:
+    _Base = object
+
+
+class ExternalTestMixin:
+    """A cmd2 plugin (mixin class) that exposes an interface to execute application commands from python"""
+
+    def __init__(self, *args, **kwargs):
+        """
+
+        :type self: cmd2.Cmd
+        :param args:
+        :param kwargs:
+        """
+        # code placed here runs before cmd2 initializes
+        super().__init__(*args, **kwargs)
+        assert isinstance(self, cmd2.Cmd)
+        # code placed here runs after cmd2 initializes
+        self._pybridge = cmd2.py_bridge.PyBridge(self)
+
+    def app_cmd(self, command: str, echo: bool | None = None) -> cmd2.CommandResult:
+        """
+        Run the application command
+
+        :param command: The application command as it would be written on the cmd2 application prompt
+        :param echo: Flag whether the command's output should be echoed to stdout/stderr
+        :return: A CommandResult object that captures stdout, stderr, and the command's result object
+        """
+        assert isinstance(self, cmd2.Cmd)
+        assert isinstance(self, ExternalTestMixin)
+        try:
+            self._in_py = True
+
+            return self._pybridge(command, echo=echo)
+
+        finally:
+            self._in_py = False
+
+    def fixture_setup(self):
+        """
+        Replicates the behavior of `cmdloop()` preparing the state of the application
+        :type self: cmd2.Cmd
+        """
+
+        for func in self._preloop_hooks:
+            func()
+        self.preloop()
+
+    def fixture_teardown(self):
+        """
+        Replicates the behavior of `cmdloop()` tearing down the application
+
+        :type self: cmd2.Cmd
+        """
+        for func in self._postloop_hooks:
+            func()
+        self.postloop()
 
 
 def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_strings: list[str] | None = None) -> None:
