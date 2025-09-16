@@ -20,7 +20,7 @@ else:
     _Base = object
 
 
-class ExternalTestMixin:
+class ExternalTestMixin(_Base):
     """A cmd2 plugin (mixin class) that exposes an interface to execute application commands from python"""
 
     def __init__(self, *args, **kwargs):
