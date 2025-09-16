@@ -29,7 +29,7 @@ class App(Cmd):
 
     This warning applies in general to many other attributes which are not settable at runtime.
 
-!!! tip
+!!! note
 
     Command, alias, and macro names cannot start with a shortcut
 
@@ -62,7 +62,9 @@ Use `alias delete` to remove aliases
 
 For more details run: `help alias delete`
 
-Note: Aliases cannot have the same name as a command or macro
+!!! note
+
+    Aliases cannot have the same name as a command or macro
 
 ## Macros
 
@@ -99,6 +101,6 @@ For more details on listing macros run: `help macro list`
 
 For more details on deleting macros run: `help macro delete`
 
-!!! warning
+!!! note
 
     Macros cannot have the same name as a command or alias

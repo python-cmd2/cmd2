@@ -19,10 +19,31 @@ output you generate must be sent to `self.stdout`. You can use the methods descr
 everything will work fine. [cmd2.Cmd][] also includes a number of output related methods which you
 may use to enhance the output your application produces.
 
-Since `cmd2` has a dependency on the [rich](https://github.com/Textualize/rich) library, all of
-`cmd2`'s output methods can natively render `rich`
+Since `cmd2` has a dependency on the [rich](https://github.com/Textualize/rich) library, the
+following [cmd2.Cmd][] output methods can natively render `rich`
 [renderable objects](https://rich.readthedocs.io/en/latest/protocol.html), enabling beautiful and
-complex output.
+complex output:
+
+- [poutput][cmd2.Cmd.poutput]
+- [perror][cmd2.Cmd.perror]
+- [psuccess][cmd2.Cmd.psuccess]
+- [pwarning][cmd2.Cmd.pwarning]
+- [pfeedback][cmd2.Cmd.pfeedback]
+- [ppaged][cmd2.Cmd.ppaged]
+
+!!! tip "Advanced output customization"
+
+      Each of the above methods accepts additional optional parameters that help control how the output is
+      formatted:
+
+      - `sep`: string to write between printed text. Defaults to " "
+      - `end`: string to write at end of printed text. Defaults to a newline
+      - `style`: optional style to apply to output
+      - `soft_wrap`: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to fit the terminal width. Defaults to True
+      - `emoji`: If True, Rich will replace emoji codes (e.g., 😃) with their corresponding Unicode characters. Defaults to False
+      - `markup`: If True, Rich will interpret strings with tags (e.g., [bold]hello[/bold]) as styled output. Defaults to False
+      - `highlight`: If True, Rich will automatically apply highlighting to elements within strings, such as common Python data types like numbers, booleans, or None.
+      - `rich_print_kwargs`: optional additional keyword arguments to pass to Rich's `Console.print()`
 
 ## Ordinary Output
 
@@ -139,6 +160,11 @@ These functions differ from Python's string justifying functions in that they su
 with display widths greater than 1. Additionally, ANSI style sequences are safely ignored and do not
 count toward the display width. This means colored text is supported. If text has line breaks, then
 each line is aligned independently.
+
+!!! tip "Advanced alignment customization"
+
+      You can also control output alignment using the `rich_print_kwargs.justify` member when calling
+      `cmd2`'s print methods.
 
 ## Columnar Output
 

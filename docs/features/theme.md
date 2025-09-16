@@ -1,7 +1,7 @@
 # Theme
 
 `cmd2` provides the ability to configure an overall theme for your application using the
-[cmd2.rich_utils.set_theme][] function. This is based o the
+[cmd2.rich_utils.set_theme][] function. This is based on the
 [rich.theme](https://rich.readthedocs.io/en/stable/reference/theme.html) container for style
 information. You can use this to brand your application and set an overall consistent look and feel
 that is appealing to your user base.

@@ -3,7 +3,7 @@
 Once installed, you will want to ensure that your project's dependencies include `cmd2`. Make sure
 your `pyproject.toml` or `setup.py` includes the following dependency
 
-    'cmd2>=2.7'
+    'cmd2>=3,<4'
 
 The `cmd2` project uses :simple-semver: [Semantic Versioning](https://semver.org), which means that
 any incompatible API changes will be release with a new major version number. The public API is

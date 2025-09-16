@@ -34,13 +34,32 @@ All of these decorators accept an optional **preserve_quotes** argument which de
 Setting this argument to `True` is useful for cases where you are passing the arguments to another
 command which might have its own argument parsing.
 
+## with_argparser decorator
+
+The [@with_argparser][cmd2.with_argparser] decorator can accept the following for its first
+argument:
+
+1. An existing instance of `argparse.ArgumentParser`
+2. A function or static method which returns an instance of `argparse.ArgumentParser`
+3. Cmd or CommandSet class method which returns an instance of `argparse.ArgumentParser`
+
+In all cases the `@with_argparser` decorator creates a deep copy of the parser instance which it
+stores internally. A consequence is that parsers don't need to be unique across commands.
+
+!!! warning
+
+    Since the `@with_argparser` decorator is making a deep-copy of the parser provided, if you wish
+    to dynamically modify this parser at a later time, you need to retrieve this deep copy. This can
+    be done using `self._command_parsers.get(self.do_commandname)`.
+
 ## Argument Parsing
 
-For each command in the `cmd2.Cmd` subclass which requires argument parsing, create a unique
-instance of `argparse.ArgumentParser()` which can parse the input appropriately for the command.
-Then decorate the command method with the `@with_argparser` decorator, passing the argument parser
-as the first parameter to the decorator. This changes the second argument of the command method,
-which will contain the results of `ArgumentParser.parse_args()`.
+For each command in the `cmd2.Cmd` subclass which requires argument parsing, create an instance of
+`argparse.ArgumentParser()` which can parse the input appropriately for the command (or provide a
+function/method that returns such a parser). Then decorate the command method with the
+`@with_argparser` decorator, passing the argument parser as the first parameter to the decorator.
+This changes the second argument of the command method, which will contain the results of
+`ArgumentParser.parse_args()`.
 
 Here's what it looks like:
 
@@ -82,9 +101,9 @@ to set the description for the `argparse.ArgumentParser`.
 
 !!! tip "description and epilog fields are rich objects"
 
-    While the `help` text itself is simply a string, both the `description` and `epilog` can contain
-    [rich](https://github.com/Textualize/rich) objects. For the `description` and `epilog` fields, you can pass
-    in any `rich` object, including Text, Tables, Markdown.
+    While the `help` field is simply a string, both the `description` and `epilog` fields can accept any
+    [rich](https://github.com/Textualize/rich) renderable. This allows you to include all of rich's
+    built-in objects like `Text`, `Table`, and `Markdown`.
 
 With this code:
 

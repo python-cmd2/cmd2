@@ -11,7 +11,7 @@ See
 for and example of removing or hiding built-in commands.
 
 See [command_sets.py](https://github.com/python-cmd2/cmd2/blob/main/examples/command_sets.py) for an
-example of dynamically enabling and dis-abling custom commands at runtime.
+example of dynamically enabling and disabling custom commands at runtime.
 
 ## Remove A Command
 

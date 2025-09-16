@@ -43,6 +43,6 @@ application, you may be able to remove them. See [Exiting](../features/misc.md#e
 If you are distributing your application, you'll also need to ensure that `cmd2` is properly
 installed. You will need to add the following dependency to your `pyproject.toml` or `setup.py`:
 
-    'cmd2>=2.7'
+    'cmd2>=3,<4'
 
 See [Integrate cmd2 Into Your Project](../overview/integrating.md) for more details.

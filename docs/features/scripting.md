@@ -112,8 +112,9 @@ script for more information.
 If your cmd2 application follows the
 [Unix design philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) a scripter will have the
 most flexibility to create workflows using different commands. If the designer's application is more
-complete and less likely to be augmented in the future a scripter can use simple serial scripts with
-little control flow. In either case, choices made by the designer will have effects on scripters.
+complete and less likely to be augmented in the future, a scripter can use simple serial scripts
+with little control flow. In either case, choices made by the designer will have effects on
+scripters.
 
 The following diagram illustrates the different boundaries to keep in mind.
 
