@@ -6,9 +6,10 @@ This covers special considerations when writing unit or integration tests for a 
 
 ## Testing Commands
 
-The [External Test Plugin](plugins/external_test.md) provides a mixin class with a function that
-allows external calls to application commands. The `cmd2_ext_test.ExternalTestMixin.app_cmd`
-function captures and returns stdout, stderr, and the command-specific result data.
+We encourage `cmd2` application developers to look at the
+[cmd2 tests](https://github.com/python-cmd2/cmd2/tree/main/tests) for examples of how to perform
+unit and integration testing of `cmd2` commands. There are various helpers that will do things like
+capture and return stdout, stderr, and command-specific result data.
 
 ## Mocking
 

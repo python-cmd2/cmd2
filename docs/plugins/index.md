@@ -2,6 +2,6 @@
 
 <!--intro-start-->
 
-- [External Test Plugin](external_test.md)
+- [cmd2 Plugin Template](plugin_template.md)
 
 <!--intro-end-->

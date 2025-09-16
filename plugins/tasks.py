@@ -10,16 +10,12 @@ import pathlib
 
 import invoke
 
-from plugins.ext_test import (
-    tasks as ext_test_tasks,
-)
 from plugins.template import (
     tasks as template_tasks,
 )
 
 # create namespaces
 namespace = invoke.Collection(
-    ext_test=ext_test_tasks,
     template=template_tasks,
 )
 namespace_clean = invoke.Collection('clean')
@@ -35,7 +31,6 @@ TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
 
 
-@invoke.task(pre=[ext_test_tasks.pytest])
 @invoke.task()
 def pytest(_) -> None:
     """Run tests and code coverage using pytest."""
@@ -44,7 +39,7 @@ def pytest(_) -> None:
 namespace.add_task(pytest)
 
 
-@invoke.task(pre=[ext_test_tasks.pytest_clean])
+@invoke.task()
 def pytest_clean(_) -> None:
     """Remove pytest cache and code coverage files and directories."""
 
@@ -52,7 +47,7 @@ def pytest_clean(_) -> None:
 namespace_clean.add_task(pytest_clean, 'pytest')
 
 
-@invoke.task(pre=[ext_test_tasks.mypy])
+@invoke.task()
 def mypy(_) -> None:
     """Run mypy optional static type checker."""
 
@@ -60,7 +55,7 @@ def mypy(_) -> None:
 namespace.add_task(mypy)
 
 
-@invoke.task(pre=[ext_test_tasks.mypy_clean])
+@invoke.task()
 def mypy_clean(_) -> None:
     """Remove mypy cache directory."""
     # pylint: disable=unused-argument
@@ -78,7 +73,7 @@ BUILDDIR = 'build'
 DISTDIR = 'dist'
 
 
-@invoke.task(pre=[ext_test_tasks.build_clean])
+@invoke.task()
 def build_clean(_) -> None:
     """Remove the build directory."""
 
@@ -86,7 +81,7 @@ def build_clean(_) -> None:
 namespace_clean.add_task(build_clean, 'build')
 
 
-@invoke.task(pre=[ext_test_tasks.dist_clean])
+@invoke.task()
 def dist_clean(_) -> None:
     """Remove the dist directory."""
 
@@ -107,7 +102,7 @@ def clean_all(_) -> None:
 namespace_clean.add_task(clean_all, 'all')
 
 
-@invoke.task(pre=[clean_all], post=[ext_test_tasks.sdist])
+@invoke.task(pre=[clean_all])
 def sdist(_) -> None:
     """Create a source distribution."""
 
@@ -115,7 +110,7 @@ def sdist(_) -> None:
 namespace.add_task(sdist)
 
 
-@invoke.task(pre=[clean_all], post=[ext_test_tasks.wheel])
+@invoke.task(pre=[clean_all])
 def wheel(_) -> None:
     """Build a wheel distribution."""
 
@@ -124,7 +119,7 @@ namespace.add_task(wheel)
 
 
 # ruff linter
-@invoke.task(pre=[ext_test_tasks.lint])
+@invoke.task()
 def lint(context) -> None:
     with context.cd(TASK_ROOT_STR):
         context.run("ruff check")
@@ -134,7 +129,7 @@ namespace.add_task(lint)
 
 
 # ruff formatter
-@invoke.task(pre=[ext_test_tasks.format])
+@invoke.task()
 def format(context) -> None:  # noqa: A001
     """Run formatter."""
     with context.cd(TASK_ROOT_STR):
