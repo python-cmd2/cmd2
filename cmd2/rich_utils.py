@@ -416,9 +416,9 @@ def _apply_style_wrapper(cls: type[Segment], *args: Any, **kwargs: Any) -> Itera
     styled_segments = list(_orig_segment_apply_style(*args, **kwargs))
     newline_segment = cls.line()
 
-    # If the final segment is a newline, it will be stripped by Segment.split_lines().
+    # If the final segment ends in a newline, that newline will be stripped by Segment.split_lines().
     # Save an unstyled newline to restore later.
-    end_segment = newline_segment if styled_segments and styled_segments[-1].text == "\n" else None
+    end_segment = newline_segment if styled_segments and styled_segments[-1].text.endswith("\n") else None
 
     # Use Segment.split_lines() to separate the styled text from the newlines.
     # This way the ANSI reset code will appear before any newline.
