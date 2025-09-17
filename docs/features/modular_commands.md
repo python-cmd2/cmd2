@@ -72,8 +72,8 @@ class ExampleApp(cmd2.Cmd):
     """
     CommandSets are automatically loaded. Nothing needs to be done.
     """
-    def __init__(self, *args, auto_load_commands=True, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, auto_load_commands=True, **kwargs)
 
     def do_something(self, arg):
         self.poutput('this is the something command')
@@ -106,9 +106,9 @@ class ExampleApp(cmd2.Cmd):
     """
     CommandSets with initializer parameters are provided in the initializer
     """
-    def __init__(self, *args, auto_load_commands=True, **kwargs):
+    def __init__(self, *args, **kwargs):
         # gotta have this or neither the plugin or cmd2 will initialize
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, auto_load_commands=True, **kwargs)
 
     def do_something(self, arg):
         self.last_result = 5
