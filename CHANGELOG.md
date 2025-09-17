@@ -24,6 +24,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
       `value` property
     - Removed redundant setting of a parser's `prog` value in the `with_argparser()` decorator, as
       this is now handled centrally in `Cmd._build_parser()`
+    - The `auto_load_commands` argument to `cmd2.Cmd.__init__` now defaults to `False`
 
 - Enhancements
     - Enhanced all print methods (`poutput()`, `perror()`, `ppaged()`, etc.) to natively render

@@ -346,10 +346,9 @@ This bit is up to you!
 
 The cmd2 project directory structure is pretty simple and straightforward. All actual code for cmd2
 is located underneath the `cmd2` directory. The code to generate the documentation is in the `docs`
-directory. Unit tests are in the `tests` directory. Integration tests are in the `tests_isolated`
-directory. The `examples` directory contains examples of how to use cmd2. There are various other
-files in the root directory, but these are primarily related to continuous integration and release
-deployment.
+directory. Unit and integration tests are in the `tests` directory. The `examples` directory
+contains examples of how to use cmd2. There are various other files in the root directory, but these
+are primarily related to continuous integration and release deployment.
 
 #### Changes to the documentation files
 

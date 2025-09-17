@@ -14,4 +14,3 @@ component_management:
 ignore:
   - "examples" # ignore example code folder
   - "tests" # ignore unit test code folder
-  - "tests_isolated" # ignore integration test code folder
