@@ -4,18 +4,20 @@
 
 Cmd2 also enables developers to modularize their command definitions into
 [CommandSet][cmd2.CommandSet] objects. CommandSets represent a logical grouping of commands within a
-`cmd2` application. By default, all `CommandSet` objects will be discovered and loaded automatically
-when the [cmd2.Cmd][] class is instantiated with this mixin. This also enables the developer to
-dynamically add/remove commands from the cmd2 application. This could be useful for loadable plugins
-that add additional capabilities. Additionally, it allows for object-oriented encapsulation and
-garbage collection of state that is specific to a CommandSet.
+`cmd2` application. By default, `CommandSet` objects need to be manually registered. However, it is
+possible for all `CommandSet` objects to be discovered and loaded automatically when the
+[cmd2.Cmd][] class is instantiated with this mixin by setting `auto_load_commands=True`. This also
+enables the developer to dynamically add/remove commands from the `cmd2` application. This could be
+useful for loadable plugins that add additional capabilities. Additionally, it allows for
+object-oriented encapsulation and garbage collection of state that is specific to a CommandSet.
 
 ### Features
 
 - Modular Command Sets - Commands can be broken into separate modules rather than in one god class
   holding all commands.
 - Automatic Command Discovery - In your application, merely defining and importing a CommandSet is
-  sufficient for `cmd2` to discover and load your command. No manual registration is necessary.
+  sufficient for `cmd2` to discover and load your command if you set `auto_load_commands=True`. No
+  manual registration is necessary.
 - Dynamically Loadable/Unloadable Commands - Command functions and CommandSets can both be loaded
   and unloaded dynamically during application execution. This can enable features such as
   dynamically loaded modules that add additional commands.
@@ -71,7 +73,7 @@ class ExampleApp(cmd2.Cmd):
     CommandSets are automatically loaded. Nothing needs to be done.
     """
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, auto_load_commands=True, **kwargs)
 
     def do_something(self, arg):
         self.poutput('this is the something command')
@@ -106,7 +108,7 @@ class ExampleApp(cmd2.Cmd):
     """
     def __init__(self, *args, **kwargs):
         # gotta have this or neither the plugin or cmd2 will initialize
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, auto_load_commands=True, **kwargs)
 
     def do_something(self, arg):
         self.last_result = 5
@@ -289,7 +291,7 @@ class LoadableVegetables(CommandSet):
 
 class ExampleApp(cmd2.Cmd):
     """
-    CommandSets are automatically loaded. Nothing needs to be done.
+    CommandSets are loaded dynamically at runtime via other commands.
     """
 
     def __init__(self, *args, **kwargs):

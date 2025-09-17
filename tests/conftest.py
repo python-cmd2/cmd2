@@ -239,3 +239,13 @@ class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
+
+@pytest.fixture
+def autoload_command_sets_app():
+    return WithCommandSets(auto_load_commands=True)
+
+
+@pytest.fixture
+def manual_command_sets_app():
+    return WithCommandSets(auto_load_commands=False)

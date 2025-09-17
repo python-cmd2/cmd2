@@ -106,3 +106,11 @@ however it now inherits from `argparse.HelpFormatter`. If you want RawText behav
 The benefit is that your `cmd2` applications now have more aesthetically pleasing help which
 includes color to make it quicker and easier to visually parse help text. This works for all
 supported versions of Python.
+
+### Other Changes
+
+- The `auto_load_commands` argument to `cmd2.Cmd.__init__` now defaults to `False`
+- Replaced `Settable.get_value()` and `Settable.set_value()` methods with a more Pythonic `value`
+  property
+- Removed redundant setting of a parser's `prog` value in the `with_argparser()` decorator, as this
+  is now handled centrally in `Cmd._build_parser()`

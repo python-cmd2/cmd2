@@ -34,7 +34,6 @@ typecheck: ## Perform type checking
 test: ## Test the code with pytest.
 	@echo "🚀 Testing code: Running pytest"
 	@uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
-	@uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests_isolated
 
 .PHONY: docs-test
 docs-test: ## Test if documentation can be built without warnings or errors

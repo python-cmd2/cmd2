@@ -59,7 +59,6 @@ plugins/*                  @anselor
 
 # Unit and Integration Tests
 tests/*                    @kmvanbrunt @tleonhardt
-tests_isolated/*           @anselor
 
 # Top-level project stuff
 .coveragerc                @tleonhardt

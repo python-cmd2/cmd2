@@ -323,7 +323,7 @@ class Cmd(cmd.Cmd):
         terminators: list[str] | None = None,
         shortcuts: dict[str, str] | None = None,
         command_sets: Iterable[CommandSet] | None = None,
-        auto_load_commands: bool = True,
+        auto_load_commands: bool = False,
         allow_clipboard: bool = True,
         suggest_similar_command: bool = False,
     ) -> None:
