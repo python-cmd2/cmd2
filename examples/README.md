@@ -32,6 +32,8 @@ each:
       subcommands, etc.
 - [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
     - Demonstrates how to create your own custom `Cmd2ArgumentParser`
+- [custom_types.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_types.py)
+    - Some useful custom argument types
 - [default_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/default_categories.py)
     - Demonstrates usage of `@with_default_category` decorator to group and categorize commands and
       `CommandSet` use
