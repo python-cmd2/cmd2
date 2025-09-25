@@ -1,4 +1,4 @@
-"""Classes for the cmd2 plugin system."""
+"""Classes for the cmd2 lifecycle hooks that you can register multiple callback functions/methods with."""
 
 from dataclasses import (
     dataclass,

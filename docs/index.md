@@ -53,10 +53,10 @@ app.cmdloop()
     end="<!--intro-end-->"
 %}
 
-## Plugins
+## Mixins
 
 {%
-   include-markdown "./plugins/index.md"
+   include-markdown "./mixins/index.md"
     start="<!--intro-start-->"
     end="<!--intro-end-->"
 %}

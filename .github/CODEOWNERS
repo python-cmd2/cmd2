@@ -76,5 +76,6 @@ MANIFEST.in                @tleonhardt
 mkdocs.yml                 @tleonhardt
 package.json               @tleonhardt
 pyproject.toml             @tleonhardt @kmvanbrunt
+ruff.toml                  @tleonhardt
 README.md                  @kmvanbrunt @tleonhardt
 tasks.py                   @tleonhardt

@@ -1,0 +1,191 @@
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Same as Black.
+line-length = 127
+indent-width = 4
+target-version = "py310" # Minimum supported version of Python
+output-format = "full"
+
+[lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
+# Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
+# McCabe complexity (`C901`) by default.
+select = [
+    # https://docs.astral.sh/ruff/rules
+    "A", # flake8-builtins (variables or arguments shadowing built-ins)
+    # "AIR", # Airflow specific warnings
+    "ANN",   # flake8-annotations (missing type annotations for arguments or return types)
+    "ARG",   # flake8-unused-arguments (functions or methods with arguments that are never used)
+    "ASYNC", # flake8-async (async await bugs)
+    "B",     # flake8-bugbear (various likely bugs and design issues)
+    "BLE",   # flake8-blind-except (force more specific exception types than just Exception)
+    "C4",    # flake8-comprehensions (warn about things that could be written as a comprehensions but aren't)
+    "C90",   # McCabe cyclomatic complexity (warn about functions that are too complex)
+    "COM",   # flake8-commas (forces commas at the end of every type of iterable/container
+    # "CPY", # flake8-copyright (warn about missing copyright notice at top of file - currently in preview)
+    "D", # pydocstyle (warn about things like missing docstrings)
+    # "DOC", # pydoclint (docstring warnings - currently in preview)
+    # "DJ",  # flake8-django (Django-specific warnings)
+    "DTZ", # flake8-datetimez (warn about datetime calls where no timezone is specified)
+    "E",   # pycodestyle errors (warn about major stylistic issues like mixing spaces and tabs)
+    # "EM", # flake8-errmsg (warn about exceptions that use string literals that aren't assigned to a variable first)
+    "ERA", # eradicate (warn about commented-out code)
+    "EXE", # flake8-executable (warn about files with a shebang present that aren't executable or vice versa)
+    "F",   # Pyflakes (a bunch of common warnings for things like unused imports, imports shadowed by variables, etc)
+    # "FA",  # flake8-future-annotations (warn if certain from __future__ imports are used but missing)
+    # "FAST", # FastAPI specific warnings
+    # "FBT",  # flake8-boolean-trap (force all boolean arguments passed to functions to be keyword arguments and not positional)
+    "FIX",  # flake8-fixme (warn about lines containing FIXME, TODO, XXX, or HACK)
+    "FLY",  # flynt (automatically convert from old school string .format to f-strings)
+    "FURB", # refurb (A tool for refurbishing and modernizing Python codebases)
+    "G",    # flake8-logging-format (warn about logging statements using outdated string formatting methods)
+    "I",    # isort (sort all import statements in the order established by isort)
+    "ICN",  # flake8-import-conventions (force idiomatic import conventions for certain modules typically imported as something else)
+    "INP",  # flake8-no-pep420 (warn about files in the implicit namespace - i.e. force creation of __init__.py files to make packages)
+    "INT",  # flake8-gettext (warnings that only apply when you are internationalizing your strings)
+    "ISC",  # flake8-implicit-str-concat (warnings related to implicit vs explicit string concatenation)
+    "LOG",  # flake8-logging (warn about potential logger issues, but very pedantic)
+    "N",    # pep8-naming (force idiomatic naming for classes, functions/methods, and variables/arguments)
+    # "NPY",  # NumPy specific rules
+    # "PD",   # pandas-vet (Pandas specific rules)
+    "PERF", # Perflint (warn about performance issues)
+    "PGH",  # pygrep-hooks (force specific rule codes when ignoring type or linter issues on a line)
+    "PIE",  # flake8-pie (eliminate unnecessary use of pass, range starting at 0, etc.)
+    "PLC",  # Pylint Conventions
+    "PLE",  # Pylint Errors
+    # "PLR", # Pylint Refactoring suggestions
+    "PLW", # Pylint Warnings
+    "PT",  # flake8-pytest-style (warnings about unit test best practices)
+    # "PTH", # flake8-use-pathlib (force use of pathlib instead of os.path)
+    "PYI", # flake8-pyi (warnings related to type hint best practices)
+    "Q",   # flake8-quotes (force double quotes)
+    "RET", # flake8-return (various warnings related to implicit vs explicit return statements)
+    "RSE", # flake8-raise (warn about unnecessary parentheses on raised exceptions)
+    "RUF", # Ruff-specific rules (miscellaneous grab bag of lint checks specific to Ruff)
+    "S",   # flake8-bandit (security oriented checks, but extremely pedantic - do not attempt to apply to unit test files)
+    "SIM", # flake8-simplify (rules to attempt to simplify code)
+    # "SLF",  # flake8-self (warn when protected members are accessed outside of a class or file)
+    "SLOT", # flake8-slots (warn about subclasses that should define __slots__)
+    "T10",  # flake8-debugger (check for pdb traces left in Python code)
+    # "T20",  # flake8-print (warn about use of `print` or `pprint` - force use of loggers)
+    "TC",  # flake8-type-checking (type checking warnings)
+    "TD",  # flake8-todos (force all TODOs to include an author and issue link)
+    "TID", # flake8-tidy-imports (extra import rules to check)
+    "TRY", # tryceratops (warnings related to exceptions and try/except)
+    "UP",  # pyupgrade (A tool (and pre-commit hook) to automatically upgrade syntax for newer versions of the language)
+    "W",   # pycodestyle warnings (warn about minor stylistic issues)
+    "YTT", # flake8-2020 (checks for misuse of sys.version or sys.version_info)
+]
+ignore = [
+    # `uv run ruff rule E501` for a description of that rule
+    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed (would be good to enable this later)
+    "COM812",  # Conflicts with ruff format (see https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules)
+    "COM819",  # Conflicts with ruff format
+    "D203",    # 1 blank line required before class docstring (conflicts with D211)
+    "D206",    # Conflicts with ruff format
+    "D213",    # Multi-line docstring summary should start at 2nd line (conflicts with D212 which starts at 1st line)
+    "D300",    # Conflicts with ruff format
+    "E111",    # Conflicts with ruff format
+    "E114",    # Conflicts with ruff format
+    "E117",    # Conflicts with ruff format
+    "ISC002",  # Conflicts with ruff format
+    "PLC0415", # `import` should be at the top-level of a file"
+    "Q000",    # Conflicts with ruff format
+    "Q001",    # Conflicts with ruff format
+    "Q002",    # Conflicts with ruff format
+    "Q003",    # Conflicts with ruff format
+    "TC006",   # Add quotes to type expression in typing.cast() (not needed except for forward references)
+    "TRY003",  # Avoid specifying long messages outside the exception class (force custom exceptions for everything)
+    "UP017",   # Use datetime.UTC alias (requires Python 3.11+)
+    "W191",    # Conflicts with ruff format
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+mccabe.max-complexity = 49
+
+[lint.per-file-ignores]
+# Do not call setattr with constant attribute value
+"cmd2/argparse_custom.py" = ["B010"]
+
+# Ignore various warnings in examples/ directory
+"examples/*.py" = [
+    "ANN",     # Ignore all type annotation rules in examples folder
+    "D",       # Ignore all pydocstyle rules in examples folder
+    "INP001",  # Module is part of an implicit namespace
+    "PLW2901", # loop variable overwritten inside loop
+    "S",       # Ignore all Security rules in examples folder
+]
+"examples/scripts/*.py" = ["F821"] # Undefined name `app`
+
+# Ingore various rulesets in test directories
+"{tests}/*.py" = [
+    "ANN",  # Ignore all type annotation rules in test folders
+    "ARG",  # Ignore all unused argument warnings in test folders
+    "D",    # Ignore all pydocstyle rules in test folders
+    "E501", # Line too long
+    "S",    # Ignore all Security rules in test folders
+    "SLF",  # Ignore all warnings about private or protected member access in test folders
+]
+# Undefined name `app` and module is part of an implicit namespace
+"tests/pyscript/*.py" = ["F821", "INP001"]
+
+[format]
+# Like Black, use double quotes for strings.
+quote-style = "preserve"
+
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
+
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
+
+# Enable auto-formatting of code examples in docstrings. Markdown,
+# reStructuredText code/literal blocks and doctests are all supported.
+#
+# This is currently disabled by default, but it is planned for this
+# to be opt-out in the future.
+docstring-code-format = false
+
+# Set the line length limit used when formatting code snippets in
+# docstrings.
+#
+# This only has an effect when the `docstring-code-format` setting is
+# enabled.
+docstring-code-line-length = "dynamic"

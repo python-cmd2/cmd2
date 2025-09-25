@@ -193,9 +193,9 @@ nav:
       - examples/getting_started.md
       - examples/alternate_event_loops.md
       - examples/examples.md
-  - Plugins:
-      - plugins/index.md
-      - plugins/plugin_template.md
+  - Mixins:
+      - mixins/index.md
+      - mixins/mixin_template.md
   - Testing:
       - testing.md
   - API Reference:
