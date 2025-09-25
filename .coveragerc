@@ -1,8 +1,8 @@
 # .coveragerc to control coverage.py
 [run]
 # Source
-source = plugins/*/cmd2_*/
-         cmd2/
+source = cmd2/
+
 # (boolean, default False): whether to measure branch coverage in addition to statement coverage.
 branch = False
 

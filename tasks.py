@@ -15,7 +15,6 @@ import sys
 
 import invoke
 from invoke.context import Context
-
 from plugins import (
     tasks as plugin_tasks,
 )

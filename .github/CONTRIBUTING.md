@@ -51,7 +51,8 @@ We have a [Makefile](../Makefile) with commands that make it quick and easy for 
 everything set up and perform common development tasks.
 
 Nearly all project configuration, including for dependencies and quality tools is in the
-[pyproject.toml](../pyproject.toml) file.
+[pyproject.toml](../pyproject.toml) file other than for `ruff` which is in
+[ruff.toml](../ruff.toml).
 
 > _Updating to the latest releases for all prerequisites via `uv` is recommended_. This can be done
 > with `uv lock --upgrade` followed by `uv sync`.

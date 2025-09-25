@@ -1,4 +1,4 @@
-include LICENSE README.md CHANGELOG.md mkdocs.yml pyproject.toml tasks.py
+include LICENSE README.md CHANGELOG.md mkdocs.yml pyproject.toml ruff.toml tasks.py
 recursive-include examples *
 recursive-include tests *
 recursive-include docs *
