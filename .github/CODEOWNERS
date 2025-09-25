@@ -54,9 +54,6 @@ docs/*                     @tleonhardt
 examples/modular*          @anselor
 examples/*.py              @kmvanbrunt @tleonhardt
 
-# Plugins
-plugins/*                  @anselor
-
 # Unit and Integration Tests
 tests/*                    @kmvanbrunt @tleonhardt
 
