@@ -78,9 +78,9 @@ reasons:
 - The `cmd.Cmd.__init__()` method in the python standard library does not call `super().__init__()`.
   Because of this oversight, if you don't inherit from `MyMixin` first, the `MyMixin.__init__()`
   method will never be called.
-- You may want your mixin to be able to override methods from `cmd2.Cmd`. If you mixin the plugin
-  after `cmd2.Cmd`, the python method resolution order will call `cmd2.Cmd` methods before it calls
-  those in your plugin.
+- You may want your mixin to be able to override methods from `cmd2.Cmd`. If you mixin the mixin
+  class after `cmd2.Cmd`, the python method resolution order will call `cmd2.Cmd` methods before it
+  calls those in your mixin.
 
 ### Add commands
 
@@ -95,7 +95,7 @@ class MyMixin:
         self.poutput(statement)
 ```
 
-You have all the same capabilities within the plugin that you do inside a `cmd2.Cmd` app, including
+You have all the same capabilities within the mixin that you do inside a `cmd2.Cmd` app, including
 argument parsing via decorators and custom help methods.
 
 ### Add (or hide) settings
@@ -123,8 +123,8 @@ their own commands.
 
 Your mixin can override core `cmd2.Cmd` methods, changing their behavior. This approach should be
 used sparingly, because it is very brittle. If a developer chooses to use multiple mixins in their
-application, and several of the mixins override the same method, only the first plugin to be mixed
-in will have the overridden method called.
+application, and several of the mixins override the same method, only the first mixin to be mixed in
+will have the overridden method called.
 
 Hooks are a much better approach.
 
@@ -148,7 +148,7 @@ class MyMixin:
         super().__init__(*args, **kwargs)
         # code placed here runs after cmd2 initializes
         # this is where you register any hook functions
-        self.register_postparsing_hook(self.cmd2_myplugin_postparsing_hook)
+        self.register_postparsing_hook(self.cmd2_mymixin_postparsing_hook)
 
     def cmd2_mymixin_postparsing_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """Method to be called after parsing user input, but before running the command"""
