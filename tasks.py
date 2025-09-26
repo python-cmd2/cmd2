@@ -15,9 +15,6 @@ import sys
 
 import invoke
 from invoke.context import Context
-from plugins import (
-    tasks as plugin_tasks,
-)
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
@@ -39,7 +36,7 @@ def rmrf(items: str | list[str] | set[str], verbose: bool = True) -> None:
 
 
 # create namespaces
-namespace = invoke.Collection(plugin=plugin_tasks)
+namespace = invoke.Collection()
 namespace_clean = invoke.Collection('clean')
 namespace.add_collection(namespace_clean, 'clean')
 
@@ -68,7 +65,7 @@ def pytest(context: Context, junit: bool = False, pty: bool = True) -> None:
 namespace.add_task(pytest)
 
 
-@invoke.task(post=[plugin_tasks.pytest_clean])
+@invoke.task()
 def pytest_clean(context: Context) -> None:
     """Remove pytest cache and code coverage files and directories."""
     # pylint: disable=unused-argument
@@ -152,7 +149,7 @@ BUILDDIR = 'build'
 DISTDIR = 'dist'
 
 
-@invoke.task(post=[plugin_tasks.build_clean])
+@invoke.task()
 def build_clean(context: Context) -> None:
     """Remove the build directory."""
     # pylint: disable=unused-argument
@@ -163,7 +160,7 @@ def build_clean(context: Context) -> None:
 namespace_clean.add_task(build_clean, 'build')
 
 
-@invoke.task(post=[plugin_tasks.dist_clean])
+@invoke.task()
 def dist_clean(context: Context) -> None:
     """Remove the dist directory."""
     # pylint: disable=unused-argument
@@ -242,7 +239,6 @@ namespace_clean.add_task(ruff_clean, 'ruff')
 #
 # make a dummy clean task which runs all the tasks in the clean namespace
 clean_tasks = list(namespace_clean.tasks.values())
-clean_tasks.append(plugin_tasks.clean_all)
 
 
 @invoke.task(pre=clean_tasks, default=True)
@@ -286,7 +282,7 @@ def validatetag(context: Context) -> None:
 namespace.add_task(validatetag)
 
 
-@invoke.task(pre=[clean_all], post=[plugin_tasks.sdist])
+@invoke.task(pre=[clean_all])
 def sdist(context: Context) -> None:
     """Create a source distribution."""
     with context.cd(TASK_ROOT_STR):
@@ -296,7 +292,7 @@ def sdist(context: Context) -> None:
 namespace.add_task(sdist)
 
 
-@invoke.task(pre=[clean_all], post=[plugin_tasks.wheel])
+@invoke.task(pre=[clean_all])
 def wheel(context: Context) -> None:
     """Build a wheel distribution."""
     with context.cd(TASK_ROOT_STR):
