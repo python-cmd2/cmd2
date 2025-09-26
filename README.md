@@ -27,8 +27,8 @@ when using cmd.
 
 > :warning: **cmd2 is now "feature complete" for the `2.x` branch and is actively working on the
 > 3.0.0 release on the `main` branch. New features will only be addressed in 3.x moving forwards. If
-> need be, we will still fix bugs in 2.x. A beta version, 3.0.0b2, is available for testing and we
-> would appreciate feedback.**
+> need be, we will still fix bugs in 2.x. A release candidate, 3.0.0rc1, is available for testing
+> and we would appreciate feedback.**
 
 ## The developers toolbox
 
