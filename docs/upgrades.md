@@ -20,6 +20,18 @@ The functionality within the `cmd2.ansi` module has either been removed or chang
 `rich` and moved to one of the new modules: [cmd2.string_utils][], [cmd2.styles][], or
 [cmd2.terminal_utils][].
 
+To ease the migration path from `cmd2` 2.x to 3.x, we have created the `cmd2-ansi` module which is a
+backport of the `cmd2.ansi` module present in `cmd2` 2.7.0 in a standalone fashion. Relevant links:
+
+- PyPI: [cmd2-ansi](https://pypi.org/project/cmd2-ansi/)
+- GitHub: [cmd2-ansi](https://github.com/python-cmd2/cmd2-ansi)
+
+To use this backport:
+
+```Python
+from cmd2_ansi import ansi
+```
+
 #### table_creator
 
 The `cmd2.table_creator` module no longer exists. Please see rich's documentation on
@@ -30,6 +42,19 @@ demonstrates how to use `rich` tables in a `cmd2` application.
 `rich` tables offer a degree of power and flexibility that are superior to what `cmd2` previously
 offered. We apologize for this backwards incompatibility, but the APIs were fundamentally different
 and we could not figure out a way to create a backwards-compatibility wrapper.
+
+To ease the migration path from `cmd2` 2.x to 3.x, we have created the `cmd2-table` module which is
+a backport of the `cmd2.table_creator` module present in `cmd2` 2.7.0 in a standalone fashion.
+Relevant links:
+
+- PyPI: [cmd2-table](https://pypi.org/project/cmd2-table/)
+- GitHub: [cmd2-table](https://github.com/python-cmd2/cmd2-table)
+
+To use this backport:
+
+```Python
+from cmd2_table import table_creator
+```
 
 ### Added modules
 
