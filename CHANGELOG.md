@@ -52,6 +52,12 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Fixed a redirection bug where `cmd2` could unintentionally overwrite an application's
       `sys.stdout`
 
+- Migration Aids - these will help you iteratively migrate to `cmd2` 3.x in stages
+    - Published new [cmd2-ansi](https://pypi.org/project/cmd2-ansi/) module which is a backport of
+      the `cmd2.ansi` module present in `cmd2` 2.7.0
+    - Published new [cmd2-table](https://pypi.org/project/cmd2-table/) module which is a backport of
+      the `cmd2.table_creator` module present in `cmd2` 2.7.0
+
 ## 2.7.0 (June 30, 2025)
 
 - Enhancements
