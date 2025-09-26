@@ -1,4 +1,4 @@
-## 3.0.0 (TBD, 2025)
+## 3.0.0 (October TBD, 2025)
 
 ### Summary
 
