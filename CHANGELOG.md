@@ -27,6 +27,13 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - Removed redundant setting of a parser's `prog` value in the `with_argparser()` decorator, as
       this is now handled centrally in `Cmd._build_parser()`
     - The `auto_load_commands` argument to `cmd2.Cmd.__init__` now defaults to `False`
+    - `argparse_custom` module breaking changes:
+        - `descriptive_header: str` replaced with `descriptive_headers: Sequence[str | rich.Column]`
+            - Applies to parameter name when adding an argument to a parser as well as
+              `set_descriptive_headers` and `get_descriptive_headers`
+    - `decorators` module breaking changes:
+        - `_set_parser_prog` renamed to `set_parser_prog` (without the leading underscore) and moved
+          to `argparse_custom` module
 
 - Enhancements
     - Enhanced all print methods (`poutput()`, `perror()`, `ppaged()`, etc.) to natively render
