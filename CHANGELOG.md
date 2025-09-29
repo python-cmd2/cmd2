@@ -16,6 +16,8 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
           [rich_tables.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_tables.py)
           example for more info)
         - Moved all string-related functions from `utils.py` to a new `string_utils.py` module
+            - Removed redundant `string` from some of the names so `quote_string` is now just
+              `quote` and `quote_string_if_needed` is now `quote_if_needed`
         - Consolidated all string styling functions from `ansi.py` into `string_utils.py`
         - Replaced all text style enums from `ansi.py` with modern `rich` styles
         - Renamed `ansi.py` to `terminal_utils.py` to better reflect its purpose
