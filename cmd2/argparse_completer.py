@@ -39,7 +39,7 @@ from .exceptions import CompletionError
 from .styles import Cmd2Style
 
 # If no descriptive headers are supplied, then this will be used instead
-DEFAULT_DESCRIPTIVE_HEADERS: Sequence[str | Column] = ('Description',)
+DEFAULT_DESCRIPTIVE_HEADERS: Sequence[str | Column] = ['Description']
 
 # Name of the choice/completer function argument that, if present, will be passed a dictionary of
 # command line tokens up through the token being completed mapped to their argparse destination name.

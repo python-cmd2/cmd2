@@ -804,7 +804,7 @@ def _add_argument_wrapper(
     choices_provider: ChoicesProviderFunc | None = None,
     completer: CompleterFunc | None = None,
     suppress_tab_hint: bool = False,
-    descriptive_headers: list[Column | str] | None = None,
+    descriptive_headers: Sequence[str | Column] | None = None,
     **kwargs: Any,
 ) -> argparse.Action:
     """Wrap ActionsContainer.add_argument() which supports more settings used by cmd2.
