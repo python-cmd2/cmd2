@@ -31,6 +31,8 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - `descriptive_header: str` replaced with `descriptive_headers: Sequence[str | rich.Column]`
             - Applies to parameter name when adding an argument to a parser as well as
               `set_descriptive_headers` and `get_descriptive_headers`
+        - `CompletionItem.description: str` changed to
+          `CompletionItem.descriptive_data: Sequence[str | rich.Column]`
     - `decorators` module breaking changes:
         - `_set_parser_prog` renamed to `set_parser_prog` (without the leading underscore) and moved
           to `argparse_custom` module
