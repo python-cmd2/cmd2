@@ -5029,7 +5029,7 @@ class Cmd(cmd.Cmd):
         history_action_group.add_argument('-e', '--edit', action='store_true', help='edit and then run selected history items')
         history_action_group.add_argument(
             '-o',
-            '--output_file',
+            '--output-file',
             metavar='FILE',
             help='output commands to a script file, implies -s',
             completer=cls.path_complete,
