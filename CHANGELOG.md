@@ -36,6 +36,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
     - `decorators` module breaking changes:
         - `_set_parser_prog` renamed to `set_parser_prog` (without the leading underscore) and moved
           to `argparse_custom` module
+    - Renamed history `--output_file` to `--output-file` to follow common command-line practices
 
 - Enhancements
     - Enhanced all print methods (`poutput()`, `perror()`, `ppaged()`, etc.) to natively render
