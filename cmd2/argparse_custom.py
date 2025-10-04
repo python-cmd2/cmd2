@@ -139,7 +139,7 @@ The left-most column is the actual value being tab completed and its header is
 that value's name. The right column header is defined using the
 ``descriptive_headers`` parameter of add_argument(), which is a list of header
 names that defaults to ["Description"]. The right column values come from the
-``CompletionItem.descriptive_data`` member, which is a list with the same number
+``CompletionItem.description`` member, which is a list with the same number
 of items as columns defined in descriptive_headers.
 
 To use CompletionItems, just return them from your choices_provider or
@@ -166,7 +166,7 @@ Example::
         def get_items(self) -> list[CompletionItems]:
             \"\"\"choices_provider which returns CompletionItems\"\"\"
 
-            # CompletionItem's second argument is descriptive_data.
+            # CompletionItem's second argument is description.
             # Its item count should match that of descriptive_headers.
             return [
                 CompletionItem(1, ["My item", True, "02/02/2022"]),
@@ -194,14 +194,14 @@ This means a long string which exceeds the width of its column will be
 truncated with an ellipsis at the end. You can override this and other settings
 when you create the ``Column``.
 
-``descriptive_data`` items can include Rich objects, including styled Text and Tables.
+``description`` items can include Rich objects, including styled Text and Tables.
 
 To avoid printing a excessive information to the screen at once when a user
 presses tab, there is a maximum threshold for the number of CompletionItems
 that will be shown. Its value is defined in ``cmd2.Cmd.max_completion_items``.
 It defaults to 50, but can be changed. If the number of completion suggestions
 exceeds this number, they will be displayed in the typical columnized format
-and will not include the descriptive_data of the CompletionItems.
+and will not include the description of the CompletionItems.
 
 
 **Patched argparse functions**
@@ -384,22 +384,26 @@ class CompletionItem(str):  # noqa: SLOT000
         """Responsible for creating and returning a new instance, called before __init__ when an object is instantiated."""
         return super().__new__(cls, value)
 
-    def __init__(self, value: object, descriptive_data: Sequence[Any], *args: Any) -> None:
+    def __init__(self, value: object, description: str | Sequence[Any], *args: Any) -> None:
         """CompletionItem Initializer.
 
         :param value: the value being tab completed
-        :param descriptive_data: a list of descriptive data to display in the columns that follow
-                                 the completion value. The number of items in this list must equal
+        :param description: a string or list of descriptive data to display in the columns that follow
+                                 the completion value. If a list, the number of items in this list must equal
                                  the number of descriptive headers defined for the argument.
         :param args: args for str __init__
         """
         super().__init__(*args)
 
+        # If description is a string, wrap it in a list
+        if isinstance(description, str):
+            description = [description]
+
         # Make sure all objects are renderable by a Rich table.
-        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in descriptive_data]
+        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in description]
 
         # Convert strings containing ANSI style sequences to Rich Text objects for correct display width.
-        self.descriptive_data = ru.prepare_objects_for_rendering(*renderable_data)
+        self.description = ru.prepare_objects_for_rendering(*renderable_data)
 
         # Save the original value to support CompletionItems as argparse choices.
         # cmd2 has patched argparse so input is compared to this value instead of the CompletionItem instance.

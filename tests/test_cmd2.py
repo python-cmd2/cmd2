@@ -2306,7 +2306,7 @@ def test_get_alias_completion_items(base_app) -> None:
     for cur_res in results:
         assert cur_res in base_app.aliases
         # Strip trailing spaces from table output
-        assert cur_res.descriptive_data[0].rstrip() == base_app.aliases[cur_res]
+        assert cur_res.description[0].rstrip() == base_app.aliases[cur_res]
 
 
 def test_get_macro_completion_items(base_app) -> None:
@@ -2319,7 +2319,7 @@ def test_get_macro_completion_items(base_app) -> None:
     for cur_res in results:
         assert cur_res in base_app.macros
         # Strip trailing spaces from table output
-        assert cur_res.descriptive_data[0].rstrip() == base_app.macros[cur_res].value
+        assert cur_res.description[0].rstrip() == base_app.macros[cur_res].value
 
 
 def test_get_settable_completion_items(base_app) -> None:
@@ -2333,11 +2333,11 @@ def test_get_settable_completion_items(base_app) -> None:
         # These CompletionItem descriptions are a two column table (Settable Value and Settable Description)
         # First check if the description text starts with the value
         str_value = str(cur_settable.value)
-        assert cur_res.descriptive_data[0].startswith(str_value)
+        assert cur_res.description[0].startswith(str_value)
 
         # The second column is likely to have wrapped long text. So we will just examine the
         # first couple characters to look for the Settable's description.
-        assert cur_settable.description[0:10] in cur_res.descriptive_data[1]
+        assert cur_settable.description[0:10] in cur_res.description[1]
 
 
 def test_alias_no_subcommand(base_app) -> None:
