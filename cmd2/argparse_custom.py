@@ -388,8 +388,8 @@ class CompletionItem(str):  # noqa: SLOT000
         """CompletionItem Initializer.
 
         :param value: the value being tab completed
-        :param description: a string or list of descriptive data to display in the columns that follow
-                                 the completion value. If a list, the number of items in this list must equal
+        :param description: a string or sequence of descriptive data to display in the columns that follow
+                                 the completion value. If a sequence, the number of items in this sequence must equal
                                  the number of descriptive headers defined for the argument.
         :param args: args for str __init__
         """
