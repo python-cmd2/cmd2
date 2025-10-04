@@ -582,7 +582,7 @@ class ArgparseCompleter:
                 border_style=Cmd2Style.TABLE_BORDER,
             )
             for item in completion_items:
-                hint_table.add_row(item, *item.descriptive_data)
+                hint_table.add_row(item, *item.description)
 
             # Generate the hint table string
             console = Cmd2GeneralConsole()
