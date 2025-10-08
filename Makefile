@@ -2,8 +2,8 @@
 .PHONY: install
 install: ## Install the virtual environment with dependencies
 	@echo "🚀 Creating uv Python virtual environment"
-	@uv python install 3.13
-	@uv sync --python=3.13
+	@uv python install 3.14
+	@uv sync --python=3.14
 	@echo "🚀 Installing Git pre-commit hooks locally"
 	@uv run pre-commit install
 	@echo "🚀 Installing Prettier using npm"
