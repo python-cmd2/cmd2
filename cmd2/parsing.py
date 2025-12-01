@@ -105,10 +105,10 @@ class Statement(str):  # noqa: SLOT000
        whether positional or denoted with switches.
 
     2. For commands with simple positional arguments, use
-       [args][cmd2.Statement.args] or [arg_list][cmd2.Statement.arg_list]
+       [args][cmd2.parsing.Statement.args] or [arg_list][cmd2.parsing.Statement.arg_list]
 
     3. If you don't want to have to worry about quoted arguments, see
-       [argv][cmd2.Statement.argv] for a trick which strips quotes off for you.
+       [argv][cmd2.parsing.Statement.argv] for a trick which strips quotes off for you.
     """
 
     # the arguments, but not the command, nor the output redirection clauses.
@@ -193,7 +193,7 @@ class Statement(str):  # noqa: SLOT000
 
     @property
     def expanded_command_line(self) -> str:
-        """Concatenate [command_and_args][cmd2.Statement.command_and_args] and [post_command][cmd2.Statement.post_command]."""
+        """Concatenate [cmd2.parsing.Statement.command_and_args]() and [cmd2.parsing.Statement.post_command]()."""
         return self.command_and_args + self.post_command
 
     @property

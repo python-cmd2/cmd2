@@ -211,22 +211,23 @@ if __name__ == '__main__':
 The following functions are called at different points in the [CommandSet][cmd2.CommandSet] life
 cycle.
 
-[on_register][cmd2.CommandSet.on_register] - Called by `cmd2.Cmd` as the first step to registering a
-`CommandSet`. The commands defined in this class have not be added to the CLI object at this point.
-Subclasses can override this to perform any initialization requiring access to the Cmd object (e.g.
-configure commands and their parsers based on CLI state data).
+[on_register][cmd2.command_definition.CommandSet.on_register] - Called by `cmd2.Cmd` as the first
+step to registering a `CommandSet`. The commands defined in this class have not be added to the CLI
+object at this point. Subclasses can override this to perform any initialization requiring access to
+the Cmd object (e.g. configure commands and their parsers based on CLI state data).
 
-[on_registered][cmd2.CommandSet.on_registered] - Called by `cmd2.Cmd` after a `CommandSet` is
-registered and all its commands have been added to the CLI. Subclasses can override this to perform
-custom steps related to the newly added commands (e.g. setting them to a disabled state).
+[on_registered][cmd2.command_definition.CommandSet.on_registered] - Called by `cmd2.Cmd` after a
+`CommandSet` is registered and all its commands have been added to the CLI. Subclasses can override
+this to perform custom steps related to the newly added commands (e.g. setting them to a disabled
+state).
 
-[on_unregister][cmd2.CommandSet.on_unregister] - Called by `cmd2.Cmd` as the first step to
-unregistering a `CommandSet`. Subclasses can override this to perform any cleanup steps which
-require their commands being registered in the CLI.
+[on_unregister][cmd2.command_definition.CommandSet.on_unregister] - Called by `cmd2.Cmd` as the
+first step to unregistering a `CommandSet`. Subclasses can override this to perform any cleanup
+steps which require their commands being registered in the CLI.
 
-[on_unregistered][cmd2.CommandSet.on_unregistered] - Called by `cmd2.Cmd` after a `CommandSet` has
-been unregistered and all its commands removed from the CLI. Subclasses can override this to perform
-remaining cleanup steps.
+[on_unregistered][cmd2.command_definition.CommandSet.on_unregistered] - Called by `cmd2.Cmd` after a
+`CommandSet` has been unregistered and all its commands removed from the CLI. Subclasses can
+override this to perform remaining cleanup steps.
 
 ## Injecting Subcommands
 
