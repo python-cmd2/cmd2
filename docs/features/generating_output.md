@@ -71,7 +71,7 @@ def do_echo(self, args):
 
 When an error occurs in your program, you can display it on `sys.stderr` by calling the
 [perror][cmd2.Cmd.perror] method. By default this method applies
-[Cmd2Style.ERROR][cmd2.Cmd2Style.ERROR] to the output.
+[Cmd2Style.ERROR][cmd2.styles.Cmd2Style.ERROR] to the output.
 
 ## Warning Messages
 
