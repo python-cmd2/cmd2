@@ -24,13 +24,14 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Programming Language :: Python :: Free Threading :: 3 - Stable",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
     "backports.strenum; python_version == '3.10'",
     "gnureadline>=8; platform_system == 'Darwin'",
-    "pyperclip>=1.8",
+    "pyperclip>=1.8.2",
     "pyreadline3>=3.4; platform_system == 'Windows'",
     "rich>=14.1.0",
     "rich-argparse>=1.7.1",
@@ -42,7 +43,7 @@ dev = [
     "black>=24",
     "codecov>=2",
     "invoke>=2",
-    "ipython>=8",
+    "ipython>=8.23",
     "mkdocs-git-revision-date-localized-plugin>=1.3",
     "mkdocs-include-markdown-plugin>=6",
     "mkdocs-macros-plugin>=1",
@@ -53,7 +54,7 @@ dev = [
     "pytest>=7",
     "pytest-cov>=4",
     "pytest-mock>=3.14",
-    "ruff>=0.9",
+    "ruff>=0.14",
     "twine>=6",
 ]
 docs = [
@@ -74,7 +75,7 @@ test = [
     "pytest-cov>=4",
     "pytest-mock>=3.14",
 ]
-validate = ["mypy>=1.12", "ruff>=0.9", "types-setuptools>=69"]
+validate = ["mypy>=1.12", "ruff>=0.14", "types-setuptools>=69"]
 
 [tool.mypy]
 disallow_incomplete_defs = true
