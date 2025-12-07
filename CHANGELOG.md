@@ -1,4 +1,4 @@
-## 3.0.0 (December TBD, 2025)
+## 3.0.0 (December 7, 2025)
 
 ### Summary
 

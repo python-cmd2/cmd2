@@ -25,10 +25,10 @@ applications. It provides a simple API which is an extension of Python's built-i
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary
 when using cmd.
 
-> :warning: **cmd2 is now "feature complete" for the `2.x` branch and is actively working on the
-> 3.0.0 release on the `main` branch. New features will only be addressed in 3.x moving forwards. If
-> need be, we will still fix bugs in 2.x. A release candidate, 3.0.0rc1, is available for testing
-> and we would appreciate feedback.**
+> :warning: \*\*cmd2 3.0.0 has been released and there are some significant backwards
+> incompatibilities from version `2.x`. Please see the
+> [Migration Guide](https://cmd2.readthedocs.io/en/latest/upgrades/) for tips on upgrading from
+> `cmd2` 2.x to 3.x.
 
 ## The developers toolbox
 
