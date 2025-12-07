@@ -26,7 +26,6 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 # import this module, many of these imports are lazy-loaded
 # i.e. we only import the module when we use it.
 import argparse
-import cmd
 import contextlib
 import copy
 import functools
@@ -286,7 +285,7 @@ class _CommandParsers:
             del self._parsers[full_method_name]
 
 
-class Cmd(cmd.Cmd):
+class Cmd:
     """An easy but powerful framework for writing line-oriented command interpreters.
 
     Extends the Python Standard Library's cmd package by adding a lot of useful features
@@ -303,6 +302,9 @@ class Cmd(cmd.Cmd):
 
     # List for storing transcript test file names
     testfiles: ClassVar[list[str]] = []
+
+    DEFAULT_PROMPT = '(Cmd) '
+    IDENTCHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_'
 
     def __init__(
         self,
@@ -326,6 +328,7 @@ class Cmd(cmd.Cmd):
         auto_load_commands: bool = False,
         allow_clipboard: bool = True,
         suggest_similar_command: bool = False,
+        intro: str = '',
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
@@ -376,6 +379,7 @@ class Cmd(cmd.Cmd):
         :param suggest_similar_command: If ``True``, ``cmd2`` will attempt to suggest the most
                                         similar command when the user types a command that does
                                         not exist. Default: ``False``.
+        "param intro: Intro banner to print when starting the application.
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -384,11 +388,29 @@ class Cmd(cmd.Cmd):
             setattr(self, 'do_ipy', None)  # noqa: B010
 
         # initialize plugin system
-        # needs to be done before we call __init__(0)
+        # needs to be done before we most of the other stuff below
         self._initialize_plugin_system()
 
-        # Call super class constructor
-        super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
+        # Configure a few defaults
+        self.prompt = Cmd.DEFAULT_PROMPT
+        self.identchars = Cmd.IDENTCHARS
+        self.intro = intro
+        self.use_rawinput = True
+
+        # What to use for standard input
+        if stdin is not None:
+            self.stdin = stdin
+        else:
+            self.stdin = sys.stdin
+
+        # What to use for standard output
+        if stdout is not None:
+            self.stdout = stdout
+        else:
+            self.stdout = sys.stdout
+
+        # Key used for tab completion
+        self.completekey = completekey
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
@@ -3086,7 +3108,7 @@ class Cmd(cmd.Cmd):
 
         # Initialize the redirection saved state
         redir_saved_state = utils.RedirectionSavedState(
-            cast(TextIO, self.stdout), stdouts_match, self._cur_pipe_proc_reader, self._redirecting
+            self.stdout, stdouts_match, self._cur_pipe_proc_reader, self._redirecting
         )
 
         # The ProcReader for this command
@@ -3141,7 +3163,7 @@ class Cmd(cmd.Cmd):
                 new_stdout.close()
                 raise RedirectionError(f'Pipe process exited with code {proc.returncode} before command could run')
             redir_saved_state.redirecting = True
-            cmd_pipe_proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
+            cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
 
             self.stdout = new_stdout
             if stdouts_match:
@@ -3292,6 +3314,19 @@ class Cmd(cmd.Cmd):
 
         self.perror(err_msg, style=None)
         return None
+
+    def completedefault(self, *_ignored: list[str]) -> list[str]:
+        """Call to complete an input line when no command-specific complete_*() method is available.
+
+        By default, it returns an empty list.
+
+        """
+        return []
+
+    def completenames(self, text: str, *_ignored: list[str]) -> list[str]:
+        """Help provide tab-completion options for command names."""
+        dotext = 'do_' + text
+        return [a[3:] for a in self.get_names() if a.startswith(dotext)]
 
     def _suggest_similar_command(self, command: str) -> str | None:
         return suggest_similar(command, self.get_visible_commands())
@@ -4131,10 +4166,6 @@ class Cmd(cmd.Cmd):
         )
         return help_parser
 
-    # Get rid of cmd's complete_help() functions so ArgparseCompleter will complete the help command
-    if getattr(cmd.Cmd, 'complete_help', None) is not None:
-        delattr(cmd.Cmd, 'complete_help')
-
     @with_argparser(_build_help_parser)
     def do_help(self, args: argparse.Namespace) -> None:
         """List available commands or provide detailed help for a specific command."""
@@ -4640,7 +4671,7 @@ class Cmd(cmd.Cmd):
                 **kwargs,
             )
 
-            proc_reader = utils.ProcReader(proc, cast(TextIO, self.stdout), sys.stderr)
+            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
             proc_reader.wait()
 
             # Save the return code of the application for use in a pyscript
@@ -5359,7 +5390,7 @@ class Cmd(cmd.Cmd):
                 transcript += command
 
                 # Use a StdSim object to capture output
-                stdsim = utils.StdSim(cast(TextIO, self.stdout))
+                stdsim = utils.StdSim(self.stdout)
                 self.stdout = cast(TextIO, stdsim)
 
                 # then run the command and let the output go into our buffer
@@ -5385,7 +5416,7 @@ class Cmd(cmd.Cmd):
             with self.sigint_protection:
                 # Restore altered attributes to their original state
                 self.echo = saved_echo
-                self.stdout = cast(TextIO, saved_stdout)
+                self.stdout = saved_stdout
 
         # Check if all commands ran
         if commands_run < len(history):
@@ -5880,7 +5911,7 @@ class Cmd(cmd.Cmd):
         """
         self.perror(message_to_print, style=None)
 
-    def cmdloop(self, intro: str | None = None) -> int:  # type: ignore[override]
+    def cmdloop(self, intro: str = '') -> int:  # type: ignore[override]
         """Deal with extra features provided by cmd2, this is an outer wrapper around _cmdloop().
 
         _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
@@ -5922,11 +5953,11 @@ class Cmd(cmd.Cmd):
             self._run_transcript_tests([os.path.expanduser(tf) for tf in self._transcript_files])
         else:
             # If an intro was supplied in the method call, allow it to override the default
-            if intro is not None:
+            if intro:
                 self.intro = intro
 
             # Print the intro, if there is one, right after the preloop
-            if self.intro is not None:
+            if self.intro:
                 self.poutput(self.intro)
 
             # And then call _cmdloop() to enter the main loop
