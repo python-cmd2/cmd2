@@ -2106,6 +2106,21 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
     assert not out
 
 
+def test_custom_stdout() -> None:
+    # Create a custom file-like object (e.g., an in-memory string buffer)
+    custom_output = io.StringIO()
+
+    # Instantiate cmd2.Cmd with the custom_output as stdout
+    my_app = cmd2.Cmd(stdout=custom_output)
+
+    # Simulate a command
+    my_app.onecmd('help')
+
+    # Retrieve the output from the custom_output buffer
+    captured_output = custom_output.getvalue()
+    assert 'history' in captured_output
+
+
 def test_read_command_line_eof(base_app, monkeypatch) -> None:
     read_input_mock = mock.MagicMock(name='read_input', side_effect=EOFError)
     monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
