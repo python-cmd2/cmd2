@@ -24,8 +24,8 @@ top-notch interactive command-line experience for their users.
 
 !!! warning
 
-    As of version 4.0.0, `cmd2` does not have an actual dependency on `cmd`. It is API compatible, but
-    the `cmd2.Cmd` class no longer inherits from `cmd.Cmd`.
+    As of version 4.0.0, `cmd2` does not have an actual dependency on `cmd`. `cmd2` is mostly API compatible with `cmd2`.
+    See [Incompatibilities](./incompatibilities.md) for the few documented incompatibilities.
 
 ## Automatic Features
 

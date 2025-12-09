@@ -1,24 +1,26 @@
-"""Variant on standard library's cmd with extra features.
+"""cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python.
 
-To use, simply import cmd2.Cmd instead of cmd.Cmd; use precisely as though you
-were using the standard library's cmd, while enjoying the extra features.
+cmd2 is a tool for building interactive command line applications in Python. Its goal is to make it quick and easy for
+developers to build feature-rich and user-friendly interactive command line applications. It provides a simple API which
+is an extension of Python's built-in cmd module. cmd2 provides a wealth of features on top of cmd to make your life easier
+and eliminates much of the boilerplate code which would be necessary when using cmd.
 
-Searchable command history (commands: "history")
-Run commands from file, save to file, edit commands in file
-Multi-line commands
-Special-character shortcut commands (beyond cmd's "?" and "!")
-Settable environment parameters
-Parsing commands with `argparse` argument parsers (flags)
-Redirection to file or paste buffer (clipboard) with > or >>
-Easy transcript-based testing of applications (see examples/transcript_example.py)
-Bash-style ``select`` available
+Extra features include:
+- Searchable command history (commands: "history")
+- Run commands from file, save to file, edit commands in file
+- Multi-line commands
+- Special-character shortcut commands (beyond cmd's "?" and "!")
+- Settable environment parameters
+- Parsing commands with `argparse` argument parsers (flags)
+- Redirection to file or paste buffer (clipboard) with > or >>
+- Easy transcript-based testing of applications (see examples/transcript_example.py)
+- Bash-style ``select`` available
 
 Note, if self.stdout is different than sys.stdout, then redirection with > and |
 will only work if `self.poutput()` is used in place of `print`.
 
-- Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
-
-Git repository on GitHub at https://github.com/python-cmd2/cmd2
+GitHub: https://github.com/python-cmd2/cmd2
+Documentation: https://cmd2.readthedocs.io/
 """
 
 # This module has many imports, quite a few of which are only
@@ -63,7 +65,7 @@ from typing import (
 )
 
 import rich.box
-from rich.console import Group
+from rich.console import Group, RenderableType
 from rich.highlighter import ReprHighlighter
 from rich.rule import Rule
 from rich.style import Style, StyleType
@@ -304,7 +306,6 @@ class Cmd:
     testfiles: ClassVar[list[str]] = []
 
     DEFAULT_PROMPT = '(Cmd) '
-    IDENTCHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_'
 
     def __init__(
         self,
@@ -328,7 +329,7 @@ class Cmd:
         auto_load_commands: bool = False,
         allow_clipboard: bool = True,
         suggest_similar_command: bool = False,
-        intro: str = '',
+        intro: RenderableType = '',
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
@@ -393,7 +394,6 @@ class Cmd:
 
         # Configure a few defaults
         self.prompt = Cmd.DEFAULT_PROMPT
-        self.identchars = Cmd.IDENTCHARS
         self.intro = intro
         self.use_rawinput = True
 
@@ -2714,10 +2714,6 @@ class Cmd:
 
     def parseline(self, line: str) -> tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.
-
-        NOTE: This is an override of a parent class method.  It is only used by other parent class methods.
-
-        Different from the parent class method, this ignores self.identchars.
 
         :param line: line read by readline
         :return: tuple containing (command, args, line)

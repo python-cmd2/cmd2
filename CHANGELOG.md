@@ -1,3 +1,8 @@
+## 4.0.0 (TBD)
+
+- Breaking Changes
+    - `cmd2` no longer has a dependency on `cmd` and `cmd2.Cmd` no longer inherits from `cmd.Cmd`
+
 ## 3.0.0 (December 7, 2025)
 
 ### Summary
