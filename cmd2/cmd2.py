@@ -3314,15 +3314,11 @@ class Cmd:
     def completedefault(self, *_ignored: list[str]) -> list[str]:
         """Call to complete an input line when no command-specific complete_*() method is available.
 
-        By default, it returns an empty list.
+        This method is only called for non-argparse-based commands.
 
+        By default, it returns an empty list.
         """
         return []
-
-    def completenames(self, text: str, *_ignored: list[str]) -> list[str]:
-        """Help provide tab-completion options for command names."""
-        dotext = 'do_' + text
-        return [a[3:] for a in self.get_names() if a.startswith(dotext)]
 
     def _suggest_similar_command(self, command: str) -> str | None:
         return suggest_similar(command, self.get_visible_commands())
