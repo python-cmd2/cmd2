@@ -2434,9 +2434,7 @@ class Cmd:
             if len(self.completion_matches) == 1 and self.allow_closing_quote and completion_token_quote:
                 self.completion_matches[0] += completion_token_quote
 
-    def complete(  # type: ignore[override]
-        self, text: str, state: int, custom_settings: utils.CustomCompletionSettings | None = None
-    ) -> str | None:
+    def complete(self, text: str, state: int, custom_settings: utils.CustomCompletionSettings | None = None) -> str | None:
         """Override of cmd's complete method which returns the next possible completion for 'text'.
 
         This completer function is called by readline as complete(text, state), for state in 0, 1, 2, …,
@@ -3294,7 +3292,7 @@ class Cmd:
 
         return stop if stop is not None else False
 
-    def default(self, statement: Statement) -> bool | None:  # type: ignore[override]
+    def default(self, statement: Statement) -> bool | None:
         """Execute when the command given isn't a recognized command implemented by a do_* method.
 
         :param statement: Statement object with parsed input
@@ -5903,11 +5901,10 @@ class Cmd:
         """
         self.perror(message_to_print, style=None)
 
-    def cmdloop(self, intro: str = '') -> int:  # type: ignore[override]
+    def cmdloop(self, intro: RenderableType = '') -> int:
         """Deal with extra features provided by cmd2, this is an outer wrapper around _cmdloop().
 
-        _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
-        the following extra features provided by cmd2:
+        _cmdloop() provides the main loop.  This provides the following extra features provided by cmd2:
         - transcript testing
         - intro banner
         - exit code
