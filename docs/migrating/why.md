@@ -22,6 +22,11 @@ of [cmd][cmd] will add many features to an application without any further modif
 to `cmd2` will also open many additional doors for making it possible for developers to provide a
 top-notch interactive command-line experience for their users.
 
+!!! warning
+
+    As of version 4.0.0, `cmd2` does not have an actual dependency on `cmd`. `cmd2` is mostly API compatible with `cmd2`.
+    See [Incompatibilities](./incompatibilities.md) for the few documented incompatibilities.
+
 ## Automatic Features
 
 After switching from [cmd][cmd] to `cmd2`, your application will have the following new features and

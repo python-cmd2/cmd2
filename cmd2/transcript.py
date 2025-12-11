@@ -46,7 +46,7 @@ class Cmd2TestCase(unittest.TestCase):
 
             # Trap stdout
             self._orig_stdout = self.cmdapp.stdout
-            self.cmdapp.stdout = cast(TextIO, utils.StdSim(cast(TextIO, self.cmdapp.stdout)))
+            self.cmdapp.stdout = cast(TextIO, utils.StdSim(self.cmdapp.stdout))
 
     def tearDown(self) -> None:
         """Instructions that will be executed after each test method."""

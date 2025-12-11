@@ -137,7 +137,7 @@ class PyBridge:
                 )
         finally:
             with self._cmd2_app.sigint_protection:
-                self._cmd2_app.stdout = cast(IO[str], copy_cmd_stdout.inner_stream)
+                self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout.inner_stream)
                 if stdouts_match:
                     sys.stdout = self._cmd2_app.stdout
 

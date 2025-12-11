@@ -78,7 +78,6 @@ plugins:
             show_if_no_docstring: true
             preload_modules:
               - argparse
-              - cmd
             inherited_members: true
             members_order: source
             separate_signature: true
