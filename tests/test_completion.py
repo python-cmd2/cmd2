@@ -219,14 +219,6 @@ def cmd2_app():
     return CompletionsExample()
 
 
-def test_cmd2_command_completion_single(cmd2_app) -> None:
-    text = 'he'
-    line = text
-    endidx = len(line)
-    begidx = endidx - len(text)
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, cmd2_app.get_all_commands()) == ['help']
-
-
 def test_complete_command_single(cmd2_app) -> None:
     text = 'he'
     line = text
@@ -322,7 +314,10 @@ def test_cmd2_command_completion_multiple(cmd2_app) -> None:
     line = text
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, cmd2_app.get_all_commands()) == ['help', 'history']
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None
+    assert cmd2_app.completion_matches == ['help', 'history']
 
 
 def test_cmd2_command_completion_nomatch(cmd2_app) -> None:
@@ -330,7 +325,10 @@ def test_cmd2_command_completion_nomatch(cmd2_app) -> None:
     line = text
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, cmd2_app.get_all_commands()) == []
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is None
+    assert cmd2_app.completion_matches == []
 
 
 def test_cmd2_help_completion_single(cmd2_app) -> None:
