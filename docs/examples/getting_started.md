@@ -19,9 +19,7 @@ click the **Copy** button in the top-right):
 !!! example "getting_started.py"
 
     ```py
-    {%
-        include "../../examples/getting_started.py"
-    %}
+    --8<-- "examples/getting_started.py"
     ```
 
 ## Basic Application

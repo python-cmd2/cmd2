@@ -5,9 +5,7 @@ Here is a basic example `cmd2` application which demonstrates many capabilities 
 !!! example "examples/getting_started.py"
 
     ```py
-    {%
-        include "../../examples/getting_started.py"
-    %}
+    --8<-- "examples/getting_started.py"
     ```
 
 ## Cmd class initializer

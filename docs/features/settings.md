@@ -105,9 +105,7 @@ Here's an example, from
 !!! example "examples/environment.py"
 
     ```py
-    {%
-      include "../../examples/environment.py"
-    %}
+    --8<-- "examples/environment.py"
     ```
 
 If you want to be notified when a setting changes (as we do above), then be sure to supply a method
