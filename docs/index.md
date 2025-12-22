@@ -25,46 +25,39 @@ app = App()
 app.cmdloop()
 ```
 
-<!-- Getting Started -->
+## Getting Started
 
-{%
-   include-markdown "./overview/index.md"
-%}
+See the [Getting Started](overview/index.md) section for info on how to get started building a
+`cmd2` application.
 
-<!-- Migrating from cmd -->
+## Migrating from cmd2
 
-{%
-   include-markdown "./migrating/index.md"
-%}
+See the [Migrating from cmd2](migrating/index.md) section for info on how to migrate a `cmd`
+application to `cmd2`.
 
 ## Features
 
-{%
-   include-markdown "./features/index.md"
-    start="<!--intro-start-->"
-    end="<!--intro-end-->"
-%}
+See the [Features](features/index.md) section for a detailed guide to the features available within
+`cmd2`.
 
 ## Examples
 
-{%
-   include-markdown "./examples/index.md"
-    start="<!--intro-start-->"
-    end="<!--intro-end-->"
-%}
+See the [Examples](examples/index.md) section for various examples of using `cmd2`.
 
 ## Mixins
 
-{%
-   include-markdown "./mixins/index.md"
-    start="<!--intro-start-->"
-    end="<!--intro-end-->"
-%}
+See the [Mixins](mixins/index.md) section for info on how to extend `cmd2` using mixins.
 
-## [Testing](testing.md)
+## Testing
 
-## [API Reference](api/index.md)
+See the [Testing](testing.md) section for special considerations when writing unit or integration
+tests for a `cmd2` application.
+
+## API Reference
+
+See the [API Reference](api/index.md) for detailed information on the public API of `cmd2`.
 
 ## Meta
 
-[Documentation Conventions](doc_conventions.md)
+See the [Documentation Conventions](doc_conventions.md) for info on conventions used in this
+documentation.

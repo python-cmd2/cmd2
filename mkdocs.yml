@@ -60,10 +60,6 @@ theme:
 plugins:
   - search
   - git-revision-date-localized
-  - include-markdown:
-      preserve_includer_indent: true
-      dedent: true
-      comments: false
   - macros:
       render_by_default: false
       on_error_fail: true
@@ -121,6 +117,9 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.keys
   - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      base_path: [".", "docs"]
+      check_paths: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -137,7 +136,7 @@ validation:
     absolute_links: info
   links:
     not_found: warn
-    absolute_links: info
+    absolute_links: ignore
     unrecognized_links: info
 
 not_in_nav: |
