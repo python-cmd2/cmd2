@@ -106,7 +106,6 @@ namespace_clean.add_task(mypy_clean, 'mypy')
 #
 #####
 DOCS_BUILDDIR = 'build'
-MKDOCS_OPTS = '-nvWT'  # Be nitpicky, verbose, and treat warnings as errors
 
 
 @invoke.task()
