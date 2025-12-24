@@ -48,6 +48,7 @@ from collections.abc import (
     Callable,
     Iterable,
     Mapping,
+    Sequence,
 )
 from types import (
     FrameType,
@@ -320,10 +321,10 @@ class Cmd:
         include_py: bool = False,
         include_ipy: bool = False,
         allow_cli_args: bool = True,
-        transcript_files: list[str] | None = None,
+        transcript_files: Sequence[str] | None = None,
         allow_redirection: bool = True,
-        multiline_commands: list[str] | None = None,
-        terminators: list[str] | None = None,
+        multiline_commands: Iterable[str] | None = None,
+        terminators: Iterable[str] | None = None,
         shortcuts: dict[str, str] | None = None,
         command_sets: Iterable[CommandSet] | None = None,
         auto_load_commands: bool = False,
@@ -568,7 +569,7 @@ class Cmd:
             elif callargs:
                 self._startup_commands.extend(callargs)
         elif transcript_files:
-            self._transcript_files = transcript_files
+            self._transcript_files = list(transcript_files)
 
         # Set the pager(s) for use when displaying output using a pager
         if sys.platform.startswith('win'):
@@ -2870,7 +2871,7 @@ class Cmd:
 
     def runcmds_plus_hooks(
         self,
-        cmds: list[HistoryItem] | list[str],
+        cmds: Iterable[HistoryItem] | Iterable[str],
         *,
         add_to_history: bool = True,
         stop_on_keyboard_interrupt: bool = False,
@@ -4218,7 +4219,7 @@ class Cmd:
                 self.perror(err_msg, style=None)
                 self.last_result = False
 
-    def print_topics(self, header: str, cmds: list[str] | None, cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
+    def print_topics(self, header: str, cmds: Sequence[str] | None, cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
         """Print groups of commands and topics in columns and an optional header.
 
         Override of cmd's print_topics() to use Rich.
@@ -4307,7 +4308,7 @@ class Cmd:
         self.poutput(category_grid)
         self.poutput()
 
-    def render_columns(self, str_list: list[str] | None, display_width: int = 80) -> str:
+    def render_columns(self, str_list: Sequence[str] | None, display_width: int = 80) -> str:
         """Render a list of single-line strings as a compact set of columns.
 
         This method correctly handles strings containing ANSI style sequences and
@@ -4366,7 +4367,7 @@ class Cmd:
 
         return "\n".join(rows)
 
-    def columnize(self, str_list: list[str] | None, display_width: int = 80) -> None:
+    def columnize(self, str_list: Sequence[str] | None, display_width: int = 80) -> None:
         """Display a list of single-line strings as a compact set of columns.
 
         Override of cmd's columnize() that uses the render_columns() method.
