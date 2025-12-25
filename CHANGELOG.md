@@ -1,8 +1,9 @@
-## 4.0.0 (TBD, 2026)
+## 3.1.0 (December 25, 2025)
 
 - Potentially Breaking Changes
     - `cmd2` no longer has a dependency on `cmd` and `cmd2.Cmd` no longer inherits from `cmd.Cmd`
         - We don't _think_ this should impact users, but there is theoretically a possibility
+        - This opens the door for more impactful changes in the next major release
 
 ## 3.0.0 (December 7, 2025)
 
