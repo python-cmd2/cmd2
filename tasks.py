@@ -1,10 +1,4 @@
-"""Development related tasks to be run with 'invoke'.
-
-Make sure you satisfy the following Python module requirements if you are trying to publish a release to PyPI:
-    - twine >= 1.11.0
-    - wheel >= 0.31.0
-    - setuptools >= 39.1.0
-"""
+"""Development related tasks to be run with 'invoke'."""
 
 import contextlib
 import os
@@ -279,43 +273,3 @@ def validatetag(context: Context) -> None:
 
 
 namespace.add_task(validatetag)
-
-
-@invoke.task(pre=[clean_all])
-def sdist(context: Context) -> None:
-    """Create a source distribution."""
-    with context.cd(TASK_ROOT_STR):
-        context.run('python -m build --sdist')
-
-
-namespace.add_task(sdist)
-
-
-@invoke.task(pre=[clean_all])
-def wheel(context: Context) -> None:
-    """Build a wheel distribution."""
-    with context.cd(TASK_ROOT_STR):
-        context.run('python -m build --wheel')
-
-
-namespace.add_task(wheel)
-
-
-@invoke.task(pre=[validatetag, sdist, wheel])
-def pypi(context: Context) -> None:
-    """Build and upload a distribution to pypi."""
-    with context.cd(TASK_ROOT_STR):
-        context.run('twine upload dist/*')
-
-
-namespace.add_task(pypi)
-
-
-@invoke.task(pre=[validatetag, sdist, wheel])
-def pypi_test(context: Context) -> None:
-    """Build and upload a distribution to https://test.pypi.org."""
-    with context.cd(TASK_ROOT_STR):
-        context.run('twine upload --repository testpypi dist/*')
-
-
-namespace.add_task(pypi_test)

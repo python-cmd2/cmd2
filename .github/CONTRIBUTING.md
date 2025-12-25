@@ -85,8 +85,8 @@ for a list of dependencies needed for building `cmd2`.
 | [setuptools](https://pypi.org/project/setuptools/)       | `72.1.0`        | Python package management        |
 | [setuptools-scm](https://github.com/pypa/setuptools-scm) | `8.0.4`         | Manage your versions by scm tags |
 
-> [twine](https://github.com/pypa/twine) 5.1 or newer is also needed for publishing releases to
-> PyPI, but that is something only core maintainers need to worry about.
+> [uv-publish](https://pypi.org/project/uv-publish/) is also needed for publishing releases to PyPI,
+> but that is something only core maintainers need to worry about.
 
 #### Additional prerequisites for developing cmd2
 
