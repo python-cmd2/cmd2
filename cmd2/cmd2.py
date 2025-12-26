@@ -51,7 +51,6 @@ from collections.abc import (
 )
 from types import (
     FrameType,
-    ModuleType,
 )
 from typing import (
     IO,
@@ -123,7 +122,6 @@ from .exceptions import (
 from .history import (
     History,
     HistoryItem,
-    single_line_format,
 )
 from .parsing import (
     Macro,
@@ -143,17 +141,15 @@ from .styles import Cmd2Style
 with contextlib.suppress(ImportError):
     from IPython import start_ipython
 
-from .rl_utils import (
-    RlType,
-    rl_escape_prompt,
-    rl_get_display_prompt,
-    rl_get_point,
-    rl_get_prompt,
-    rl_in_search_mode,
-    rl_set_prompt,
-    rl_type,
-    rl_warning,
-    vt100_support,
+from prompt_toolkit.completion import Completer, DummyCompleter
+from prompt_toolkit.formatted_text import ANSI
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.shortcuts import PromptSession, set_title
+
+from .pt_utils import (
+    Cmd2Completer,
+    Cmd2History,
 )
 from .utils import (
     Settable,
@@ -163,49 +159,11 @@ from .utils import (
     suggest_similar,
 )
 
-# Set up readline
-if rl_type == RlType.NONE:  # pragma: no cover
-    Cmd2GeneralConsole(sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
-else:
-    from .rl_utils import (
-        readline,
-        rl_force_redisplay,
-    )
-
-    # Used by rlcompleter in Python console loaded by py command
-    orig_rl_delims = readline.get_completer_delims()
-
-    if rl_type == RlType.PYREADLINE:
-        # Save the original pyreadline3 display completion function since we need to override it and restore it
-        orig_pyreadline_display = readline.rl.mode._display_completions
-
-    elif rl_type == RlType.GNU:
-        # Get the readline lib so we can make changes to it
-        import ctypes
-
-        from .rl_utils import (
-            readline_lib,
-        )
-
-        rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-        orig_rl_basic_quotes = cast(bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
-
-
-class _SavedReadlineSettings:
-    """readline settings that are backed up when switching between readline environments."""
-
-    def __init__(self) -> None:
-        self.completer = None
-        self.delims = ''
-        self.basic_quotes: bytes | None = None
-
 
 class _SavedCmd2Env:
     """cmd2 environment settings that are backed up when entering an interactive Python shell."""
 
     def __init__(self) -> None:
-        self.readline_settings = _SavedReadlineSettings()
-        self.readline_module: ModuleType | None = None
         self.history: list[str] = []
 
 
@@ -498,6 +456,14 @@ class Cmd:
 
         # The multiline command currently being typed which is used to tab complete multiline commands.
         self._multiline_in_progress = ''
+
+        # Initialize PromptSession
+        self.history_adapter = Cmd2History(self)
+        self.completer = Cmd2Completer(self)
+        self.session: PromptSession[str] = PromptSession(
+            history=self.history_adapter,
+            completer=self.completer,
+        )
 
         # Characters used to draw a horizontal rule. Should not be blank.
         self.ruler = "─"
@@ -1212,7 +1178,7 @@ class Cmd:
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported."""
-        return self.use_rawinput and bool(self.completekey) and rl_type != RlType.NONE
+        return self.use_rawinput and bool(self.completekey)
 
     @property
     def visible_prompt(self) -> str:
@@ -1618,11 +1584,6 @@ class Cmd:
         self.display_matches = []
         self.matches_delimited = False
         self.matches_sorted = False
-
-        if rl_type == RlType.GNU:
-            readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
-        elif rl_type == RlType.PYREADLINE:
-            readline.rl.mode._display_completions = self._display_matches_pyreadline
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> tuple[list[str], list[str]]:
         """Get all tokens through the one being completed, used by tab completion functions.
@@ -2126,122 +2087,6 @@ class Cmd:
         return compfunc(text, line, begidx, endidx)
 
     @staticmethod
-    def _pad_matches_to_display(matches_to_display: list[str]) -> tuple[list[str], int]:  # pragma: no cover
-        """Add padding to the matches being displayed as tab completion suggestions.
-
-        The default padding of readline/pyreadine is small and not visually appealing
-        especially if matches have spaces. It appears very squished together.
-
-        :param matches_to_display: the matches being padded
-        :return: the padded matches and length of padding that was added
-        """
-        if rl_type == RlType.GNU:
-            # Add 2 to the padding of 2 that readline uses for a total of 4.
-            padding = 2 * ' '
-
-        elif rl_type == RlType.PYREADLINE:
-            # Add 3 to the padding of 1 that pyreadline3 uses for a total of 4.
-            padding = 3 * ' '
-
-        else:
-            return matches_to_display, 0
-
-        return [cur_match + padding for cur_match in matches_to_display], len(padding)
-
-    def _display_matches_gnu_readline(
-        self, substitution: str, matches: list[str], longest_match_length: int
-    ) -> None:  # pragma: no cover
-        """Print a match list using GNU readline's rl_display_match_list().
-
-        :param substitution: the substitution written to the command line
-        :param matches: the tab completion matches to display
-        :param longest_match_length: longest printed length of the matches
-        """
-        if rl_type == RlType.GNU:
-            # Print hint if one exists and we are supposed to display it
-            hint_printed = False
-            if self.always_show_hint and self.completion_hint:
-                hint_printed = True
-                sys.stdout.write('\n' + self.completion_hint)
-
-            # Check if we already have formatted results to print
-            if self.formatted_completions:
-                if not hint_printed:
-                    sys.stdout.write('\n')
-                sys.stdout.write('\n' + self.formatted_completions + '\n')
-
-            # Otherwise use readline's formatter
-            else:
-                # Check if we should show display_matches
-                if self.display_matches:
-                    matches_to_display = self.display_matches
-
-                    # Recalculate longest_match_length for display_matches
-                    longest_match_length = 0
-
-                    for cur_match in matches_to_display:
-                        cur_length = su.str_width(cur_match)
-                        longest_match_length = max(longest_match_length, cur_length)
-                else:
-                    matches_to_display = matches
-
-                # Add padding for visual appeal
-                matches_to_display, padding_length = self._pad_matches_to_display(matches_to_display)
-                longest_match_length += padding_length
-
-                # We will use readline's display function (rl_display_match_list()), so we
-                # need to encode our string as bytes to place in a C array.
-                encoded_substitution = bytes(substitution, encoding='utf-8')
-                encoded_matches = [bytes(cur_match, encoding='utf-8') for cur_match in matches_to_display]
-
-                # rl_display_match_list() expects matches to be in argv format where
-                # substitution is the first element, followed by the matches, and then a NULL.
-                strings_array = cast(list[bytes | None], (ctypes.c_char_p * (1 + len(encoded_matches) + 1))())
-
-                # Copy in the encoded strings and add a NULL to the end
-                strings_array[0] = encoded_substitution
-                strings_array[1:-1] = encoded_matches
-                strings_array[-1] = None
-
-                # rl_display_match_list(strings_array, number of completion matches, longest match length)
-                readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
-
-            # Redraw prompt and input line
-            rl_force_redisplay()
-
-    def _display_matches_pyreadline(self, matches: list[str]) -> None:  # pragma: no cover
-        """Print a match list using pyreadline3's _display_completions().
-
-        :param matches: the tab completion matches to display
-        """
-        if rl_type == RlType.PYREADLINE:
-            # Print hint if one exists and we are supposed to display it
-            hint_printed = False
-            if self.always_show_hint and self.completion_hint:
-                hint_printed = True
-                sys.stdout.write('\n' + self.completion_hint)
-
-            # Check if we already have formatted results to print
-            if self.formatted_completions:
-                if not hint_printed:
-                    sys.stdout.write('\n')
-                sys.stdout.write('\n' + self.formatted_completions + '\n')
-
-                # Redraw the prompt and input lines
-                rl_force_redisplay()
-
-            # Otherwise use pyreadline3's formatter
-            else:
-                # Check if we should show display_matches
-                matches_to_display = self.display_matches if self.display_matches else matches
-
-                # Add padding for visual appeal
-                matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
-
-                # Display matches using actual display function. This also redraws the prompt and input lines.
-                orig_pyreadline_display(matches_to_display)
-
-    @staticmethod
     def _determine_ap_completer_type(parser: argparse.ArgumentParser) -> type[argparse_completer.ArgparseCompleter]:
         """Determine what type of ArgparseCompleter to use on a given parser.
 
@@ -2434,7 +2279,15 @@ class Cmd:
             if len(self.completion_matches) == 1 and self.allow_closing_quote and completion_token_quote:
                 self.completion_matches[0] += completion_token_quote
 
-    def complete(self, text: str, state: int, custom_settings: utils.CustomCompletionSettings | None = None) -> str | None:
+    def complete(
+        self,
+        text: str,
+        state: int,
+        line: str | None = None,
+        begidx: int | None = None,
+        endidx: int | None = None,
+        custom_settings: utils.CustomCompletionSettings | None = None,
+    ) -> str | None:
         """Override of cmd's complete method which returns the next possible completion for 'text'.
 
         This completer function is called by readline as complete(text, state), for state in 0, 1, 2, …,
@@ -2446,6 +2299,9 @@ class Cmd:
 
         :param text: the current word that user is typing
         :param state: non-negative integer
+        :param line: optional current input line
+        :param begidx: optional beginning index of text
+        :param endidx: optional ending index of text
         :param custom_settings: used when not tab completing the main command line
         :return: the next possible completion for text or None
         """
@@ -2453,25 +2309,33 @@ class Cmd:
             if state == 0:
                 self._reset_completion_defaults()
 
+                # If line is provided, use it and indices. Otherwise fallback to empty (for safety)
+                if line is None:
+                    line = ""
+                if begidx is None:
+                    begidx = 0
+                if endidx is None:
+                    endidx = 0
+
                 # Check if we are completing a multiline command
                 if self._at_continuation_prompt:
                     # lstrip and prepend the previously typed portion of this multiline command
                     lstripped_previous = self._multiline_in_progress.lstrip()
-                    line = lstripped_previous + readline.get_line_buffer()
+                    line = lstripped_previous + line
 
                     # Increment the indexes to account for the prepended text
-                    begidx = len(lstripped_previous) + readline.get_begidx()
-                    endidx = len(lstripped_previous) + readline.get_endidx()
+                    begidx = len(lstripped_previous) + begidx
+                    endidx = len(lstripped_previous) + endidx
                 else:
                     # lstrip the original line
-                    orig_line = readline.get_line_buffer()
+                    orig_line = line
                     line = orig_line.lstrip()
                     num_stripped = len(orig_line) - len(line)
 
                     # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
                     # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
-                    begidx = max(readline.get_begidx() - num_stripped, 0)
-                    endidx = max(readline.get_endidx() - num_stripped, 0)
+                    begidx = max(begidx - num_stripped, 0)
+                    endidx = max(endidx - num_stripped, 0)
 
                 # Shortcuts are not word break characters when tab completing. Therefore, shortcuts become part
                 # of the text variable if there isn't a word break, like a space, after it. We need to remove it
@@ -2531,13 +2395,11 @@ class Cmd:
                         (err_str, Cmd2Style.ERROR if ex.apply_style else ""),
                     ),
                 )
-                rl_force_redisplay()
             return None
         except Exception as ex:  # noqa: BLE001
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
             self.perror()
             self.pexcept(ex)
-            rl_force_redisplay()
             return None
 
     def in_script(self) -> bool:
@@ -2726,7 +2588,6 @@ class Cmd:
         add_to_history: bool = True,
         raise_keyboard_interrupt: bool = False,
         py_bridge_call: bool = False,
-        orig_rl_history_length: int | None = None,
     ) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
@@ -2738,9 +2599,6 @@ class Cmd:
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
                                command's stdout.
-        :param orig_rl_history_length: Optional length of the readline history before the current command was typed.
-                                       This is used to assist in combining multiline readline history entries and is only
-                                       populated by cmd2. Defaults to None.
         :return: True if running of commands should stop
         """
         import datetime
@@ -2750,7 +2608,7 @@ class Cmd:
 
         try:
             # Convert the line into a Statement
-            statement = self._input_line_to_statement(line, orig_rl_history_length=orig_rl_history_length)
+            statement = self._input_line_to_statement(line)
 
             # call the postparsing hooks
             postparsing_data = plugin.PostparsingData(False, statement)
@@ -2905,7 +2763,7 @@ class Cmd:
 
         return False
 
-    def _complete_statement(self, line: str, *, orig_rl_history_length: int | None = None) -> Statement:
+    def _complete_statement(self, line: str) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
@@ -2914,29 +2772,10 @@ class Cmd:
         backwards compatibility with the standard library version of cmd.
 
         :param line: the line being parsed
-        :param orig_rl_history_length: Optional length of the readline history before the current command was typed.
-                                       This is used to assist in combining multiline readline history entries and is only
-                                       populated by cmd2. Defaults to None.
         :return: the completed Statement
         :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
         :raises EmptyStatement: when the resulting Statement is blank
         """
-
-        def combine_rl_history(statement: Statement) -> None:
-            """Combine all lines of a multiline command into a single readline history entry."""
-            if orig_rl_history_length is None or not statement.multiline_command:
-                return
-
-            # Remove all previous lines added to history for this command
-            while readline.get_current_history_length() > orig_rl_history_length:
-                readline.remove_history_item(readline.get_current_history_length() - 1)
-
-            formatted_command = single_line_format(statement)
-
-            # If formatted command is different than the previous history item, add it
-            if orig_rl_history_length == 0 or formatted_command != readline.get_history_item(orig_rl_history_length):
-                readline.add_history(formatted_command)
-
         while True:
             try:
                 statement = self.statement_parser.parse(line)
@@ -2976,11 +2815,6 @@ class Cmd:
 
                 line += f'\n{nextline}'
 
-                # Combine all history lines of this multiline command as we go.
-                if nextline:
-                    statement = self.statement_parser.parse_command_only(line)
-                    combine_rl_history(statement)
-
             except KeyboardInterrupt:
                 self.poutput('^C')
                 statement = self.statement_parser.parse('')
@@ -2990,18 +2824,13 @@ class Cmd:
 
         if not statement.command:
             raise EmptyStatement
-        # If necessary, update history with completed multiline command.
-        combine_rl_history(statement)
 
         return statement
 
-    def _input_line_to_statement(self, line: str, *, orig_rl_history_length: int | None = None) -> Statement:
+    def _input_line_to_statement(self, line: str) -> Statement:
         """Parse the user's input line and convert it to a Statement, ensuring that all macros are also resolved.
 
         :param line: the line being parsed
-        :param orig_rl_history_length: Optional length of the readline history before the current command was typed.
-                                       This is used to assist in combining multiline readline history entries and is only
-                                       populated by cmd2. Defaults to None.
         :return: parsed command line as a Statement
         :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
         :raises EmptyStatement: when the resulting Statement is blank
@@ -3012,13 +2841,12 @@ class Cmd:
         # Continue until all macros are resolved
         while True:
             # Make sure all input has been read and convert it to a Statement
-            statement = self._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+            statement = self._complete_statement(line)
 
             # If this is the first loop iteration, save the original line and stop
             # combining multiline history entries in the remaining iterations.
             if orig_line is None:
                 orig_line = statement.raw
-                orig_rl_history_length = None
 
             # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
             if statement.command in self.macros and statement.command not in used_macros:
@@ -3323,10 +3151,10 @@ class Cmd:
 
     def read_input(
         self,
-        prompt: str,
+        prompt: str = '',
         *,
         history: list[str] | None = None,
-        completion_mode: utils.CompletionMode = utils.CompletionMode.NONE,
+        completion_mode: utils.CompletionMode = utils.CompletionMode.COMMANDS,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
         choices_provider: ChoicesProviderFunc | None = None,
@@ -3335,128 +3163,64 @@ class Cmd:
     ) -> str:
         """Read input from appropriate stdin value.
 
-        Also supports tab completion and up-arrow history while input is being entered.
-
-        :param prompt: prompt to display to user
-        :param history: optional list of strings to use for up-arrow history. If completion_mode is
-                        CompletionMode.COMMANDS and this is None, then cmd2's command list history will
-                        be used. The passed in history will not be edited. It is the caller's responsibility
-                        to add the returned input to history if desired. Defaults to None.
-        :param completion_mode: tells what type of tab completion to support. Tab completion only works when
-                                self.use_rawinput is True and sys.stdin is a terminal. Defaults to
-                                CompletionMode.NONE.
-
-        The following optional settings apply when completion_mode is CompletionMode.CUSTOM:
-
-        :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
-                                ArgparseCompleter. This is helpful in cases when you're tab completing
-                                flag-like tokens (e.g. -o, --option) and you don't want them to be
-                                treated as argparse flags when quoted. Set this to True if you plan
-                                on passing the string to argparse with the tokens still quoted.
-
-        A maximum of one of these should be provided:
-
-        :param choices: iterable of accepted values for single argument
-        :param choices_provider: function that provides choices for single argument
-        :param completer: tab completion function that provides choices for single argument
-        :param parser: an argument parser which supports the tab completion of multiple arguments
-
-        :return: the line read from stdin with all trailing new lines removed
-        :raises Exception: any exceptions raised by input() and stdin.readline()
+        :param prompt: prompt to display
+        :param history: optional list of history items to use for this input
+        :param completion_mode: type of tab completion to perform
+        :param preserve_quotes: if True, quotes are preserved in the completion items
+        :param choices: optional list of choices to tab complete
+        :param choices_provider: optional function that provides choices
+        :param completer: optional completer function
+        :param parser: optional argparse parser
+        :return: the line read from input
         """
-        readline_configured = False
-        saved_completer: CompleterFunc | None = None
-        saved_history: list[str] | None = None
-
-        def configure_readline() -> None:
-            """Configure readline tab completion and history."""
-            nonlocal readline_configured
-            nonlocal saved_completer
-            nonlocal saved_history
-            nonlocal parser
-
-            if readline_configured or rl_type == RlType.NONE:  # pragma: no cover
-                return
-
-            # Configure tab completion
-            if self._completion_supported():
-                saved_completer = readline.get_completer()
-
-                # Disable completion
-                if completion_mode == utils.CompletionMode.NONE:
-
-                    def complete_none(text: str, state: int) -> str | None:  # pragma: no cover  # noqa: ARG001
-                        return None
-
-                    complete_func = complete_none
-
-                # Complete commands
-                elif completion_mode == utils.CompletionMode.COMMANDS:
-                    complete_func = self.complete
-
-                # Set custom completion settings
-                else:
-                    if parser is None:
-                        parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
-                        parser.add_argument(
-                            'arg',
-                            suppress_tab_hint=True,
-                            choices=choices,
-                            choices_provider=choices_provider,
-                            completer=completer,
-                        )
-
-                    custom_settings = utils.CustomCompletionSettings(parser, preserve_quotes=preserve_quotes)
-                    complete_func = functools.partial(self.complete, custom_settings=custom_settings)
-
-                readline.set_completer(complete_func)
-
-            # Overwrite history if not completing commands or new history was provided
-            if completion_mode != utils.CompletionMode.COMMANDS or history is not None:
-                saved_history = []
-                for i in range(1, readline.get_current_history_length() + 1):
-                    saved_history.append(readline.get_history_item(i))
-
-                readline.clear_history()
-                if history is not None:
-                    for item in history:
-                        readline.add_history(item)
-
-            readline_configured = True
-
-        def restore_readline() -> None:
-            """Restore readline tab completion and history."""
-            nonlocal readline_configured
-            if not readline_configured or rl_type == RlType.NONE:  # pragma: no cover
-                return
-
-            if self._completion_supported():
-                readline.set_completer(saved_completer)
-
-            if saved_history is not None:
-                readline.clear_history()
-                for item in saved_history:
-                    readline.add_history(item)
-
-            readline_configured = False
-
-        # Check we are reading from sys.stdin
-        if self.use_rawinput:
-            if sys.stdin.isatty():
-                try:
-                    # Deal with the vagaries of readline and ANSI escape codes
-                    escaped_prompt = rl_escape_prompt(prompt)
-
-                    with self.sigint_protection:
-                        configure_readline()
-                    line = input(escaped_prompt)
-                finally:
-                    with self.sigint_protection:
-                        restore_readline()
+        if self.use_rawinput and self.stdin.isatty():
+            # Determine completer
+            completer_to_use: Completer
+            if completion_mode == utils.CompletionMode.NONE:
+                completer_to_use = DummyCompleter()
+            elif completion_mode == utils.CompletionMode.COMMANDS:
+                completer_to_use = self.completer
             else:
-                line = input()
-                if self.echo:
-                    sys.stdout.write(f'{prompt}{line}\n')
+                # Custom completion
+                if parser is None:
+                    parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
+                    parser.add_argument(
+                        'arg',
+                        suppress_tab_hint=True,
+                        choices=choices,
+                        choices_provider=choices_provider,
+                        completer=completer,
+                    )
+                custom_settings = utils.CustomCompletionSettings(parser, preserve_quotes=preserve_quotes)
+                completer_to_use = Cmd2Completer(self, custom_settings=custom_settings)
+
+            # Use dynamic prompt if the prompt matches self.prompt
+            def get_prompt() -> Any:
+                return ANSI(self.prompt)
+
+            prompt_to_use: Any = ANSI(prompt)
+            if prompt == self.prompt:
+                prompt_to_use = get_prompt
+
+            with patch_stdout():
+                if history is not None:
+                    # If custom history is provided, we use the prompt() shortcut
+                    # which can take a history object.
+                    history_to_use = InMemoryHistory()
+                    for item in history:
+                        history_to_use.append_string(item)
+                    from prompt_toolkit import prompt as pt_prompt
+
+                    return pt_prompt(
+                        prompt_to_use,
+                        completer=completer_to_use,
+                        history=history_to_use,
+                    )
+
+                return self.session.prompt(
+                    prompt_to_use,
+                    completer=completer_to_use,
+                )
 
         # Otherwise read from self.stdin
         elif self.stdin.isatty():
@@ -3465,20 +3229,14 @@ class Cmd:
             self.stdout.flush()
             line = self.stdin.readline()
             if len(line) == 0:
-                line = 'eof'
+                raise EOFError
+            return line.rstrip('\n')
         else:
-            # we are reading from a pipe, read the line to see if there is
-            # anything there, if so, then decide whether to print the
-            # prompt or not
+            # not a tty, just read the line
             line = self.stdin.readline()
-            if len(line):
-                # we read something, output the prompt and the something
-                if self.echo:
-                    self.poutput(f'{prompt}{line}')
-            else:
-                line = 'eof'
-
-        return line.rstrip('\r\n')
+            if len(line) == 0:
+                raise EOFError
+            return line.rstrip('\n')
 
     def _read_command_line(self, prompt: str) -> str:
         """Read command line from appropriate stdin.
@@ -3499,62 +3257,6 @@ class Cmd:
             # Command line is gone. Do not allow asynchronous changes to the terminal.
             self.terminal_lock.acquire()
 
-    def _set_up_cmd2_readline(self) -> _SavedReadlineSettings:
-        """Set up readline with cmd2-specific settings, called at beginning of command loop.
-
-        :return: Class containing saved readline settings
-        """
-        readline_settings = _SavedReadlineSettings()
-
-        if rl_type == RlType.GNU:
-            # To calculate line count when printing async_alerts, we rely on commands wider than
-            # the terminal to wrap across multiple lines. The default for horizontal-scroll-mode
-            # is "off" but a user may have overridden it in their readline initialization file.
-            readline.parse_and_bind("set horizontal-scroll-mode off")
-
-        if self._completion_supported():
-            # Set up readline for our tab completion needs
-            if rl_type == RlType.GNU:
-                # GNU readline automatically adds a closing quote if the text being completed has an opening quote.
-                # We don't want this behavior since cmd2 only adds a closing quote when self.allow_closing_quote is True.
-                # To fix this behavior, set readline's rl_basic_quote_characters to NULL. We don't need to worry about setting
-                # rl_completion_suppress_quote since we never declared rl_completer_quote_characters.
-                readline_settings.basic_quotes = cast(bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value)
-                rl_basic_quote_characters.value = None
-
-            readline_settings.completer = readline.get_completer()
-            readline.set_completer(self.complete)
-
-            # Set the readline word delimiters for completion
-            completer_delims = " \t\n"
-            completer_delims += ''.join(constants.QUOTES)
-            completer_delims += ''.join(constants.REDIRECTION_CHARS)
-            completer_delims += ''.join(self.statement_parser.terminators)
-
-            readline_settings.delims = readline.get_completer_delims()
-            readline.set_completer_delims(completer_delims)
-
-            # Enable tab completion
-            readline.parse_and_bind(self.completekey + ": complete")
-
-        return readline_settings
-
-    def _restore_readline(self, readline_settings: _SavedReadlineSettings) -> None:
-        """Restore saved readline settings, called at end of command loop.
-
-        :param readline_settings: the readline settings to restore
-        """
-        if self._completion_supported():
-            # Restore what we changed in readline
-            readline.set_completer(readline_settings.completer)
-            readline.set_completer_delims(readline_settings.delims)
-
-            if rl_type == RlType.GNU:
-                readline.set_completion_display_matches_hook(None)
-                rl_basic_quote_characters.value = readline_settings.basic_quotes
-            elif rl_type == RlType.PYREADLINE:
-                readline.rl.mode._display_completions = orig_pyreadline_display
-
     def _cmdloop(self) -> None:
         """Repeatedly issue a prompt, accept input, parse it, and dispatch to apporpriate commands.
 
@@ -3563,25 +3265,12 @@ class Cmd:
 
         This serves the same role as cmd.cmdloop().
         """
-        saved_readline_settings = None
-
         try:
-            # Get sigint protection while we set up readline for cmd2
-            with self.sigint_protection:
-                saved_readline_settings = self._set_up_cmd2_readline()
-
             # Run startup commands
             stop = self.runcmds_plus_hooks(self._startup_commands)
             self._startup_commands.clear()
 
             while not stop:
-                # Used in building multiline readline history entries. Only applies
-                # when command line is read by input() in a terminal.
-                if rl_type != RlType.NONE and self.use_rawinput and sys.stdin.isatty():
-                    orig_rl_history_length = readline.get_current_history_length()
-                else:
-                    orig_rl_history_length = None
-
                 # Get commands from user
                 try:
                     line = self._read_command_line(self.prompt)
@@ -3590,12 +3279,9 @@ class Cmd:
                     line = ''
 
                 # Run the command along with all associated pre and post hooks
-                stop = self.onecmd_plus_hooks(line, orig_rl_history_length=orig_rl_history_length)
+                stop = self.onecmd_plus_hooks(line)
         finally:
-            # Get sigint protection while we restore readline settings
-            with self.sigint_protection:
-                if saved_readline_settings is not None:
-                    self._restore_readline(saved_readline_settings)
+            pass
 
     #############################################################
     # Parsers and functions for alias command and subcommands
@@ -4694,96 +4380,23 @@ class Cmd:
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
-    def _set_up_py_shell_env(self, interp: InteractiveConsole) -> _SavedCmd2Env:
+    def _set_up_py_shell_env(self, _interp: InteractiveConsole) -> _SavedCmd2Env:
         """Set up interactive Python shell environment.
 
         :return: Class containing saved up cmd2 environment.
         """
         cmd2_env = _SavedCmd2Env()
 
-        # Set up readline for Python shell
-        if rl_type != RlType.NONE:
-            # Save cmd2 history
-            for i in range(1, readline.get_current_history_length() + 1):
-                cmd2_env.history.append(readline.get_history_item(i))
-
-            readline.clear_history()
-
-            # Restore py's history
-            for item in self._py_history:
-                readline.add_history(item)
-
-            if self._completion_supported():
-                # Set up tab completion for the Python console
-                # rlcompleter relies on the default settings of the Python readline module
-                if rl_type == RlType.GNU:
-                    cmd2_env.readline_settings.basic_quotes = cast(
-                        bytes, ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-                    )
-                    rl_basic_quote_characters.value = orig_rl_basic_quotes
-
-                    if 'gnureadline' in sys.modules:
-                        # rlcompleter imports readline by name, so it won't use gnureadline
-                        # Force rlcompleter to use gnureadline instead so it has our settings and history
-                        if 'readline' in sys.modules:
-                            cmd2_env.readline_module = sys.modules['readline']
-
-                        sys.modules['readline'] = sys.modules['gnureadline']
-
-                cmd2_env.readline_settings.delims = readline.get_completer_delims()
-                readline.set_completer_delims(orig_rl_delims)
-
-                # rlcompleter will not need cmd2's custom display function
-                # This will be restored by cmd2 the next time complete() is called
-                if rl_type == RlType.GNU:
-                    readline.set_completion_display_matches_hook(None)
-                elif rl_type == RlType.PYREADLINE:
-                    readline.rl.mode._display_completions = orig_pyreadline_display
-
-                # Save off the current completer and set a new one in the Python console
-                # Make sure it tab completes from its locals() dictionary
-                cmd2_env.readline_settings.completer = readline.get_completer()
-                interp.runcode(compile("from rlcompleter import Completer", "<stdin>", "exec"))
-                interp.runcode(compile("import readline", "<stdin>", "exec"))
-                interp.runcode(compile("readline.set_completer(Completer(locals()).complete)", "<stdin>", "exec"))
-
         # Set up sys module for the Python console
         self._reset_py_display()
 
         return cmd2_env
 
-    def _restore_cmd2_env(self, cmd2_env: _SavedCmd2Env) -> None:
+    def _restore_cmd2_env(self, _cmd2_env: _SavedCmd2Env) -> None:
         """Restore cmd2 environment after exiting an interactive Python shell.
 
         :param cmd2_env: the environment settings to restore
         """
-        # Set up readline for cmd2
-        if rl_type != RlType.NONE:
-            # Save py's history
-            self._py_history.clear()
-            for i in range(1, readline.get_current_history_length() + 1):
-                self._py_history.append(readline.get_history_item(i))
-
-            readline.clear_history()
-
-            # Restore cmd2's history
-            for item in cmd2_env.history:
-                readline.add_history(item)
-
-            if self._completion_supported():
-                # Restore cmd2's tab completion settings
-                readline.set_completer(cmd2_env.readline_settings.completer)
-                readline.set_completer_delims(cmd2_env.readline_settings.delims)
-
-                if rl_type == RlType.GNU:
-                    rl_basic_quote_characters.value = cmd2_env.readline_settings.basic_quotes
-
-                    if 'gnureadline' in sys.modules:
-                        # Restore what the readline module pointed to
-                        if cmd2_env.readline_module is None:
-                            del sys.modules['readline']
-                        else:
-                            sys.modules['readline'] = cmd2_env.readline_module
 
     def _run_python(self, *, pyscript: str | None = None) -> bool | None:
         """Run an interactive Python shell or execute a pyscript file.
@@ -5136,8 +4749,6 @@ class Cmd:
                     self.last_result = False
                     return None
 
-            if rl_type != RlType.NONE:
-                readline.clear_history()
             return None
 
         # If an argument was supplied, then retrieve partial contents of the history, otherwise retrieve it all
@@ -5298,16 +4909,6 @@ class Cmd:
             return
 
         self.history.start_session()
-
-        # Populate readline history
-        if rl_type != RlType.NONE:
-            for item in self.history:
-                formatted_command = single_line_format(item.statement)
-
-                # If formatted command is different than the previous history item, add it
-                cur_history_length = readline.get_current_history_length()
-                if cur_history_length == 0 or formatted_command != readline.get_history_item(cur_history_length):
-                    readline.add_history(formatted_command)
 
     def _persist_history(self) -> None:
         """Write history out to the persistent history file as compressed JSON."""
@@ -5635,7 +5236,7 @@ class Cmd:
             Rule("cmd2 transcript test", characters=self.ruler, style=Style.null()),
             style=Style(bold=True),
         )
-        self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}, readline-{rl_type}')
+        self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}')
         self.poutput(f'cwd: {os.getcwd()}')
         self.poutput(f'cmd2 app: {sys.argv[0]}')
         self.poutput(f'collected {num_transcripts} transcript{plural}', style=Style(bold=True))
@@ -5665,7 +5266,7 @@ class Cmd:
             # Return a failure error code to support automated transcript-based testing
             self.exit_code = 1
 
-    def async_alert(self, alert_msg: str, new_prompt: str | None = None) -> None:  # pragma: no cover
+    def async_alert(self, alert_msg: str, new_prompt: str | None = None) -> None:
         """Display an important message to the user while they are at a command line prompt.
 
         To the user it appears as if an alert message is printed above the prompt and their
@@ -5688,46 +5289,22 @@ class Cmd:
         if threading.current_thread() is threading.main_thread():
             raise RuntimeError("async_alert should not be called from the main thread")
 
-        if not (vt100_support and self.use_rawinput):
-            return
-
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
-            # Windows terminals tend to flicker when we redraw the prompt and input lines.
-            # To reduce how often this occurs, only update terminal if there are changes.
-            update_terminal = False
+            try:
+                if new_prompt is not None:
+                    self.prompt = new_prompt
 
-            if alert_msg:
-                alert_msg += '\n'
-                update_terminal = True
+                if hasattr(self, 'session'):
+                    # Invalidate to force prompt update if prompt changed
+                    self.session.app.invalidate()
 
-            if new_prompt is not None:
-                self.prompt = new_prompt
+                if alert_msg:
+                    sys.stdout.write(alert_msg + '\n')
+                    sys.stdout.flush()
 
-            # Check if the onscreen prompt needs to be refreshed to match self.prompt.
-            if self.need_prompt_refresh():
-                update_terminal = True
-                rl_set_prompt(self.prompt)
-
-            if update_terminal:
-                from .terminal_utils import async_alert_str
-
-                # Print a string which replaces the onscreen prompt and input lines with the alert.
-                terminal_str = async_alert_str(
-                    terminal_columns=ru.console_width(),
-                    prompt=rl_get_display_prompt(),
-                    line=readline.get_line_buffer(),
-                    cursor_offset=rl_get_point(),
-                    alert_msg=alert_msg,
-                )
-
-                sys.stdout.write(terminal_str)
-                sys.stdout.flush()
-
-                # Redraw the prompt and input lines below the alert
-                rl_force_redisplay()
-
-            self.terminal_lock.release()
+            finally:
+                self.terminal_lock.release()
 
         else:
             raise RuntimeError("another thread holds terminal_lock")
@@ -5770,11 +5347,9 @@ class Cmd:
 
     def need_prompt_refresh(self) -> bool:  # pragma: no cover
         """Check whether the onscreen prompt needs to be asynchronously refreshed to match self.prompt."""
-        if not (vt100_support and self.use_rawinput):
-            return False
-
-        # Don't overwrite a readline search prompt or a continuation prompt.
-        return not rl_in_search_mode() and not self._at_continuation_prompt and self.prompt != rl_get_prompt()
+        # With prompt_toolkit, refresh is handled via invalidation.
+        # This method is kept for API compatibility.
+        return False
 
     @staticmethod
     def set_window_title(title: str) -> None:  # pragma: no cover
@@ -5782,17 +5357,7 @@ class Cmd:
 
         :param title: the new window title
         """
-        if not vt100_support:
-            return
-
-        from .terminal_utils import set_title_str
-
-        try:
-            sys.stdout.write(set_title_str(title))
-            sys.stdout.flush()
-        except AttributeError:
-            # Debugging in Pycharm has issues with setting terminal title
-            pass
+        set_title(title)
 
     def enable_command(self, command: str) -> None:
         """Enable a command by restoring its functions.
