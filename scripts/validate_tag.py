@@ -30,7 +30,9 @@ def get_current_tag() -> str:
     """Get current git tag."""
     try:
         # Gets the name of the latest tag reachable from the current commit
-        result = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ['git', 'describe', '--exact-match', '--tags', '--abbrev=0'], capture_output=True, text=True, check=True
+        )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         print("Could not find a reachable tag.")
