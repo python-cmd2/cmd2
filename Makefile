@@ -77,23 +77,22 @@ publish: validate-tag build ## Publish a release to PyPI, uses token from ~/.pyp
 BUILD_DIRS = build dist *.egg-info
 DOC_DIRS = build
 MYPY_DIRS = .mypy_cache dmypy.json dmypy.sock
-PYCACHE_DIRS = __pycache__
 TEST_DIRS = .cache .coverage .pytest_cache htmlcov
 
 .PHONY: clean-build
 clean-build: ## Clean build artifacts
 	@echo "🚀 Removing build artifacts"
-	@-rm -rf $(BUILD_DIRS)
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(BUILD_DIRS)'.split() if os.path.isdir(d)]"
 
 .PHONY: clean-docs
 clean-docs: ## Clean documentation artifacts
 	@echo "🚀 Removing documentation artifacts"
-	@-rm -rf $(DOC_DIRS)
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(DOC_DIRS)'.split() if os.path.isdir(d)]"
 
 .PHONY: clean-mypy
 clean-mypy: ## Clean mypy artifacts
 	@echo "🚀 Removing mypy artifacts"
-	@-rm -rf $(MYPY_DIRS)
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(MYPY_DIRS)'.split() if os.path.isdir(d)]"
 
 .PHONY: clean-pycache
 clean-pycache: ## Clean pycache artifacts
@@ -108,7 +107,7 @@ clean-ruff: ## Clean ruff artifacts
 .PHONY: clean-test
 clean-test: ## Clean test artifacts
 	@echo "🚀 Removing test artifacts"
-	@-rm -rf $(TEST_DIRS)
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(TEST_DIRS)'.split() if os.path.isdir(d)]"
 
 .PHONY: clean
 clean: clean-build clean-docs clean-mypy clean-pycache clean-ruff clean-test ## Clean all artifacts
