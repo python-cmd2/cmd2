@@ -1,4 +1,7 @@
 # Simple Makefile for use with a uv-based development environment
+# The at (@) prefix tells make to suppress output from the command
+# The hyphen (-) prefix tells make to ignore errors (e.g., if a directory doesn't exist)
+
 .PHONY: install
 install: ## Install the virtual environment with dependencies
 	@echo "🚀 Creating uv Python virtual environment"
@@ -48,11 +51,6 @@ build: clean-build ## Build wheel file
 	@echo "🚀 Creating wheel file"
 	@uv build
 
-.PHONY: clean-build
-clean-build: ## Clean build artifacts
-	@echo "🚀 Removing build artifacts"
-	@uv run python -c "import shutil; import os; shutil.rmtree('dist') if os.path.exists('dist') else None"
-
 .PHONY: tag
 tag: ## Add a Git tag and push it to origin with syntax: make tag TAG=tag_name
 	@echo "🚀 Creating git tag: ${TAG}"
@@ -63,7 +61,7 @@ tag: ## Add a Git tag and push it to origin with syntax: make tag TAG=tag_name
 .PHONY: validate-tag
 validate-tag: ## Check to make sure that a tag exists for the current HEAD and it looks like a valid version number
 	@echo "🚀 Validating version tag"
-	@uv run inv validatetag
+	@uv run scripts/validate_tag.py
 
 .PHONY: publish-test
 publish-test: validate-tag build ## Test publishing a release to PyPI, uses token from ~/.pypirc file.
@@ -74,6 +72,46 @@ publish-test: validate-tag build ## Test publishing a release to PyPI, uses toke
 publish: validate-tag build ## Publish a release to PyPI, uses token from ~/.pypirc file.
 	@echo "🚀 Publishing."
 	@uv run uv-publish
+
+# Define variables for files/directories to clean
+BUILD_DIRS = build dist *.egg-info
+DOC_DIRS = build
+MYPY_DIRS = .mypy_cache dmypy.json dmypy.sock
+TEST_DIRS = .cache .coverage .pytest_cache htmlcov
+
+.PHONY: clean-build
+clean-build: ## Clean build artifacts
+	@echo "🚀 Removing build artifacts"
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(BUILD_DIRS)'.split() if os.path.isdir(d)]"
+
+.PHONY: clean-docs
+clean-docs: ## Clean documentation artifacts
+	@echo "🚀 Removing documentation artifacts"
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(DOC_DIRS)'.split() if os.path.isdir(d)]"
+
+.PHONY: clean-mypy
+clean-mypy: ## Clean mypy artifacts
+	@echo "🚀 Removing mypy artifacts"
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(MYPY_DIRS)'.split() if os.path.isdir(d)]"
+
+.PHONY: clean-pycache
+clean-pycache: ## Clean pycache artifacts
+	@echo "🚀 Removing pycache artifacts"
+	@-find . -type d -name "__pycache__" -exec rm -r {} +
+
+.PHONY: clean-ruff
+clean-ruff: ## Clean ruff artifacts
+	@echo "🚀 Removing ruff artifacts"
+	@uv run ruff clean
+
+.PHONY: clean-test
+clean-test: ## Clean test artifacts
+	@echo "🚀 Removing test artifacts"
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(TEST_DIRS)'.split() if os.path.isdir(d)]"
+
+.PHONY: clean
+clean: clean-build clean-docs clean-mypy clean-pycache clean-ruff clean-test ## Clean all artifacts
+	@echo "🚀 Cleaned all artifacts"
 
 .PHONY: help
 help:

@@ -151,6 +151,9 @@ mccabe.max-complexity = 49
 ]
 "examples/scripts/*.py" = ["F821"] # Undefined name `app`
 
+# Ignore starting a process with a partial executable path (i.e. git)
+"scripts/validate_tag.py" = ["S607"]
+
 # Ingore various rulesets in test directories
 "{tests}/*.py" = [
     "ANN",  # Ignore all type annotation rules in test folders

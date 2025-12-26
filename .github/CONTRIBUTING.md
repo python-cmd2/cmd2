@@ -96,7 +96,6 @@ for a list of dependencies needed for building `cmd2`.
 | Prerequisite                                                         | Minimum Version | Purpose                          |
 | -------------------------------------------------------------------- | --------------- | -------------------------------- |
 | [codecov](http://doc.pytest.org/en/latest/)                          | `2.1.13`        | Cover coverage reporting         |
-| [invoke](https://www.pyinvoke.org/)                                  | `2.2.0`         | Command automation               |
 | [mypy](https://mypy-lang.org/)                                       | `1.13.0`        | Static type checker              |
 | [pytest](https://docs.pytest.org/en/stable/)                         | `3.0.6`         | Unit and integration tests       |
 | [pytest-cov](http://doc.pytest.org/en/latest/)                       | `6.0.0`         | Pytest code coverage             |
@@ -776,14 +775,14 @@ Since 0.9.2, the process of publishing a new release of `cmd2` to [PyPi](https:/
 mostly automated. The manual steps are all git operations. Here's the checklist:
 
 1. Make sure you're on the proper branch (almost always **main**)
-1. Make sure all the unit tests pass with `invoke pytest` or `py.test`
+1. Make sure all the unit tests pass with `make test`
 1. Make sure latest year in `LICENSE` matches current year
 1. Make sure `CHANGELOG.md` describes the version and has the correct release date
-1. Add a git tag representing the version number using `invoke tag x.y.z`
+1. Add a git tag representing the version number using `make tag TAG=x.y.z`
     - Where x, y, and z are all small non-negative integers
-1. (Optional) Run `invoke pypi-test` to clean, build, and upload a new release to
+1. (Optional) Run `make publish-test` to clean, build, and upload a new release to
    [Test PyPi](https://test.pypi.org)
-1. Run `invoke pypi` to clean, build, and upload a new release to [PyPi](https://pypi.org/)
+1. Run `make publish` to clean, build, and upload a new release to [PyPi](https://pypi.org/)
 
 ## Acknowledgement
 
