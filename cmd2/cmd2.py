@@ -413,7 +413,15 @@ class Cmd:
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', '_relative_run_script']
 
-        # Initialize history
+        # Initialize prompt-toolkit PromptSession
+        self.history_adapter = Cmd2History(self)
+        self.completer = Cmd2Completer(self)
+        self.session: PromptSession[str] = PromptSession(
+            history=self.history_adapter,
+            completer=self.completer,
+        )
+
+        # Initialize history from a persistent history file (if present)
         self.persistent_history_file = ''
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
@@ -461,14 +469,6 @@ class Cmd:
 
         # The multiline command currently being typed which is used to tab complete multiline commands.
         self._multiline_in_progress = ''
-
-        # Initialize PromptSession
-        self.history_adapter = Cmd2History(self)
-        self.completer = Cmd2Completer(self)
-        self.session: PromptSession[str] = PromptSession(
-            history=self.history_adapter,
-            completer=self.completer,
-        )
 
         # Characters used to draw a horizontal rule. Should not be blank.
         self.ruler = "─"

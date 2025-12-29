@@ -28,19 +28,25 @@ def verify_hi_last_result(app: cmd2.Cmd, expected_length: int) -> None:
 
 
 #
-# readline tests
+# prompt-toolkit tests
 #
-def test_readline_remove_history_item() -> None:
-    from cmd2.rl_utils import (
-        readline,
-    )
+def test_pt_add_history_item() -> None:
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.history import InMemoryHistory
 
-    readline.clear_history()
-    assert readline.get_current_history_length() == 0
-    readline.add_history('this is a test')
-    assert readline.get_current_history_length() == 1
-    readline.remove_history_item(0)
-    assert readline.get_current_history_length() == 0
+    # Create a history object and add some initial items
+    history = InMemoryHistory()
+    history.append_string('command one')
+    history.append_string('command two')
+    assert 'command one' in history.get_strings()
+    assert len(history.get_strings()) == 2
+
+    # Start a session and use this history
+    session = PromptSession(history=history)
+
+    session.history.get_strings().append('new command')
+    assert 'new command' not in session.history.get_strings()
+    assert len(history.get_strings()) == 2
 
 
 #
@@ -949,7 +955,7 @@ def test_history_file_bad_json(mocker, capsys) -> None:
     assert 'Error processing persistent history data' in err
 
 
-def test_history_populates_readline(hist_file) -> None:
+def test_history_populates_pt(hist_file) -> None:
     # - create a cmd2 with persistent history
     app = cmd2.Cmd(persistent_history_file=hist_file)
     run_cmd(app, 'help')
@@ -967,17 +973,14 @@ def test_history_populates_readline(hist_file) -> None:
     assert app.history.get(3).statement.raw == 'shortcuts'
     assert app.history.get(4).statement.raw == 'alias'
 
-    # readline only adds a single entry for multiple sequential identical commands
+    # prompt-toolkit only adds a single entry for multiple sequential identical commands
     # so we check to make sure that cmd2 populated the readline history
     # using the same rules
-    from cmd2.rl_utils import (
-        readline,
-    )
-
-    assert readline.get_current_history_length() == 3
-    assert readline.get_history_item(1) == 'help'
-    assert readline.get_history_item(2) == 'shortcuts'
-    assert readline.get_history_item(3) == 'alias'
+    pt_history = app.session.history.get_strings()
+    assert len(pt_history) == 3
+    assert pt_history.get(1) == 'help'
+    assert pt_history.get(2) == 'shortcuts'
+    assert pt_history.get(3) == 'alias'
 
 
 #
