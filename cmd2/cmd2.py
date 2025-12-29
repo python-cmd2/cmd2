@@ -63,6 +63,7 @@ from typing import (
     cast,
 )
 
+import prompt_toolkit as pt
 import rich.box
 from rich.console import Group, RenderableType
 from rich.highlighter import ReprHighlighter
@@ -137,7 +138,6 @@ from .rich_utils import (
 )
 from .styles import Cmd2Style
 
-# NOTE: When using gnureadline with Python 3.13, start_ipython needs to be imported before any readline-related stuff
 with contextlib.suppress(ImportError):
     from IPython import start_ipython
 
@@ -254,6 +254,8 @@ class Cmd:
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
 
+    DEFAULT_COMPLETEKEY = 'tab'
+
     DEFAULT_EDITOR = utils.find_editor()
 
     # Sorting keys for strings
@@ -267,7 +269,7 @@ class Cmd:
 
     def __init__(
         self,
-        completekey: str = 'tab',
+        completekey: str = DEFAULT_COMPLETEKEY,
         stdin: TextIO | None = None,
         stdout: TextIO | None = None,
         *,
@@ -291,7 +293,7 @@ class Cmd:
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
-        :param completekey: readline name of a completion key, default to Tab
+        :param completekey: name of a completion key, default to Tab
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
         :param persistent_history_file: file path to load a persistent cmd2 command history from
@@ -369,6 +371,9 @@ class Cmd:
 
         # Key used for tab completion
         self.completekey = completekey
+        if self.completekey != self.DEFAULT_COMPLETEKEY:
+            # TODO(T or K): Configure prompt_toolkit `KeyBindings` with the custom key for completion  # noqa: FIX002, TD003
+            pass
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
@@ -588,14 +593,14 @@ class Cmd:
         # An optional hint which prints above tab completion suggestions
         self.completion_hint: str = ''
 
-        # Normally cmd2 uses readline's formatter to columnize the list of completion suggestions.
+        # Normally cmd2 uses prompt-toolkit's formatter to columnize the list of completion suggestions.
         # If a custom format is preferred, write the formatted completions to this string. cmd2 will
-        # then print it instead of the readline format. ANSI style sequences and newlines are supported
+        # then print it instead of the prompt-toolkit format. ANSI style sequences and newlines are supported
         # when using this value. Even when using formatted_completions, the full matches must still be returned
         # from your completer function. ArgparseCompleter writes its tab completion tables to this string.
         self.formatted_completions: str = ''
 
-        # Used by complete() for readline tab completion
+        # Used by complete() for prompt-toolkit tab completion
         self.completion_matches: list[str] = []
 
         # Use this list if you need to display tab completion suggestions that are different than the actual text
@@ -1574,7 +1579,7 @@ class Cmd:
     def _reset_completion_defaults(self) -> None:
         """Reset tab completion settings.
 
-        Needs to be called each time readline runs tab completion.
+        Needs to be called each time prompt-toolkit runs tab completion.
         """
         self.allow_appended_space = True
         self.allow_closing_quote = True
@@ -1970,12 +1975,12 @@ class Cmd:
                     matches[index] += os.path.sep
                     self.display_matches[index] += os.path.sep
 
-            # Remove cwd if it was added to match the text readline expects
+            # Remove cwd if it was added to match the text prompt-toolkit expects
             if cwd_added:
                 to_replace = cwd if cwd == os.path.sep else cwd + os.path.sep
                 matches = [cur_path.replace(to_replace, '', 1) for cur_path in matches]
 
-            # Restore the tilde string if we expanded one to match the text readline expects
+            # Restore the tilde string if we expanded one to match the text prompt-toolkit expects
             if expanded_tilde_path:
                 matches = [cur_path.replace(expanded_tilde_path, orig_tilde_path, 1) for cur_path in matches]
 
@@ -2213,11 +2218,11 @@ class Cmd:
             # Save the quote so we can add a matching closing quote later.
             completion_token_quote = raw_completion_token[0]
 
-            # readline still performs word breaks after a quote. Therefore, something like quoted search
+            # prompt-toolkit still performs word breaks after a quote. Therefore, something like quoted search
             # text with a space would have resulted in begidx pointing to the middle of the token we
             # we want to complete. Figure out where that token actually begins and save the beginning
-            # portion of it that was not part of the text readline gave us. We will remove it from the
-            # completions later since readline expects them to start with the original text.
+            # portion of it that was not part of the text prompt-toolkit gave us. We will remove it from the
+            # completions later since prompt-toolkit expects them to start with the original text.
             actual_begidx = line[:endidx].rfind(tokens[-1])
 
             if actual_begidx != begidx:
@@ -2240,7 +2245,7 @@ class Cmd:
             if not self.display_matches:
                 # Since self.display_matches is empty, set it to self.completion_matches
                 # before we alter them. That way the suggestions will reflect how we parsed
-                # the token being completed and not how readline did.
+                # the token being completed and not how prompt-toolkit did.
                 import copy
 
                 self.display_matches = copy.copy(self.completion_matches)
@@ -2290,12 +2295,12 @@ class Cmd:
     ) -> str | None:
         """Override of cmd's complete method which returns the next possible completion for 'text'.
 
-        This completer function is called by readline as complete(text, state), for state in 0, 1, 2, …,
+        This completer function is called by prompt-toolkit as complete(text, state), for state in 0, 1, 2, …,
         until it returns a non-string value. It should return the next possible completion starting with text.
 
-        Since readline suppresses any exception raised in completer functions, they can be difficult to debug.
+        Since prompt-toolkit suppresses any exception raised in completer functions, they can be difficult to debug.
         Therefore, this function wraps the actual tab completion logic and prints to stderr any exception that
-        occurs before returning control to readline.
+        occurs before returning control to prompt-toolkit.
 
         :param text: the current word that user is typing
         :param state: non-negative integer
@@ -2575,7 +2580,7 @@ class Cmd:
     def parseline(self, line: str) -> tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.
 
-        :param line: line read by readline
+        :param line: line read by prompt-toolkit
         :return: tuple containing (command, args, line)
         """
         statement = self.statement_parser.parse_command_only(line)
@@ -3225,15 +3230,13 @@ class Cmd:
         # Otherwise read from self.stdin
         elif self.stdin.isatty():
             # on a tty, print the prompt first, then read the line
-            self.poutput(prompt, end='')
-            self.stdout.flush()
-            line = self.stdin.readline()
+            line = pt.prompt(prompt)
             if len(line) == 0:
                 raise EOFError
             return line.rstrip('\n')
         else:
             # not a tty, just read the line
-            line = self.stdin.readline()
+            line = pt.prompt()
             if len(line) == 0:
                 raise EOFError
             return line.rstrip('\n')
@@ -4736,7 +4739,7 @@ class Cmd:
         if args.clear:
             self.last_result = True
 
-            # Clear command and readline history
+            # Clear command and prompt-toolkit history
             self.history.clear()
 
             if self.persistent_history_file:
@@ -5333,8 +5336,8 @@ class Cmd:
 
         One case where the onscreen prompt and self.prompt can get out of sync is
         when async_alert() is called while a user is in search mode (e.g. Ctrl-r).
-        To prevent overwriting readline's onscreen search prompt, self.prompt is updated
-        but readline's saved prompt isn't.
+        To prevent overwriting prompt-toolkit's onscreen search prompt, self.prompt is updated
+        but prompt-toolkit's saved prompt isn't.
 
         Therefore when a user aborts a search, the old prompt is still on screen until they
         press Enter or this method is called. Call need_prompt_refresh() in an async print
@@ -5494,7 +5497,7 @@ class Cmd:
             original_sigterm_handler = signal.getsignal(signal.SIGTERM)
             signal.signal(signal.SIGTERM, self.termination_signal_handler)
 
-        # Grab terminal lock before the command line prompt has been drawn by readline
+        # Grab terminal lock before the command line prompt has been drawn by prompt-toolkit
         self.terminal_lock.acquire()
 
         # Always run the preloop first

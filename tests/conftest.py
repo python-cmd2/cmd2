@@ -11,13 +11,11 @@ from typing import (
     TypeVar,
     cast,
 )
-from unittest import mock
 
 import pytest
 
 import cmd2
 from cmd2 import rich_utils as ru
-from cmd2.rl_utils import readline
 from cmd2.utils import StdSim
 
 # For type hinting decorators
@@ -122,8 +120,8 @@ odd_file_names = ['nothingweird', 'has   spaces', '"is_double_quoted"', "'is_sin
 
 def complete_tester(text: str, line: str, begidx: int, endidx: int, app: cmd2.Cmd) -> str | None:
     """This is a convenience function to test cmd2.complete() since
-    in a unit test environment there is no actual console readline
-    is monitoring. Therefore we use mock to provide readline data
+    in a unit test environment there is no actual console prompt-toolkit
+    is monitoring. Therefore we use mock to provide prompt-toolkit data
     to complete().
 
     :param text: the string prefix we are attempting to match
@@ -145,13 +143,8 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app: cmd2.Cm
     def get_endidx() -> int:
         return endidx
 
-    # Run the readline tab completion function with readline mocks in place
-    with (
-        mock.patch.object(readline, 'get_line_buffer', get_line),
-        mock.patch.object(readline, 'get_begidx', get_begidx),
-        mock.patch.object(readline, 'get_endidx', get_endidx),
-    ):
-        return app.complete(text, 0, line, begidx, endidx)
+    # Run the prompt-toolkit tab completion function with mocks in place
+    return app.complete(text, 0, line, begidx, endidx)
 
 
 def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
