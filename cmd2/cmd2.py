@@ -3239,7 +3239,12 @@ class Cmd:
             line = pt.prompt()
             if len(line) == 0:
                 raise EOFError
-            return line.rstrip('\n')
+            line = line.rstrip('\n')
+
+            if self.echo:
+                self.poutput(f'{prompt}{line}')
+
+            return line
 
     def _read_command_line(self, prompt: str) -> str:
         """Read command line from appropriate stdin.

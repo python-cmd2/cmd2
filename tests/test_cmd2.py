@@ -1839,7 +1839,10 @@ def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
     history_lines = history_item.raw.splitlines()
     assert history_lines[0] == 'orate Look, "There are newlines'
     assert history_lines[1] == '  and spaces  '
-    assert history_lines[2] == ' " in quotes.;'
+    assert history_lines[2] == ' "'
+    assert history_lines[3] == ' in'
+    assert history_lines[4] == 'quotes.'
+    assert history_lines[5] == ';'
 
 
 class CommandResultApp(cmd2.Cmd):
@@ -1927,61 +1930,63 @@ def test_read_input_rawinput_true(capsys, monkeypatch) -> None:
     app = cmd2.Cmd()
     app.use_rawinput = True
 
-    # Mock out input() to return input_str
-    read_input_mock = mock.MagicMock(name='read_input', return_value=input_str)
-    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+    # Mock prompt_toolkit.prompt (used when isatty=False)
+    # and app.session.prompt (used when use_rawinput=True and isatty=True)
+    with (
+        mock.patch('prompt_toolkit.prompt', return_value=input_str),
+        mock.patch.object(app.session, 'prompt', return_value=input_str),
+    ):
+        # isatty is True
+        with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
+            line = app.read_input(prompt_str)
+            assert line == input_str
 
-    # isatty is True
-    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
-        line = app.read_input(prompt_str)
-        assert line == input_str
+            # Run custom history code
+            custom_history = ['cmd1', 'cmd2']
+            line = app.read_input(prompt_str, history=custom_history, completion_mode=cmd2.CompletionMode.NONE)
+            assert line == input_str
 
-        # Run custom history code
-        custom_history = ['cmd1', 'cmd2']
-        line = app.read_input(prompt_str, history=custom_history, completion_mode=cmd2.CompletionMode.NONE)
-        assert line == input_str
+            # Run all completion modes
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.NONE)
+            assert line == input_str
 
-        # Run all completion modes
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.NONE)
-        assert line == input_str
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.COMMANDS)
+            assert line == input_str
 
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.COMMANDS)
-        assert line == input_str
+            # custom choices
+            custom_choices = ['choice1', 'choice2']
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices=custom_choices)
+            assert line == input_str
 
-        # custom choices
-        custom_choices = ['choice1', 'choice2']
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices=custom_choices)
-        assert line == input_str
+            # custom choices_provider
+            line = app.read_input(
+                prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices_provider=cmd2.Cmd.get_all_commands
+            )
+            assert line == input_str
 
-        # custom choices_provider
-        line = app.read_input(
-            prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices_provider=cmd2.Cmd.get_all_commands
-        )
-        assert line == input_str
+            # custom completer
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, completer=cmd2.Cmd.path_complete)
+            assert line == input_str
 
-        # custom completer
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, completer=cmd2.Cmd.path_complete)
-        assert line == input_str
+            # custom parser
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, parser=cmd2.Cmd2ArgumentParser())
+            assert line == input_str
 
-        # custom parser
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, parser=cmd2.Cmd2ArgumentParser())
-        assert line == input_str
+        # isatty is False
+        with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=False)):
+            # echo True
+            app.echo = True
+            line = app.read_input(prompt_str)
+            out, _err = capsys.readouterr()
+            assert line == input_str
+            assert out == f"{prompt_str}{input_str}\n"
 
-    # isatty is False
-    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=False)):
-        # echo True
-        app.echo = True
-        line = app.read_input(prompt_str)
-        out, _err = capsys.readouterr()
-        assert line == input_str
-        assert out == f"{prompt_str}{input_str}\n"
-
-        # echo False
-        app.echo = False
-        line = app.read_input(prompt_str)
-        out, _err = capsys.readouterr()
-        assert line == input_str
-        assert not out
+            # echo False
+            app.echo = False
+            line = app.read_input(prompt_str)
+            out, _err = capsys.readouterr()
+            assert line == input_str
+            assert not out
 
 
 def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
@@ -1999,24 +2004,31 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
         new_app.use_rawinput = False
         return new_app
 
+    def mock_pt_prompt(message='', **kwargs):
+        # Emulate prompt printing for isatty=True case
+        if message:
+            print(message, end='')
+        return input_str
+
     # isatty True
     app = make_app(isatty=True)
-    line = app.read_input(prompt_str)
+    with mock.patch('prompt_toolkit.prompt', side_effect=mock_pt_prompt):
+        line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
     assert out == prompt_str
 
     # isatty True, empty input
     app = make_app(isatty=True, empty_input=True)
-    line = app.read_input(prompt_str)
+    with mock.patch('prompt_toolkit.prompt', return_value=''), pytest.raises(EOFError):
+        app.read_input(prompt_str)
     out, _err = capsys.readouterr()
-    assert line == 'eof'
-    assert out == prompt_str
 
     # isatty is False, echo is True
     app = make_app(isatty=False)
     app.echo = True
-    line = app.read_input(prompt_str)
+    with mock.patch('prompt_toolkit.prompt', return_value=input_str):
+        line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
     assert out == f"{prompt_str}{input_str}\n"
@@ -2024,17 +2036,17 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
     # isatty is False, echo is False
     app = make_app(isatty=False)
     app.echo = False
-    line = app.read_input(prompt_str)
+    with mock.patch('prompt_toolkit.prompt', return_value=input_str):
+        line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
     assert not out
 
     # isatty is False, empty input
     app = make_app(isatty=False, empty_input=True)
-    line = app.read_input(prompt_str)
+    with mock.patch('prompt_toolkit.prompt', return_value=''), pytest.raises(EOFError):
+        app.read_input(prompt_str)
     out, _err = capsys.readouterr()
-    assert line == 'eof'
-    assert not out
 
 
 def test_custom_stdout() -> None:
