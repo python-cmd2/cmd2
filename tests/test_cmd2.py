@@ -1,6 +1,5 @@
 """Cmd2 unit/functional testing"""
 
-import builtins
 import io
 import os
 import signal
@@ -1023,7 +1022,7 @@ def test_base_cmdloop_with_startup_commands() -> None:
     assert out == expected
 
 
-def test_base_cmdloop_without_startup_commands() -> None:
+def test_base_cmdloop_without_startup_commands(monkeypatch) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     with mock.patch.object(sys, 'argv', testargs):
@@ -1032,9 +1031,9 @@ def test_base_cmdloop_without_startup_commands() -> None:
     app.use_rawinput = True
     app.intro = 'Hello World, this is an intro ...'
 
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='quit')
-    builtins.input = m
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value='quit')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     expected = app.intro + '\n'
 
@@ -1044,7 +1043,7 @@ def test_base_cmdloop_without_startup_commands() -> None:
     assert out == expected
 
 
-def test_cmdloop_without_rawinput() -> None:
+def test_cmdloop_without_rawinput(monkeypatch) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     with mock.patch.object(sys, 'argv', testargs):
@@ -1054,14 +1053,13 @@ def test_cmdloop_without_rawinput() -> None:
     app.echo = False
     app.intro = 'Hello World, this is an intro ...'
 
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='quit')
-    builtins.input = m
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value='quit')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     expected = app.intro + '\n'
 
-    with pytest.raises(OSError):  # noqa: PT011
-        app.cmdloop()
+    app.cmdloop()
     out = app.stdout.getvalue()
     assert out == expected
 
@@ -1201,11 +1199,11 @@ def say_app():
     return app
 
 
-def test_ctrl_c_at_prompt(say_app) -> None:
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input')
-    m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
-    builtins.input = m
+def test_ctrl_c_at_prompt(say_app, monkeypatch) -> None:
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input')
+    read_input_mock.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     say_app.cmdloop()
 
@@ -1767,11 +1765,11 @@ def test_multiline_complete_empty_statement_raises_exception(multiline_app) -> N
         multiline_app._complete_statement('')
 
 
-def test_multiline_complete_statement_without_terminator(multiline_app) -> None:
+def test_multiline_complete_statement_without_terminator(multiline_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
-    m = mock.MagicMock(name='input', return_value='\n')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='\n')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     command = 'orate'
     args = 'hello world'
@@ -1782,11 +1780,11 @@ def test_multiline_complete_statement_without_terminator(multiline_app) -> None:
     assert statement.multiline_command == command
 
 
-def test_multiline_complete_statement_with_unclosed_quotes(multiline_app) -> None:
+def test_multiline_complete_statement_with_unclosed_quotes(multiline_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
-    m = mock.MagicMock(name='input', side_effect=['quotes', '" now closed;'])
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=['quotes', '" now closed;'])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     line = 'orate hi "partially open'
     statement = multiline_app._complete_statement(line)
@@ -1796,26 +1794,26 @@ def test_multiline_complete_statement_with_unclosed_quotes(multiline_app) -> Non
     assert statement.terminator == ';'
 
 
-def test_multiline_input_line_to_statement(multiline_app) -> None:
+def test_multiline_input_line_to_statement(multiline_app, monkeypatch) -> None:
     # Verify _input_line_to_statement saves the fully entered input line for multiline commands
 
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=['person', '\n'])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     line = 'orate hi'
     statement = multiline_app._input_line_to_statement(line)
-    assert statement.raw == 'orate hi\nperson\n'
+    assert statement.raw == 'orate hi\nperson\n\n'
     assert statement == 'hi person'
     assert statement.command == 'orate'
     assert statement.multiline_command == 'orate'
 
 
-def test_multiline_history_added(multiline_app) -> None:
+def test_multiline_history_added(multiline_app, monkeypatch) -> None:
     # Test that multiline commands are added to history as a single item
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=['person', '\n'])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     multiline_app.history.clear()
 
@@ -1823,13 +1821,13 @@ def test_multiline_history_added(multiline_app) -> None:
     run_cmd(multiline_app, "orate hi")
 
     assert len(multiline_app.history) == 1
-    assert multiline_app.history.get(1).raw == "orate hi\nperson\n"
+    assert multiline_app.history.get(1).raw == "orate hi\nperson\n\n"
 
 
-def test_multiline_history_with_quotes(multiline_app) -> None:
+def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
     # Test combined multiline command with quotes is added to history correctly
-    m = mock.MagicMock(name='input', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     multiline_app.history.clear()
 
@@ -1930,7 +1928,8 @@ def test_read_input_rawinput_true(capsys, monkeypatch) -> None:
     app.use_rawinput = True
 
     # Mock out input() to return input_str
-    monkeypatch.setattr("builtins.input", lambda *args: input_str)
+    read_input_mock = mock.MagicMock(name='read_input', return_value=input_str)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     # isatty is True
     with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
@@ -2855,13 +2854,13 @@ def exit_code_repl():
     return app
 
 
-def test_exit_code_default(exit_code_repl) -> None:
+def test_exit_code_default(exit_code_repl, monkeypatch) -> None:
     app = exit_code_repl
     app.use_rawinput = True
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='exit')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='exit')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     expected = 'exiting with code: 0\n'
 
@@ -2871,13 +2870,13 @@ def test_exit_code_default(exit_code_repl) -> None:
     assert out == expected
 
 
-def test_exit_code_nonzero(exit_code_repl) -> None:
+def test_exit_code_nonzero(exit_code_repl, monkeypatch) -> None:
     app = exit_code_repl
     app.use_rawinput = True
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='exit 23')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='exit 23')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     expected = 'exiting with code: 23\n'
 
