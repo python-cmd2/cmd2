@@ -1590,6 +1590,14 @@ class Cmd:
         self.matches_delimited = False
         self.matches_sorted = False
 
+    def _bottom_toolbar(self) -> Any:
+        """Get the bottom toolbar content."""
+        if self.formatted_completions:
+            return ANSI(self.formatted_completions.rstrip())
+        if self.completion_hint:
+            return ANSI(self.completion_hint.rstrip())
+        return None
+
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> tuple[list[str], list[str]]:
         """Get all tokens through the one being completed, used by tab completion functions.
 
@@ -2393,13 +2401,17 @@ class Cmd:
             # Don't print error and redraw the prompt unless the error has length
             err_str = str(ex)
             if err_str:
-                self.print_to(
-                    sys.stdout,
-                    Text.assemble(
-                        "\n",
-                        (err_str, Cmd2Style.ERROR if ex.apply_style else ""),
-                    ),
-                )
+                # If apply_style is True, then this is an error message that should be printed
+                # above the prompt so it remains in the scrollback.
+                if ex.apply_style:
+                    self.print_to(
+                        sys.stdout,
+                        "\n" + err_str,
+                        style=Cmd2Style.ERROR,
+                    )
+                # Otherwise, this is a hint that should be displayed below the prompt.
+                else:
+                    self.completion_hint = err_str
             return None
         except Exception as ex:  # noqa: BLE001
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
@@ -3220,23 +3232,25 @@ class Cmd:
                         prompt_to_use,
                         completer=completer_to_use,
                         history=history_to_use,
+                        bottom_toolbar=self._bottom_toolbar,
                     )
 
                 return self.session.prompt(
                     prompt_to_use,
                     completer=completer_to_use,
+                    bottom_toolbar=self._bottom_toolbar,
                 )
 
         # Otherwise read from self.stdin
         elif self.stdin.isatty():
             # on a tty, print the prompt first, then read the line
-            line = pt.prompt(prompt)
+            line = pt.prompt(prompt, bottom_toolbar=self._bottom_toolbar)
             if len(line) == 0:
                 raise EOFError
             return line.rstrip('\n')
         else:
             # not a tty, just read the line
-            line = pt.prompt()
+            line = pt.prompt(bottom_toolbar=self._bottom_toolbar)
             if len(line) == 0:
                 raise EOFError
             line = line.rstrip('\n')

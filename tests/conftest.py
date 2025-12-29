@@ -144,7 +144,14 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app: cmd2.Cm
         return endidx
 
     # Run the prompt-toolkit tab completion function with mocks in place
-    return app.complete(text, 0, line, begidx, endidx)
+    res = app.complete(text, 0, line, begidx, endidx)
+
+    # If the completion resulted in a hint being set, then print it now
+    # so that it can be captured by tests using capsys.
+    if app.completion_hint:
+        print(app.completion_hint)
+
+    return res
 
 
 def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
