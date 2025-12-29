@@ -4,10 +4,10 @@
 
 The `cmd` module from the Python standard library includes `readline` history.
 
-[cmd2.Cmd][] offers the same `readline` capabilities, but also maintains its own data structures for
-the history of all commands entered by the user. When the class is initialized, it creates an
-instance of the [cmd2.history.History][] class (which is a subclass of `list`) as
-`cmd2.Cmd.history`.
+[cmd2.Cmd][] offers the same `readline` capabilitie via use of `prompt-toolkit`, but also maintains
+its own data structures for the history of all commands entered by the user. When the class is
+initialized, it creates an instance of the [cmd2.history.History][] class (which is a subclass of
+`list`) as `cmd2.Cmd.history`.
 
 Each time a command is executed (this gets complex, see
 [Command Processing Loop](./hooks.md#command-processing-loop) for exactly when) the parsed
@@ -20,9 +20,9 @@ this format instead of plain text to preserve the complete `cmd2.Statement` obje
 
 !!! note
 
-    `readline` saves everything you type, whether it is a valid command or not. `cmd2` only saves input to internal history if the command parses successfully and is a valid command. This design choice was intentional, because the contents of history can be saved to a file as a script, or can be re-run. Not saving invalid input reduces unintentional errors when doing so.
+    `prompt-toolkit` saves everything you type, whether it is a valid command or not. `cmd2` only saves input to internal history if the command parses successfully and is a valid command. This design choice was intentional, because the contents of history can be saved to a file as a script, or can be re-run. Not saving invalid input reduces unintentional errors when doing so.
 
-    However, this design choice causes an inconsistency between the `readline` history and the `cmd2` history when you enter an invalid command: it is saved to the `readline` history, but not to the `cmd2` history.
+    However, this design choice causes an inconsistency between the `prompt-toolkit` history and the `cmd2` history when you enter an invalid command: it is saved to the `prompt-toolkit` history, but not to the `cmd2` history.
 
 The `cmd2.Cmd.history` attribute, the `cmd2.history.History` class, and the
 [cmd2.history.HistoryItem][] class are all part of the public API for `cmd2.Cmd`. You could use
@@ -34,13 +34,13 @@ built-in `history` command works).
 You can use the :arrow_up: up and :arrow_down: down arrow keys to move through the history of
 previously entered commands.
 
-If the `readline` module is installed, you can press `Control-p` to move to the previously entered
-command, and `Control-n` to move to the next command. You can also search through the command
-history using `Control-r`.
+You can press `Control-p` to move to the previously entered command, and `Control-n` to move to the
+next command. You can also search through the command history using `Control-r`.
 
 You can refer to the [readline cheat sheet](http://readline.kablamo.org/emacs.html) or you can dig
-into the [GNU Readline User Manual](http://man7.org/linux/man-pages/man3/readline.3.html) for all
-the details, including instructions for customizing the key bindings.
+into the
+[Prompt Toolkit User Manual](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/advanced_topics/key_bindings.html)
+for all the details, including instructions for customizing the key bindings.
 
 `cmd2` makes a third type of history access available with the `history` command. Each time the user
 enters a command, `cmd2` saves the input. The `history` command lets you do interesting things with

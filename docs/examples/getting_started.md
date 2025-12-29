@@ -266,8 +266,10 @@ persist between invocations of your application, you'll need to do a little work
 
 Users can access command history using two methods:
 
-- The [readline](https://docs.python.org/3/library/readline.html) library which provides a Python
-  interface to the [GNU readline library](https://en.wikipedia.org/wiki/GNU_Readline)
+- The [prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) library which
+  provides a pure Python replacement for the
+  [GNU readline library](https://en.wikipedia.org/wiki/GNU_Readline) which is fully cross-platform
+  compatible
 - The `history` command which is built-in to `cmd2`
 
 From the prompt in a `cmd2`-based application, you can press `Control-p` to move to the previously

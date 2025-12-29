@@ -88,36 +88,3 @@ If you wish to permanently uninstall `cmd2`, this can also easily be done with
 [pip](https://pypi.org/project/pip):
 
     $ pip uninstall cmd2
-
-## readline Considerations
-
-`cmd2` heavily relies on Python's built-in
-[readline](https://docs.python.org/3/library/readline.html) module for its tab completion
-capabilities. Tab completion for `cmd2` applications is only tested against :simple-gnu:
-[GNU Readline](https://tiswww.case.edu/php/chet/readline/rltop.html) or libraries fully compatible
-with it. It does not work properly with the :simple-netbsd: NetBSD
-[Editline](http://thrysoee.dk/editline/) library (`libedit`) which is similar, but not identical to
-GNU Readline. `cmd2` will disable all tab-completion support if an incompatible version of
-`readline` is found.
-
-When installed using `pip`, `uv`, or similar Python packaging tool on either `macOS` or `Windows`,
-`cmd2` will automatically install a compatible version of readline.
-
-Most Linux operating systems come with a compatible version of readline. However, if you are using a
-tool like `uv` to install Python on your system and configure a virtual environment, `uv` installed
-versions of Python come with `libedit`. If you are using `cmd2` on Linux with a version of Python
-installed via `uv`, you will likely need to manually add the `gnureadline` Python module to your
-`uv` virtual environment.
-
-```sh
-uv pip install gnureadline
-```
-
-macOS comes with the [libedit](http://thrysoee.dk/editline/) library which is similar, but not
-identical, to GNU Readline. Tab completion for `cmd2` applications is only tested against GNU
-Readline. In this case you just need to install the `gnureadline` Python package which is statically
-linked against GNU Readline:
-
-```shell
-$ pip install -U gnureadline
-```
