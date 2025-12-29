@@ -151,7 +151,7 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app: cmd2.Cm
         mock.patch.object(readline, 'get_begidx', get_begidx),
         mock.patch.object(readline, 'get_endidx', get_endidx),
     ):
-        return app.complete(text, 0)
+        return app.complete(text, 0, line, begidx, endidx)
 
 
 def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
