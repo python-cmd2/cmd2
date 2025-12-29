@@ -19,11 +19,13 @@ import cmd2
 from cmd2 import (
     COMMAND_NAME,
     Cmd2Style,
+    Color,
     RichPrintKwargs,
     clipboard,
     constants,
     exceptions,
     plugin,
+    stylize,
     utils,
 )
 from cmd2 import rich_utils as ru
@@ -1230,6 +1232,33 @@ def test_default_to_shell(base_app, monkeypatch) -> None:
     out, _err = run_cmd(base_app, line)
     assert out == []
     assert m.called
+
+
+@pytest.mark.skip('TODO: Replace escapte prompt stuff with prompt-toolkit equivalents')
+def test_escaping_prompt() -> None:
+    # This prompt has nothing which needs to be escaped
+    _prompt = '(Cmd) '
+    # TODO(T or K): Replace below with prompt-toolkit equivalent  # noqa: FIX002, TD003
+    # assert rl_escape_prompt(prompt) == prompt  # noqa: ERA001
+
+    # This prompt has color which needs to be escaped
+    _prompt = stylize('InColor', style=Color.CYAN)
+
+    _escape_start = "\x01"
+    _escape_end = "\x02"
+
+    # TODO(T or K): Replace below with prompt-toolkit equivalent  # noqa: FIX002, TD003
+    # escaped_prompt = rl_escape_prompt(prompt)  # noqa: ERA001
+    # if sys.platform.startswith('win'):
+    #     # PyReadline on Windows doesn't need to escape invisible characters
+    #     assert escaped_prompt == prompt  # noqa: ERA001
+    # else:  # noqa: ERA001
+    #     cyan = "\x1b[36m"  # noqa: ERA001
+    #     reset_all = "\x1b[0m"  # noqa: ERA001
+    #     assert escaped_prompt.startswith(escape_start + cyan + escape_end)  # noqa: ERA001
+    #     assert escaped_prompt.endswith(escape_start + reset_all + escape_end)  # noqa: ERA001
+
+    # assert rl_unescape_prompt(escaped_prompt) == prompt  # noqa: ERA001
 
 
 class HelpApp(cmd2.Cmd):
