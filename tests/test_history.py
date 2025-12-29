@@ -974,7 +974,7 @@ def test_history_populates_pt(hist_file) -> None:
     assert app.history.get(4).statement.raw == 'alias'
 
     # prompt-toolkit only adds a single entry for multiple sequential identical commands
-    # so we check to make sure that cmd2 populated the readline history
+    # so we check to make sure that cmd2 populated the prompt-toolkit history
     # using the same rules
     pt_history = app.session.history.get_strings()
     assert len(pt_history) == 3
