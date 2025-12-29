@@ -19,20 +19,15 @@ import cmd2
 from cmd2 import (
     COMMAND_NAME,
     Cmd2Style,
-    Color,
     RichPrintKwargs,
     clipboard,
     constants,
     exceptions,
     plugin,
-    stylize,
     utils,
 )
 from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
-
-# This ensures gnureadline is used in macOS tests
-from cmd2.rl_utils import readline  # type: ignore[atrr-defined]
 
 from .conftest import (
     SHORTCUTS_TXT,
@@ -390,9 +385,10 @@ def test_run_script_with_binary_file(base_app, request) -> None:
     assert base_app.last_result is False
 
 
-def test_run_script_with_python_file(base_app, request) -> None:
-    m = mock.MagicMock(name='input', return_value='2')
-    builtins.input = m
+def test_run_script_with_python_file(base_app, request, monkeypatch) -> None:
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value='2')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'pyscript', 'stop.py')
@@ -1236,35 +1232,6 @@ def test_default_to_shell(base_app, monkeypatch) -> None:
     assert m.called
 
 
-def test_escaping_prompt() -> None:
-    from cmd2.rl_utils import (
-        rl_escape_prompt,
-        rl_unescape_prompt,
-    )
-
-    # This prompt has nothing which needs to be escaped
-    prompt = '(Cmd) '
-    assert rl_escape_prompt(prompt) == prompt
-
-    # This prompt has color which needs to be escaped
-    prompt = stylize('InColor', style=Color.CYAN)
-
-    escape_start = "\x01"
-    escape_end = "\x02"
-
-    escaped_prompt = rl_escape_prompt(prompt)
-    if sys.platform.startswith('win'):
-        # PyReadline on Windows doesn't need to escape invisible characters
-        assert escaped_prompt == prompt
-    else:
-        cyan = "\x1b[36m"
-        reset_all = "\x1b[0m"
-        assert escaped_prompt.startswith(escape_start + cyan + escape_end)
-        assert escaped_prompt.endswith(escape_start + reset_all + escape_end)
-
-    assert rl_unescape_prompt(escaped_prompt) == prompt
-
-
 class HelpApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
 
@@ -1816,95 +1783,33 @@ def test_multiline_input_line_to_statement(multiline_app) -> None:
     assert statement.multiline_command == 'orate'
 
 
-def test_multiline_history_no_prior_history(multiline_app) -> None:
-    # Test no existing history prior to typing the command
+def test_multiline_history_added(multiline_app) -> None:
+    # Test that multiline commands are added to history as a single item
     m = mock.MagicMock(name='input', side_effect=['person', '\n'])
     builtins.input = m
 
-    # Set orig_rl_history_length to 0 before the first line is typed.
-    readline.clear_history()
-    orig_rl_history_length = readline.get_current_history_length()
+    multiline_app.history.clear()
 
-    line = "orate hi"
-    readline.add_history(line)
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+    # run_cmd calls onecmd_plus_hooks which triggers history addition
+    run_cmd(multiline_app, "orate hi")
 
-    assert readline.get_current_history_length() == orig_rl_history_length + 1
-    assert readline.get_history_item(1) == "orate hi person"
-
-
-def test_multiline_history_first_line_matches_prev_entry(multiline_app) -> None:
-    # Test when first line of multiline command matches previous history entry
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
-
-    # Since the first line of our command matches the previous entry,
-    # orig_rl_history_length is set before the first line is typed.
-    line = "orate hi"
-    readline.clear_history()
-    readline.add_history(line)
-    orig_rl_history_length = readline.get_current_history_length()
-
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
-
-    assert readline.get_current_history_length() == orig_rl_history_length + 1
-    assert readline.get_history_item(1) == line
-    assert readline.get_history_item(2) == "orate hi person"
-
-
-def test_multiline_history_matches_prev_entry(multiline_app) -> None:
-    # Test combined multiline command that matches previous history entry
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
-
-    readline.clear_history()
-    readline.add_history("orate hi person")
-    orig_rl_history_length = readline.get_current_history_length()
-
-    line = "orate hi"
-    readline.add_history(line)
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
-
-    # Since it matches the previous history item, nothing was added to readline history
-    assert readline.get_current_history_length() == orig_rl_history_length
-    assert readline.get_history_item(1) == "orate hi person"
-
-
-def test_multiline_history_does_not_match_prev_entry(multiline_app) -> None:
-    # Test combined multiline command that does not match previous history entry
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
-
-    readline.clear_history()
-    readline.add_history("no match")
-    orig_rl_history_length = readline.get_current_history_length()
-
-    line = "orate hi"
-    readline.add_history(line)
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
-
-    # Since it doesn't match the previous history item, it was added to readline history
-    assert readline.get_current_history_length() == orig_rl_history_length + 1
-    assert readline.get_history_item(1) == "no match"
-    assert readline.get_history_item(2) == "orate hi person"
+    assert len(multiline_app.history) == 1
+    assert multiline_app.history.get(1).raw == "orate hi\nperson\n"
 
 
 def test_multiline_history_with_quotes(multiline_app) -> None:
-    # Test combined multiline command with quotes
+    # Test combined multiline command with quotes is added to history correctly
     m = mock.MagicMock(name='input', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
     builtins.input = m
 
-    readline.clear_history()
-    orig_rl_history_length = readline.get_current_history_length()
+    multiline_app.history.clear()
 
     line = 'orate Look, "There are newlines'
-    readline.add_history(line)
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+    run_cmd(multiline_app, line)
 
-    # Since spaces and newlines in quotes are preserved, this history entry spans multiple lines.
-    assert readline.get_current_history_length() == orig_rl_history_length + 1
-
-    history_lines = readline.get_history_item(1).splitlines()
+    assert len(multiline_app.history) == 1
+    history_item = multiline_app.history.get(1)
+    history_lines = history_item.raw.splitlines()
     assert history_lines[0] == 'orate Look, "There are newlines'
     assert history_lines[1] == '  and spaces  '
     assert history_lines[2] == ' " in quotes.;'
@@ -2004,11 +1909,9 @@ def test_read_input_rawinput_true(capsys, monkeypatch) -> None:
         assert line == input_str
 
         # Run custom history code
-        readline.add_history('old_history')
         custom_history = ['cmd1', 'cmd2']
         line = app.read_input(prompt_str, history=custom_history, completion_mode=cmd2.CompletionMode.NONE)
         assert line == input_str
-        readline.clear_history()
 
         # Run all completion modes
         line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.NONE)
