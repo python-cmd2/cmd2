@@ -978,9 +978,9 @@ def test_history_populates_pt(hist_file) -> None:
     # using the same rules
     pt_history = app.session.history.get_strings()
     assert len(pt_history) == 3
-    assert pt_history.get(1) == 'help'
-    assert pt_history.get(2) == 'shortcuts'
-    assert pt_history.get(3) == 'alias'
+    assert pt_history[0] == 'help'
+    assert pt_history[1] == 'shortcuts'
+    assert pt_history[2] == 'alias'
 
 
 #

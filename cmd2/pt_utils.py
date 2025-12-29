@@ -84,8 +84,18 @@ class Cmd2History(History):
 
     def load_history_strings(self) -> Iterable[str]:
         """Yield strings from cmd2's history to prompt_toolkit."""
-        for item in self.cmd_app.history:
-            yield item.statement.raw
+        last_item = None
+        for item in reversed(self.cmd_app.history):
+            if item.statement.raw != last_item:
+                yield item.statement.raw
+                last_item = item.statement.raw
+
+    def get_strings(self) -> list[str]:
+        """Get the strings from the history that are loaded so far."""
+        if not self._loaded:
+            self._loaded_strings = list(self.load_history_strings())
+            self._loaded = True
+        return super().get_strings()
 
     def store_string(self, string: str) -> None:
         """prompt_toolkit calls this when a line is accepted.
