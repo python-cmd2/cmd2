@@ -33,6 +33,8 @@ def verify_hi_last_result(app: cmd2.Cmd, expected_length: int) -> None:
 def test_pt_add_history_item() -> None:
     from prompt_toolkit import PromptSession
     from prompt_toolkit.history import InMemoryHistory
+    from prompt_toolkit.input import DummyInput
+    from prompt_toolkit.output import DummyOutput
 
     # Create a history object and add some initial items
     history = InMemoryHistory()
@@ -42,7 +44,7 @@ def test_pt_add_history_item() -> None:
     assert len(history.get_strings()) == 2
 
     # Start a session and use this history
-    session = PromptSession(history=history)
+    session = PromptSession(history=history, input=DummyInput(), output=DummyOutput())
 
     session.history.get_strings().append('new command')
     assert 'new command' not in session.history.get_strings()
