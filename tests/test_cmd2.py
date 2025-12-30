@@ -3378,3 +3378,18 @@ def test_bottom_toolbar(base_app):
         base_app.completion_hint = 'hint  '
         base_app._bottom_toolbar()
         mock_ansi.assert_called_with('hint')
+
+
+def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypatch):
+    # Mock read_input to raise KeyboardInterrupt
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=KeyboardInterrupt)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    # Mock poutput to verify ^C is printed
+    poutput_mock = mock.MagicMock(name='poutput')
+    monkeypatch.setattr(multiline_app, 'poutput', poutput_mock)
+
+    with pytest.raises(exceptions.EmptyStatement):
+        multiline_app._complete_statement('orate incomplete')
+
+    poutput_mock.assert_called_with('^C')
