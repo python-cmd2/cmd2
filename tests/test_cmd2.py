@@ -1919,9 +1919,10 @@ def test_read_input_rawinput_true(capsys, monkeypatch) -> None:
     app.use_rawinput = True
 
     # Mock PromptSession.prompt (used when isatty=False)
-    # and app.session.prompt (used when use_rawinput=True and isatty=True)
+    # Also mock patch_stdout to prevent it from attempting to access the Windows console buffer in a Windows test environment
     with (
         mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str),
+        mock.patch('cmd2.cmd2.patch_stdout'),
     ):
         # isatty is True
         with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
