@@ -2286,6 +2286,28 @@ def test_get_settable_completion_items(base_app) -> None:
         assert cur_settable.description[0:10] in cur_res.descriptive_data[1]
 
 
+def test_completion_supported(base_app) -> None:
+    # use_rawinput is True and completekey is non-empty -> True
+    base_app.use_rawinput = True
+    base_app.completekey = 'tab'
+    assert base_app._completion_supported() is True
+
+    # use_rawinput is False and completekey is non-empty -> False
+    base_app.use_rawinput = False
+    base_app.completekey = 'tab'
+    assert base_app._completion_supported() is False
+
+    # use_rawinput is True and completekey is empty -> False
+    base_app.use_rawinput = True
+    base_app.completekey = ''
+    assert base_app._completion_supported() is False
+
+    # use_rawinput is False and completekey is empty -> False
+    base_app.use_rawinput = False
+    base_app.completekey = ''
+    assert base_app._completion_supported() is False
+
+
 def test_alias_no_subcommand(base_app) -> None:
     _out, err = run_cmd(base_app, 'alias')
     assert "Usage: alias [-h]" in err[0]
