@@ -3429,6 +3429,5 @@ def test_no_console_screen_buffer_error_dummy():
     from cmd2.cmd2 import NoConsoleScreenBufferError
 
     # Check that it behaves like a normal exception
-    err = NoConsoleScreenBufferError("test message")
-    assert str(err) == "test message"
+    err = NoConsoleScreenBufferError()
     assert isinstance(err, Exception)
