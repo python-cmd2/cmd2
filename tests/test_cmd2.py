@@ -3244,3 +3244,100 @@ def test_command_synonym_parser() -> None:
 
     assert synonym_parser is not None
     assert synonym_parser is help_parser
+
+
+def test_custom_completekey():
+    # Test setting a custom completekey
+    app = cmd2.Cmd(completekey='?')
+    assert app.completekey == '?'
+
+
+def test_prompt_session_init_exception(monkeypatch):
+    from prompt_toolkit.shortcuts import PromptSession
+
+    # Mock PromptSession to raise ValueError on first call, then succeed
+    valid_session_mock = mock.MagicMock(spec=PromptSession)
+    mock_session = mock.MagicMock(side_effect=[ValueError, valid_session_mock])
+    monkeypatch.setattr("cmd2.cmd2.PromptSession", mock_session)
+
+    cmd2.Cmd()
+    # Check that fallback to DummyInput/Output happened
+    from prompt_toolkit.input import DummyInput
+    from prompt_toolkit.output import DummyOutput
+
+    assert mock_session.call_count == 2
+    # Check args of second call
+    call_args = mock_session.call_args_list[1]
+    kwargs = call_args[1]
+    assert isinstance(kwargs['input'], DummyInput)
+    assert isinstance(kwargs['output'], DummyOutput)
+
+
+def test_pager_on_windows(monkeypatch):
+    monkeypatch.setattr("sys.platform", "win32")
+    app = cmd2.Cmd()
+    assert app.pager == 'more'
+    assert app.pager_chop == 'more'
+
+
+def test_path_complete_users_windows(monkeypatch, base_app):
+    monkeypatch.setattr("sys.platform", "win32")
+
+    # Mock os.path.expanduser and isdir
+    monkeypatch.setattr("os.path.expanduser", lambda p: '/home/user' if p == '~user' else p)
+    monkeypatch.setattr("os.path.isdir", lambda p: p == '/home/user')
+
+    matches = base_app.path_complete('~user', 'cmd ~user', 0, 9)
+    # Should contain ~user/ (or ~user\ depending on sep)
+    # Since we didn't mock os.path.sep, it will use system separator.
+    expected = '~user' + os.path.sep
+    assert expected in matches
+
+
+def test_async_alert_success(base_app):
+    import threading
+
+    success = []
+
+    def run_alert():
+        base_app.async_alert("Alert Message", new_prompt="(New) ")
+        success.append(True)
+
+    t = threading.Thread(target=run_alert)
+    t.start()
+    t.join()
+
+    assert success
+    assert base_app.prompt == "(New) "
+
+
+def test_async_alert_main_thread_error(base_app):
+    with pytest.raises(RuntimeError, match="main thread"):
+        base_app.async_alert("fail")
+
+
+def test_async_alert_lock_held(base_app):
+    import threading
+
+    # Acquire lock in main thread
+    base_app.terminal_lock.acquire()
+
+    exceptions = []
+
+    def run_alert():
+        try:
+            base_app.async_alert("fail")
+        except RuntimeError as e:
+            exceptions.append(e)
+        finally:
+            pass
+
+    try:
+        t = threading.Thread(target=run_alert)
+        t.start()
+        t.join()
+    finally:
+        base_app.terminal_lock.release()
+
+    assert len(exceptions) == 1
+    assert "another thread holds terminal_lock" in str(exceptions[0])
