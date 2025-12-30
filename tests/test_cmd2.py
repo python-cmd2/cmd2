@@ -3399,3 +3399,36 @@ def test_complete_optional_args_defaults(base_app) -> None:
     # Test that complete can be called with just text and state
     complete_val = base_app.complete('test', 0)
     assert complete_val is None
+
+
+def test_prompt_session_init_no_console_error(monkeypatch):
+    from prompt_toolkit.shortcuts import PromptSession
+
+    from cmd2.cmd2 import NoConsoleScreenBufferError
+
+    # Mock PromptSession to raise NoConsoleScreenBufferError on first call, then succeed
+    valid_session_mock = mock.MagicMock(spec=PromptSession)
+    mock_session = mock.MagicMock(side_effect=[NoConsoleScreenBufferError, valid_session_mock])
+    monkeypatch.setattr("cmd2.cmd2.PromptSession", mock_session)
+
+    cmd2.Cmd()
+
+    # Check that fallback to DummyInput/Output happened
+    from prompt_toolkit.input import DummyInput
+    from prompt_toolkit.output import DummyOutput
+
+    assert mock_session.call_count == 2
+    # Check args of second call
+    call_args = mock_session.call_args_list[1]
+    kwargs = call_args[1]
+    assert isinstance(kwargs['input'], DummyInput)
+    assert isinstance(kwargs['output'], DummyOutput)
+
+
+def test_no_console_screen_buffer_error_dummy():
+    from cmd2.cmd2 import NoConsoleScreenBufferError
+
+    # Check that it behaves like a normal exception
+    err = NoConsoleScreenBufferError("test message")
+    assert str(err) == "test message"
+    assert isinstance(err, Exception)

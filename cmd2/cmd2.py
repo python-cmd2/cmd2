@@ -152,11 +152,8 @@ try:
     if sys.platform == "win32":
         from prompt_toolkit.output.win32 import NoConsoleScreenBufferError  # type: ignore[attr-defined]
     else:
-
-        class NoConsoleScreenBufferError(Exception):  # type: ignore[no-redef]
-            """Dummy exception to use when prompt_toolkit.output.win32.NoConsoleScreenBufferError is not available."""
-
-
+        # Trigger the except block for non-Windows platforms
+        raise ImportError  # noqa: TRY301
 except ImportError:
 
     class NoConsoleScreenBufferError(Exception):  # type: ignore[no-redef]
