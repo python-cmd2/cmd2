@@ -146,7 +146,7 @@ from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input import DummyInput
 from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.patch_stdout import patch_stdout
-from prompt_toolkit.shortcuts import PromptSession, set_title
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, set_title
 
 try:
     if sys.platform == "win32":
@@ -443,6 +443,8 @@ class Cmd:
             self.session: PromptSession[str] = PromptSession(
                 history=self.history_adapter,
                 completer=self.completer,
+                complete_style=CompleteStyle.READLINE_LIKE,
+                complete_in_thread=True,
             )
         except (NoConsoleScreenBufferError, AttributeError, ValueError):
             # Fallback to dummy input/output if PromptSession initialization fails.
@@ -453,6 +455,8 @@ class Cmd:
                 completer=self.completer,
                 input=DummyInput(),
                 output=DummyOutput(),
+                complete_style=CompleteStyle.READLINE_LIKE,
+                complete_in_thread=True,
             )
 
         # Commands to exclude from the history command
