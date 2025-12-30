@@ -16,6 +16,9 @@ jobs:
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Check out
         uses: actions/checkout@v6.0.1
@@ -31,11 +34,9 @@ jobs:
           allow-prereleases: true
       - name: Install the project
         run: uv sync --all-extras --dev
-        shell: bash
 
       - name: Run tests
         run: uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
-        shell: bash
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
@@ -44,7 +45,6 @@ jobs:
           flags: python${{ matrix.python-version }}
           name: codecov-umbrella-test-results
           token: ${{ secrets.CODECOV_TOKEN }}
-        shell: bash
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
@@ -54,4 +54,3 @@ jobs:
           name: codecov-umbrella
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
-        shell: bash
