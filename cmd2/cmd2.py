@@ -63,7 +63,6 @@ from typing import (
     cast,
 )
 
-import prompt_toolkit as pt
 import rich.box
 from rich.console import Group, RenderableType
 from rich.highlighter import ReprHighlighter
@@ -144,8 +143,25 @@ with contextlib.suppress(ImportError):
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.input import DummyInput
+from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession, set_title
+
+try:
+    if sys.platform == "win32":
+        from prompt_toolkit.output.win32 import NoConsoleScreenBufferError  # type: ignore[attr-defined]
+    else:
+
+        class NoConsoleScreenBufferError(Exception):  # type: ignore[no-redef]
+            """Dummy exception to use when prompt_toolkit.output.win32.NoConsoleScreenBufferError is not available."""
+
+
+except ImportError:
+
+    class NoConsoleScreenBufferError(Exception):  # type: ignore[no-redef]
+        """Dummy exception to use when prompt_toolkit.output.win32.NoConsoleScreenBufferError is not available."""
+
 
 from .pt_utils import (
     Cmd2Completer,
@@ -421,10 +437,22 @@ class Cmd:
         # Initialize prompt-toolkit PromptSession
         self.history_adapter = Cmd2History(self)
         self.completer = Cmd2Completer(self)
-        self.session: PromptSession[str] = PromptSession(
-            history=self.history_adapter,
-            completer=self.completer,
-        )
+
+        try:
+            self.session: PromptSession[str] = PromptSession(
+                history=self.history_adapter,
+                completer=self.completer,
+            )
+        except (NoConsoleScreenBufferError, AttributeError, ValueError):
+            # Fallback to dummy input/output if PromptSession initialization fails.
+            # This can happen in some CI environments (like GitHub Actions on Windows)
+            # where isatty() is True but there is no real console.
+            self.session = PromptSession(
+                history=self.history_adapter,
+                completer=self.completer,
+                input=DummyInput(),
+                output=DummyOutput(),
+            )
 
         # Commands to exclude from the history command
         self.exclude_from_history = ['eof', 'history']
@@ -3226,12 +3254,16 @@ class Cmd:
                     history_to_use = InMemoryHistory()
                     for item in history:
                         history_to_use.append_string(item)
-                    from prompt_toolkit import prompt as pt_prompt
 
-                    return pt_prompt(
+                    temp_session1: PromptSession[str] = PromptSession(
+                        history=history_to_use,
+                        input=self.session.input,
+                        output=self.session.output,
+                    )
+
+                    return temp_session1.prompt(
                         prompt_to_use,
                         completer=completer_to_use,
-                        history=history_to_use,
                         bottom_toolbar=self._bottom_toolbar,
                     )
 
@@ -3244,13 +3276,26 @@ class Cmd:
         # Otherwise read from self.stdin
         elif self.stdin.isatty():
             # on a tty, print the prompt first, then read the line
-            line = pt.prompt(prompt, bottom_toolbar=self._bottom_toolbar)
+            temp_session2: PromptSession[str] = PromptSession(
+                input=self.session.input,
+                output=self.session.output,
+            )
+            line = temp_session2.prompt(
+                prompt,
+                bottom_toolbar=self._bottom_toolbar,
+            )
             if len(line) == 0:
                 raise EOFError
             return line.rstrip('\n')
         else:
             # not a tty, just read the line
-            line = pt.prompt(bottom_toolbar=self._bottom_toolbar)
+            temp_session3: PromptSession[str] = PromptSession(
+                input=self.session.input,
+                output=self.session.output,
+            )
+            line = temp_session3.prompt(
+                bottom_toolbar=self._bottom_toolbar,
+            )
             if len(line) == 0:
                 raise EOFError
             line = line.rstrip('\n')
