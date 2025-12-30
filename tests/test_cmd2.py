@@ -1918,10 +1918,11 @@ def test_read_input_rawinput_true(capsys, monkeypatch) -> None:
     app = cmd2.Cmd()
     app.use_rawinput = True
 
-    # Mock PromptSession.prompt (used when isatty=False)
+    # Mock prompt_toolkit.prompt (used when isatty=False)
     # and app.session.prompt (used when use_rawinput=True and isatty=True)
     with (
-        mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str),
+        mock.patch('prompt_toolkit.prompt', return_value=input_str),
+        mock.patch.object(app.session, 'prompt', return_value=input_str),
     ):
         # isatty is True
         with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
@@ -1999,7 +2000,7 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
 
     # isatty True
     app = make_app(isatty=True)
-    with mock.patch('cmd2.cmd2.PromptSession.prompt', side_effect=mock_pt_prompt):
+    with mock.patch('prompt_toolkit.prompt', side_effect=mock_pt_prompt):
         line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
@@ -2007,14 +2008,14 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
 
     # isatty True, empty input
     app = make_app(isatty=True, empty_input=True)
-    with mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=''), pytest.raises(EOFError):
+    with mock.patch('prompt_toolkit.prompt', return_value=''), pytest.raises(EOFError):
         app.read_input(prompt_str)
     out, _err = capsys.readouterr()
 
     # isatty is False, echo is True
     app = make_app(isatty=False)
     app.echo = True
-    with mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str):
+    with mock.patch('prompt_toolkit.prompt', return_value=input_str):
         line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
@@ -2023,7 +2024,7 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
     # isatty is False, echo is False
     app = make_app(isatty=False)
     app.echo = False
-    with mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str):
+    with mock.patch('prompt_toolkit.prompt', return_value=input_str):
         line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
@@ -2031,7 +2032,7 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
 
     # isatty is False, empty input
     app = make_app(isatty=False, empty_input=True)
-    with mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=''), pytest.raises(EOFError):
+    with mock.patch('prompt_toolkit.prompt', return_value=''), pytest.raises(EOFError):
         app.read_input(prompt_str)
     out, _err = capsys.readouterr()
 
