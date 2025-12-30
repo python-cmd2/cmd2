@@ -3393,3 +3393,9 @@ def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypa
         multiline_app._complete_statement('orate incomplete')
 
     poutput_mock.assert_called_with('^C')
+
+
+def test_complete_optional_args_defaults(base_app) -> None:
+    # Test that complete can be called with just text and state
+    complete_val = base_app.complete('test', 0)
+    assert complete_val is None
