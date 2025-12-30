@@ -3431,3 +3431,64 @@ def test_no_console_screen_buffer_error_dummy():
     # Check that it behaves like a normal exception
     err = NoConsoleScreenBufferError()
     assert isinstance(err, Exception)
+
+
+def test_read_input_dynamic_prompt(base_app, monkeypatch):
+    """Test that read_input uses a dynamic prompt when provided prompt matches app.prompt"""
+    input_str = 'some input'
+    base_app.use_rawinput = True
+
+    # Mock PromptSession.prompt
+    # Also mock patch_stdout to prevent it from attempting to access the Windows console buffer in a Windows test environment
+    with (
+        mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str) as mock_prompt,
+        mock.patch('cmd2.cmd2.patch_stdout'),
+        mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)),
+    ):
+        # Call with exact app prompt
+        line = base_app.read_input(base_app.prompt)
+        assert line == input_str
+
+        # Check that mock_prompt was called with a callable for the prompt
+        # args[0] should be the prompt_to_use
+        args, _ = mock_prompt.call_args
+        prompt_arg = args[0]
+        assert callable(prompt_arg)
+
+        # Verify the callable returns the expected ANSI formatted prompt
+        from prompt_toolkit.formatted_text import ANSI
+
+        result = prompt_arg()
+        assert isinstance(result, ANSI)
+        assert result.value == ANSI(base_app.prompt).value
+
+
+def test_read_input_dynamic_prompt_with_history(base_app, monkeypatch):
+    """Test that read_input uses a dynamic prompt when provided prompt matches app.prompt and history is provided"""
+    input_str = 'some input'
+    base_app.use_rawinput = True
+    custom_history = ['cmd1', 'cmd2']
+
+    # Mock PromptSession.prompt
+    # Also mock patch_stdout to prevent it from attempting to access the Windows console buffer in a Windows test environment
+    with (
+        mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str) as mock_prompt,
+        mock.patch('cmd2.cmd2.patch_stdout'),
+        mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)),
+    ):
+        # Call with exact app prompt and history
+        line = base_app.read_input(base_app.prompt, history=custom_history)
+        assert line == input_str
+
+        # Check that mock_prompt was called with a callable for the prompt
+        # args[0] should be the prompt_to_use
+        args, _ = mock_prompt.call_args
+        prompt_arg = args[0]
+        assert callable(prompt_arg)
+
+        # Verify the callable returns the expected ANSI formatted prompt
+        from prompt_toolkit.formatted_text import ANSI
+
+        result = prompt_arg()
+        assert isinstance(result, ANSI)
+        assert result.value == ANSI(base_app.prompt).value
