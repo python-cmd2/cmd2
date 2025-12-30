@@ -3341,3 +3341,40 @@ def test_async_alert_lock_held(base_app):
 
     assert len(exceptions) == 1
     assert "another thread holds terminal_lock" in str(exceptions[0])
+
+
+def test_bottom_toolbar(base_app):
+    from prompt_toolkit.formatted_text import ANSI
+
+    # Test when both are empty
+    base_app.formatted_completions = ''
+    base_app.completion_hint = ''
+    assert base_app._bottom_toolbar() is None
+
+    # Test when formatted_completions is set
+    text = 'completions'
+    base_app.formatted_completions = text + '\n'
+    base_app.completion_hint = ''
+    result = base_app._bottom_toolbar()
+    assert isinstance(result, ANSI)
+
+    # Test when completion_hint is set
+    hint = 'hint'
+    base_app.formatted_completions = ''
+    base_app.completion_hint = hint + '  '
+    result = base_app._bottom_toolbar()
+    assert isinstance(result, ANSI)
+
+    # Test prioritization and rstrip
+    with mock.patch('cmd2.cmd2.ANSI', wraps=ANSI) as mock_ansi:
+        # formatted_completions takes precedence
+        base_app.formatted_completions = 'formatted\n'
+        base_app.completion_hint = 'hint'
+        base_app._bottom_toolbar()
+        mock_ansi.assert_called_with('formatted')
+
+        # completion_hint used when formatted_completions is empty
+        base_app.formatted_completions = ''
+        base_app.completion_hint = 'hint  '
+        base_app._bottom_toolbar()
+        mock_ansi.assert_called_with('hint')
