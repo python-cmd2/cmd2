@@ -159,6 +159,10 @@ except ImportError:
     class NoConsoleScreenBufferError(Exception):  # type: ignore[no-redef]
         """Dummy exception to use when prompt_toolkit.output.win32.NoConsoleScreenBufferError is not available."""
 
+        def __init__(self, msg: str = '') -> None:
+            """Initialize NoConsoleScreenBufferError custom exception instance."""
+            super().__init__(msg)
+
 
 from .pt_utils import (
     Cmd2Completer,
