@@ -150,7 +150,7 @@ class TestCmd2History:
         return item
 
     def test_load_history_strings(self, mock_cmd_app):
-        """Test loading history strings in reverse order with deduping."""
+        """Test loading history strings yields all items in forward order."""
         history = pt_utils.Cmd2History(cast(any, mock_cmd_app))
 
         # Setup history items
@@ -163,10 +163,10 @@ class TestCmd2History:
         ]
         mock_cmd_app.history = items
 
-        # Expected: cmd3, cmd2, cmd1 (duplicates removed)
+        # Expected: cmd1, cmd2, cmd2, cmd3 (raw iteration)
         result = list(history.load_history_strings())
 
-        assert result == ["cmd3", "cmd2", "cmd1"]
+        assert result == ["cmd1", "cmd2", "cmd2", "cmd3"]
 
     def test_load_history_strings_empty(self, mock_cmd_app):
         """Test loading history strings with empty history."""
@@ -179,26 +179,25 @@ class TestCmd2History:
         assert result == []
 
     def test_get_strings(self, mock_cmd_app):
-        """Test get_strings uses lazy loading."""
+        """Test get_strings returns deduped strings and does not cache."""
         history = pt_utils.Cmd2History(cast(any, mock_cmd_app))
 
-        items = [self.make_history_item("test")]
+        items = [
+            self.make_history_item("cmd1"),
+            self.make_history_item("cmd2"),
+            self.make_history_item("cmd2"),  # Duplicate
+            self.make_history_item("cmd3"),
+        ]
         mock_cmd_app.history = items
 
-        # Initially not loaded
-        assert not history._loaded
-
+        # Expect deduped: cmd1, cmd2, cmd3
         strings = history.get_strings()
+        assert strings == ["cmd1", "cmd2", "cmd3"]
 
-        assert strings == ["test"]
-        assert history._loaded
-        assert history._loaded_strings == ["test"]
-
-        # Call again, should return cached strings
-        # Modify underlying history to prove it uses cache
-        mock_cmd_app.history = []
+        # Modify underlying history to prove it does NOT use cache
+        mock_cmd_app.history.append(self.make_history_item("cmd4"))
         strings2 = history.get_strings()
-        assert strings2 == ["test"]
+        assert strings2 == ["cmd1", "cmd2", "cmd3", "cmd4"]
 
     def test_store_string(self, mock_cmd_app):
         """Test store_string does nothing."""

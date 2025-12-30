@@ -1,5 +1,6 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
+import re
 from collections.abc import Iterable
 from typing import (
     TYPE_CHECKING,
@@ -12,7 +13,10 @@ from prompt_toolkit.completion import (
 from prompt_toolkit.document import Document
 from prompt_toolkit.history import History
 
-from . import utils
+from . import (
+    constants,
+    utils,
+)
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
@@ -28,7 +32,15 @@ class Cmd2Completer(Completer):
 
     def get_completions(self, document: Document, _complete_event: object) -> Iterable[Completion]:
         """Get completions for the current input."""
-        text = document.get_word_before_cursor(WORD=True)
+        # Define delimiters for completion to match cmd2/readline behavior
+        delimiters = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRECTION_CHARS)
+        if hasattr(self.cmd_app, 'statement_parser'):
+            delimiters += "".join(self.cmd_app.statement_parser.terminators)
+
+        # Regex pattern for a word: one or more characters that are NOT delimiters
+        pattern = re.compile(f"[^{re.escape(delimiters)}]+")
+
+        text = document.get_word_before_cursor(pattern=pattern)
 
         # We need the full line and indexes for cmd2
         line = document.text
@@ -84,18 +96,20 @@ class Cmd2History(History):
 
     def load_history_strings(self) -> Iterable[str]:
         """Yield strings from cmd2's history to prompt_toolkit."""
-        last_item = None
-        for item in reversed(self.cmd_app.history):
-            if item.statement.raw != last_item:
-                yield item.statement.raw
-                last_item = item.statement.raw
+        for item in self.cmd_app.history:
+            yield item.statement.raw
 
     def get_strings(self) -> list[str]:
-        """Get the strings from the history that are loaded so far."""
-        if not self._loaded:
-            self._loaded_strings = list(self.load_history_strings())
-            self._loaded = True
-        return super().get_strings()
+        """Get the strings from the history."""
+        # We override this to always get the latest history from cmd2
+        # instead of caching it like the base class does.
+        strings: list[str] = []
+        last_item = None
+        for item in self.cmd_app.history:
+            if item.statement.raw != last_item:
+                strings.append(item.statement.raw)
+                last_item = item.statement.raw
+        return strings
 
     def store_string(self, string: str) -> None:
         """prompt_toolkit calls this when a line is accepted.
