@@ -35,13 +35,7 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
-      - name: Run Windows tests
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
-
-      - name: Run Mac/Linux tests
-        if: runner.os == 'Linux' || runner.os == 'macOS'
+      - name: Run tests
         run: uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
 
       - name: Upload test results to Codecov
