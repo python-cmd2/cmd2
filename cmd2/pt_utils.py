@@ -22,6 +22,9 @@ if TYPE_CHECKING:
     from .cmd2 import Cmd
 
 
+BASE_DELIMITERS = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRECTION_CHARS)
+
+
 class Cmd2Completer(Completer):
     """Completer that delegates to cmd2's completion logic."""
 
@@ -30,17 +33,17 @@ class Cmd2Completer(Completer):
         self.cmd_app = cmd_app
         self.custom_settings = custom_settings
 
-    def get_completions(self, document: Document, _complete_event: object) -> Iterable[Completion]:
-        """Get completions for the current input."""
         # Define delimiters for completion to match cmd2/readline behavior
-        delimiters = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRECTION_CHARS)
+        delimiters = BASE_DELIMITERS
         if hasattr(self.cmd_app, 'statement_parser'):
             delimiters += "".join(self.cmd_app.statement_parser.terminators)
 
         # Regex pattern for a word: one or more characters that are NOT delimiters
-        pattern = re.compile(f"[^{re.escape(delimiters)}]+")
+        self.word_pattern = re.compile(f"[^{re.escape(delimiters)}]+")
 
-        text = document.get_word_before_cursor(pattern=pattern)
+    def get_completions(self, document: Document, _complete_event: object) -> Iterable[Completion]:
+        """Get completions for the current input."""
+        text = document.get_word_before_cursor(pattern=self.word_pattern)
 
         # We need the full line and indexes for cmd2
         line = document.text
