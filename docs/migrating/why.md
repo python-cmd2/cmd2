@@ -32,10 +32,10 @@ top-notch interactive command-line experience for their users.
 After switching from [cmd][cmd] to `cmd2`, your application will have the following new features and
 capabilities, without you having to do anything:
 
-- More robust [History](../features/history.md). Both [cmd][cmd] and `cmd2` have readline history,
-  but `cmd2` also has a robust `history` command which allows you to edit prior commands in a text
-  editor of your choosing, re-run multiple commands at a time, save prior commands as a script to be
-  executed later, and much more.
+- More robust [History](../features/history.md). Both [cmd][cmd] and `cmd2` have readline-style
+  history, but `cmd2` also has a robust `history` command which allows you to edit prior commands in
+  a text editor of your choosing, re-run multiple commands at a time, save prior commands as a
+  script to be executed later, and much more.
 - Users can redirect output to a file or pipe it to some other operating system command. You did
   remember to use `self.stdout` instead of `sys.stdout` in all of your print functions, right? If
   you did, then this will work out of the box. If you didn't, you'll have to go back and fix them.
