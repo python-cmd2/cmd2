@@ -1,6 +1,6 @@
-"""Unit/functional testing for readline tab completion functions in the cmd2.py module.
+"""Unit/functional testing for prompt-toolkit tab completion functions in the cmd2.py module.
 
-These are primarily tests related to readline completer functions which handle tab completion of cmd2/cmd commands,
+These are primarily tests related to prompt-toolkit completer functions which handle tab completion of cmd2/cmd commands,
 file system paths, and shell commands.
 """
 

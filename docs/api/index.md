@@ -24,11 +24,10 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.history](./history.md) - classes for storing the history of previously entered commands
 - [cmd2.parsing](./parsing.md) - classes for parsing and storing user input
 - [cmd2.plugin](./plugin.md) - data classes for hook methods
+- [cmd2.pt_utils](./pt_utils.md) - utilities related to prompt-toolkit
 - [cmd2.py_bridge](./py_bridge.md) - classes for bridging calls from the embedded python environment
   to the host app
 - [cmd2.rich_utils](./rich_utils.md) - common utilities to support Rich in cmd2 applications
-- [cmd2.rl_utils](./rl_utils.md) - imports the proper Readline for the platform and provides utility
-  functions for it
 - [cmd2.string_utils](./string_utils.md) - string utility functions
 - [cmd2.styles](./styles.md) - cmd2-specific Rich styles and a StrEnum of their corresponding names
 - [cmd2.terminal_utils](./terminal_utils.md) - support for terminal control escape sequences
