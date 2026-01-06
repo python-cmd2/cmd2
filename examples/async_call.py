@@ -16,7 +16,7 @@ def run_async(coro) -> concurrent.futures.Future:
     Await a coroutine from a synchronous function/method.
     """
 
-    global _event_loop
+    global _event_loop  # noqa: PLW0603
 
     if _event_loop is None:
         with _event_lock:
@@ -30,6 +30,7 @@ def run_async(coro) -> concurrent.futures.Future:
                 thread.start()
 
     return asyncio.run_coroutine_threadsafe(coro, _event_loop)
+
 
 async def async_wait(duration: float) -> float:
     """
@@ -75,4 +76,5 @@ async def main() -> int:
 
 if __name__ == '__main__':
     import sys
+
     sys.exit(asyncio.run(main(), debug=True))
