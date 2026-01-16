@@ -460,8 +460,8 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completion_results:
-                # Don't overwrite an existing hint
-                if not self._cmd2_app.completion_hint:
+                # Don't overwrite an existing hint or show a hint for subcommands
+                if not self._cmd2_app.completion_hint and not isinstance(pos_arg_state.action, argparse._SubParsersAction):
                     self._cmd2_app.completion_hint = _build_hint(self._parser, pos_arg_state.action)
                 return completion_results
 
