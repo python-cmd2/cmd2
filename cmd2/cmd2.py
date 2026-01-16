@@ -2405,6 +2405,7 @@ class Cmd:
                             metavar="COMMAND",
                             help="command, alias, or macro name",
                             choices=self._get_commands_aliases_and_macros_for_completion(),
+                            suppress_tab_hint=True,
                         )
                         custom_settings = utils.CustomCompletionSettings(parser)
 
