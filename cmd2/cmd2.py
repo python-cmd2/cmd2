@@ -306,6 +306,7 @@ class Cmd:
         auto_load_commands: bool = False,
         allow_clipboard: bool = True,
         suggest_similar_command: bool = False,
+        include_bottom_toolbar: bool = False,
         intro: RenderableType = '',
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
@@ -354,10 +355,10 @@ class Cmd:
                                    instantiate and register all commands. If False, CommandSets
                                    must be manually installed with `register_command_set`.
         :param allow_clipboard: If False, cmd2 will disable clipboard interactions
-        :param suggest_similar_command: If ``True``, ``cmd2`` will attempt to suggest the most
-                                        similar command when the user types a command that does
-                                        not exist. Default: ``False``.
-        "param intro: Intro banner to print when starting the application.
+        :param suggest_similar_command: if ``True``, then when a command is not found,
+                                        [cmd2.Cmd][] will look for similar commands and suggest them.
+        :param include_bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
+        :param intro: introduction to display at startup
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -438,6 +439,7 @@ class Cmd:
         # Initialize prompt-toolkit PromptSession
         self.history_adapter = Cmd2History(self)
         self.completer = Cmd2Completer(self)
+        self.include_bottom_toolbar = include_bottom_toolbar
 
         try:
             self.session: PromptSession[str] = PromptSession(
@@ -1625,10 +1627,8 @@ class Cmd:
 
     def _bottom_toolbar(self) -> Any:
         """Get the bottom toolbar content."""
-        if self.formatted_completions:
-            return ANSI(self.formatted_completions.rstrip())
-        if self.completion_hint:
-            return ANSI(self.completion_hint.rstrip())
+        if self.include_bottom_toolbar:
+            return sys.argv[0]
         return None
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> tuple[list[str], list[str]]:

@@ -18,6 +18,8 @@ class MockCmd:
         self.completion_matches = []
         self.display_matches = []
         self.history = []
+        self.formatted_completions = ''
+        self.completion_hint = ''
 
 
 @pytest.fixture
