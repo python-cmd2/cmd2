@@ -1833,6 +1833,31 @@ def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
     assert history_lines[5] == ';'
 
 
+def test_multiline_complete_statement_eof(multiline_app, monkeypatch):
+    # Mock poutput to verify it's called
+    poutput_mock = mock.MagicMock(name='poutput')
+    monkeypatch.setattr(multiline_app, 'poutput', poutput_mock)
+
+    # Mock out the read_input call so we return EOFError
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=EOFError)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    command = 'orate'
+    args = 'hello world'
+    line = f'{command} {args}'
+
+    # This should call _read_command_line, get 'eof', set nextline to '\n',
+    # and then parse the line with the newline terminator.
+    statement = multiline_app._complete_statement(line)
+
+    assert statement.command == command
+    assert statement.args == args
+    assert statement.terminator == '\n'
+
+    # Verify that poutput('\n') was called
+    poutput_mock.assert_called_once_with('\n')
+
+
 class CommandResultApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
