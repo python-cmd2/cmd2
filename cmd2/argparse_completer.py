@@ -201,23 +201,11 @@ class ArgparseCompleter:
 
         # Positionals args that are left to parse
         remaining_positionals = deque(self._positional_actions)
-
-        # This gets set to True when flags will no longer be processed as argparse flags
         skip_remaining_flags = False
-
-        # _ArgumentState of the current positional
         pos_arg_state: _ArgumentState | None = None
-
-        # _ArgumentState of the current flag
         flag_arg_state: _ArgumentState | None = None
-
-        # Non-reusable flags that we've parsed
         matched_flags: list[str] = []
-
-        # Keeps track of arguments we've seen and any tokens they consumed
-        consumed_arg_values: dict[str, list[str]] = {}  # dict(arg_name -> list[tokens])
-
-        # Completed mutually exclusive groups
+        consumed_arg_values: dict[str, list[str]] = {}
         completed_mutex_groups: dict[argparse._MutuallyExclusiveGroup, argparse.Action] = {}
 
         def consume_argument(arg_state: _ArgumentState, token: str) -> None:
@@ -225,33 +213,6 @@ class ArgparseCompleter:
             arg_state.count += 1
             consumed_arg_values.setdefault(arg_state.action.dest, [])
             consumed_arg_values[arg_state.action.dest].append(token)
-
-        def update_mutex_groups(arg_action: argparse.Action) -> None:
-            """Check if an argument belongs to a mutually exclusive group potenitally mark that group complete."""
-            # Check if this action is in a mutually exclusive group
-            for group in self._parser._mutually_exclusive_groups:
-                if arg_action in group._group_actions:
-                    # Check if the group this action belongs to has already been completed
-                    if group in completed_mutex_groups:
-                        completer_action = completed_mutex_groups[group]
-                        if arg_action != completer_action:
-                            arg_str = f'{argparse._get_action_name(arg_action)}'
-                            completer_str = f'{argparse._get_action_name(completer_action)}'
-                            raise CompletionError(f"Error: argument {arg_str}: not allowed with argument {completer_str}")
-                        return
-
-                    # Mark that this action completed the group
-                    completed_mutex_groups[group] = arg_action
-
-                    # Don't tab complete any of the other args in the group
-                    for group_action in group._group_actions:
-                        if group_action == arg_action:
-                            continue
-                        if group_action in self._flag_to_action.values():
-                            matched_flags.extend(group_action.option_strings)
-                        elif group_action in remaining_positionals:
-                            remaining_positionals.remove(group_action)
-                    break
 
         #############################################################################################
         # Parse all but the last token
@@ -287,19 +248,19 @@ class ArgparseCompleter:
                     if len(candidates) == 1:
                         action = self._flag_to_action[candidates[0]]
                 if action:
-                    update_mutex_groups(action)
+                    self._update_mutex_groups(action, completed_mutex_groups, matched_flags, remaining_positionals)
                     if isinstance(action, (argparse._AppendAction, argparse._AppendConstAction, argparse._CountAction)):
                         consumed_arg_values.setdefault(action.dest, [])
                     else:
                         matched_flags.extend(action.option_strings)
                         consumed_arg_values[action.dest] = []
                     new_arg_state = _ArgumentState(action)
-                    if new_arg_state.max > 0:  # type: ignore[operator]
+                    if cast(float, new_arg_state.max) > 0:
                         flag_arg_state = new_arg_state
                         skip_remaining_flags = flag_arg_state.is_remainder
             elif flag_arg_state is not None:
                 consume_argument(flag_arg_state, token)
-                if isinstance(flag_arg_state.max, (float, int)) and flag_arg_state.count >= flag_arg_state.max:
+                if flag_arg_state.count >= cast(float, flag_arg_state.max):
                     flag_arg_state = None
             # Positional handling
             else:
@@ -317,57 +278,120 @@ class ArgparseCompleter:
                         return []
                     pos_arg_state = _ArgumentState(action)
                 if pos_arg_state is not None:
-                    update_mutex_groups(pos_arg_state.action)
+                    self._update_mutex_groups(
+                        pos_arg_state.action, completed_mutex_groups, matched_flags, remaining_positionals
+                    )
                     consume_argument(pos_arg_state, token)
                     if pos_arg_state.is_remainder:
                         skip_remaining_flags = True
-                    elif isinstance(pos_arg_state.max, (float, int)) and pos_arg_state.count >= pos_arg_state.max:
+                    elif pos_arg_state.count >= cast(float, pos_arg_state.max):
                         pos_arg_state = None
                         if remaining_positionals and remaining_positionals[0].nargs == argparse.REMAINDER:
                             skip_remaining_flags = True
 
-        #############################################################################################
-        # Complete the last token
-        #############################################################################################
+        return self._handle_last_token(
+            text,
+            line,
+            begidx,
+            endidx,
+            flag_arg_state,
+            pos_arg_state,
+            remaining_positionals,
+            consumed_arg_values,
+            matched_flags,
+            skip_remaining_flags,
+            cmd_set,
+        )
+
+    def _update_mutex_groups(
+        self,
+        arg_action: argparse.Action,
+        completed_mutex_groups: dict[argparse._MutuallyExclusiveGroup, argparse.Action],
+        matched_flags: list[str],
+        remaining_positionals: deque[argparse.Action],
+    ) -> None:
+        """Update mutex groups state."""
+        for group in self._parser._mutually_exclusive_groups:
+            if arg_action in group._group_actions:
+                if group in completed_mutex_groups:
+                    completer_action = completed_mutex_groups[group]
+                    if arg_action != completer_action:
+                        arg_str = f'{argparse._get_action_name(arg_action)}'
+                        completer_str = f'{argparse._get_action_name(completer_action)}'
+                        raise CompletionError(f"Error: argument {arg_str}: not allowed with argument {completer_str}")
+                    return
+                completed_mutex_groups[group] = arg_action
+                for group_action in group._group_actions:
+                    if group_action == arg_action:
+                        continue
+                    if group_action in self._flag_to_action.values():
+                        matched_flags.extend(group_action.option_strings)
+                    elif group_action in remaining_positionals:
+                        remaining_positionals.remove(group_action)
+                break
+
+    def _handle_last_token(
+        self,
+        text: str,
+        line: str,
+        begidx: int,
+        endidx: int,
+        flag_arg_state: _ArgumentState | None,
+        pos_arg_state: _ArgumentState | None,
+        remaining_positionals: deque[argparse.Action],
+        consumed_arg_values: dict[str, list[str]],
+        matched_flags: list[str],
+        skip_remaining_flags: bool,
+        cmd_set: CommandSet | None,
+    ) -> list[str]:
+        """Perform final completion step handling positionals and flags."""
         if _looks_like_flag(text, self._parser) and not skip_remaining_flags:
             if flag_arg_state and isinstance(flag_arg_state.min, int) and flag_arg_state.count < flag_arg_state.min:
                 raise _UnfinishedFlagError(flag_arg_state)
             return cast(list[str], self._complete_flags(text, line, begidx, endidx, matched_flags))
 
-        completion_results: list[str] = []
         if flag_arg_state is not None:
-            completion_results = self._complete_arg(
-                text, line, begidx, endidx, flag_arg_state, consumed_arg_values, cmd_set=cmd_set
-            )
-            if completion_results:
+            results = self._complete_arg(text, line, begidx, endidx, flag_arg_state, consumed_arg_values, cmd_set=cmd_set)
+            if results:
                 if not self._cmd2_app.completion_hint:
                     self._cmd2_app.completion_hint = _build_hint(self._parser, flag_arg_state.action)
-                return completion_results
+                return results
             if (
                 (isinstance(flag_arg_state.min, int) and flag_arg_state.count < flag_arg_state.min)
                 or not _single_prefix_char(text, self._parser)
                 or skip_remaining_flags
             ):
                 raise _NoResultsError(self._parser, flag_arg_state.action)
-        elif pos_arg_state is not None or remaining_positionals:
-            if pos_arg_state is None:
-                pos_arg_state = _ArgumentState(remaining_positionals.popleft())
-            completion_results = self._complete_arg(
-                text, line, begidx, endidx, pos_arg_state, consumed_arg_values, cmd_set=cmd_set
-            )
-            if completion_results:
-                if not self._cmd2_app.completion_hint and not isinstance(pos_arg_state.action, argparse._SubParsersAction):
-                    self._cmd2_app.completion_hint = _build_hint(self._parser, pos_arg_state.action)
-                return completion_results
+            return []
+
+        if pos_arg_state is None and remaining_positionals:
+            pos_arg_state = _ArgumentState(remaining_positionals.popleft())
+
+        if pos_arg_state is not None:
+            results = self._complete_arg(text, line, begidx, endidx, pos_arg_state, consumed_arg_values, cmd_set=cmd_set)
             # Fallback to flags if allowed
-            if not skip_remaining_flags and (
-                _looks_like_flag(text, self._parser)
-                or _single_prefix_char(text, self._parser)
-                or (isinstance(pos_arg_state.min, int) and pos_arg_state.count >= pos_arg_state.min)
-            ):
-                flag_results = self._complete_flags(text, line, begidx, endidx, matched_flags)
-                if flag_results:
-                    return cast(list[str], flag_results)
+            if not skip_remaining_flags:
+                if _looks_like_flag(text, self._parser) or _single_prefix_char(text, self._parser):
+                    flag_results = self._complete_flags(text, line, begidx, endidx, matched_flags)
+                    results.extend(cast(list[str], flag_results))
+                elif (
+                    not text
+                    and not results
+                    and (isinstance(pos_arg_state.min, int) and pos_arg_state.count >= pos_arg_state.min)
+                ):
+                    flag_results = self._complete_flags(text, line, begidx, endidx, matched_flags)
+                    if flag_results:
+                        return cast(list[str], flag_results)
+
+            if results:
+                if (
+                    not self._cmd2_app.completion_hint
+                    and not isinstance(pos_arg_state.action, argparse._SubParsersAction)
+                    and not _looks_like_flag(text, self._parser)
+                    and not _single_prefix_char(text, self._parser)
+                ):
+                    self._cmd2_app.completion_hint = _build_hint(self._parser, pos_arg_state.action)
+                return results
             if not _single_prefix_char(text, self._parser) or skip_remaining_flags:
                 raise _NoResultsError(self._parser, pos_arg_state.action)
 
