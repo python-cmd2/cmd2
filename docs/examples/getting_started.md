@@ -12,6 +12,7 @@ example application which demonstrates many features of `cmd2`:
 - [Shortcuts](../features/shortcuts_aliases_macros.md#shortcuts)
 - [Multiline Commands](../features/multiline_commands.md)
 - [History](../features/history.md)
+- [Bottom Toolbar](../features/prompt.md#bottom-toolbar)
 
 If you don't want to type as we go, here is the complete source (you can click to expand and then
 click the **Copy** button in the top-right):
@@ -274,9 +275,13 @@ Users can access command history using two methods:
 
 From the prompt in a `cmd2`-based application, you can press `Control-p` to move to the previously
 entered command, and `Control-n` to move to the next command. You can also search through the
-command history using `Control-r`. The
-[GNU Readline User Manual](http://man7.org/linux/man-pages/man3/readline.3.html) has all the
-details, including all the available commands, and instructions for customizing the key bindings.
+command history using `Control-r`.
+
+By default, `prompt-toolkit` provides Emacs-style key bindings which will be familiar to users of
+the GNU Readline library. You can refer to the
+[readline cheat sheet](http://readline.kablamo.org/emacs.html) or you can dig into the
+[Prompt Toolkit User Manual](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/advanced_topics/key_bindings.html)
+for all the details, including instructions for customizing the key bindings.
 
 The `history` command allows a user to view the command history, and select commands from history by
 number, range, string search, or regular expression. With the selected commands, users can:

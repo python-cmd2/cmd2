@@ -74,6 +74,7 @@ plugins:
             unwrap_annotated: true
             filters:
               - "!^_"
+              - "_bottom_toolbar"
             merge_init_into_class: true
             docstring_style: sphinx
             docstring_section_style: spacy

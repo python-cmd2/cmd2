@@ -2,12 +2,14 @@
 
 ## For Developers
 
-The `cmd` module from the Python standard library includes `readline` history.
+Previously, `cmd2` relied on the GNU Readline library for command history. As of version 4.0.0,
+`cmd2` has migrated to [prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) for
+all input and history handling.
 
-[cmd2.Cmd][] offers the same `readline` capabilitie via use of `prompt-toolkit`, but also maintains
-its own data structures for the history of all commands entered by the user. When the class is
-initialized, it creates an instance of the [cmd2.history.History][] class (which is a subclass of
-`list`) as `cmd2.Cmd.history`.
+[cmd2.Cmd][] uses `prompt-toolkit` to provide familiar command-line history capabilities while also
+maintaining its own data structures for the history of all commands entered by the user. When the
+class is initialized, it creates an instance of the [cmd2.history.History][] class (which is a
+subclass of `list`) as `cmd2.Cmd.history`.
 
 Each time a command is executed (this gets complex, see
 [Command Processing Loop](./hooks.md#command-processing-loop) for exactly when) the parsed
@@ -37,8 +39,9 @@ previously entered commands.
 You can press `Control-p` to move to the previously entered command, and `Control-n` to move to the
 next command. You can also search through the command history using `Control-r`.
 
-You can refer to the [readline cheat sheet](http://readline.kablamo.org/emacs.html) or you can dig
-into the
+By default, `prompt-toolkit` provides Emacs-style key bindings which will be familiar to users of
+the GNU Readline library. You can refer to the
+[readline cheat sheet](http://readline.kablamo.org/emacs.html) or you can dig into the
 [Prompt Toolkit User Manual](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/advanced_topics/key_bindings.html)
 for all the details, including instructions for customizing the key bindings.
 
