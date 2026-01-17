@@ -2268,6 +2268,47 @@ def test_get_macro_completion_items(base_app) -> None:
         assert cur_res.descriptive_data[0].rstrip() == base_app.macros[cur_res].value
 
 
+def test_get_commands_aliases_and_macros_for_completion(base_app) -> None:
+    # Add an alias and a macro
+    run_cmd(base_app, 'alias create fake_alias help')
+    run_cmd(base_app, 'macro create fake_macro !echo macro')
+
+    # Add a command without a docstring
+    import types
+
+    def do_no_doc(self, arg):
+        pass
+
+    base_app.do_no_doc = types.MethodType(do_no_doc, base_app)
+
+    results = base_app._get_commands_aliases_and_macros_for_completion()
+
+    # All visible commands + our new command + alias + macro
+    expected_count = len(base_app.get_visible_commands()) + len(base_app.aliases) + len(base_app.macros)
+    assert len(results) == expected_count
+
+    # Verify alias
+    alias_item = next((item for item in results if item == 'fake_alias'), None)
+    assert alias_item is not None
+    assert alias_item.descriptive_data[0] == "Alias for: help"
+
+    # Verify macro
+    macro_item = next((item for item in results if item == 'fake_macro'), None)
+    assert macro_item is not None
+    assert macro_item.descriptive_data[0] == "Macro: !echo macro"
+
+    # Verify command with docstring (help)
+    help_item = next((item for item in results if item == 'help'), None)
+    assert help_item is not None
+    # First line of help docstring
+    assert "List available commands" in help_item.descriptive_data[0]
+
+    # Verify command without docstring
+    no_doc_item = next((item for item in results if item == 'no_doc'), None)
+    assert no_doc_item is not None
+    assert no_doc_item.descriptive_data[0] == ""
+
+
 def test_get_settable_completion_items(base_app) -> None:
     results = base_app._get_settable_completion_items()
     assert len(results) == len(base_app.settables)
