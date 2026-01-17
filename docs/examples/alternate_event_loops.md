@@ -21,6 +21,15 @@ Many Python concurrency libraries involve or require an event loop which they ar
 such as [asyncio](https://docs.python.org/3/library/asyncio.html), [gevent](http://www.gevent.org/),
 [Twisted](https://twistedmatrix.com), etc.
 
+!!! warning
+
+    As of version **4.0**, `cmd2` depends on `prompt-toolkit` which in turn uses
+    [asyncio natively](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/advanced_topics/asyncio.html)
+    and starts its own `asyncio` event loop.
+
+    The [async_call.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_call.py) example shows how
+    to make a call to an async function from a cmd2 command.
+
 `cmd2` applications can be executed in a way where `cmd2` doesn't own the main loop for the program
 by using code like the following:
 
