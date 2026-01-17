@@ -1627,8 +1627,16 @@ class Cmd:
         self.matches_delimited = False
         self.matches_sorted = False
 
-    def _bottom_toolbar(self) -> Any:
-        """Get the bottom toolbar content."""
+    def _bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
+        """Get the bottom toolbar content.
+
+        If self.include_bottom_toolbar is False, returns None.
+
+        Otherwise returns tokens for prompt-toolkit to populate in the bottom toolbar.
+
+        NOTE: This content can extend over multiple lines.  However we would recommend
+        keeping it to a single line or two lines maximum.
+        """
         if self.include_bottom_toolbar:
             import datetime
             import shutil
