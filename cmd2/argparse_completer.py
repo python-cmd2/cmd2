@@ -458,7 +458,7 @@ class ArgparseCompleter:
                 elif (
                     not text
                     and not results
-                    and (isinstance(pos_arg_state.min, int) and pos_arg_state.count >= pos_arg_state.min)
+                    and (isinstance(pos_arg_state.max, int) and pos_arg_state.count >= pos_arg_state.max)
                 ):
                     flag_results = self._complete_flags(text, line, begidx, endidx, matched_flags)
                     if flag_results:
