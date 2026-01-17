@@ -1347,3 +1347,33 @@ def test_add_parser_custom_completer() -> None:
 
     custom_completer_parser = subparsers.add_parser(name="custom_completer", ap_completer_type=CustomCompleter)
     assert custom_completer_parser.get_ap_completer_type() is CustomCompleter  # type: ignore[attr-defined]
+
+
+def test_autcomp_fallback_to_flags_nargs0(ac_app) -> None:
+    """Test fallback to flags when a positional argument has nargs=0 (using manual patching)"""
+    from cmd2.argparse_completer import (
+        ArgparseCompleter,
+    )
+
+    parser = Cmd2ArgumentParser()
+    # Add a positional argument
+    action = parser.add_argument('pos')
+    # Add a flag
+    parser.add_argument('-f', '--flag', action='store_true', help='a flag')
+
+    # Manually change nargs to 0 AFTER adding it to bypass argparse validation during add_argument.
+    # This allows us to hit the fallback-to-flags logic in _handle_last_token where pos_arg_state.max is 0.
+    action.nargs = 0
+
+    ac = ArgparseCompleter(parser, ac_app)
+
+    text = ''
+    line = 'cmd '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    tokens = ['']
+
+    # This should hit the fallback to flags in _handle_last_token because pos has max=0 and count=0
+    results = ac.complete(text, line, begidx, endidx, tokens)
+
+    assert any(item == '-f' for item in results)
