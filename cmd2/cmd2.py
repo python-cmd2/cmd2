@@ -3291,10 +3291,10 @@ class Cmd:
                 completer_to_use = Cmd2Completer(self, custom_settings=custom_settings)
 
             # Use dynamic prompt if the prompt matches self.prompt
-            def get_prompt() -> Any:
+            def get_prompt() -> ANSI | str:
                 return ANSI(self.prompt)
 
-            prompt_to_use: Any = ANSI(prompt)
+            prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
             if prompt == self.prompt:
                 prompt_to_use = get_prompt
 
