@@ -65,9 +65,9 @@ class AsyncCallExample(cmd2.Cmd):
         self.poutput('Hello World')
 
 
-async def main() -> int:
+def main() -> int:
     """
-    Having this async ensures presence of the top level event loop.
+    Main entry point for the example.
     """
     app = AsyncCallExample()
     app.set_window_title("Call to an Async Function Test")
@@ -77,4 +77,4 @@ async def main() -> int:
 if __name__ == '__main__':
     import sys
 
-    sys.exit(asyncio.run(main(), debug=True))
+    sys.exit(main())
