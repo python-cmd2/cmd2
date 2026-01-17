@@ -1629,8 +1629,6 @@ class Cmd:
 
     def _bottom_toolbar(self) -> Any:
         """Get the bottom toolbar content."""
-        if self.completion_hint:
-            return self.completion_hint.strip()
         if self.include_bottom_toolbar:
             return sys.argv[0]
         return None
@@ -3291,13 +3289,13 @@ class Cmd:
                     return temp_session1.prompt(
                         prompt_to_use,
                         completer=completer_to_use,
-                        bottom_toolbar=self._bottom_toolbar,
+                        bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                     )
 
                 return self.session.prompt(
                     prompt_to_use,
                     completer=completer_to_use,
-                    bottom_toolbar=self._bottom_toolbar,
+                    bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                 )
 
         # Otherwise read from self.stdin
@@ -3311,7 +3309,7 @@ class Cmd:
             )
             line = temp_session2.prompt(
                 prompt,
-                bottom_toolbar=self._bottom_toolbar,
+                bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
             )
             if len(line) == 0:
                 raise EOFError
@@ -3325,7 +3323,7 @@ class Cmd:
                 complete_while_typing=self.session.complete_while_typing,
             )
             line = temp_session3.prompt(
-                bottom_toolbar=self._bottom_toolbar,
+                bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
             )
             if len(line) == 0:
                 raise EOFError

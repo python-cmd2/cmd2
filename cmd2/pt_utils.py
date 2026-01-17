@@ -76,8 +76,10 @@ class Cmd2Completer(Completer):
             print_formatted_text(ANSI("\n" + self.cmd_app.formatted_completions))
             self.cmd_app.formatted_completions = ""
 
-        # completion_hint will be displayed in the bottom toolbar by cmd2.py
-        # and cleared by _reset_completion_defaults() on the next completion attempt.
+        # Print hint if present
+        if self.cmd_app.completion_hint:
+            print_formatted_text(ANSI(self.cmd_app.completion_hint))
+            self.cmd_app.completion_hint = ""
 
         # Now we iterate over self.cmd_app.completion_matches and self.cmd_app.display_matches
         matches = self.cmd_app.completion_matches

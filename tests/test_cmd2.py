@@ -3374,10 +3374,6 @@ def test_bottom_toolbar(base_app, monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['myapp.py'])
     assert base_app._bottom_toolbar() == 'myapp.py'
 
-    # Test hint priority
-    base_app.completion_hint = 'My Hint'
-    assert base_app._bottom_toolbar() == 'My Hint'
-
 
 def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypatch):
     # Mock read_input to raise KeyboardInterrupt
