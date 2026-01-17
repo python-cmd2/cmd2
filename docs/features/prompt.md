@@ -70,7 +70,7 @@ You can customize the content of the toolbar by overriding the [cmd2.Cmd._bottom
 This method should return either a string or a list of `(style, text)` tuples for formatted text.
 
 ```py
-    def _bottom_toolbar(self) -> Any:
+    def _bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
         return [
             ('ansigreen', 'My Application Name'),
             ('', ' - '),
