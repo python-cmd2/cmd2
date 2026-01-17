@@ -40,6 +40,7 @@ class BasicApp(cmd2.Cmd):
         shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({'&': 'intro'})
         super().__init__(
+            include_bottom_toolbar=True,
             include_ipy=True,
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
