@@ -1086,8 +1086,8 @@ def test_arg_tokens(ac_app, command_and_args, completions) -> None:
 @pytest.mark.parametrize(
     ('command_and_args', 'text', 'output_contains', 'first_match'),
     [
-        # Group isn't done. Hint will show for optional positional and no completions returned
-        ('mutex', '', 'the optional positional', None),
+        # Group isn't done. Flags will complete and hint will be set but not printed by complete()
+        ('mutex', '', '', '--flag'),
         # Group isn't done. Flag name will still complete.
         ('mutex', '--fl', '', '--flag '),
         # Group isn't done. Flag hint will show.

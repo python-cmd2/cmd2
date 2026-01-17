@@ -6,13 +6,11 @@ from typing import (
     TYPE_CHECKING,
 )
 
-from prompt_toolkit import print_formatted_text
 from prompt_toolkit.completion import (
     Completer,
     Completion,
 )
 from prompt_toolkit.document import Document
-from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 
 from . import (
@@ -46,32 +44,28 @@ class Cmd2Completer(Completer):
 
     def get_completions(self, document: Document, _complete_event: object) -> Iterable[Completion]:
         """Get completions for the current input."""
-        text = document.get_word_before_cursor(pattern=self.word_pattern)
-
-        # We need the full line and indexes for cmd2
+        # Find the beginning of the current word based on delimiters
         line = document.text
+        cursor_pos = document.cursor_position
 
-        # Calculate begidx and endidx
-        # get_word_before_cursor returns the word.
-        # We need to find where this word starts.
-        # document.cursor_position is the current cursor position.
+        # Define delimiters for completion to match cmd2/readline behavior
+        delimiters = BASE_DELIMITERS
+        if hasattr(self.cmd_app, 'statement_parser'):
+            delimiters += "".join(self.cmd_app.statement_parser.terminators)
 
-        # text is the word before cursor.
-        # So begidx should be cursor_position - len(text)
-        # endidx should be cursor_position
+        # Find last delimiter before cursor to determine the word being completed
+        begidx = 0
+        for i in range(cursor_pos - 1, -1, -1):
+            if line[i] in delimiters:
+                begidx = i + 1
+                break
 
-        endidx = document.cursor_position
-        begidx = endidx - len(text)
+        endidx = cursor_pos
+        text = line[begidx:endidx]
 
         # Call cmd2's complete method.
         # We pass state=0 to trigger the completion calculation.
         self.cmd_app.complete(text, 0, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings)
-
-        # Print formatted completions or hints above the prompt if present
-        if self.cmd_app.formatted_completions:
-            print_formatted_text(ANSI(self.cmd_app.formatted_completions.rstrip()))
-        if self.cmd_app.completion_hint:
-            print_formatted_text(ANSI(self.cmd_app.completion_hint.rstrip()))
 
         # Now we iterate over self.cmd_app.completion_matches and self.cmd_app.display_matches
         matches = self.cmd_app.completion_matches
