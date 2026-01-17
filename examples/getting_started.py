@@ -94,7 +94,11 @@ class BasicApp(cmd2.Cmd):
         )
 
     def _refresh_bottom_toolbar(self) -> None:
-        """Background thread target to refresh the bottom toolbar."""
+        """Background thread target to refresh the bottom toolbar.
+
+        This is a toy example to show how the bottom toolbar can be used to display
+        realtime status updates in an otherwise line-oriented command interpreter.
+        """
         import contextlib
 
         from prompt_toolkit.application.current import get_app
