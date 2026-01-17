@@ -721,10 +721,11 @@ class ArgparseCompleter:
                     choices_func = arg_choices.choices_provider
                     if isinstance(choices_func, ChoicesProviderFuncWithTokens):
                         completion_items = choices_func(*args, **kwargs)
-                    else:
+                    else:  # pragma: no cover
                         # This won't hit because runtime checking doesn't check function argument types and will always
                         # resolve true above.
                         completion_items = choices_func(*args)
+                # else case is already covered above
             else:
                 completion_items = arg_choices
 
