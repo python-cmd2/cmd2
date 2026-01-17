@@ -226,7 +226,7 @@ class ArgparseCompleter:
         matched_flags: list[str] = []
 
         # Keeps track of arguments we've seen and any tokens they consumed
-        consumed_arg_values: dict[str, list[str]] = {}
+        consumed_arg_values: dict[str, list[str]] = {}  # dict(arg_name -> list[tokens])
 
         # Completed mutually exclusive groups
         completed_mutex_groups: dict[argparse._MutuallyExclusiveGroup, argparse.Action] = {}
