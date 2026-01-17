@@ -6,11 +6,15 @@ from typing import (
     TYPE_CHECKING,
 )
 
+from prompt_toolkit import (
+    print_formatted_text,
+)
 from prompt_toolkit.completion import (
     Completer,
     Completion,
 )
 from prompt_toolkit.document import Document
+from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 
 from . import (
@@ -66,6 +70,14 @@ class Cmd2Completer(Completer):
         # Call cmd2's complete method.
         # We pass state=0 to trigger the completion calculation.
         self.cmd_app.complete(text, 0, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings)
+
+        # Print formatted completions (tables) above the prompt if present
+        if self.cmd_app.formatted_completions:
+            print_formatted_text(ANSI("\n" + self.cmd_app.formatted_completions))
+            self.cmd_app.formatted_completions = ""
+
+        # completion_hint will be displayed in the bottom toolbar by cmd2.py
+        # and cleared by _reset_completion_defaults() on the next completion attempt.
 
         # Now we iterate over self.cmd_app.completion_matches and self.cmd_app.display_matches
         matches = self.cmd_app.completion_matches

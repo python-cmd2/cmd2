@@ -1629,6 +1629,8 @@ class Cmd:
 
     def _bottom_toolbar(self) -> Any:
         """Get the bottom toolbar content."""
+        if self.completion_hint:
+            return self.completion_hint.strip()
         if self.include_bottom_toolbar:
             return sys.argv[0]
         return None
@@ -3240,6 +3242,7 @@ class Cmd:
         :param parser: optional argparse parser
         :return: the line read from input
         """
+        self._reset_completion_defaults()
         if self.use_rawinput and self.stdin.isatty():
             # Determine completer
             completer_to_use: Completer
@@ -3288,13 +3291,13 @@ class Cmd:
                     return temp_session1.prompt(
                         prompt_to_use,
                         completer=completer_to_use,
-                        bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                        bottom_toolbar=self._bottom_toolbar,
                     )
 
                 return self.session.prompt(
                     prompt_to_use,
                     completer=completer_to_use,
-                    bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                    bottom_toolbar=self._bottom_toolbar,
                 )
 
         # Otherwise read from self.stdin
@@ -3308,7 +3311,7 @@ class Cmd:
             )
             line = temp_session2.prompt(
                 prompt,
-                bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                bottom_toolbar=self._bottom_toolbar,
             )
             if len(line) == 0:
                 raise EOFError
@@ -3322,7 +3325,7 @@ class Cmd:
                 complete_while_typing=self.session.complete_while_typing,
             )
             line = temp_session3.prompt(
-                bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                bottom_toolbar=self._bottom_toolbar,
             )
             if len(line) == 0:
                 raise EOFError
