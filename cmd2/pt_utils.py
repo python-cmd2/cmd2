@@ -19,6 +19,7 @@ from . import (
     constants,
     utils,
 )
+from .argparse_custom import CompletionItem
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
@@ -69,7 +70,7 @@ class Cmd2Completer(Completer):
         # Print formatted completions or hints above the prompt if present
         if self.cmd_app.formatted_completions:
             print_formatted_text(ANSI(self.cmd_app.formatted_completions.rstrip()))
-        elif self.cmd_app.completion_hint:
+        if self.cmd_app.completion_hint:
             print_formatted_text(ANSI(self.cmd_app.completion_hint.rstrip()))
 
         # Now we iterate over self.cmd_app.completion_matches and self.cmd_app.display_matches
@@ -87,6 +88,9 @@ class Cmd2Completer(Completer):
 
         for i, match in enumerate(matches):
             display = display_matches[i] if use_display_matches else match
+            display_meta = None
+            if isinstance(match, CompletionItem) and match.descriptive_data:
+                display_meta = match.descriptive_data[0]
 
             # prompt_toolkit replaces the word before cursor by default if we use the default Completer?
             # No, we yield Completion(text, start_position=...).
@@ -94,7 +98,7 @@ class Cmd2Completer(Completer):
 
             start_position = -len(text)
 
-            yield Completion(match, start_position=start_position, display=display)
+            yield Completion(match, start_position=start_position, display=display, display_meta=display_meta)
 
 
 class Cmd2History(History):

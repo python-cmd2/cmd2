@@ -445,8 +445,9 @@ class Cmd:
             self.session: PromptSession[str] = PromptSession(
                 history=self.history_adapter,
                 completer=self.completer,
-                complete_style=CompleteStyle.READLINE_LIKE,
+                complete_style=CompleteStyle.COLUMN,
                 complete_in_thread=True,
+                complete_while_typing=False,
             )
         except (NoConsoleScreenBufferError, AttributeError, ValueError):
             # Fallback to dummy input/output if PromptSession initialization fails.
@@ -457,8 +458,9 @@ class Cmd:
                 completer=self.completer,
                 input=DummyInput(),
                 output=DummyOutput(),
-                complete_style=CompleteStyle.READLINE_LIKE,
+                complete_style=CompleteStyle.COLUMN,
                 complete_in_thread=True,
+                complete_while_typing=False,
             )
 
         # Commands to exclude from the history command
@@ -2519,12 +2521,26 @@ class Cmd:
 
         return results
 
-    def _get_commands_aliases_and_macros_for_completion(self) -> list[str]:
+    def _get_commands_aliases_and_macros_for_completion(self) -> list[CompletionItem]:
         """Return a list of visible commands, aliases, and macros for tab completion."""
-        visible_commands = set(self.get_visible_commands())
-        alias_names = set(self.aliases)
-        macro_names = set(self.macros)
-        return list(visible_commands | alias_names | macro_names)
+        results: list[CompletionItem] = []
+
+        # Add commands
+        for command in self.get_visible_commands():
+            # Get the command method
+            func = getattr(self, constants.COMMAND_FUNC_PREFIX + command)
+            description = strip_doc_annotations(func.__doc__).splitlines()[0] if func.__doc__ else ''
+            results.append(CompletionItem(command, [description]))
+
+        # Add aliases
+        for name, value in self.aliases.items():
+            results.append(CompletionItem(name, [f"Alias for: {value}"]))
+
+        # Add macros
+        for name, macro in self.macros.items():
+            results.append(CompletionItem(name, [f"Macro: {macro.value}"]))
+
+        return results
 
     def get_help_topics(self) -> list[str]:
         """Return a list of help topics."""
@@ -3265,6 +3281,8 @@ class Cmd:
                         history=history_to_use,
                         input=self.session.input,
                         output=self.session.output,
+                        complete_style=self.session.complete_style,
+                        complete_while_typing=self.session.complete_while_typing,
                     )
 
                     return temp_session1.prompt(
@@ -3285,6 +3303,8 @@ class Cmd:
             temp_session2: PromptSession[str] = PromptSession(
                 input=self.session.input,
                 output=self.session.output,
+                complete_style=self.session.complete_style,
+                complete_while_typing=self.session.complete_while_typing,
             )
             line = temp_session2.prompt(
                 prompt,
@@ -3298,6 +3318,8 @@ class Cmd:
             temp_session3: PromptSession[str] = PromptSession(
                 input=self.session.input,
                 output=self.session.output,
+                complete_style=self.session.complete_style,
+                complete_while_typing=self.session.complete_while_typing,
             )
             line = temp_session3.prompt(
                 bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,

@@ -538,6 +538,12 @@ class ArgparseCompleter:
 
         # Check if there are too many CompletionItems to display as a table
         if len(completions) <= self._cmd2_app.max_completion_items:
+            # Skip generating hint table for subcommands or the main command completion
+            if isinstance(arg_state.action, argparse._SubParsersAction) or (
+                arg_state.action.metavar == "COMMAND" and arg_state.action.dest == "command"
+            ):
+                return cast(list[str], completions)
+
             # If a metavar was defined, use that instead of the dest field
             destination = arg_state.action.metavar if arg_state.action.metavar else arg_state.action.dest
 
@@ -659,9 +665,27 @@ class ArgparseCompleter:
         :raises CompletionError: if the completer or choices function this calls raises one.
         """
         # Check if the arg provides choices to the user
-        arg_choices: list[str] | ChoicesCallable
+        arg_choices: list[str] | list[CompletionItem] | ChoicesCallable
         if arg_state.action.choices is not None:
-            arg_choices = list(arg_state.action.choices)
+            if isinstance(arg_state.action, argparse._SubParsersAction):
+                arg_choices_items: list[CompletionItem] = []
+                # Map parser object to help text using _choices_actions (which contains canonical commands)
+                parser_help = {}
+                for action in arg_state.action._choices_actions:
+                    # Retrieve the parser corresponding to this action
+                    # action.dest is the canonical name
+                    if action.dest in arg_state.action.choices:
+                        subparser = arg_state.action.choices[action.dest]
+                        parser_help[subparser] = action.help if action.help else ''
+
+                # Iterate over all choices (including aliases)
+                for name, subparser in arg_state.action.choices.items():
+                    help_text = parser_help.get(subparser, '')
+                    arg_choices_items.append(CompletionItem(name, [help_text]))
+                arg_choices = arg_choices_items
+            else:
+                arg_choices = list(arg_state.action.choices)
+
             if not arg_choices:
                 return []
 
@@ -716,7 +740,7 @@ class ArgparseCompleter:
         # Otherwise use basic_complete on the choices
         else:
             # Check if the choices come from a function
-            completion_items: list[str] = []
+            completion_items: list[str] | list[CompletionItem] = []
             if isinstance(arg_choices, ChoicesCallable):
                 if not arg_choices.is_completer:
                     choices_func = arg_choices.choices_provider
