@@ -21,6 +21,13 @@ shell, and the option for a persistent bottom bar that can display realtime stat
       each platform and provided utility functions related to `readline`
     - Added a dependency on `prompt-toolkit` and a new `cmd2.pt_utils` module with supporting
       utilities
+    - Async specific: `prompt-toolkit` starts its own `asyncio` event loop in every `cmd2`
+      application
+- Enhancements
+    - Optional persistent **bottom toolbar** capable of displaying realtime status information, see
+      the `include_bottom_toolbar` optional argument to the initializer for `cmd2.Cmd` and the
+      `cmd2.Cmd2._bottom_toolbar` method that can be overridden as well as the updated
+      `getting_started.py` example
 
 ## 3.1.0 (December 25, 2025)
 
