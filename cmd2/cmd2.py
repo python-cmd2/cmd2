@@ -1633,8 +1633,9 @@ class Cmd:
             import datetime
             import shutil
 
-            # Get the current time in ISO format
-            now = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
+            # Get the current time in ISO format with 0.01s precision
+            dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
+            now = dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-4] + dt.strftime('%z')
             left_text = sys.argv[0]
 
             # Get terminal width to calculate padding for right-alignment
