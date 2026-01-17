@@ -13,6 +13,7 @@ Features demonstrated include all of the following:
  9) Using a custom prompt
 10) How to make custom attributes settable at runtime.
 11) Shortcuts for commands
+12) Persistent bottom toolbar with realtime status updates
 """
 
 import pathlib
