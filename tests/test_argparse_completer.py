@@ -414,13 +414,6 @@ def test_subcommand_completions(ac_app, subcommand, text, completions) -> None:
             'flag',
             '-',
             [
-                '--append_const_flag',
-                '--append_flag',
-                '--count_flag',
-                '--help',
-                '--normal_flag',
-                '--remainder_flag',
-                '--required_flag',
                 '-a',
                 '-c',
                 '-h',
@@ -516,7 +509,7 @@ def test_subcommand_completions(ac_app, subcommand, text, completions) -> None:
         (
             'plus_flag',
             '+',
-            ['++help', '++normal_flag', '+h', '+n', '+q', '++required_flag'],
+            ['+h', '+n', '+q'],
             ['+q, ++required_flag', '[+h, ++help]', '[+n, ++normal_flag]'],
         ),
         (
@@ -532,8 +525,8 @@ def test_subcommand_completions(ac_app, subcommand, text, completions) -> None:
         ('plus_flag ++help --', '++', [], []),
         # Test remaining flag names complete after all positionals are complete
         ('pos_and_flag', '', ['a', 'choice'], ['a', 'choice']),
-        ('pos_and_flag choice ', '', ['--flag', '--help', '-f', '-h'], ['[-f, --flag]', '[-h, --help]']),
-        ('pos_and_flag choice -f ', '', ['--help', '-h'], ['[-h, --help]']),
+        ('pos_and_flag choice ', '', ['-f', '-h'], ['[-f, --flag]', '[-h, --help]']),
+        ('pos_and_flag choice -f ', '', ['-h '], ['[-h, --help]']),
         ('pos_and_flag choice -f -h ', '', [], []),
     ],
 )
@@ -626,9 +619,7 @@ def test_flag_sorting(ac_app) -> None:
     # text looks like the beginning of a flag (e.g -), then ArgparseCompleter will try to complete
     # flag names next. Before it does this, cmd2.matches_sorted is reset to make sure the flag names
     # get sorted correctly.
-    option_strings = []
-    for action in ac_app.choices_parser._actions:
-        option_strings.extend(action.option_strings)
+    option_strings = [action.option_strings[0] for action in ac_app.choices_parser._actions if action.option_strings]
     option_strings.sort(key=ac_app.default_sort_key)
 
     text = '-'

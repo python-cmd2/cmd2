@@ -521,8 +521,10 @@ class ArgparseCompleter:
             # Mark optional flags with brackets
             if not action.required:
                 flag_text = '[' + flag_text + ']'
+
             self._cmd2_app.display_matches.append(flag_text)
-            results.extend(CompletionItem(opt, [action.help if action.help else '']) for opt in option_strings)
+            # Use the first option string as the completion result for this action
+            results.append(CompletionItem(option_strings[0], [action.help if action.help else '']))
         return results
 
     def _format_completions(self, arg_state: _ArgumentState, completions: list[str] | list[CompletionItem]) -> list[str]:
