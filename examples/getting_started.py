@@ -16,6 +16,8 @@ Features demonstrated include all of the following:
 """
 
 import pathlib
+import threading
+import time
 
 from rich.style import Style
 
@@ -47,6 +49,12 @@ class BasicApp(cmd2.Cmd):
             shortcuts=shortcuts,
             startup_script=str(alias_script),
         )
+
+        # Spawn a background thread to refresh the bottom toolbar twice a second.
+        # This is necessary because the toolbar contains a timestamp that we want to keep current.
+        self._stop_refresh = False
+        self._refresh_thread = threading.Thread(target=self._refresh_bottom_toolbar, daemon=True)
+        self._refresh_thread.start()
 
         # Prints an intro banner once upon application startup
         self.intro = (
@@ -83,6 +91,20 @@ class BasicApp(cmd2.Cmd):
                 choices=fg_colors,
             )
         )
+
+    def _refresh_bottom_toolbar(self) -> None:
+        """Background thread target to refresh the bottom toolbar."""
+        import contextlib
+
+        from prompt_toolkit.application.current import get_app
+
+        while not self._stop_refresh:
+            with contextlib.suppress(Exception):
+                # get_app() will return the currently running prompt-toolkit application
+                app = get_app()
+                if app:
+                    app.invalidate()
+            time.sleep(0.5)
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_intro(self, _: cmd2.Statement) -> None:
