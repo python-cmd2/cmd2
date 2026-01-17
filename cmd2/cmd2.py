@@ -1630,7 +1630,26 @@ class Cmd:
     def _bottom_toolbar(self) -> Any:
         """Get the bottom toolbar content."""
         if self.include_bottom_toolbar:
-            return sys.argv[0]
+            import datetime
+            import shutil
+
+            # Get the current time in ISO format
+            now = datetime.datetime.now(datetime.timezone.utc).astimezone().isoformat()
+            left_text = sys.argv[0]
+
+            # Get terminal width to calculate padding for right-alignment
+            cols, _ = shutil.get_terminal_size()
+            padding_size = cols - len(left_text) - len(now) - 1
+            if padding_size < 1:
+                padding_size = 1
+            padding = ' ' * padding_size
+
+            # Return formatted text for prompt-toolkit
+            return [
+                ('ansigreen', left_text),
+                ('', padding),
+                ('ansiblue', now),
+            ]
         return None
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> tuple[list[str], list[str]]:
