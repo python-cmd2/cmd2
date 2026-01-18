@@ -7,10 +7,10 @@ Includes examples of how to integrate tab completion with argparse-based command
 import argparse
 from collections.abc import Iterable
 
-from modular_commands.commandset_basic import (  # noqa: F401
+from modular_commands.commandset_basic import (
     BasicCompletionCommandSet,
 )
-from modular_commands.commandset_complex import (  # noqa: F401
+from modular_commands.commandset_complex import (
     CommandSetA,
 )
 from modular_commands.commandset_custominit import (
@@ -64,6 +64,6 @@ if __name__ == '__main__':
     import sys
 
     print("Starting")
-    my_sets = [CustomInitCommandSet('First argument', 'Second argument')]
+    my_sets = [BasicCompletionCommandSet(), CommandSetA(), CustomInitCommandSet('First argument', 'Second argument')]
     app = WithCommandSets(command_sets=my_sets)
     sys.exit(app.cmdloop())
