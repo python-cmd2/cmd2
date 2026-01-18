@@ -396,7 +396,7 @@ class Cmd:
             key_bindings = KeyBindings()
 
             @key_bindings.add(self.completekey)
-            def _(event: Any) -> None:
+            def _(event: Any) -> None:  # pragma: no cover
                 """Trigger completion."""
                 b = event.current_buffer
                 if b.complete_state:
