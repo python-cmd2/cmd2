@@ -64,6 +64,7 @@ class BasicApp(cmd2.Cmd):
                 style=Style(color=Color.GREEN1, bgcolor=Color.GRAY0, bold=True),
             )
             + ' Note the full Unicode support:  😇 💩'
+            + ' and the persistent bottom bar with realtime status updates!'
         )
 
         # Show this as the prompt when asking for input
