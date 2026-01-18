@@ -144,6 +144,7 @@ from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input import DummyInput
+from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, set_title
@@ -389,9 +390,19 @@ class Cmd:
 
         # Key used for tab completion
         self.completekey = completekey
+        key_bindings = None
         if self.completekey != self.DEFAULT_COMPLETEKEY:
-            # TODO(T or K): Configure prompt_toolkit `KeyBindings` with the custom key for completion  # noqa: FIX002, TD003
-            pass
+            # Configure prompt_toolkit `KeyBindings` with the custom key for completion
+            key_bindings = KeyBindings()
+
+            @key_bindings.add(self.completekey)
+            def _(event: Any) -> None:
+                """Trigger completion."""
+                b = event.current_buffer
+                if b.complete_state:
+                    b.complete_next()
+                else:
+                    b.start_completion(select_first=False)
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
@@ -448,6 +459,7 @@ class Cmd:
                 complete_style=CompleteStyle.COLUMN,
                 complete_in_thread=True,
                 complete_while_typing=False,
+                key_bindings=key_bindings,
             )
         except (NoConsoleScreenBufferError, AttributeError, ValueError):
             # Fallback to dummy input/output if PromptSession initialization fails.
@@ -461,6 +473,7 @@ class Cmd:
                 complete_style=CompleteStyle.COLUMN,
                 complete_in_thread=True,
                 complete_while_typing=False,
+                key_bindings=key_bindings,
             )
 
         # Commands to exclude from the history command
