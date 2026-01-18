@@ -3264,7 +3264,7 @@ class Cmd:
         prompt: str = '',
         *,
         history: list[str] | None = None,
-        completion_mode: utils.CompletionMode = utils.CompletionMode.COMMANDS,
+        completion_mode: utils.CompletionMode = utils.CompletionMode.NONE,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
         choices_provider: ChoicesProviderFunc | None = None,
@@ -3273,15 +3273,29 @@ class Cmd:
     ) -> str:
         """Read input from appropriate stdin value.
 
-        :param prompt: prompt to display
-        :param history: optional list of history items to use for this input
-        :param completion_mode: type of tab completion to perform
-        :param preserve_quotes: if True, quotes are preserved in the completion items
-        :param choices: optional list of choices to tab complete
-        :param choices_provider: optional function that provides choices
-        :param completer: optional completer function
-        :param parser: optional argparse parser
-        :return: the line read from input
+        Also supports tab completion and up-arrow history while input is being entered.
+
+        :param prompt: prompt to display to user
+        :param history: optional list of strings to use for up-arrow history. If completion_mode is
+                        CompletionMode.COMMANDS and this is None, then cmd2's command list history will
+                        be used. The passed in history will not be edited. It is the caller's responsibility
+                        to add the returned input to history if desired. Defaults to None.
+        :param completion_mode: tells what type of tab completion to support. Tab completion only works when
+                                self.use_rawinput is True and sys.stdin is a terminal. Defaults to
+                                CompletionMode.NONE.
+        The following optional settings apply when completion_mode is CompletionMode.CUSTOM:
+        :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
+                                ArgparseCompleter. This is helpful in cases when you're tab completing
+                                flag-like tokens (e.g. -o, --option) and you don't want them to be
+                                treated as argparse flags when quoted. Set this to True if you plan
+                                on passing the string to argparse with the tokens still quoted.
+        A maximum of one of these should be provided:
+        :param choices: iterable of accepted values for single argument
+        :param choices_provider: function that provides choices for single argument
+        :param completer: tab completion function that provides choices for single argument
+        :param parser: an argument parser which supports the tab completion of multiple arguments
+        :return: the line read from stdin with all trailing new lines removed
+        :raises Exception: any exceptions raised by prompt()
         """
         self._reset_completion_defaults()
         if self.use_rawinput and self.stdin.isatty():
@@ -3289,6 +3303,10 @@ class Cmd:
             completer_to_use: Completer
             if completion_mode == utils.CompletionMode.NONE:
                 completer_to_use = DummyCompleter()
+
+                # No up-arrow history when CompletionMode.NONE and history is None
+                if history is None:
+                    history = []
             elif completion_mode == utils.CompletionMode.COMMANDS:
                 completer_to_use = self.completer
             else:
@@ -3335,6 +3353,7 @@ class Cmd:
                         bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                     )
 
+                # history is None
                 return self.session.prompt(
                     prompt_to_use,
                     completer=completer_to_use,
