@@ -21,6 +21,7 @@ class MockCmd:
         self.history = []
         self.formatted_completions = ''
         self.completion_hint = ''
+        self.completion_header = ''
         self.statement_parser = Mock()
         self.statement_parser.terminators = [';']
 
@@ -146,6 +147,22 @@ class TestCmd2Completer:
         assert mock_print.call_count == 2
         assert mock_cmd_app.formatted_completions == ""
         assert mock_cmd_app.completion_hint == ""
+
+    def test_get_completions_with_header(self, mock_cmd_app, monkeypatch):
+        """Test that completion header is printed even with no matches."""
+        mock_print = Mock()
+        monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
+
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        document = Document("test", cursor_position=4)
+
+        mock_cmd_app.completion_header = "Header Text"
+        mock_cmd_app.completion_matches = []
+
+        list(completer.get_completions(document, None))
+
+        assert mock_print.call_count == 1
+        assert mock_cmd_app.completion_header == ""
 
     def test_get_completions_completion_item_meta(self, mock_cmd_app):
         """Test that CompletionItem descriptive data is used as display_meta."""
