@@ -2640,6 +2640,7 @@ class Cmd:
 
     def _raise_keyboard_interrupt(self) -> None:
         """Raise a KeyboardInterrupt."""
+        self.poutput()  # Ensure new prompt is on a line by itself
         raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def precmd(self, statement: Statement | str) -> Statement:
