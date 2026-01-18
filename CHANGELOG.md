@@ -1,3 +1,34 @@
+## 4.0.0 (TBD 2026)
+
+### Summary
+
+`cmd2` now has a dependency on
+[prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) which serves as a
+pure-Python cross-platform replacement for
+[GNU Readline](https://tiswww.case.edu/php/chet/readline/rltop.html). Previously, `cmd2` had used
+different `readline` dependencies on each Operating System (OS) which was at times a very
+frustrating developer and user experience due to small inconsistencies in these different readline
+libraries. Now we have consistent cross-platform support for tab-completion, user terminal input,
+and history. Additionally, this opens up some cool advanced features such as support for syntax
+highlighting of user input while typing, auto-suggestions similar to those provided by the fish
+shell, and the option for a persistent bottom bar that can display realtime status updates.
+
+### Details
+
+- Breaking Changes
+    - Removed all use of `readline` built-in module and underlying platform libraries
+    - Deleted `cmd2.rl_utils` module which dealt with importing the proper `readline` module for
+      each platform and provided utility functions related to `readline`
+    - Added a dependency on `prompt-toolkit` and a new `cmd2.pt_utils` module with supporting
+      utilities
+    - Async specific: `prompt-toolkit` starts its own `asyncio` event loop in every `cmd2`
+      application
+- Enhancements
+    - Optional persistent **bottom toolbar** capable of displaying realtime status information, see
+      the `include_bottom_toolbar` optional argument to the initializer for `cmd2.Cmd` and the
+      `cmd2.Cmd2._bottom_toolbar` method that can be overridden as well as the updated
+      `getting_started.py` example
+
 ## 3.1.0 (December 25, 2025)
 
 - Potentially Breaking Changes

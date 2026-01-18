@@ -74,6 +74,7 @@ plugins:
             unwrap_annotated: true
             filters:
               - "!^_"
+              - "_bottom_toolbar"
             merge_init_into_class: true
             docstring_style: sphinx
             docstring_section_style: spacy
@@ -204,9 +205,9 @@ nav:
       - api/history.md
       - api/parsing.md
       - api/plugin.md
+      - api/pt_utils.md
       - api/py_bridge.md
       - api/rich_utils.md
-      - api/rl_utils.md
       - api/string_utils.md
       - api/styles.md
       - api/terminal_utils.md

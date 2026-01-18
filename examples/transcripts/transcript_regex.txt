@@ -1,15 +1,20 @@
-# Run this transcript with "python transcript_example.py -t transcript_regex.txt"
+# Run this transcript with "python transcript_example.py -t transcripts/transcript_regex.txt"
 # Anything between two forward slashes, /, is interpreted as a regular expression (regex).
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious
-(Cmd) set
-allow_style: '/(Terminal|Always|Never)/'
-always_show_hint: False
-debug: False
-echo: False
-editor: /.*?/
-feedback_to_output: False
-max_completion_items: 50
-maxrepeats: 3
-quiet: False
-timing: False
+(Cmd) set 
+
+ Name                     Value      Description                                                                       
+───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+ allow_style              Terminal   Allow ANSI text style sequences in output (valid values: Always, Never, Terminal) 
+ always_show_hint         False      Display tab completion hint even when completion suggestions print                
+ debug                    False      Show full traceback on exception                                                  
+ echo                     False      Echo command issued into output                                                   
+ editor                   /.*?/      Program used by 'edit'                                                            
+ feedback_to_output       False      Include nonessentials in '|' and '>' results                                      
+ max_completion_items     50         Maximum number of CompletionItems to display during tab completion                
+ maxrepeats               3          max repetitions for speak command                                                 
+ quiet                    False      Don't print nonessential feedback                                                 
+ scripts_add_to_history   True       Scripts and pyscripts add commands to history                                     
+ timing                   False      Report execution times                                                            
+
