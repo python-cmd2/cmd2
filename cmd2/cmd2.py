@@ -1624,6 +1624,7 @@ class Cmd:
         self.formatted_completions = ''
         self.completion_matches = []
         self.display_matches = []
+        self.completion_header = ''
         self.matches_delimited = False
         self.matches_sorted = False
 
@@ -2468,11 +2469,12 @@ class Cmd:
                 # If apply_style is True, then this is an error message that should be printed
                 # above the prompt so it remains in the scrollback.
                 if ex.apply_style:
-                    self.print_to(
-                        sys.stdout,
-                        "\n" + err_str,
-                        style=Cmd2Style.ERROR,
-                    )
+                    # Render the error with style to a string using Rich
+                    console = ru.Cmd2GeneralConsole()
+                    with console.capture() as capture:
+                        console.print("\n" + err_str, style=Cmd2Style.ERROR)
+                    self.completion_header = capture.get()
+
                 # Otherwise, this is a hint that should be displayed below the prompt.
                 else:
                     self.completion_hint = err_str

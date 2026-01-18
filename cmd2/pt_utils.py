@@ -76,6 +76,11 @@ class Cmd2Completer(Completer):
             print_formatted_text(ANSI("\n" + self.cmd_app.formatted_completions))
             self.cmd_app.formatted_completions = ""
 
+        # Print completion header (e.g. CompletionError) if present
+        if self.cmd_app.completion_header:
+            print_formatted_text(ANSI(self.cmd_app.completion_header))
+            self.cmd_app.completion_header = ""
+
         # Print hint if present
         if self.cmd_app.completion_hint:
             print_formatted_text(ANSI(self.cmd_app.completion_hint))

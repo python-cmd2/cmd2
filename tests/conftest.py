@@ -151,6 +151,11 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app: cmd2.Cm
     if app.completion_hint:
         print(app.completion_hint)
 
+    # If the completion resulted in a header being set (e.g. CompletionError), then print it now
+    # so that it can be captured by tests using capsys.
+    if app.completion_header:
+        print(app.completion_header)
+
     return res
 
 
