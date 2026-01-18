@@ -69,8 +69,8 @@ each:
 - [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/main/examples/persistent_history.py)
     - Shows how to enable persistent history in your `cmd2` application
 - [pretty_print.py](https://github.com/python-cmd2/cmd2/blob/main/examples/pretty_print.py)
-    - Demonstrates use of cmd2.Cmd.ppretty() for pretty-printing arbitrary Python data structures
-      like dictionaries.
+    - Demonstrates use of rich within cmd2 for pretty-printing arbitrary Python data structures like
+      dictionaries.
 - [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/main/examples/python_scripting.py)
     - Shows how cmd2's built-in `run_pyscript` command can provide advanced Python scripting of cmd2
       applications

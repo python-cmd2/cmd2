@@ -44,6 +44,10 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - `_set_parser_prog` renamed to `set_parser_prog` (without the leading underscore) and moved
           to `argparse_custom` module
     - Renamed history `--output_file` to `--output-file` to follow common command-line practices
+    - `cmd2.Cmd.ppretty` method removed - `rich` has more and better options for pretty printing,
+      see the
+      [pretty_print.py](https://github.com/python-cmd2/cmd2/blob/main/examples/pretty_print.py)
+      example for a demonstration of pretty-printing JSON data
 
 - Enhancements
     - Enhanced all print methods (`poutput()`, `perror()`, `ppaged()`, etc.) to natively render
