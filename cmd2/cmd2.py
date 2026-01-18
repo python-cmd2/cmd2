@@ -2819,8 +2819,8 @@ class Cmd:
 
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement | None) -> bool:
         """Run the command finalization hooks."""
-        if self._initial_termios_settings is not None and self.stdin.isatty():
-            import io
+        if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]
+            import io  # type: ignore[unreachable]
             import termios
 
             # Before the next command runs, fix any terminal problems like those
