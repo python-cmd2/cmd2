@@ -3285,6 +3285,9 @@ class Cmd:
     def _suggest_similar_command(self, command: str) -> str | None:
         return suggest_similar(command, self.get_visible_commands())
 
+    def pre_prompt(self) -> None:
+        """Call this before the prompt is displayed (and after the event loop has started)."""
+
     def read_input(
         self,
         prompt: str = '',
@@ -3378,6 +3381,7 @@ class Cmd:
                         return temp_session1.prompt(
                             prompt_to_use,
                             completer=completer_to_use,
+                            pre_run=self.pre_prompt,
                             bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                         )
 
@@ -3385,6 +3389,7 @@ class Cmd:
                     return self.session.prompt(
                         prompt_to_use,
                         completer=completer_to_use,
+                        pre_run=self.pre_prompt,
                         bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                     )
 
@@ -3399,6 +3404,7 @@ class Cmd:
                 )
                 line = temp_session2.prompt(
                     prompt,
+                    pre_run=self.pre_prompt,
                     bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                 )
                 if len(line) == 0:
@@ -3413,6 +3419,7 @@ class Cmd:
                     complete_while_typing=self.session.complete_while_typing,
                 )
                 line = temp_session3.prompt(
+                    pre_run=self.pre_prompt,
                     bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                 )
                 if len(line) == 0:
@@ -5467,10 +5474,7 @@ class Cmd:
         :raises RuntimeError: if called from the main thread.
         :raises RuntimeError: if main thread is not currently at the prompt.
         """
-        if threading.current_thread() is threading.main_thread():
-            raise RuntimeError("async_alert should not be called from the main thread")
-
-        # Check if the main thread is currently waiting at the prompt
+        # Check if prompt is currently displayed and waiting for user input
         if not self._in_prompt:
             raise RuntimeError("Main thread is not at the prompt")
 

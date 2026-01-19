@@ -3,8 +3,9 @@
 and changes the window title.
 """
 
+import asyncio
+import contextlib
 import random
-import threading
 import time
 
 import cmd2
@@ -36,45 +37,57 @@ class AlerterApp(cmd2.Cmd):
 
         self.prompt = "(APR)> "
 
-        # The thread that will asynchronously alert the user of events
-        self._stop_event = threading.Event()
-        self._alerter_thread = threading.Thread()
+        # The task that will asynchronously alert the user of events
+        self._alerter_task: asyncio.Task | None = None
+        self._alerts_enabled = True
         self._alert_count = 0
         self._next_alert_time = 0
 
-        # Create some hooks to handle the starting and stopping of our thread
-        self.register_preloop_hook(self._preloop_hook)
+        # Register hook to stop alerts when the command loop finishes
         self.register_postloop_hook(self._postloop_hook)
 
-    def _preloop_hook(self) -> None:
-        """Start the alerter thread."""
-        self._stop_event.clear()
-
-        self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
-        self._alerter_thread.start()
+    def pre_prompt(self) -> None:
+        """Start the alerter task if enabled.
+        This is called after the prompt event loop has started, so create_background_task works.
+        """
+        if self._alerts_enabled:
+            self._start_alerter_task()
 
     def _postloop_hook(self) -> None:
-        """Stops the alerter thread."""
-        self._stop_event.set()
-        if self._alerter_thread.is_alive():
-            self._alerter_thread.join()
+        """Stops the alerter task."""
+        self._cancel_alerter_task()
 
     def do_start_alerts(self, _) -> None:
-        """Starts the alerter thread."""
-        if self._alerter_thread.is_alive():
-            print("The alert thread is already started")
+        """Starts the alerter task."""
+        if self._alerts_enabled:
+            print("The alert task is already started")
         else:
-            self._stop_event.clear()
-            self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
-            self._alerter_thread.start()
+            self._alerts_enabled = True
+            # Task will be started in pre_prompt at next prompt
 
     def do_stop_alerts(self, _) -> None:
-        """Stops the alerter thread."""
-        self._stop_event.set()
-        if self._alerter_thread.is_alive():
-            self._alerter_thread.join()
+        """Stops the alerter task."""
+        if not self._alerts_enabled:
+            print("The alert task is already stopped")
         else:
-            print("The alert thread is already stopped")
+            self._alerts_enabled = False
+            self._cancel_alerter_task()
+
+    def _start_alerter_task(self) -> None:
+        """Start the alerter task if it's not running."""
+        if self._alerter_task is not None and not self._alerter_task.done():
+            return
+
+        # self.session.app is the prompt_toolkit Application.
+        # create_background_task creates a task that runs on the same loop as the app.
+        with contextlib.suppress(RuntimeError):
+            self._alerter_task = self.session.app.create_background_task(self._alerter())
+
+    def _cancel_alerter_task(self) -> None:
+        """Cancel the alerter task."""
+        if self._alerter_task is not None:
+            self._alerter_task.cancel()
+            self._alerter_task = None
 
     def _get_alerts(self) -> list[str]:
         """Reports alerts
@@ -147,13 +160,13 @@ class AlerterApp(cmd2.Cmd):
 
         return stylize(self.visible_prompt, style=status_color)
 
-    def _alerter_thread_func(self) -> None:
+    async def _alerter(self) -> None:
         """Prints alerts and updates the prompt any time the prompt is showing."""
         self._alert_count = 0
         self._next_alert_time = 0
 
-        while not self._stop_event.is_set():
-            try:
+        try:
+            while True:
                 # Get any alerts that need to be printed
                 alert_str = self._generate_alert_str()
 
@@ -162,22 +175,26 @@ class AlerterApp(cmd2.Cmd):
 
                 # Check if we have alerts to print
                 if alert_str:
-                    # new_prompt is an optional parameter to async_alert()
-                    self.async_alert(alert_str, new_prompt)
+                    # We are running on the main loop, so we can print directly.
+                    # patch_stdout (active during read_input) handles the output.
+                    print(alert_str)
+
+                    self.prompt = new_prompt
                     new_title = f"Alerts Printed: {self._alert_count}"
                     self.set_window_title(new_title)
+                    self.session.app.invalidate()
 
                 # Otherwise check if the prompt needs to be updated or refreshed
                 elif self.prompt != new_prompt:
-                    self.async_update_prompt(new_prompt)
+                    self.prompt = new_prompt
+                    self.session.app.invalidate()
 
                 elif self.need_prompt_refresh():
-                    self.async_refresh_prompt()
+                    self.session.app.invalidate()
 
-            except RuntimeError:
-                pass
-
-            self._stop_event.wait(0.5)
+                await asyncio.sleep(0.5)
+        except asyncio.CancelledError:
+            pass
 
 
 if __name__ == '__main__':
