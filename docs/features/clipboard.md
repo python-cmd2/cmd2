@@ -20,6 +20,11 @@ symbols:
 mycommand arg1 arg2 >>
 ```
 
+!!! warning "Limitation"
+
+    The ability to redirect command output only works directly from a `cmd2`
+    command. It doesn't work after piping output to a shell command.
+
 ## Developers
 
 You can control whether the above user features of adding output to the operating system clipboard
