@@ -3387,6 +3387,18 @@ def test_async_alert_success(base_app):
 
     success = []
 
+    # Mock loop and app
+    mock_loop = mock.MagicMock()
+    mock_app = mock.MagicMock()
+    mock_app.loop = mock_loop
+    # Mocking base_app.session which is a PromptSession.
+    # PromptSession does not expose .app directly in types but it has .app at runtime.
+    # However in tests base_app.session might be PromptSession(input=DummyInput(), ...)
+    base_app.session.app = mock_app
+
+    # Pretend we are at the prompt
+    base_app._in_prompt = True
+
     def run_alert():
         base_app.async_alert("Alert Message", new_prompt="(New) ")
         success.append(True)
@@ -3396,7 +3408,18 @@ def test_async_alert_success(base_app):
     t.join()
 
     assert success
-    assert base_app.prompt == "(New) "
+
+    # Verify callback scheduled
+    mock_loop.call_soon_threadsafe.assert_called_once()
+
+    # Verify functionality of the callback
+    callback = mock_loop.call_soon_threadsafe.call_args[0][0]
+
+    with mock.patch('builtins.print') as mock_print:
+        callback()
+        mock_print.assert_called_with("Alert Message")
+        assert base_app.prompt == "(New) "
+        mock_app.invalidate.assert_called_once()
 
 
 def test_async_alert_main_thread_error(base_app):
@@ -3404,11 +3427,11 @@ def test_async_alert_main_thread_error(base_app):
         base_app.async_alert("fail")
 
 
-def test_async_alert_lock_held(base_app):
+def test_async_alert_not_at_prompt(base_app):
     import threading
 
-    # Acquire lock in main thread
-    base_app.terminal_lock.acquire()
+    # Ensure we are NOT at prompt
+    base_app._in_prompt = False
 
     exceptions = []
 
@@ -3417,18 +3440,13 @@ def test_async_alert_lock_held(base_app):
             base_app.async_alert("fail")
         except RuntimeError as e:
             exceptions.append(e)
-        finally:
-            pass
 
-    try:
-        t = threading.Thread(target=run_alert)
-        t.start()
-        t.join()
-    finally:
-        base_app.terminal_lock.release()
+    t = threading.Thread(target=run_alert)
+    t.start()
+    t.join()
 
     assert len(exceptions) == 1
-    assert "another thread holds terminal_lock" in str(exceptions[0])
+    assert "Main thread is not at the prompt" in str(exceptions[0])
 
 
 def test_bottom_toolbar(base_app, monkeypatch):

@@ -48,10 +48,6 @@ class AlerterApp(cmd2.Cmd):
 
     def _preloop_hook(self) -> None:
         """Start the alerter thread."""
-        # This runs after cmdloop() acquires self.terminal_lock, which will be locked until the prompt appears.
-        # Therefore this is the best place to start the alerter thread since there is no risk of it alerting
-        # before the prompt is displayed. You can also start it via a command if its not something that should
-        # be running during the entire application. See do_start_alerts().
         self._stop_event.clear()
 
         self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
@@ -59,9 +55,6 @@ class AlerterApp(cmd2.Cmd):
 
     def _postloop_hook(self) -> None:
         """Stops the alerter thread."""
-        # After this function returns, cmdloop() releases self.terminal_lock which could make the alerter
-        # thread think the prompt is on screen. Therefore this is the best place to stop the alerter thread.
-        # You can also stop it via a command. See do_stop_alerts().
         self._stop_event.set()
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
@@ -160,9 +153,7 @@ class AlerterApp(cmd2.Cmd):
         self._next_alert_time = 0
 
         while not self._stop_event.is_set():
-            # Always acquire terminal_lock before printing alerts or updating the prompt.
-            # To keep the app responsive, do not block on this call.
-            if self.terminal_lock.acquire(blocking=False):
+            try:
                 # Get any alerts that need to be printed
                 alert_str = self._generate_alert_str()
 
@@ -183,8 +174,8 @@ class AlerterApp(cmd2.Cmd):
                 elif self.need_prompt_refresh():
                     self.async_refresh_prompt()
 
-                # Don't forget to release the lock
-                self.terminal_lock.release()
+            except RuntimeError:
+                pass
 
             self._stop_event.wait(0.5)
 

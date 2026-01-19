@@ -609,10 +609,9 @@ class Cmd:
         # This determines the value returned by cmdloop() when exiting the application
         self.exit_code = 0
 
-        # This lock should be acquired before doing any asynchronous changes to the terminal to
-        # ensure the updates to the terminal don't interfere with the input being typed or output
-        # being printed by a command.
-        self.terminal_lock = threading.RLock()
+        # This flag is set to True when the prompt is displayed and the application is waiting for user input.
+        # It is used by async_alert() to determine if it is safe to alert the user.
+        self._in_prompt = False
 
         # Commands that have been disabled from use. This is to support commands that are only available
         # during specific states of the application. This dictionary's keys are the command names and its
@@ -3325,103 +3324,108 @@ class Cmd:
         :raises Exception: any exceptions raised by prompt()
         """
         self._reset_completion_defaults()
-        if self.use_rawinput and self.stdin.isatty():
-            # Determine completer
-            completer_to_use: Completer
-            if completion_mode == utils.CompletionMode.NONE:
-                completer_to_use = DummyCompleter()
+        self._in_prompt = True
+        try:
+            if self.use_rawinput and self.stdin.isatty():
+                # Determine completer
+                completer_to_use: Completer
+                if completion_mode == utils.CompletionMode.NONE:
+                    completer_to_use = DummyCompleter()
 
-                # No up-arrow history when CompletionMode.NONE and history is None
-                if history is None:
-                    history = []
-            elif completion_mode == utils.CompletionMode.COMMANDS:
-                completer_to_use = self.completer
-            else:
-                # Custom completion
-                if parser is None:
-                    parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
-                    parser.add_argument(
-                        'arg',
-                        suppress_tab_hint=True,
-                        choices=choices,
-                        choices_provider=choices_provider,
-                        completer=completer,
-                    )
-                custom_settings = utils.CustomCompletionSettings(parser, preserve_quotes=preserve_quotes)
-                completer_to_use = Cmd2Completer(self, custom_settings=custom_settings)
+                    # No up-arrow history when CompletionMode.NONE and history is None
+                    if history is None:
+                        history = []
+                elif completion_mode == utils.CompletionMode.COMMANDS:
+                    completer_to_use = self.completer
+                else:
+                    # Custom completion
+                    if parser is None:
+                        parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
+                        parser.add_argument(
+                            'arg',
+                            suppress_tab_hint=True,
+                            choices=choices,
+                            choices_provider=choices_provider,
+                            completer=completer,
+                        )
+                    custom_settings = utils.CustomCompletionSettings(parser, preserve_quotes=preserve_quotes)
+                    completer_to_use = Cmd2Completer(self, custom_settings=custom_settings)
 
-            # Use dynamic prompt if the prompt matches self.prompt
-            def get_prompt() -> ANSI | str:
-                return ANSI(self.prompt)
+                # Use dynamic prompt if the prompt matches self.prompt
+                def get_prompt() -> ANSI | str:
+                    return ANSI(self.prompt)
 
-            prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
-            if prompt == self.prompt:
-                prompt_to_use = get_prompt
+                prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
+                if prompt == self.prompt:
+                    prompt_to_use = get_prompt
 
-            with patch_stdout():
-                if history is not None:
-                    # If custom history is provided, we use the prompt() shortcut
-                    # which can take a history object.
-                    history_to_use = InMemoryHistory()
-                    for item in history:
-                        history_to_use.append_string(item)
+                with patch_stdout():
+                    if history is not None:
+                        # If custom history is provided, we use the prompt() shortcut
+                        # which can take a history object.
+                        history_to_use = InMemoryHistory()
+                        for item in history:
+                            history_to_use.append_string(item)
 
-                    temp_session1: PromptSession[str] = PromptSession(
-                        history=history_to_use,
-                        input=self.session.input,
-                        output=self.session.output,
-                        complete_style=self.session.complete_style,
-                        complete_while_typing=self.session.complete_while_typing,
-                    )
+                        temp_session1: PromptSession[str] = PromptSession(
+                            history=history_to_use,
+                            input=self.session.input,
+                            output=self.session.output,
+                            complete_style=self.session.complete_style,
+                            complete_while_typing=self.session.complete_while_typing,
+                        )
 
-                    return temp_session1.prompt(
+                        return temp_session1.prompt(
+                            prompt_to_use,
+                            completer=completer_to_use,
+                            bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                        )
+
+                    # history is None
+                    return self.session.prompt(
                         prompt_to_use,
                         completer=completer_to_use,
                         bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                     )
 
-                # history is None
-                return self.session.prompt(
-                    prompt_to_use,
-                    completer=completer_to_use,
+            # Otherwise read from self.stdin
+            elif self.stdin.isatty():
+                # on a tty, print the prompt first, then read the line
+                temp_session2: PromptSession[str] = PromptSession(
+                    input=self.session.input,
+                    output=self.session.output,
+                    complete_style=self.session.complete_style,
+                    complete_while_typing=self.session.complete_while_typing,
+                )
+                line = temp_session2.prompt(
+                    prompt,
                     bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
                 )
+                if len(line) == 0:
+                    raise EOFError
+                return line.rstrip('\n')
+            else:
+                # not a tty, just read the line
+                temp_session3: PromptSession[str] = PromptSession(
+                    input=self.session.input,
+                    output=self.session.output,
+                    complete_style=self.session.complete_style,
+                    complete_while_typing=self.session.complete_while_typing,
+                )
+                line = temp_session3.prompt(
+                    bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                )
+                if len(line) == 0:
+                    raise EOFError
+                line = line.rstrip('\n')
 
-        # Otherwise read from self.stdin
-        elif self.stdin.isatty():
-            # on a tty, print the prompt first, then read the line
-            temp_session2: PromptSession[str] = PromptSession(
-                input=self.session.input,
-                output=self.session.output,
-                complete_style=self.session.complete_style,
-                complete_while_typing=self.session.complete_while_typing,
-            )
-            line = temp_session2.prompt(
-                prompt,
-                bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
-            )
-            if len(line) == 0:
-                raise EOFError
-            return line.rstrip('\n')
-        else:
-            # not a tty, just read the line
-            temp_session3: PromptSession[str] = PromptSession(
-                input=self.session.input,
-                output=self.session.output,
-                complete_style=self.session.complete_style,
-                complete_while_typing=self.session.complete_while_typing,
-            )
-            line = temp_session3.prompt(
-                bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
-            )
-            if len(line) == 0:
-                raise EOFError
-            line = line.rstrip('\n')
+                if self.echo:
+                    self.poutput(f'{prompt}{line}')
 
-            if self.echo:
-                self.poutput(f'{prompt}{line}')
+                return line
 
-            return line
+        finally:
+            self._in_prompt = False
 
     def _read_command_line(self, prompt: str) -> str:
         """Read command line from appropriate stdin.
@@ -3431,16 +3435,9 @@ class Cmd:
         :raises Exception: whatever exceptions are raised by input() except for EOFError
         """
         try:
-            # Wrap in try since terminal_lock may not be locked
-            with contextlib.suppress(RuntimeError):
-                # Command line is about to be drawn. Allow asynchronous changes to the terminal.
-                self.terminal_lock.release()
             return self.read_input(prompt, completion_mode=utils.CompletionMode.COMMANDS)
         except EOFError:
             return 'eof'
-        finally:
-            # Command line is gone. Do not allow asynchronous changes to the terminal.
-            self.terminal_lock.acquire()
 
     def _cmdloop(self) -> None:
         """Repeatedly issue a prompt, accept input, parse it, and dispatch to apporpriate commands.
@@ -5457,9 +5454,8 @@ class Cmd:
         To the user it appears as if an alert message is printed above the prompt and their
         current input text and cursor location is left alone.
 
-        This function needs to acquire self.terminal_lock to ensure a prompt is on screen.
-        Therefore, it is best to acquire the lock before calling this function to avoid
-        raising a RuntimeError.
+        This function checks self._in_prompt to ensure a prompt is on screen.
+        If the main thread is not at the prompt, a RuntimeError is raised.
 
         This function is only needed when you need to print an alert or update the prompt while the
         main thread is blocking at the prompt. Therefore, this should never be called from the main
@@ -5469,30 +5465,35 @@ class Cmd:
         :param new_prompt: If you also want to change the prompt that is displayed, then include it here.
                            See async_update_prompt() docstring for guidance on updating a prompt.
         :raises RuntimeError: if called from the main thread.
-        :raises RuntimeError: if called while another thread holds `terminal_lock`
+        :raises RuntimeError: if main thread is not currently at the prompt.
         """
         if threading.current_thread() is threading.main_thread():
             raise RuntimeError("async_alert should not be called from the main thread")
 
-        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
-        if self.terminal_lock.acquire(blocking=False):
-            try:
-                if new_prompt is not None:
-                    self.prompt = new_prompt
+        # Check if the main thread is currently waiting at the prompt
+        if not self._in_prompt:
+            raise RuntimeError("Main thread is not at the prompt")
 
-                if hasattr(self, 'session'):
-                    # Invalidate to force prompt update if prompt changed
-                    self.session.app.invalidate()
+        def _alert() -> None:
+            if new_prompt is not None:
+                self.prompt = new_prompt
 
-                if alert_msg:
-                    sys.stdout.write(alert_msg + '\n')
-                    sys.stdout.flush()
+            if alert_msg:
+                # Since we are running in the loop, patch_stdout context manager from read_input
+                # should be active (if tty), or at least we are in the main thread.
+                print(alert_msg)
 
-            finally:
-                self.terminal_lock.release()
+            if hasattr(self, 'session'):
+                # Invalidate to force prompt update
+                self.session.app.invalidate()
 
-        else:
-            raise RuntimeError("another thread holds terminal_lock")
+        # Schedule the alert to run on the main thread's event loop
+        try:
+            self.session.app.loop.call_soon_threadsafe(_alert)  # type: ignore[union-attr]
+        except AttributeError:
+            # Fallback if loop is not accessible (e.g. prompt not running or session not initialized)
+            # This shouldn't happen if _in_prompt is True, unless prompt exited concurrently.
+            raise RuntimeError("Event loop not available") from None
 
     def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
         """Update the command line prompt while the user is still typing at it.
@@ -5509,7 +5510,7 @@ class Cmd:
 
         :param new_prompt: what to change the prompt to
         :raises RuntimeError: if called from the main thread.
-        :raises RuntimeError: if called while another thread holds `terminal_lock`
+        :raises RuntimeError: if main thread is not currently at the prompt.
         """
         self.async_alert('', new_prompt)
 
@@ -5526,7 +5527,7 @@ class Cmd:
         thread to know when a refresh is needed.
 
         :raises RuntimeError: if called from the main thread.
-        :raises RuntimeError: if called while another thread holds `terminal_lock`
+        :raises RuntimeError: if main thread is not currently at the prompt.
         """
         self.async_alert('')
 
@@ -5679,9 +5680,6 @@ class Cmd:
             original_sigterm_handler = signal.getsignal(signal.SIGTERM)
             signal.signal(signal.SIGTERM, self.termination_signal_handler)
 
-        # Grab terminal lock before the command line prompt has been drawn by prompt-toolkit
-        self.terminal_lock.acquire()
-
         # Always run the preloop first
         for func in self._preloop_hooks:
             func()
@@ -5706,10 +5704,6 @@ class Cmd:
         for func in self._postloop_hooks:
             func()
         self.postloop()
-
-        # Release terminal lock now that postloop code should have stopped any terminal updater threads
-        # This will also zero the lock count in case cmdloop() is called again
-        self.terminal_lock.release()
 
         # Restore original signal handlers
         signal.signal(signal.SIGINT, original_sigint_handler)
