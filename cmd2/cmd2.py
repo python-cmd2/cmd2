@@ -1617,22 +1617,25 @@ class Cmd:
                     try:
                         import signal
                         import termios
-
-                        # Ensure we are in the foreground process group
-                        if hasattr(os, 'tcsetpgrp') and hasattr(os, 'getpgrp'):
-                            # Ignore SIGTTOU to avoid getting stopped when calling tcsetpgrp from background
-                            old_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-                            try:
-                                os.tcsetpgrp(self.stdin.fileno(), os.getpgrp())
-                            finally:
-                                signal.signal(signal.SIGTTOU, old_handler)
-
-                        # Restore terminal attributes
-                        if self._initial_termios_settings is not None:
-                            termios.tcsetattr(self.stdin.fileno(), termios.TCSANOW, self._initial_termios_settings)
-
-                    except (ImportError, OSError, termios.error):
+                    except ImportError:
                         pass
+                    else:
+                        try:
+                            # Ensure we are in the foreground process group
+                            if hasattr(os, 'tcsetpgrp') and hasattr(os, 'getpgrp'):
+                                # Ignore SIGTTOU to avoid getting stopped when calling tcsetpgrp from background
+                                old_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+                                try:
+                                    os.tcsetpgrp(self.stdin.fileno(), os.getpgrp())
+                                finally:
+                                    signal.signal(signal.SIGTTOU, old_handler)
+
+                            # Restore terminal attributes
+                            if self._initial_termios_settings is not None:
+                                termios.tcsetattr(self.stdin.fileno(), termios.TCSANOW, self._initial_termios_settings)
+
+                        except (OSError, termios.error):
+                            pass
 
         else:
             self.poutput(
