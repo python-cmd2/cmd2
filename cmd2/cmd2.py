@@ -428,6 +428,10 @@ class Cmd:
         # not include the description value of the CompletionItems.
         self.max_completion_items: int = 50
 
+        # The maximum number of completion results to display in a single column (CompleteStyle.COLUMN).
+        # If the number of results exceeds this, CompleteStyle.MULTI_COLUMN will be used.
+        self.max_column_completion_items: int = 7
+
         # A dictionary mapping settable names to their Settable instance
         self._settables: dict[str, Settable] = {}
         self._always_prefix_settables: bool = False
@@ -1218,6 +1222,11 @@ class Cmd:
         self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|' and '>' results", self))
         self.add_settable(
             Settable('max_completion_items', int, "Maximum number of CompletionItems to display during tab completion", self)
+        )
+        self.add_settable(
+            Settable(
+                'max_column_completion_items', int, "Maximum number of completion results to display in a single column", self
+            )
         )
         self.add_settable(Settable('quiet', bool, "Don't print nonessential feedback", self))
         self.add_settable(Settable('scripts_add_to_history', bool, 'Scripts and pyscripts add commands to history', self))
@@ -2499,6 +2508,12 @@ class Cmd:
                     self.completion_matches.sort(key=self.default_sort_key)
                     self.display_matches.sort(key=self.default_sort_key)
                     self.matches_sorted = True
+
+                # Swap between COLUMN and MULTI_COLUMN style based on the number of matches
+                if len(self.completion_matches) > self.max_column_completion_items:
+                    self.session.complete_style = CompleteStyle.MULTI_COLUMN
+                else:
+                    self.session.complete_style = CompleteStyle.COLUMN
 
             try:
                 return self.completion_matches[state]
