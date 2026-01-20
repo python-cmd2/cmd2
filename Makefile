@@ -43,8 +43,8 @@ docs-test: ## Test if documentation can be built without warnings or errors
 	@uv run zensical build -s
 
 .PHONY: docs
-docs: ## Build and serve the documentation
-	@uv run zensical serve
+docs: ## Build and serve the documentation (and open in default browser)
+	@uv run zensical serve -o
 
 .PHONY: build
 build: clean-build ## Build wheel file

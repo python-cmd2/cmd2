@@ -1,2 +1,5 @@
+# File is nicely lined up
+.github/CODEOWNERS
+
 # Markdown documentation files with non-standard syntax for mkdocstrings that Prettier should not auto-format
 docs/features/initialization.md
