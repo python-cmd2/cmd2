@@ -310,6 +310,7 @@ class Cmd:
         intro: RenderableType = '',
         bottom_toolbar: bool = False,
         complete_style: CompleteStyle = CompleteStyle.COLUMN,
+        max_column_completion_items: int = 7,
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
@@ -365,6 +366,8 @@ class Cmd:
                                1. CompleteStyle.COLUMN (default) - displays hints with help next to them in one big column
                                2. CompleteStyle.MULTI_COLUMN - displays hints across multiple columns, with help when selected
                                3. CompleteStyle.READLINE_LIKE - displays like readline, complete_in_thread doesn't work
+        :param max_column_completion_items: The maximum number of completion results to display in a single column,
+                                            used to provide the initial value for a settable with the same name.
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -430,7 +433,7 @@ class Cmd:
 
         # The maximum number of completion results to display in a single column (CompleteStyle.COLUMN).
         # If the number of results exceeds this, CompleteStyle.MULTI_COLUMN will be used.
-        self.max_column_completion_items: int = 7
+        self.max_column_completion_items: int = max_column_completion_items
 
         # A dictionary mapping settable names to their Settable instance
         self._settables: dict[str, Settable] = {}
@@ -2509,11 +2512,12 @@ class Cmd:
                     self.display_matches.sort(key=self.default_sort_key)
                     self.matches_sorted = True
 
-                # Swap between COLUMN and MULTI_COLUMN style based on the number of matches
-                if len(self.completion_matches) > self.max_column_completion_items:
-                    self.session.complete_style = CompleteStyle.MULTI_COLUMN
-                else:
-                    self.session.complete_style = CompleteStyle.COLUMN
+                # Swap between COLUMN and MULTI_COLUMN style based on the number of matches if not using READLINE_LIKE
+                if self.session.complete_style != CompleteStyle.READLINE_LIKE:
+                    if len(self.completion_matches) > self.max_column_completion_items:
+                        self.session.complete_style = CompleteStyle.MULTI_COLUMN
+                    else:
+                        self.session.complete_style = CompleteStyle.COLUMN
 
             try:
                 return self.completion_matches[state]
