@@ -23,11 +23,17 @@ shell, and the option for a persistent bottom bar that can display realtime stat
       utilities
     - Async specific: `prompt-toolkit` starts its own `asyncio` event loop in every `cmd2`
       application
+    - Removed `cmd2.Cmd.terminal_lock` as it is no longer required to support things like
+      `cmd2.Cmd.async_alert`
 - Enhancements
-    - Optional persistent **bottom toolbar** capable of displaying realtime status information, see
-      the `include_bottom_toolbar` optional argument to the initializer for `cmd2.Cmd` and the
+    - New optional persistent **bottom toolbar** capable of displaying realtime status information,
+      see the `include_bottom_toolbar` optional argument to the initializer for `cmd2.Cmd` and the
       `cmd2.Cmd2._bottom_toolbar` method that can be overridden as well as the updated
       `getting_started.py` example
+    - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
+      application is waiting for user input
+    - Added `cmd2.Cmd.pre_prompt` hook method that is called before the prompt is displayed, but
+      after `prompt-toolkit` event loop has started
 
 ## 3.1.0 (December 25, 2025)
 
