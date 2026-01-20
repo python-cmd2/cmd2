@@ -93,18 +93,17 @@ for a list of dependencies needed for building `cmd2`.
 See the `dev` list under the `[dependency-groups]` heading in [pyproject.toml](../pyproject.toml)
 for a list of dependencies needed for building `cmd2`.
 
-| Prerequisite                                                         | Minimum Version | Purpose                          |
-| -------------------------------------------------------------------- | --------------- | -------------------------------- |
-| [codecov](http://doc.pytest.org/en/latest/)                          | `2.1.13`        | Cover coverage reporting         |
-| [mypy](https://mypy-lang.org/)                                       | `1.13.0`        | Static type checker              |
-| [pytest](https://docs.pytest.org/en/stable/)                         | `3.0.6`         | Unit and integration tests       |
-| [pytest-cov](http://doc.pytest.org/en/latest/)                       | `6.0.0`         | Pytest code coverage             |
-| [pytest-mock](https://pypi.org/project/pytest-mock/)                 | `3.14.0`        | Pytest mocker fixture            |
-| [mkdocs-macros-plugin](https://mkdocs-macros-plugin.readthedocs.io/) | `1.3.7`         | MkDocs Plugin for macros         |
-| [mkdocs-material](https://squidfunk.github.io/mkdocs-material/)      | `9.5.49`        | Documentation                    |
-| [mkdocstrings[python]](https://mkdocstrings.github.io/)              | `0.27.0`        | MkDocs Plugin for Python AutoDoc |
-| [ruff](https://github.com/astral-sh/ruff)                            | `0.7.3`         | Fast linter and formatter        |
-| [uv](https://github.com/astral-sh/uv)                                | `0.5.1`         | Python package management        |
+| Prerequisite                                            | Minimum Version | Purpose                            |
+| ------------------------------------------------------- | --------------- | ---------------------------------- |
+| [codecov](http://doc.pytest.org/en/latest/)             | `2.1.13`        | Cover coverage reporting           |
+| [mypy](https://mypy-lang.org/)                          | `1.13.0`        | Static type checker                |
+| [pytest](https://docs.pytest.org/en/stable/)            | `3.0.6`         | Unit and integration tests         |
+| [pytest-cov](http://doc.pytest.org/en/latest/)          | `6.0.0`         | Pytest code coverage               |
+| [pytest-mock](https://pypi.org/project/pytest-mock/)    | `3.14.0`        | Pytest mocker fixture              |
+| [mkdocstrings[python]](https://mkdocstrings.github.io/) | `0.27.0`        | Zensical plugin for Python AutoDoc |
+| [ruff](https://github.com/astral-sh/ruff)               | `0.7.3`         | Fast linter and formatter          |
+| [uv](https://github.com/astral-sh/uv)                   | `0.5.1`         | Python package management          |
+| [Zensical](https://github.com/zensical/zensical)        | `0.0.17`        | Markdown-based documentation       |
 
 If Python is already installed in your machine, run the following commands to validate the versions:
 
@@ -351,8 +350,8 @@ are primarily related to continuous integration and release deployment.
 
 #### Changes to the documentation files
 
-If you made changes to any file in the `/docs` directory, you need to build the MkDocs documentation
-and make sure your changes look good:
+If you made changes to any file in the `/docs` directory, you need to build the Zensical
+documentation and make sure your changes look good:
 
 ```sh
 $ make docs-test

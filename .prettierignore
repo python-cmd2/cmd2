@@ -1,2 +1,2 @@
-# Markdown documentation files with non-standards syntax for mkdocstrings that Prettier should not auto-format
+# Markdown documentation files with non-standard syntax for mkdocstrings that Prettier should not auto-format
 docs/features/initialization.md

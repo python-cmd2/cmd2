@@ -27,8 +27,8 @@ example to learn more about how to use the various `cmd2` argument processing de
 `cmd2` provides the following [decorators](../api/decorators.md) for assisting with parsing
 arguments passed to commands:
 
-- `cmd2.decorators.with_argparser`
-- `cmd2.decorators.with_argument_list`
+- [cmd2.decorators.with_argparser][]
+- [cmd2.decorators.with_argument_list][]
 
 All of these decorators accept an optional **preserve_quotes** argument which defaults to `False`.
 Setting this argument to `True` is useful for cases where you are passing the arguments to another
