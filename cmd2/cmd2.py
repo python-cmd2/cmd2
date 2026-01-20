@@ -2668,6 +2668,9 @@ class Cmd:
         self.poutput()  # Ensure new prompt is on a line by itself
         raise KeyboardInterrupt("Got a keyboard interrupt")
 
+    def pre_prompt(self) -> None:
+        """Ran just before the prompt is displayed (and after the event loop has started)."""
+
     def precmd(self, statement: Statement | str) -> Statement:
         """Ran just before the command is executed by [cmd2.Cmd.onecmd][] and after adding it to history (cmd  Hook method).
 
@@ -3284,9 +3287,6 @@ class Cmd:
 
     def _suggest_similar_command(self, command: str) -> str | None:
         return suggest_similar(command, self.get_visible_commands())
-
-    def pre_prompt(self) -> None:
-        """Call this before the prompt is displayed (and after the event loop has started)."""
 
     def read_input(
         self,

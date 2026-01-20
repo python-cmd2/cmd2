@@ -3571,6 +3571,10 @@ def test_read_input_dynamic_prompt_with_history(base_app, monkeypatch):
         assert result.value == ANSI(base_app.prompt).value
 
 
+@pytest.mark.skipif(
+    sys.platform.startswith('win'),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
 def test_pre_prompt_running_loop(base_app):
     # Test that pre_prompt runs with a running event loop.
     import asyncio
