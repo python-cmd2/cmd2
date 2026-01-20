@@ -1,9 +1,9 @@
 # Minimum Required Changes
 
-[cmd2.Cmd][] subclasses [cmd.Cmd](https://docs.python.org/3/library/cmd.html#cmd.Cmd) from the
-standard library, and overrides all of the methods other than `Cmd.emptyline` (`cmd2` never calls
-this method). Most apps based on the standard library can be migrated to `cmd2` in just a couple of
-minutes.
+[cmd2.Cmd][] provides all of the same public methods and fields of
+[cmd.Cmd](https://docs.python.org/3/library/cmd.html#cmd.Cmd) from the standard library other than
+`Cmd.emptyline` (`cmd2` never calls this method). Most apps based on the standard library can be
+migrated to `cmd2` in just a couple of minutes.
 
 ## Import and Inheritance
 

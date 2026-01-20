@@ -141,11 +141,11 @@ not_in_nav: |
 nav:
   - Home: index.md
   - Getting Started:
-      - Overview: overview/index.md
-      - Installation Instructions: overview/installation.md
-      - Integrate cmd2 Into Your Project: overview/integrating.md
-      - Alternatives: overview/alternatives.md
-      - Resources: overview/resources.md
+      - overview/index.md
+      - overview/installation.md
+      - overview/integrating.md
+      - overview/alternatives.md
+      - overview/resources.md
   - Migrating From cmd:
       - migrating/index.md
       - migrating/why.md
