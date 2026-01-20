@@ -29,4 +29,4 @@ build:
         - zensical build
     post_build:
       - mkdir -p $READTHEDOCS_OUTPUT/html/
-      - cp --recursive site/* $READTHEDOCS_OUTPUT/html/
+      - cp --recursive build/html/* $READTHEDOCS_OUTPUT/html/
