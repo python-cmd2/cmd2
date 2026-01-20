@@ -23,8 +23,10 @@ shell, and the option for a persistent bottom bar that can display realtime stat
       utilities
     - Async specific: `prompt-toolkit` starts its own `asyncio` event loop in every `cmd2`
       application
-    - Removed `cmd2.Cmd.terminal_lock` as it is no longer required to support things like
-      `cmd2.Cmd.async_alert`
+        - Removed `cmd2.Cmd.terminal_lock` as it is no longer required to support things like
+          `cmd2.Cmd.async_alert`
+        - Removed `cmd2.Cmd.async_refresh_prompt` and `cmd2.Cmd.need_prompt_refresh` as they are no
+          longer needed
 - Enhancements
     - New optional persistent **bottom toolbar** capable of displaying realtime status information,
       see the `bottom_toolbar` optional argument to the initializer for `cmd2.Cmd` and the

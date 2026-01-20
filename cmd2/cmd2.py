@@ -5523,29 +5523,6 @@ class Cmd:
         """
         self.async_alert('', new_prompt)
 
-    def async_refresh_prompt(self) -> None:  # pragma: no cover
-        """Refresh the oncreen prompt to match self.prompt.
-
-        One case where the onscreen prompt and self.prompt can get out of sync is
-        when async_alert() is called while a user is in search mode (e.g. Ctrl-r).
-        To prevent overwriting prompt-toolkit's onscreen search prompt, self.prompt is updated
-        but prompt-toolkit's saved prompt isn't.
-
-        Therefore when a user aborts a search, the old prompt is still on screen until they
-        press Enter or this method is called. Call need_prompt_refresh() in an async print
-        thread to know when a refresh is needed.
-
-        :raises RuntimeError: if called from the main thread.
-        :raises RuntimeError: if main thread is not currently at the prompt.
-        """
-        self.async_alert('')
-
-    def need_prompt_refresh(self) -> bool:  # pragma: no cover
-        """Check whether the onscreen prompt needs to be asynchronously refreshed to match self.prompt."""
-        # With prompt_toolkit, refresh is handled via invalidation.
-        # This method is kept for API compatibility.
-        return False
-
     @staticmethod
     def set_window_title(title: str) -> None:  # pragma: no cover
         """Set the terminal window title.

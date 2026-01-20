@@ -189,9 +189,6 @@ class AlerterApp(cmd2.Cmd):
                     self.prompt = new_prompt
                     self.session.app.invalidate()
 
-                elif self.need_prompt_refresh():
-                    self.session.app.invalidate()
-
                 await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             pass

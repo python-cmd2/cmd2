@@ -36,8 +36,6 @@ and greater all support these.
 
 - [cmd2.Cmd.async_alert][]
 - [cmd2.Cmd.async_update_prompt][]
-- [cmd2.Cmd.async_refresh_prompt][]
-- [cmd2.Cmd.need_prompt_refresh][]
 
 `cmd2` also provides a function to change the title of the terminal window. This feature requires
 the application be running in a terminal that supports VT100 control characters. Linux, Mac, and
