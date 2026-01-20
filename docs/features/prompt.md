@@ -56,21 +56,22 @@ terminal window while the application is idle and waiting for input.
 
 ### Enabling the Toolbar
 
-To enable the toolbar, set `include_bottom_toolbar=True` in the [cmd2.Cmd.__init__][] constructor:
+To enable the toolbar, set `bottom_toolbar=True` in the [cmd2.Cmd.__init__][] constructor:
 
 ```py
 class App(cmd2.Cmd):
     def __init__(self):
-        super().__init__(include_bottom_toolbar=True)
+        super().__init__(bottom_toolbar=True)
 ```
 
 ### Customizing Toolbar Content
 
-You can customize the content of the toolbar by overriding the [cmd2.Cmd._bottom_toolbar][] method.
-This method should return either a string or a list of `(style, text)` tuples for formatted text.
+You can customize the content of the toolbar by overriding the [cmd2.Cmd.get_bottom_toolbar][]
+method. This method should return either a string or a list of `(style, text)` tuples for formatted
+text.
 
 ```py
-    def _bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
+    def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
         return [
             ('ansigreen', 'My Application Name'),
             ('', ' - '),

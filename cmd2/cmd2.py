@@ -307,8 +307,9 @@ class Cmd:
         auto_load_commands: bool = False,
         allow_clipboard: bool = True,
         suggest_similar_command: bool = False,
-        include_bottom_toolbar: bool = False,
         intro: RenderableType = '',
+        bottom_toolbar: bool = False,
+        complete_style: CompleteStyle = CompleteStyle.COLUMN,
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
@@ -358,8 +359,10 @@ class Cmd:
         :param allow_clipboard: If False, cmd2 will disable clipboard interactions
         :param suggest_similar_command: if ``True``, then when a command is not found,
                                         [cmd2.Cmd][] will look for similar commands and suggest them.
-        :param include_bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
         :param intro: introduction to display at startup
+        :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
+        :param complete_style: style of prompt-toolkit tab completion to use, defaults to CompleteStyle.COLUMN;
+                               set to CompleteStyle.READLINE_LIKE if you want it like readline
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -450,13 +453,13 @@ class Cmd:
         # Initialize prompt-toolkit PromptSession
         self.history_adapter = Cmd2History(self)
         self.completer = Cmd2Completer(self)
-        self.include_bottom_toolbar = include_bottom_toolbar
+        self.bottom_toolbar = bottom_toolbar
 
         try:
             self.session: PromptSession[str] = PromptSession(
                 history=self.history_adapter,
                 completer=self.completer,
-                complete_style=CompleteStyle.COLUMN,
+                complete_style=complete_style,
                 complete_in_thread=True,
                 complete_while_typing=False,
                 key_bindings=key_bindings,
@@ -470,7 +473,7 @@ class Cmd:
                 completer=self.completer,
                 input=DummyInput(),
                 output=DummyOutput(),
-                complete_style=CompleteStyle.COLUMN,
+                complete_style=complete_style,
                 complete_in_thread=True,
                 complete_while_typing=False,
                 key_bindings=key_bindings,
@@ -1666,17 +1669,17 @@ class Cmd:
         self.matches_delimited = False
         self.matches_sorted = False
 
-    def _bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
+    def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
         """Get the bottom toolbar content.
 
-        If self.include_bottom_toolbar is False, returns None.
+        If self.bottom_toolbar is False, returns None.
 
         Otherwise returns tokens for prompt-toolkit to populate in the bottom toolbar.
 
         NOTE: This content can extend over multiple lines.  However we would recommend
         keeping it to a single line or two lines maximum.
         """
-        if self.include_bottom_toolbar:
+        if self.bottom_toolbar:
             import datetime
             import shutil
 
@@ -3382,7 +3385,7 @@ class Cmd:
                             prompt_to_use,
                             completer=completer_to_use,
                             pre_run=self.pre_prompt,
-                            bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                            bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                         )
 
                     # history is None
@@ -3390,7 +3393,7 @@ class Cmd:
                         prompt_to_use,
                         completer=completer_to_use,
                         pre_run=self.pre_prompt,
-                        bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                        bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                     )
 
             # Otherwise read from self.stdin
@@ -3405,7 +3408,7 @@ class Cmd:
                 line = temp_session2.prompt(
                     prompt,
                     pre_run=self.pre_prompt,
-                    bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                    bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                 )
                 if len(line) == 0:
                     raise EOFError
@@ -3420,7 +3423,7 @@ class Cmd:
                 )
                 line = temp_session3.prompt(
                     pre_run=self.pre_prompt,
-                    bottom_toolbar=self._bottom_toolbar if self.include_bottom_toolbar else None,
+                    bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                 )
                 if len(line) == 0:
                     raise EOFError

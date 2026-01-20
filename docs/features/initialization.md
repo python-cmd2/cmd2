@@ -25,6 +25,8 @@ The `cmd2.Cmd` class provides a large number of public instance attributes which
 Here are instance attributes of `cmd2.Cmd` which developers might wish to override:
 
 - **always_show_hint**: if `True`, display tab completion hint even when completion suggestions print (Default: `False`)
+- **bottom_toolbar**: if `True`, then a bottom toolbar will be displayed (Default: `False`)
+- **complete_style**: style to display tab-completion hints in (from `CompleteStyle` options in `prompt-toolkit`)
 - **broken_pipe_warning**: if non-empty, this string will be displayed if a broken pipe error occurs
 - **continuation_prompt**: used for multiline commands on 2nd+ line of input
 - **debug**: if `True`, show full stack trace on error (Default: `False`)
@@ -41,7 +43,6 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **feedback_to_output**: if `True`, send nonessential output to stdout, if `False` send them to stderr (Default: `False`)
 - **help_error**: the error that prints when no help information can be found
 - **hidden_commands**: commands to exclude from the help menu and tab completion
-- **include_bottom_toolbar**: if `True`, then a bottom toolbar will be displayed (Default: `False`)
 - **last_result**: stores results from the last command run to enable usage of results in a Python script or interactive console. Built-in commands don't make use of this. It is purely there for user-defined commands and convenience.
 - **macros**: dictionary of macro names and their values
 - **max_completion_items**: max number of CompletionItems to display during tab completion (Default: 50)

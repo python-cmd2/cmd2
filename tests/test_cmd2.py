@@ -3444,14 +3444,14 @@ def test_async_alert_not_at_prompt(base_app):
     assert "Main thread is not at the prompt" in str(exceptions[0])
 
 
-def test_bottom_toolbar(base_app, monkeypatch):
+def test_get_bottom_toolbar(base_app, monkeypatch):
     # Test default (disabled)
-    assert base_app._bottom_toolbar() is None
+    assert base_app.get_bottom_toolbar() is None
 
     # Test enabled
-    base_app.include_bottom_toolbar = True
+    base_app.bottom_toolbar = True
     monkeypatch.setattr(sys, 'argv', ['myapp.py'])
-    toolbar = base_app._bottom_toolbar()
+    toolbar = base_app.get_bottom_toolbar()
     assert isinstance(toolbar, list)
     assert toolbar[0] == ('ansigreen', 'myapp.py')
     assert toolbar[2][0] == 'ansiblue'

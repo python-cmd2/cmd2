@@ -27,8 +27,8 @@ shell, and the option for a persistent bottom bar that can display realtime stat
       `cmd2.Cmd.async_alert`
 - Enhancements
     - New optional persistent **bottom toolbar** capable of displaying realtime status information,
-      see the `include_bottom_toolbar` optional argument to the initializer for `cmd2.Cmd` and the
-      `cmd2.Cmd2._bottom_toolbar` method that can be overridden as well as the updated
+      see the `bottom_toolbar` optional argument to the initializer for `cmd2.Cmd` and the
+      `cmd2.Cmd2.get_bottom_toolbar` method that can be overridden as well as the updated
       `getting_started.py` example
     - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
       application is waiting for user input
