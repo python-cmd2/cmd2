@@ -141,6 +141,7 @@ class TestCmd2Completer:
         mock_cmd_app.formatted_completions = "Table Data"
         mock_cmd_app.completion_hint = "Hint Text"
         mock_cmd_app.completion_matches = []
+        mock_cmd_app.always_show_hint = True
 
         list(completer.get_completions(document, None))
 

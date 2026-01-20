@@ -81,22 +81,22 @@ class Cmd2Completer(Completer):
             print_formatted_text(ANSI(self.cmd_app.completion_header))
             self.cmd_app.completion_header = ""
 
-        # Print hint if present
-        if self.cmd_app.completion_hint:
+        matches = self.cmd_app.completion_matches
+
+        # Print hint if present and settings say we should
+        if self.cmd_app.completion_hint and (self.cmd_app.always_show_hint or not matches):
             print_formatted_text(ANSI(self.cmd_app.completion_hint))
             self.cmd_app.completion_hint = ""
-
-        # Now we iterate over self.cmd_app.completion_matches and self.cmd_app.display_matches
-        matches = self.cmd_app.completion_matches
-        display_matches = self.cmd_app.display_matches
 
         if not matches:
             return
 
+        # Now we iterate over self.cmd_app.completion_matches and self.cmd_app.display_matches
         # cmd2 separates completion matches (what is inserted) from display matches (what is shown).
         # prompt_toolkit Completion object takes 'text' (what is inserted) and 'display' (what is shown).
 
         # Check if we have display matches and if they match the length of completion matches
+        display_matches = self.cmd_app.display_matches
         use_display_matches = len(display_matches) == len(matches)
 
         for i, match in enumerate(matches):
