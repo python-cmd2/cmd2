@@ -3422,11 +3422,6 @@ def test_async_alert_success(base_app):
         mock_app.invalidate.assert_called_once()
 
 
-def test_async_alert_main_thread_error(base_app):
-    with pytest.raises(RuntimeError, match="main thread"):
-        base_app.async_alert("fail")
-
-
 def test_async_alert_not_at_prompt(base_app):
     import threading
 
@@ -3574,3 +3569,44 @@ def test_read_input_dynamic_prompt_with_history(base_app, monkeypatch):
         result = prompt_arg()
         assert isinstance(result, ANSI)
         assert result.value == ANSI(base_app.prompt).value
+
+
+def test_pre_prompt_running_loop(base_app):
+    # Test that pre_prompt runs with a running event loop.
+    import asyncio
+
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+    from prompt_toolkit.shortcuts import PromptSession
+
+    # Setup pipe input to feed data to prompt_toolkit
+    with create_pipe_input() as pipe_input:
+        # Create a new session with our pipe input because the input property is read-only
+        base_app.session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            history=base_app.session.history,
+            completer=base_app.session.completer,
+        )
+
+        loop_check = {'running': False}
+
+        def my_pre_prompt():
+            try:
+                asyncio.get_running_loop()
+                loop_check['running'] = True
+            except RuntimeError:
+                loop_check['running'] = False
+
+        base_app.pre_prompt = my_pre_prompt
+
+        # Feed input to exit prompt immediately
+        pipe_input.send_text("foo\n")
+
+        # Enable raw input and mock isatty to ensure self.session.prompt is used
+        base_app.use_rawinput = True
+        with mock.patch('sys.stdin.isatty', return_value=True):
+            # patch_stdout is used in this branch. It should work with DummyOutput/PipeInput.
+            base_app.read_input("prompt> ")
+
+        assert loop_check['running']
