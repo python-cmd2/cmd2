@@ -13,6 +13,8 @@ argparse-based completion. For an example integrating tab completion with argpar
 
 import functools
 
+from prompt_toolkit.shortcuts import CompleteStyle
+
 import cmd2
 
 # List of strings used with completion functions
@@ -30,8 +32,8 @@ file_strs = [
 
 
 class BasicCompletion(cmd2.Cmd):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self) -> None:
+        super().__init__(complete_style=CompleteStyle.MULTI_COLUMN)
 
     def do_flag_based(self, statement: cmd2.Statement) -> None:
         """Tab completes arguments based on a preceding flag using flag_based_complete
