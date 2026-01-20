@@ -361,8 +361,10 @@ class Cmd:
                                         [cmd2.Cmd][] will look for similar commands and suggest them.
         :param intro: introduction to display at startup
         :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
-        :param complete_style: style of prompt-toolkit tab completion to use, defaults to CompleteStyle.COLUMN;
-                               set to CompleteStyle.READLINE_LIKE if you want it like readline
+        :param complete_style: style of prompt-toolkit tab completion to use, 3 valid options are:
+                               1. CompleteStyle.COLUMN (default) - displays hints with help next to them in one big column
+                               2. CompleteStyle.MULTI_COLUMN - displays hints across multiple columns, with help when selected
+                               3. CompleteStyle.READLINE_LIKE - displays like readline, complete_in_thread doesn't work
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
