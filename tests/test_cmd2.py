@@ -2804,6 +2804,180 @@ def test_ppaged_no_pager(outsim_app) -> None:
     assert out == msg + end
 
 
+@pytest.mark.parametrize('has_tcsetpgrp', [True, False])
+def test_ppaged_terminal_restoration(outsim_app, monkeypatch, has_tcsetpgrp) -> None:
+    """Test terminal restoration in ppaged() after pager exits."""
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    stdin_mock.fileno.return_value = 0
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # Mock termios and signal since they are imported within the method
+    termios_mock = mock.MagicMock()
+    # The error attribute needs to be the actual exception for isinstance checks
+    import termios
+
+    termios_mock.error = termios.error
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    signal_mock = mock.MagicMock()
+    monkeypatch.setitem(sys.modules, 'signal', signal_mock)
+
+    # Mock os.tcsetpgrp and os.getpgrp
+    if has_tcsetpgrp:
+        monkeypatch.setattr(os, "tcsetpgrp", mock.Mock(), raising=False)
+        monkeypatch.setattr(os, "getpgrp", mock.Mock(return_value=123), raising=False)
+    else:
+        monkeypatch.delattr(os, "tcsetpgrp", raising=False)
+
+    # Mock subprocess.Popen
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+
+    # Set initial termios settings so the logic will run
+    dummy_settings = ["dummy settings"]
+    outsim_app._initial_termios_settings = dummy_settings
+
+    # Call ppaged
+    outsim_app.ppaged("Test")
+
+    # Verify restoration logic
+    if has_tcsetpgrp:
+        os.tcsetpgrp.assert_called_once_with(0, 123)
+        signal_mock.signal.assert_any_call(signal_mock.SIGTTOU, signal_mock.SIG_IGN)
+
+    termios_mock.tcsetattr.assert_called_once_with(0, termios_mock.TCSANOW, dummy_settings)
+
+
+def test_ppaged_terminal_restoration_exceptions(outsim_app, monkeypatch) -> None:
+    """Test that terminal restoration in ppaged() handles exceptions gracefully."""
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    stdin_mock.fileno.return_value = 0
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # Mock termios and make it raise an error
+    termios_mock = mock.MagicMock()
+    import termios
+
+    termios_mock.error = termios.error
+    termios_mock.tcsetattr.side_effect = termios.error("Restoration failed")
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    monkeypatch.setitem(sys.modules, 'signal', mock.MagicMock())
+
+    # Mock os.tcsetpgrp and os.getpgrp to prevent OSError before tcsetattr
+    monkeypatch.setattr(os, "tcsetpgrp", mock.Mock(), raising=False)
+    monkeypatch.setattr(os, "getpgrp", mock.Mock(return_value=123), raising=False)
+
+    # Mock subprocess.Popen
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+
+    # Set initial termios settings
+    outsim_app._initial_termios_settings = ["dummy settings"]
+
+    # Call ppaged - should not raise exception
+    outsim_app.ppaged("Test")
+
+    # Verify tcsetattr was attempted
+    assert termios_mock.tcsetattr.called
+
+
+def test_ppaged_terminal_restoration_no_settings(outsim_app, monkeypatch) -> None:
+    """Test that terminal restoration in ppaged() is skipped if no settings are saved."""
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    stdin_mock.fileno.return_value = 0
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # Mock termios
+    termios_mock = mock.MagicMock()
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    # Mock subprocess.Popen
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+
+    # Ensure initial termios settings is None
+    outsim_app._initial_termios_settings = None
+
+    # Call ppaged
+    outsim_app.ppaged("Test")
+
+    # Verify tcsetattr was NOT called
+    assert not termios_mock.tcsetattr.called
+
+
+def test_ppaged_terminal_restoration_oserror(outsim_app, monkeypatch) -> None:
+    """Test that terminal restoration in ppaged() handles OSError gracefully."""
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    stdin_mock.fileno.return_value = 0
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # Mock signal
+    monkeypatch.setitem(sys.modules, 'signal', mock.MagicMock())
+
+    # Mock os.tcsetpgrp to raise OSError
+    monkeypatch.setattr(os, "tcsetpgrp", mock.Mock(side_effect=OSError("Permission denied")), raising=False)
+    monkeypatch.setattr(os, "getpgrp", mock.Mock(return_value=123), raising=False)
+
+    # Mock termios
+    termios_mock = mock.MagicMock()
+    import termios
+
+    termios_mock.error = termios.error
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    # Mock subprocess.Popen
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+
+    # Set initial termios settings
+    outsim_app._initial_termios_settings = ["dummy settings"]
+
+    # Call ppaged - should not raise exception
+    outsim_app.ppaged("Test")
+
+    # Verify tcsetpgrp was attempted and OSError was caught
+    assert os.tcsetpgrp.called
+    # tcsetattr should have been skipped due to OSError being raised before it
+    assert not termios_mock.tcsetattr.called
+
+
 # we override cmd.parseline() so we always get consistent
 # command parsing by parent methods we don't override
 # don't need to test all the parsing logic here, because
