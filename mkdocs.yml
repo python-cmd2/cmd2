@@ -12,7 +12,7 @@ repo_url: https://github.com/python-cmd2/cmd2
 edit_uri: edit/main/docs
 
 # Copyright
-copyright: Copyright &copy; 2010-2024, cmd2 contributors.
+copyright: Copyright &copy; 2026, cmd2 contributors.
 
 # Configuration
 theme:
@@ -218,10 +218,9 @@ nav:
   - Meta:
       - doc_conventions.md
 
-# Include extra CSS to make some style adjustments for ReadTheDocs
+# Include extra CSS to make some style adjustments for visible width
 extra_css:
   - stylesheets/cmd2.css
-  - stylesheets/readthedocs.css
 
 # Include extra JS to setup Read the Docs addons integrations
 extra_javascript:
