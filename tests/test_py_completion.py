@@ -2,6 +2,10 @@ import sys
 from code import InteractiveConsole
 from unittest import mock
 
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="This test file is not applicable on Windows")
+
 
 def test_py_completion_setup_readline(base_app):
     # Mock readline and rlcompleter
