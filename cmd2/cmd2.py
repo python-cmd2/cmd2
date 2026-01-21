@@ -625,6 +625,7 @@ class Cmd:
         # This flag is set to True when the prompt is displayed and the application is waiting for user input.
         # It is used by async_alert() to determine if it is safe to alert the user.
         self._in_prompt = False
+        self._in_prompt_lock = threading.Lock()
 
         # Commands that have been disabled from use. This is to support commands that are only available
         # during specific states of the application. This dictionary's keys are the command names and its
@@ -3349,7 +3350,8 @@ class Cmd:
         :raises Exception: any exceptions raised by prompt()
         """
         self._reset_completion_defaults()
-        self._in_prompt = True
+        with self._in_prompt_lock:
+            self._in_prompt = True
         try:
             if self.use_rawinput and self.stdin.isatty():
                 # Determine completer
@@ -3454,7 +3456,8 @@ class Cmd:
                 return line
 
         finally:
-            self._in_prompt = False
+            with self._in_prompt_lock:
+                self._in_prompt = False
 
     def _read_command_line(self, prompt: str) -> str:
         """Read command line from appropriate stdin.
@@ -5519,8 +5522,9 @@ class Cmd:
         :raises RuntimeError: if main thread is not currently at the prompt.
         """
         # Check if prompt is currently displayed and waiting for user input
-        if not self._in_prompt:
-            raise RuntimeError("Main thread is not at the prompt")
+        with self._in_prompt_lock:
+            if not self._in_prompt or not self.session.app.is_running:
+                raise RuntimeError("Main thread is not at the prompt")
 
         def _alert() -> None:
             if new_prompt is not None:
