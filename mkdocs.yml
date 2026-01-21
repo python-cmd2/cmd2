@@ -155,6 +155,7 @@ nav:
   - Features:
       - features/index.md
       - features/argument_processing.md
+      - features/async_commands.md
       - features/builtin_commands.md
       - features/clipboard.md
       - features/commands.md
