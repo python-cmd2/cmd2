@@ -62,7 +62,7 @@ See the [Links](https://www.markdownguide.org/basic-syntax/) Markdown syntax doc
 
 ## API Documentation
 
-The API documentation is mostly pulled from docstrings in the source code using the MkDocs
+The API documentation is mostly pulled from docstrings in the source code using the Zensical
 [mkdocstrings](https://mkdocstrings.github.io/) plugin.
 
 When using `mkdocstrings`, it must be preceded by a blank line before and after, i.e.:
