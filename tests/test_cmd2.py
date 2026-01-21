@@ -2804,6 +2804,7 @@ def test_ppaged_no_pager(outsim_app) -> None:
     assert out == msg + end
 
 
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
 @pytest.mark.parametrize('has_tcsetpgrp', [True, False])
 def test_ppaged_terminal_restoration(outsim_app, monkeypatch, has_tcsetpgrp) -> None:
     """Test terminal restoration in ppaged() after pager exits."""
@@ -2857,6 +2858,7 @@ def test_ppaged_terminal_restoration(outsim_app, monkeypatch, has_tcsetpgrp) -> 
     termios_mock.tcsetattr.assert_called_once_with(0, termios_mock.TCSANOW, dummy_settings)
 
 
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
 def test_ppaged_terminal_restoration_exceptions(outsim_app, monkeypatch) -> None:
     """Test that terminal restoration in ppaged() handles exceptions gracefully."""
     # Make it look like we're in a terminal
@@ -2900,6 +2902,7 @@ def test_ppaged_terminal_restoration_exceptions(outsim_app, monkeypatch) -> None
     assert termios_mock.tcsetattr.called
 
 
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
 def test_ppaged_terminal_restoration_no_settings(outsim_app, monkeypatch) -> None:
     """Test that terminal restoration in ppaged() is skipped if no settings are saved."""
     # Make it look like we're in a terminal
@@ -2933,6 +2936,7 @@ def test_ppaged_terminal_restoration_no_settings(outsim_app, monkeypatch) -> Non
     assert not termios_mock.tcsetattr.called
 
 
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
 def test_ppaged_terminal_restoration_oserror(outsim_app, monkeypatch) -> None:
     """Test that terminal restoration in ppaged() handles OSError gracefully."""
     # Make it look like we're in a terminal
@@ -3788,3 +3792,22 @@ def test_pre_prompt_running_loop(base_app):
             base_app.read_input("prompt> ")
 
         assert loop_check['running']
+
+
+def test_get_bottom_toolbar_narrow_terminal(base_app, monkeypatch):
+    """Test get_bottom_toolbar when terminal is too narrow for calculated padding"""
+    import shutil
+
+    base_app.bottom_toolbar = True
+    monkeypatch.setattr(sys, 'argv', ['myapp.py'])
+
+    # Mock shutil.get_terminal_size to return a very small width (e.g. 5)
+    # Calculated padding_size = 5 - len('myapp.py') - len(now) - 1
+    # Since len(now) is ~29, this will definitely be < 1
+    monkeypatch.setattr(shutil, 'get_terminal_size', lambda: os.terminal_size((5, 20)))
+
+    toolbar = base_app.get_bottom_toolbar()
+    assert isinstance(toolbar, list)
+
+    # The padding (index 1) should be exactly 1 space
+    assert toolbar[1] == ('', ' ')
