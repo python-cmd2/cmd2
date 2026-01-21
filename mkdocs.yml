@@ -217,10 +217,9 @@ nav:
   - Meta:
       - doc_conventions.md
 
-# Include extra CSS to make some style adjustments for ReadTheDocs
+# Include extra CSS to make some style adjustments for visible width
 extra_css:
   - stylesheets/cmd2.css
-  - stylesheets/readthedocs.css
 
 # Include extra JS to setup Read the Docs addons integrations
 extra_javascript:
