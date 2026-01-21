@@ -1630,29 +1630,26 @@ class Cmd:
 
                 # If the pager was killed (e.g. SIGKILL), the terminal might be in a bad state.
                 # Attempt to restore terminal settings and foreground process group.
-                if self.stdin.isatty():
+                if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]
                     try:
                         import signal
                         import termios
-                    except ImportError:
+
+                        # Ensure we are in the foreground process group
+                        if hasattr(os, 'tcsetpgrp') and hasattr(os, 'getpgrp'):
+                            # Ignore SIGTTOU to avoid getting stopped when calling tcsetpgrp from background
+                            old_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+                            try:
+                                os.tcsetpgrp(self.stdin.fileno(), os.getpgrp())
+                            finally:
+                                signal.signal(signal.SIGTTOU, old_handler)
+
+                        # Restore terminal attributes
+                        if self._initial_termios_settings is not None:
+                            termios.tcsetattr(self.stdin.fileno(), termios.TCSANOW, self._initial_termios_settings)
+
+                    except (OSError, termios.error):
                         pass
-                    else:
-                        try:
-                            # Ensure we are in the foreground process group
-                            if hasattr(os, 'tcsetpgrp') and hasattr(os, 'getpgrp'):
-                                # Ignore SIGTTOU to avoid getting stopped when calling tcsetpgrp from background
-                                old_handler = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
-                                try:
-                                    os.tcsetpgrp(self.stdin.fileno(), os.getpgrp())
-                                finally:
-                                    signal.signal(signal.SIGTTOU, old_handler)
-
-                            # Restore terminal attributes
-                            if self._initial_termios_settings is not None:
-                                termios.tcsetattr(self.stdin.fileno(), termios.TCSANOW, self._initial_termios_settings)
-
-                        except (OSError, termios.error):
-                            pass
 
         else:
             self.poutput(
@@ -4605,12 +4602,10 @@ class Cmd:
         self._reset_py_display()
 
         # Enable tab completion if readline is available
-        try:
+        if not sys.platform.startswith('win'):
             import readline
             import rlcompleter
-        except ImportError:
-            pass
-        else:
+
             # Save the current completer
             cmd2_env.completer = readline.get_completer()
 
@@ -4631,11 +4626,9 @@ class Cmd:
         :param cmd2_env: the environment settings to restore
         """
         # Restore the readline completer
-        try:
+        if not sys.platform.startswith('win'):
             import readline
-        except ImportError:
-            pass
-        else:
+
             readline.set_completer(cmd2_env.completer)
 
     def _run_python(self, *, pyscript: str | None = None) -> bool | None:
