@@ -1631,7 +1631,7 @@ class Cmd:
                 # If the pager was killed (e.g. SIGKILL), the terminal might be in a bad state.
                 # Attempt to restore terminal settings and foreground process group.
                 if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]
-                    try:
+                    try:  # type: ignore[unreachable]
                         import signal
                         import termios
 
