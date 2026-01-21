@@ -3811,3 +3811,30 @@ def test_get_bottom_toolbar_narrow_terminal(base_app, monkeypatch):
 
     # The padding (index 1) should be exactly 1 space
     assert toolbar[1] == ('', ' ')
+
+
+def test_async_alert_loop_not_available(base_app):
+    import threading
+
+    # Mock app but without loop attribute
+    mock_app = mock.MagicMock(spec=['is_running', 'invalidate'])
+    mock_app.is_running = True
+    base_app.session.app = mock_app
+
+    # Pretend we are at the prompt
+    base_app._in_prompt = True
+
+    exceptions = []
+
+    def run_alert():
+        try:
+            base_app.async_alert("fail")
+        except RuntimeError as e:
+            exceptions.append(e)
+
+    t = threading.Thread(target=run_alert)
+    t.start()
+    t.join()
+
+    assert len(exceptions) == 1
+    assert "Event loop not available" in str(exceptions[0])
