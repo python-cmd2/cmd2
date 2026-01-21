@@ -40,11 +40,11 @@ test: ## Test the code with pytest.
 
 .PHONY: docs-test
 docs-test: ## Test if documentation can be built without warnings or errors
-	@uv run mkdocs build -s
+	@uv run zensical build -s
 
 .PHONY: docs
-docs: ## Build and serve the documentation
-	@uv run mkdocs serve
+docs: ## Build and serve the documentation (and open in default browser)
+	@uv run zensical serve -o
 
 .PHONY: build
 build: clean-build ## Build wheel file
