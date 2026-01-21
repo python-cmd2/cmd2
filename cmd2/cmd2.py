@@ -183,6 +183,7 @@ class _SavedCmd2Env:
 
     def __init__(self) -> None:
         self.history: list[str] = []
+        self.completer: Callable[[str, int], str | None] | None = None
 
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
@@ -4593,7 +4594,7 @@ class Cmd:
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
-    def _set_up_py_shell_env(self, _interp: InteractiveConsole) -> _SavedCmd2Env:
+    def _set_up_py_shell_env(self, interp: InteractiveConsole) -> _SavedCmd2Env:
         """Set up interactive Python shell environment.
 
         :return: Class containing saved up cmd2 environment.
@@ -4603,13 +4604,39 @@ class Cmd:
         # Set up sys module for the Python console
         self._reset_py_display()
 
+        # Enable tab completion if readline is available
+        try:
+            import readline
+            import rlcompleter
+        except ImportError:
+            pass
+        else:
+            # Save the current completer
+            cmd2_env.completer = readline.get_completer()
+
+            # Set the completer to use the interpreter's locals
+            readline.set_completer(rlcompleter.Completer(interp.locals).complete)
+
+            # Use the correct binding based on whether LibEdit or Readline is being used
+            if 'libedit' in (readline.__doc__ or ''):
+                readline.parse_and_bind("bind ^I rl_complete")
+            else:
+                readline.parse_and_bind("tab: complete")
+
         return cmd2_env
 
-    def _restore_cmd2_env(self, _cmd2_env: _SavedCmd2Env) -> None:
+    def _restore_cmd2_env(self, cmd2_env: _SavedCmd2Env) -> None:
         """Restore cmd2 environment after exiting an interactive Python shell.
 
         :param cmd2_env: the environment settings to restore
         """
+        # Restore the readline completer
+        try:
+            import readline
+        except ImportError:
+            pass
+        else:
+            readline.set_completer(cmd2_env.completer)
 
     def _run_python(self, *, pyscript: str | None = None) -> bool | None:
         """Run an interactive Python shell or execute a pyscript file.
