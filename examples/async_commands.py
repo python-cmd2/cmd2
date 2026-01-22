@@ -33,13 +33,18 @@ def _get_event_loop() -> asyncio.AbstractEventLoop:
     return _event_loop
 
 
-def with_async_loop(func: Callable[..., Any]) -> Callable[..., Any]:
-    """Decorator to run a command method asynchronously in a background thread.
+def with_async_loop(func: Callable[..., Any], cancel_on_interrupt: bool = True) -> Callable[..., Any]:
+    """Decorate an async ``do_*`` command method to give it access to the event loop.
+
 
     This decorator wraps a do_* command method. When the command is executed,
     it submits the coroutine returned by the method to a background asyncio loop
     and waits for the result synchronously (blocking the cmd2 loop, as expected
     for a synchronous command).
+
+    :param func: do_* method to wrap
+    :param cancel_on_interrupt: if True, cancel any running async task on an interrupt;
+                                if False, leave any async task running
     """
 
     @functools.wraps(func)
@@ -47,7 +52,12 @@ def with_async_loop(func: Callable[..., Any]) -> Callable[..., Any]:
         loop = _get_event_loop()
         coro = func(self, *args, **kwargs)
         future = asyncio.run_coroutine_threadsafe(coro, loop)
-        return future.result()
+        try:
+            return future.result()
+        except KeyboardInterrupt:
+            if cancel_on_interrupt:
+                future.cancel()
+            raise
 
     return wrapper
 

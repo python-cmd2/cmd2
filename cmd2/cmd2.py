@@ -5690,6 +5690,7 @@ class Cmd:
         - exit code
 
         :param intro: if provided this overrides self.intro and serves as the intro banner printed once at start
+        :return: exit code
         """
         # cmdloop() expects to be run in the main thread to support extensive use of KeyboardInterrupts throughout the
         # other built-in functions. You are free to override cmdloop, but much of cmd2's features will be limited.
