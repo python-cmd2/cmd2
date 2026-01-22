@@ -1,13 +1,23 @@
 #!/usr/bin/env python
-"""A simple example demonstrating how to run async commands in a cmd2 app."""
+"""A simple example demonstrating how to run async commands in a cmd2 app.
+
+It also demonstrates how to configure keybindings to run a handler method on
+key-combo press and how to display colored output above the prompt.
+"""
 
 import asyncio
 import functools
+import random
+import shutil
 import threading
 from collections.abc import Callable
 from typing import (
     Any,
 )
+
+from prompt_toolkit import ANSI, print_formatted_text
+from prompt_toolkit.key_binding import KeyBindings
+from rich.text import Text
 
 import cmd2
 
@@ -69,6 +79,14 @@ class AsyncCommandsApp(cmd2.Cmd):
         super().__init__()
         self.intro = 'Welcome to the Async Commands example. Type "help" to see available commands.'
 
+        if self.session.key_bindings is None:
+            self.session.key_bindings = KeyBindings()
+
+        # Add a custom key binding for <CTRL>+T that calls a method so it has access to self
+        @self.session.key_bindings.add('c-t')
+        def _(_event: Any) -> None:
+            self.handle_control_t(_event)
+
     @with_async_loop
     async def do_my_async(self, _: cmd2.Statement) -> None:
         """An example async command that simulates work."""
@@ -91,6 +109,31 @@ class AsyncCommandsApp(cmd2.Cmd):
     def do_sync_command(self, _: cmd2.Statement) -> None:
         """A normal synchronous command."""
         self.poutput("This is a normal synchronous command.")
+
+    def handle_control_t(self, _event) -> None:
+        """Handler method for <CTRL>+T key press.
+
+        Prints 'fnord' above the prompt in a random color and random position.
+        """
+        word = 'fnord'
+
+        # Generate a random RGB color tuple
+        r = random.randint(0, 255)
+        g = random.randint(0, 255)
+        b = random.randint(0, 255)
+
+        # Get terminal width to calculate padding for right-alignment
+        cols, _ = shutil.get_terminal_size()
+        extra_width = cols - len(word) - 1
+        padding_size = random.randint(0, extra_width)
+        padding = ' ' * padding_size
+
+        # Use rich to generate the the overall text to print out
+        text = Text()
+        text.append(padding)
+        text.append(word, style=f'rgb({r},{g},{b})')
+
+        print_formatted_text(ANSI(cmd2.rich_utils.rich_text_to_string(text)))
 
 
 if __name__ == '__main__':
