@@ -293,6 +293,7 @@ from rich_argparse import (
     RawTextRichHelpFormatter,
     RichHelpFormatter,
 )
+from typing_extensions import Self
 
 from . import constants
 from . import rich_utils as ru
@@ -380,7 +381,7 @@ class CompletionItem(str):  # noqa: SLOT000
     See header of this file for more information
     """
 
-    def __new__(cls, value: object, *_args: Any, **_kwargs: Any) -> 'CompletionItem':
+    def __new__(cls, value: object, *_args: Any, **_kwargs: Any) -> Self:
         """Responsible for creating and returning a new instance, called before __init__ when an object is instantiated."""
         return super().__new__(cls, value)
 
