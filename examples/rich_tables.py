@@ -6,6 +6,13 @@ we recommend using rich since that is built into cmd2.
 
 Data comes from World Population Review: https://worldpopulationreview.com/
 and https://en.wikipedia.org/wiki/List_of_countries_by_GDP_(nominal)
+
+NOTE: The flag emojis used require appropriate font support in your terminal
+and/or IDE. Any "Nerd Font" should work. Some good options include:
+- JetBrains Mono
+- Fira Code
+- Hack
+- Monaspace
 """
 
 from rich.table import Table
