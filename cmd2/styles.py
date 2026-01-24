@@ -51,7 +51,6 @@ class Cmd2Style(StrEnum):
 
     COMMAND_LINE = "cmd2.example"  # Command line examples in help text
     ERROR = "cmd2.error"  # Error text (used by perror())
-    EXCEPTION_TYPE = "cmd2.exception.type"  # Used by pexcept to mark an exception type
     HELP_HEADER = "cmd2.help.header"  # Help table header text
     HELP_LEADER = "cmd2.help.leader"  # Text right before the help tables are listed
     SUCCESS = "cmd2.success"  # Success text (used by psuccess())
@@ -63,10 +62,9 @@ class Cmd2Style(StrEnum):
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.COMMAND_LINE: Style(color=Color.CYAN, bold=True),
     Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
-    Cmd2Style.EXCEPTION_TYPE: Style(color=Color.DARK_ORANGE, bold=True),
-    Cmd2Style.HELP_HEADER: Style(color=Color.BRIGHT_GREEN, bold=True),
+    Cmd2Style.HELP_HEADER: Style(color=Color.DARK_ORANGE),
     Cmd2Style.HELP_LEADER: Style(color=Color.CYAN, bold=True),
     Cmd2Style.SUCCESS: Style(color=Color.GREEN),
-    Cmd2Style.TABLE_BORDER: Style(color=Color.BRIGHT_GREEN),
+    Cmd2Style.TABLE_BORDER: Style(color=Color.DARK_ORANGE),
     Cmd2Style.WARNING: Style(color=Color.BRIGHT_YELLOW),
 }
