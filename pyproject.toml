@@ -33,7 +33,7 @@ dependencies = [
     "gnureadline>=8; platform_system == 'Darwin'",
     "pyperclip>=1.8.2",
     "pyreadline3>=3.4; platform_system == 'Windows'",
-    "rich>=14.1.0",
+    "rich>=14.3.0",
     "rich-argparse>=1.7.1",
 ]
 

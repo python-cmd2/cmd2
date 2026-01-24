@@ -65,7 +65,7 @@ See the `dependencies` list under the `[project]` heading in [pyproject.toml](..
 | ---------------------------------------------------------- | --------------- | ------------------------------------------------------ |
 | [python](https://www.python.org/downloads/)                | `3.10`          | Python programming language                            |
 | [pyperclip](https://github.com/asweigart/pyperclip)        | `1.8`           | Cross-platform clipboard functions                     |
-| [rich](https://github.com/Textualize/rich)                 | `14.1.0`        | Add rich text and beautiful formatting in the terminal |
+| [rich](https://github.com/Textualize/rich)                 | `14.3.0`        | Add rich text and beautiful formatting in the terminal |
 | [rich-argparse](https://github.com/hamdanal/rich-argparse) | `1.7.1`         | A rich-enabled help formatter for argparse             |
 
 > `macOS` and `Windows` each have an extra dependency to ensure they have a viable alternative to
