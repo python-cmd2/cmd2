@@ -1,10 +1,7 @@
 """Provides common utilities to support Rich in cmd2-based applications."""
 
 import re
-from collections.abc import (
-    Iterable,
-    Mapping,
-)
+from collections.abc import Mapping
 from enum import Enum
 from typing import (
     IO,
@@ -22,7 +19,6 @@ from rich.console import (
 from rich.padding import Padding
 from rich.pretty import is_expandable
 from rich.protocol import rich_cast
-from rich.segment import Segment
 from rich.style import StyleType
 from rich.table import (
     Column,
@@ -380,72 +376,3 @@ def _from_ansi_has_newline_bug() -> bool:
 # Only apply the monkey patch if the bug is present
 if _from_ansi_has_newline_bug():
     Text.from_ansi = _from_ansi_wrapper  # type: ignore[assignment]
-
-
-###################################################################################
-# Segment.apply_style() monkey patch
-###################################################################################
-
-# Save original Segment.apply_style() so we can call it in our wrapper
-_orig_segment_apply_style = Segment.apply_style
-
-
-@classmethod  # type: ignore[misc]
-def _apply_style_wrapper(cls: type[Segment], *args: Any, **kwargs: Any) -> Iterable["Segment"]:
-    r"""Wrap Segment.apply_style() to fix bug with styling newlines.
-
-    This wrapper handles an issue where Segment.apply_style() includes newlines
-    within styled Segments. As a result, when printing text using a background color
-    and soft wrapping, the background color incorrectly carries over onto the following line.
-
-    You can reproduce this behavior by calling console.print() using a background color
-    and soft wrapping.
-
-    For example:
-        console.print("line_1", style="blue on white", soft_wrap=True)
-
-    When soft wrapping is disabled, console.print() splits Segments into their individual
-    lines, which separates the newlines from the styled text. Therefore, the background color
-    issue does not occur in that mode.
-
-    This function copies that behavior to fix this the issue even when soft wrapping is enabled.
-
-    There is currently a pull request on Rich to fix this.
-    https://github.com/Textualize/rich/pull/3839
-    """
-    styled_segments = list(_orig_segment_apply_style(*args, **kwargs))
-    newline_segment = cls.line()
-
-    # If the final segment ends in a newline, that newline will be stripped by Segment.split_lines().
-    # Save an unstyled newline to restore later.
-    end_segment = newline_segment if styled_segments and styled_segments[-1].text.endswith("\n") else None
-
-    # Use Segment.split_lines() to separate the styled text from the newlines.
-    # This way the ANSI reset code will appear before any newline.
-    sanitized_segments: list[Segment] = []
-
-    lines = list(Segment.split_lines(styled_segments))
-    for index, line in enumerate(lines):
-        sanitized_segments.extend(line)
-        if index < len(lines) - 1:
-            sanitized_segments.append(newline_segment)
-
-    if end_segment is not None:
-        sanitized_segments.append(end_segment)
-
-    return sanitized_segments
-
-
-def _rich_has_styled_newline_bug() -> bool:
-    """Check if newlines are styled when soft wrapping."""
-    console = Console(force_terminal=True)
-    with console.capture() as capture:
-        console.print("line_1", style="blue on white", soft_wrap=True)
-
-    # Check if we see a styled newline in the output
-    return "\x1b[34;47m\n\x1b[0m" in capture.get()
-
-
-# Only apply the monkey patch if the bug is present
-if _rich_has_styled_newline_bug():
-    Segment.apply_style = _apply_style_wrapper  # type: ignore[assignment]
