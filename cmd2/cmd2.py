@@ -351,7 +351,7 @@ class Cmd:
         :param include_py: should the "py" command be included for an embedded Python shell
         :param intro: introduction to display at startup
         :param max_column_completion_items: The maximum number of completion results to display in a single column,
-                                            used to provide the initial value for a settable with the same name.
+                                            used to provide the initial value for a settable with the same name
         :param multiline_commands: list of commands allowed to accept multi-line input
         :param persistent_history_file: file path to load a persistent cmd2 command history from
         :param persistent_history_length: max number of history items to write
@@ -478,6 +478,7 @@ class Cmd:
         try:
             self.session: PromptSession[str] = PromptSession(
                 auto_suggest=self.auto_suggest,
+                bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                 complete_in_thread=True,
                 complete_style=complete_style,
                 complete_while_typing=False,
@@ -492,6 +493,7 @@ class Cmd:
             # where isatty() is True but there is no real console.
             self.session = PromptSession(
                 auto_suggest=self.auto_suggest,
+                bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                 complete_in_thread=True,
                 complete_style=complete_style,
                 complete_while_typing=False,
@@ -3409,29 +3411,29 @@ class Cmd:
                             history_to_use.append_string(item)
 
                         temp_session1: PromptSession[str] = PromptSession(
-                            history=history_to_use,
-                            input=self.session.input,
-                            output=self.session.output,
-                            lexer=self.lexer,
                             complete_style=self.session.complete_style,
                             complete_while_typing=self.session.complete_while_typing,
+                            history=history_to_use,
+                            input=self.session.input,
+                            lexer=self.lexer,
+                            output=self.session.output,
                         )
 
                         return temp_session1.prompt(
                             prompt_to_use,
+                            bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                             completer=completer_to_use,
                             lexer=self.lexer,
                             pre_run=self.pre_prompt,
-                            bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                         )
 
                     # history is None
                     return self.session.prompt(
                         prompt_to_use,
+                        bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                         completer=completer_to_use,
                         lexer=self.lexer,
                         pre_run=self.pre_prompt,
-                        bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                     )
 
             # Otherwise read from self.stdin
@@ -3446,8 +3448,8 @@ class Cmd:
                 )
                 line = temp_session2.prompt(
                     prompt,
-                    pre_run=self.pre_prompt,
                     bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
+                    pre_run=self.pre_prompt,
                 )
                 if len(line) == 0:
                     raise EOFError
@@ -3455,15 +3457,15 @@ class Cmd:
             else:
                 # not a tty, just read the line
                 temp_session3: PromptSession[str] = PromptSession(
-                    input=self.session.input,
-                    output=self.session.output,
-                    lexer=self.lexer,
                     complete_style=self.session.complete_style,
                     complete_while_typing=self.session.complete_while_typing,
+                    input=self.session.input,
+                    lexer=self.lexer,
+                    output=self.session.output,
                 )
                 line = temp_session3.prompt(
-                    pre_run=self.pre_prompt,
                     bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
+                    pre_run=self.pre_prompt,
                 )
                 if len(line) == 0:
                     raise EOFError
