@@ -1712,7 +1712,7 @@ class Cmd:
             return [
                 ('ansigreen', left_text),
                 ('', padding),
-                ('ansiblue', now),
+                ('ansicyan', now),
             ]
         return None
 
