@@ -142,7 +142,7 @@ with contextlib.suppress(ImportError):
 
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
-from prompt_toolkit.formatted_text import ANSI
+from prompt_toolkit.formatted_text import ANSI, FormattedText
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input import DummyInput
 from prompt_toolkit.key_binding import KeyBindings
@@ -1730,6 +1730,17 @@ class Cmd:
                 ('', padding),
                 ('ansicyan', now),
             ]
+        return None
+
+    def get_rprompt(self) -> str | FormattedText | None:
+        """Provide text to populate prompt-toolkit right prompt with.
+
+        Override this if you want a right-prompt displaying contetual information useful for your application.
+        This could be information like current Git branch, time, current working directory, etc that is displayed
+        without cluttering the main input area.
+
+        :return: any type of formatted text to display as the right prompt
+        """
         return None
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> tuple[list[str], list[str]]:
@@ -3425,6 +3436,7 @@ class Cmd:
                             completer=completer_to_use,
                             lexer=self.lexer,
                             pre_run=self.pre_prompt,
+                            rprompt=self.get_rprompt,
                         )
 
                     # history is None
@@ -3434,6 +3446,7 @@ class Cmd:
                         completer=completer_to_use,
                         lexer=self.lexer,
                         pre_run=self.pre_prompt,
+                        rprompt=self.get_rprompt,
                     )
 
             # Otherwise read from self.stdin
@@ -3450,6 +3463,7 @@ class Cmd:
                     prompt,
                     bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                     pre_run=self.pre_prompt,
+                    rprompt=self.get_rprompt,
                 )
                 if len(line) == 0:
                     raise EOFError
@@ -3466,6 +3480,7 @@ class Cmd:
                 line = temp_session3.prompt(
                     bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                     pre_run=self.pre_prompt,
+                    rprompt=self.get_rprompt,
                 )
                 if len(line) == 0:
                     raise EOFError

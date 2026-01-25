@@ -49,8 +49,11 @@ shell, and the option for a persistent bottom bar that can display realtime stat
           in a single column, used to provide the initial value for a settable with the same name
     - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
       application is waiting for user input
-    - Added `cmd2.Cmd.pre_prompt` hook method that is called before the prompt is displayed, but
-      after `prompt-toolkit` event loop has started
+    - New `cmd2.Cmd` methods
+        - **get_bottom_toolbar**: populates bottom toolbar if `bottom_toolbar` is `True`
+        - **get_rprompt**: override to populate right prompt
+        - **pre_prompt**: hook method that is called before the prompt is displayed, but after
+          `prompt-toolkit` event loop has started
 
 ## 3.1.0 (December 25, 2025)
 

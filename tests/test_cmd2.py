@@ -3636,6 +3636,22 @@ def test_get_bottom_toolbar(base_app, monkeypatch):
     assert toolbar[2][0] == 'ansicyan'
 
 
+def test_get_rprompt(base_app):
+    # Test default
+    assert base_app.get_rprompt() is None
+
+    # Test overridden
+    from prompt_toolkit.formatted_text import FormattedText
+
+    expected_text = "rprompt text"
+    base_app.get_rprompt = lambda: expected_text
+    assert base_app.get_rprompt() == expected_text
+
+    expected_formatted = FormattedText([('class:status', 'OK')])
+    base_app.get_rprompt = lambda: expected_formatted
+    assert base_app.get_rprompt() == expected_formatted
+
+
 def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypatch):
     # Mock read_input to raise KeyboardInterrupt
     read_input_mock = mock.MagicMock(name='read_input', side_effect=KeyboardInterrupt)

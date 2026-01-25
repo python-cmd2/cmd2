@@ -20,6 +20,7 @@ import pathlib
 import threading
 import time
 
+from prompt_toolkit.formatted_text import FormattedText
 from rich.style import Style
 
 import cmd2
@@ -94,6 +95,12 @@ class BasicApp(cmd2.Cmd):
                 choices=fg_colors,
             )
         )
+
+    def get_rprompt(self) -> str | FormattedText | None:
+        current_working_directory = pathlib.Path.cwd()
+        style = 'bg:ansired fg:ansiwhite'
+        text = f"cwd={current_working_directory}"
+        return FormattedText([(style, text)])
 
     def _refresh_bottom_toolbar(self) -> None:
         """Background thread target to refresh the bottom toolbar.
