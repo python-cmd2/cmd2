@@ -3632,7 +3632,7 @@ def test_get_bottom_toolbar(base_app, monkeypatch):
     toolbar = base_app.get_bottom_toolbar()
     assert isinstance(toolbar, list)
     assert toolbar[0] == ('ansigreen', 'myapp.py')
-    assert toolbar[2][0] == 'ansiblue'
+    assert toolbar[2][0] == 'ansicyan'
 
 
 def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypatch):
