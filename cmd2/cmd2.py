@@ -168,6 +168,7 @@ except ImportError:
 from .pt_utils import (
     Cmd2Completer,
     Cmd2History,
+    Cmd2Lexer,
 )
 from .utils import (
     Settable,
@@ -463,12 +464,14 @@ class Cmd:
         # Initialize prompt-toolkit PromptSession
         self.history_adapter = Cmd2History(self)
         self.completer = Cmd2Completer(self)
+        self.lexer = Cmd2Lexer(self)
         self.bottom_toolbar = bottom_toolbar
 
         try:
             self.session: PromptSession[str] = PromptSession(
                 history=self.history_adapter,
                 completer=self.completer,
+                lexer=self.lexer,
                 complete_style=complete_style,
                 complete_in_thread=True,
                 complete_while_typing=False,
@@ -481,6 +484,7 @@ class Cmd:
             self.session = PromptSession(
                 history=self.history_adapter,
                 completer=self.completer,
+                lexer=self.lexer,
                 input=DummyInput(),
                 output=DummyOutput(),
                 complete_style=complete_style,
@@ -3398,6 +3402,7 @@ class Cmd:
                             history=history_to_use,
                             input=self.session.input,
                             output=self.session.output,
+                            lexer=self.lexer,
                             complete_style=self.session.complete_style,
                             complete_while_typing=self.session.complete_while_typing,
                         )
@@ -3405,6 +3410,7 @@ class Cmd:
                         return temp_session1.prompt(
                             prompt_to_use,
                             completer=completer_to_use,
+                            lexer=self.lexer,
                             pre_run=self.pre_prompt,
                             bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                         )
@@ -3413,6 +3419,7 @@ class Cmd:
                     return self.session.prompt(
                         prompt_to_use,
                         completer=completer_to_use,
+                        lexer=self.lexer,
                         pre_run=self.pre_prompt,
                         bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                     )
@@ -3423,6 +3430,7 @@ class Cmd:
                 temp_session2: PromptSession[str] = PromptSession(
                     input=self.session.input,
                     output=self.session.output,
+                    lexer=self.lexer,
                     complete_style=self.session.complete_style,
                     complete_while_typing=self.session.complete_while_typing,
                 )
@@ -3439,6 +3447,7 @@ class Cmd:
                 temp_session3: PromptSession[str] = PromptSession(
                     input=self.session.input,
                     output=self.session.output,
+                    lexer=self.lexer,
                     complete_style=self.session.complete_style,
                     complete_while_typing=self.session.complete_while_typing,
                 )

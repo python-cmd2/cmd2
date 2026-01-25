@@ -1,9 +1,10 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
 import re
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import (
     TYPE_CHECKING,
+    Any,
 )
 
 from prompt_toolkit import (
@@ -16,6 +17,7 @@ from prompt_toolkit.completion import (
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
+from prompt_toolkit.lexers import Lexer
 
 from . import (
     constants,
@@ -150,3 +152,56 @@ class Cmd2History(History):
 
         This method is intentionally empty.
         """
+
+
+class Cmd2Lexer(Lexer):
+    """Lexer that highlights cmd2 command names, aliases, and macros."""
+
+    def __init__(self, cmd_app: 'Cmd') -> None:
+        """Initialize the lexer."""
+        super().__init__()
+        self.cmd_app = cmd_app
+
+    def lex_document(self, document: Document) -> Callable[[int], Any]:
+        """Lex the document."""
+
+        def get_line(lineno: int) -> list[tuple[str, str]]:
+            """Return the tokens for the given line number."""
+            line = document.lines[lineno]
+            tokens: list[tuple[str, str]] = []
+
+            # Use cmd2's command pattern to find the first word (the command)
+            match = self.cmd_app.statement_parser._command_pattern.search(line)
+            if match:
+                # Group 1 is the command, Group 2 is the character(s) that terminated the command match
+                command = match.group(1)
+                cmd_start = match.start(1)
+                cmd_end = match.end(1)
+
+                # Add any leading whitespace
+                if cmd_start > 0:
+                    tokens.append(('', line[:cmd_start]))
+
+                if command:
+                    # Determine the style for the command
+                    style = ''
+                    if command in self.cmd_app.get_all_commands():
+                        style = 'ansigreen'
+                    elif command in self.cmd_app.aliases:
+                        style = 'ansicyan'
+                    elif command in self.cmd_app.macros:
+                        style = 'ansimagenta'
+
+                    # Add the command with the determined style
+                    tokens.append((style, command))
+
+                # Add the rest of the line
+                if cmd_end < len(line):
+                    tokens.append(('', line[cmd_end:]))
+            elif line:
+                # No command match found, add the entire line unstyled
+                tokens.append(('', line))
+
+            return tokens
+
+        return get_line

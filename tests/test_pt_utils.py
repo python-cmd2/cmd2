@@ -1,5 +1,6 @@
 """Unit tests for cmd2/pt_utils.py"""
 
+import re
 from typing import Any, cast
 from unittest.mock import Mock
 
@@ -24,11 +25,90 @@ class MockCmd:
         self.completion_header = ''
         self.statement_parser = Mock()
         self.statement_parser.terminators = [';']
+        self.statement_parser._command_pattern = re.compile(r'\A\s*(\S*?)(\s|\Z)')
+        self.aliases = {}
+        self.macros = {}
+        self.all_commands = []
+
+    def get_all_commands(self):
+        return self.all_commands
 
 
 @pytest.fixture
 def mock_cmd_app():
     return MockCmd()
+
+
+class TestCmd2Lexer:
+    def test_lex_document_command(self, mock_cmd_app):
+        """Test lexing a command name."""
+        mock_cmd_app.all_commands = ["help"]
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "help something"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('ansigreen', 'help'), ('', ' something')]
+
+    def test_lex_document_alias(self, mock_cmd_app):
+        """Test lexing an alias."""
+        mock_cmd_app.aliases = {"ls": "dir"}
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "ls -l"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('ansicyan', 'ls'), ('', ' -l')]
+
+    def test_lex_document_macro(self, mock_cmd_app):
+        """Test lexing a macro."""
+        mock_cmd_app.macros = {"my_macro": "some value"}
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "my_macro arg1"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('ansimagenta', 'my_macro'), ('', ' arg1')]
+
+    def test_lex_document_leading_whitespace(self, mock_cmd_app):
+        """Test lexing with leading whitespace."""
+        mock_cmd_app.all_commands = ["help"]
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "   help something"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('', '   '), ('ansigreen', 'help'), ('', ' something')]
+
+    def test_lex_document_unknown_command(self, mock_cmd_app):
+        """Test lexing an unknown command."""
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "unknown command"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('', 'unknown'), ('', ' command')]
+
+    def test_lex_document_no_command(self, mock_cmd_app):
+        """Test lexing an empty line or line with only whitespace."""
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "   "
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('', '   ')]
 
 
 class TestCmd2Completer:
