@@ -12,6 +12,7 @@ from typing import NoReturn
 from unittest import mock
 
 import pytest
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from rich.text import Text
 
 import cmd2
@@ -3838,3 +3839,26 @@ def test_async_alert_loop_not_available(base_app):
 
     assert len(exceptions) == 1
     assert "Event loop not available" in str(exceptions[0])
+
+
+def test_auto_suggest_true():
+    """Test that auto_suggest=True initializes AutoSuggestFromHistory."""
+    app = cmd2.Cmd(auto_suggest=True)
+    assert app.auto_suggest is not None
+    assert isinstance(app.auto_suggest, AutoSuggestFromHistory)
+    assert app.session.auto_suggest is app.auto_suggest
+
+
+def test_auto_suggest_false():
+    """Test that auto_suggest=False does not initialize AutoSuggestFromHistory."""
+    app = cmd2.Cmd(auto_suggest=False)
+    assert app.auto_suggest is None
+    assert app.session.auto_suggest is None
+
+
+def test_auto_suggest_default():
+    """Test that auto_suggest defaults to True."""
+    app = cmd2.Cmd()
+    assert app.auto_suggest is not None
+    assert isinstance(app.auto_suggest, AutoSuggestFromHistory)
+    assert app.session.auto_suggest is app.auto_suggest

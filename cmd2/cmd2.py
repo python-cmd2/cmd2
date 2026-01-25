@@ -140,6 +140,7 @@ from .styles import Cmd2Style
 with contextlib.suppress(ImportError):
     from IPython import start_ipython
 
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import InMemoryHistory
@@ -293,83 +294,86 @@ class Cmd:
         stdin: TextIO | None = None,
         stdout: TextIO | None = None,
         *,
+        allow_cli_args: bool = True,
+        allow_clipboard: bool = True,
+        allow_redirection: bool = True,
+        auto_load_commands: bool = False,
+        auto_suggest: bool = True,
+        bottom_toolbar: bool = False,
+        command_sets: Iterable[CommandSet] | None = None,
+        complete_style: CompleteStyle = CompleteStyle.COLUMN,
+        include_ipy: bool = False,
+        include_py: bool = False,
+        intro: RenderableType = '',
+        max_column_completion_items: int = 7,
+        multiline_commands: list[str] | None = None,
         persistent_history_file: str = '',
         persistent_history_length: int = 1000,
-        startup_script: str = '',
-        silence_startup_script: bool = False,
-        include_py: bool = False,
-        include_ipy: bool = False,
-        allow_cli_args: bool = True,
-        transcript_files: list[str] | None = None,
-        allow_redirection: bool = True,
-        multiline_commands: list[str] | None = None,
-        terminators: list[str] | None = None,
         shortcuts: dict[str, str] | None = None,
-        command_sets: Iterable[CommandSet] | None = None,
-        auto_load_commands: bool = False,
-        allow_clipboard: bool = True,
+        silence_startup_script: bool = False,
+        startup_script: str = '',
         suggest_similar_command: bool = False,
-        intro: RenderableType = '',
-        bottom_toolbar: bool = False,
-        complete_style: CompleteStyle = CompleteStyle.COLUMN,
-        max_column_completion_items: int = 7,
+        terminators: list[str] | None = None,
+        transcript_files: list[str] | None = None,
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
         :param completekey: name of a completion key, default to Tab
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
-        :param persistent_history_file: file path to load a persistent cmd2 command history from
-        :param persistent_history_length: max number of history items to write
-                                          to the persistent history file
-        :param startup_script: file path to a script to execute at startup
-        :param silence_startup_script: if ``True``, then the startup script's output will be
-                                       suppressed. Anything written to stderr will still display.
-        :param include_py: should the "py" command be included for an embedded Python shell
-        :param include_ipy: should the "ipy" command be included for an embedded IPython shell
         :param allow_cli_args: if ``True``, then [cmd2.Cmd.__init__][] will process command
                                line arguments as either commands to be run or, if ``-t`` or
                                ``--test`` are given, transcript files to run. This should be
                                set to ``False`` if your application parses its own command line
                                arguments.
-        :param transcript_files: pass a list of transcript files to be run on initialization.
-                                 This allows running transcript tests when ``allow_cli_args``
-                                 is ``False``. If ``allow_cli_args`` is ``True`` this parameter
-                                 is ignored.
+        :param allow_clipboard: If False, cmd2 will disable clipboard interactions
         :param allow_redirection: If ``False``, prevent output redirection and piping to shell
                                   commands. This parameter prevents redirection and piping, but
                                   does not alter parsing behavior. A user can still type
                                   redirection and piping tokens, and they will be parsed as such
                                   but they won't do anything.
+        :param auto_load_commands: If True, cmd2 will check for all subclasses of `CommandSet`
+                                   that are currently loaded by Python and automatically
+                                   instantiate and register all commands. If False, CommandSets
+                                   must be manually installed with `register_command_set`.
+        :param auto_suggest: If True, cmd2 will provide fish shell style auto-suggestions
+                            based on history. If False, these will not be provided.
+        :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
+        :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
+                             This allows CommandSets with custom constructor parameters to be
+                             loaded.  This also allows the a set of CommandSets to be provided
+                             when `auto_load_commands` is set to False
+        :param complete_style: style of prompt-toolkit tab completion to use, 3 valid options are:
+                               1. CompleteStyle.COLUMN (default) - displays hints with help next to them in one big column
+                               2. CompleteStyle.MULTI_COLUMN - displays hints across multiple columns, with help when selected
+                               3. CompleteStyle.READLINE_LIKE - displays like readline, complete_in_thread doesn't work
+        :param include_ipy: should the "ipy" command be included for an embedded IPython shell
+        :param include_py: should the "py" command be included for an embedded Python shell
+        :param intro: introduction to display at startup
+        :param max_column_completion_items: The maximum number of completion results to display in a single column,
+                                            used to provide the initial value for a settable with the same name.
         :param multiline_commands: list of commands allowed to accept multi-line input
+        :param persistent_history_file: file path to load a persistent cmd2 command history from
+        :param persistent_history_length: max number of history items to write
+                                          to the persistent history file
+        :param shortcuts: dictionary containing shortcuts for commands. If not supplied,
+                          then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
+                          any shortcuts, pass an empty dictionary.
+        :param silence_startup_script: if ``True``, then the startup script's output will be
+                                       suppressed. Anything written to stderr will still display.
+        :param startup_script: file path to a script to execute at startup
+        :param suggest_similar_command: if ``True``, then when a command is not found,
+                                        [cmd2.Cmd][] will look for similar commands and suggest them.
         :param terminators: list of characters that terminate a command. These are mainly
                             intended for terminating multiline commands, but will also
                             terminate single-line commands. If not supplied, the default
                             is a semicolon. If your app only contains single-line commands
                             and you want terminators to be treated as literals by the parser,
                             then set this to an empty list.
-        :param shortcuts: dictionary containing shortcuts for commands. If not supplied,
-                          then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
-                          any shortcuts, pass an empty dictionary.
-        :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
-                             This allows CommandSets with custom constructor parameters to be
-                             loaded.  This also allows the a set of CommandSets to be provided
-                             when `auto_load_commands` is set to False
-        :param auto_load_commands: If True, cmd2 will check for all subclasses of `CommandSet`
-                                   that are currently loaded by Python and automatically
-                                   instantiate and register all commands. If False, CommandSets
-                                   must be manually installed with `register_command_set`.
-        :param allow_clipboard: If False, cmd2 will disable clipboard interactions
-        :param suggest_similar_command: if ``True``, then when a command is not found,
-                                        [cmd2.Cmd][] will look for similar commands and suggest them.
-        :param intro: introduction to display at startup
-        :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
-        :param complete_style: style of prompt-toolkit tab completion to use, 3 valid options are:
-                               1. CompleteStyle.COLUMN (default) - displays hints with help next to them in one big column
-                               2. CompleteStyle.MULTI_COLUMN - displays hints across multiple columns, with help when selected
-                               3. CompleteStyle.READLINE_LIKE - displays like readline, complete_in_thread doesn't work
-        :param max_column_completion_items: The maximum number of completion results to display in a single column,
-                                            used to provide the initial value for a settable with the same name.
+        :param transcript_files: pass a list of transcript files to be run on initialization.
+                                 This allows running transcript tests when ``allow_cli_args``
+                                 is ``False``. If ``allow_cli_args`` is ``True`` this parameter
+                                 is ignored.
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -467,30 +471,36 @@ class Cmd:
         self.lexer = Cmd2Lexer(self)
         self.bottom_toolbar = bottom_toolbar
 
+        self.auto_suggest = None
+        if auto_suggest:
+            self.auto_suggest = AutoSuggestFromHistory()
+
         try:
             self.session: PromptSession[str] = PromptSession(
-                history=self.history_adapter,
-                completer=self.completer,
-                lexer=self.lexer,
-                complete_style=complete_style,
+                auto_suggest=self.auto_suggest,
                 complete_in_thread=True,
+                complete_style=complete_style,
                 complete_while_typing=False,
+                completer=self.completer,
+                history=self.history_adapter,
                 key_bindings=key_bindings,
+                lexer=self.lexer,
             )
         except (NoConsoleScreenBufferError, AttributeError, ValueError):
             # Fallback to dummy input/output if PromptSession initialization fails.
             # This can happen in some CI environments (like GitHub Actions on Windows)
             # where isatty() is True but there is no real console.
             self.session = PromptSession(
-                history=self.history_adapter,
-                completer=self.completer,
-                lexer=self.lexer,
-                input=DummyInput(),
-                output=DummyOutput(),
-                complete_style=complete_style,
+                auto_suggest=self.auto_suggest,
                 complete_in_thread=True,
+                complete_style=complete_style,
                 complete_while_typing=False,
+                completer=self.completer,
+                history=self.history_adapter,
+                input=DummyInput(),
                 key_bindings=key_bindings,
+                lexer=self.lexer,
+                output=DummyOutput(),
             )
 
         # Commands to exclude from the history command
