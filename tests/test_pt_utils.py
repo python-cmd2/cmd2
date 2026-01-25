@@ -50,7 +50,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('ansigreen', 'help'), ('', ' something')]
+        assert tokens == [('ansigreen', 'help'), ('', ' '), ('ansiyellow', 'something')]
 
     def test_lex_document_alias(self, mock_cmd_app):
         """Test lexing an alias."""
@@ -62,7 +62,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('ansicyan', 'ls'), ('', ' -l')]
+        assert tokens == [('ansicyan', 'ls'), ('', ' '), ('ansired', '-l')]
 
     def test_lex_document_macro(self, mock_cmd_app):
         """Test lexing a macro."""
@@ -74,7 +74,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('ansimagenta', 'my_macro'), ('', ' arg1')]
+        assert tokens == [('ansimagenta', 'my_macro'), ('', ' '), ('ansiyellow', 'arg1')]
 
     def test_lex_document_leading_whitespace(self, mock_cmd_app):
         """Test lexing with leading whitespace."""
@@ -86,7 +86,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('', '   '), ('ansigreen', 'help'), ('', ' something')]
+        assert tokens == [('', '   '), ('ansigreen', 'help'), ('', ' '), ('ansiyellow', 'something')]
 
     def test_lex_document_unknown_command(self, mock_cmd_app):
         """Test lexing an unknown command."""
@@ -97,7 +97,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('', 'unknown'), ('', ' command')]
+        assert tokens == [('', 'unknown'), ('', ' '), ('ansiyellow', 'command')]
 
     def test_lex_document_no_command(self, mock_cmd_app):
         """Test lexing an empty line or line with only whitespace."""
@@ -109,6 +109,30 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [('', '   ')]
+
+    def test_lex_document_arguments(self, mock_cmd_app):
+        """Test lexing a command with flags and values."""
+        mock_cmd_app.all_commands = ["help"]
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "help -v --name \"John Doe\" > out.txt"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [
+            ('ansigreen', 'help'),
+            ('', ' '),
+            ('ansired', '-v'),
+            ('', ' '),
+            ('ansired', '--name'),
+            ('', ' '),
+            ('ansiyellow', '"John Doe"'),
+            ('', ' '),
+            ('', '>'),
+            ('', ' '),
+            ('ansiyellow', 'out.txt'),
+        ]
 
 
 class TestCmd2Completer:

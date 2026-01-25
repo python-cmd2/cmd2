@@ -197,7 +197,27 @@ class Cmd2Lexer(Lexer):
 
                 # Add the rest of the line
                 if cmd_end < len(line):
-                    tokens.append(('', line[cmd_end:]))
+                    rest = line[cmd_end:]
+                    # Regex to match whitespace, flags, quoted strings, or other words
+                    arg_pattern = re.compile(r'(\s+)|(--?[^\s\'"]+)|("[^"]*"|\'[^\']*\')|([^\s\'"]+)')
+
+                    # Get redirection tokens and terminators to avoid highlighting them as values
+                    exclude_tokens = set(constants.REDIRECTION_TOKENS)
+                    if hasattr(self.cmd_app, 'statement_parser'):
+                        exclude_tokens.update(self.cmd_app.statement_parser.terminators)
+
+                    for m in arg_pattern.finditer(rest):
+                        space, flag, quoted, word = m.groups()
+                        text = m.group(0)
+
+                        if space:
+                            tokens.append(('', text))
+                        elif flag:
+                            tokens.append(('ansired', text))
+                        elif (quoted or word) and text not in exclude_tokens:
+                            tokens.append(('ansiyellow', text))
+                        else:
+                            tokens.append(('', text))
             elif line:
                 # No command match found, add the entire line unstyled
                 tokens.append(('', line))
