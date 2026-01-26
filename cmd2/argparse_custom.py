@@ -258,14 +258,11 @@ sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser` for mo
 import argparse
 import re
 import sys
-from argparse import (
-    ONE_OR_MORE,
-    ZERO_OR_MORE,
-    ArgumentError,
-)
+from argparse import ArgumentError
 from collections.abc import (
     Callable,
     Iterable,
+    Iterator,
     Sequence,
 )
 from gettext import gettext
@@ -1296,29 +1293,68 @@ class Cmd2HelpFormatter(RichHelpFormatter):
 
         return format_tuple
 
+    def _build_nargs_range_str(self, nargs_range: tuple[int, int | float]) -> str:
+        """Generate nargs range string for help text."""
+        if nargs_range[1] == constants.INFINITY:
+            # {min+}
+            range_str = f"{{{nargs_range[0]}+}}"
+        else:
+            # {min..max}
+            range_str = f"{{{nargs_range[0]}..{nargs_range[1]}}}"
+
+        return range_str
+
     def _format_args(self, action: argparse.Action, default_metavar: str) -> str:
-        """Handle ranged nargs and make other output less verbose."""
+        """Override to handle cmd2's custom nargs formatting.
+
+        All formats in this function need to be handled by _rich_metavar_parts().
+        """
         metavar = self._determine_metavar(action, default_metavar)
         metavar_formatter = self._metavar_formatter(action, default_metavar)
 
         # Handle nargs specified as a range
         nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
-            range_str = f'{nargs_range[0]}+' if nargs_range[1] == constants.INFINITY else f'{nargs_range[0]}..{nargs_range[1]}'
+            arg_str = '%s' % metavar_formatter(1)  # noqa: UP031
+            range_str = self._build_nargs_range_str(nargs_range)
+            return f"{arg_str}{range_str}"
 
-            return '{}{{{}}}'.format('%s' % metavar_formatter(1), range_str)  # noqa: UP031
+        # When nargs is just a number, argparse repeats the arg in the help text.
+        # For instance, when nargs=5 the help text looks like: 'command arg arg arg arg arg'.
+        # To make this less verbose, format it like: 'command arg{5}'.
+        # Do not customize the output when metavar is a tuple of strings. Allow argparse's
+        # formatter to handle that instead.
+        if isinstance(metavar, str) and isinstance(action.nargs, int) and action.nargs > 1:
+            arg_str = '%s' % metavar_formatter(1)  # noqa: UP031
+            return f"{arg_str}{{{action.nargs}}}"
 
-        # Make this output less verbose. Do not customize the output when metavar is a
-        # tuple of strings. Allow argparse's formatter to handle that instead.
-        if isinstance(metavar, str):
-            if action.nargs == ZERO_OR_MORE:
-                return '[%s [...]]' % metavar_formatter(1)  # noqa: UP031
-            if action.nargs == ONE_OR_MORE:
-                return '%s [...]' % metavar_formatter(1)  # noqa: UP031
-            if isinstance(action.nargs, int) and action.nargs > 1:
-                return '{}{{{}}}'.format('%s' % metavar_formatter(1), action.nargs)  # noqa: UP031
+        # Fallback to parent for all other cases
+        return super()._format_args(action, default_metavar)
 
-        return super()._format_args(action, default_metavar)  # type: ignore[arg-type]
+    def _rich_metavar_parts(
+        self,
+        action: argparse.Action,
+        default_metavar: str,
+    ) -> Iterator[tuple[str, bool]]:
+        """Override to handle all cmd2-specific formatting in _format_args()."""
+        metavar = self._determine_metavar(action, default_metavar)
+        metavar_formatter = self._metavar_formatter(action, default_metavar)
+
+        # Handle nargs specified as a range
+        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
+        if nargs_range is not None:
+            yield "%s" % metavar_formatter(1), True  # noqa: UP031
+            yield self._build_nargs_range_str(nargs_range), False
+            return
+
+        # Handle specific integer nargs (e.g., nargs=5 -> arg{5})
+        if isinstance(metavar, str) and isinstance(action.nargs, int) and action.nargs > 1:
+            yield "%s" % metavar_formatter(1), True  # noqa: UP031
+            yield f"{{{action.nargs}}}", False
+            return
+
+        # Fallback to parent for all other cases
+        yield from super()._rich_metavar_parts(action, default_metavar)
 
 
 class RawDescriptionCmd2HelpFormatter(
