@@ -9,13 +9,9 @@ from cmd2 import (
     Cmd2ArgumentParser,
     constants,
 )
-from cmd2.argparse_custom import (
-    generate_range_error,
-)
+from cmd2.argparse_custom import generate_range_error
 
-from .conftest import (
-    run_cmd,
-)
+from .conftest import run_cmd
 
 
 class ApCustomTestApp(cmd2.Cmd):
@@ -29,8 +25,6 @@ class ApCustomTestApp(cmd2.Cmd):
     range_parser.add_argument('--arg1', nargs=2)
     range_parser.add_argument('--arg2', nargs=(3,))
     range_parser.add_argument('--arg3', nargs=(2, 3))
-    range_parser.add_argument('--arg4', nargs=argparse.ZERO_OR_MORE)
-    range_parser.add_argument('--arg5', nargs=argparse.ONE_OR_MORE)
 
     @cmd2.with_argparser(range_parser)
     def do_range(self, _) -> None:
@@ -89,7 +83,7 @@ def test_apcustom_usage() -> None:
 def test_apcustom_nargs_help_format(cust_app) -> None:
     out, _err = run_cmd(cust_app, 'help range')
     assert 'Usage: range [-h] [--arg0 ARG0] [--arg1 ARG1{2}] [--arg2 ARG2{3+}]' in out[0]
-    assert '             [--arg3 ARG3{2..3}] [--arg4 [ARG4 [...]]] [--arg5 ARG5 [...]]' in out[1]
+    assert '             [--arg3 ARG3{2..3}]' in out[1]
 
 
 def test_apcustom_nargs_range_validation(cust_app) -> None:
@@ -112,6 +106,50 @@ def test_apcustom_nargs_range_validation(cust_app) -> None:
 
     _out, err = run_cmd(cust_app, 'range --arg2 one two three')
     assert not err
+
+
+@pytest.mark.parametrize(
+    ('nargs', 'expected_parts'),
+    [
+        # arg{2}
+        (
+            2,
+            [("arg", True), ("{2}", False)],
+        ),
+        # arg{2+}
+        (
+            (2,),
+            [("arg", True), ("{2+}", False)],
+        ),
+        # arg{0..5}
+        (
+            (0, 5),
+            [("arg", True), ("{0..5}", False)],
+        ),
+    ],
+)
+def test_rich_metavar_parts(
+    nargs: int | tuple[int, int | float],
+    expected_parts: list[tuple[str, bool]],
+) -> None:
+    """
+    Test cmd2's override of _rich_metavar_parts which handles custom nargs formats.
+
+    :param nargs: the arguments nargs value
+    :param expected_parts: list to compare to _rich_metavar_parts's return value
+
+                           Each element in this list is a 2-item tuple.
+                           item 1: one part of the argument string outputted by _format_args
+                           item 2: boolean stating whether rich-argparse should color this part
+    """
+    parser = Cmd2ArgumentParser()
+    help_formatter = parser._get_formatter()
+
+    action = parser.add_argument("arg", nargs=nargs)  # type: ignore[arg-type]
+    default_metavar = help_formatter._get_default_metavar_for_positional(action)
+
+    parts = help_formatter._rich_metavar_parts(action, default_metavar)
+    assert list(parts) == expected_parts
 
 
 @pytest.mark.parametrize(
@@ -149,7 +187,7 @@ def test_apcustom_narg_tuple_zero_base() -> None:
     arg = parser.add_argument('arg', nargs=(0,))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.nargs_range is None
-    assert "[arg [...]]" in parser.format_help()
+    assert "[arg ...]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0, 1))
@@ -169,7 +207,7 @@ def test_apcustom_narg_tuple_one_base() -> None:
     arg = parser.add_argument('arg', nargs=(1,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range is None
-    assert "arg [...]" in parser.format_help()
+    assert "arg [arg ...]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1, 5))
