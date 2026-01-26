@@ -3623,14 +3623,39 @@ def test_async_alert_not_at_prompt(base_app):
     assert "Main thread is not at the prompt" in str(exceptions[0])
 
 
+class ToolbarApp(cmd2.Cmd):
+    def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
+        import datetime
+        import shutil
+
+        # Get the current time in ISO format with 0.01s precision
+        dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
+        now = dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-4] + dt.strftime('%z')
+        left_text = sys.argv[0]
+
+        # Get terminal width to calculate padding for right-alignment
+        cols, _ = shutil.get_terminal_size()
+        padding_size = cols - len(left_text) - len(now) - 1
+        if padding_size < 1:
+            padding_size = 1
+        padding = ' ' * padding_size
+
+        # Return formatted text for prompt-toolkit
+        return [
+            ('ansigreen', left_text),
+            ('', padding),
+            ('ansicyan', now),
+        ]
+
+
 def test_get_bottom_toolbar(base_app, monkeypatch):
     # Test default (disabled)
     assert base_app.get_bottom_toolbar() is None
 
-    # Test enabled
-    base_app.bottom_toolbar = True
+    # Test overridden via custom class
     monkeypatch.setattr(sys, 'argv', ['myapp.py'])
-    toolbar = base_app.get_bottom_toolbar()
+    app = ToolbarApp()
+    toolbar = app.get_bottom_toolbar()
     assert isinstance(toolbar, list)
     assert toolbar[0] == ('ansigreen', 'myapp.py')
     assert toolbar[2][0] == 'ansicyan'
@@ -3811,11 +3836,10 @@ def test_pre_prompt_running_loop(base_app):
         assert loop_check['running']
 
 
-def test_get_bottom_toolbar_narrow_terminal(base_app, monkeypatch):
+def test_get_bottom_toolbar_narrow_terminal(monkeypatch):
     """Test get_bottom_toolbar when terminal is too narrow for calculated padding"""
     import shutil
 
-    base_app.bottom_toolbar = True
     monkeypatch.setattr(sys, 'argv', ['myapp.py'])
 
     # Mock shutil.get_terminal_size to return a very small width (e.g. 5)
@@ -3823,7 +3847,8 @@ def test_get_bottom_toolbar_narrow_terminal(base_app, monkeypatch):
     # Since len(now) is ~29, this will definitely be < 1
     monkeypatch.setattr(shutil, 'get_terminal_size', lambda: os.terminal_size((5, 20)))
 
-    toolbar = base_app.get_bottom_toolbar()
+    app = ToolbarApp()
+    toolbar = app.get_bottom_toolbar()
     assert isinstance(toolbar, list)
 
     # The padding (index 1) should be exactly 1 space

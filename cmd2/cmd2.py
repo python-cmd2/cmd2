@@ -299,7 +299,6 @@ class Cmd:
         allow_redirection: bool = True,
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
-        bottom_toolbar: bool = False,
         command_sets: Iterable[CommandSet] | None = None,
         complete_style: CompleteStyle = CompleteStyle.COLUMN,
         include_ipy: bool = False,
@@ -338,7 +337,6 @@ class Cmd:
                                    must be manually installed with `register_command_set`.
         :param auto_suggest: If True, cmd2 will provide fish shell style auto-suggestions
                             based on history. If False, these will not be provided.
-        :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
@@ -469,7 +467,6 @@ class Cmd:
         self.history_adapter = Cmd2History(self)
         self.completer = Cmd2Completer(self)
         self.lexer = Cmd2Lexer(self)
-        self.bottom_toolbar = bottom_toolbar
 
         self.auto_suggest = None
         if auto_suggest:
@@ -478,7 +475,7 @@ class Cmd:
         try:
             self.session: PromptSession[str] = PromptSession(
                 auto_suggest=self.auto_suggest,
-                bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
+                bottom_toolbar=self.get_bottom_toolbar,
                 complete_in_thread=True,
                 complete_style=complete_style,
                 complete_while_typing=False,
@@ -493,7 +490,7 @@ class Cmd:
             # where isatty() is True but there is no real console.
             self.session = PromptSession(
                 auto_suggest=self.auto_suggest,
-                bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
+                bottom_toolbar=self.get_bottom_toolbar,
                 complete_in_thread=True,
                 complete_style=complete_style,
                 complete_while_typing=False,
@@ -1701,35 +1698,14 @@ class Cmd:
     def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
         """Get the bottom toolbar content.
 
-        If self.bottom_toolbar is False, returns None.
+        Override this if you want a bottom toolbar to be displayed.
 
-        Otherwise returns tokens for prompt-toolkit to populate in the bottom toolbar.
+        :return: tokens for prompt-toolkit to populate in the bottom toolbar
+                or None for no bottom toolbar.
 
         NOTE: This content can extend over multiple lines.  However we would recommend
         keeping it to a single line or two lines maximum.
         """
-        if self.bottom_toolbar:
-            import datetime
-            import shutil
-
-            # Get the current time in ISO format with 0.01s precision
-            dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
-            now = dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-4] + dt.strftime('%z')
-            left_text = sys.argv[0]
-
-            # Get terminal width to calculate padding for right-alignment
-            cols, _ = shutil.get_terminal_size()
-            padding_size = cols - len(left_text) - len(now) - 1
-            if padding_size < 1:
-                padding_size = 1
-            padding = ' ' * padding_size
-
-            # Return formatted text for prompt-toolkit
-            return [
-                ('ansigreen', left_text),
-                ('', padding),
-                ('ansicyan', now),
-            ]
         return None
 
     def get_rprompt(self) -> str | FormattedText | None:
@@ -3432,7 +3408,7 @@ class Cmd:
 
                         return temp_session1.prompt(
                             prompt_to_use,
-                            bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
+                            bottom_toolbar=self.get_bottom_toolbar,
                             completer=completer_to_use,
                             lexer=self.lexer,
                             pre_run=self.pre_prompt,
@@ -3442,7 +3418,7 @@ class Cmd:
                     # history is None
                     return self.session.prompt(
                         prompt_to_use,
-                        bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
+                        bottom_toolbar=self.get_bottom_toolbar,
                         completer=completer_to_use,
                         lexer=self.lexer,
                         pre_run=self.pre_prompt,
@@ -3461,7 +3437,7 @@ class Cmd:
                 )
                 line = temp_session2.prompt(
                     prompt,
-                    bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
+                    bottom_toolbar=self.get_bottom_toolbar,
                     pre_run=self.pre_prompt,
                     rprompt=self.get_rprompt,
                 )
@@ -3478,7 +3454,7 @@ class Cmd:
                     output=self.session.output,
                 )
                 line = temp_session3.prompt(
-                    bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
+                    bottom_toolbar=self.get_bottom_toolbar,
                     pre_run=self.pre_prompt,
                     rprompt=self.get_rprompt,
                 )

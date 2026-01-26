@@ -36,10 +36,9 @@ While we have strived to maintain compatibility, there are some differences:
 `cmd2` now supports an optional, persistent bottom toolbar. This can be used to display information
 such as the application name, current state, or even a real-time clock.
 
-- **Enablement**: Set `bottom_toolbar=True` in the [cmd2.Cmd.__init__][] constructor.
-- **Customization**: Override the [cmd2.Cmd.get_bottom_toolbar][] method to return the content you
-  wish to display. The content can be a simple string or a list of `(style, text)` tuples for
-  formatted text with colors.
+- **Enablement and Customization**: Override the [cmd2.Cmd.get_bottom_toolbar][] method to return
+  the content you wish to display. The content can be a simple string or a list of `(style, text)`
+  tuples for formatted text with colors.
 
 See the
 [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)

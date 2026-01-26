@@ -14,9 +14,12 @@ Features demonstrated include all of the following:
 10) How to make custom attributes settable at runtime.
 11) Shortcuts for commands
 12) Persistent bottom toolbar with realtime status updates
+13) Right prompt contextual information display
 """
 
+import datetime
 import pathlib
+import shutil
 import threading
 import time
 
@@ -45,7 +48,6 @@ class BasicApp(cmd2.Cmd):
         shortcuts.update({'&': 'intro'})
         super().__init__(
             auto_suggest=True,
-            bottom_toolbar=True,
             include_ipy=True,
             multiline_commands=['echo'],
             persistent_history_file='cmd2_history.dat',
@@ -95,6 +97,26 @@ class BasicApp(cmd2.Cmd):
                 choices=fg_colors,
             )
         )
+
+    def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
+        # Get the current time in ISO format with 0.01s precision
+        dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
+        now = dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-4] + dt.strftime('%z')
+        left_text = sys.argv[0]
+
+        # Get terminal width to calculate padding for right-alignment
+        cols, _ = shutil.get_terminal_size()
+        padding_size = cols - len(left_text) - len(now) - 1
+        if padding_size < 1:
+            padding_size = 1
+        padding = ' ' * padding_size
+
+        # Return formatted text for prompt-toolkit
+        return [
+            ('ansigreen', left_text),
+            ('', padding),
+            ('ansicyan', now),
+        ]
 
     def get_rprompt(self) -> str | FormattedText | None:
         current_working_directory = pathlib.Path.cwd()

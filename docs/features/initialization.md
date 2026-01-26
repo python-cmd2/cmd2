@@ -25,7 +25,6 @@ The `cmd2.Cmd` class provides a large number of public instance attributes which
 Here are instance attributes of `cmd2.Cmd` which developers might wish to override:
 
 - **always_show_hint**: if `True`, display tab completion hint even when completion suggestions print (Default: `False`)
-- **bottom_toolbar**: if `True`, then a bottom toolbar will be displayed (Default: `False`)
 - **complete_style**: style to display tab-completion hints in (from `CompleteStyle` options in `prompt-toolkit`)
 - **broken_pipe_warning**: if non-empty, this string will be displayed if a broken pipe error occurs
 - **continuation_prompt**: used for multiline commands on 2nd+ line of input
