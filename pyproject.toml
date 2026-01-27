@@ -35,6 +35,7 @@ dependencies = [
     "pyreadline3>=3.4; platform_system == 'Windows'",
     "rich>=14.3.0",
     "rich-argparse>=1.7.1",
+    "typing-extensions; python_version == '3.10'",
 ]
 
 [dependency-groups]

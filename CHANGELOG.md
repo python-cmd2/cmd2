@@ -1,3 +1,8 @@
+## 3.1.2 (January 26, 2026)
+
+- Bug Fixes
+    - Fixed missing `typing-extensions` dependency for Python 3.10
+
 ## 3.1.1 (January 26, 2026)
 
 - Bug Fixes
