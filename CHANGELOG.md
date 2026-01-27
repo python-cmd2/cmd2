@@ -1,3 +1,8 @@
+## 3.1.1 (January 26, 2026)
+
+- Bug Fixes
+    - Fixed bug where `rich-argparse` was not coloring cmd2's custom `nargs` formatting
+
 ## 3.1.0 (December 25, 2025)
 
 - Potentially Breaking Changes
