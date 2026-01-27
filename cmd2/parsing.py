@@ -2,6 +2,7 @@
 
 import re
 import shlex
+import sys
 from collections.abc import Iterable
 from dataclasses import (
     dataclass,
@@ -9,7 +10,10 @@ from dataclasses import (
 )
 from typing import Any
 
-from typing_extensions import Self
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 from . import (
     constants,

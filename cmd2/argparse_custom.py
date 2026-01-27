@@ -290,7 +290,12 @@ from rich_argparse import (
     RawTextRichHelpFormatter,
     RichHelpFormatter,
 )
-from typing_extensions import Self
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 
 from . import constants
 from . import rich_utils as ru

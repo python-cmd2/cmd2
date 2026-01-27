@@ -52,6 +52,11 @@ shell, and the option for a persistent bottom bar that can display realtime stat
         - **pre_prompt**: hook method that is called before the prompt is displayed, but after
           `prompt-toolkit` event loop has started
 
+## 3.1.2 (January 26, 2026)
+
+- Bug Fixes
+    - Fixed missing `typing-extensions` dependency for Python 3.10
+
 ## 3.1.1 (January 26, 2026)
 
 - Bug Fixes
