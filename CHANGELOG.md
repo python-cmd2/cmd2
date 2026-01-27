@@ -52,6 +52,11 @@ shell, and the option for a persistent bottom bar that can display realtime stat
         - **pre_prompt**: hook method that is called before the prompt is displayed, but after
           `prompt-toolkit` event loop has started
 
+## 3.1.1 (January 26, 2026)
+
+- Bug Fixes
+    - Fixed bug where `rich-argparse` was not coloring cmd2's custom `nargs` formatting
+
 ## 3.1.0 (December 25, 2025)
 
 - Potentially Breaking Changes
