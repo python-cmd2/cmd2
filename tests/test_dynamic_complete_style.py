@@ -29,8 +29,8 @@ def app():
 
 
 def test_dynamic_complete_style(app):
-    # Default max_column_completion_items is 7
-    assert app.max_column_completion_items == 7
+    # Default max_column_completion_results is 7
+    assert app.max_column_completion_results == 7
 
     # Complete 'foo' which has 10 items (> 7)
     # text='item', state=0, line='foo item', begidx=4, endidx=8
@@ -44,14 +44,14 @@ def test_dynamic_complete_style(app):
 
 def test_dynamic_complete_style_custom_limit(app):
     # Change limit to 3
-    app.max_column_completion_items = 3
+    app.max_column_completion_results = 3
 
     # Complete 'bar' which has 5 items (> 3)
     app.complete('item', 0, 'bar item', 4, 8)
     assert app.session.complete_style == CompleteStyle.MULTI_COLUMN
 
     # Change limit to 15
-    app.max_column_completion_items = 15
+    app.max_column_completion_results = 15
 
     # Complete 'foo' which has 10 items (<= 15)
     app.complete('item', 0, 'foo item', 4, 8)

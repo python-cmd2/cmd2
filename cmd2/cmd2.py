@@ -304,7 +304,6 @@ class Cmd:
         include_ipy: bool = False,
         include_py: bool = False,
         intro: RenderableType = '',
-        max_column_completion_items: int = 7,
         multiline_commands: list[str] | None = None,
         persistent_history_file: str = '',
         persistent_history_length: int = 1000,
@@ -345,8 +344,6 @@ class Cmd:
         :param include_ipy: should the "ipy" command be included for an embedded IPython shell
         :param include_py: should the "py" command be included for an embedded Python shell
         :param intro: introduction to display at startup
-        :param max_column_completion_items: The maximum number of completion results to display in a single column,
-                                            used to provide the initial value for a settable with the same name
         :param multiline_commands: list of commands allowed to accept multi-line input
         :param persistent_history_file: file path to load a persistent cmd2 command history from
         :param persistent_history_length: max number of history items to write
@@ -434,7 +431,7 @@ class Cmd:
 
         # The maximum number of completion results to display in a single column (CompleteStyle.COLUMN).
         # If the number of results exceeds this, CompleteStyle.MULTI_COLUMN will be used.
-        self.max_column_completion_items: int = max_column_completion_items
+        self.max_column_completion_results: int = 7
 
         # A dictionary mapping settable names to their Settable instance
         self._settables: dict[str, Settable] = {}
@@ -1241,7 +1238,10 @@ class Cmd:
         )
         self.add_settable(
             Settable(
-                'max_column_completion_items', int, "Maximum number of completion results to display in a single column", self
+                'max_column_completion_results',
+                int,
+                "Maximum number of completion results to display in a single column",
+                self,
             )
         )
         self.add_settable(Settable('quiet', bool, "Don't print nonessential feedback", self))
@@ -2534,7 +2534,7 @@ class Cmd:
                     self.matches_sorted = True
 
                 # Swap between COLUMN and MULTI_COLUMN style based on the number of matches if not using READLINE_LIKE
-                if len(self.completion_matches) > self.max_column_completion_items:
+                if len(self.completion_matches) > self.max_column_completion_results:
                     self.session.complete_style = CompleteStyle.MULTI_COLUMN
                 else:
                     self.session.complete_style = CompleteStyle.COLUMN

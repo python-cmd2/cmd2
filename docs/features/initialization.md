@@ -44,7 +44,7 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **hidden_commands**: commands to exclude from the help menu and tab completion
 - **last_result**: stores results from the last command run to enable usage of results in a Python script or interactive console. Built-in commands don't make use of this. It is purely there for user-defined commands and convenience.
 - **macros**: dictionary of macro names and their values
-- **max_column_completion_items**: The maximum number of completion results to display in a single column (Default: 7)
+- **max_column_completion_results**: The maximum number of completion results to display in a single column (Default: 7)
 - **max_completion_items**: max number of CompletionItems to display during tab completion (Default: 50)
 - **pager**: sets the pager command used by the `Cmd.ppaged()` method for displaying wrapped output using a pager
 - **pager_chop**: sets the pager command used by the `Cmd.ppaged()` method for displaying chopped/truncated output using a pager

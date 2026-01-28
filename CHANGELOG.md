@@ -36,8 +36,6 @@ shell, and the option for a persistent bottom bar that can display realtime stat
           displaying realtime status information while the prompt is displayed, see the
           `cmd2.Cmd2.get_bottom_toolbar` method that can be overridden as well as the updated
           `getting_started.py` example
-        - **max_column_completion_items**: (int) the maximum number of completion results to display
-          in a single column, used to provide the initial value for a settable with the same name
     - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
       application is waiting for user input
     - New `cmd2.Cmd` methods
@@ -45,6 +43,9 @@ shell, and the option for a persistent bottom bar that can display realtime stat
         - **get_rprompt**: override to populate right prompt
         - **pre_prompt**: hook method that is called before the prompt is displayed, but after
           `prompt-toolkit` event loop has started
+    - New settables:
+        - **max_column_completion_results**: (int) the maximum number of completion results to
+          display in a single column
 
 ## 3.1.2 (January 26, 2026)
 
