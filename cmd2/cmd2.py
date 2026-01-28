@@ -1300,8 +1300,14 @@ class Cmd:
         :param sep: string to write between printed text. Defaults to " ".
         :param end: string to write at end of printed text. Defaults to a newline.
         :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be
-                          word-wrapped or cropped to fit the terminal width. Defaults to True.
+        :param soft_wrap: Enable soft wrap mode. Defaults to True.
+                          If True, text that doesn't fit will run on to the following line,
+                          just like with print(). This is useful for raw text and logs.
+                          If False, Rich wraps text to fit the terminal width.
+                          Set this to False when printing structured Renderables like
+                          Tables, Panels, or Columns to ensure they render as expected.
+                          For example, when soft_wrap is True Panels truncate text
+                          which is wider than the terminal.
         :param emoji: If True, Rich will replace emoji codes (e.g., :smiley:) with their
                       corresponding Unicode characters. Defaults to False.
         :param markup: If True, Rich will interpret strings with tags (e.g., [bold]hello[/bold])
@@ -4163,7 +4169,7 @@ class Cmd:
             header_grid = Table.grid()
             header_grid.add_row(Text(header, style=Cmd2Style.HELP_HEADER))
             header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
-            self.poutput(header_grid)
+            self.poutput(header_grid, soft_wrap=False)
 
         # Subtract 1 from maxcol to account for a one-space right margin.
         maxcol = min(maxcol, ru.console_width()) - 1
@@ -4231,7 +4237,7 @@ class Cmd:
             topics_table.add_row(command, cmd_desc)
 
         category_grid.add_row(topics_table)
-        self.poutput(category_grid)
+        self.poutput(category_grid, soft_wrap=False)
         self.poutput()
 
     def render_columns(self, str_list: list[str] | None, display_width: int = 80) -> str:
@@ -4528,7 +4534,7 @@ class Cmd:
             self.last_result[param] = settable.value
 
         self.poutput()
-        self.poutput(settable_table)
+        self.poutput(settable_table, soft_wrap=False)
         self.poutput()
 
     @classmethod

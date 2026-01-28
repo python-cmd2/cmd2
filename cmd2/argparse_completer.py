@@ -582,7 +582,7 @@ class ArgparseCompleter:
             # Generate the hint table string
             console = Cmd2GeneralConsole()
             with console.capture() as capture:
-                console.print(hint_table, end="")
+                console.print(hint_table, end="", soft_wrap=False)
             self._cmd2_app.formatted_completions = capture.get()
         return cast(list[str], completions)
 
