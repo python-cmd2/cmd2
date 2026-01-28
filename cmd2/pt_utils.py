@@ -104,7 +104,7 @@ class Cmd2Completer(Completer):
         for i, match in enumerate(matches):
             display = display_matches[i] if use_display_matches else match
             display_meta = None
-            if isinstance(match, CompletionItem) and match.descriptive_data:
+            if isinstance(match, CompletionItem) and match.descriptive_data and isinstance(match.descriptive_data[0], str):
                 display_meta = match.descriptive_data[0]
 
             # prompt_toolkit replaces the word before cursor by default if we use the default Completer?
