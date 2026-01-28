@@ -301,7 +301,6 @@ class Cmd:
         auto_suggest: bool = True,
         bottom_toolbar: bool = False,
         command_sets: Iterable[CommandSet] | None = None,
-        complete_style: CompleteStyle = CompleteStyle.COLUMN,
         include_ipy: bool = False,
         include_py: bool = False,
         intro: RenderableType = '',
@@ -343,10 +342,6 @@ class Cmd:
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
                              when `auto_load_commands` is set to False
-        :param complete_style: style of prompt-toolkit tab completion to use, 3 valid options are:
-                               1. CompleteStyle.COLUMN (default) - displays hints with help next to them in one big column
-                               2. CompleteStyle.MULTI_COLUMN - displays hints across multiple columns, with help when selected
-                               3. CompleteStyle.READLINE_LIKE - displays like readline, complete_in_thread doesn't work
         :param include_ipy: should the "ipy" command be included for an embedded IPython shell
         :param include_py: should the "py" command be included for an embedded Python shell
         :param intro: introduction to display at startup
@@ -480,7 +475,7 @@ class Cmd:
                 auto_suggest=self.auto_suggest,
                 bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                 complete_in_thread=True,
-                complete_style=complete_style,
+                complete_style=CompleteStyle.MULTI_COLUMN,
                 complete_while_typing=False,
                 completer=self.completer,
                 history=self.history_adapter,
@@ -495,7 +490,7 @@ class Cmd:
                 auto_suggest=self.auto_suggest,
                 bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
                 complete_in_thread=True,
-                complete_style=complete_style,
+                complete_style=CompleteStyle.MULTI_COLUMN,
                 complete_while_typing=False,
                 completer=self.completer,
                 history=self.history_adapter,
@@ -2539,11 +2534,10 @@ class Cmd:
                     self.matches_sorted = True
 
                 # Swap between COLUMN and MULTI_COLUMN style based on the number of matches if not using READLINE_LIKE
-                if self.session.complete_style != CompleteStyle.READLINE_LIKE:
-                    if len(self.completion_matches) > self.max_column_completion_items:
-                        self.session.complete_style = CompleteStyle.MULTI_COLUMN
-                    else:
-                        self.session.complete_style = CompleteStyle.COLUMN
+                if len(self.completion_matches) > self.max_column_completion_items:
+                    self.session.complete_style = CompleteStyle.MULTI_COLUMN
+                else:
+                    self.session.complete_style = CompleteStyle.COLUMN
 
             try:
                 return self.completion_matches[state]

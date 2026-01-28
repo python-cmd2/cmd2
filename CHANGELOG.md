@@ -36,15 +36,6 @@ shell, and the option for a persistent bottom bar that can display realtime stat
           displaying realtime status information while the prompt is displayed, see the
           `cmd2.Cmd2.get_bottom_toolbar` method that can be overridden as well as the updated
           `getting_started.py` example
-        - **complete_style**: (enum) style of prompt-toolkit tab completion to use, 3 valid options
-          are:
-            -   1. `CompleteStyle.COLUMN` (default) - displays hints with help next to them in one
-                   big column
-            -   2. `CompleteStyle.MULTI_COLUMN` - displays hints across multiple columns, with help
-                   when selected
-            -   3. `CompleteStyle.READLINE_LIKE` - displays like readline; WARNING:
-                   `complete_in_thread` doesn't work for background completion when this option is
-                   selected
         - **max_column_completion_items**: (int) the maximum number of completion results to display
           in a single column, used to provide the initial value for a settable with the same name
     - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
