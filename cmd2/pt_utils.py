@@ -205,7 +205,7 @@ class Cmd2Lexer(Lexer):
                 if cmd_end < len(line):
                     rest = line[cmd_end:]
                     # Regex to match whitespace, flags, quoted strings, or other words
-                    arg_pattern = re.compile(r'(\s+)|(--?[^\s\'"]+)|("[^"]*"|\'[^\']*\')|([^\s\'"]+)')
+                    arg_pattern = re.compile(r'(\s+)|(--?[^\s\'"]+)|("[^"]*"?|\'[^\']*\'?)|([^\s\'"]+)')
 
                     # Get redirection tokens and terminators to avoid highlighting them as values
                     exclude_tokens = set(constants.REDIRECTION_TOKENS)

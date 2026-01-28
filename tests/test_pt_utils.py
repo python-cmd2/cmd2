@@ -134,6 +134,18 @@ class TestCmd2Lexer:
             ('ansiyellow', 'out.txt'),
         ]
 
+    def test_lex_document_unclosed_quote(self, mock_cmd_app):
+        """Test lexing with an unclosed quote."""
+        mock_cmd_app.all_commands = ["echo"]
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "echo \"hello"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('ansigreen', 'echo'), ('', ' '), ('ansiyellow', '"hello')]
+
 
 class TestCmd2Completer:
     def test_get_completions_basic(self, mock_cmd_app):
