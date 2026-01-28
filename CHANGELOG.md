@@ -32,6 +32,10 @@ shell, and the option for a persistent bottom bar that can display realtime stat
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
           are grayed-out hints based on history. User can press right-arrow key to accept the
           provided suggestion.
+        - **bottom toolbar**: (boolean) if `True`, present a persistent bottom toolbar capable of
+          displaying realtime status information while the prompt is displayed, see the
+          `cmd2.Cmd2.get_bottom_toolbar` method that can be overridden as well as the updated
+          `getting_started.py` example
         - **complete_style**: (enum) style of prompt-toolkit tab completion to use, 3 valid options
           are:
             -   1. `CompleteStyle.COLUMN` (default) - displays hints with help next to them in one
@@ -46,8 +50,7 @@ shell, and the option for a persistent bottom bar that can display realtime stat
     - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
       application is waiting for user input
     - New `cmd2.Cmd` methods
-        - **get_bottom_toolbar**: override to create and populates a bottom toolbar capable of
-          displaying realtime status information while the prompt is displayed
+        - **get_bottom_toolbar**: populates bottom toolbar if `bottom_toolbar` is `True`
         - **get_rprompt**: override to populate right prompt
         - **pre_prompt**: hook method that is called before the prompt is displayed, but after
           `prompt-toolkit` event loop has started
