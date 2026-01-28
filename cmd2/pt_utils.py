@@ -18,9 +18,11 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
+from rich.text import Text
 
 from . import (
     constants,
+    rich_utils,
     utils,
 )
 from .argparse_custom import CompletionItem
@@ -103,9 +105,13 @@ class Cmd2Completer(Completer):
 
         for i, match in enumerate(matches):
             display = display_matches[i] if use_display_matches else match
-            display_meta = None
-            if isinstance(match, CompletionItem) and match.descriptive_data and isinstance(match.descriptive_data[0], str):
-                display_meta = match.descriptive_data[0]
+            display_meta: str | ANSI | None = None
+            if isinstance(match, CompletionItem) and match.descriptive_data:
+                if isinstance(match.descriptive_data[0], str):
+                    display_meta = match.descriptive_data[0]
+                elif isinstance(match.descriptive_data[0], Text):
+                    # Convert rich renderable to prompt-toolkit formatted text
+                    display_meta = ANSI(rich_utils.rich_text_to_string(match.descriptive_data[0]))
 
             # prompt_toolkit replaces the word before cursor by default if we use the default Completer?
             # No, we yield Completion(text, start_position=...).
