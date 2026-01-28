@@ -77,7 +77,8 @@ publish: validate-tag build ## Publish a release to PyPI, uses token from ~/.pyp
 BUILD_DIRS = build dist *.egg-info
 DOC_DIRS = build
 MYPY_DIRS = .mypy_cache dmypy.json dmypy.sock
-TEST_DIRS = .cache .coverage .pytest_cache htmlcov
+TEST_DIRS = .cache .pytest_cache htmlcov
+TEST_FILES = .coverage coverage.xml
 
 .PHONY: clean-build
 clean-build: ## Clean build artifacts
@@ -108,6 +109,7 @@ clean-ruff: ## Clean ruff artifacts
 clean-test: ## Clean test artifacts
 	@echo "🚀 Removing test artifacts"
 	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(TEST_DIRS)'.split() if os.path.isdir(d)]"
+	@uv run python -c "from pathlib import Path; [Path(f).unlink(missing_ok=True) for f in '$(TEST_FILES)'.split()]"
 
 .PHONY: clean
 clean: clean-build clean-docs clean-mypy clean-pycache clean-ruff clean-test ## Clean all artifacts
