@@ -3878,3 +3878,45 @@ def test_auto_suggest_default():
     assert app.auto_suggest is not None
     assert isinstance(app.auto_suggest, AutoSuggestFromHistory)
     assert app.session.auto_suggest is app.auto_suggest
+
+
+def test_completion_quoting_with_spaces_and_no_common_prefix(tmp_path):
+    """Test that completion results with spaces are quoted even if there is no common prefix."""
+    # Create files in a temporary directory
+    has_space_dir = tmp_path / "has space"
+    has_space_dir.mkdir()
+    foo_file = tmp_path / "foo.txt"
+    foo_file.write_text("content")
+
+    # Change CWD to the temporary directory
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+
+    try:
+        # Define a custom command with path_complete
+        class PathApp(cmd2.Cmd):
+            def do_test_path(self, _):
+                pass
+
+            def complete_test_path(self, text, line, begidx, endidx):
+                return self.path_complete(text, line, begidx, endidx)
+
+        app = PathApp()
+
+        text = ''
+        line = f'test_path {text}'
+        endidx = len(line)
+        begidx = endidx - len(text)
+
+        complete_tester(text, line, begidx, endidx, app)
+
+        matches = app.completion_matches
+
+        # Find the match for our directory
+        has_space_match = next((m for m in matches if "has space" in m), None)
+        assert has_space_match is not None
+
+        # Check if it is quoted.
+        assert has_space_match.startswith(('"', "'"))
+    finally:
+        os.chdir(cwd)

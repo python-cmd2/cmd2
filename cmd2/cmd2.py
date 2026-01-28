@@ -2406,16 +2406,13 @@ class Cmd:
                 common_prefix = os.path.commonprefix(self.completion_matches)
 
                 if self.matches_delimited:
-                    # Check if any portion of the display matches appears in the tab completion
-                    display_prefix = os.path.commonprefix(self.display_matches)
-
                     # For delimited matches, we check for a space in what appears before the display
                     # matches (common_prefix) as well as in the display matches themselves.
-                    if ' ' in common_prefix or (display_prefix and any(' ' in match for match in self.display_matches)):
+                    if ' ' in common_prefix or any(' ' in match for match in self.display_matches):
                         add_quote = True
 
                 # If there is a tab completion and any match has a space, then add an opening quote
-                elif common_prefix and any(' ' in match for match in self.completion_matches):
+                elif any(' ' in match for match in self.completion_matches):
                     add_quote = True
 
                 if add_quote:
