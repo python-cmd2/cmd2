@@ -12,9 +12,7 @@ _event_lock = threading.Lock()
 
 
 def run_async(coro) -> concurrent.futures.Future:
-    """
-    Await a coroutine from a synchronous function/method.
-    """
+    """Await a coroutine from a synchronous function/method."""
 
     global _event_loop  # noqa: PLW0603
 
@@ -33,22 +31,21 @@ def run_async(coro) -> concurrent.futures.Future:
 
 
 async def async_wait(duration: float) -> float:
-    """
-    Example async function that is called from a synchronous cmd2 command
-    """
+    """Example async function that is called from a synchronous cmd2 command"""
     await asyncio.sleep(duration)
     return duration
 
 
 class AsyncCallExample(cmd2.Cmd):
-    """
-    A simple cmd2 application.
+    """A simple cmd2 application.
+
     Demonstrates how to run an async function from a cmd2 command.
     """
 
     def do_async_wait(self, _: str) -> None:
-        """
-        Waits asynchronously.  Example cmd2 command that calls an async function.
+        """Waits asynchronously.
+
+        Example cmd2 command that calls an async function.
         """
 
         waitable = run_async(async_wait(0.1))
@@ -59,16 +56,15 @@ class AsyncCallExample(cmd2.Cmd):
         return
 
     def do_hello_world(self, _: str) -> None:
-        """
-        Prints a simple greeting.  Just a typical (synchronous) cmd2 command
+        """Prints a simple greeting.
+
+        Just a typical (synchronous) cmd2 command
         """
         self.poutput('Hello World')
 
 
-async def main() -> int:
-    """
-    Having this async ensures presence of the top level event loop.
-    """
+def main() -> int:
+    """Main entry point for the example."""
     app = AsyncCallExample()
     app.set_window_title("Call to an Async Function Test")
     return app.cmdloop()
@@ -77,4 +73,4 @@ async def main() -> int:
 if __name__ == '__main__':
     import sys
 
-    sys.exit(asyncio.run(main(), debug=True))
+    sys.exit(main())

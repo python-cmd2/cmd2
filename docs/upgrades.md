@@ -1,5 +1,51 @@
 # cmd2 Major Versions Upgrades
 
+## Upgrading to cmd2 4.x from 3.x
+
+The biggest change from 3.x to 4.x is the migration from the GNU Readline library to
+[prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) for the Read-Eval-Print
+Loop (REPL). This change provides a pure Python replacement for readline that is fully
+cross-platform compatible and offers significant enhancements in terms of features and
+extensibility.
+
+### prompt-toolkit Migration
+
+`cmd2` now utilizes `prompt-toolkit` for all input handling, history navigation, and tab completion.
+This removes the dependency on the GNU Readline library (and the `gnureadline` package on macOS).
+
+#### Key Benefits of prompt-toolkit
+
+- **Cross-platform**: Works identically on Windows, macOS, and Linux without external dependencies.
+- **Asynchronous Output**: Better handling of asynchronous printing to the terminal without
+  interfering with the user's input line.
+- **Enhanced UI**: Support for advanced UI elements like bottom toolbars and floating menus.
+- **Multiline Editing**: Improved support for editing commands that span multiple lines.
+
+#### Breaking Changes and Incompatibilities
+
+While we have strived to maintain compatibility, there are some differences:
+
+- **Key Bindings**: Key bindings are now managed by `prompt-toolkit`. While it defaults to
+  Emacs-style bindings (similar to readline), customization now uses the `prompt-toolkit`
+  [KeyBindings](https://python-prompt-toolkit.readthedocs.io/en/stable/pages/advanced_topics/key_bindings.html)
+  API.
+- **Input Hooks**: Readline-specific input hooks are no longer supported.
+
+### Bottom Toolbar
+
+`cmd2` now supports an optional, persistent bottom toolbar. This can be used to display information
+such as the application name, current state, or even a real-time clock.
+
+- **Enablement**: Set `bottom_toolbar=True` in the [cmd2.Cmd.__init__][] constructor.
+- **Customization**: Override the [cmd2.Cmd.get_bottom_toolbar][] method to return the content you
+  wish to display. The content can be a simple string or a list of `(style, text)` tuples for
+  formatted text with colors.
+
+See the
+[getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
+example for a demonstration of how to implement a background thread that refreshes the toolbar
+periodically.
+
 ## Upgrading to cmd2 3.x from 2.x
 
 For details about all of the changes in the 3.0.0 release, please refer to

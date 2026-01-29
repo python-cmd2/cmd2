@@ -16,27 +16,23 @@ clicks. However, programming a `textual` application is not as straightforward a
 Several Python packages exist for building interactive command-line applications approximately
 similar in concept to [cmd](https://docs.python.org/3/library/cmd.html) applications. None of them
 share `cmd2`'s close ties to [cmd](https://docs.python.org/3/library/cmd.html), but they may be
-worth investigating nonetheless. Two of the most mature and full-featured are:
-
-- [Python Prompt Toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit)
-- [Click](https://click.palletsprojects.com)
-
-[Python Prompt Toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) is a library for
-building powerful interactive command lines and terminal applications in Python. It provides a lot
-of advanced visual features like syntax highlighting, bottom bars, and the ability to create
-fullscreen apps.
+worth investigating nonetheless.
 
 [Click](https://click.palletsprojects.com) is a Python package for creating beautiful command line
 interfaces in a composable way with as little code as necessary. It is more geared towards command
 line utilities instead of command line interpreters, but it can be used for either.
 
-Getting a working command-interpreter application based on either
-[Python Prompt Toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) or
+Getting a working command-interpreter application based on
 [Click](https://click.palletsprojects.com) requires a good deal more effort and boilerplate code
 than `cmd2`. `cmd2` focuses on providing an excellent out-of-the-box experience with as many useful
 features as possible built in for free with as little work required on the developer's part as
 possible. We believe that `cmd2` provides developers the easiest way to write a command-line
 interpreter, while allowing a good experience for end users.
+
+Historically, [Python Prompt Toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) was
+considered a powerful but more complex alternative to `cmd2`. However, as of version 4.0.0, `cmd2`
+utilizes `prompt-toolkit` internally as its REPL engine. This means you get the power and
+cross-platform compatibility of `prompt-toolkit` with the easy-to-use API of `cmd2`.
 
 If you are seeking a visually richer end-user experience and don't mind investing more development
 time, we would recommend checking out [Textual](https://github.com/Textualize/textual) as this can

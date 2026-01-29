@@ -3,6 +3,7 @@
 <div class="grid cards" markdown>
 <!--intro-start-->
 - [Argument Processing](argument_processing.md)
+- [Async Commands](async_commands.md)
 - [Builtin Commands](builtin_commands.md)
 - [Clipboard Integration](clipboard.md)
 - [Commands](commands.md)
