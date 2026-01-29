@@ -262,10 +262,10 @@ def test_complete_exception(cmd2_app, capsys) -> None:
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    _out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
 
     assert first_match is None
-    assert "IndexError" in err
+    assert "IndexError" in out
 
 
 def test_complete_macro(base_app, request) -> None:

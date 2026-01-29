@@ -64,7 +64,7 @@ from typing import (
 )
 
 import rich.box
-from rich.console import Group, RenderableType
+from rich.console import Console, Group, RenderableType
 from rich.highlighter import ReprHighlighter
 from rich.rule import Rule
 from rich.style import Style, StyleType
@@ -1467,6 +1467,8 @@ class Cmd:
     def pexcept(
         self,
         exception: BaseException,
+        *,
+        console: Console | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print an exception to sys.stderr.
@@ -1474,10 +1476,13 @@ class Cmd:
         If `debug` is true, a full traceback is also printed, if one exists.
 
         :param exception: the exception to be printed.
+        :param console: optional Rich console to use for printing. If None, a new Cmd2ExceptionConsole
+                        instance is created which writes to sys.stderr.
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
         """
-        console = Cmd2ExceptionConsole(sys.stderr)
+        if console is None:
+            console = Cmd2ExceptionConsole(sys.stderr)
 
         # Only print a traceback if we're in debug mode and one exists.
         if self.debug and sys.exc_info() != (None, None, None):
@@ -2555,9 +2560,9 @@ class Cmd:
                 # above the prompt so it remains in the scrollback.
                 if ex.apply_style:
                     # Render the error with style to a string using Rich
-                    console = ru.Cmd2GeneralConsole()
-                    with console.capture() as capture:
-                        console.print("\n" + err_str, style=Cmd2Style.ERROR)
+                    general_console = ru.Cmd2GeneralConsole()
+                    with general_console.capture() as capture:
+                        general_console.print("\n" + err_str, style=Cmd2Style.ERROR)
                     self.completion_header = capture.get()
 
                 # Otherwise, this is a hint that should be displayed below the prompt.
@@ -2566,8 +2571,11 @@ class Cmd:
             return None
         except Exception as ex:  # noqa: BLE001
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
-            self.perror()
-            self.pexcept(ex)
+            exception_console = ru.Cmd2ExceptionConsole()
+            with exception_console.capture() as capture:
+                exception_console.print()
+                self.pexcept(ex, console=exception_console)
+            self.completion_header = capture.get()
             return None
 
     def in_script(self) -> bool:
