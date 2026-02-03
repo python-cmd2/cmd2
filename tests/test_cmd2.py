@@ -20,6 +20,7 @@ from cmd2 import (
     COMMAND_NAME,
     Cmd2Style,
     Color,
+    CommandSet,
     RichPrintKwargs,
     clipboard,
     constants,
@@ -3106,6 +3107,16 @@ class DisableCommandsApp(cmd2.Cmd):
         self.poutput("The real has_no_helper_funcs")
 
 
+class DisableCommandSet(CommandSet):
+    """Test registering a command which is in a disabled category"""
+
+    category_name = "CommandSet Test Category"
+
+    @cmd2.with_category(category_name)
+    def do_new_command(self, arg) -> None:
+        self._cmd.poutput("CommandSet function is enabled")
+
+
 @pytest.fixture
 def disable_commands_app():
     return DisableCommandsApp()
@@ -3249,6 +3260,25 @@ def test_disabled_message_command_name(disable_commands_app) -> None:
 
     _out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
     assert err[0].startswith('has_helper_funcs is currently disabled')
+
+
+def test_register_command_in_enabled_category(disable_commands_app) -> None:
+    disable_commands_app.enable_category(DisableCommandSet.category_name)
+    cs = DisableCommandSet()
+    disable_commands_app.register_command_set(cs)
+
+    out, _err = run_cmd(disable_commands_app, 'new_command')
+    assert out[0] == "CommandSet function is enabled"
+
+
+def test_register_command_in_disabled_category(disable_commands_app) -> None:
+    message_to_print = "CommandSet function is disabled"
+    disable_commands_app.disable_category(DisableCommandSet.category_name, message_to_print)
+    cs = DisableCommandSet()
+    disable_commands_app.register_command_set(cs)
+
+    _out, err = run_cmd(disable_commands_app, 'new_command')
+    assert err[0] == message_to_print
 
 
 @pytest.mark.parametrize('silence_startup_script', [True, False])

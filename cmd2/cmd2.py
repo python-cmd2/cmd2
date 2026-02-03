@@ -593,10 +593,13 @@ class Cmd:
         # being printed by a command.
         self.terminal_lock = threading.RLock()
 
-        # Commands that have been disabled from use. This is to support commands that are only available
-        # during specific states of the application. This dictionary's keys are the command names and its
-        # values are DisabledCommand objects.
+        # Commands disabled during specific application states
+        # Key: Command name | Value: DisabledCommand object
         self.disabled_commands: dict[str, DisabledCommand] = {}
+
+        # Categories of commands to be disabled
+        # Key: Category name | Value: Message to display
+        self.disabled_categories: dict[str, str] = {}
 
         # The default key for sorting string results. Its default value performs a case-insensitive alphabetical sort.
         # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
@@ -787,6 +790,12 @@ class Cmd:
 
                 if default_category and not hasattr(command_method, constants.CMD_ATTR_HELP_CATEGORY):
                     utils.categorize(command_method, default_category)
+
+                # If this command is in a disabled category, then disable it
+                command_category = getattr(command_method, constants.CMD_ATTR_HELP_CATEGORY, None)
+                if command_category in self.disabled_categories:
+                    message_to_print = self.disabled_categories[command_category]
+                    self.disable_command(command, message_to_print)
 
             self._installed_command_sets.add(cmdset)
 
@@ -5805,7 +5814,7 @@ class Cmd:
 
         :param command: the command being enabled
         """
-        # If the commands is already enabled, then return
+        # If the command is already enabled, then return
         if command not in self.disabled_commands:
             return
 
@@ -5837,10 +5846,16 @@ class Cmd:
 
         :param category: the category to enable
         """
+        # If the category is already enabled, then return
+        if category not in self.disabled_categories:
+            return
+
         for cmd_name in list(self.disabled_commands):
             func = self.disabled_commands[cmd_name].command_function
             if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.enable_command(cmd_name)
+
+        del self.disabled_categories[category]
 
     def disable_command(self, command: str, message_to_print: str) -> None:
         """Disable a command and overwrite its functions.
@@ -5852,7 +5867,7 @@ class Cmd:
                                  command being disabled.
                                  ex: message_to_print = f"{cmd2.COMMAND_NAME} is currently disabled"
         """
-        # If the commands is already disabled, then return
+        # If the command is already disabled, then return
         if command in self.disabled_commands:
             return
 
@@ -5891,12 +5906,18 @@ class Cmd:
                                  of the command being disabled.
                                  ex: message_to_print = f"{cmd2.COMMAND_NAME} is currently disabled"
         """
+        # If the category is already disabled, then return
+        if category in self.disabled_categories:
+            return
+
         all_commands = self.get_all_commands()
 
         for cmd_name in all_commands:
             func = self.cmd_func(cmd_name)
             if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.disable_command(cmd_name, message_to_print)
+
+        self.disabled_categories[category] = message_to_print
 
     def _report_disabled_command_usage(self, *_args: Any, message_to_print: str, **_kwargs: Any) -> None:
         """Report when a disabled command has been run or had help called on it.

@@ -1,3 +1,8 @@
+## 3.1.3 (TBD)
+
+- Bug Fixes
+    - Fixed issue where `CommandSet` registration did not respect disabled categories
+
 ## 3.1.2 (January 26, 2026)
 
 - Bug Fixes
