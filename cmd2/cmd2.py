@@ -635,10 +635,13 @@ class Cmd:
         self._in_prompt = False
         self._in_prompt_lock = threading.Lock()
 
-        # Commands that have been disabled from use. This is to support commands that are only available
-        # during specific states of the application. This dictionary's keys are the command names and its
-        # values are DisabledCommand objects.
+        # Commands disabled during specific application states
+        # Key: Command name | Value: DisabledCommand object
         self.disabled_commands: dict[str, DisabledCommand] = {}
+
+        # Categories of commands to be disabled
+        # Key: Category name | Value: Message to display
+        self.disabled_categories: dict[str, str] = {}
 
         # The default key for sorting string results. Its default value performs a case-insensitive alphabetical sort.
         # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
@@ -829,6 +832,12 @@ class Cmd:
 
                 if default_category and not hasattr(command_method, constants.CMD_ATTR_HELP_CATEGORY):
                     utils.categorize(command_method, default_category)
+
+                # If this command is in a disabled category, then disable it
+                command_category = getattr(command_method, constants.CMD_ATTR_HELP_CATEGORY, None)
+                if command_category in self.disabled_categories:
+                    message_to_print = self.disabled_categories[command_category]
+                    self.disable_command(command, message_to_print)
 
             self._installed_command_sets.add(cmdset)
 
@@ -1876,31 +1885,45 @@ class Cmd:
         :return: a list of possible tab completions
         """
         matches = self.basic_complete(text, line, begidx, endidx, match_against)
+        if not matches:
+            return []
 
-        # Display only the portion of the match that's being completed based on delimiter
-        if matches:
-            # Set this to True for proper quoting of matches with spaces
-            self.matches_delimited = True
+        # Set this to True for proper quoting of matches with spaces
+        self.matches_delimited = True
 
-            # Get the common beginning for the matches
-            common_prefix = os.path.commonprefix(matches)
-            prefix_tokens = common_prefix.split(delimiter)
+        # Get the common beginning for the matches
+        common_prefix = os.path.commonprefix(matches)
+        prefix_tokens = common_prefix.split(delimiter)
 
-            # Calculate what portion of the match we are completing
-            display_token_index = 0
-            if prefix_tokens:
-                display_token_index = len(prefix_tokens) - 1
+        # Calculate what portion of the match we are completing
+        display_token_index = 0
+        if prefix_tokens:
+            display_token_index = len(prefix_tokens) - 1
 
-            # Get this portion for each match and store them in self.display_matches
-            for cur_match in matches:
-                match_tokens = cur_match.split(delimiter)
-                display_token = match_tokens[display_token_index]
+        # Remove from each match everything after where the user is completing.
+        # This approach can result in duplicates so we will filter those out.
+        unique_results: dict[str, str] = {}
 
-                if not display_token:
-                    display_token = delimiter
-                self.display_matches.append(display_token)
+        for cur_match in matches:
+            match_tokens = cur_match.split(delimiter)
 
-        return matches
+            filtered_match = delimiter.join(match_tokens[: display_token_index + 1])
+            display_match = match_tokens[display_token_index]
+
+            # If there are more tokens, then we aren't done completing a full item
+            if len(match_tokens) > display_token_index + 1:
+                filtered_match += delimiter
+                display_match += delimiter
+                self.allow_appended_space = False
+                self.allow_closing_quote = False
+
+            if filtered_match not in unique_results:
+                unique_results[filtered_match] = display_match
+
+        filtered_matches = list(unique_results.keys())
+        self.display_matches = list(unique_results.values())
+
+        return filtered_matches
 
     def flag_based_complete(
         self,
@@ -5620,7 +5643,7 @@ class Cmd:
 
         :param command: the command being enabled
         """
-        # If the commands is already enabled, then return
+        # If the command is already enabled, then return
         if command not in self.disabled_commands:
             return
 
@@ -5652,10 +5675,16 @@ class Cmd:
 
         :param category: the category to enable
         """
+        # If the category is already enabled, then return
+        if category not in self.disabled_categories:
+            return
+
         for cmd_name in list(self.disabled_commands):
             func = self.disabled_commands[cmd_name].command_function
             if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.enable_command(cmd_name)
+
+        del self.disabled_categories[category]
 
     def disable_command(self, command: str, message_to_print: str) -> None:
         """Disable a command and overwrite its functions.
@@ -5667,7 +5696,7 @@ class Cmd:
                                  command being disabled.
                                  ex: message_to_print = f"{cmd2.COMMAND_NAME} is currently disabled"
         """
-        # If the commands is already disabled, then return
+        # If the command is already disabled, then return
         if command in self.disabled_commands:
             return
 
@@ -5706,12 +5735,18 @@ class Cmd:
                                  of the command being disabled.
                                  ex: message_to_print = f"{cmd2.COMMAND_NAME} is currently disabled"
         """
+        # If the category is already disabled, then return
+        if category in self.disabled_categories:
+            return
+
         all_commands = self.get_all_commands()
 
         for cmd_name in all_commands:
             func = self.cmd_func(cmd_name)
             if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.disable_command(cmd_name, message_to_print)
+
+        self.disabled_categories[category] = message_to_print
 
     def _report_disabled_command_usage(self, *_args: Any, message_to_print: str, **_kwargs: Any) -> None:
         """Report when a disabled command has been run or had help called on it.

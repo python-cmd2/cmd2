@@ -716,19 +716,53 @@ def test_basic_completion_nomatch(cmd2_app) -> None:
     assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
 
-def test_delimiter_completion(cmd2_app) -> None:
+def test_delimiter_completion_partial(cmd2_app) -> None:
+    """Test that a delimiter is added when an item has not been fully completed"""
     text = '/home/'
-    line = f'run_script {text}'
+    line = f'command {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
-    cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
+    matches = cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
 
-    # Remove duplicates from display_matches and sort it. This is typically done in complete().
-    display_list = utils.remove_duplicates(cmd2_app.display_matches)
-    display_list = utils.alphabetical_sort(display_list)
+    # All matches end with the delimiter
+    matches.sort(key=cmd2_app.default_sort_key)
+    expected_matches = sorted(["/home/other user/", "/home/user/"], key=cmd2_app.default_sort_key)
 
-    assert display_list == ['other user', 'user']
+    cmd2_app.display_matches.sort(key=cmd2_app.default_sort_key)
+    expected_display = sorted(["other user/", "user/"], key=cmd2_app.default_sort_key)
+
+    assert matches == expected_matches
+    assert cmd2_app.display_matches == expected_display
+
+
+def test_delimiter_completion_full(cmd2_app) -> None:
+    """Test that no delimiter is added when an item has been fully completed"""
+    text = '/home/other user/'
+    line = f'command {text}'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    matches = cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
+
+    # No matches end with the delimiter
+    matches.sort(key=cmd2_app.default_sort_key)
+    expected_matches = sorted(["/home/other user/maps", "/home/other user/tests"], key=cmd2_app.default_sort_key)
+
+    cmd2_app.display_matches.sort(key=cmd2_app.default_sort_key)
+    expected_display = sorted(["maps", "tests"], key=cmd2_app.default_sort_key)
+
+    assert matches == expected_matches
+    assert cmd2_app.display_matches == expected_display
+
+
+def test_delimiter_completion_nomatch(cmd2_app) -> None:
+    text = '/nothing_to_see'
+    line = f'command {text}'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/') == []
 
 
 def test_flag_based_completion_single(cmd2_app) -> None:
@@ -966,53 +1000,43 @@ def test_add_opening_quote_delimited_no_text(cmd2_app) -> None:
     begidx = endidx - len(text)
 
     # Any match has a space, so opening quotes are added to all
+    expected_matches = sorted(['"/home/other user/', '"/home/user/'], key=cmd2_app.default_sort_key)
+    expected_display = sorted(["other user/", "user/"], key=cmd2_app.default_sort_key)
+
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None
-    expected = [
-        '"/home/other user/maps',
-        '"/home/other user/tests',
-        '"/home/user/file space.txt',
-        '"/home/user/file.txt',
-        '"/home/user/prog.c',
-    ]
-    assert cmd2_app.completion_matches == expected
+    assert cmd2_app.completion_matches == expected_matches
+    assert cmd2_app.display_matches == expected_display
 
 
-def test_add_opening_quote_delimited_nothing_added(cmd2_app) -> None:
-    text = '/ho'
+def test_add_opening_quote_delimited_root_portion(cmd2_app) -> None:
+    text = '/home/'
     line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     # Any match has a space, so opening quotes are added to all
+    expected_matches = sorted(['"/home/other user/', '"/home/user/'], key=cmd2_app.default_sort_key)
+    expected_display = sorted(['other user/', 'user/'], key=cmd2_app.default_sort_key)
+
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None
-
-    expected_matches = [
-        '"/home/other user/maps',
-        '"/home/other user/tests',
-        '"/home/user/file space.txt',
-        '"/home/user/file.txt',
-        '"/home/user/prog.c',
-    ]
-    expected_display = sorted(['other user', 'user'], key=cmd2_app.default_sort_key)
-
     assert cmd2_app.completion_matches == expected_matches
     assert cmd2_app.display_matches == expected_display
 
 
-def test_add_opening_quote_delimited_quote_added(cmd2_app) -> None:
+def test_add_opening_quote_delimited_final_portion(cmd2_app) -> None:
     text = '/home/user/fi'
     line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_common_prefix = '"/home/user/file'
+    # Any match has a space, so opening quotes are added to all
+    expected_matches = sorted(['"/home/user/file.txt"', '"/home/user/file space.txt"'], key=cmd2_app.default_sort_key)
     expected_display = sorted(['file.txt', 'file space.txt'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None
-    assert os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix
     assert cmd2_app.display_matches == expected_display
 
 
@@ -1033,7 +1057,7 @@ def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app) -> None:
 
 
 def test_add_opening_quote_delimited_space_in_prefix(cmd2_app) -> None:
-    # This test when a space appears before the part of the string that is the display match
+    # This tests when a space appears before the part of the string that is the display match
     text = '/home/oth'
     line = f'test_delimited {text}'
     endidx = len(line)
