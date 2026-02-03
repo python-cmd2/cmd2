@@ -42,14 +42,6 @@ class Cmd2Completer(Completer):
         self.cmd_app = cmd_app
         self.custom_settings = custom_settings
 
-        # Define delimiters for completion to match cmd2/readline behavior
-        delimiters = BASE_DELIMITERS
-        if hasattr(self.cmd_app, 'statement_parser'):
-            delimiters += "".join(self.cmd_app.statement_parser.terminators)
-
-        # Regex pattern for a word: one or more characters that are NOT delimiters
-        self.word_pattern = re.compile(f"[^{re.escape(delimiters)}]+")
-
     def get_completions(self, document: Document, _complete_event: object) -> Iterable[Completion]:
         """Get completions for the current input."""
         # Find the beginning of the current word based on delimiters
