@@ -2,6 +2,7 @@
 
 - Bug Fixes
     - Fixed issue where `delimiter_complete()` could cause more matches than display matches
+    - Fixed issue where `CommandSet` registration did not respect disabled categories
 
 ## 3.1.2 (January 26, 2026)
 

@@ -20,6 +20,7 @@ from cmd2 import (
     COMMAND_NAME,
     Cmd2Style,
     Color,
+    CommandSet,
     RichPrintKwargs,
     clipboard,
     constants,
@@ -3106,6 +3107,16 @@ class DisableCommandsApp(cmd2.Cmd):
         self.poutput("The real has_no_helper_funcs")
 
 
+class DisableCommandSet(CommandSet):
+    """Test registering a command which is in a disabled category"""
+
+    category_name = "CommandSet Test Category"
+
+    @cmd2.with_category(category_name)
+    def do_new_command(self, arg) -> None:
+        self._cmd.poutput("CommandSet function is enabled")
+
+
 @pytest.fixture
 def disable_commands_app():
     return DisableCommandsApp()
@@ -3209,7 +3220,7 @@ def test_enable_enabled_command(disable_commands_app) -> None:
     saved_len = len(disable_commands_app.disabled_commands)
     disable_commands_app.enable_command('has_helper_funcs')
 
-    # The number of disabled_commands should not have changed
+    # The number of disabled commands should not have changed
     assert saved_len == len(disable_commands_app.disabled_commands)
 
 
@@ -3223,7 +3234,7 @@ def test_disable_command_twice(disable_commands_app) -> None:
     message_to_print = 'These commands are currently disabled'
     disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
-    # The length of disabled_commands should have increased one
+    # The number of disabled commands should have increased one
     new_len = len(disable_commands_app.disabled_commands)
     assert saved_len == new_len - 1
     saved_len = new_len
@@ -3249,6 +3260,50 @@ def test_disabled_message_command_name(disable_commands_app) -> None:
 
     _out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
     assert err[0].startswith('has_helper_funcs is currently disabled')
+
+
+def test_register_command_in_enabled_category(disable_commands_app) -> None:
+    disable_commands_app.enable_category(DisableCommandSet.category_name)
+    cs = DisableCommandSet()
+    disable_commands_app.register_command_set(cs)
+
+    out, _err = run_cmd(disable_commands_app, 'new_command')
+    assert out[0] == "CommandSet function is enabled"
+
+
+def test_register_command_in_disabled_category(disable_commands_app) -> None:
+    message_to_print = "CommandSet function is disabled"
+    disable_commands_app.disable_category(DisableCommandSet.category_name, message_to_print)
+    cs = DisableCommandSet()
+    disable_commands_app.register_command_set(cs)
+
+    _out, err = run_cmd(disable_commands_app, 'new_command')
+    assert err[0] == message_to_print
+
+
+def test_enable_enabled_category(disable_commands_app) -> None:
+    # Test enabling a category that is not disabled
+    saved_len = len(disable_commands_app.disabled_categories)
+    disable_commands_app.enable_category('Test Category')
+
+    # The number of disabled categories should not have changed
+    assert saved_len == len(disable_commands_app.disabled_categories)
+
+
+def test_disable_category_twice(disable_commands_app) -> None:
+    saved_len = len(disable_commands_app.disabled_categories)
+    message_to_print = 'These commands are currently disabled'
+    disable_commands_app.disable_category('Test Category', message_to_print)
+
+    # The number of disabled categories should have increased one
+    new_len = len(disable_commands_app.disabled_categories)
+    assert saved_len == new_len - 1
+    saved_len = new_len
+
+    # Disable again and the length should not change
+    disable_commands_app.disable_category('Test Category', message_to_print)
+    new_len = len(disable_commands_app.disabled_categories)
+    assert saved_len == new_len
 
 
 @pytest.mark.parametrize('silence_startup_script', [True, False])
