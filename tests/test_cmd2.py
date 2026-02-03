@@ -3220,7 +3220,7 @@ def test_enable_enabled_command(disable_commands_app) -> None:
     saved_len = len(disable_commands_app.disabled_commands)
     disable_commands_app.enable_command('has_helper_funcs')
 
-    # The number of disabled_commands should not have changed
+    # The number of disabled commands should not have changed
     assert saved_len == len(disable_commands_app.disabled_commands)
 
 
@@ -3234,7 +3234,7 @@ def test_disable_command_twice(disable_commands_app) -> None:
     message_to_print = 'These commands are currently disabled'
     disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
-    # The length of disabled_commands should have increased one
+    # The number of disabled commands should have increased one
     new_len = len(disable_commands_app.disabled_commands)
     assert saved_len == new_len - 1
     saved_len = new_len
@@ -3279,6 +3279,31 @@ def test_register_command_in_disabled_category(disable_commands_app) -> None:
 
     _out, err = run_cmd(disable_commands_app, 'new_command')
     assert err[0] == message_to_print
+
+
+def test_enable_enabled_category(disable_commands_app) -> None:
+    # Test enabling a category that is not disabled
+    saved_len = len(disable_commands_app.disabled_categories)
+    disable_commands_app.enable_category('Test Category')
+
+    # The number of disabled categories should not have changed
+    assert saved_len == len(disable_commands_app.disabled_categories)
+
+
+def test_disable_category_twice(disable_commands_app) -> None:
+    saved_len = len(disable_commands_app.disabled_categories)
+    message_to_print = 'These commands are currently disabled'
+    disable_commands_app.disable_category('Test Category', message_to_print)
+
+    # The number of disabled categories should have increased one
+    new_len = len(disable_commands_app.disabled_categories)
+    assert saved_len == new_len - 1
+    saved_len = new_len
+
+    # Disable again and the length should not change
+    disable_commands_app.disable_category('Test Category', message_to_print)
+    new_len = len(disable_commands_app.disabled_categories)
+    assert saved_len == new_len
 
 
 @pytest.mark.parametrize('silence_startup_script', [True, False])
