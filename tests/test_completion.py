@@ -1032,11 +1032,12 @@ def test_add_opening_quote_delimited_final_portion(cmd2_app) -> None:
     begidx = endidx - len(text)
 
     # Any match has a space, so opening quotes are added to all
-    expected_matches = sorted(['"/home/user/file.txt"', '"/home/user/file space.txt"'], key=cmd2_app.default_sort_key)
+    expected_matches = sorted(['"/home/user/file.txt', '"/home/user/file space.txt'], key=cmd2_app.default_sort_key)
     expected_display = sorted(['file.txt', 'file space.txt'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None
+    assert cmd2_app.completion_matches == expected_matches
     assert cmd2_app.display_matches == expected_display
 
 
