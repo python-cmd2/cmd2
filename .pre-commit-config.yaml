@@ -9,7 +9,7 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.14.14"
+    rev: "v0.15.0"
     hooks:
       - id: ruff-format
         args: [--config=ruff.toml]
@@ -21,5 +21,5 @@ repos:
     hooks:
       - id: prettier
         additional_dependencies:
-          - prettier@3.8.0
+          - prettier@3.8.1
           - prettier-plugin-toml@2.0.6

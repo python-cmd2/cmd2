@@ -758,9 +758,11 @@ class Cmd:
             list[tuple[str, Callable[..., Any]]],
             inspect.getmembers(
                 cmdset,
-                predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, '__name__')
-                and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
+                predicate=lambda meth: (  # type: ignore[arg-type]
+                    isinstance(meth, Callable)  # type: ignore[arg-type]
+                    and hasattr(meth, '__name__')
+                    and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+                ),
             ),
         )
 
@@ -913,9 +915,11 @@ class Cmd:
 
             methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
                 cmdset,
-                predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, '__name__')
-                and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
+                predicate=lambda meth: (  # type: ignore[arg-type]
+                    isinstance(meth, Callable)  # type: ignore[arg-type]
+                    and hasattr(meth, '__name__')
+                    and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+                ),
             )
 
             for cmd_func_name, command_method in methods:
@@ -959,9 +963,11 @@ class Cmd:
 
         methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
-            and hasattr(meth, '__name__')
-            and meth.__name__.startswith(COMMAND_FUNC_PREFIX),
+            predicate=lambda meth: (  # type: ignore[arg-type]
+                isinstance(meth, Callable)  # type: ignore[arg-type]
+                and hasattr(meth, '__name__')
+                and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+            ),
         )
 
         for cmd_func_name, command_method in methods:
@@ -983,10 +989,12 @@ class Cmd:
         # find methods that have the required attributes necessary to be recognized as a sub-command
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
-            and hasattr(meth, constants.SUBCMD_ATTR_NAME)
-            and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
-            and hasattr(meth, constants.CMD_ATTR_ARGPARSER),
+            predicate=lambda meth: (
+                isinstance(meth, Callable)  # type: ignore[arg-type]
+                and hasattr(meth, constants.SUBCMD_ATTR_NAME)
+                and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
+                and hasattr(meth, constants.CMD_ATTR_ARGPARSER)
+            ),
         )
 
         # iterate through all matching methods
@@ -1072,10 +1080,12 @@ class Cmd:
         # find methods that have the required attributes necessary to be recognized as a sub-command
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: isinstance(meth, Callable)  # type: ignore[arg-type]
-            and hasattr(meth, constants.SUBCMD_ATTR_NAME)
-            and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
-            and hasattr(meth, constants.CMD_ATTR_ARGPARSER),
+            predicate=lambda meth: (
+                isinstance(meth, Callable)  # type: ignore[arg-type]
+                and hasattr(meth, constants.SUBCMD_ATTR_NAME)
+                and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
+                and hasattr(meth, constants.CMD_ATTR_ARGPARSER)
+            ),
         )
 
         # iterate through all matching methods
@@ -2262,7 +2272,7 @@ class Cmd:
             # Otherwise use pyreadline3's formatter
             else:
                 # Check if we should show display_matches
-                matches_to_display = self.display_matches if self.display_matches else matches
+                matches_to_display = self.display_matches or matches
 
                 # Add padding for visual appeal
                 matches_to_display, _ = self._pad_matches_to_display(matches_to_display)

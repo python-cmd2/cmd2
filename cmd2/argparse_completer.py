@@ -539,7 +539,7 @@ class ArgparseCompleter:
         # Check if there are too many CompletionItems to display as a table
         if len(completions) <= self._cmd2_app.max_completion_items:
             # If a metavar was defined, use that instead of the dest field
-            destination = arg_state.action.metavar if arg_state.action.metavar else arg_state.action.dest
+            destination = arg_state.action.metavar or arg_state.action.dest
 
             # Handle case where metavar was a tuple
             if isinstance(destination, tuple):
