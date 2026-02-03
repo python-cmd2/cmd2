@@ -1,7 +1,6 @@
 """Shared utility functions."""
 
 import argparse
-import collections
 import contextlib
 import functools
 import glob
@@ -192,10 +191,7 @@ def remove_duplicates(list_to_prune: list[_T]) -> list[_T]:
     :param list_to_prune: the list being pruned of duplicates
     :return: The pruned list
     """
-    temp_dict: collections.OrderedDict[_T, Any] = collections.OrderedDict()
-    for item in list_to_prune:
-        temp_dict[item] = None
-
+    temp_dict = dict.fromkeys(list_to_prune)
     return list(temp_dict.keys())
 
 
