@@ -137,5 +137,4 @@ will know what's available.
 
 ## Examples
 
-See [cmd2 Plugin Template](https://github.com/python-cmd2/cmd2/tree/main/plugins/template) for more
-info.
+See [cmd2 Plugin Template](https://github.com/python-cmd2/cmd2-plugin-template) for more info.

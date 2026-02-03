@@ -17,8 +17,8 @@ applications, then creating a mixin class to encapsulate this behavior can be a 
 one way to extend `cmd2` by relying on multiple inheritance. It is quick and easy, but there are
 some potential pitfalls you should be aware of so you know how to do it correctly.
 
-The [mixins.py](https://github.com/python-cmd2/cmd2/blob/main/examples/mixins.py) example is a
-general example that shows you how you can develop a mixin class for `cmd2` applicaitons. In the
+The [mixins.py](https://github.com/python-cmd2/cmd2/blob/main/examples/mixin.py) example is a
+general example that shows you how you can develop a mixin class for `cmd2` applications. In the
 past we have referred to these as "Plugins", but in retrospect that probably isn't the best name for
 them. They are generally mixin classes that add some extra functionality to your class which
 inherits from [cmd2.Cmd][].
@@ -132,8 +132,8 @@ Hooks are a much better approach.
 
 Mixins can register hooks, which are called by `cmd2.Cmd` during various points in the application
 and command processing lifecycle. Mixins should not override any of the legacy `cmd` hook methods,
-instead they should register their hooks as
-[described](https://cmd2.readthedocs.io/en/latest/hooks.html) in the `cmd2` documentation.
+instead they should register their hooks as [described](../features/hooks.md) in the `cmd2`
+documentation.
 
 You should name your hooks so that they begin with the name of your mixin. Hook methods get mixed
 into the `cmd2` application and this naming convention helps avoid unintentional method overriding.
@@ -159,9 +159,8 @@ class MyMixin:
 Registration allows multiple mixins (or even the application itself) to each inject code to be
 called during the application or command processing lifecycle.
 
-See the [cmd2 hook documentation](https://cmd2.readthedocs.io/en/latest/hooks.html) for full details
-of the application and command lifecycle, including all available hooks and the ways hooks can
-influence the lifecycle.
+See the [cmd2 hook documentation](../features/hooks.md) for full details of the application and
+command lifecycle, including all available hooks and the ways hooks can influence the lifecycle.
 
 ### Classes and Functions
 
