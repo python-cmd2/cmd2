@@ -63,9 +63,11 @@ def with_default_category(category: str, *, heritable: bool = True) -> Callable[
         # 3. Must be a member of the class being decorated and not one inherited from a parent declaration
         methods = inspect.getmembers(
             cls,
-            predicate=lambda meth: inspect.isfunction(meth)
-            and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
-            and meth in inspect.getmro(cls)[0].__dict__.values(),
+            predicate=lambda meth: (
+                inspect.isfunction(meth)
+                and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+                and meth in inspect.getmro(cls)[0].__dict__.values()
+            ),
         )
         category_decorator = with_category(category)
         for method in methods:

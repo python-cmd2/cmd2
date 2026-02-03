@@ -524,7 +524,7 @@ class ArgparseCompleter:
 
             self._cmd2_app.display_matches.append(flag_text)
             # Use the first option string as the completion result for this action
-            results.append(CompletionItem(option_strings[0], [action.help if action.help else '']))
+            results.append(CompletionItem(option_strings[0], [action.help or '']))
         return results
 
     def _format_completions(self, arg_state: _ArgumentState, completions: list[str] | list[CompletionItem]) -> list[str]:
@@ -556,7 +556,7 @@ class ArgparseCompleter:
                 return cast(list[str], completions)
 
             # If a metavar was defined, use that instead of the dest field
-            destination = arg_state.action.metavar if arg_state.action.metavar else arg_state.action.dest
+            destination = arg_state.action.metavar or arg_state.action.dest
 
             # Handle case where metavar was a tuple
             if isinstance(destination, tuple):
@@ -653,7 +653,7 @@ class ArgparseCompleter:
                 for action in arg_state.action._choices_actions:
                     if action.dest in arg_state.action.choices:
                         subparser = arg_state.action.choices[action.dest]
-                        parser_help[subparser] = action.help if action.help else ''
+                        parser_help[subparser] = action.help or ''
                 for name, subparser in arg_state.action.choices.items():
                     items.append(CompletionItem(name, [parser_help.get(subparser, '')]))
                 arg_choices = items
