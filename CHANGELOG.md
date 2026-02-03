@@ -47,7 +47,7 @@ shell, and the option for a persistent bottom bar that can display realtime stat
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
 
-## 3.1.3 (TBD)
+## 3.1.3 (February 3, 2026)
 
 - Bug Fixes
     - Fixed issue where `delimiter_complete()` could cause more matches than display matches
