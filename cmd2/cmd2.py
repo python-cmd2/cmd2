@@ -1757,31 +1757,45 @@ class Cmd:
         :return: a list of possible tab completions
         """
         matches = self.basic_complete(text, line, begidx, endidx, match_against)
+        if not matches:
+            return []
 
-        # Display only the portion of the match that's being completed based on delimiter
-        if matches:
-            # Set this to True for proper quoting of matches with spaces
-            self.matches_delimited = True
+        # Set this to True for proper quoting of matches with spaces
+        self.matches_delimited = True
 
-            # Get the common beginning for the matches
-            common_prefix = os.path.commonprefix(matches)
-            prefix_tokens = common_prefix.split(delimiter)
+        # Get the common beginning for the matches
+        common_prefix = os.path.commonprefix(matches)
+        prefix_tokens = common_prefix.split(delimiter)
 
-            # Calculate what portion of the match we are completing
-            display_token_index = 0
-            if prefix_tokens:
-                display_token_index = len(prefix_tokens) - 1
+        # Calculate what portion of the match we are completing
+        display_token_index = 0
+        if prefix_tokens:
+            display_token_index = len(prefix_tokens) - 1
 
-            # Get this portion for each match and store them in self.display_matches
-            for cur_match in matches:
-                match_tokens = cur_match.split(delimiter)
-                display_token = match_tokens[display_token_index]
+        # Remove from each match everything after where the user is completing.
+        # This approach can result in duplicates so we will filter those out.
+        unique_results: dict[str, str] = {}
 
-                if not display_token:
-                    display_token = delimiter
-                self.display_matches.append(display_token)
+        for cur_match in matches:
+            match_tokens = cur_match.split(delimiter)
 
-        return matches
+            filtered_match = delimiter.join(match_tokens[: display_token_index + 1])
+            display_match = match_tokens[display_token_index]
+
+            # If there are more tokens, then we aren't done completing a full item
+            if len(match_tokens) > display_token_index + 1:
+                filtered_match += delimiter
+                display_match += delimiter
+                self.allow_appended_space = False
+                self.allow_closing_quote = False
+
+            if filtered_match not in unique_results:
+                unique_results[filtered_match] = display_match
+
+        filtered_matches = list(unique_results.keys())
+        self.display_matches = list(unique_results.values())
+
+        return filtered_matches
 
     def flag_based_complete(
         self,

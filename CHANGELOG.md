@@ -1,3 +1,8 @@
+## 3.1.3 (TBD)
+
+- Bug Fixes
+    - Fixed issue where `delimiter_complete()` could cause more matches than display matches
+
 ## 3.1.2 (January 26, 2026)
 
 - Bug Fixes
