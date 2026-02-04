@@ -167,7 +167,7 @@ class TestCmd2Completer:
 
         # Verify cmd_app.complete was called correctly
         # begidx = cursor_position - len(text) = 11 - 3 = 8
-        mock_cmd_app.complete.assert_called_once_with(text, 0, line=line, begidx=8, endidx=11, custom_settings=None)
+        mock_cmd_app.complete.assert_called_once_with(text, line=line, begidx=8, endidx=11, custom_settings=None)
 
         # Verify completions
         assert len(completions) == 2
@@ -320,7 +320,7 @@ class TestCmd2Completer:
         list(completer.get_completions(document, None))
 
         # text should be "arg", begidx=4, endidx=7
-        mock_cmd_app.complete.assert_called_with("arg", 0, line="cmd#arg", begidx=4, endidx=7, custom_settings=None)
+        mock_cmd_app.complete.assert_called_with("arg", line="cmd#arg", begidx=4, endidx=7, custom_settings=None)
 
 
 class TestCmd2History:

@@ -3722,12 +3722,6 @@ def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypa
     poutput_mock.assert_called_with('^C')
 
 
-def test_complete_optional_args_defaults(base_app) -> None:
-    # Test that complete can be called with just text and state
-    complete_val = base_app.complete('test', 0)
-    assert complete_val is None
-
-
 def test_prompt_session_init_no_console_error(monkeypatch):
     from prompt_toolkit.shortcuts import PromptSession
 

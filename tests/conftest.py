@@ -144,7 +144,7 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app: cmd2.Cm
         return endidx
 
     # Run the prompt-toolkit tab completion function with mocks in place
-    res = app.complete(text, 0, line, begidx, endidx)
+    res = app.complete(text, line, begidx, endidx)
 
     # If the completion resulted in a hint being set, then print it now
     # so that it can be captured by tests using capsys.

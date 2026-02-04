@@ -63,9 +63,8 @@ class Cmd2Completer(Completer):
         endidx = cursor_pos
         text = line[begidx:endidx]
 
-        # Call cmd2's complete method.
-        # We pass state=0 to trigger the completion calculation.
-        self.cmd_app.complete(text, 0, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings)
+        # Call cmd2's complete method
+        self.cmd_app.complete(text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings)
 
         # Print formatted completions (tables) above the prompt if present
         if self.cmd_app.formatted_completions:

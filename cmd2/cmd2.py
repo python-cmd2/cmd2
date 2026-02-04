@@ -394,7 +394,7 @@ class Cmd:
         else:
             self.stdout = sys.stdout
 
-        # Key used for tab completion
+        # Key used for completion
         self.completekey = completekey
         key_bindings = None
         if self.completekey != self.DEFAULT_COMPLETEKEY:
@@ -424,7 +424,7 @@ class Cmd:
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
         self.timing = False  # Prints elapsed time for each command
 
-        # The maximum number of CompletionItems to display during tab completion. If the number of completion
+        # The maximum number of CompletionItems to display during completion. If the number of completion
         # suggestions exceeds this number, they will be displayed in the typical columnized format and will
         # not include the description value of the CompletionItems.
         self.max_completion_items: int = 50
@@ -449,7 +449,7 @@ class Cmd:
         # Allow access to your application in embedded Python shells and pyscripts via self
         self.self_in_py = False
 
-        # Commands to exclude from the help menu and tab completion
+        # Commands to exclude from the help menu and completion
         self.hidden_commands = ['eof', '_relative_run_script']
 
         # Initialize history from a persistent history file (if present)
@@ -538,7 +538,7 @@ class Cmd:
         # Used to keep track of whether a continuation prompt is being displayed
         self._at_continuation_prompt = False
 
-        # The multiline command currently being typed which is used to tab complete multiline commands.
+        # The multiline command currently being typed which is used to complete multiline commands.
         self._multiline_in_progress = ''
 
         # Characters used to draw a horizontal rule. Should not be blank.
@@ -648,11 +648,11 @@ class Cmd:
         # cmd2 uses this key for sorting:
         #     command and category names
         #     alias, macro, settable, and shortcut names
-        #     tab completion results when self.matches_sorted is False
+        #     completion results when self.matches_sorted is False
         self.default_sort_key: Callable[[str], str] = Cmd.ALPHABETICAL_SORT_KEY
 
         ############################################################################################################
-        # The following variables are used by tab completion functions. They are reset each time complete() is run
+        # The following variables are used by completion functions. They are reset each time complete() is run
         # in _reset_completion_defaults() and it is up to completer functions to set them before returning results.
         ############################################################################################################
 
@@ -664,22 +664,22 @@ class Cmd:
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
-        # An optional hint which prints above tab completion suggestions
+        # An optional hint which prints above completion suggestions
         self.completion_hint: str = ''
 
         # Normally cmd2 uses prompt-toolkit's formatter to columnize the list of completion suggestions.
         # If a custom format is preferred, write the formatted completions to this string. cmd2 will
         # then print it instead of the prompt-toolkit format. ANSI style sequences and newlines are supported
         # when using this value. Even when using formatted_completions, the full matches must still be returned
-        # from your completer function. ArgparseCompleter writes its tab completion tables to this string.
+        # from your completer function. ArgparseCompleter writes its completion tables to this string.
         self.formatted_completions: str = ''
 
-        # Used by complete() for prompt-toolkit tab completion
+        # Used by complete() for prompt-toolkit completion
         self.completion_matches: list[str] = []
 
-        # Use this list if you need to display tab completion suggestions that are different than the actual text
+        # Use this list if you need to display completion suggestions that are different than the actual text
         # of the matches. For instance, if you are completing strings that contain a common delimiter and you only
-        # want to display the final portion of the matches as the tab completion suggestions. The full matches
+        # want to display the final portion of the matches as the completion suggestions. The full matches
         # still must be returned from your completer function. For an example, look at path_complete() which
         # uses this to show only the basename of paths as the suggestions. delimiter_complete() also populates
         # this list. These are ignored if self.formatted_completions is populated.
@@ -1222,7 +1222,7 @@ class Cmd:
         """Create the dictionary of user-settable parameters."""
 
         def get_allow_style_choices(_cli_self: Cmd) -> list[str]:
-            """Tab complete allow_style values."""
+            """Complete allow_style values."""
             return [val.name.lower() for val in ru.AllowStyle]
 
         def allow_style_type(value: str) -> ru.AllowStyle:
@@ -1246,14 +1246,14 @@ class Cmd:
         )
 
         self.add_settable(
-            Settable('always_show_hint', bool, 'Display tab completion hint even when completion suggestions print', self)
+            Settable('always_show_hint', bool, 'Display completion hint even when completion suggestions print', self)
         )
         self.add_settable(Settable('debug', bool, "Show full traceback on exception", self))
         self.add_settable(Settable('echo', bool, "Echo command issued into output", self))
         self.add_settable(Settable('editor', str, "Program used by 'edit'", self))
         self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|' and '>' results", self))
         self.add_settable(
-            Settable('max_completion_items', int, "Maximum number of CompletionItems to display during tab completion", self)
+            Settable('max_completion_items', int, "Maximum number of CompletionItems to display during completion", self)
         )
         self.add_settable(
             Settable(
@@ -1280,7 +1280,7 @@ class Cmd:
         ru.ALLOW_STYLE = new_val
 
     def _completion_supported(self) -> bool:
-        """Return whether tab completion is supported."""
+        """Return whether completion is supported."""
         return self.use_rawinput and bool(self.completekey)
 
     @property
@@ -1706,12 +1706,12 @@ class Cmd:
                 rich_print_kwargs=rich_print_kwargs,
             )
 
-    # -----  Methods related to tab completion -----
+    # -----  Methods related to completion -----
 
     def _reset_completion_defaults(self) -> None:
-        """Reset tab completion settings.
+        """Reset completion settings.
 
-        Needs to be called each time prompt-toolkit runs tab completion.
+        Needs to be called each time prompt-toolkit runs completion.
         """
         self.allow_appended_space = True
         self.allow_closing_quote = True
@@ -1769,14 +1769,14 @@ class Cmd:
         return None
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> tuple[list[str], list[str]]:
-        """Get all tokens through the one being completed, used by tab completion functions.
+        """Get all tokens through the one being completed, used by completion functions.
 
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
         :return: A 2 item tuple where the items are
                  **On Success**
-                 - tokens: list of unquoted tokens - this is generally the list needed for tab completion functions
+                 - tokens: list of unquoted tokens - this is generally the list needed for completion functions
                  - raw_tokens: list of tokens with any quotes preserved = this can be used to know if a token was quoted
                  or is missing a closing quote
                  Both lists are guaranteed to have at least 1 item. The last item in both lists is the token being tab
@@ -1840,7 +1840,7 @@ class Cmd:
         endidx: int,  # noqa: ARG002
         match_against: Iterable[str],
     ) -> list[str]:
-        """Tab completion function that matches against a list of strings without considering line contents or cursor position.
+        """Completion function that matches against a list of strings without considering line contents or cursor position.
 
         The args required by this function are defined in the header of Python's cmd.py.
 
@@ -1849,7 +1849,7 @@ class Cmd:
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
         :param match_against: the strings being matched against
-        :return: a list of possible tab completions
+        :return: a list of possible completions
         """
         return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
@@ -1862,14 +1862,14 @@ class Cmd:
         match_against: Iterable[str],
         delimiter: str,
     ) -> list[str]:
-        """Perform tab completion against a list but each match is split on a delimiter.
+        """Perform completion against a list but each match is split on a delimiter.
 
-        Only the portion of the match being tab completed is shown as the completion suggestions.
+        Only the portion of the match being completed is shown as the completion suggestions.
         This is useful if you match against strings that are hierarchical in nature and have a
         common delimiter.
 
         An easy way to illustrate this concept is path completion since paths are just directories/files
-        delimited by a slash. If you are tab completing items in /home/user you don't get the following
+        delimited by a slash. If you are completing items in /home/user you don't get the following
         as suggestions:
 
         /home/user/file.txt     /home/user/program.c
@@ -1892,7 +1892,7 @@ class Cmd:
         :param endidx: the ending index of the prefix text
         :param match_against: the list being matched against
         :param delimiter: what delimits each portion of the matches (ex: paths are delimited by a slash)
-        :return: a list of possible tab completions
+        :return: a list of possible completions
         """
         matches = self.basic_complete(text, line, begidx, endidx, match_against)
         if not matches:
@@ -1945,20 +1945,20 @@ class Cmd:
         *,
         all_else: None | Iterable[str] | CompleterFunc = None,
     ) -> list[str]:
-        """Tab completes based on a particular flag preceding the token being completed.
+        """Completes based on a particular flag preceding the token being completed.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
         :param flag_dict: dictionary whose structure is the following:
-                          `keys` - flags (ex: -c, --create) that result in tab completion for the next argument in the
+                          `keys` - flags (ex: -c, --create) that result in completion for the next argument in the
                           command line
                           `values` - there are two types of values:
                           1. iterable list of strings to match against (dictionaries, lists, etc.)
-                          2. function that performs tab completion (ex: path_complete)
-        :param all_else: an optional parameter for tab completing any token that isn't preceded by a flag in flag_dict
-        :return: a list of possible tab completions
+                          2. function that performs completion (ex: path_complete)
+        :param all_else: an optional parameter for completing any token that isn't preceded by a flag in flag_dict
+        :return: a list of possible completions
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -1974,11 +1974,11 @@ class Cmd:
             if flag in flag_dict:
                 match_against = flag_dict[flag]
 
-        # Perform tab completion using an Iterable
+        # Perform completion using an Iterable
         if isinstance(match_against, Iterable):
             completions_matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
-        # Perform tab completion using a function
+        # Perform completion using a function
         elif callable(match_against):
             completions_matches = match_against(text, line, begidx, endidx)
 
@@ -1994,7 +1994,7 @@ class Cmd:
         *,
         all_else: Iterable[str] | CompleterFunc | None = None,
     ) -> list[str]:
-        """Tab completes based on a fixed position in the input string.
+        """Completes based on a fixed position in the input string.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -2005,9 +2005,9 @@ class Cmd:
                            completion
                            `values` - there are two types of values:
                            1. iterable list of strings to match against (dictionaries, lists, etc.)
-                           2. function that performs tab completion (ex: path_complete)
-        :param all_else: an optional parameter for tab completing any token that isn't at an index in index_dict
-        :return: a list of possible tab completions
+                           2. function that performs completion (ex: path_complete)
+        :param all_else: an optional parameter for completing any token that isn't at an index in index_dict
+        :return: a list of possible completions
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -2023,11 +2023,11 @@ class Cmd:
         match_against: Iterable[str] | CompleterFunc | None
         match_against = index_dict.get(index, all_else)
 
-        # Perform tab completion using a Iterable
+        # Perform completion using a Iterable
         if isinstance(match_against, Iterable):
             matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
-        # Perform tab completion using a function
+        # Perform completion using a function
         elif callable(match_against):
             matches = match_against(text, line, begidx, endidx)
 
@@ -2051,7 +2051,7 @@ class Cmd:
         :param path_filter: optional filter function that determines if a path belongs in the results
                             this function takes a path as its argument and returns True if the path should
                             be kept in the results
-        :return: a list of possible tab completions
+        :return: a list of possible completions
         """
 
         # Used to complete ~ and ~user strings
@@ -2159,7 +2159,7 @@ class Cmd:
 
             # Build display_matches and add a slash to directories
             for index, cur_match in enumerate(matches):
-                # Display only the basename of this path in the tab completion suggestions
+                # Display only the basename of this path in the completion suggestions
                 self.display_matches.append(os.path.basename(cur_match))
 
                 # Add a separator after directories if the next character isn't already a separator
@@ -2187,9 +2187,9 @@ class Cmd:
         :param endidx: the ending index of the prefix text
         :param complete_blank: If True, then a blank will complete all shell commands in a user's path. If False, then
                                no completion is performed. Defaults to False to match Bash shell behavior.
-        :return: a list of possible tab completions
+        :return: a list of possible completions
         """
-        # Don't tab complete anything if no shell command has been started
+        # Don't complete anything if no shell command has been started
         if not complete_blank and not text:
             return []
 
@@ -2203,9 +2203,9 @@ class Cmd:
         )
 
     def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: CompleterFunc) -> list[str]:
-        """First tab completion function for all commands, called by complete().
+        """First completion function for all commands, called by complete().
 
-        It determines if it should tab complete for redirection (|, >, >>) or use the
+        It determines if it should complete for redirection (|, >, >>) or use the
         completer function for the current command.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
@@ -2214,7 +2214,7 @@ class Cmd:
         :param endidx: the ending index of the prefix text
         :param compfunc: the completer function for the current command
                          this will be called if we aren't completing for redirection
-        :return: a list of possible tab completions
+        :return: a list of possible completions
         """
         # Get all tokens through the one being completed. We want the raw tokens
         # so we can tell if redirection strings are quoted and ignore them.
@@ -2257,7 +2257,7 @@ class Cmd:
                         in_pipe = False
                         in_file_redir = True
 
-                # Only tab complete after redirection tokens if redirection is allowed
+                # Only complete after redirection tokens if redirection is allowed
                 elif self.allow_redirection:
                     do_shell_completion = False
                     do_path_completion = False
@@ -2276,7 +2276,7 @@ class Cmd:
                 return self.path_complete(text, line, begidx, endidx)
 
             # If there were redirection strings anywhere on the command line, then we
-            # are no longer tab completing for the current command
+            # are no longer completing for the current command
             if has_redirection:
                 return []
 
@@ -2425,7 +2425,7 @@ class Cmd:
                 text = text_to_remove + text
                 begidx = actual_begidx
 
-        # Attempt tab completion for redirection first, and if that isn't occurring,
+        # Attempt completion for redirection first, and if that isn't occurring,
         # call the completer function for the current command
         self.completion_matches = self._redirect_complete(text, line, begidx, endidx, completer_func)
 
@@ -2446,7 +2446,7 @@ class Cmd:
             if not completion_token_quote:
                 add_quote = False
 
-                # This is the tab completion text that will appear on the command line.
+                # This is the completion text that will appear on the command line.
                 common_prefix = os.path.commonprefix(self.completion_matches)
 
                 if self.matches_delimited:
@@ -2455,7 +2455,7 @@ class Cmd:
                     if ' ' in common_prefix or any(' ' in match for match in self.display_matches):
                         add_quote = True
 
-                # If there is a tab completion and any match has a space, then add an opening quote
+                # If there is a completion and any match has a space, then add an opening quote
                 elif any(' ' in match for match in self.completion_matches):
                     add_quote = True
 
@@ -2465,7 +2465,7 @@ class Cmd:
 
                     self.completion_matches = [completion_token_quote + match for match in self.completion_matches]
 
-            # Check if we need to remove text from the beginning of tab completions
+            # Check if we need to remove text from the beginning of completions
             elif text_to_remove:
                 self.completion_matches = [match.replace(text_to_remove, '', 1) for match in self.completion_matches]
 
@@ -2476,112 +2476,94 @@ class Cmd:
     def complete(
         self,
         text: str,
-        state: int,
-        line: str | None = None,
-        begidx: int | None = None,
-        endidx: int | None = None,
+        line: str,
+        begidx: int,
+        endidx: int,
         custom_settings: utils.CustomCompletionSettings | None = None,
     ) -> str | None:
-        """Override of cmd's complete method which returns the next possible completion for 'text'.
-
-        This completer function is called by prompt-toolkit as complete(text, state), for state in 0, 1, 2, …,
-        until it returns a non-string value. It should return the next possible completion starting with text.
-
-        Since prompt-toolkit suppresses any exception raised in completer functions, they can be difficult to debug.
-        Therefore, this function wraps the actual tab completion logic and prints to stderr any exception that
-        occurs before returning control to prompt-toolkit.
+        """Handle completion for an input line.
 
         :param text: the current word that user is typing
-        :param state: non-negative integer
-        :param line: optional current input line
-        :param begidx: optional beginning index of text
-        :param endidx: optional ending index of text
-        :param custom_settings: used when not tab completing the main command line
+        :param line: current input line
+        :param begidx: beginning index of text
+        :param endidx: ending index of text
+        :param custom_settings: used when not completing the main command line
         :return: the next possible completion for text or None
         """
         try:
-            if state == 0:
-                self._reset_completion_defaults()
+            self._reset_completion_defaults()
 
-                # If line is provided, use it and indices. Otherwise fallback to empty (for safety)
-                if line is None:
-                    line = ""
-                if begidx is None:
-                    begidx = 0
-                if endidx is None:
-                    endidx = 0
+            # Check if we are completing a multiline command
+            if self._at_continuation_prompt:
+                # lstrip and prepend the previously typed portion of this multiline command
+                lstripped_previous = self._multiline_in_progress.lstrip()
+                line = lstripped_previous + line
 
-                # Check if we are completing a multiline command
-                if self._at_continuation_prompt:
-                    # lstrip and prepend the previously typed portion of this multiline command
-                    lstripped_previous = self._multiline_in_progress.lstrip()
-                    line = lstripped_previous + line
+                # Increment the indexes to account for the prepended text
+                begidx = len(lstripped_previous) + begidx
+                endidx = len(lstripped_previous) + endidx
+            else:
+                # lstrip the original line
+                orig_line = line
+                line = orig_line.lstrip()
+                num_stripped = len(orig_line) - len(line)
 
-                    # Increment the indexes to account for the prepended text
-                    begidx = len(lstripped_previous) + begidx
-                    endidx = len(lstripped_previous) + endidx
+                # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
+                # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
+                begidx = max(begidx - num_stripped, 0)
+                endidx = max(endidx - num_stripped, 0)
+
+            # Shortcuts are not word break characters when completing. Therefore, shortcuts become part
+            # of the text variable if there isn't a word break, like a space, after it. We need to remove it
+            # from text and update the indexes. This only applies if we are at the beginning of the command line.
+            shortcut_to_restore = ''
+            if begidx == 0 and custom_settings is None:
+                for shortcut, _ in self.statement_parser.shortcuts:
+                    if text.startswith(shortcut):
+                        # Save the shortcut to restore later
+                        shortcut_to_restore = shortcut
+
+                        # Adjust text and where it begins
+                        text = text[len(shortcut_to_restore) :]
+                        begidx += len(shortcut_to_restore)
+                        break
                 else:
-                    # lstrip the original line
-                    orig_line = line
-                    line = orig_line.lstrip()
-                    num_stripped = len(orig_line) - len(line)
+                    # No shortcut was found. Complete the command token.
+                    parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
+                    parser.add_argument(
+                        'command',
+                        metavar="COMMAND",
+                        help="command, alias, or macro name",
+                        choices=self._get_commands_aliases_and_macros_for_completion(),
+                        suppress_tab_hint=True,
+                    )
+                    custom_settings = utils.CustomCompletionSettings(parser)
 
-                    # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
-                    # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
-                    begidx = max(begidx - num_stripped, 0)
-                    endidx = max(endidx - num_stripped, 0)
+            self._perform_completion(text, line, begidx, endidx, custom_settings)
 
-                # Shortcuts are not word break characters when tab completing. Therefore, shortcuts become part
-                # of the text variable if there isn't a word break, like a space, after it. We need to remove it
-                # from text and update the indexes. This only applies if we are at the beginning of the command line.
-                shortcut_to_restore = ''
-                if begidx == 0 and custom_settings is None:
-                    for shortcut, _ in self.statement_parser.shortcuts:
-                        if text.startswith(shortcut):
-                            # Save the shortcut to restore later
-                            shortcut_to_restore = shortcut
+            # Check if we need to restore a shortcut in the completions
+            # so it doesn't get erased from the command line
+            if shortcut_to_restore:
+                self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
 
-                            # Adjust text and where it begins
-                            text = text[len(shortcut_to_restore) :]
-                            begidx += len(shortcut_to_restore)
-                            break
-                    else:
-                        # No shortcut was found. Complete the command token.
-                        parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
-                        parser.add_argument(
-                            'command',
-                            metavar="COMMAND",
-                            help="command, alias, or macro name",
-                            choices=self._get_commands_aliases_and_macros_for_completion(),
-                            suppress_tab_hint=True,
-                        )
-                        custom_settings = utils.CustomCompletionSettings(parser)
+            # If we have one result and we are at the end of the line, then add a space if allowed
+            if len(self.completion_matches) == 1 and endidx == len(line) and self.allow_appended_space:
+                self.completion_matches[0] += ' '
 
-                self._perform_completion(text, line, begidx, endidx, custom_settings)
+            # Sort matches if they haven't already been sorted
+            if not self.matches_sorted:
+                self.completion_matches.sort(key=self.default_sort_key)
+                self.display_matches.sort(key=self.default_sort_key)
+                self.matches_sorted = True
 
-                # Check if we need to restore a shortcut in the tab completions
-                # so it doesn't get erased from the command line
-                if shortcut_to_restore:
-                    self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
-
-                # If we have one result and we are at the end of the line, then add a space if allowed
-                if len(self.completion_matches) == 1 and endidx == len(line) and self.allow_appended_space:
-                    self.completion_matches[0] += ' '
-
-                # Sort matches if they haven't already been sorted
-                if not self.matches_sorted:
-                    self.completion_matches.sort(key=self.default_sort_key)
-                    self.display_matches.sort(key=self.default_sort_key)
-                    self.matches_sorted = True
-
-                # Swap between COLUMN and MULTI_COLUMN style based on the number of matches if not using READLINE_LIKE
-                if len(self.completion_matches) > self.max_column_completion_results:
-                    self.session.complete_style = CompleteStyle.MULTI_COLUMN
-                else:
-                    self.session.complete_style = CompleteStyle.COLUMN
+            # Swap between COLUMN and MULTI_COLUMN style based on the number of matches if not using READLINE_LIKE
+            if len(self.completion_matches) > self.max_column_completion_results:
+                self.session.complete_style = CompleteStyle.MULTI_COLUMN
+            else:
+                self.session.complete_style = CompleteStyle.COLUMN
 
             try:
-                return self.completion_matches[state]
+                return self.completion_matches[0]
             except IndexError:
                 return None
 
@@ -2603,7 +2585,7 @@ class Cmd:
                     self.completion_hint = err_str
             return None
         except Exception as ex:  # noqa: BLE001
-            # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
+            # Insert a newline so the exception doesn't print in the middle of the command line being completed
             exception_console = ru.Cmd2ExceptionConsole()
             with exception_console.capture() as capture:
                 exception_console.print()
@@ -2678,7 +2660,7 @@ class Cmd:
         return results
 
     def _get_commands_aliases_and_macros_for_completion(self) -> list[CompletionItem]:
-        """Return a list of visible commands, aliases, and macros for tab completion."""
+        """Return a list of visible commands, aliases, and macros for completion."""
         results: list[CompletionItem] = []
 
         # Add commands
@@ -3027,7 +3009,7 @@ class Cmd:
             try:
                 self._at_continuation_prompt = True
 
-                # Save the command line up to this point for tab completion
+                # Save the command line up to this point for completion
                 self._multiline_in_progress = line + '\n'
 
                 # Get next line of this command
@@ -3390,27 +3372,27 @@ class Cmd:
     ) -> str:
         """Read input from appropriate stdin value.
 
-        Also supports tab completion and up-arrow history while input is being entered.
+        Also supports completion and up-arrow history while input is being entered.
 
         :param prompt: prompt to display to user
         :param history: optional list of strings to use for up-arrow history. If completion_mode is
                         CompletionMode.COMMANDS and this is None, then cmd2's command list history will
                         be used. The passed in history will not be edited. It is the caller's responsibility
                         to add the returned input to history if desired. Defaults to None.
-        :param completion_mode: tells what type of tab completion to support. Tab completion only works when
+        :param completion_mode: tells what type of completion to support. Completion only works when
                                 self.use_rawinput is True and sys.stdin is a terminal. Defaults to
                                 CompletionMode.NONE.
         The following optional settings apply when completion_mode is CompletionMode.CUSTOM:
         :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
-                                ArgparseCompleter. This is helpful in cases when you're tab completing
+                                ArgparseCompleter. This is helpful in cases when you're completing
                                 flag-like tokens (e.g. -o, --option) and you don't want them to be
                                 treated as argparse flags when quoted. Set this to True if you plan
                                 on passing the string to argparse with the tokens still quoted.
         A maximum of one of these should be provided:
         :param choices: iterable of accepted values for single argument
         :param choices_provider: function that provides choices for single argument
-        :param completer: tab completion function that provides choices for single argument
-        :param parser: an argument parser which supports the tab completion of multiple arguments
+        :param completer: completion function that provides choices for single argument
+        :param parser: an argument parser which supports the completion of multiple arguments
         :return: the line read from stdin with all trailing new lines removed
         :raises Exception: any exceptions raised by prompt()
         """
@@ -3613,7 +3595,7 @@ class Cmd:
             ("    alias create save_results print_results \">\" out.txt\n", Cmd2Style.COMMAND_LINE),
             "\n\n",
             (
-                "Since aliases are resolved during parsing, tab completion will function as it would "
+                "Since aliases are resolved during parsing, completion will function as it would "
                 "for the actual command the alias resolves to."
             ),
         )
@@ -3773,7 +3755,7 @@ class Cmd:
         begidx: int,
         endidx: int,
     ) -> list[str]:
-        """Tab completes arguments to a macro.
+        """Completes arguments to a macro.
 
         Its default behavior is to call path_complete, but you can override this as needed.
 
@@ -3783,7 +3765,7 @@ class Cmd:
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :return: a list of possible tab completions
+        :return: a list of possible completions
         """
         return self.path_complete(text, line, begidx, endidx)
 
@@ -3856,8 +3838,8 @@ class Cmd:
             ("    macro create show_results print_results -type {1} \"|\" less", Cmd2Style.COMMAND_LINE),
             "\n\n",
             (
-                "Since macros don't resolve until after you press Enter, their arguments tab complete as paths. "
-                "This default behavior changes if custom tab completion for macro arguments has been implemented."
+                "Since macros don't resolve until after you press Enter, their arguments complete as paths. "
+                "This default behavior changes if custom completion for macro arguments has been implemented."
             ),
         )
         macro_create_parser.epilog = macro_create_parser.create_text_group("Notes", macro_create_notes)
@@ -4451,7 +4433,7 @@ class Cmd:
 
     @classmethod
     def _build_base_set_parser(cls) -> Cmd2ArgumentParser:
-        # When tab completing value, we recreate the set command parser with a value argument specific to
+        # When completing value, we recreate the set command parser with a value argument specific to
         # the settable being edited. To make this easier, define a base parser with all the common elements.
         set_description = Text.assemble(
             "Set a settable parameter or show current settings of parameters.",
@@ -4486,7 +4468,7 @@ class Cmd:
         settable_parser = self._build_base_set_parser()
 
         # Settables with choices list the values of those choices instead of the arg name
-        # in help text and this shows in tab completion hints. Set metavar to avoid this.
+        # in help text and this shows in completion hints. Set metavar to avoid this.
         arg_name = 'value'
         settable_parser.add_argument(
             arg_name,
@@ -4678,7 +4660,7 @@ class Cmd:
         # Set up sys module for the Python console
         self._reset_py_display()
 
-        # Enable tab completion if readline is available
+        # Enable completion if readline is available
         if not sys.platform.startswith('win'):
             import readline
             import rlcompleter
@@ -4687,7 +4669,7 @@ class Cmd:
             cmd2_env.completer = readline.get_completer()
 
             # Set the completer to use the interpreter's locals
-            readline.set_completer(rlcompleter.Completer(interp.locals).complete)
+            readline.set_completer(rlcompleter.Completer(interp.locals).complete)  # type: ignore[arg-type]
 
             # Use the correct binding based on whether LibEdit or Readline is being used
             if 'libedit' in (readline.__doc__ or ''):
