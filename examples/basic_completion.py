@@ -30,8 +30,8 @@ file_strs = [
 
 
 class BasicCompletion(cmd2.Cmd):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self) -> None:
+        super().__init__(auto_suggest=False, include_py=True)
 
     def do_flag_based(self, statement: cmd2.Statement) -> None:
         """Tab completes arguments based on a preceding flag using flag_based_complete

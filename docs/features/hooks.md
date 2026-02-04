@@ -83,6 +83,9 @@ loop behavior:
 When you call [cmd2.Cmd.cmdloop][], the following sequence of events are repeated until the
 application exits:
 
+1. Start the `prompt-toolkit` event loop
+1. Call [cmd2.Cmd.pre_prompt][] for any behavior that should happen after event loop starts but
+   before prompt is displayed
 1. Output the prompt
 1. Accept user input
 1. Parse user input into a [cmd2.Statement][] object

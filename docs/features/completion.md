@@ -20,8 +20,8 @@ from `cmd2.Cmd`:
 complete_foo = cmd2.Cmd.path_complete
 ```
 
-This will effectively define the `complete_foo` readline completer method in your class and make it
-utilize the same path completion logic as the built-in commands.
+This will effectively define the `complete_foo` prompt-toolkit completer method in your class and
+make it utilize the same path completion logic as the built-in commands.
 
 The built-in logic allows for a few more advanced path completion capabilities, such as cases where
 you only want to match directories. Suppose you have a custom command `bar` implemented by the

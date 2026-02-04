@@ -38,9 +38,9 @@ cmd2/exceptions.py         @kmvanbrunt @anselor
 cmd2/history.py            @tleonhardt
 cmd2/parsing.py            @kmvanbrunt
 cmd2/plugin.py             @anselor
+cmd2/pt_utils.py           @kmvanbrunt @tleonhardt
 cmd2/py_bridge.py          @kmvanbrunt
 cmd2/rich_utils.py         @kmvanbrunt
-cmd2/rl_utils.py           @kmvanbrunt
 cmd2/string_utils.py       @kmvanbrunt
 cmd2/styles.py             @tleonhardt @kmvanbrunt
 cmd2/terminal_utils.py     @kmvanbrunt

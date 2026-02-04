@@ -96,7 +96,7 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
 
     :param terminal_columns: terminal width (number of columns)
     :param prompt: current onscreen prompt
-    :param line: current contents of the Readline line buffer
+    :param line: current contents of the prompt-toolkit line buffer
     :param cursor_offset: the offset of the current cursor position within line
     :param alert_msg: the message to display to the user
     :return: the correct string so that the alert message appears to the user to be printed above the current line.

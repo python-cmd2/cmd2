@@ -1,6 +1,6 @@
-"""Unit/functional testing for readline tab completion functions in the cmd2.py module.
+"""Unit/functional testing for prompt-toolkit tab completion functions in the cmd2.py module.
 
-These are primarily tests related to readline completer functions which handle tab completion of cmd2/cmd commands,
+These are primarily tests related to prompt-toolkit completer functions which handle tab completion of cmd2/cmd commands,
 file system paths, and shell commands.
 """
 
@@ -262,10 +262,10 @@ def test_complete_exception(cmd2_app, capsys) -> None:
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    _out, err = capsys.readouterr()
+    out, _err = capsys.readouterr()
 
     assert first_match is None
-    assert "IndexError" in err
+    assert "IndexError" in out
 
 
 def test_complete_macro(base_app, request) -> None:
@@ -938,10 +938,11 @@ def test_add_opening_quote_basic_no_text(cmd2_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # The whole list will be returned with no opening quotes added
+    # Any match has a space, so opening quotes are added to all
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None
-    assert cmd2_app.completion_matches == sorted(food_item_strs, key=cmd2_app.default_sort_key)
+    expected = ["'Cheese \"Pizza\"", "'Ham", "'Ham Sandwich", "'Pizza", "'Potato"]
+    assert cmd2_app.completion_matches == expected
 
 
 def test_add_opening_quote_basic_nothing_added(cmd2_app) -> None:
@@ -998,8 +999,8 @@ def test_add_opening_quote_delimited_no_text(cmd2_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # Matches returned with no opening quote
-    expected_matches = sorted(["/home/other user/", "/home/user/"], key=cmd2_app.default_sort_key)
+    # Any match has a space, so opening quotes are added to all
+    expected_matches = sorted(['"/home/other user/', '"/home/user/'], key=cmd2_app.default_sort_key)
     expected_display = sorted(["other user/", "user/"], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
@@ -1008,13 +1009,14 @@ def test_add_opening_quote_delimited_no_text(cmd2_app) -> None:
     assert cmd2_app.display_matches == expected_display
 
 
-def test_add_opening_quote_delimited_nothing_added(cmd2_app) -> None:
+def test_add_opening_quote_delimited_root_portion(cmd2_app) -> None:
     text = '/home/'
     line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_matches = sorted(['/home/other user/', '/home/user/'], key=cmd2_app.default_sort_key)
+    # Any match has a space, so opening quotes are added to all
+    expected_matches = sorted(['"/home/other user/', '"/home/user/'], key=cmd2_app.default_sort_key)
     expected_display = sorted(['other user/', 'user/'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
@@ -1023,18 +1025,19 @@ def test_add_opening_quote_delimited_nothing_added(cmd2_app) -> None:
     assert cmd2_app.display_matches == expected_display
 
 
-def test_add_opening_quote_delimited_quote_added(cmd2_app) -> None:
+def test_add_opening_quote_delimited_final_portion(cmd2_app) -> None:
     text = '/home/user/fi'
     line = f'test_delimited {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_common_prefix = '"/home/user/file'
+    # Any match has a space, so opening quotes are added to all
+    expected_matches = sorted(['"/home/user/file.txt', '"/home/user/file space.txt'], key=cmd2_app.default_sort_key)
     expected_display = sorted(['file.txt', 'file space.txt'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None
-    assert os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix
+    assert cmd2_app.completion_matches == expected_matches
     assert cmd2_app.display_matches == expected_display
 
 
@@ -1099,10 +1102,11 @@ def test_complete_multiline_on_single_line(cmd2_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = sorted(sport_item_strs, key=cmd2_app.default_sort_key)
+    # Any match has a space, so opening quotes are added to all
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-
     assert first_match is not None
+
+    expected = ['"Basket', '"Basketball', '"Bat', '"Football', '"Space Ball']
     assert cmd2_app.completion_matches == expected
 
 

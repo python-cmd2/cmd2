@@ -19,6 +19,8 @@ each:
       via the `cmd2.with_argparser` decorator
 - [async_call.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_call.py)
     - Shows how to make a call to an async function from a cmd2 command.
+- [async_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_commands.py)
+    - A simple example demonstrating how to run async commands in a cmd2 app
 - [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
     - Shows how to asynchronously print alerts, update the prompt in realtime, and change the window
       title

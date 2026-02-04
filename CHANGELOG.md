@@ -1,3 +1,52 @@
+## 4.0.0 (TBD 2026)
+
+### Summary
+
+`cmd2` now has a dependency on
+[prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) which serves as a
+pure-Python cross-platform replacement for
+[GNU Readline](https://tiswww.case.edu/php/chet/readline/rltop.html). Previously, `cmd2` had used
+different `readline` dependencies on each Operating System (OS) which was at times a very
+frustrating developer and user experience due to small inconsistencies in these different readline
+libraries. Now we have consistent cross-platform support for tab-completion, user terminal input,
+and history. Additionally, this opens up some cool advanced features such as support for syntax
+highlighting of user input while typing, auto-suggestions similar to those provided by the fish
+shell, and the option for a persistent bottom bar that can display realtime status updates.
+
+### Details
+
+- Breaking Changes
+    - Removed all use of `readline` built-in module and underlying platform libraries
+    - Deleted `cmd2.rl_utils` module which dealt with importing the proper `readline` module for
+      each platform and provided utility functions related to `readline`
+    - Added a dependency on `prompt-toolkit` and a new `cmd2.pt_utils` module with supporting
+      utilities
+    - Async specific: `prompt-toolkit` starts its own `asyncio` event loop in every `cmd2`
+      application
+        - Removed `cmd2.Cmd.terminal_lock` as it is no longer required to support things like
+          `cmd2.Cmd.async_alert`
+        - Removed `cmd2.Cmd.async_refresh_prompt` and `cmd2.Cmd.need_prompt_refresh` as they are no
+          longer needed
+- Enhancements
+    - New `cmd2.Cmd` parameters
+        - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
+          are grayed-out hints based on history. User can press right-arrow key to accept the
+          provided suggestion.
+        - **bottom toolbar**: (boolean) if `True`, present a persistent bottom toolbar capable of
+          displaying realtime status information while the prompt is displayed, see the
+          `cmd2.Cmd2.get_bottom_toolbar` method that can be overridden as well as the updated
+          `getting_started.py` example
+    - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
+      application is waiting for user input
+    - New `cmd2.Cmd` methods
+        - **get_bottom_toolbar**: populates bottom toolbar if `bottom_toolbar` is `True`
+        - **get_rprompt**: override to populate right prompt
+        - **pre_prompt**: hook method that is called before the prompt is displayed, but after
+          `prompt-toolkit` event loop has started
+    - New settables:
+        - **max_column_completion_results**: (int) the maximum number of completion results to
+          display in a single column
+
 ## 3.1.3 (February 3, 2026)
 
 - Bug Fixes

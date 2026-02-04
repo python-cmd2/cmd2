@@ -1,6 +1,5 @@
 """Cmd2 unit/functional testing"""
 
-import builtins
 import io
 import os
 import signal
@@ -13,6 +12,7 @@ from typing import NoReturn
 from unittest import mock
 
 import pytest
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from rich.text import Text
 
 import cmd2
@@ -31,9 +31,6 @@ from cmd2 import (
 )
 from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
-
-# This ensures gnureadline is used in macOS tests
-from cmd2.rl_utils import readline  # type: ignore[atrr-defined]
 
 from .conftest import (
     SHORTCUTS_TXT,
@@ -391,9 +388,10 @@ def test_run_script_with_binary_file(base_app, request) -> None:
     assert base_app.last_result is False
 
 
-def test_run_script_with_python_file(base_app, request) -> None:
-    m = mock.MagicMock(name='input', return_value='2')
-    builtins.input = m
+def test_run_script_with_python_file(base_app, request, monkeypatch) -> None:
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value='2')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'pyscript', 'stop.py')
@@ -1026,7 +1024,7 @@ def test_base_cmdloop_with_startup_commands() -> None:
     assert out == expected
 
 
-def test_base_cmdloop_without_startup_commands() -> None:
+def test_base_cmdloop_without_startup_commands(monkeypatch) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     with mock.patch.object(sys, 'argv', testargs):
@@ -1035,9 +1033,9 @@ def test_base_cmdloop_without_startup_commands() -> None:
     app.use_rawinput = True
     app.intro = 'Hello World, this is an intro ...'
 
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='quit')
-    builtins.input = m
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value='quit')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     expected = app.intro + '\n'
 
@@ -1047,7 +1045,7 @@ def test_base_cmdloop_without_startup_commands() -> None:
     assert out == expected
 
 
-def test_cmdloop_without_rawinput() -> None:
+def test_cmdloop_without_rawinput(monkeypatch) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     with mock.patch.object(sys, 'argv', testargs):
@@ -1057,14 +1055,13 @@ def test_cmdloop_without_rawinput() -> None:
     app.echo = False
     app.intro = 'Hello World, this is an intro ...'
 
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='quit')
-    builtins.input = m
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value='quit')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     expected = app.intro + '\n'
 
-    with pytest.raises(OSError):  # noqa: PT011
-        app.cmdloop()
+    app.cmdloop()
     out = app.stdout.getvalue()
     assert out == expected
 
@@ -1204,11 +1201,11 @@ def say_app():
     return app
 
 
-def test_ctrl_c_at_prompt(say_app) -> None:
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input')
-    m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
-    builtins.input = m
+def test_ctrl_c_at_prompt(say_app, monkeypatch) -> None:
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input')
+    read_input_mock.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     say_app.cmdloop()
 
@@ -1237,33 +1234,19 @@ def test_default_to_shell(base_app, monkeypatch) -> None:
     assert m.called
 
 
-def test_escaping_prompt() -> None:
-    from cmd2.rl_utils import (
-        rl_escape_prompt,
-        rl_unescape_prompt,
-    )
+def test_visible_prompt() -> None:
+    app = cmd2.Cmd()
 
-    # This prompt has nothing which needs to be escaped
-    prompt = '(Cmd) '
-    assert rl_escape_prompt(prompt) == prompt
+    # This prompt has nothing which needs to be stripped
+    app.prompt = '(Cmd) '
+    assert app.visible_prompt == app.prompt
+    assert su.str_width(app.prompt) == len(app.prompt)
 
-    # This prompt has color which needs to be escaped
-    prompt = stylize('InColor', style=Color.CYAN)
-
-    escape_start = "\x01"
-    escape_end = "\x02"
-
-    escaped_prompt = rl_escape_prompt(prompt)
-    if sys.platform.startswith('win'):
-        # PyReadline on Windows doesn't need to escape invisible characters
-        assert escaped_prompt == prompt
-    else:
-        cyan = "\x1b[36m"
-        reset_all = "\x1b[0m"
-        assert escaped_prompt.startswith(escape_start + cyan + escape_end)
-        assert escaped_prompt.endswith(escape_start + reset_all + escape_end)
-
-    assert rl_unescape_prompt(escaped_prompt) == prompt
+    # This prompt has color which needs to be stripped
+    color_prompt = stylize('InColor', style=Color.CYAN) + '> '
+    app.prompt = color_prompt
+    assert app.visible_prompt == 'InColor> '
+    assert su.str_width(app.prompt) == len('InColor> ')
 
 
 class HelpApp(cmd2.Cmd):
@@ -1772,11 +1755,11 @@ def test_multiline_complete_empty_statement_raises_exception(multiline_app) -> N
         multiline_app._complete_statement('')
 
 
-def test_multiline_complete_statement_without_terminator(multiline_app) -> None:
+def test_multiline_complete_statement_without_terminator(multiline_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
-    m = mock.MagicMock(name='input', return_value='\n')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='\n')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     command = 'orate'
     args = 'hello world'
@@ -1787,11 +1770,11 @@ def test_multiline_complete_statement_without_terminator(multiline_app) -> None:
     assert statement.multiline_command == command
 
 
-def test_multiline_complete_statement_with_unclosed_quotes(multiline_app) -> None:
+def test_multiline_complete_statement_with_unclosed_quotes(multiline_app, monkeypatch) -> None:
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
-    m = mock.MagicMock(name='input', side_effect=['quotes', '" now closed;'])
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=['quotes', '" now closed;'])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     line = 'orate hi "partially open'
     statement = multiline_app._complete_statement(line)
@@ -1801,114 +1784,80 @@ def test_multiline_complete_statement_with_unclosed_quotes(multiline_app) -> Non
     assert statement.terminator == ';'
 
 
-def test_multiline_input_line_to_statement(multiline_app) -> None:
+def test_multiline_input_line_to_statement(multiline_app, monkeypatch) -> None:
     # Verify _input_line_to_statement saves the fully entered input line for multiline commands
 
     # Mock out the input call so we don't actually wait for a user's response
     # on stdin when it looks for more input
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=['person', '\n'])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     line = 'orate hi'
     statement = multiline_app._input_line_to_statement(line)
-    assert statement.raw == 'orate hi\nperson\n'
+    assert statement.raw == 'orate hi\nperson\n\n'
     assert statement == 'hi person'
     assert statement.command == 'orate'
     assert statement.multiline_command == 'orate'
 
 
-def test_multiline_history_no_prior_history(multiline_app) -> None:
-    # Test no existing history prior to typing the command
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
+def test_multiline_history_added(multiline_app, monkeypatch) -> None:
+    # Test that multiline commands are added to history as a single item
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=['person', '\n'])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
-    # Set orig_rl_history_length to 0 before the first line is typed.
-    readline.clear_history()
-    orig_rl_history_length = readline.get_current_history_length()
+    multiline_app.history.clear()
 
-    line = "orate hi"
-    readline.add_history(line)
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+    # run_cmd calls onecmd_plus_hooks which triggers history addition
+    run_cmd(multiline_app, "orate hi")
 
-    assert readline.get_current_history_length() == orig_rl_history_length + 1
-    assert readline.get_history_item(1) == "orate hi person"
+    assert len(multiline_app.history) == 1
+    assert multiline_app.history.get(1).raw == "orate hi\nperson\n\n"
 
 
-def test_multiline_history_first_line_matches_prev_entry(multiline_app) -> None:
-    # Test when first line of multiline command matches previous history entry
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
+def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
+    # Test combined multiline command with quotes is added to history correctly
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
-    # Since the first line of our command matches the previous entry,
-    # orig_rl_history_length is set before the first line is typed.
-    line = "orate hi"
-    readline.clear_history()
-    readline.add_history(line)
-    orig_rl_history_length = readline.get_current_history_length()
-
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
-
-    assert readline.get_current_history_length() == orig_rl_history_length + 1
-    assert readline.get_history_item(1) == line
-    assert readline.get_history_item(2) == "orate hi person"
-
-
-def test_multiline_history_matches_prev_entry(multiline_app) -> None:
-    # Test combined multiline command that matches previous history entry
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
-
-    readline.clear_history()
-    readline.add_history("orate hi person")
-    orig_rl_history_length = readline.get_current_history_length()
-
-    line = "orate hi"
-    readline.add_history(line)
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
-
-    # Since it matches the previous history item, nothing was added to readline history
-    assert readline.get_current_history_length() == orig_rl_history_length
-    assert readline.get_history_item(1) == "orate hi person"
-
-
-def test_multiline_history_does_not_match_prev_entry(multiline_app) -> None:
-    # Test combined multiline command that does not match previous history entry
-    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
-    builtins.input = m
-
-    readline.clear_history()
-    readline.add_history("no match")
-    orig_rl_history_length = readline.get_current_history_length()
-
-    line = "orate hi"
-    readline.add_history(line)
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
-
-    # Since it doesn't match the previous history item, it was added to readline history
-    assert readline.get_current_history_length() == orig_rl_history_length + 1
-    assert readline.get_history_item(1) == "no match"
-    assert readline.get_history_item(2) == "orate hi person"
-
-
-def test_multiline_history_with_quotes(multiline_app) -> None:
-    # Test combined multiline command with quotes
-    m = mock.MagicMock(name='input', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
-    builtins.input = m
-
-    readline.clear_history()
-    orig_rl_history_length = readline.get_current_history_length()
+    multiline_app.history.clear()
 
     line = 'orate Look, "There are newlines'
-    readline.add_history(line)
-    multiline_app._complete_statement(line, orig_rl_history_length=orig_rl_history_length)
+    run_cmd(multiline_app, line)
 
-    # Since spaces and newlines in quotes are preserved, this history entry spans multiple lines.
-    assert readline.get_current_history_length() == orig_rl_history_length + 1
-
-    history_lines = readline.get_history_item(1).splitlines()
+    assert len(multiline_app.history) == 1
+    history_item = multiline_app.history.get(1)
+    history_lines = history_item.raw.splitlines()
     assert history_lines[0] == 'orate Look, "There are newlines'
     assert history_lines[1] == '  and spaces  '
-    assert history_lines[2] == ' " in quotes.;'
+    assert history_lines[2] == ' "'
+    assert history_lines[3] == ' in'
+    assert history_lines[4] == 'quotes.'
+    assert history_lines[5] == ';'
+
+
+def test_multiline_complete_statement_eof(multiline_app, monkeypatch):
+    # Mock poutput to verify it's called
+    poutput_mock = mock.MagicMock(name='poutput')
+    monkeypatch.setattr(multiline_app, 'poutput', poutput_mock)
+
+    # Mock out the read_input call so we return EOFError
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=EOFError)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    command = 'orate'
+    args = 'hello world'
+    line = f'{command} {args}'
+
+    # This should call _read_command_line, get 'eof', set nextline to '\n',
+    # and then parse the line with the newline terminator.
+    statement = multiline_app._complete_statement(line)
+
+    assert statement.command == command
+    assert statement.args == args
+    assert statement.terminator == '\n'
+
+    # Verify that poutput('\n') was called
+    poutput_mock.assert_called_once_with('\n')
 
 
 class CommandResultApp(cmd2.Cmd):
@@ -1996,62 +1945,63 @@ def test_read_input_rawinput_true(capsys, monkeypatch) -> None:
     app = cmd2.Cmd()
     app.use_rawinput = True
 
-    # Mock out input() to return input_str
-    monkeypatch.setattr("builtins.input", lambda *args: input_str)
+    # Mock PromptSession.prompt (used when isatty=False)
+    # Also mock patch_stdout to prevent it from attempting to access the Windows console buffer in a Windows test environment
+    with (
+        mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str),
+        mock.patch('cmd2.cmd2.patch_stdout'),
+    ):
+        # isatty is True
+        with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
+            line = app.read_input(prompt_str)
+            assert line == input_str
 
-    # isatty is True
-    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
-        line = app.read_input(prompt_str)
-        assert line == input_str
+            # Run custom history code
+            custom_history = ['cmd1', 'cmd2']
+            line = app.read_input(prompt_str, history=custom_history, completion_mode=cmd2.CompletionMode.NONE)
+            assert line == input_str
 
-        # Run custom history code
-        readline.add_history('old_history')
-        custom_history = ['cmd1', 'cmd2']
-        line = app.read_input(prompt_str, history=custom_history, completion_mode=cmd2.CompletionMode.NONE)
-        assert line == input_str
-        readline.clear_history()
+            # Run all completion modes
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.NONE)
+            assert line == input_str
 
-        # Run all completion modes
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.NONE)
-        assert line == input_str
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.COMMANDS)
+            assert line == input_str
 
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.COMMANDS)
-        assert line == input_str
+            # custom choices
+            custom_choices = ['choice1', 'choice2']
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices=custom_choices)
+            assert line == input_str
 
-        # custom choices
-        custom_choices = ['choice1', 'choice2']
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices=custom_choices)
-        assert line == input_str
+            # custom choices_provider
+            line = app.read_input(
+                prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices_provider=cmd2.Cmd.get_all_commands
+            )
+            assert line == input_str
 
-        # custom choices_provider
-        line = app.read_input(
-            prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, choices_provider=cmd2.Cmd.get_all_commands
-        )
-        assert line == input_str
+            # custom completer
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, completer=cmd2.Cmd.path_complete)
+            assert line == input_str
 
-        # custom completer
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, completer=cmd2.Cmd.path_complete)
-        assert line == input_str
+            # custom parser
+            line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, parser=cmd2.Cmd2ArgumentParser())
+            assert line == input_str
 
-        # custom parser
-        line = app.read_input(prompt_str, completion_mode=cmd2.CompletionMode.CUSTOM, parser=cmd2.Cmd2ArgumentParser())
-        assert line == input_str
+        # isatty is False
+        with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=False)):
+            # echo True
+            app.echo = True
+            line = app.read_input(prompt_str)
+            out, _err = capsys.readouterr()
+            assert line == input_str
+            assert out == f"{prompt_str}{input_str}\n"
 
-    # isatty is False
-    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=False)):
-        # echo True
-        app.echo = True
-        line = app.read_input(prompt_str)
-        out, _err = capsys.readouterr()
-        assert line == input_str
-        assert out == f"{prompt_str}{input_str}\n"
-
-        # echo False
-        app.echo = False
-        line = app.read_input(prompt_str)
-        out, _err = capsys.readouterr()
-        assert line == input_str
-        assert not out
+            # echo False
+            app.echo = False
+            line = app.read_input(prompt_str)
+            out, _err = capsys.readouterr()
+            assert line == input_str
+            assert not out
 
 
 def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
@@ -2069,24 +2019,31 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
         new_app.use_rawinput = False
         return new_app
 
+    def mock_pt_prompt(message='', **kwargs):
+        # Emulate prompt printing for isatty=True case
+        if message:
+            print(message, end='')
+        return input_str
+
     # isatty True
     app = make_app(isatty=True)
-    line = app.read_input(prompt_str)
+    with mock.patch('cmd2.cmd2.PromptSession.prompt', side_effect=mock_pt_prompt):
+        line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
     assert out == prompt_str
 
     # isatty True, empty input
     app = make_app(isatty=True, empty_input=True)
-    line = app.read_input(prompt_str)
+    with mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=''), pytest.raises(EOFError):
+        app.read_input(prompt_str)
     out, _err = capsys.readouterr()
-    assert line == 'eof'
-    assert out == prompt_str
 
     # isatty is False, echo is True
     app = make_app(isatty=False)
     app.echo = True
-    line = app.read_input(prompt_str)
+    with mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str):
+        line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
     assert out == f"{prompt_str}{input_str}\n"
@@ -2094,17 +2051,17 @@ def test_read_input_rawinput_false(capsys, monkeypatch) -> None:
     # isatty is False, echo is False
     app = make_app(isatty=False)
     app.echo = False
-    line = app.read_input(prompt_str)
+    with mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str):
+        line = app.read_input(prompt_str)
     out, _err = capsys.readouterr()
     assert line == input_str
     assert not out
 
     # isatty is False, empty input
     app = make_app(isatty=False, empty_input=True)
-    line = app.read_input(prompt_str)
+    with mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=''), pytest.raises(EOFError):
+        app.read_input(prompt_str)
     out, _err = capsys.readouterr()
-    assert line == 'eof'
-    assert not out
 
 
 def test_custom_stdout() -> None:
@@ -2338,6 +2295,47 @@ def test_get_macro_completion_items(base_app) -> None:
         assert cur_res.descriptive_data[0].rstrip() == base_app.macros[cur_res].value
 
 
+def test_get_commands_aliases_and_macros_for_completion(base_app) -> None:
+    # Add an alias and a macro
+    run_cmd(base_app, 'alias create fake_alias help')
+    run_cmd(base_app, 'macro create fake_macro !echo macro')
+
+    # Add a command without a docstring
+    import types
+
+    def do_no_doc(self, arg):
+        pass
+
+    base_app.do_no_doc = types.MethodType(do_no_doc, base_app)
+
+    results = base_app._get_commands_aliases_and_macros_for_completion()
+
+    # All visible commands + our new command + alias + macro
+    expected_count = len(base_app.get_visible_commands()) + len(base_app.aliases) + len(base_app.macros)
+    assert len(results) == expected_count
+
+    # Verify alias
+    alias_item = next((item for item in results if item == 'fake_alias'), None)
+    assert alias_item is not None
+    assert alias_item.descriptive_data[0] == "Alias for: help"
+
+    # Verify macro
+    macro_item = next((item for item in results if item == 'fake_macro'), None)
+    assert macro_item is not None
+    assert macro_item.descriptive_data[0] == "Macro: !echo macro"
+
+    # Verify command with docstring (help)
+    help_item = next((item for item in results if item == 'help'), None)
+    assert help_item is not None
+    # First line of help docstring
+    assert "List available commands" in help_item.descriptive_data[0]
+
+    # Verify command without docstring
+    no_doc_item = next((item for item in results if item == 'no_doc'), None)
+    assert no_doc_item is not None
+    assert no_doc_item.descriptive_data[0] == ""
+
+
 def test_get_settable_completion_items(base_app) -> None:
     results = base_app._get_settable_completion_items()
     assert len(results) == len(base_app.settables)
@@ -2354,6 +2352,28 @@ def test_get_settable_completion_items(base_app) -> None:
         # The second column is likely to have wrapped long text. So we will just examine the
         # first couple characters to look for the Settable's description.
         assert cur_settable.description[0:10] in cur_res.descriptive_data[1]
+
+
+def test_completion_supported(base_app) -> None:
+    # use_rawinput is True and completekey is non-empty -> True
+    base_app.use_rawinput = True
+    base_app.completekey = 'tab'
+    assert base_app._completion_supported() is True
+
+    # use_rawinput is False and completekey is non-empty -> False
+    base_app.use_rawinput = False
+    base_app.completekey = 'tab'
+    assert base_app._completion_supported() is False
+
+    # use_rawinput is True and completekey is empty -> False
+    base_app.use_rawinput = True
+    base_app.completekey = ''
+    assert base_app._completion_supported() is False
+
+    # use_rawinput is False and completekey is empty -> False
+    base_app.use_rawinput = False
+    base_app.completekey = ''
+    assert base_app._completion_supported() is False
 
 
 def test_alias_no_subcommand(base_app) -> None:
@@ -2786,6 +2806,184 @@ def test_ppaged_no_pager(outsim_app) -> None:
     assert out == msg + end
 
 
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
+@pytest.mark.parametrize('has_tcsetpgrp', [True, False])
+def test_ppaged_terminal_restoration(outsim_app, monkeypatch, has_tcsetpgrp) -> None:
+    """Test terminal restoration in ppaged() after pager exits."""
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    stdin_mock.fileno.return_value = 0
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # Mock termios and signal since they are imported within the method
+    termios_mock = mock.MagicMock()
+    # The error attribute needs to be the actual exception for isinstance checks
+    import termios
+
+    termios_mock.error = termios.error
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    signal_mock = mock.MagicMock()
+    monkeypatch.setitem(sys.modules, 'signal', signal_mock)
+
+    # Mock os.tcsetpgrp and os.getpgrp
+    if has_tcsetpgrp:
+        monkeypatch.setattr(os, "tcsetpgrp", mock.Mock(), raising=False)
+        monkeypatch.setattr(os, "getpgrp", mock.Mock(return_value=123), raising=False)
+    else:
+        monkeypatch.delattr(os, "tcsetpgrp", raising=False)
+
+    # Mock subprocess.Popen
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+
+    # Set initial termios settings so the logic will run
+    dummy_settings = ["dummy settings"]
+    outsim_app._initial_termios_settings = dummy_settings
+
+    # Call ppaged
+    outsim_app.ppaged("Test")
+
+    # Verify restoration logic
+    if has_tcsetpgrp:
+        os.tcsetpgrp.assert_called_once_with(0, 123)
+        signal_mock.signal.assert_any_call(signal_mock.SIGTTOU, signal_mock.SIG_IGN)
+
+    termios_mock.tcsetattr.assert_called_once_with(0, termios_mock.TCSANOW, dummy_settings)
+
+
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
+def test_ppaged_terminal_restoration_exceptions(outsim_app, monkeypatch) -> None:
+    """Test that terminal restoration in ppaged() handles exceptions gracefully."""
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    stdin_mock.fileno.return_value = 0
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # Mock termios and make it raise an error
+    termios_mock = mock.MagicMock()
+    import termios
+
+    termios_mock.error = termios.error
+    termios_mock.tcsetattr.side_effect = termios.error("Restoration failed")
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    monkeypatch.setitem(sys.modules, 'signal', mock.MagicMock())
+
+    # Mock os.tcsetpgrp and os.getpgrp to prevent OSError before tcsetattr
+    monkeypatch.setattr(os, "tcsetpgrp", mock.Mock(), raising=False)
+    monkeypatch.setattr(os, "getpgrp", mock.Mock(return_value=123), raising=False)
+
+    # Mock subprocess.Popen
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+
+    # Set initial termios settings
+    outsim_app._initial_termios_settings = ["dummy settings"]
+
+    # Call ppaged - should not raise exception
+    outsim_app.ppaged("Test")
+
+    # Verify tcsetattr was attempted
+    assert termios_mock.tcsetattr.called
+
+
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
+def test_ppaged_terminal_restoration_no_settings(outsim_app, monkeypatch) -> None:
+    """Test that terminal restoration in ppaged() is skipped if no settings are saved."""
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    stdin_mock.fileno.return_value = 0
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # Mock termios
+    termios_mock = mock.MagicMock()
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    # Mock subprocess.Popen
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+
+    # Ensure initial termios settings is None
+    outsim_app._initial_termios_settings = None
+
+    # Call ppaged
+    outsim_app.ppaged("Test")
+
+    # Verify tcsetattr was NOT called
+    assert not termios_mock.tcsetattr.called
+
+
+@pytest.mark.skipif(sys.platform.startswith('win'), reason="termios is not available on Windows")
+def test_ppaged_terminal_restoration_oserror(outsim_app, monkeypatch) -> None:
+    """Test that terminal restoration in ppaged() handles OSError gracefully."""
+    # Make it look like we're in a terminal
+    stdin_mock = mock.MagicMock()
+    stdin_mock.isatty.return_value = True
+    stdin_mock.fileno.return_value = 0
+    monkeypatch.setattr(outsim_app, "stdin", stdin_mock)
+
+    stdout_mock = mock.MagicMock()
+    stdout_mock.isatty.return_value = True
+    monkeypatch.setattr(outsim_app, "stdout", stdout_mock)
+
+    if not sys.platform.startswith('win') and os.environ.get("TERM") is None:
+        monkeypatch.setenv('TERM', 'simulated')
+
+    # Mock signal
+    monkeypatch.setitem(sys.modules, 'signal', mock.MagicMock())
+
+    # Mock os.tcsetpgrp to raise OSError
+    monkeypatch.setattr(os, "tcsetpgrp", mock.Mock(side_effect=OSError("Permission denied")), raising=False)
+    monkeypatch.setattr(os, "getpgrp", mock.Mock(return_value=123), raising=False)
+
+    # Mock termios
+    termios_mock = mock.MagicMock()
+    import termios
+
+    termios_mock.error = termios.error
+    monkeypatch.setitem(sys.modules, 'termios', termios_mock)
+
+    # Mock subprocess.Popen
+    popen_mock = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", popen_mock)
+
+    # Set initial termios settings
+    outsim_app._initial_termios_settings = ["dummy settings"]
+
+    # Call ppaged - should not raise exception
+    outsim_app.ppaged("Test")
+
+    # Verify tcsetpgrp was attempted and OSError was caught
+    assert os.tcsetpgrp.called
+    # tcsetattr should have been skipped due to OSError being raised before it
+    assert not termios_mock.tcsetattr.called
+
+
 # we override cmd.parseline() so we always get consistent
 # command parsing by parent methods we don't override
 # don't need to test all the parsing logic here, because
@@ -2924,13 +3122,13 @@ def exit_code_repl():
     return app
 
 
-def test_exit_code_default(exit_code_repl) -> None:
+def test_exit_code_default(exit_code_repl, monkeypatch) -> None:
     app = exit_code_repl
     app.use_rawinput = True
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='exit')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='exit')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     expected = 'exiting with code: 0\n'
 
@@ -2940,13 +3138,13 @@ def test_exit_code_default(exit_code_repl) -> None:
     assert out == expected
 
 
-def test_exit_code_nonzero(exit_code_repl) -> None:
+def test_exit_code_nonzero(exit_code_repl, monkeypatch) -> None:
     app = exit_code_repl
     app.use_rawinput = True
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='exit 23')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='exit 23')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     expected = 'exiting with code: 23\n'
 
@@ -3368,3 +3566,412 @@ def test_command_synonym_parser() -> None:
 
     assert synonym_parser is not None
     assert synonym_parser is help_parser
+
+
+def test_custom_completekey():
+    # Test setting a custom completekey
+    app = cmd2.Cmd(completekey='?')
+    assert app.completekey == '?'
+
+
+def test_prompt_session_init_exception(monkeypatch):
+    from prompt_toolkit.shortcuts import PromptSession
+
+    # Mock PromptSession to raise ValueError on first call, then succeed
+    valid_session_mock = mock.MagicMock(spec=PromptSession)
+    mock_session = mock.MagicMock(side_effect=[ValueError, valid_session_mock])
+    monkeypatch.setattr("cmd2.cmd2.PromptSession", mock_session)
+
+    cmd2.Cmd()
+    # Check that fallback to DummyInput/Output happened
+    from prompt_toolkit.input import DummyInput
+    from prompt_toolkit.output import DummyOutput
+
+    assert mock_session.call_count == 2
+    # Check args of second call
+    call_args = mock_session.call_args_list[1]
+    kwargs = call_args[1]
+    assert isinstance(kwargs['input'], DummyInput)
+    assert isinstance(kwargs['output'], DummyOutput)
+
+
+def test_pager_on_windows(monkeypatch):
+    monkeypatch.setattr("sys.platform", "win32")
+    app = cmd2.Cmd()
+    assert app.pager == 'more'
+    assert app.pager_chop == 'more'
+
+
+def test_path_complete_users_windows(monkeypatch, base_app):
+    monkeypatch.setattr("sys.platform", "win32")
+
+    # Mock os.path.expanduser and isdir
+    monkeypatch.setattr("os.path.expanduser", lambda p: '/home/user' if p == '~user' else p)
+    monkeypatch.setattr("os.path.isdir", lambda p: p == '/home/user')
+
+    matches = base_app.path_complete('~user', 'cmd ~user', 0, 9)
+    # Should contain ~user/ (or ~user\ depending on sep)
+    # Since we didn't mock os.path.sep, it will use system separator.
+    expected = '~user' + os.path.sep
+    assert expected in matches
+
+
+def test_async_alert_success(base_app):
+    import threading
+
+    success = []
+
+    # Mock loop and app
+    mock_loop = mock.MagicMock()
+    mock_app = mock.MagicMock()
+    mock_app.loop = mock_loop
+    # Mocking base_app.session which is a PromptSession.
+    # PromptSession does not expose .app directly in types but it has .app at runtime.
+    # However in tests base_app.session might be PromptSession(input=DummyInput(), ...)
+    base_app.session.app = mock_app
+
+    # Pretend we are at the prompt
+    base_app._in_prompt = True
+
+    def run_alert():
+        base_app.async_alert("Alert Message", new_prompt="(New) ")
+        success.append(True)
+
+    t = threading.Thread(target=run_alert)
+    t.start()
+    t.join()
+
+    assert success
+
+    # Verify callback scheduled
+    mock_loop.call_soon_threadsafe.assert_called_once()
+
+    # Verify functionality of the callback
+    callback = mock_loop.call_soon_threadsafe.call_args[0][0]
+
+    with mock.patch('builtins.print') as mock_print:
+        callback()
+        mock_print.assert_called_with("Alert Message")
+        assert base_app.prompt == "(New) "
+        mock_app.invalidate.assert_called_once()
+
+
+def test_async_alert_not_at_prompt(base_app):
+    import threading
+
+    # Ensure we are NOT at prompt
+    base_app._in_prompt = False
+
+    exceptions = []
+
+    def run_alert():
+        try:
+            base_app.async_alert("fail")
+        except RuntimeError as e:
+            exceptions.append(e)
+
+    t = threading.Thread(target=run_alert)
+    t.start()
+    t.join()
+
+    assert len(exceptions) == 1
+    assert "Main thread is not at the prompt" in str(exceptions[0])
+
+
+def test_get_bottom_toolbar(base_app, monkeypatch):
+    # Test default (disabled)
+    assert base_app.get_bottom_toolbar() is None
+
+    # Test enabled
+    base_app.bottom_toolbar = True
+    monkeypatch.setattr(sys, 'argv', ['myapp.py'])
+    toolbar = base_app.get_bottom_toolbar()
+    assert isinstance(toolbar, list)
+    assert toolbar[0] == ('ansigreen', 'myapp.py')
+    assert toolbar[2][0] == 'ansicyan'
+
+
+def test_get_rprompt(base_app):
+    # Test default
+    assert base_app.get_rprompt() is None
+
+    # Test overridden
+    from prompt_toolkit.formatted_text import FormattedText
+
+    expected_text = "rprompt text"
+    base_app.get_rprompt = lambda: expected_text
+    assert base_app.get_rprompt() == expected_text
+
+    expected_formatted = FormattedText([('class:status', 'OK')])
+    base_app.get_rprompt = lambda: expected_formatted
+    assert base_app.get_rprompt() == expected_formatted
+
+
+def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypatch):
+    # Mock read_input to raise KeyboardInterrupt
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=KeyboardInterrupt)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    # Mock poutput to verify ^C is printed
+    poutput_mock = mock.MagicMock(name='poutput')
+    monkeypatch.setattr(multiline_app, 'poutput', poutput_mock)
+
+    with pytest.raises(exceptions.EmptyStatement):
+        multiline_app._complete_statement('orate incomplete')
+
+    poutput_mock.assert_called_with('^C')
+
+
+def test_complete_optional_args_defaults(base_app) -> None:
+    # Test that complete can be called with just text and state
+    complete_val = base_app.complete('test', 0)
+    assert complete_val is None
+
+
+def test_prompt_session_init_no_console_error(monkeypatch):
+    from prompt_toolkit.shortcuts import PromptSession
+
+    from cmd2.cmd2 import NoConsoleScreenBufferError
+
+    # Mock PromptSession to raise NoConsoleScreenBufferError on first call, then succeed
+    valid_session_mock = mock.MagicMock(spec=PromptSession)
+    mock_session = mock.MagicMock(side_effect=[NoConsoleScreenBufferError, valid_session_mock])
+    monkeypatch.setattr("cmd2.cmd2.PromptSession", mock_session)
+
+    cmd2.Cmd()
+
+    # Check that fallback to DummyInput/Output happened
+    from prompt_toolkit.input import DummyInput
+    from prompt_toolkit.output import DummyOutput
+
+    assert mock_session.call_count == 2
+    # Check args of second call
+    call_args = mock_session.call_args_list[1]
+    kwargs = call_args[1]
+    assert isinstance(kwargs['input'], DummyInput)
+    assert isinstance(kwargs['output'], DummyOutput)
+
+
+def test_no_console_screen_buffer_error_dummy():
+    from cmd2.cmd2 import NoConsoleScreenBufferError
+
+    # Check that it behaves like a normal exception
+    err = NoConsoleScreenBufferError()
+    assert isinstance(err, Exception)
+
+
+def test_read_input_dynamic_prompt(base_app, monkeypatch):
+    """Test that read_input uses a dynamic prompt when provided prompt matches app.prompt"""
+    input_str = 'some input'
+    base_app.use_rawinput = True
+
+    # Mock PromptSession.prompt
+    # Also mock patch_stdout to prevent it from attempting to access the Windows console buffer in a Windows test environment
+    with (
+        mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str) as mock_prompt,
+        mock.patch('cmd2.cmd2.patch_stdout'),
+        mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)),
+    ):
+        # Call with exact app prompt
+        line = base_app.read_input(base_app.prompt)
+        assert line == input_str
+
+        # Check that mock_prompt was called with a callable for the prompt
+        # args[0] should be the prompt_to_use
+        args, _ = mock_prompt.call_args
+        prompt_arg = args[0]
+        assert callable(prompt_arg)
+
+        # Verify the callable returns the expected ANSI formatted prompt
+        from prompt_toolkit.formatted_text import ANSI
+
+        result = prompt_arg()
+        assert isinstance(result, ANSI)
+        assert result.value == ANSI(base_app.prompt).value
+
+
+def test_read_input_dynamic_prompt_with_history(base_app, monkeypatch):
+    """Test that read_input uses a dynamic prompt when provided prompt matches app.prompt and history is provided"""
+    input_str = 'some input'
+    base_app.use_rawinput = True
+    custom_history = ['cmd1', 'cmd2']
+
+    # Mock PromptSession.prompt
+    # Also mock patch_stdout to prevent it from attempting to access the Windows console buffer in a Windows test environment
+    with (
+        mock.patch('cmd2.cmd2.PromptSession.prompt', return_value=input_str) as mock_prompt,
+        mock.patch('cmd2.cmd2.patch_stdout'),
+        mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)),
+    ):
+        # Call with exact app prompt and history
+        line = base_app.read_input(base_app.prompt, history=custom_history)
+        assert line == input_str
+
+        # Check that mock_prompt was called with a callable for the prompt
+        # args[0] should be the prompt_to_use
+        args, _ = mock_prompt.call_args
+        prompt_arg = args[0]
+        assert callable(prompt_arg)
+
+        # Verify the callable returns the expected ANSI formatted prompt
+        from prompt_toolkit.formatted_text import ANSI
+
+        result = prompt_arg()
+        assert isinstance(result, ANSI)
+        assert result.value == ANSI(base_app.prompt).value
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith('win'),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+def test_pre_prompt_running_loop(base_app):
+    # Test that pre_prompt runs with a running event loop.
+    import asyncio
+
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+    from prompt_toolkit.shortcuts import PromptSession
+
+    # Setup pipe input to feed data to prompt_toolkit
+    with create_pipe_input() as pipe_input:
+        # Create a new session with our pipe input because the input property is read-only
+        base_app.session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            history=base_app.session.history,
+            completer=base_app.session.completer,
+        )
+
+        loop_check = {'running': False}
+
+        def my_pre_prompt():
+            try:
+                asyncio.get_running_loop()
+                loop_check['running'] = True
+            except RuntimeError:
+                loop_check['running'] = False
+
+        base_app.pre_prompt = my_pre_prompt
+
+        # Feed input to exit prompt immediately
+        pipe_input.send_text("foo\n")
+
+        # Enable raw input and mock isatty to ensure self.session.prompt is used
+        base_app.use_rawinput = True
+        with mock.patch('sys.stdin.isatty', return_value=True):
+            # patch_stdout is used in this branch. It should work with DummyOutput/PipeInput.
+            base_app.read_input("prompt> ")
+
+        assert loop_check['running']
+
+
+def test_get_bottom_toolbar_narrow_terminal(base_app, monkeypatch):
+    """Test get_bottom_toolbar when terminal is too narrow for calculated padding"""
+    import shutil
+
+    base_app.bottom_toolbar = True
+    monkeypatch.setattr(sys, 'argv', ['myapp.py'])
+
+    # Mock shutil.get_terminal_size to return a very small width (e.g. 5)
+    # Calculated padding_size = 5 - len('myapp.py') - len(now) - 1
+    # Since len(now) is ~29, this will definitely be < 1
+    monkeypatch.setattr(shutil, 'get_terminal_size', lambda: os.terminal_size((5, 20)))
+
+    toolbar = base_app.get_bottom_toolbar()
+    assert isinstance(toolbar, list)
+
+    # The padding (index 1) should be exactly 1 space
+    assert toolbar[1] == ('', ' ')
+
+
+def test_async_alert_loop_not_available(base_app):
+    import threading
+
+    # Mock app but without loop attribute
+    mock_app = mock.MagicMock(spec=['is_running', 'invalidate'])
+    mock_app.is_running = True
+    base_app.session.app = mock_app
+
+    # Pretend we are at the prompt
+    base_app._in_prompt = True
+
+    exceptions = []
+
+    def run_alert():
+        try:
+            base_app.async_alert("fail")
+        except RuntimeError as e:
+            exceptions.append(e)
+
+    t = threading.Thread(target=run_alert)
+    t.start()
+    t.join()
+
+    assert len(exceptions) == 1
+    assert "Event loop not available" in str(exceptions[0])
+
+
+def test_auto_suggest_true():
+    """Test that auto_suggest=True initializes AutoSuggestFromHistory."""
+    app = cmd2.Cmd(auto_suggest=True)
+    assert app.auto_suggest is not None
+    assert isinstance(app.auto_suggest, AutoSuggestFromHistory)
+    assert app.session.auto_suggest is app.auto_suggest
+
+
+def test_auto_suggest_false():
+    """Test that auto_suggest=False does not initialize AutoSuggestFromHistory."""
+    app = cmd2.Cmd(auto_suggest=False)
+    assert app.auto_suggest is None
+    assert app.session.auto_suggest is None
+
+
+def test_auto_suggest_default():
+    """Test that auto_suggest defaults to True."""
+    app = cmd2.Cmd()
+    assert app.auto_suggest is not None
+    assert isinstance(app.auto_suggest, AutoSuggestFromHistory)
+    assert app.session.auto_suggest is app.auto_suggest
+
+
+def test_completion_quoting_with_spaces_and_no_common_prefix(tmp_path):
+    """Test that completion results with spaces are quoted even if there is no common prefix."""
+    # Create files in a temporary directory
+    has_space_dir = tmp_path / "has space"
+    has_space_dir.mkdir()
+    foo_file = tmp_path / "foo.txt"
+    foo_file.write_text("content")
+
+    # Change CWD to the temporary directory
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+
+    try:
+        # Define a custom command with path_complete
+        class PathApp(cmd2.Cmd):
+            def do_test_path(self, _):
+                pass
+
+            def complete_test_path(self, text, line, begidx, endidx):
+                return self.path_complete(text, line, begidx, endidx)
+
+        app = PathApp()
+
+        text = ''
+        line = f'test_path {text}'
+        endidx = len(line)
+        begidx = endidx - len(text)
+
+        complete_tester(text, line, begidx, endidx, app)
+
+        matches = app.completion_matches
+
+        # Find the match for our directory
+        has_space_match = next((m for m in matches if "has space" in m), None)
+        assert has_space_match is not None
+
+        # Check if it is quoted.
+        assert has_space_match.startswith(('"', "'"))
+    finally:
+        os.chdir(cwd)

@@ -414,13 +414,6 @@ def test_subcommand_completions(ac_app, subcommand, text, completions) -> None:
             'flag',
             '-',
             [
-                '--append_const_flag',
-                '--append_flag',
-                '--count_flag',
-                '--help',
-                '--normal_flag',
-                '--remainder_flag',
-                '--required_flag',
                 '-a',
                 '-c',
                 '-h',
@@ -516,7 +509,7 @@ def test_subcommand_completions(ac_app, subcommand, text, completions) -> None:
         (
             'plus_flag',
             '+',
-            ['++help', '++normal_flag', '+h', '+n', '+q', '++required_flag'],
+            ['+h', '+n', '+q'],
             ['+q, ++required_flag', '[+h, ++help]', '[+n, ++normal_flag]'],
         ),
         (
@@ -532,8 +525,8 @@ def test_subcommand_completions(ac_app, subcommand, text, completions) -> None:
         ('plus_flag ++help --', '++', [], []),
         # Test remaining flag names complete after all positionals are complete
         ('pos_and_flag', '', ['a', 'choice'], ['a', 'choice']),
-        ('pos_and_flag choice ', '', ['--flag', '--help', '-f', '-h'], ['[-f, --flag]', '[-h, --help]']),
-        ('pos_and_flag choice -f ', '', ['--help', '-h'], ['[-h, --help]']),
+        ('pos_and_flag choice ', '', ['-f', '-h'], ['[-f, --flag]', '[-h, --help]']),
+        ('pos_and_flag choice -f ', '', ['-h '], ['[-h, --help]']),
         ('pos_and_flag choice -f -h ', '', [], []),
     ],
 )
@@ -626,9 +619,7 @@ def test_flag_sorting(ac_app) -> None:
     # text looks like the beginning of a flag (e.g -), then ArgparseCompleter will try to complete
     # flag names next. Before it does this, cmd2.matches_sorted is reset to make sure the flag names
     # get sorted correctly.
-    option_strings = []
-    for action in ac_app.choices_parser._actions:
-        option_strings.extend(action.option_strings)
+    option_strings = [action.option_strings[0] for action in ac_app.choices_parser._actions if action.option_strings]
     option_strings.sort(key=ac_app.default_sort_key)
 
     text = '-'
@@ -1086,7 +1077,7 @@ def test_arg_tokens(ac_app, command_and_args, completions) -> None:
 @pytest.mark.parametrize(
     ('command_and_args', 'text', 'output_contains', 'first_match'),
     [
-        # Group isn't done. Hint will show for optional positional and no completions returned
+        # Group isn't done. The optional positional's hint will show and flags will not complete.
         ('mutex', '', 'the optional positional', None),
         # Group isn't done. Flag name will still complete.
         ('mutex', '--fl', '', '--flag '),
@@ -1356,3 +1347,33 @@ def test_add_parser_custom_completer() -> None:
 
     custom_completer_parser = subparsers.add_parser(name="custom_completer", ap_completer_type=CustomCompleter)
     assert custom_completer_parser.get_ap_completer_type() is CustomCompleter  # type: ignore[attr-defined]
+
+
+def test_autcomp_fallback_to_flags_nargs0(ac_app) -> None:
+    """Test fallback to flags when a positional argument has nargs=0 (using manual patching)"""
+    from cmd2.argparse_completer import (
+        ArgparseCompleter,
+    )
+
+    parser = Cmd2ArgumentParser()
+    # Add a positional argument
+    action = parser.add_argument('pos')
+    # Add a flag
+    parser.add_argument('-f', '--flag', action='store_true', help='a flag')
+
+    # Manually change nargs to 0 AFTER adding it to bypass argparse validation during add_argument.
+    # This allows us to hit the fallback-to-flags logic in _handle_last_token where pos_arg_state.max is 0.
+    action.nargs = 0
+
+    ac = ArgparseCompleter(parser, ac_app)
+
+    text = ''
+    line = 'cmd '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    tokens = ['']
+
+    # This should hit the fallback to flags in _handle_last_token because pos has max=0 and count=0
+    results = ac.complete(text, line, begidx, endidx, tokens)
+
+    assert any(item == '-f' for item in results)

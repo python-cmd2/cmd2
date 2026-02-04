@@ -1,6 +1,5 @@
 """Unit/functional testing for run_pytest in cmd2"""
 
-import builtins
 import os
 from unittest import (
     mock,
@@ -43,9 +42,10 @@ def test_run_pyscript_with_nonexist_file(base_app) -> None:
     assert base_app.last_result is False
 
 
-def test_run_pyscript_with_non_python_file(base_app, request) -> None:
-    m = mock.MagicMock(name='input', return_value='2')
-    builtins.input = m
+def test_run_pyscript_with_non_python_file(base_app, request, monkeypatch) -> None:
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value='2')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
@@ -55,13 +55,13 @@ def test_run_pyscript_with_non_python_file(base_app, request) -> None:
 
 
 @pytest.mark.parametrize('python_script', odd_file_names)
-def test_run_pyscript_with_odd_file_names(base_app, python_script) -> None:
+def test_run_pyscript_with_odd_file_names(base_app, python_script, monkeypatch) -> None:
     """Pass in file names with various patterns. Since these files don't exist, we will rely
     on the error text to make sure the file names were processed correctly.
     """
-    # Mock input to get us passed the warning about not ending in .py
-    input_mock = mock.MagicMock(name='input', return_value='1')
-    builtins.input = input_mock
+    # Mock read_input to get us passed the warning about not ending in .py
+    read_input_mock = mock.MagicMock(name='read_input', return_value='1')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     _out, err = run_cmd(base_app, f"run_pyscript {quote(python_script)}")
     err = ''.join(err)
