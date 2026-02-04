@@ -29,16 +29,16 @@ Example::
     parser.add_argument('-f', nargs=(3, 5))
 
 
-**Tab Completion**
+**Completion**
 
-cmd2 uses its ArgparseCompleter class to enable argparse-based tab completion
+cmd2 uses its ArgparseCompleter class to enable argparse-based completion
 on all commands that use the @with_argparse wrappers. Out of the box you get
-tab completion of commands, subcommands, and flag names, as well as instructive
+completion of commands, subcommands, and flag names, as well as instructive
 hints about the current argument that print when tab is pressed. In addition,
-you can add tab completion for each argument's values using parameters passed
+you can add completion for each argument's values using parameters passed
 to add_argument().
 
-Below are the 3 add_argument() parameters for enabling tab completion of an
+Below are the 3 add_argument() parameters for enabling completion of an
 argument's value. Only one can be used at a time.
 
 ``choices`` - pass a list of values to the choices parameter.
@@ -59,7 +59,7 @@ cases where the choice list is dynamically generated when the user hits tab.
 
         parser.add_argument("arg", choices_provider=my_choices_provider)
 
-``completer`` - pass a tab completion function that does custom completion.
+``completer`` - pass a function that does custom completion.
 
 cmd2 provides a few completer methods for convenience (e.g., path_complete,
 delimiter_complete)
@@ -93,13 +93,13 @@ standalone functions (i.e. not a member of a class). In this case,
 ArgparseCompleter will pass its ``cmd2.Cmd`` app instance as the first
 positional argument.
 
-Of the 3 tab completion parameters, ``choices`` is the only one where argparse
+Of the 3 completion parameters, ``choices`` is the only one where argparse
 validates user input against items in the choices list. This is because the
-other 2 parameters are meant to tab complete data sets that are viewed as
+other 2 parameters are meant to complete data sets that are viewed as
 dynamic. Therefore it is up to the developer to validate if the user has typed
 an acceptable value for these arguments.
 
-There are times when what's being tab completed is determined by a previous
+There are times when what's being completed is determined by a previous
 argument on the command line. In these cases, ArgparseCompleter can pass a
 dictionary that maps the command line tokens up through the one being completed
 to their argparse argument name. To receive this dictionary, your
@@ -111,14 +111,14 @@ choices/completer function should have an argument called arg_tokens.
         def my_completer(self, text, line, begidx, endidx, arg_tokens)
 
 All values of the arg_tokens dictionary are lists, even if a particular
-argument expects only 1 token. Since ArgparseCompleter is for tab completion,
+argument expects only 1 token. Since ArgparseCompleter is for completion,
 it does not convert the tokens to their actual argument types or validate their
 values. All tokens are stored in the dictionary as the raw strings provided on
 the command line. It is up to the developer to determine if the user entered
 the correct argument type (e.g. int) and validate their values.
 
 CompletionItem Class - This class was added to help in cases where
-uninformative data is being tab completed. For instance, tab completing ID
+uninformative data is being completed. For instance, completing ID
 numbers isn't very helpful to a user without context. Returning a list of
 CompletionItems instead of a regular string for completion results will signal
 the ArgparseCompleter to output the completion results in a table of completion
@@ -135,7 +135,7 @@ tokens with descriptive data instead of just a table of tokens::
                3   Yet another item
 
 
-The left-most column is the actual value being tab completed and its header is
+The left-most column is the actual value being completed and its header is
 that value's name. The right column header is defined using the
 ``descriptive_headers`` parameter of add_argument(), which is a list of header
 names that defaults to ["Description"]. The right column values come from the
@@ -174,7 +174,7 @@ Example::
                 CompletionItem(3, ["Yet another item", False, ""]),
             ]
 
-    This is what the user will see during tab completion.
+    This is what the user will see during completion.
 
         ITEM_ID   Item Name          Checked Out   Due Date
         ───────────────────────────────────────────────────────
@@ -390,7 +390,7 @@ class CompletionItem(str):  # noqa: SLOT000
     def __init__(self, value: object, descriptive_data: Sequence[Any], *args: Any) -> None:
         """CompletionItem Initializer.
 
-        :param value: the value being tab completed
+        :param value: the value being completed
         :param descriptive_data: a list of descriptive data to display in the columns that follow
                                  the completion value. The number of items in this list must equal
                                  the number of descriptive headers defined for the argument.
@@ -421,7 +421,7 @@ class CompletionItem(str):  # noqa: SLOT000
 
 @runtime_checkable
 class ChoicesProviderFuncBase(Protocol):
-    """Function that returns a list of choices in support of tab completion."""
+    """Function that returns a list of choices in support of completion."""
 
     def __call__(self) -> list[str]:  # pragma: no cover
         """Enable instances to be called like functions."""
@@ -429,7 +429,7 @@ class ChoicesProviderFuncBase(Protocol):
 
 @runtime_checkable
 class ChoicesProviderFuncWithTokens(Protocol):
-    """Function that returns a list of choices in support of tab completion and accepts a dictionary of prior arguments."""
+    """Function that returns a list of choices in support of completion and accepts a dictionary of prior arguments."""
 
     def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]:  # pragma: no cover  # noqa: B006
         """Enable instances to be called like functions."""
@@ -440,7 +440,7 @@ ChoicesProviderFunc = ChoicesProviderFuncBase | ChoicesProviderFuncWithTokens
 
 @runtime_checkable
 class CompleterFuncBase(Protocol):
-    """Function to support tab completion with the provided state of the user prompt."""
+    """Function to support completion with the provided state of the user prompt."""
 
     def __call__(
         self,
@@ -454,7 +454,7 @@ class CompleterFuncBase(Protocol):
 
 @runtime_checkable
 class CompleterFuncWithTokens(Protocol):
-    """Function to support tab completion with the provided state of the user prompt, accepts a dictionary of prior args."""
+    """Function to support completion with the provided state of the user prompt, accepts a dictionary of prior args."""
 
     def __call__(
         self,
@@ -484,7 +484,7 @@ class ChoicesCallable:
     ) -> None:
         """Initialize the ChoiceCallable instance.
 
-        :param is_completer: True if to_call is a tab completion routine which expects
+        :param is_completer: True if to_call is a completion routine which expects
                              the args: text, line, begidx, endidx
         :param to_call: the callable object that will be called to provide choices for the argument.
         """
@@ -822,8 +822,8 @@ def _add_argument_wrapper(
 
     # Added args used by ArgparseCompleter
     :param choices_provider: function that provides choices for this argument
-    :param completer: tab completion function that provides choices for this argument
-    :param suppress_tab_hint: when ArgparseCompleter has no results to show during tab completion, it displays the
+    :param completer: completion function that provides choices for this argument
+    :param suppress_tab_hint: when ArgparseCompleter has no results to show during completion, it displays the
                               current argument's help text as a hint. Set this to True to suppress the hint. If this
                               argument's help text is set to argparse.SUPPRESS, then tab hints will not display
                               regardless of the value passed for suppress_tab_hint. Defaults to False.
@@ -988,7 +988,7 @@ setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 # Patch argparse.ArgumentParser with accessors for ap_completer_type attribute
 ############################################################################################################
 
-# An ArgumentParser attribute which specifies a subclass of ArgparseCompleter for custom tab completion behavior on a
+# An ArgumentParser attribute which specifies a subclass of ArgparseCompleter for custom completion behavior on a
 # given parser. If this is None or not present, then cmd2 will use argparse_completer.DEFAULT_AP_COMPLETER when tab
 # completing a parser's arguments
 ATTR_AP_COMPLETER_TYPE = 'ap_completer_type'
@@ -1018,7 +1018,7 @@ def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_comp
     To call: ``parser.set_ap_completer_type(ap_completer_type)``
 
     :param self: ArgumentParser being edited
-    :param ap_completer_type: the custom ArgparseCompleter-based class to use when tab completing arguments for this parser
+    :param ap_completer_type: the custom ArgparseCompleter-based class to use when completing arguments for this parser
     """
     setattr(self, ATTR_AP_COMPLETER_TYPE, ap_completer_type)
 
@@ -1460,9 +1460,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     ) -> None:
         """Initialize the Cmd2ArgumentParser instance, a custom ArgumentParser added by cmd2.
 
-        :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom tab completion
+        :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom completion
                                   behavior on this parser. If this is None or not present, then cmd2 will use
-                                  argparse_completer.DEFAULT_AP_COMPLETER when tab completing this parser's arguments
+                                  argparse_completer.DEFAULT_AP_COMPLETER when completing this parser's arguments
         """
         kwargs: dict[str, bool] = {}
         if sys.version_info >= (3, 14):

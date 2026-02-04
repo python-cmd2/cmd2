@@ -89,7 +89,7 @@ class Settable:
                          validation fails, which will be caught and displayed to the user
                          by the set command. For example, setting this to int ensures the
                          input is a valid integer. Specifying bool automatically provides
-                         tab completion for 'true' and 'false' and uses a built-in function
+                         completion for 'true' and 'false' and uses a built-in function
                          for conversion and validation.
         :param description: A concise string that describes the purpose of this setting.
         :param settable_object: The object that owns the attribute being made settable (e.g. self).
@@ -105,18 +105,18 @@ class Settable:
                                 old_value: Any - the parameter's old value
                                 new_value: Any - the parameter's new value
 
-        The following optional settings provide tab completion for a parameter's values.
-        They correspond to the same settings in argparse-based tab completion. A maximum
+        The following optional settings provide completion for a parameter's values.
+        They correspond to the same settings in argparse-based completion. A maximum
         of one of these should be provided.
 
         :param choices: iterable of accepted values
         :param choices_provider: function that provides choices for this argument
-        :param completer: tab completion function that provides choices for this argument
+        :param completer: completion function that provides choices for this argument
         """
         if val_type is bool:
 
             def get_bool_choices(_: str) -> list[str]:
-                """Tab complete lowercase boolean values."""
+                """Complete lowercase boolean values."""
                 return ['true', 'false']
 
             val_type = to_bool
@@ -733,32 +733,32 @@ def get_defining_class(meth: Callable[..., Any]) -> type[Any] | None:
 
 
 class CompletionMode(Enum):
-    """Enum for what type of tab completion to perform in cmd2.Cmd.read_input()."""
+    """Enum for what type of completion to perform in cmd2.Cmd.read_input()."""
 
-    # Tab completion will be disabled during read_input() call
+    # Completion will be disabled during read_input() call
     # Use of custom up-arrow history supported
     NONE = 1
 
-    # read_input() will tab complete cmd2 commands and their arguments
+    # read_input() will complete cmd2 commands and their arguments
     # cmd2's command line history will be used for up arrow if history is not provided.
     # Otherwise use of custom up-arrow history supported.
     COMMANDS = 2
 
-    # read_input() will tab complete based on one of its following parameters:
+    # read_input() will complete based on one of its following parameters:
     #     choices, choices_provider, completer, parser
     # Use of custom up-arrow history supported
     CUSTOM = 3
 
 
 class CustomCompletionSettings:
-    """Used by cmd2.Cmd.complete() to tab complete strings other than command arguments."""
+    """Used by cmd2.Cmd.complete() to complete strings other than command arguments."""
 
     def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False) -> None:
         """CustomCompletionSettings initializer.
 
-        :param parser: arg parser defining format of string being tab completed
+        :param parser: arg parser defining format of string being completed
         :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
-                                ArgparseCompleter. This is helpful in cases when you're tab completing
+                                ArgparseCompleter. This is helpful in cases when you're completing
                                 flag-like tokens (e.g. -o, --option) and you don't want them to be
                                 treated as argparse flags when quoted. Set this to True if you plan
                                 on passing the string to argparse with the tokens still quoted.

@@ -533,7 +533,7 @@ class StatementParser:
         Multiline commands are identified, but terminators and output
         redirection are not parsed.
 
-        This method is used by tab completion code and therefore must not
+        This method is used by completion code and therefore must not
         generate an exception if there are unclosed quotes.
 
         The [cmd2.parsing.Statement][] object returned by this method can at most

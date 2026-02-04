@@ -1,4 +1,4 @@
-"""Module defines the ArgparseCompleter class which provides argparse-based tab completion to cmd2 apps.
+"""Module defines the ArgparseCompleter class which provides argparse-based completion to cmd2 apps.
 
 See the header of argparse_custom.py for instructions on how to use these features.
 """
@@ -47,7 +47,7 @@ ARG_TOKENS = 'arg_tokens'
 
 
 def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) -> str:
-    """Build tab completion hint for a given argument."""
+    """Build completion hint for a given argument."""
     # Check if hinting is disabled for this argument
     suppress_hint = arg_action.get_suppress_tab_hint()  # type: ignore[attr-defined]
     if suppress_hint or arg_action.help == argparse.SUPPRESS:
@@ -140,17 +140,17 @@ class _NoResultsError(CompletionError):
     def __init__(self, parser: argparse.ArgumentParser, arg_action: argparse.Action) -> None:
         """CompletionError which occurs when there are no results.
 
-        If hinting is allowed, then its message will be a hint about the argument being tab completed.
+        If hinting is allowed, then its message will be a hint about the argument being completed.
 
-        :param parser: ArgumentParser instance which owns the action being tab completed
-        :param arg_action: action being tab completed.
+        :param parser: ArgumentParser instance which owns the action being completed
+        :param arg_action: action being completed.
         """
         # Set apply_style to False because we don't want hints to look like errors
         super().__init__(_build_hint(parser, arg_action), apply_style=False)
 
 
 class ArgparseCompleter:
-    """Automatic command line tab completion based on argparse parameters."""
+    """Automatic command line completion based on argparse parameters."""
 
     def __init__(
         self, parser: argparse.ArgumentParser, cmd2_app: 'Cmd', *, parent_tokens: dict[str, list[str]] | None = None
@@ -202,9 +202,9 @@ class ArgparseCompleter:
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
         :param tokens: list of argument tokens being passed to the parser
-        :param cmd_set: if tab completing a command, the CommandSet the command's function belongs to, if applicable.
+        :param cmd_set: if completing a command, the CommandSet the command's function belongs to, if applicable.
                         Defaults to None.
-        :raises CompletionError: for various types of tab completion errors
+        :raises CompletionError: for various types of completion errors
         """
         if not tokens:
             return []
@@ -493,8 +493,8 @@ class ArgparseCompleter:
     def _complete_flags(
         self, text: str, line: str, begidx: int, endidx: int, matched_flags: list[str]
     ) -> list[CompletionItem]:
-        """Tab completion routine for a parsers unused flags."""
-        # Build a list of flags that can be tab completed
+        """Completion routine for a parsers unused flags."""
+        # Build a list of flags that can be completed
         match_against = []
 
         for flag in self._flags:
@@ -513,7 +513,7 @@ class ArgparseCompleter:
             action = self._flag_to_action[flag]
             matched_actions.setdefault(action, []).append(flag)
 
-        # For tab completion suggestions, group matched flags by action
+        # For completion suggestions, group matched flags by action
         results: list[CompletionItem] = []
         for action, option_strings in matched_actions.items():
             flag_text = ', '.join(option_strings)
@@ -639,7 +639,7 @@ class ArgparseCompleter:
         *,
         cmd_set: CommandSet | None = None,
     ) -> list[str]:
-        """Tab completion routine for an argparse argument.
+        """Completion routine for an argparse argument.
 
         :return: list of completions
         :raises CompletionError: if the completer or choices function this calls raises one.
@@ -707,7 +707,7 @@ class ArgparseCompleter:
                 # Add the namespace to the keyword arguments for the function we are calling
                 kwargs[ARG_TOKENS] = arg_tokens
 
-        # Check if the argument uses a specific tab completion function to provide its choices
+        # Check if the argument uses a specific completion function to provide its choices
         if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
             args.extend([text, line, begidx, endidx])
             results = arg_choices.completer(*args, **kwargs)  # type: ignore[arg-type]
@@ -733,7 +733,7 @@ class ArgparseCompleter:
             used_values = consumed_arg_values.get(arg_state.action.dest, [])
             completion_items = [choice for choice in completion_items if choice not in used_values]
 
-            # Do tab completion on the choices
+            # Do completion on the choices
             results = self._cmd2_app.basic_complete(text, line, begidx, endidx, completion_items)
 
         if not results:

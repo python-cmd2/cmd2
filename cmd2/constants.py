@@ -5,8 +5,7 @@
 
 INFINITY = float('inf')
 
-# Used for command parsing, output redirection, tab completion and word
-# breaks. Do not change.
+# Used for command parsing, output redirection, completion, and word breaks. Do not change.
 QUOTES = ['"', "'"]
 REDIRECTION_PIPE = '|'
 REDIRECTION_OUTPUT = '>'
