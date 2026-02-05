@@ -1,4 +1,4 @@
-## 3.2.0 (TBD)
+## 3.2.0 (February 5, 2026)
 
 - Bug Fixes
     - Fixed incompatibilities with Python 3.14.3.
