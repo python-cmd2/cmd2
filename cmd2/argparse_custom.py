@@ -1339,7 +1339,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:  # type: ignore[type-arg]
         """Add a subcommand parser.
 
-        Set a default title if one was not given.f
+        Set a default title if one was not given.
 
         :param kwargs: additional keyword arguments
         :return: argparse Subparser Action
@@ -1350,10 +1350,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         return super().add_subparsers(**kwargs)
 
     def error(self, message: str) -> NoReturn:
-        """Print a usage message, including the message, to sys.stderr and terminates the program with a status code of 2.
-
-        Custom override that applies custom formatting to the error message.
-        """
+        """Override that applies custom formatting to the error message."""
         lines = message.split('\n')
         formatted_message = ''
         for linum, line in enumerate(lines):
@@ -1373,62 +1370,12 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.exit(2, f'{formatted_message}\n')
 
     def _get_formatter(self) -> Cmd2HelpFormatter:
-        """Override _get_formatter with customizations for Cmd2HelpFormatter."""
+        """Override with customizations for Cmd2HelpFormatter."""
         return cast(Cmd2HelpFormatter, super()._get_formatter())
 
     def format_help(self) -> str:
-        """Return a string containing a help message, including the program usage and information about the arguments.
-
-        Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters.
-        """
-        formatter = self._get_formatter()
-
-        # usage
-        formatter.add_usage(self.usage, self._actions, self._mutually_exclusive_groups)
-
-        # description
-        formatter.add_text(self.description)
-
-        # Begin cmd2 customization (separate required and optional arguments)
-
-        # positionals, optionals and user-defined groups
-        for action_group in self._action_groups:
-            default_options_group = action_group.title == 'options'
-
-            if default_options_group:
-                # check if the arguments are required, group accordingly
-                req_args = []
-                opt_args = []
-                for action in action_group._group_actions:
-                    if action.required:
-                        req_args.append(action)
-                    else:
-                        opt_args.append(action)
-
-                # separately display required arguments
-                formatter.start_section('required arguments')
-                formatter.add_text(action_group.description)
-                formatter.add_arguments(req_args)
-                formatter.end_section()
-
-                # now display truly optional arguments
-                formatter.start_section('optional arguments')
-                formatter.add_text(action_group.description)
-                formatter.add_arguments(opt_args)
-                formatter.end_section()
-            else:
-                formatter.start_section(action_group.title)
-                formatter.add_text(action_group.description)
-                formatter.add_arguments(action_group._group_actions)
-                formatter.end_section()
-
-        # End cmd2 customization
-
-        # epilog
-        formatter.add_text(self.epilog)
-
-        # determine help from format above
-        return formatter.format_help() + '\n'
+        """Override to add a newline."""
+        return super().format_help() + '\n'
 
     def create_text_group(self, title: str, text: RenderableType) -> TextGroup:
         """Create a TextGroup using this parser's formatter creator."""
