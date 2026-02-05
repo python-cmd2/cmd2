@@ -1,7 +1,12 @@
-## 3.1.4 (TBD)
+## 3.2.0 (TBD)
 
 - Bug Fixes
     - Fixed incompatibilities with Python 3.14.3.
+
+- Potentially Breaking Changes
+    - To avoid future incompatibilities with argparse, we removed most of our overridden help
+      functions. This should not break an application, but it could affect unit tests which parse
+      help text.
 
 ## 3.1.3 (February 3, 2026)
 
