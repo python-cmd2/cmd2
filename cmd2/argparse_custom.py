@@ -261,11 +261,9 @@ import sys
 from argparse import ArgumentError
 from collections.abc import (
     Callable,
-    Iterable,
     Iterator,
     Sequence,
 )
-from gettext import gettext
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1131,173 +1129,6 @@ class Cmd2HelpFormatter(RichHelpFormatter):
 
         super().__init__(prog, indent_increment, max_help_position, width, console=console, **kwargs)
 
-    def _format_usage(
-        self,
-        usage: str | None,
-        actions: Iterable[argparse.Action],
-        groups: Iterable[argparse._ArgumentGroup],
-        prefix: str | None = None,
-    ) -> str:
-        if prefix is None:
-            prefix = gettext('Usage: ')
-
-        # if usage is specified, use that
-        if usage is not None:
-            usage %= {"prog": self._prog}
-
-        # if no optionals or positionals are available, usage is just prog
-        elif not actions:
-            usage = f'{self._prog}'
-
-        # if optionals and positionals are available, calculate usage
-        else:
-            prog = f'{self._prog}'
-
-            # split optionals from positionals
-            optionals = []
-            positionals = []
-            # Begin cmd2 customization (separates required and optional, applies to all changes in this function)
-            required_options = []
-            for action in actions:
-                if action.option_strings:
-                    if action.required:
-                        required_options.append(action)
-                    else:
-                        optionals.append(action)
-                else:
-                    positionals.append(action)
-            # End cmd2 customization
-
-            # build full usage string
-            format_actions = self._format_actions_usage
-            action_usage = format_actions(required_options + optionals + positionals, groups)  # type: ignore[arg-type]
-            usage = ' '.join([s for s in [prog, action_usage] if s])
-
-            # wrap the usage parts if it's too long
-            text_width = self._width - self._current_indent
-            if len(prefix) + len(usage) > text_width:
-                # Begin cmd2 customization
-
-                # break usage into wrappable parts
-                part_regexp = r'\(.*?\)+|\[.*?\]+|\S+'
-                req_usage = format_actions(required_options, groups)  # type: ignore[arg-type]
-                opt_usage = format_actions(optionals, groups)  # type: ignore[arg-type]
-                pos_usage = format_actions(positionals, groups)  # type: ignore[arg-type]
-                req_parts = re.findall(part_regexp, req_usage)
-                opt_parts = re.findall(part_regexp, opt_usage)
-                pos_parts = re.findall(part_regexp, pos_usage)
-
-                # End cmd2 customization
-
-                # helper for wrapping lines
-                def get_lines(parts: list[str], indent: str, prefix: str | None = None) -> list[str]:
-                    lines: list[str] = []
-                    line: list[str] = []
-                    line_len = len(prefix) - 1 if prefix is not None else len(indent) - 1
-                    for part in parts:
-                        if line_len + 1 + len(part) > text_width and line:
-                            lines.append(indent + ' '.join(line))
-                            line = []
-                            line_len = len(indent) - 1
-                        line.append(part)
-                        line_len += len(part) + 1
-                    if line:
-                        lines.append(indent + ' '.join(line))
-                    if prefix is not None:
-                        lines[0] = lines[0][len(indent) :]
-                    return lines
-
-                # if prog is short, follow it with optionals or positionals
-                if len(prefix) + len(prog) <= 0.75 * text_width:
-                    indent = ' ' * (len(prefix) + len(prog) + 1)
-                    # Begin cmd2 customization
-                    if req_parts:
-                        lines = get_lines([prog, *req_parts], indent, prefix)
-                        lines.extend(get_lines(opt_parts, indent))
-                        lines.extend(get_lines(pos_parts, indent))
-                    elif opt_parts:
-                        lines = get_lines([prog, *opt_parts], indent, prefix)
-                        lines.extend(get_lines(pos_parts, indent))
-                    elif pos_parts:
-                        lines = get_lines([prog, *pos_parts], indent, prefix)
-                    else:
-                        lines = [prog]
-                    # End cmd2 customization
-
-                # if prog is long, put it on its own line
-                else:
-                    indent = ' ' * len(prefix)
-                    # Begin cmd2 customization
-                    parts = req_parts + opt_parts + pos_parts
-                    lines = get_lines(parts, indent)
-                    if len(lines) > 1:
-                        lines = []
-                        lines.extend(get_lines(req_parts, indent))
-                        lines.extend(get_lines(opt_parts, indent))
-                        lines.extend(get_lines(pos_parts, indent))
-                    # End cmd2 customization
-                    lines = [prog, *lines]
-
-                # join lines into usage
-                usage = '\n'.join(lines)
-
-        # prefix with 'Usage:'
-        return f'{prefix}{usage}\n\n'
-
-    def _format_action_invocation(self, action: argparse.Action) -> str:
-        if not action.option_strings:
-            default = self._get_default_metavar_for_positional(action)
-            (metavar,) = self._metavar_formatter(action, default)(1)
-            return metavar
-
-        parts: list[str] = []
-
-        # if the Optional doesn't take a value, format is:
-        #    -s, --long
-        if action.nargs == 0:
-            parts.extend(action.option_strings)
-            return ', '.join(parts)
-
-        # Begin cmd2 customization (less verbose)
-        # if the Optional takes a value, format is:
-        #    -s, --long ARGS
-        default = self._get_default_metavar_for_optional(action)
-        args_string = self._format_args(action, default)
-
-        return ', '.join(action.option_strings) + ' ' + args_string
-        # End cmd2 customization
-
-    def _determine_metavar(
-        self,
-        action: argparse.Action,
-        default_metavar: str,
-    ) -> str | tuple[str, ...]:
-        """Determine what to use as the metavar value of an action."""
-        if action.metavar is not None:
-            result = action.metavar
-        elif action.choices is not None:
-            choice_strs = [str(choice) for choice in action.choices]
-            # Begin cmd2 customization (added space after comma)
-            result = f'{", ".join(choice_strs)}'
-            # End cmd2 customization
-        else:
-            result = default_metavar
-        return result
-
-    def _metavar_formatter(
-        self,
-        action: argparse.Action,
-        default_metavar: str,
-    ) -> Callable[[int], tuple[str, ...]]:
-        metavar = self._determine_metavar(action, default_metavar)
-
-        def format_tuple(tuple_size: int) -> tuple[str, ...]:
-            if isinstance(metavar, tuple):
-                return metavar
-            return (metavar,) * tuple_size
-
-        return format_tuple
-
     def _build_nargs_range_str(self, nargs_range: tuple[int, int | float]) -> str:
         """Generate nargs range string for help text."""
         if nargs_range[1] == constants.INFINITY:
@@ -1314,13 +1145,12 @@ class Cmd2HelpFormatter(RichHelpFormatter):
 
         All formats in this function need to be handled by _rich_metavar_parts().
         """
-        metavar = self._determine_metavar(action, default_metavar)
-        metavar_formatter = self._metavar_formatter(action, default_metavar)
+        get_metavar = self._metavar_formatter(action, default_metavar)
 
         # Handle nargs specified as a range
         nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
-            arg_str = '%s' % metavar_formatter(1)  # noqa: UP031
+            arg_str = '%s' % get_metavar(1)  # noqa: UP031
             range_str = self._build_nargs_range_str(nargs_range)
             return f"{arg_str}{range_str}"
 
@@ -1329,8 +1159,8 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         # To make this less verbose, format it like: 'command arg{5}'.
         # Do not customize the output when metavar is a tuple of strings. Allow argparse's
         # formatter to handle that instead.
-        if isinstance(metavar, str) and isinstance(action.nargs, int) and action.nargs > 1:
-            arg_str = '%s' % metavar_formatter(1)  # noqa: UP031
+        if not isinstance(action.metavar, tuple) and isinstance(action.nargs, int) and action.nargs > 1:
+            arg_str = '%s' % get_metavar(1)  # noqa: UP031
             return f"{arg_str}{{{action.nargs}}}"
 
         # Fallback to parent for all other cases
@@ -1342,19 +1172,18 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         default_metavar: str,
     ) -> Iterator[tuple[str, bool]]:
         """Override to handle all cmd2-specific formatting in _format_args()."""
-        metavar = self._determine_metavar(action, default_metavar)
-        metavar_formatter = self._metavar_formatter(action, default_metavar)
+        get_metavar = self._metavar_formatter(action, default_metavar)
 
         # Handle nargs specified as a range
         nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
-            yield "%s" % metavar_formatter(1), True  # noqa: UP031
+            yield "%s" % get_metavar(1), True  # noqa: UP031
             yield self._build_nargs_range_str(nargs_range), False
             return
 
         # Handle specific integer nargs (e.g., nargs=5 -> arg{5})
-        if isinstance(metavar, str) and isinstance(action.nargs, int) and action.nargs > 1:
-            yield "%s" % metavar_formatter(1), True  # noqa: UP031
+        if not isinstance(action.metavar, tuple) and isinstance(action.nargs, int) and action.nargs > 1:
+            yield "%s" % get_metavar(1), True  # noqa: UP031
             yield f"{{{action.nargs}}}", False
             return
 
