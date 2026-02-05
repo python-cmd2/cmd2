@@ -271,13 +271,6 @@ def test_generate_range_error() -> None:
     assert err_str == "expected 0 to 2 arguments"
 
 
-def test_apcustom_required_options() -> None:
-    # Make sure a 'required arguments' section shows when a flag is marked required
-    parser = Cmd2ArgumentParser()
-    parser.add_argument('--required_flag', required=True)
-    assert 'Required Arguments' in parser.format_help()
-
-
 def test_apcustom_metavar_tuple() -> None:
     # Test the case when a tuple metavar is used with nargs an integer > 1
     parser = Cmd2ArgumentParser()

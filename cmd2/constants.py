@@ -47,8 +47,8 @@ SUBCMD_ATTR_COMMAND = 'parent_command'
 SUBCMD_ATTR_NAME = 'subcommand_name'
 SUBCMD_ATTR_ADD_PARSER_KWARGS = 'subcommand_add_parser_kwargs'
 
-# arpparse attribute linking to command set instance
-PARSER_ATTR_COMMANDSET = 'command_set'
+# arpparse attribute uniquely identifying the command set instance
+PARSER_ATTR_COMMANDSET_ID = 'command_set_id'
 
 # custom attributes added to argparse Namespaces
 NS_ATTR_SUBCMD_HANDLER = '__subcmd_handler__'
