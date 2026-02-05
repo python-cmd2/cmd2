@@ -4059,25 +4059,31 @@ class Cmd:
                     self.perror(f"Macro '{cur_name}' does not exist")
 
     # macro -> list
-    macro_list_help = "list macros"
-    macro_list_description = Text.assemble(
-        "List specified macros in a reusable form that can be saved to a startup script to preserve macros across sessions.",
-        "\n\n",
-        "Without arguments, all macros will be listed.",
-    )
+    @classmethod
+    def _build_macro_list_parser(cls) -> Cmd2ArgumentParser:
+        macro_list_description = Text.assemble(
+            (
+                "List specified macros in a reusable form that can be saved to a startup script "
+                "to preserve macros across sessions."
+            ),
+            "\n\n",
+            "Without arguments, all macros will be listed.",
+        )
 
-    macro_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
-    macro_list_parser.add_argument(
-        'names',
-        nargs=argparse.ZERO_OR_MORE,
-        help='macro(s) to list',
-        choices_provider=_get_macro_completion_items,
-        descriptive_headers=["Value"],
-    )
+        macro_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
+        macro_list_parser.add_argument(
+            'names',
+            nargs=argparse.ZERO_OR_MORE,
+            help='macro(s) to list',
+            choices_provider=cls._get_macro_completion_items,
+            descriptive_headers=["Value"],
+        )
 
-    @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
+        return macro_list_parser
+
+    @as_subcommand_to('macro', 'list', _build_macro_list_parser, help="list macros")
     def _macro_list(self, args: argparse.Namespace) -> None:
-        """List some or all macros as 'macro create' commands."""
+        """List macros."""
         self.last_result = {}  # dict[macro_name, macro_value]
 
         tokens_to_quote = constants.REDIRECTION_TOKENS
