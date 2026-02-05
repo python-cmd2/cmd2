@@ -950,11 +950,12 @@ class Cmd:
 
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
         def check_parser_uninstallable(parser: argparse.ArgumentParser) -> None:
+            cmdset_id = id(cmdset)
             for action in parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
                     for subparser in action.choices.values():
-                        attached_cmdset = getattr(subparser, constants.PARSER_ATTR_COMMANDSET, None)
-                        if attached_cmdset is not None and attached_cmdset is not cmdset:
+                        attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_COMMANDSET_ID, None)
+                        if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
                             raise CommandSetRegistrationError(
                                 'Cannot uninstall CommandSet when another CommandSet depends on it'
                             )
@@ -1049,7 +1050,7 @@ class Cmd:
             subcmd_parser.set_defaults(**defaults)
 
             # Set what instance the handler is bound to
-            setattr(subcmd_parser, constants.PARSER_ATTR_COMMANDSET, cmdset)
+            setattr(subcmd_parser, constants.PARSER_ATTR_COMMANDSET_ID, id(cmdset))
 
             # Find the argparse action that handles subcommands
             for action in target_parser._actions:
