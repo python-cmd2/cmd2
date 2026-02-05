@@ -1722,7 +1722,7 @@ def test_help_with_no_docstring(capsys) -> None:
         out
         == """Usage: greet [-h] [-s]
 
-Optional Arguments:
+Options:
   -h, --help   show this help message and exit
   -s, --shout  N00B EMULATION MODE
 

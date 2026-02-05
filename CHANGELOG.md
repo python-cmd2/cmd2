@@ -47,6 +47,16 @@ shell, and the option for a persistent bottom bar that can display realtime stat
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
 
+## 3.2.0 (February 5, 2026)
+
+- Bug Fixes
+    - Fixed incompatibilities with Python 3.14.3.
+
+- Potentially Breaking Changes
+    - To avoid future incompatibilities with argparse, we removed most of our overridden help
+      functions. This should not break an application, but it could affect unit tests which parse
+      help text.
+
 ## 3.1.3 (February 3, 2026)
 
 - Bug Fixes
