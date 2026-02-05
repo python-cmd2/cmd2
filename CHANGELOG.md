@@ -1,3 +1,8 @@
+## 3.1.4 (TBD)
+
+- Bug Fixes
+    - Fixed incompatibilities with Python 3.14.3.
+
 ## 3.1.3 (February 3, 2026)
 
 - Bug Fixes

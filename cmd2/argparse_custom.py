@@ -1124,10 +1124,22 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         **kwargs: Any,
     ) -> None:
         """Initialize Cmd2HelpFormatter."""
-        if console is None:
-            console = Cmd2RichArgparseConsole()
-
         super().__init__(prog, indent_increment, max_help_position, width, console=console, **kwargs)
+
+        # Recast to assist type checkers
+        self._console: Cmd2RichArgparseConsole | None
+
+    @property  # type: ignore[override]
+    def console(self) -> Cmd2RichArgparseConsole:
+        """Return our console instance."""
+        if self._console is None:
+            self._console = Cmd2RichArgparseConsole()
+        return self._console
+
+    @console.setter
+    def console(self, console: Cmd2RichArgparseConsole) -> None:
+        """Set our console instance."""
+        self._console = console
 
     def _build_nargs_range_str(self, nargs_range: tuple[int, int | float]) -> str:
         """Generate nargs range string for help text."""
@@ -1319,8 +1331,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         )
 
         # Recast to assist type checkers since these can be Rich renderables in a Cmd2HelpFormatter.
-        self.description: RenderableType | None = self.description  # type: ignore[assignment]
-        self.epilog: RenderableType | None = self.epilog  # type: ignore[assignment]
+        self.description: RenderableType | None  # type: ignore[assignment]
+        self.epilog: RenderableType | None  # type: ignore[assignment]
 
         self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
 
