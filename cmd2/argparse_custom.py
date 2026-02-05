@@ -269,16 +269,13 @@ from typing import (
     Any,
     ClassVar,
     NoReturn,
-    Protocol,
     cast,
-    runtime_checkable,
 )
 
 from rich.console import (
     Group,
     RenderableType,
 )
-from rich.protocol import is_renderable
 from rich.table import Column
 from rich.text import Text
 from rich_argparse import (
@@ -289,14 +286,17 @@ from rich_argparse import (
     RichHelpFormatter,
 )
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
-
 from . import constants
 from . import rich_utils as ru
+from .completion import (
+    ChoicesProviderFunc,
+    ChoicesProviderFuncBase,
+    ChoicesProviderFuncWithTokens,
+    CompleterFunc,
+    CompleterFuncBase,
+    CompleterFuncWithTokens,
+    CompletionItem,
+)
 from .rich_utils import Cmd2RichArgparseConsole
 from .styles import Cmd2Style
 
@@ -373,100 +373,6 @@ def set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
         # Need to save required args so they can be prepended to the subcommand usage
         if action.required:
             req_args.append(action.dest)
-
-
-class CompletionItem(str):  # noqa: SLOT000
-    """Completion item with descriptive text attached.
-
-    See header of this file for more information
-    """
-
-    def __new__(cls, value: object, *_args: Any, **_kwargs: Any) -> Self:
-        """Responsible for creating and returning a new instance, called before __init__ when an object is instantiated."""
-        return super().__new__(cls, value)
-
-    def __init__(self, value: object, descriptive_data: Sequence[Any], *args: Any) -> None:
-        """CompletionItem Initializer.
-
-        :param value: the value being completed
-        :param descriptive_data: a list of descriptive data to display in the columns that follow
-                                 the completion value. The number of items in this list must equal
-                                 the number of descriptive headers defined for the argument.
-        :param args: args for str __init__
-        """
-        super().__init__(*args)
-
-        # Make sure all objects are renderable by a Rich table.
-        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in descriptive_data]
-
-        # Convert strings containing ANSI style sequences to Rich Text objects for correct display width.
-        self.descriptive_data = ru.prepare_objects_for_rendering(*renderable_data)
-
-        # Save the original value to support CompletionItems as argparse choices.
-        # cmd2 has patched argparse so input is compared to this value instead of the CompletionItem instance.
-        self._orig_value = value
-
-    @property
-    def orig_value(self) -> Any:
-        """Read-only property for _orig_value."""
-        return self._orig_value
-
-
-############################################################################################################
-# Class and functions related to ChoicesCallable
-############################################################################################################
-
-
-@runtime_checkable
-class ChoicesProviderFuncBase(Protocol):
-    """Function that returns a list of choices in support of completion."""
-
-    def __call__(self) -> list[str]:  # pragma: no cover
-        """Enable instances to be called like functions."""
-
-
-@runtime_checkable
-class ChoicesProviderFuncWithTokens(Protocol):
-    """Function that returns a list of choices in support of completion and accepts a dictionary of prior arguments."""
-
-    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]:  # pragma: no cover  # noqa: B006
-        """Enable instances to be called like functions."""
-
-
-ChoicesProviderFunc = ChoicesProviderFuncBase | ChoicesProviderFuncWithTokens
-
-
-@runtime_checkable
-class CompleterFuncBase(Protocol):
-    """Function to support completion with the provided state of the user prompt."""
-
-    def __call__(
-        self,
-        text: str,
-        line: str,
-        begidx: int,
-        endidx: int,
-    ) -> list[str]:  # pragma: no cover
-        """Enable instances to be called like functions."""
-
-
-@runtime_checkable
-class CompleterFuncWithTokens(Protocol):
-    """Function to support completion with the provided state of the user prompt, accepts a dictionary of prior args."""
-
-    def __call__(
-        self,
-        text: str,
-        line: str,
-        begidx: int,
-        endidx: int,
-        *,
-        arg_tokens: dict[str, list[str]] = {},  # noqa: B006
-    ) -> list[str]:  # pragma: no cover
-        """Enable instances to be called like functions."""
-
-
-CompleterFunc = CompleterFuncBase | CompleterFuncWithTokens
 
 
 class ChoicesCallable:

@@ -22,10 +22,12 @@ from rich.text import Text
 
 from . import (
     constants,
-    rich_utils,
     utils,
 )
-from .argparse_custom import CompletionItem
+from . import rich_utils as ru
+from .completion import CompletionItem
+from .exceptions import CompletionError
+from .styles import Cmd2Style
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
@@ -63,53 +65,56 @@ class Cmd2Completer(Completer):
         endidx = cursor_pos
         text = line[begidx:endidx]
 
-        # Call cmd2's complete method
-        self.cmd_app.complete(text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings)
-
-        # Print formatted completions (tables) above the prompt if present
-        if self.cmd_app.formatted_completions:
-            print_formatted_text(ANSI("\n" + self.cmd_app.formatted_completions))
-            self.cmd_app.formatted_completions = ""
-
-        # Print completion header (e.g. CompletionError) if present
-        if self.cmd_app.completion_header:
-            print_formatted_text(ANSI(self.cmd_app.completion_header))
-            self.cmd_app.completion_header = ""
-
-        matches = self.cmd_app.completion_matches
-
-        # Print hint if present and settings say we should
-        if self.cmd_app.completion_hint and (self.cmd_app.always_show_hint or not matches):
-            print_formatted_text(ANSI(self.cmd_app.completion_hint))
-            self.cmd_app.completion_hint = ""
-
-        if not matches:
+        try:
+            completions = self.cmd_app.complete(
+                text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
+            )
+        except CompletionError as ex:
+            general_console = ru.Cmd2GeneralConsole()
+            with general_console.capture() as capture:
+                general_console.print(
+                    Text.assemble(
+                        "\n",
+                        (str(ex), Cmd2Style.ERROR if ex.apply_style else ""),
+                    ),
+                )
+            print_formatted_text(ANSI(capture.get()))
+            return
+        except Exception as ex:  # noqa: BLE001
+            formatted_exception = self.cmd_app.format_exception(ex)
+            print_formatted_text(ANSI(formatted_exception))
             return
 
-        # Now we iterate over self.cmd_app.completion_matches and self.cmd_app.display_matches
+        # Print formatted completions if present
+        if completions.formatted_completions:
+            print_formatted_text(ANSI("\n" + completions.formatted_completions))
+
+        # Print hint if present and settings say we should
+        if completions.completion_hint and (self.cmd_app.always_show_hint or not completions.matches):
+            print_formatted_text(ANSI(completions.completion_hint))
+
+        if not completions.matches:
+            return
+
+        # Now we iterate over completions.matches and completions.display_matches.
         # cmd2 separates completion matches (what is inserted) from display matches (what is shown).
         # prompt_toolkit Completion object takes 'text' (what is inserted) and 'display' (what is shown).
 
-        # Check if we have display matches and if they match the length of completion matches
-        display_matches = self.cmd_app.display_matches
-        use_display_matches = len(display_matches) == len(matches)
+        # Check if we have display matches
+        use_display_matches = bool(completions.display_matches)
 
-        for i, match in enumerate(matches):
-            display = display_matches[i] if use_display_matches else match
+        for i, match in enumerate(completions.matches):
+            display = completions.display_matches[i] if use_display_matches else match
             display_meta: str | ANSI | None = None
             if isinstance(match, CompletionItem) and match.descriptive_data:
                 if isinstance(match.descriptive_data[0], str):
                     display_meta = match.descriptive_data[0]
                 elif isinstance(match.descriptive_data[0], Text):
                     # Convert rich renderable to prompt-toolkit formatted text
-                    display_meta = ANSI(rich_utils.rich_text_to_string(match.descriptive_data[0]))
+                    display_meta = ANSI(ru.rich_text_to_string(match.descriptive_data[0]))
 
-            # prompt_toolkit replaces the word before cursor by default if we use the default Completer?
-            # No, we yield Completion(text, start_position=...).
-            # Default start_position is 0 (append).
-
+            # Set offset to the start of the current word to overwrite it with the completion
             start_position = -len(text)
-
             yield Completion(match, start_position=start_position, display=display, display_meta=display_meta)
 
 

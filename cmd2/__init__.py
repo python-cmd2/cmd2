@@ -15,7 +15,6 @@ from .argparse_completer import set_default_ap_completer_type
 from .argparse_custom import (
     Cmd2ArgumentParser,
     Cmd2AttributeWrapper,
-    CompletionItem,
     register_argparse_argument_parameter,
     set_default_argument_parser_type,
 )
@@ -25,6 +24,7 @@ from .command_definition import (
     CommandSet,
     with_default_category,
 )
+from .completion import CompletionItem
 from .constants import (
     COMMAND_NAME,
     DEFAULT_SHORTCUTS,
@@ -60,7 +60,6 @@ __all__: list[str] = [  # noqa: RUF022
     # Argparse Exports
     'Cmd2ArgumentParser',
     'Cmd2AttributeWrapper',
-    'CompletionItem',
     'register_argparse_argument_parameter',
     'set_default_ap_completer_type',
     'set_default_argument_parser_type',
@@ -71,6 +70,8 @@ __all__: list[str] = [  # noqa: RUF022
     'Statement',
     # Colors
     "Color",
+    # Completion
+    'CompletionItem',
     # Decorators
     'with_argument_list',
     'with_argparser',
