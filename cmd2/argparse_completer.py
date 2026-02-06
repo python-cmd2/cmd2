@@ -143,7 +143,7 @@ class _NoResultsError(CompletionError):
     def __init__(self, parser: argparse.ArgumentParser, arg_action: argparse.Action) -> None:
         """CompletionError which occurs when there are no results.
 
-        If hinting is allowed, then its message will be a hint about the argument being completed.
+        If hinting is allowed on this argument, then its hint text will display.
 
         :param parser: ArgumentParser instance which owns the action being completed
         :param arg_action: action being completed.
@@ -481,7 +481,6 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completions:
-                # Don't overwrite an existing hint
                 if (
                     not completions.completion_hint
                     and not isinstance(pos_arg_state.action, argparse._SubParsersAction)

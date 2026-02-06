@@ -1465,7 +1465,7 @@ class Cmd:
                     max_frames=0,  # 0 means full traceback.
                     word_wrap=True,  # Wrap long lines of code instead of truncate
                 )
-                console.print(traceback)
+                console.print(traceback, end="")
 
             else:
                 # Print the exception in the same style Rich uses after a traceback.
@@ -1492,9 +1492,6 @@ class Cmd:
                     final_msg.append(help_msg)
 
                 console.print(final_msg)
-
-            # Add a blank line
-            console.print()
 
         return capture.get()
 
@@ -2501,7 +2498,6 @@ class Cmd:
                     metavar="COMMAND",
                     help="command, alias, or macro name",
                     choices=self._get_commands_aliases_and_macros_for_completion(),
-                    suppress_tab_hint=True,
                 )
                 custom_settings = utils.CustomCompletionSettings(parser)
 

@@ -70,15 +70,14 @@ class Cmd2Completer(Completer):
                 text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
             )
         except CompletionError as ex:
-            general_console = ru.Cmd2GeneralConsole()
-            with general_console.capture() as capture:
-                general_console.print(
-                    Text.assemble(
-                        "\n",
-                        (str(ex), Cmd2Style.ERROR if ex.apply_style else ""),
-                    ),
-                )
-            print_formatted_text(ANSI(capture.get()))
+            # Don't print unless error has length
+            err_str = str(ex)
+            if err_str:
+                general_console = ru.Cmd2GeneralConsole()
+                with general_console.capture() as capture:
+                    styled_err = Text(err_str, style=Cmd2Style.ERROR if ex.apply_style else "")
+                    general_console.print(styled_err, end="")
+                print_formatted_text(ANSI(capture.get()))
             return
         except Exception as ex:  # noqa: BLE001
             formatted_exception = self.cmd_app.format_exception(ex)
