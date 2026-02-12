@@ -105,7 +105,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     STR_METAVAR = "HEADLESS"
     TUPLE_METAVAR = ('arg1', 'others')
-    CUSTOM_DESC_HEADERS = ("Custom Headers",)
+    CUSTOM_HEADER = ("Custom Header",)
 
     # tuples (for sake of immutability) used in our tests (there is a mix of sorted and unsorted on purpose)
     non_negative_num_choices = (1, 2, 3, 0.5, 22)
@@ -149,7 +149,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         "--desc_header",
         help='this arg has a descriptive header',
         choices_provider=completion_item_method,
-        descriptive_headers=CUSTOM_DESC_HEADERS,
+        table_header=CUSTOM_HEADER,
     )
     choices_parser.add_argument(
         "--no_header",
@@ -755,15 +755,15 @@ def test_completion_items(ac_app) -> None:
 @pytest.mark.parametrize(
     ('num_aliases', 'show_description'),
     [
-        # The number of completion results determines if the description field of CompletionItems gets displayed
-        # in the tab completions. The count must be greater than 1 and less than ac_app.max_completion_items,
+        # The number of completion results determines if a completion table is displayed.
+        # The count must be greater than 1 and less than ac_app.max_completion_table_items,
         # which defaults to 50.
         (1, False),
         (5, True),
         (100, False),
     ],
 )
-def test_max_completion_items(ac_app, num_aliases, show_description) -> None:
+def test_max_completion_table_items(ac_app, num_aliases, show_description) -> None:
     # Create aliases
     for i in range(num_aliases):
         run_cmd(ac_app, f'alias create fake_alias{i} help')
@@ -951,28 +951,28 @@ def test_completion_items_arg_header(ac_app) -> None:
     assert ac_app.TUPLE_METAVAR[1].upper() in normalize(ac_app.formatted_completions)[0]
 
 
-def test_completion_items_descriptive_headers(ac_app) -> None:
+def test_completion_items_table_header(ac_app) -> None:
     from cmd2.argparse_completer import (
-        DEFAULT_DESCRIPTIVE_HEADERS,
+        DEFAULT_TABLE_HEADER,
     )
 
-    # This argument provided a descriptive header
+    # This argument provided a table header
     text = ''
     line = f'choices --desc_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert ac_app.CUSTOM_DESC_HEADERS[0] in normalize(ac_app.formatted_completions)[0]
+    assert ac_app.CUSTOM_TABLE_HEADER[0] in normalize(ac_app.formatted_completions)[0]
 
-    # This argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADERS
+    # This argument did not provide a table header, so it should be DEFAULT_TABLE_HEADER
     text = ''
     line = f'choices --no_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     complete_tester(text, line, begidx, endidx, ac_app)
-    assert DEFAULT_DESCRIPTIVE_HEADERS[0] in normalize(ac_app.formatted_completions)[0]
+    assert DEFAULT_TABLE_HEADER[0] in normalize(ac_app.formatted_completions)[0]
 
 
 @pytest.mark.parametrize(
@@ -1347,33 +1347,3 @@ def test_add_parser_custom_completer() -> None:
 
     custom_completer_parser = subparsers.add_parser(name="custom_completer", ap_completer_type=CustomCompleter)
     assert custom_completer_parser.get_ap_completer_type() is CustomCompleter  # type: ignore[attr-defined]
-
-
-def test_autcomp_fallback_to_flags_nargs0(ac_app) -> None:
-    """Test fallback to flags when a positional argument has nargs=0 (using manual patching)"""
-    from cmd2.argparse_completer import (
-        ArgparseCompleter,
-    )
-
-    parser = Cmd2ArgumentParser()
-    # Add a positional argument
-    action = parser.add_argument('pos')
-    # Add a flag
-    parser.add_argument('-f', '--flag', action='store_true', help='a flag')
-
-    # Manually change nargs to 0 AFTER adding it to bypass argparse validation during add_argument.
-    # This allows us to hit the fallback-to-flags logic in _handle_last_token where pos_arg_state.max is 0.
-    action.nargs = 0
-
-    ac = ArgparseCompleter(parser, ac_app)
-
-    text = ''
-    line = 'cmd '
-    endidx = len(line)
-    begidx = endidx - len(text)
-    tokens = ['']
-
-    # This should hit the fallback to flags in _handle_last_token because pos has max=0 and count=0
-    results = ac.complete(text, line, begidx, endidx, tokens)
-
-    assert any(item == '-f' for item in results)

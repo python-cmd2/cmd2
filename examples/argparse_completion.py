@@ -110,7 +110,7 @@ class ArgparseCompletion(Cmd):
         '--completion_item',
         choices_provider=choices_completion_item,
         metavar="ITEM_ID",
-        descriptive_headers=["Description"],
+        table_header=["Description"],
         help="demonstrate use of CompletionItems",
     )
 

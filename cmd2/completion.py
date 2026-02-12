@@ -1,148 +1,232 @@
 """Provides classes and functions related to completion."""
 
+import re
 import sys
 from collections.abc import (
+    Iterator,
     Sequence,
+)
+from dataclasses import (
+    dataclass,
+    field,
 )
 from typing import (
     Any,
     Protocol,
+    TypeAlias,
+    cast,
+    overload,
     runtime_checkable,
 )
-
-from rich.protocol import is_renderable
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
 
-
-from dataclasses import (
-    dataclass,
-    field,
-)
+from rich.protocol import is_renderable
 
 from . import rich_utils as ru
+from . import utils
+
+# Regular expression to identify strings which we should sort numerically
+NUMERIC_RE = re.compile(
+    r"""
+    ^              # Start of string
+    [-+]?          # Optional sign
+    (?:            # Start of non-capturing group
+        \d+\.?\d*  # Matches 123 or 123. or 123.45
+        |          # OR
+        \.\d+      # Matches .45
+    )              # End of group
+    $              # End of string
+""",
+    re.VERBOSE,
+)
 
 
-@dataclass(slots=True)
-class Completions:
-    """The result and display configuration for a completion operation.
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CompletionItem:
+    """A single completion result."""
 
-    Note: Validation of data integrity is performed by Cmd.complete() before returning.
-    """
+    # The underlying object this completion represents (e.g., a Path, Enum, or int).
+    # This is used to support argparse choices validation.
+    value: Any = field(kw_only=False)
 
-    # The list of completions
-    matches: list[str] = field(default_factory=list)
+    # The actual string that will be inserted into the command line.
+    # If not provided, it defaults to str(value).
+    text: str = ""
 
-    # Optional strings for displaying the matches differently in the completion menu.
-    # If populated, it must be the same length as matches.
-    display_matches: list[str] = field(default_factory=list)
+    # Optional string for displaying the completion differently in the completion menu.
+    display: str = ""
 
-    # Optional meta information about each match which displays in the completion menu.
-    # If populated, it must be the same length as matches.
-    display_meta: list[str] = field(default_factory=list)
+    # Optional meta information about completion which displays in the completion menu.
+    display_meta: str = ""
 
-    # If True and a single match is returned to complete(), then a space will be appended
-    # if the match appears at the end of the line
-    allow_appended_space: bool = True
+    # Optional row data for completion tables. Length must match the associated argparse
+    # argument's table_header. This is stored internally as a tuple.
+    table_row: Sequence[Any] = field(default_factory=tuple)
 
-    # If True and a single match is returned to complete(), then a closing quote
-    # will be added if there is an unmatched opening quote
-    allow_closing_quote: bool = True
+    def __post_init__(self) -> None:
+        """Finalize the object after initialization."""
+        # Derive text from value if it wasn't explicitly provided
+        if not self.text:
+            object.__setattr__(self, "text", str(self.value))
+
+        # Ensure display is never blank.
+        if not self.display:
+            object.__setattr__(self, "display", self.text)
+
+        # Make sure all table row objects are renderable by a Rich table.
+        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in self.table_row]
+
+        # Convert strings containing ANSI style sequences to Rich Text objects for correct display width.
+        object.__setattr__(
+            self,
+            'table_row',
+            ru.prepare_objects_for_rendering(*renderable_data),
+        )
+
+    def __str__(self) -> str:
+        """Return the completion text."""
+        return self.text
+
+    def __eq__(self, other: object) -> bool:
+        """Compare this CompletionItem for equality.
+
+        Identity is determined by value, text, display, and display_meta.
+        table_row is excluded from equality checks to ensure that items
+        with the same functional value are treated as duplicates.
+
+        Also supports comparison against non-CompletionItems to facilitate argparse
+        choices validation.
+        """
+        if isinstance(other, CompletionItem):
+            return (
+                self.value == other.value
+                and self.text == other.text
+                and self.display == other.display
+                and self.display_meta == other.display_meta
+            )
+
+        # This supports argparse validation when a CompletionItem is used as a choice
+        return bool(self.value == other)
+
+    def __hash__(self) -> int:
+        """Return a hash of the item's identity fields."""
+        return hash((self.value, self.text, self.display, self.display_meta))
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class CompletionResultsBase:
+    """Base class for results containing a collection of CompletionItems."""
+
+    # The collection of CompletionItems. This is stored internally as a tuple.
+    items: Sequence[CompletionItem] = field(default_factory=tuple, kw_only=False)
+
+    # If True, indicates the items are already provided in the desired display order.
+    # If False, items will be sorted by their display value during initialization.
+    is_sorted: bool = False
+
+    def __post_init__(self) -> None:
+        """Finalize the object after initialization."""
+        unique_items = utils.remove_duplicates(self.items)
+        if not self.is_sorted:
+            if all_display_numeric(unique_items):
+                # Sort numerically
+                unique_items.sort(key=lambda item: float(item.display))
+            else:
+                # Standard string sort
+                unique_items.sort(key=lambda item: utils.DEFAULT_STR_SORT_KEY(item.display))
+
+            object.__setattr__(self, "is_sorted", True)
+
+        object.__setattr__(self, "items", tuple(unique_items))
+
+    @classmethod
+    def from_strings(cls, strings: Sequence[str], *, is_sorted: bool = False) -> Self:
+        """Create a completion results instance from a sequence of strings.
+
+        :param strings: the raw strings to be converted into CompletionItems.
+        :param is_sorted: whether the strings are already in the desired order.
+        """
+        items = [CompletionItem(s) for s in strings]
+        return cls(items=items, is_sorted=is_sorted)
+
+    # --- Sequence Protocol Functions ---
+
+    def __bool__(self) -> bool:
+        """Return True if there are items, False otherwise."""
+        return bool(self.items)
+
+    def __len__(self) -> int:
+        """Return the number of items."""
+        return len(self.items)
+
+    def __contains__(self, item: object) -> bool:
+        """Return True if the item is present in the collection."""
+        return item in self.items
+
+    def __iter__(self) -> Iterator[CompletionItem]:
+        """Allow the collection to be used in loops or comprehensions."""
+        return iter(self.items)
+
+    def __reversed__(self) -> Iterator[CompletionItem]:
+        """Allow the collection to be iterated in reverse order using reversed()."""
+        return reversed(self.items)
+
+    @overload
+    def __getitem__(self, index: int) -> CompletionItem: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> tuple[CompletionItem, ...]: ...
+
+    def __getitem__(self, index: int | slice) -> CompletionItem | tuple[CompletionItem, ...]:
+        """Retrieve an item by its integer index or a range of items using a slice."""
+        items_tuple = cast(tuple[CompletionItem, ...], self.items)
+        return items_tuple[index]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Choices(CompletionResultsBase):
+    """A collection of potential values available for completion, typically provided by a choice provider."""
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Completions(CompletionResultsBase):
+    """The results of a completion operation."""
 
     # An optional hint which prints above completion suggestions
     completion_hint: str = ""
 
-    # Normally cmd2 uses prompt-toolkit's formatter to columnize the list of completion suggestions.
-    # If a custom format is preferred, write the formatted completions to this string. cmd2 will
-    # then print it instead of the prompt-toolkit format. ANSI style sequences and newlines are supported
-    # when using this value. Even when using formatted_completions, the full matches must still be returned
-    # from your completer function. ArgparseCompleter writes its completion tables to this string.
-    formatted_completions: str = ""
+    # An optional table string populated by the argparse completer
+    completion_table: str = ""
 
-    # Used by functions like path_complete() and delimiter_complete() to properly
-    # quote matches that are completed in a delimited fashion
-    matches_delimited: bool = False
+    # If True, the completion engine is allowed to finalize a completion
+    # when a single match is found by appending a trailing space and
+    # closing any open quotation marks.
+    #
+    # Set this to False for intermediate or hierarchical matches (such as
+    # directories) where the user needs to continue typing the next segment.
+    # This flag is ignored if there are multiple matches.
+    allow_finalization: bool = True
 
-    # Set to True before returning matches to complete() in cases where matches have already been sorted.
-    # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
-    # This does not affect formatted_completions.
-    matches_sorted: bool = False
-
-    def __bool__(self) -> bool:
-        """Return True if there are matches, False otherwise."""
-        return bool(self.matches)
-
-    def __len__(self) -> int:
-        """Return the number of matches."""
-        return len(self.matches)
-
-    def validate(self) -> None:
-        """Validate data integrity.
-
-        :raises ValueError: if there is an issue with the data.
-        """
-        num_matches = len(self.matches)
-
-        # Check display_matches
-        if self.display_matches and len(self.display_matches) != num_matches:
-            raise ValueError(
-                f"Mismatched display_matches: expected {num_matches} items "
-                f"(to match 'matches'), but got {len(self.display_matches)}."
-            )
-
-        # Check display_meta
-        if self.display_meta and len(self.display_meta) != num_matches:
-            raise ValueError(
-                f"Mismatched display_meta: expected {num_matches} items "
-                f"(to match 'matches'), but got {len(self.display_meta)}."
-            )
+    # If True, indicates that matches represent portions of a hierarchical
+    # string (e.g., paths or "a::b::c"). This signals the shell to use
+    # specialized quoting logic.
+    is_delimited: bool = False
 
 
-class CompletionItem(str):  # noqa: SLOT000
-    """Completion item with descriptive text attached.
-
-    See header of this file for more information
-    """
-
-    def __new__(cls, value: object, *_args: Any, **_kwargs: Any) -> Self:
-        """Responsible for creating and returning a new instance, called before __init__ when an object is instantiated."""
-        return super().__new__(cls, value)
-
-    def __init__(self, value: object, descriptive_data: Sequence[Any], *args: Any) -> None:
-        """CompletionItem Initializer.
-
-        :param value: the value being completed
-        :param descriptive_data: a list of descriptive data to display in the columns that follow
-                                 the completion value. The number of items in this list must equal
-                                 the number of descriptive headers defined for the argument.
-        :param args: args for str __init__
-        """
-        super().__init__(*args)
-
-        # Make sure all objects are renderable by a Rich table.
-        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in descriptive_data]
-
-        # Convert strings containing ANSI style sequences to Rich Text objects for correct display width.
-        self.descriptive_data = ru.prepare_objects_for_rendering(*renderable_data)
-
-        # Save the original value to support CompletionItems as argparse choices.
-        # cmd2 has patched argparse so input is compared to this value instead of the CompletionItem instance.
-        self._orig_value = value
-
-    @property
-    def orig_value(self) -> Any:
-        """Read-only property for _orig_value."""
-        return self._orig_value
+def all_display_numeric(items: Sequence[CompletionItem]) -> bool:
+    """Return True if items is non-empty and every item.display is a numeric string."""
+    return bool(items) and all(NUMERIC_RE.match(item.display) for item in items)
 
 
 @runtime_checkable
 class ChoicesProviderFuncBase(Protocol):
     """Function that returns a list of choices in support of completion."""
 
-    def __call__(self) -> list[str]:  # pragma: no cover
+    def __call__(self) -> Choices:  # pragma: no cover
         """Enable instances to be called like functions."""
 
 
@@ -150,11 +234,11 @@ class ChoicesProviderFuncBase(Protocol):
 class ChoicesProviderFuncWithTokens(Protocol):
     """Function that returns a list of choices in support of completion and accepts a dictionary of prior arguments."""
 
-    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> list[str]:  # pragma: no cover  # noqa: B006
+    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> Choices:  # pragma: no cover  # noqa: B006
         """Enable instances to be called like functions."""
 
 
-ChoicesProviderFunc = ChoicesProviderFuncBase | ChoicesProviderFuncWithTokens
+ChoicesProviderFunc: TypeAlias = ChoicesProviderFuncBase | ChoicesProviderFuncWithTokens
 
 
 @runtime_checkable
@@ -187,4 +271,9 @@ class CompleterFuncWithTokens(Protocol):
         """Enable instances to be called like functions."""
 
 
-CompleterFunc = CompleterFuncBase | CompleterFuncWithTokens
+CompleterFunc: TypeAlias = CompleterFuncBase | CompleterFuncWithTokens
+
+# Represents a type that can be matched against when completing.
+# Strings are matched directly while CompletionItems are matched
+# against their 'text' member.
+Matchable: TypeAlias = str | CompletionItem

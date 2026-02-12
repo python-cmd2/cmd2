@@ -49,13 +49,13 @@ argument's value. Only one can be used at a time.
         parser.add_argument('-o', '--options', choices=my_list)
 
 ``choices_provider`` - pass a function that returns choices. This is good in
-cases where the choice list is dynamically generated when the user hits tab.
+cases where the choices are dynamically generated when the user hits tab.
 
     Example::
 
         def my_choices_provider(self):
             ...
-            return my_generated_list
+            return my_choices
 
         parser.add_argument("arg", choices_provider=my_choices_provider)
 
@@ -137,10 +137,10 @@ tokens with descriptive data instead of just a table of tokens::
 
 The left-most column is the actual value being completed and its header is
 that value's name. The right column header is defined using the
-``descriptive_headers`` parameter of add_argument(), which is a list of header
+``table_header`` parameter of add_argument(), which is a list of header
 names that defaults to ["Description"]. The right column values come from the
-``CompletionItem.descriptive_data`` member, which is a list with the same number
-of items as columns defined in descriptive_headers.
+``row_data`` argument to ``CompletionItem``. It's a ``Sequence`` with the
+same number of items as ``table_header``.
 
 To use CompletionItems, just return them from your choices_provider or
 completer functions. They can also be used as argparse choices. When a
@@ -151,14 +151,14 @@ CompletionItem.orig_value instead of the CompletionItem instance.
 
 Example::
 
-    Add an argument and define its descriptive_headers.
+    Add an argument and define its table_header.
 
         parser.add_argument(
             add_argument(
             "item_id",
             type=int,
             choices_provider=get_items,
-            descriptive_headers=["Item Name", "Checked Out", "Due Date"],
+            table_header=["Item Name", "Checked Out", "Due Date"],
         )
 
     Implement the choices_provider to return CompletionItems.
@@ -166,12 +166,12 @@ Example::
         def get_items(self) -> list[CompletionItems]:
             \"\"\"choices_provider which returns CompletionItems\"\"\"
 
-            # CompletionItem's second argument is descriptive_data.
-            # Its item count should match that of descriptive_headers.
+            # Populate CompletionItem's table_row argument.
+            # Its item count should match that of table_header.
             return [
-                CompletionItem(1, ["My item", True, "02/02/2022"]),
-                CompletionItem(2, ["Another item", False, ""]),
-                CompletionItem(3, ["Yet another item", False, ""]),
+                CompletionItem(1, table_row=["My item", True, "02/02/2022"]),
+                CompletionItem(2, table_row=["Another item", False, ""]),
+                CompletionItem(3, table_row=["Yet another item", False, ""]),
             ]
 
     This is what the user will see during completion.
@@ -182,7 +182,7 @@ Example::
               2   Another item       False
               3   Yet another item   False
 
-``descriptive_headers`` can be strings or ``Rich.table.Columns`` for more
+``table_header`` can be strings or ``Rich.table.Columns`` for more
 control over things like alignment.
 
 - If a header is a string, it will render as a left-aligned column with its
@@ -194,14 +194,13 @@ This means a long string which exceeds the width of its column will be
 truncated with an ellipsis at the end. You can override this and other settings
 when you create the ``Column``.
 
-``descriptive_data`` items can include Rich objects, including styled Text and Tables.
+``table_row`` items can include Rich objects, including styled Text and Tables.
 
 To avoid printing a excessive information to the screen at once when a user
 presses tab, there is a maximum threshold for the number of CompletionItems
-that will be shown. Its value is defined in ``cmd2.Cmd.max_completion_items``.
+that will be shown. Its value is defined in ``cmd2.Cmd.max_completion_table_items``.
 It defaults to 50, but can be changed. If the number of completion suggestions
-exceeds this number, they will be displayed in the typical columnized format
-and will not include the descriptive_data of the CompletionItems.
+exceeds this number, they then a completion table won't be displayed.
 
 
 **Patched argparse functions**
@@ -209,12 +208,6 @@ and will not include the descriptive_data of the CompletionItems.
 ``argparse._ActionsContainer.add_argument`` - adds arguments related to tab
 completion and enables nargs range parsing. See _add_argument_wrapper for
 more details on these arguments.
-
-``argparse.ArgumentParser._check_value`` - adds support for using
-``CompletionItems`` as argparse choices. When evaluating choices, input is
-compared to ``CompletionItem.orig_value`` instead of the ``CompletionItem``
-instance.
-See _ArgumentParser_check_value for more details.
 
 ``argparse.ArgumentParser._get_nargs_pattern`` - adds support for nargs ranges.
 See _get_nargs_pattern_wrapper for more details.
@@ -234,8 +227,8 @@ for cases in which you need to manually access the cmd2-specific attributes.
 - ``argparse.Action.get_choices_callable()`` - See `action_get_choices_callable` for more details.
 - ``argparse.Action.set_choices_provider()`` - See `_action_set_choices_provider` for more details.
 - ``argparse.Action.set_completer()`` - See `_action_set_completer` for more details.
-- ``argparse.Action.get_descriptive_headers()`` - See `_action_get_descriptive_headers` for more details.
-- ``argparse.Action.set_descriptive_headers()`` - See `_action_set_descriptive_headers` for more details.
+- ``argparse.Action.get_table_header()`` - See `_action_get_table_header` for more details.
+- ``argparse.Action.set_table_header()`` - See `_action_set_table_header` for more details.
 - ``argparse.Action.get_nargs_range()`` - See `_action_get_nargs_range` for more details.
 - ``argparse.Action.set_nargs_range()`` - See `_action_set_nargs_range` for more details.
 - ``argparse.Action.get_suppress_tab_hint()`` - See `_action_get_suppress_tab_hint` for more details.
@@ -295,7 +288,6 @@ from .completion import (
     CompleterFunc,
     CompleterFuncBase,
     CompleterFuncWithTokens,
-    CompletionItem,
 )
 from .rich_utils import Cmd2RichArgparseConsole
 from .styles import Cmd2Style
@@ -431,8 +423,8 @@ class ChoicesCallable:
 # ChoicesCallable object that specifies the function to be called which provides choices to the argument
 ATTR_CHOICES_CALLABLE = 'choices_callable'
 
-# Descriptive header that prints when using CompletionItems
-ATTR_DESCRIPTIVE_HEADERS = 'descriptive_headers'
+# A completion table header
+ATTR_TABLE_HEADER = 'table_header'
 
 # A tuple specifying nargs as a range (min, max)
 ATTR_NARGS_RANGE = 'nargs_range'
@@ -529,38 +521,38 @@ setattr(argparse.Action, 'set_completer', _action_set_completer)
 
 
 ############################################################################################################
-# Patch argparse.Action with accessors for descriptive_headers attribute
+# Patch argparse.Action with accessors for table_header attribute
 ############################################################################################################
-def _action_get_descriptive_headers(self: argparse.Action) -> Sequence[str | Column] | None:
-    """Get the descriptive_headers attribute of an argparse Action.
+def _action_get_table_header(self: argparse.Action) -> Sequence[str | Column] | None:
+    """Get the table_header attribute of an argparse Action.
 
-    This function is added by cmd2 as a method called ``get_descriptive_headers()`` to ``argparse.Action`` class.
+    This function is added by cmd2 as a method called ``get_table_header()`` to ``argparse.Action`` class.
 
-    To call: ``action.get_descriptive_headers()``
+    To call: ``action.get_table_header()``
 
     :param self: argparse Action being queried
-    :return: The value of descriptive_headers or None if attribute does not exist
+    :return: The value of table_header or None if attribute does not exist
     """
-    return cast(Sequence[str | Column] | None, getattr(self, ATTR_DESCRIPTIVE_HEADERS, None))
+    return cast(Sequence[str | Column] | None, getattr(self, ATTR_TABLE_HEADER, None))
 
 
-setattr(argparse.Action, 'get_descriptive_headers', _action_get_descriptive_headers)
+setattr(argparse.Action, 'get_table_header', _action_get_table_header)
 
 
-def _action_set_descriptive_headers(self: argparse.Action, descriptive_headers: Sequence[str | Column] | None) -> None:
-    """Set the descriptive_headers attribute of an argparse Action.
+def _action_set_table_header(self: argparse.Action, table_header: Sequence[str | Column] | None) -> None:
+    """Set the table_header attribute of an argparse Action.
 
-    This function is added by cmd2 as a method called ``set_descriptive_headers()`` to ``argparse.Action`` class.
+    This function is added by cmd2 as a method called ``set_table_header()`` to ``argparse.Action`` class.
 
-    To call: ``action.set_descriptive_headers(descriptive_headers)``
+    To call: ``action.set_table_header(table_header)``
 
     :param self: argparse Action being updated
-    :param descriptive_headers: value being assigned
+    :param table_header: value being assigned
     """
-    setattr(self, ATTR_DESCRIPTIVE_HEADERS, descriptive_headers)
+    setattr(self, ATTR_TABLE_HEADER, table_header)
 
 
-setattr(argparse.Action, 'set_descriptive_headers', _action_set_descriptive_headers)
+setattr(argparse.Action, 'set_table_header', _action_set_table_header)
 
 
 ############################################################################################################
@@ -711,7 +703,7 @@ def _add_argument_wrapper(
     choices_provider: ChoicesProviderFunc | None = None,
     completer: CompleterFunc | None = None,
     suppress_tab_hint: bool = False,
-    descriptive_headers: Sequence[str | Column] | None = None,
+    table_header: Sequence[str | Column] | None = None,
     **kwargs: Any,
 ) -> argparse.Action:
     """Wrap ActionsContainer.add_argument() which supports more settings used by cmd2.
@@ -731,8 +723,7 @@ def _add_argument_wrapper(
                               current argument's help text as a hint. Set this to True to suppress the hint. If this
                               argument's help text is set to argparse.SUPPRESS, then tab hints will not display
                               regardless of the value passed for suppress_tab_hint. Defaults to False.
-    :param descriptive_headers: if the provided choices are CompletionItems, then these are the headers
-                                of the descriptive data. Defaults to None.
+    :param table_header: optional header for when displaying a completion table. Defaults to None.
 
     # Args from original function
     :param kwargs: keyword-arguments recognized by argparse._ActionsContainer.add_argument
@@ -823,7 +814,7 @@ def _add_argument_wrapper(
         new_arg.set_completer(completer)  # type: ignore[attr-defined]
 
     new_arg.set_suppress_tab_hint(suppress_tab_hint)  # type: ignore[attr-defined]
-    new_arg.set_descriptive_headers(descriptive_headers)  # type: ignore[attr-defined]
+    new_arg.set_table_header(table_header)  # type: ignore[attr-defined]
 
     for keyword, value in custom_attribs.items():
         attr_setter = getattr(new_arg, f'set_{keyword}', None)
@@ -928,37 +919,6 @@ def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_comp
 
 
 setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap_completer_type)
-
-
-############################################################################################################
-# Patch ArgumentParser._check_value to support CompletionItems as choices
-############################################################################################################
-def _ArgumentParser_check_value(_self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:  # noqa: N802
-    """Check_value that supports CompletionItems as choices (Custom override of ArgumentParser._check_value).
-
-    When evaluating choices, input is compared to CompletionItem.orig_value instead of the
-    CompletionItem instance.
-
-    :param self: ArgumentParser instance
-    :param action: the action being populated
-    :param value: value from command line already run through conversion function by argparse
-    """
-    # Import gettext like argparse does
-    from gettext import (
-        gettext as _,
-    )
-
-    # converted value must be one of the choices (if specified)
-    if action.choices is not None:
-        # If any choice is a CompletionItem, then use its orig_value property.
-        choices = [c.orig_value if isinstance(c, CompletionItem) else c for c in action.choices]
-        if value not in choices:
-            args = {'value': value, 'choices': ', '.join(map(repr, choices))}
-            msg = _('invalid choice: %(value)r (choose from %(choices)s)')
-            raise ArgumentError(action, msg % args)
-
-
-setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 
 
 ############################################################################################################

@@ -3,6 +3,7 @@
 from collections.abc import Callable, Mapping
 from typing import (
     TYPE_CHECKING,
+    TypeAlias,
     TypeVar,
 )
 
@@ -13,16 +14,14 @@ from .constants import (
 from .exceptions import (
     CommandSetRegistrationError,
 )
-from .utils import (
-    Settable,
-)
+from .utils import Settable
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2
 
 #: Callable signature for a basic command  function
 #: Further refinements are needed to define the input parameters
-CommandFunc = Callable[..., bool | None]
+CommandFunc: TypeAlias = Callable[..., bool | None]
 
 CommandSetType = TypeVar('CommandSetType', bound=type['CommandSet'])
 

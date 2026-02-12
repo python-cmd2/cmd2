@@ -30,6 +30,7 @@ Documentation: https://cmd2.readthedocs.io/
 import argparse
 import contextlib
 import copy
+import dataclasses
 import functools
 import glob
 import inspect
@@ -98,10 +99,12 @@ from .command_definition import (
     CommandSet,
 )
 from .completion import (
+    Choices,
     ChoicesProviderFunc,
     CompleterFunc,
     CompletionItem,
     Completions,
+    Matchable,
 )
 from .constants import (
     CLASS_ATTR_DEFAULT_HELP_CATEGORY,
@@ -284,10 +287,6 @@ class Cmd:
 
     DEFAULT_EDITOR = utils.find_editor()
 
-    # Sorting keys for strings
-    ALPHABETICAL_SORT_KEY = su.norm_fold
-    NATURAL_SORT_KEY = utils.natural_keys
-
     # List for storing transcript test file names
     testfiles: ClassVar[list[str]] = []
 
@@ -429,10 +428,9 @@ class Cmd:
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
         self.timing = False  # Prints elapsed time for each command
 
-        # The maximum number of CompletionItems to display during completion. If the number of completion
-        # suggestions exceeds this number, they will be displayed in the typical columnized format and will
-        # not include the description value of the CompletionItems.
-        self.max_completion_items: int = 50
+        # The maximum number of items to display in a completion table. If the number of completion
+        # suggestions exceeds this number, then no table will appear.
+        self.max_completion_table_items: int = 50
 
         # The maximum number of completion results to display in a single column (CompleteStyle.COLUMN).
         # If the number of results exceeds this, CompleteStyle.MULTI_COLUMN will be used.
@@ -647,14 +645,6 @@ class Cmd:
         # Categories of commands to be disabled
         # Key: Category name | Value: Message to display
         self.disabled_categories: dict[str, str] = {}
-
-        # The default key for sorting string results. Its default value performs a case-insensitive alphabetical sort.
-        # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
-        # cmd2 uses this key for sorting:
-        #     command and category names
-        #     alias, macro, settable, and shortcut names
-        #     completion results when self.matches_sorted is False
-        self.default_sort_key: Callable[[str], str] = Cmd.ALPHABETICAL_SORT_KEY
 
         # Command parsers for this Cmd instance.
         self._command_parsers: _CommandParsers = _CommandParsers(self)
@@ -1184,9 +1174,10 @@ class Cmd:
     def build_settables(self) -> None:
         """Create the dictionary of user-settable parameters."""
 
-        def get_allow_style_choices(_cli_self: Cmd) -> list[str]:
+        def get_allow_style_choices(_cli_self: Cmd) -> Choices:
             """Complete allow_style values."""
-            return [val.name.lower() for val in ru.AllowStyle]
+            styles = [val.name.lower() for val in ru.AllowStyle]
+            return Choices.from_strings(styles)
 
         def allow_style_type(value: str) -> ru.AllowStyle:
             """Convert a string value into an ru.AllowStyle."""
@@ -1204,7 +1195,7 @@ class Cmd:
                 'Allow ANSI text style sequences in output (valid values: '
                 f'{ru.AllowStyle.ALWAYS}, {ru.AllowStyle.NEVER}, {ru.AllowStyle.TERMINAL})',
                 self,
-                choices_provider=cast(ChoicesProviderFunc, get_allow_style_choices),
+                choices_provider=get_allow_style_choices,
             )
         )
 
@@ -1216,7 +1207,12 @@ class Cmd:
         self.add_settable(Settable('editor', str, "Program used by 'edit'", self))
         self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|' and '>' results", self))
         self.add_settable(
-            Settable('max_completion_items', int, "Maximum number of CompletionItems to display during completion", self)
+            Settable(
+                'max_completion_table_items',
+                int,
+                "Maximum number of completion results allowed for a completion table to appear",
+                self,
+            )
         )
         self.add_settable(
             Settable(
@@ -1790,21 +1786,27 @@ class Cmd:
         line: str,  # noqa: ARG002
         begidx: int,  # noqa: ARG002
         endidx: int,  # noqa: ARG002
-        match_against: Iterable[str],
+        match_against: Iterable[Matchable],
     ) -> Completions:
-        """Completion function that matches against a list of strings without considering line contents or cursor position.
+        """Perform completion without considering line contents or cursor position.
 
-        The args required by this function are defined in the header of Python's cmd.py.
+        Strings are matched directly while CompletionItems are matched against their 'text' member.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param match_against: the strings being matched against
+        :param match_against: the items being matched against
         :return: a Completions object
         """
-        matches = [cur_match for cur_match in match_against if cur_match.startswith(text)]
-        return Completions(matches)
+        matches: list[CompletionItem] = []
+
+        for item in match_against:
+            candidate = item.text if isinstance(item, CompletionItem) else item
+            if candidate.startswith(text):
+                matches.append(item if isinstance(item, CompletionItem) else CompletionItem(item))
+
+        return Completions(items=matches)
 
     def delimiter_complete(
         self,
@@ -1848,18 +1850,13 @@ class Cmd:
         :return: a Completions object
         """
         basic_completions = self.basic_complete(text, line, begidx, endidx, match_against)
-        if not basic_completions.matches:
+        if not basic_completions:
             return Completions()
 
-        completions = Completions()
-
-        # Set this to True for proper quoting of matches with spaces
-        completions.matches_delimited = True
-
-        # Get the common beginning for the matches
-        common_prefix = os.path.commonprefix(completions.matches)
+        match_strings = [item.text for item in basic_completions.items]
 
         # Calculate what portion of the match we are completing
+        common_prefix = os.path.commonprefix(match_strings)
         prefix_tokens = common_prefix.split(delimiter)
         display_token_index = len(prefix_tokens) - 1
 
@@ -1867,26 +1864,31 @@ class Cmd:
         # This approach can result in duplicates so we will filter those out.
         unique_results: dict[str, str] = {}
 
-        for cur_match in completions.matches:
+        allow_finalization = True
+        for cur_match in match_strings:
             match_tokens = cur_match.split(delimiter)
 
-            filtered_match = delimiter.join(match_tokens[: display_token_index + 1])
-            display_match = match_tokens[display_token_index]
+            full_value = delimiter.join(match_tokens[: display_token_index + 1])
+            display_val = match_tokens[display_token_index]
 
             # If there are more tokens, then we aren't done completing a full item
             if len(match_tokens) > display_token_index + 1:
-                filtered_match += delimiter
-                display_match += delimiter
-                completions.allow_appended_space = False
-                completions.allow_closing_quote = False
+                full_value += delimiter
+                display_val += delimiter
+                allow_finalization = False
 
-            if filtered_match not in unique_results:
-                unique_results[filtered_match] = display_match
+            if full_value not in unique_results:
+                unique_results[full_value] = display_val
 
-        completions.matches = list(unique_results.keys())
-        completions.display_matches = list(unique_results.values())
+        items = [
+            CompletionItem(
+                value=value,
+                display=display,
+            )
+            for value, display in unique_results.items()
+        ]
 
-        return completions
+        return Completions(items, allow_finalization=allow_finalization, is_delimited=True)
 
     def flag_based_complete(
         self,
@@ -1894,9 +1896,9 @@ class Cmd:
         line: str,
         begidx: int,
         endidx: int,
-        flag_dict: dict[str, Iterable[str] | CompleterFunc],
+        flag_dict: dict[str, Iterable[Matchable] | CompleterFunc],
         *,
-        all_else: None | Iterable[str] | CompleterFunc = None,
+        all_else: None | Iterable[Matchable] | CompleterFunc = None,
     ) -> Completions:
         """Completes based on a particular flag preceding the token being completed.
 
@@ -1908,7 +1910,7 @@ class Cmd:
                           `keys` - flags (ex: -c, --create) that result in completion for the next argument in the
                           command line
                           `values` - there are two types of values:
-                          1. iterable list of strings to match against (dictionaries, lists, etc.)
+                          1. iterable of Matchables to match against
                           2. function that performs completion (ex: path_complete)
         :param all_else: an optional parameter for completing any token that isn't preceded by a flag in flag_dict
         :return: a Completions object
@@ -1942,9 +1944,9 @@ class Cmd:
         line: str,
         begidx: int,
         endidx: int,
-        index_dict: Mapping[int, Iterable[str] | CompleterFunc],
+        index_dict: Mapping[int, Iterable[Matchable] | CompleterFunc],
         *,
-        all_else: Iterable[str] | CompleterFunc | None = None,
+        all_else: Iterable[Matchable] | CompleterFunc | None = None,
     ) -> Completions:
         """Completes based on a fixed position in the input string.
 
@@ -1956,7 +1958,7 @@ class Cmd:
                            `keys` - 0-based token indexes into command line that determine which tokens perform tab
                            completion
                            `values` - there are two types of values:
-                           1. iterable list of strings to match against (dictionaries, lists, etc.)
+                           1. iterable of Matchables to match against
                            2. function that performs completion (ex: path_complete)
         :param all_else: an optional parameter for completing any token that isn't at an index in index_dict
         :return: a Completions object
@@ -1970,8 +1972,7 @@ class Cmd:
         index = len(tokens) - 1
 
         # Check if token is at an index in the dictionary
-        match_against: Iterable[str] | CompleterFunc | None
-        match_against = index_dict.get(index, all_else)
+        match_against: Iterable[Matchable] | CompleterFunc | None = index_dict.get(index, all_else)
 
         # Perform completion using a Iterable
         if isinstance(match_against, Iterable):
@@ -1991,7 +1992,7 @@ class Cmd:
         :param add_trailing_sep_if_dir: whether a trailing separator should be appended to directory completions
         :return: a Completions object
         """
-        completions = Completions()
+        items: list[CompletionItem] = []
 
         # Windows lacks the pwd module so we can't get a list of users.
         # Instead we will return a result once the user enters text that
@@ -2002,7 +2003,7 @@ class Cmd:
                 user = text
                 if add_trailing_sep_if_dir:
                     user += os.path.sep
-                completions.matches.append(user)
+                items.append(CompletionItem(user))
         else:
             import pwd
 
@@ -2015,15 +2016,11 @@ class Cmd:
                     if cur_user.startswith(text):
                         if add_trailing_sep_if_dir:
                             cur_user += os.path.sep
-                        completions.matches.append(cur_user)
+                        items.append(CompletionItem(cur_user))
 
-        if completions:
-            # We are returning ~user strings that resolve to directories,
-            # so don't append a space or quote in the case of a single result.
-            completions.allow_appended_space = False
-            completions.allow_closing_quote = False
-
-        return completions
+        # Since all ~user matches resolve to directories, set allow_finalization to False
+        # so the user can continue into the subdirectory structure.
+        return Completions(items=items, allow_finalization=False, is_delimited=True)
 
     def path_complete(
         self,
@@ -2093,48 +2090,47 @@ class Cmd:
                 cwd_added = True
 
         # Find all matching path completions
-        completions = Completions()
-        completions.matches = glob.glob(search_str)
+        matches = glob.glob(search_str)
 
         # Filter out results that don't belong
         if path_filter is not None:
-            completions.matches = [c for c in completions.matches if path_filter(c)]
+            matches = [c for c in matches if path_filter(c)]
 
-        if completions:
-            # Set this to True for proper quoting of paths with spaces
-            completions.matches_delimited = True
+        if not matches:
+            return Completions()
 
-            # Don't append a space or closing quote to directory
-            if len(completions) == 1 and os.path.isdir(completions.matches[0]):
-                completions.allow_appended_space = False
-                completions.allow_closing_quote = False
+        # If we have a single match and it's a directory, then don't append a space or closing quote
+        allow_finalization = not (len(matches) == 1 and os.path.isdir(matches[0]))
 
-            # Sort the matches before any trailing slashes are added
-            completions.matches.sort(key=self.default_sort_key)
-            completions.matches_sorted = True
+        # Build display_matches and add a slash to directories
+        display_matches: list[str] = []
+        for index, cur_match in enumerate(matches):
+            # Display only the basename of this path in the completion suggestions
+            display_matches.append(os.path.basename(cur_match))
 
-            # Build display_matches and add a slash to directories
-            for index, cur_match in enumerate(completions.matches):
-                # Display only the basename of this path in the completion suggestions
-                completions.display_matches.append(os.path.basename(cur_match))
+            # Add a separator after directories if the next character isn't already a separator
+            if os.path.isdir(cur_match) and add_trailing_sep_if_dir:
+                matches[index] += os.path.sep
+                display_matches[index] += os.path.sep
 
-                # Add a separator after directories if the next character isn't already a separator
-                if os.path.isdir(cur_match) and add_trailing_sep_if_dir:
-                    completions.matches[index] += os.path.sep
-                    completions.display_matches[index] += os.path.sep
+        # Remove cwd if it was added to match the text prompt-toolkit expects
+        if cwd_added:
+            to_replace = cwd if cwd == os.path.sep else cwd + os.path.sep
+            matches = [cur_path.replace(to_replace, '', 1) for cur_path in matches]
 
-            # Remove cwd if it was added to match the text prompt-toolkit expects
-            if cwd_added:
-                to_replace = cwd if cwd == os.path.sep else cwd + os.path.sep
-                completions.matches = [cur_path.replace(to_replace, '', 1) for cur_path in completions.matches]
+        # Restore the tilde string if we expanded one to match the text prompt-toolkit expects
+        if expanded_tilde_path:
+            matches = [cur_path.replace(expanded_tilde_path, orig_tilde_path, 1) for cur_path in matches]
 
-            # Restore the tilde string if we expanded one to match the text prompt-toolkit expects
-            if expanded_tilde_path:
-                completions.matches = [
-                    cur_path.replace(expanded_tilde_path, orig_tilde_path, 1) for cur_path in completions.matches
-                ]
+        items = [
+            CompletionItem(
+                value=match,
+                display=display,
+            )
+            for match, display in zip(matches, display_matches, strict=True)
+        ]
 
-        return completions
+        return Completions(items=items, allow_finalization=allow_finalization, is_delimited=True)
 
     def shell_cmd_complete(
         self, text: str, line: str, begidx: int, endidx: int, *, complete_blank: bool = False
@@ -2155,8 +2151,8 @@ class Cmd:
 
         # If there are no path characters in the search text, then do shell command completion in the user's path
         if not text.startswith('~') and os.path.sep not in text:
-            exes = utils.get_exes_in_path(text)
-            return Completions(exes)
+            items = [CompletionItem(exe) for exe in utils.get_exes_in_path(text)]
+            return Completions(items=items)
 
         # Otherwise look for executables in the given path
         return self.path_complete(
@@ -2390,50 +2386,74 @@ class Cmd:
         # Attempt completion for redirection first, and if that isn't occurring,
         # call the completer function for the current command
         completions = self._redirect_complete(text, line, begidx, endidx, completer_func)
+        if not completions:
+            return Completions()
 
-        if completions:
-            # Eliminate duplicates
-            completions.matches = utils.remove_duplicates(completions.matches)
-            completions.display_matches = utils.remove_duplicates(completions.display_matches)
+        # Create a mutable list to possibly make changes to items
+        working_items = list(completions.items)
 
-            if not completions.display_matches:
-                # Since display_matches is empty, set it to matches before we alter them.
-                # That way the suggestions will reflect how we parsed the token being completed
-                # and not how prompt-toolkit did.
-                import copy
+        # Check if we need to add an opening quote
+        if not completion_token_quote:
+            add_quote = False
 
-                completions.display_matches = copy.copy(completions.matches)
+            # Extract the raw text and display strings for quote detection
+            current_texts = [item.text for item in working_items]
 
-            # Check if we need to add an opening quote
-            if not completion_token_quote:
-                add_quote = False
+            # For delimited matches, check for a space in the common text prefix
+            # as well as in the display segments.
+            if completions.is_delimited:
+                common_prefix = os.path.commonprefix(current_texts)
+                current_displays = [item.display for item in working_items]
 
-                # This is the completion text that will appear on the command line.
-                common_prefix = os.path.commonprefix(completions.matches)
-
-                if completions.matches_delimited:
-                    # For delimited matches, we check for a space in what appears before the display
-                    # matches (common_prefix) as well as in the display matches themselves.
-                    if ' ' in common_prefix or any(' ' in match for match in completions.display_matches):
-                        add_quote = True
-
-                # If there is a completion and any match has a space, then add an opening quote
-                elif any(' ' in match for match in completions.matches):
+                if ' ' in common_prefix or any(' ' in display for display in current_displays):
                     add_quote = True
 
-                if add_quote:
-                    # Figure out what kind of quote to add and save it as the unclosed_quote
-                    completion_token_quote = "'" if any('"' in match for match in completions.matches) else '"'
+            # Otherwise check if any text match has a space.
+            elif any(' ' in text for text in current_texts):
+                add_quote = True
 
-                    completions.matches = [completion_token_quote + match for match in completions.matches]
+            if add_quote:
+                # Determine best quote (single vs double) based on text content
+                completion_token_quote = "'" if any('"' in t for t in current_texts) else '"'
+                working_items = [
+                    dataclasses.replace(
+                        item,
+                        text=completion_token_quote + item.text,
+                    )
+                    for item in working_items
+                ]
 
-            # Check if we need to remove text from the beginning of completions
-            elif text_to_remove:
-                completions.matches = [match.replace(text_to_remove, '', 1) for match in completions.matches]
+        # Check if we need to remove text from the beginning of completions
+        elif text_to_remove:
+            working_items = [
+                dataclasses.replace(
+                    item,
+                    text=item.text.replace(text_to_remove, '', 1),
+                )
+                for item in working_items
+            ]
 
-            # If we have one result, then add a closing quote if needed and allowed
-            if len(completions) == 1 and completions.allow_closing_quote and completion_token_quote:
-                completions.matches[0] += completion_token_quote
+        # Handle closing quote and trailing space
+        if len(working_items) == 1 and completions.allow_finalization:
+            final_item = working_items[0]
+            new_text = final_item.text
+
+            # Append the matching quote if we started one
+            if completion_token_quote:
+                new_text += completion_token_quote
+
+            # Append a space if the cursor is at the end of the line
+            if endidx == len(line):
+                new_text += ' '
+
+            # Update the item if the text changed
+            if new_text != final_item.text:
+                working_items = [dataclasses.replace(final_item, text=new_text)]
+
+        # Convert back to tuple for comparison with the original frozen tuple
+        final_items_tuple = tuple(working_items)
+        if final_items_tuple != completions.items:
+            completions = dataclasses.replace(completions, items=final_items_tuple)
 
         return completions
 
@@ -2445,14 +2465,14 @@ class Cmd:
         endidx: int,
         custom_settings: utils.CustomCompletionSettings | None = None,
     ) -> Completions:
-        """Handle completion for an input line and return a validated Completions object.
+        """Handle completion for an input line.
 
         :param text: the current word that user is typing
         :param line: current input line
         :param begidx: beginning index of text
         :param endidx: ending index of text
         :param custom_settings: used when not completing the main command line
-        :return: a validated Completions object
+        :return: a Completions object
         :raises CompletionError: if a completion-related exception occurs
         :raises Exception: for any unhandled underlying processing errors
         """
@@ -2497,7 +2517,7 @@ class Cmd:
                     'command',
                     metavar="COMMAND",
                     help="command, alias, or macro name",
-                    choices=self._get_commands_aliases_and_macros_for_completion(),
+                    choices=self._get_commands_aliases_and_macros_choices(),
                 )
                 custom_settings = utils.CustomCompletionSettings(parser)
 
@@ -2505,18 +2525,15 @@ class Cmd:
 
         # Check if we need to restore a shortcut in the completions
         # so it doesn't get erased from the command line
-        if shortcut_to_restore:
-            completions.matches = [shortcut_to_restore + match for match in completions.matches]
-
-        # If we have one result and we are at the end of the line, then add a space if allowed
-        if len(completions) == 1 and endidx == len(line) and completions.allow_appended_space:
-            completions.matches[0] += ' '
-
-        # Sort matches if they haven't already been sorted
-        if not completions.matches_sorted:
-            completions.matches.sort(key=self.default_sort_key)
-            completions.display_matches.sort(key=self.default_sort_key)
-            completions.matches_sorted = True
+        if completions and shortcut_to_restore:
+            new_items = [
+                dataclasses.replace(
+                    item,
+                    text=shortcut_to_restore + item.text,
+                )
+                for item in completions.items
+            ]
+            completions = dataclasses.replace(completions, items=new_items)
 
         # Swap between COLUMN and MULTI_COLUMN style based on the number of matches if not using READLINE_LIKE
         if len(completions) > self.max_column_completion_results:
@@ -2524,8 +2541,6 @@ class Cmd:
         else:
             self.session.complete_style = CompleteStyle.COLUMN
 
-        # Run validation before returning
-        completions.validate()
         return completions
 
     def in_script(self) -> bool:
@@ -2561,59 +2576,57 @@ class Cmd:
             if command not in self.hidden_commands and command not in self.disabled_commands
         ]
 
-    def _get_alias_completion_items(self) -> list[CompletionItem]:
-        """Return list of alias names and values as CompletionItems."""
-        results: list[CompletionItem] = []
+    def _get_alias_choices(self) -> Choices:
+        """Return list of alias names and values as Choices."""
+        items: list[CompletionItem] = []
 
         for name, value in self.aliases.items():
-            descriptive_data = [value]
-            results.append(CompletionItem(name, descriptive_data))
+            items.append(CompletionItem(name, display_meta=value, table_row=[value]))
 
-        return results
+        return Choices(items=items)
 
-    def _get_macro_completion_items(self) -> list[CompletionItem]:
-        """Return list of macro names and values as CompletionItems."""
-        results: list[CompletionItem] = []
+    def _get_macro_choices(self) -> Choices:
+        """Return list of macro names and values as Choices."""
+        items: list[CompletionItem] = []
 
         for name, macro in self.macros.items():
-            descriptive_data = [macro.value]
-            results.append(CompletionItem(name, descriptive_data))
+            items.append(CompletionItem(name, display_meta=macro.value, table_row=[macro.value]))
 
-        return results
+        return Choices(items=items)
 
-    def _get_settable_completion_items(self) -> list[CompletionItem]:
-        """Return list of Settable names, values, and descriptions as CompletionItems."""
-        results: list[CompletionItem] = []
+    def _get_settable_choices(self) -> Choices:
+        """Return list of Settable names, values, and descriptions as Choices."""
+        items: list[CompletionItem] = []
 
         for name, settable in self.settables.items():
-            descriptive_data = [
+            table_row = [
                 str(settable.value),
                 settable.description,
             ]
-            results.append(CompletionItem(name, descriptive_data))
+            items.append(CompletionItem(name, display_meta=str(settable.value), table_row=table_row))
 
-        return results
+        return Choices(items=items)
 
-    def _get_commands_aliases_and_macros_for_completion(self) -> list[CompletionItem]:
-        """Return a list of visible commands, aliases, and macros for completion."""
-        results: list[CompletionItem] = []
+    def _get_commands_aliases_and_macros_choices(self) -> Choices:
+        """Return a list of visible commands, aliases, and macros as Choices."""
+        items: list[CompletionItem] = []
 
         # Add commands
         for command in self.get_visible_commands():
             # Get the command method
             func = getattr(self, constants.COMMAND_FUNC_PREFIX + command)
             description = strip_doc_annotations(func.__doc__).splitlines()[0] if func.__doc__ else ''
-            results.append(CompletionItem(command, [description]))
+            items.append(CompletionItem(command, display_meta=description))
 
         # Add aliases
         for name, value in self.aliases.items():
-            results.append(CompletionItem(name, [f"Alias for: {value}"]))
+            items.append(CompletionItem(name, display_meta=f"Alias for: {value}"))
 
         # Add macros
         for name, macro in self.macros.items():
-            results.append(CompletionItem(name, [f"Macro: {macro.value}"]))
+            items.append(CompletionItem(name, display_meta=f"Macro: {macro.value}"))
 
-        return results
+        return Choices(items=items)
 
     def get_help_topics(self) -> list[str]:
         """Return a list of help topics."""
@@ -3540,7 +3553,7 @@ class Cmd:
         alias_create_parser.add_argument(
             'command',
             help='command, alias, or macro to run',
-            choices_provider=cls._get_commands_aliases_and_macros_for_completion,
+            choices_provider=cls._get_commands_aliases_and_macros_choices,
         )
         alias_create_parser.add_argument(
             'command_args',
@@ -3598,8 +3611,8 @@ class Cmd:
             'names',
             nargs=argparse.ZERO_OR_MORE,
             help='alias(es) to delete',
-            choices_provider=cls._get_alias_completion_items,
-            descriptive_headers=["Value"],
+            choices_provider=cls._get_alias_choices,
+            table_header=["Value"],
         )
 
         return alias_delete_parser
@@ -3640,8 +3653,8 @@ class Cmd:
             'names',
             nargs=argparse.ZERO_OR_MORE,
             help='alias(es) to list',
-            choices_provider=cls._get_alias_completion_items,
-            descriptive_headers=["Value"],
+            choices_provider=cls._get_alias_choices,
+            table_header=["Value"],
         )
 
         return alias_list_parser
@@ -3654,7 +3667,14 @@ class Cmd:
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
 
-        to_list = utils.remove_duplicates(args.names) if args.names else sorted(self.aliases, key=self.default_sort_key)
+        to_list = (
+            utils.remove_duplicates(args.names)
+            if args.names
+            else sorted(
+                self.aliases,
+                key=utils.DEFAULT_STR_SORT_KEY,
+            )
+        )
 
         not_found: list[str] = []
         for name in to_list:
@@ -3692,8 +3712,6 @@ class Cmd:
         """Completes arguments to a macro.
 
         Its default behavior is to call path_complete, but you can override this as needed.
-
-        The args required by this function are defined in the header of Python's cmd.py.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -3783,7 +3801,7 @@ class Cmd:
         macro_create_parser.add_argument(
             'command',
             help='command, alias, or macro to run',
-            choices_provider=cls._get_commands_aliases_and_macros_for_completion,
+            choices_provider=cls._get_commands_aliases_and_macros_choices,
         )
         macro_create_parser.add_argument(
             'command_args',
@@ -3884,8 +3902,8 @@ class Cmd:
             'names',
             nargs=argparse.ZERO_OR_MORE,
             help='macro(s) to delete',
-            choices_provider=cls._get_macro_completion_items,
-            descriptive_headers=["Value"],
+            choices_provider=cls._get_macro_choices,
+            table_header=["Value"],
         )
 
         return macro_delete_parser
@@ -3926,8 +3944,8 @@ class Cmd:
             'names',
             nargs=argparse.ZERO_OR_MORE,
             help='macro(s) to list',
-            choices_provider=cls._get_macro_completion_items,
-            descriptive_headers=["Value"],
+            choices_provider=cls._get_macro_choices,
+            table_header=["Value"],
         )
 
         return macro_list_parser
@@ -3940,7 +3958,14 @@ class Cmd:
         tokens_to_quote = constants.REDIRECTION_TOKENS
         tokens_to_quote.extend(self.statement_parser.terminators)
 
-        to_list = utils.remove_duplicates(args.names) if args.names else sorted(self.macros, key=self.default_sort_key)
+        to_list = (
+            utils.remove_duplicates(args.names)
+            if args.names
+            else sorted(
+                self.macros,
+                key=utils.DEFAULT_STR_SORT_KEY,
+            )
+        )
 
         not_found: list[str] = []
         for name in to_list:
@@ -3998,10 +4023,10 @@ class Cmd:
                   - list of help topic names that are not also commands
         """
         # Get a sorted list of help topics
-        help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
+        help_topics = sorted(self.get_help_topics(), key=utils.DEFAULT_STR_SORT_KEY)
 
         # Get a sorted list of visible command names
-        visible_commands = sorted(self.get_visible_commands(), key=self.default_sort_key)
+        visible_commands = sorted(self.get_visible_commands(), key=utils.DEFAULT_STR_SORT_KEY)
         cmds_doc: list[str] = []
         cmds_undoc: list[str] = []
         cmds_cats: dict[str, list[str]] = {}
@@ -4066,7 +4091,7 @@ class Cmd:
             self.poutput()
 
             # Print any categories first and then the remaining documented commands.
-            sorted_categories = sorted(cmds_cats.keys(), key=self.default_sort_key)
+            sorted_categories = sorted(cmds_cats.keys(), key=utils.DEFAULT_STR_SORT_KEY)
             all_cmds = {category: cmds_cats[category] for category in sorted_categories}
             if all_cmds:
                 all_cmds[self.default_category] = cmds_doc
@@ -4283,7 +4308,7 @@ class Cmd:
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts."""
         # Sort the shortcut tuples by name
-        sorted_shortcuts = sorted(self.statement_parser.shortcuts, key=lambda x: self.default_sort_key(x[0]))
+        sorted_shortcuts = sorted(self.statement_parser.shortcuts, key=lambda x: utils.DEFAULT_STR_SORT_KEY(x[0]))
         result = "\n".join(f'{sc[0]}: {sc[1]}' for sc in sorted_shortcuts)
         self.poutput(f"Shortcuts for other commands:\n{result}")
         self.last_result = True
@@ -4388,8 +4413,8 @@ class Cmd:
             'param',
             nargs=argparse.OPTIONAL,
             help='parameter to set or view',
-            choices_provider=cls._get_settable_completion_items,
-            descriptive_headers=["Value", "Description"],
+            choices_provider=cls._get_settable_choices,
+            table_header=["Value", "Description"],
         )
 
         return base_set_parser
@@ -4487,7 +4512,7 @@ class Cmd:
         # Build the table and populate self.last_result
         self.last_result = {}  # dict[settable_name, settable_value]
 
-        for param in sorted(to_show, key=self.default_sort_key):
+        for param in sorted(to_show, key=utils.DEFAULT_STR_SORT_KEY):
             settable = self.settables[param]
             settable_table.add_row(
                 param,

@@ -28,13 +28,14 @@ from typing import (
 
 from . import constants
 from . import string_utils as su
-from .argparse_custom import (
+from .completion import (
+    Choices,
     ChoicesProviderFunc,
     CompleterFunc,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    import cmd2  # noqa: F401
+    from .decorators import CommandParent
 
     PopenTextIO = subprocess.Popen[str]
 else:
@@ -115,12 +116,12 @@ class Settable:
         """
         if val_type is bool:
 
-            def get_bool_choices(_: str) -> list[str]:
-                """Complete lowercase boolean values."""
-                return ['true', 'false']
+            def get_bool_choices(_cmd2_self: "CommandParent") -> Choices:
+                """Tab complete lowercase boolean values."""
+                return Choices.from_strings(['true', 'false'])
 
             val_type = to_bool
-            choices_provider = cast(ChoicesProviderFunc, get_bool_choices)
+            choices_provider = get_bool_choices
 
         self.name = name
         self.val_type = val_type
@@ -185,18 +186,17 @@ def is_text_file(file_path: str) -> bool:
     return valid_text_file
 
 
-def remove_duplicates(list_to_prune: list[_T]) -> list[_T]:
-    """Remove duplicates from a list while preserving order of the items.
+def remove_duplicates(items: Iterable[_T]) -> list[_T]:
+    """Remove duplicates from an iterable while preserving order of the items.
 
-    :param list_to_prune: the list being pruned of duplicates
-    :return: The pruned list
+    :param items: the items being pruned of duplicates
+    :return: a list containing only the unique items, in order
     """
-    temp_dict = dict.fromkeys(list_to_prune)
-    return list(temp_dict.keys())
+    return list(dict.fromkeys(items))
 
 
-def alphabetical_sort(list_to_sort: Iterable[str]) -> list[str]:
-    """Sorts a list of strings alphabetically.
+def alphabetical_sort(items: Iterable[str]) -> list[str]:
+    """Sorts an iterable of strings alphabetically.
 
     For example: ['a1', 'A11', 'A2', 'a22', 'a3']
 
@@ -204,10 +204,10 @@ def alphabetical_sort(list_to_sort: Iterable[str]) -> list[str]:
 
     my_list.sort(key=norm_fold)
 
-    :param list_to_sort: the list being sorted
-    :return: the sorted list
+    :param items: the strings to sort
+    :return: a sorted list
     """
-    return sorted(list_to_sort, key=su.norm_fold)
+    return sorted(items, key=su.norm_fold)
 
 
 def try_int_or_force_to_lower_case(input_str: str) -> int | str:
@@ -844,3 +844,18 @@ def get_types(func_or_method: Callable[..., Any]) -> tuple[dict[str, Any], Any]:
     if inspect.ismethod(func_or_method):
         type_hints.pop('self', None)  # Pop off `self` hint for methods
     return type_hints, ret_ann
+
+
+# Sorting keys for strings
+ALPHABETICAL_SORT_KEY = su.norm_fold
+NATURAL_SORT_KEY = natural_keys
+
+# Application-wide sort key for strings
+# Set it using cmd2.set_default_str_sort_key().
+DEFAULT_STR_SORT_KEY: Callable[[str], str] = ALPHABETICAL_SORT_KEY
+
+
+def set_default_str_sort_key(sort_key: Callable[[str], str]) -> None:
+    """Set the application-wide sort key for strings."""
+    global DEFAULT_STR_SORT_KEY  # noqa: PLW0603
+    DEFAULT_STR_SORT_KEY = sort_key

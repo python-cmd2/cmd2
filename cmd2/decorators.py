@@ -5,6 +5,7 @@ from collections.abc import Callable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
+    TypeAlias,
     TypeVar,
     Union,
 )
@@ -63,8 +64,7 @@ def with_category(category: str) -> Callable[[CommandFunc], CommandFunc]:
 CommandParent = TypeVar('CommandParent', bound=Union['cmd2.Cmd', CommandSet])
 CommandParentType = TypeVar('CommandParentType', bound=type['cmd2.Cmd'] | type[CommandSet])
 
-
-RawCommandFuncOptionalBoolReturn = Callable[[CommandParent, Statement | str], bool | None]
+RawCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CommandParent, Statement | str], bool | None]
 
 
 ##########################
@@ -113,16 +113,16 @@ def _arg_swap(args: Sequence[Any], search_arg: Any, *replace_arg: Any) -> list[A
 
 #: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and optionally returns a boolean
-ArgListCommandFuncOptionalBoolReturn = Callable[[CommandParent, list[str]], bool | None]
+ArgListCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CommandParent, list[str]], bool | None]
 #: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and returns a boolean
-ArgListCommandFuncBoolReturn = Callable[[CommandParent, list[str]], bool]
+ArgListCommandFuncBoolReturn: TypeAlias = Callable[[CommandParent, list[str]], bool]
 #: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and returns Nothing
-ArgListCommandFuncNoneReturn = Callable[[CommandParent, list[str]], None]
+ArgListCommandFuncNoneReturn: TypeAlias = Callable[[CommandParent, list[str]], None]
 
 #: Aggregate of all accepted function signatures for command functions that accept a pre-processed argument list
-ArgListCommandFunc = (
+ArgListCommandFunc: TypeAlias = (
     ArgListCommandFuncOptionalBoolReturn[CommandParent]
     | ArgListCommandFuncBoolReturn[CommandParent]
     | ArgListCommandFuncNoneReturn[CommandParent]
@@ -193,21 +193,23 @@ def with_argument_list(
 
 #: Function signatures for command functions that use an argparse.ArgumentParser to process user input
 #: and optionally return a boolean
-ArgparseCommandFuncOptionalBoolReturn = Callable[[CommandParent, argparse.Namespace], bool | None]
-ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn = Callable[[CommandParent, argparse.Namespace, list[str]], bool | None]
+ArgparseCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace], bool | None]
+ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn: TypeAlias = Callable[
+    [CommandParent, argparse.Namespace, list[str]], bool | None
+]
 
 #: Function signatures for command functions that use an argparse.ArgumentParser to process user input
 #: and return a boolean
-ArgparseCommandFuncBoolReturn = Callable[[CommandParent, argparse.Namespace], bool]
-ArgparseCommandFuncWithUnknownArgsBoolReturn = Callable[[CommandParent, argparse.Namespace, list[str]], bool]
+ArgparseCommandFuncBoolReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace], bool]
+ArgparseCommandFuncWithUnknownArgsBoolReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace, list[str]], bool]
 
 #: Function signatures for command functions that use an argparse.ArgumentParser to process user input
 #: and return nothing
-ArgparseCommandFuncNoneReturn = Callable[[CommandParent, argparse.Namespace], None]
-ArgparseCommandFuncWithUnknownArgsNoneReturn = Callable[[CommandParent, argparse.Namespace, list[str]], None]
+ArgparseCommandFuncNoneReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace], None]
+ArgparseCommandFuncWithUnknownArgsNoneReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace, list[str]], None]
 
 #: Aggregate of all accepted function signatures for an argparse command function
-ArgparseCommandFunc = (
+ArgparseCommandFunc: TypeAlias = (
     ArgparseCommandFuncOptionalBoolReturn[CommandParent]
     | ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn[CommandParent]
     | ArgparseCommandFuncBoolReturn[CommandParent]

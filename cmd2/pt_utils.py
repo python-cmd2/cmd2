@@ -7,9 +7,7 @@ from typing import (
     Any,
 )
 
-from prompt_toolkit import (
-    print_formatted_text,
-)
+from prompt_toolkit import print_formatted_text
 from prompt_toolkit.completion import (
     Completer,
     Completion,
@@ -25,7 +23,6 @@ from . import (
     utils,
 )
 from . import rich_utils as ru
-from .completion import CompletionItem
 from .exceptions import CompletionError
 from .styles import Cmd2Style
 
@@ -84,37 +81,27 @@ class Cmd2Completer(Completer):
             print_formatted_text(ANSI(formatted_exception))
             return
 
-        # Print formatted completions if present
-        if completions.formatted_completions:
-            print_formatted_text(ANSI("\n" + completions.formatted_completions))
+        # Print completion table if present
+        if completions.completion_table:
+            print_formatted_text(ANSI("\n" + completions.completion_table))
 
         # Print hint if present and settings say we should
-        if completions.completion_hint and (self.cmd_app.always_show_hint or not completions.matches):
+        if completions.completion_hint and (self.cmd_app.always_show_hint or not completions):
             print_formatted_text(ANSI(completions.completion_hint))
 
-        if not completions.matches:
+        if not completions:
             return
 
-        # Now we iterate over completions.matches and completions.display_matches.
-        # cmd2 separates completion matches (what is inserted) from display matches (what is shown).
-        # prompt_toolkit Completion object takes 'text' (what is inserted) and 'display' (what is shown).
-
-        # Check if we have display matches
-        use_display_matches = bool(completions.display_matches)
-
-        for i, match in enumerate(completions.matches):
-            display = completions.display_matches[i] if use_display_matches else match
-            display_meta: str | ANSI | None = None
-            if isinstance(match, CompletionItem) and match.descriptive_data:
-                if isinstance(match.descriptive_data[0], str):
-                    display_meta = match.descriptive_data[0]
-                elif isinstance(match.descriptive_data[0], Text):
-                    # Convert rich renderable to prompt-toolkit formatted text
-                    display_meta = ANSI(ru.rich_text_to_string(match.descriptive_data[0]))
-
+        # Return the completions
+        for item in completions.items:
             # Set offset to the start of the current word to overwrite it with the completion
             start_position = -len(text)
-            yield Completion(match, start_position=start_position, display=display, display_meta=display_meta)
+            yield Completion(
+                item.text,
+                start_position=start_position,
+                display=item.display,
+                display_meta=item.display_meta,
+            )
 
 
 class Cmd2History(History):

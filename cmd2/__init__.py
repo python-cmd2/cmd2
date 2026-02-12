@@ -52,6 +52,7 @@ from .utils import (
     CustomCompletionSettings,
     Settable,
     categorize,
+    set_default_str_sort_key,
 )
 
 __all__: list[str] = [  # noqa: RUF022
@@ -99,4 +100,5 @@ __all__: list[str] = [  # noqa: RUF022
     'CompletionMode',
     'CustomCompletionSettings',
     'Settable',
+    'set_default_str_sort_key',
 ]
