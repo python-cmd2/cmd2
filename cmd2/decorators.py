@@ -62,7 +62,7 @@ def with_category(category: str) -> Callable[[CommandFunc], CommandFunc]:
 
 
 CommandParent = TypeVar('CommandParent', bound=Union['cmd2.Cmd', CommandSet])
-CommandParentType = TypeVar('CommandParentType', bound=type['cmd2.Cmd'] | type[CommandSet])
+CommandParentClass = TypeVar('CommandParentClass', bound=type['cmd2.Cmd'] | type[CommandSet])
 
 RawCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CommandParent, Statement | str], bool | None]
 
@@ -222,7 +222,7 @@ ArgparseCommandFunc: TypeAlias = (
 def with_argparser(
     parser: argparse.ArgumentParser  # existing parser
     | Callable[[], argparse.ArgumentParser]  # function or staticmethod
-    | Callable[[CommandParentType], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
+    | Callable[[CommandParentClass], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -356,7 +356,7 @@ def as_subcommand_to(
     subcommand: str,
     parser: argparse.ArgumentParser  # existing parser
     | Callable[[], argparse.ArgumentParser]  # function or staticmethod
-    | Callable[[CommandParentType], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
+    | Callable[[CommandParentClass], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
     *,
     help: str | None = None,  # noqa: A002
     aliases: list[str] | None = None,

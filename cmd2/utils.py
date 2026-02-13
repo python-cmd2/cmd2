@@ -30,8 +30,8 @@ from . import constants
 from . import string_utils as su
 from .completion import (
     Choices,
-    ChoicesProviderFunc,
-    CompleterFunc,
+    ChoicesProviderUnbound,
+    CompleterUnbound,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -78,8 +78,8 @@ class Settable:
         settable_attrib_name: str | None = None,
         onchange_cb: Callable[[str, _T, _T], Any] | None = None,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderFunc | None = None,
-        completer: CompleterFunc | None = None,
+        choices_provider: ChoicesProviderUnbound | None = None,
+        completer: CompleterUnbound | None = None,
     ) -> None:
         """Settable Initializer.
 

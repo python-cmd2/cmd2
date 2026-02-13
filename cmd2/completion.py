@@ -3,6 +3,7 @@
 import re
 import sys
 from collections.abc import (
+    Callable,
     Iterator,
     Sequence,
 )
@@ -11,13 +12,16 @@ from dataclasses import (
     field,
 )
 from typing import (
+    TYPE_CHECKING,
     Any,
-    Protocol,
     TypeAlias,
     cast,
     overload,
-    runtime_checkable,
 )
+
+if TYPE_CHECKING:
+    from .cmd2 import Cmd
+    from .command_definition import CommandSet
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -222,56 +226,45 @@ def all_display_numeric(items: Sequence[CompletionItem]) -> bool:
     return bool(items) and all(NUMERIC_RE.match(item.display) for item in items)
 
 
-@runtime_checkable
-class ChoicesProviderFuncBase(Protocol):
-    """Function that returns a list of choices in support of completion."""
+#############################################
+# choices_provider function types
+#############################################
 
-    def __call__(self) -> Choices:  # pragma: no cover
-        """Enable instances to be called like functions."""
+# Represents the parsed tokens from argparse during completion
+ArgTokens: TypeAlias = dict[str, list[str]]
 
+# Unbound choices_provider function types used by argparse-based completion.
+# These expect a Cmd or CommandSet instance as the first argument.
+ChoicesProviderUnbound: TypeAlias = (
+    # Basic: (self) -> Choices
+    Callable[["Cmd"], Choices]
+    | Callable[["CommandSet"], Choices]
+    |
+    # Context-aware: (self, arg_tokens) -> Choices
+    Callable[["Cmd", ArgTokens], Choices]
+    | Callable[["CommandSet", ArgTokens], Choices]
+)
 
-@runtime_checkable
-class ChoicesProviderFuncWithTokens(Protocol):
-    """Function that returns a list of choices in support of completion and accepts a dictionary of prior arguments."""
+#############################################
+# completer function types
+#############################################
 
-    def __call__(self, *, arg_tokens: dict[str, list[str]] = {}) -> Choices:  # pragma: no cover  # noqa: B006
-        """Enable instances to be called like functions."""
+# Unbound completer function types used by argparse-based completion.
+# These expect a Cmd or CommandSet instance as the first argument.
+CompleterUnbound: TypeAlias = (
+    # Basic: (self, text, line, begidx, endidx) -> Completions
+    Callable[["Cmd", str, str, int, int], Completions]
+    | Callable[["CommandSet", str, str, int, int], Completions]
+    |
+    # Context-aware: (self, text, line, begidx, endidx, arg_tokens) -> Completions
+    Callable[["Cmd", str, str, int, int, ArgTokens], Completions]
+    | Callable[["CommandSet", str, str, int, int, ArgTokens], Completions]
+)
 
-
-ChoicesProviderFunc: TypeAlias = ChoicesProviderFuncBase | ChoicesProviderFuncWithTokens
-
-
-@runtime_checkable
-class CompleterFuncBase(Protocol):
-    """Function to support completion with the provided state of the user prompt."""
-
-    def __call__(
-        self,
-        text: str,
-        line: str,
-        begidx: int,
-        endidx: int,
-    ) -> Completions:  # pragma: no cover
-        """Enable instances to be called like functions."""
-
-
-@runtime_checkable
-class CompleterFuncWithTokens(Protocol):
-    """Function to support completion with the provided state of the user prompt, accepts a dictionary of prior args."""
-
-    def __call__(
-        self,
-        text: str,
-        line: str,
-        begidx: int,
-        endidx: int,
-        *,
-        arg_tokens: dict[str, list[str]] = {},  # noqa: B006
-    ) -> Completions:  # pragma: no cover
-        """Enable instances to be called like functions."""
-
-
-CompleterFunc: TypeAlias = CompleterFuncBase | CompleterFuncWithTokens
+# A bound completer used internally by cmd2 for basic completion logic.
+# The 'self' argument is already tied to an instance and is omitted.
+# Format: (text, line, begidx, endidx) -> Completions
+CompleterBound: TypeAlias = Callable[[str, str, int, int], Completions]
 
 # Represents a type that can be matched against when completing.
 # Strings are matched directly while CompletionItems are matched

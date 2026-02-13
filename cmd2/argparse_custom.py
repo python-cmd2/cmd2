@@ -282,20 +282,14 @@ from rich_argparse import (
 from . import constants
 from . import rich_utils as ru
 from .completion import (
-    ChoicesProviderFunc,
-    ChoicesProviderFuncBase,
-    ChoicesProviderFuncWithTokens,
-    CompleterFunc,
-    CompleterFuncBase,
-    CompleterFuncWithTokens,
+    ChoicesProviderUnbound,
+    CompleterUnbound,
 )
 from .rich_utils import Cmd2RichArgparseConsole
 from .styles import Cmd2Style
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .argparse_completer import (
-        ArgparseCompleter,
-    )
+    from .argparse_completer import ArgparseCompleter
 
 
 def generate_range_error(range_min: int, range_max: float) -> str:
@@ -376,7 +370,7 @@ class ChoicesCallable:
     def __init__(
         self,
         is_completer: bool,
-        to_call: CompleterFunc | ChoicesProviderFunc,
+        to_call: ChoicesProviderUnbound | CompleterUnbound,
     ) -> None:
         """Initialize the ChoiceCallable instance.
 
@@ -385,35 +379,21 @@ class ChoicesCallable:
         :param to_call: the callable object that will be called to provide choices for the argument.
         """
         self.is_completer = is_completer
-        if is_completer:
-            if not isinstance(to_call, (CompleterFuncBase, CompleterFuncWithTokens)):  # pragma: no cover
-                # runtime checking of Protocols do not currently check the parameters of a function.
-                raise ValueError(
-                    'With is_completer set to true, to_call must be either CompleterFunc, CompleterFuncWithTokens'
-                )
-        elif not isinstance(to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
-            # runtime checking of Protocols do not currently check the parameters of a function.
-            raise ValueError(
-                'With is_completer set to false, to_call must be either: '
-                'ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens'
-            )
         self.to_call = to_call
 
     @property
-    def completer(self) -> CompleterFunc:
-        """Retreive the internal Completer function, first type checking to ensure it is the right type."""
-        if not isinstance(self.to_call, (CompleterFuncBase, CompleterFuncWithTokens)):  # pragma: no cover
-            # this should've been caught in the constructor, just a backup check
-            raise TypeError('Function is not a CompleterFunc')
-        return self.to_call
+    def choices_provider(self) -> ChoicesProviderUnbound:
+        """Retreive the internal choices_provider function."""
+        if self.is_completer:
+            raise AttributeError("This instance is configured as a completer, not a choices_provider")
+        return cast(ChoicesProviderUnbound, self.to_call)
 
     @property
-    def choices_provider(self) -> ChoicesProviderFunc:
-        """Retreive the internal ChoicesProvider function, first type checking to ensure it is the right type."""
-        if not isinstance(self.to_call, (ChoicesProviderFuncBase, ChoicesProviderFuncWithTokens)):  # pragma: no cover
-            # this should've been caught in the constructor, just a backup check
-            raise TypeError('Function is not a ChoicesProviderFunc')
-        return self.to_call
+    def completer(self) -> CompleterUnbound:
+        """Retreive the internal completer function."""
+        if not self.is_completer:
+            raise AttributeError("This instance is configured as a choices_provider, not a completer")
+        return cast(CompleterUnbound, self.to_call)
 
 
 ############################################################################################################
@@ -482,7 +462,7 @@ setattr(argparse.Action, '_set_choices_callable', _action_set_choices_callable)
 
 def _action_set_choices_provider(
     self: argparse.Action,
-    choices_provider: ChoicesProviderFunc,
+    choices_provider: ChoicesProviderUnbound,
 ) -> None:
     """Set choices_provider of an argparse Action.
 
@@ -502,7 +482,7 @@ setattr(argparse.Action, 'set_choices_provider', _action_set_choices_provider)
 
 def _action_set_completer(
     self: argparse.Action,
-    completer: CompleterFunc,
+    completer: CompleterUnbound,
 ) -> None:
     """Set completer of an argparse Action.
 
@@ -700,8 +680,8 @@ def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
     nargs: int | str | tuple[int] | tuple[int, int] | tuple[int, float] | None = None,
-    choices_provider: ChoicesProviderFunc | None = None,
-    completer: CompleterFunc | None = None,
+    choices_provider: ChoicesProviderUnbound | None = None,
+    completer: CompleterUnbound | None = None,
     suppress_tab_hint: bool = False,
     table_header: Sequence[str | Column] | None = None,
     **kwargs: Any,

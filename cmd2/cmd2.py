@@ -100,8 +100,9 @@ from .command_definition import (
 )
 from .completion import (
     Choices,
-    ChoicesProviderFunc,
-    CompleterFunc,
+    ChoicesProviderUnbound,
+    CompleterBound,
+    CompleterUnbound,
     CompletionItem,
     Completions,
     Matchable,
@@ -883,7 +884,7 @@ class Cmd:
 
         setattr(self, command_func_name, command_method)
 
-    def _install_completer_function(self, cmd_name: str, cmd_completer: CompleterFunc) -> None:
+    def _install_completer_function(self, cmd_name: str, cmd_completer: CompleterBound) -> None:
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
 
         if hasattr(self, completer_func_name):
@@ -1896,9 +1897,9 @@ class Cmd:
         line: str,
         begidx: int,
         endidx: int,
-        flag_dict: dict[str, Iterable[Matchable] | CompleterFunc],
+        flag_dict: dict[str, Iterable[Matchable] | CompleterBound],
         *,
-        all_else: None | Iterable[Matchable] | CompleterFunc = None,
+        all_else: None | Iterable[Matchable] | CompleterBound = None,
     ) -> Completions:
         """Completes based on a particular flag preceding the token being completed.
 
@@ -1944,9 +1945,9 @@ class Cmd:
         line: str,
         begidx: int,
         endidx: int,
-        index_dict: Mapping[int, Iterable[Matchable] | CompleterFunc],
+        index_dict: Mapping[int, Iterable[Matchable] | CompleterBound],
         *,
-        all_else: Iterable[Matchable] | CompleterFunc | None = None,
+        all_else: Iterable[Matchable] | CompleterBound | None = None,
     ) -> Completions:
         """Completes based on a fixed position in the input string.
 
@@ -1972,7 +1973,7 @@ class Cmd:
         index = len(tokens) - 1
 
         # Check if token is at an index in the dictionary
-        match_against: Iterable[Matchable] | CompleterFunc | None = index_dict.get(index, all_else)
+        match_against: Iterable[Matchable] | CompleterBound | None = index_dict.get(index, all_else)
 
         # Perform completion using a Iterable
         if isinstance(match_against, Iterable):
@@ -2159,7 +2160,7 @@ class Cmd:
             text, line, begidx, endidx, path_filter=lambda path: os.path.isdir(path) or os.access(path, os.X_OK)
         )
 
-    def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: CompleterFunc) -> Completions:
+    def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: CompleterBound) -> Completions:
         """First completion function for all commands, called by complete().
 
         It determines if it should complete for redirection (|, >, >>) or use the
@@ -2304,6 +2305,7 @@ class Cmd:
             return Completions()
 
         # Determine the completer function to use for the command's argument
+        completer_func: CompleterBound
         if custom_settings is None:
             # Check if a macro was entered
             if command in self.macros:
@@ -3314,8 +3316,8 @@ class Cmd:
         completion_mode: utils.CompletionMode = utils.CompletionMode.NONE,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderFunc | None = None,
-        completer: CompleterFunc | None = None,
+        choices_provider: ChoicesProviderUnbound | None = None,
+        completer: CompleterUnbound | None = None,
         parser: argparse.ArgumentParser | None = None,
     ) -> str:
         """Read input from appropriate stdin value.

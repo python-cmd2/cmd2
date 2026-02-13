@@ -33,7 +33,6 @@ from .argparse_custom import (
 )
 from .command_definition import CommandSet
 from .completion import (
-    ChoicesProviderFuncWithTokens,
     CompletionItem,
     Completions,
     all_display_numeric,
@@ -761,11 +760,7 @@ class ArgparseCompleter:
             if isinstance(raw_choices, ChoicesCallable):
                 args, kwargs = self._prepare_callable_params(raw_choices, arg_state, text, consumed_arg_values, cmd_set)
                 choices_func = raw_choices.choices_provider
-
-                if isinstance(choices_func, ChoicesProviderFuncWithTokens):
-                    all_choices = list(choices_func(*args, **kwargs))
-                else:
-                    all_choices = list(choices_func(*args))
+                all_choices = list(choices_func(*args, **kwargs))
             else:
                 all_choices = raw_choices
 
