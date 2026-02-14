@@ -559,7 +559,7 @@ class ArgparseCompleter:
 
         for item in matched_flags.items:
             action = self._flag_to_action[item.text]
-            matched_actions.setdefault(action, []).append(flag)
+            matched_actions.setdefault(action, []).append(item.text)
 
         # For completion suggestions, group matched flags by action
         items: list[CompletionItem] = []
