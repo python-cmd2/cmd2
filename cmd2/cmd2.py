@@ -1488,7 +1488,7 @@ class Cmd:
                     )
                     final_msg.append(help_msg)
 
-                console.print(final_msg)
+                console.print(final_msg, end="")
 
         return capture.get()
 
@@ -1506,7 +1506,7 @@ class Cmd:
                        method and still call `super()` without encountering unexpected keyword argument errors.
         """
         formatted_exception = self.format_exception(exception)
-        self.print_to(sys.stderr, formatted_exception)
+        self.print_to(sys.stderr, formatted_exception + "\n")
 
     def pfeedback(
         self,
@@ -2437,82 +2437,99 @@ class Cmd:
         :param endidx: ending index of text
         :param custom_settings: used when not completing the main command line
         :return: a Completions object
-        :raises CompletionError: if a completion-related exception occurs
-        :raises Exception: for any unhandled underlying processing errors
         """
-        # Check if we are completing a multiline command
-        if self._at_continuation_prompt:
-            # lstrip and prepend the previously typed portion of this multiline command
-            lstripped_previous = self._multiline_in_progress.lstrip()
-            line = lstripped_previous + line
+        try:
+            # Check if we are completing a multiline command
+            if self._at_continuation_prompt:
+                # lstrip and prepend the previously typed portion of this multiline command
+                lstripped_previous = self._multiline_in_progress.lstrip()
+                line = lstripped_previous + line
 
-            # Increment the indexes to account for the prepended text
-            begidx = len(lstripped_previous) + begidx
-            endidx = len(lstripped_previous) + endidx
-        else:
-            # lstrip the original line
-            orig_line = line
-            line = orig_line.lstrip()
-            num_stripped = len(orig_line) - len(line)
-
-            # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
-            # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
-            begidx = max(begidx - num_stripped, 0)
-            endidx = max(endidx - num_stripped, 0)
-
-        # Shortcuts are not word break characters when completing. Therefore, shortcuts become part
-        # of the text variable if there isn't a word break, like a space, after it. We need to remove it
-        # from text and update the indexes. This only applies if we are at the beginning of the command line.
-        shortcut_to_restore = ''
-        if begidx == 0 and custom_settings is None:
-            for shortcut, _ in self.statement_parser.shortcuts:
-                if text.startswith(shortcut):
-                    # Save the shortcut to restore later
-                    shortcut_to_restore = shortcut
-
-                    # Adjust text and where it begins
-                    text = text[len(shortcut_to_restore) :]
-                    begidx += len(shortcut_to_restore)
-                    break
+                # Increment the indexes to account for the prepended text
+                begidx = len(lstripped_previous) + begidx
+                endidx = len(lstripped_previous) + endidx
             else:
-                # No shortcut was found. Complete the command token.
-                parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
-                parser.add_argument(
-                    'command',
-                    metavar="COMMAND",
-                    help="command, alias, or macro name",
-                    choices=self._get_commands_aliases_and_macros_choices(),
+                # lstrip the original line
+                orig_line = line
+                line = orig_line.lstrip()
+                num_stripped = len(orig_line) - len(line)
+
+                # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
+                # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
+                begidx = max(begidx - num_stripped, 0)
+                endidx = max(endidx - num_stripped, 0)
+
+            # Shortcuts are not word break characters when completing. Therefore, shortcuts become part
+            # of the text variable if there isn't a word break, like a space, after it. We need to remove it
+            # from text and update the indexes. This only applies if we are at the beginning of the command line.
+            shortcut_to_restore = ''
+            if begidx == 0 and custom_settings is None:
+                for shortcut, _ in self.statement_parser.shortcuts:
+                    if text.startswith(shortcut):
+                        # Save the shortcut to restore later
+                        shortcut_to_restore = shortcut
+
+                        # Adjust text and where it begins
+                        text = text[len(shortcut_to_restore) :]
+                        begidx += len(shortcut_to_restore)
+                        break
+                else:
+                    # No shortcut was found. Complete the command token.
+                    parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
+                    parser.add_argument(
+                        'command',
+                        metavar="COMMAND",
+                        help="command, alias, or macro name",
+                        choices=self._get_commands_aliases_and_macros_choices(),
+                    )
+                    custom_settings = utils.CustomCompletionSettings(parser)
+
+            completions = self._perform_completion(text, line, begidx, endidx, custom_settings)
+
+            # Check if we need to restore a shortcut in the completion text
+            # so it doesn't get erased from the command line.
+            if completions and shortcut_to_restore:
+                new_items = [
+                    dataclasses.replace(
+                        item,
+                        text=shortcut_to_restore + item.text,
+                    )
+                    for item in completions
+                ]
+
+                # Update items and set _quote_from_offset so that any auto-inserted
+                # opening quote is placed after the shortcut.
+                completions = dataclasses.replace(
+                    completions,
+                    items=new_items,
+                    _search_text_offset=len(shortcut_to_restore),
                 )
-                custom_settings = utils.CustomCompletionSettings(parser)
 
-        completions = self._perform_completion(text, line, begidx, endidx, custom_settings)
+            # Swap between COLUMN and MULTI_COLUMN style based on the number of matches.
+            if len(completions) > self.max_column_completion_results:
+                self.session.complete_style = CompleteStyle.MULTI_COLUMN
+            else:
+                self.session.complete_style = CompleteStyle.COLUMN
 
-        # Check if we need to restore a shortcut in the completion text
-        # so it doesn't get erased from the command line.
-        if completions and shortcut_to_restore:
-            new_items = [
-                dataclasses.replace(
-                    item,
-                    text=shortcut_to_restore + item.text,
-                )
-                for item in completions
-            ]
+            return completions  # noqa: TRY300
 
-            # Update items and set _quote_from_offset so that any auto-inserted
-            # opening quote is placed after the shortcut.
-            completions = dataclasses.replace(
-                completions,
-                items=new_items,
-                _search_text_offset=len(shortcut_to_restore),
-            )
+        except CompletionError as ex:
+            err_str = str(ex)
+            completion_error = ""
 
-        # Swap between COLUMN and MULTI_COLUMN style based on the number of matches.
-        if len(completions) > self.max_column_completion_results:
-            self.session.complete_style = CompleteStyle.MULTI_COLUMN
-        else:
-            self.session.complete_style = CompleteStyle.COLUMN
-
-        return completions
+            # Don't display anything if the error is blank (e.g. _NoResultsError for an argument which supresses hints)
+            if err_str:
+                console = ru.Cmd2GeneralConsole()
+                with console.capture() as capture:
+                    console.print(
+                        Text(err_str, style=Cmd2Style.ERROR if ex.apply_style else ""),
+                        end="",
+                    )
+                completion_error = capture.get()
+            return Completions(completion_error=completion_error)
+        except Exception as ex:  # noqa: BLE001
+            formatted_exception = self.format_exception(ex)
+            return Completions(completion_error=formatted_exception)
 
     def in_script(self) -> bool:
         """Return whether a text script is running."""

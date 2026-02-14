@@ -16,15 +16,11 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
-from rich.text import Text
 
 from . import (
     constants,
     utils,
 )
-from . import rich_utils as ru
-from .exceptions import CompletionError
-from .styles import Cmd2Style
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
@@ -62,23 +58,12 @@ class Cmd2Completer(Completer):
         endidx = cursor_pos
         text = line[begidx:endidx]
 
-        try:
-            completions = self.cmd_app.complete(
-                text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
-            )
-        except CompletionError as ex:
-            # Don't print unless error has length
-            err_str = str(ex)
-            if err_str:
-                general_console = ru.Cmd2GeneralConsole()
-                with general_console.capture() as capture:
-                    styled_err = Text(err_str, style=Cmd2Style.ERROR if ex.apply_style else "")
-                    general_console.print(styled_err, end="")
-                print_formatted_text(ANSI(capture.get()))
-            return
-        except Exception as ex:  # noqa: BLE001
-            formatted_exception = self.cmd_app.format_exception(ex)
-            print_formatted_text(ANSI(formatted_exception))
+        completions = self.cmd_app.complete(
+            text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
+        )
+
+        if completions.completion_error:
+            print_formatted_text(ANSI(completions.completion_error + "\n"))
             return
 
         # Print completion table if present

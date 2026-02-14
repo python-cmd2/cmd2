@@ -207,6 +207,9 @@ class Completions(CompletionResultsBase):
     # An optional hint which prints above completion suggestions
     completion_hint: str = ""
 
+    # Optional message to display if an error occurs during completion
+    completion_error: str = ""
+
     # An optional table string populated by the argparse completer
     completion_table: str = ""
 
