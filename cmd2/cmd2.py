@@ -1178,7 +1178,7 @@ class Cmd:
         def get_allow_style_choices(_cli_self: Cmd) -> Choices:
             """Complete allow_style values."""
             styles = [val.name.lower() for val in ru.AllowStyle]
-            return Choices.from_strings(styles)
+            return Choices.from_values(styles)
 
         def allow_style_type(value: str) -> ru.AllowStyle:
             """Convert a string value into an ru.AllowStyle."""
@@ -1858,7 +1858,7 @@ class Cmd:
         if not basic_completions:
             return Completions()
 
-        match_strings = [item.text for item in basic_completions]
+        match_strings = basic_completions.to_strings()
 
         # Calculate what portion of the match we are completing
         common_prefix = os.path.commonprefix(match_strings)
@@ -2400,13 +2400,13 @@ class Cmd:
 
         # Check if we need to add an opening quote
         if not completion_token_quote:
-            current_texts = [item.text for item in completions]
+            matches = completions.to_strings()
 
-            if any(' ' in text for text in current_texts):
+            if any(' ' in match for match in matches):
                 _add_opening_quote = True
 
                 # Determine best quote (single vs double) based on text content
-                _quote_char = "'" if any('"' in t for t in current_texts) else '"'
+                _quote_char = "'" if any('"' in t for t in matches) else '"'
 
         # Check if we need to remove text from the beginning of completions
         elif text_to_remove:

@@ -3297,7 +3297,7 @@ class DisableCommandsApp(cmd2.Cmd):
         self.poutput('Help for has_helper_funcs')
 
     def complete_has_helper_funcs(self, *args) -> Completions:
-        return Completions.from_strings(['result'])
+        return Completions.from_values(['result'])
 
     @cmd2.with_category(category_name)
     def do_has_no_helper_funcs(self, arg) -> None:

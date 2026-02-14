@@ -6,7 +6,10 @@ See the header of argparse_custom.py for instructions on how to use these featur
 import argparse
 import dataclasses
 import inspect
-from collections import deque
+from collections import (
+    defaultdict,
+    deque,
+)
 from collections.abc import Sequence
 from typing import (
     IO,
@@ -247,7 +250,7 @@ class ArgparseCompleter:
         used_flags: set[str] = set()
 
         # Keeps track of arguments we've seen and any tokens they consumed
-        consumed_arg_values: dict[str, list[str]] = {}  # dict(arg_name -> list[tokens])
+        consumed_arg_values: dict[str, list[str]] = defaultdict(list)
 
         # Completed mutually exclusive groups
         completed_mutex_groups: dict[argparse._MutuallyExclusiveGroup, argparse.Action] = {}
@@ -255,7 +258,6 @@ class ArgparseCompleter:
         def consume_argument(arg_state: _ArgumentState, arg_token: str) -> None:
             """Consume token as an argument."""
             arg_state.count += 1
-            consumed_arg_values.setdefault(arg_state.action.dest, [])
             consumed_arg_values[arg_state.action.dest].append(arg_token)
 
         #############################################################################################
@@ -315,7 +317,11 @@ class ArgparseCompleter:
 
                 if action is not None:
                     self._update_mutex_groups(action, completed_mutex_groups, used_flags, remaining_positionals)
-                    if isinstance(
+
+                    # Check if the action type allows the same flag to be provided multiple times.
+                    # Reusable actions (append, count, extend) preserve their history so the
+                    # completion logic knows which values have already been 'consumed'.
+                    if not isinstance(
                         action,
                         (
                             argparse._AppendAction,
@@ -324,16 +330,12 @@ class ArgparseCompleter:
                             argparse._ExtendAction,
                         ),
                     ):
-                        # Flags with actions set to append, append_const, count, and extend can be reused.
-                        # Therefore don't erase any tokens already consumed for this flag.
-                        consumed_arg_values.setdefault(action.dest, [])
-                    else:
-                        # This flag is not reusable, so mark that we've seen it
+                        # For standard 'overwrite' actions (e.g., --store), providing the flag
+                        # again resets its state. We mark the flags as 'used' to potentially
+                        # filter them from future completion results and clear any previously
+                        # recorded values for this destination.
                         used_flags.update(action.option_strings)
-
-                        # It's possible we already have consumed values for this flag if it was used
-                        # earlier in the command line. Reset them now for this use of it.
-                        consumed_arg_values[action.dest] = []
+                        consumed_arg_values[action.dest].clear()
 
                     new_arg_state = _ArgumentState(action)
 
@@ -554,15 +556,15 @@ class ArgparseCompleter:
                     match_against.append(flag)
 
         # Build a dictionary linking actions with their matched flag names
-        matched_actions: dict[argparse.Action, list[str]] = {}
+        matched_actions: dict[argparse.Action, list[str]] = defaultdict(list)
 
         # Keep flags sorted in the order provided by argparse so our completion
         # suggestions display the same as argparse help text.
         matched_flags = self._cmd2_app.basic_complete(text, line, begidx, endidx, match_against, sort=False)
 
-        for item in matched_flags.items:
-            action = self._flag_to_action[item.text]
-            matched_actions.setdefault(action, []).append(item.text)
+        for flag in matched_flags.to_strings():
+            action = self._flag_to_action[flag]
+            matched_actions[action].append(flag)
 
         # For completion suggestions, group matched flags by action
         items: list[CompletionItem] = []

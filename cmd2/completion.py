@@ -53,7 +53,7 @@ NUMERIC_RE = re.compile(
 class CompletionItem:
     """A single completion result."""
 
-    # The underlying object this completion represents (e.g., a Path, Enum, or int).
+    # The underlying object this completion represents (e.g., str, int, Path).
     # This is used to support argparse choices validation.
     value: Any = field(kw_only=False)
 
@@ -148,14 +148,18 @@ class CompletionResultsBase:
         object.__setattr__(self, "items", tuple(unique_items))
 
     @classmethod
-    def from_strings(cls, strings: Sequence[str], *, is_sorted: bool = False) -> Self:
-        """Create a completion results instance from a sequence of strings.
+    def from_values(cls, values: Sequence[str], *, is_sorted: bool = False) -> Self:
+        """Create a completion results instance from a sequence of arbitrary objects.
 
-        :param strings: the raw strings to be converted into CompletionItems.
-        :param is_sorted: whether the strings are already in the desired order.
+        :param values: the raw objects (e.g. strs, ints, Paths) to be converted into CompletionItems.
+        :param is_sorted: whether the values are already in the desired order.
         """
-        items = [CompletionItem(s) for s in strings]
+        items = [CompletionItem(value=v) for v in values]
         return cls(items=items, is_sorted=is_sorted)
+
+    def to_strings(self) -> tuple[str, ...]:
+        """Return a tuple of the completion strings (the 'text' field of each item)."""
+        return tuple(item.text for item in self.items)
 
     # --- Sequence Protocol Functions ---
 

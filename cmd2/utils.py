@@ -118,7 +118,7 @@ class Settable:
 
             def get_bool_choices(_cmd2_self: "CommandParent") -> Choices:
                 """Tab complete lowercase boolean values."""
-                return Choices.from_strings(['true', 'false'])
+                return Choices.from_values(['true', 'false'])
 
             val_type = to_bool
             choices_provider = get_bool_choices
