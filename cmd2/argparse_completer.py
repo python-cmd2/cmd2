@@ -554,8 +554,11 @@ class ArgparseCompleter:
                     match_against.append(flag)
 
         # Build a dictionary linking actions with their matched flag names
-        matched_flags = self._cmd2_app.basic_complete(text, line, begidx, endidx, match_against)
         matched_actions: dict[argparse.Action, list[str]] = {}
+
+        # Keep flags sorted in the order provided by argparse so our completion
+        # suggestions display the same as argparse help text.
+        matched_flags = self._cmd2_app.basic_complete(text, line, begidx, endidx, match_against, sort=False)
 
         for item in matched_flags.items:
             action = self._flag_to_action[item.text]

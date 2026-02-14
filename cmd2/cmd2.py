@@ -1788,6 +1788,8 @@ class Cmd:
         begidx: int,  # noqa: ARG002
         endidx: int,  # noqa: ARG002
         match_against: Iterable[Matchable],
+        *,
+        sort: bool = True,
     ) -> Completions:
         """Perform completion without considering line contents or cursor position.
 
@@ -1798,6 +1800,8 @@ class Cmd:
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
         :param match_against: the items being matched against
+        :param sort: if True, then results will be sorted. If False, then items will
+                     be in the same order they appeared in match_against.
         :return: a Completions object
         """
         matches: list[CompletionItem] = []
@@ -1807,7 +1811,7 @@ class Cmd:
             if candidate.startswith(text):
                 matches.append(item if isinstance(item, CompletionItem) else CompletionItem(item))
 
-        return Completions(items=matches)
+        return Completions(items=matches, is_sorted=not sort)
 
     def delimiter_complete(
         self,
