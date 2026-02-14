@@ -1854,7 +1854,7 @@ class Cmd:
         if not basic_completions:
             return Completions()
 
-        match_strings = [item.text for item in basic_completions.items]
+        match_strings = [item.text for item in basic_completions]
 
         # Calculate what portion of the match we are completing
         common_prefix = os.path.commonprefix(match_strings)
@@ -2370,7 +2370,7 @@ class Cmd:
             # Save the quote so we can add a matching closing quote later.
             completion_token_quote = raw_completion_token[0]
 
-            # prompt-toolkit still performs word breaks after a quote. Therefore, something like quoted search
+            # Cmd2Completer still performs word breaks after a quote. Therefore, something like quoted search
             # text with a space would have resulted in begidx pointing to the middle of the token we
             # we want to complete. Figure out where that token actually begins and save the beginning
             # portion of it that was not part of the text prompt-toolkit gave us. We will remove it from the
@@ -2391,73 +2391,31 @@ class Cmd:
         if not completions:
             return Completions()
 
-        # Create a mutable list to possibly make changes to items
-        working_items = list(completions.items)
+        _add_opening_quote = False
+        _quote_char = completion_token_quote
 
         # Check if we need to add an opening quote
         if not completion_token_quote:
-            add_quote = False
+            current_texts = [item.text for item in completions]
 
-            # Extract the raw text and display strings for quote detection
-            current_texts = [item.text for item in working_items]
+            if any(' ' in text for text in current_texts):
+                _add_opening_quote = True
 
-            # For delimited matches, check for a space in the common text prefix
-            # as well as in the display segments.
-            if completions.is_delimited:
-                common_prefix = os.path.commonprefix(current_texts)
-                current_displays = [item.display for item in working_items]
-
-                if ' ' in common_prefix or any(' ' in display for display in current_displays):
-                    add_quote = True
-
-            # Otherwise check if any text match has a space.
-            elif any(' ' in text for text in current_texts):
-                add_quote = True
-
-            if add_quote:
                 # Determine best quote (single vs double) based on text content
-                completion_token_quote = "'" if any('"' in t for t in current_texts) else '"'
-                working_items = [
-                    dataclasses.replace(
-                        item,
-                        text=completion_token_quote + item.text,
-                    )
-                    for item in working_items
-                ]
+                _quote_char = "'" if any('"' in t for t in current_texts) else '"'
 
         # Check if we need to remove text from the beginning of completions
         elif text_to_remove:
-            working_items = [
+            new_items = [
                 dataclasses.replace(
                     item,
                     text=item.text.replace(text_to_remove, '', 1),
                 )
-                for item in working_items
+                for item in completions
             ]
+            completions = dataclasses.replace(completions, items=new_items)
 
-        # Handle closing quote and trailing space
-        if len(working_items) == 1 and completions.allow_finalization:
-            final_item = working_items[0]
-            new_text = final_item.text
-
-            # Append the matching quote if we started one
-            if completion_token_quote:
-                new_text += completion_token_quote
-
-            # Append a space if the cursor is at the end of the line
-            if endidx == len(line):
-                new_text += ' '
-
-            # Update the item if the text changed
-            if new_text != final_item.text:
-                working_items = [dataclasses.replace(final_item, text=new_text)]
-
-        # Convert back to tuple for comparison with the original frozen tuple
-        final_items_tuple = tuple(working_items)
-        if final_items_tuple != completions.items:
-            completions = dataclasses.replace(completions, items=final_items_tuple)
-
-        return completions
+        return dataclasses.replace(completions, _add_opening_quote=_add_opening_quote, _quote_char=_quote_char)
 
     def complete(
         self,
@@ -2525,19 +2483,26 @@ class Cmd:
 
         completions = self._perform_completion(text, line, begidx, endidx, custom_settings)
 
-        # Check if we need to restore a shortcut in the completions
-        # so it doesn't get erased from the command line
+        # Check if we need to restore a shortcut in the completion text
+        # so it doesn't get erased from the command line.
         if completions and shortcut_to_restore:
             new_items = [
                 dataclasses.replace(
                     item,
                     text=shortcut_to_restore + item.text,
                 )
-                for item in completions.items
+                for item in completions
             ]
-            completions = dataclasses.replace(completions, items=new_items)
 
-        # Swap between COLUMN and MULTI_COLUMN style based on the number of matches if not using READLINE_LIKE
+            # Update items and set _quote_from_offset so that any auto-inserted
+            # opening quote is placed after the shortcut.
+            completions = dataclasses.replace(
+                completions,
+                items=new_items,
+                _search_text_offset=len(shortcut_to_restore),
+            )
+
+        # Swap between COLUMN and MULTI_COLUMN style based on the number of matches.
         if len(completions) > self.max_column_completion_results:
             self.session.complete_style = CompleteStyle.MULTI_COLUMN
         else:

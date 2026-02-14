@@ -92,12 +92,50 @@ class Cmd2Completer(Completer):
         if not completions:
             return
 
+        # The length of the user's input minus any shortcut.
+        search_text_length = len(text) - completions._search_text_offset
+
+        # If matches require quoting but the word isn't quoted yet, we insert the
+        # opening quote directly into the buffer. We do this because if any completions
+        # change text before the cursor (like prepending a quote), prompt-toolkit will
+        # not return a common prefix to the command line. By modifying the buffer
+        # and returning early, we trigger a new completion cycle where the quote
+        # is already present, allowing for proper common prefix calculation.
+        if completions._add_opening_quote and search_text_length > 0:
+            buffer = self.cmd_app.session.app.current_buffer
+
+            buffer.cursor_left(search_text_length)
+            buffer.insert_text(completions._quote_char)
+            buffer.cursor_right(search_text_length)
+            return
+
         # Return the completions
-        for item in completions.items:
+        for item in completions:
             # Set offset to the start of the current word to overwrite it with the completion
             start_position = -len(text)
+            match_text = item.text
+
+            # If we need a quote but didn't interrupt (because text was empty),
+            # prepend the quote here so it's included in the insertion.
+            if completions._add_opening_quote:
+                match_text = (
+                    match_text[: completions._search_text_offset]
+                    + completions._quote_char
+                    + match_text[completions._search_text_offset :]
+                )
+
+            # Finalize if there's only one match
+            if len(completions) == 1 and completions.allow_finalization:
+                # Close any open quote
+                if completions._quote_char:
+                    match_text += completions._quote_char
+
+                # Add trailing space if the cursor is at the end of the line
+                if endidx == len(line):
+                    match_text += " "
+
             yield Completion(
-                item.text,
+                match_text,
                 start_position=start_position,
                 display=item.display,
                 display_meta=item.display_meta,

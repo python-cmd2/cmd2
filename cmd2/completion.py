@@ -220,6 +220,22 @@ class Completions(CompletionResultsBase):
     # specialized quoting logic.
     is_delimited: bool = False
 
+    #####################################################################
+    # The following fields are used internally by cmd2 to handle
+    # automatic quoting and are not intended for user modification.
+    #####################################################################
+
+    # Whether to add an opening quote to the matches.
+    _add_opening_quote: bool = False
+
+    # The starting index of the user-provided search text within a full match.
+    # This accounts for leading shortcuts (e.g., in '?cmd', the offset is 1).
+    # Used to ensure opening quotes are inserted after the shortcut rather than before it.
+    _search_text_offset: int = 0
+
+    # The quote character to use if adding an opening or closing quote to the matches.
+    _quote_char: str = ""
+
 
 def all_display_numeric(items: Sequence[CompletionItem]) -> bool:
     """Return True if items is non-empty and every item.display is a numeric string."""
