@@ -24,7 +24,11 @@ from .command_definition import (
     CommandSet,
     with_default_category,
 )
-from .completion import CompletionItem
+from .completion import (
+    Choices,
+    CompletionItem,
+    Completions,
+)
 from .constants import (
     COMMAND_NAME,
     DEFAULT_SHORTCUTS,
@@ -72,7 +76,9 @@ __all__: list[str] = [  # noqa: RUF022
     # Colors
     "Color",
     # Completion
+    'Choices',
     'CompletionItem',
+    'Completions',
     # Decorators
     'with_argument_list',
     'with_argparser',

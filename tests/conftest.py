@@ -118,47 +118,6 @@ def with_ansi_style(style: ru.AllowStyle) -> Callable[[Callable[P, T]], Callable
 odd_file_names = ['nothingweird', 'has   spaces', '"is_double_quoted"', "'is_single_quoted'"]
 
 
-def complete_tester(text: str, line: str, begidx: int, endidx: int, app: cmd2.Cmd) -> str | None:
-    """This is a convenience function to test cmd2.complete() since
-    in a unit test environment there is no actual console prompt-toolkit
-    is monitoring. Therefore we use mock to provide prompt-toolkit data
-    to complete().
-
-    :param text: the string prefix we are attempting to match
-    :param line: the current input line with leading whitespace removed
-    :param begidx: the beginning index of the prefix text
-    :param endidx: the ending index of the prefix text
-    :param app: the cmd2 app that will run completions
-    :return: The first matched string or None if there are no matches
-             Matches are stored in app.completion_matches
-             These matches also have been sorted by complete()
-    """
-
-    def get_line() -> str:
-        return line
-
-    def get_begidx() -> int:
-        return begidx
-
-    def get_endidx() -> int:
-        return endidx
-
-    # Run the prompt-toolkit tab completion function with mocks in place
-    res = app.complete(text, line, begidx, endidx)
-
-    # If the completion resulted in a hint being set, then print it now
-    # so that it can be captured by tests using capsys.
-    if app.completion_hint:
-        print(app.completion_hint)
-
-    # If the completion resulted in a header being set (e.g. CompletionError), then print it now
-    # so that it can be captured by tests using capsys.
-    if app.completion_header:
-        print(app.completion_header)
-
-    return res
-
-
 def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
     if not subcmd_names:
         return action

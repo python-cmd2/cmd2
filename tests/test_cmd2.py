@@ -21,6 +21,7 @@ from cmd2 import (
     Cmd2Style,
     Color,
     CommandSet,
+    Completions,
     RichPrintKwargs,
     clipboard,
     constants,
@@ -34,7 +35,6 @@ from cmd2 import string_utils as su
 
 from .conftest import (
     SHORTCUTS_TXT,
-    complete_tester,
     normalize,
     odd_file_names,
     run_cmd,
@@ -2269,33 +2269,37 @@ invalid_command_name = [
 ]
 
 
-def test_get_alias_completion_items(base_app) -> None:
+def test_get_alias_choices(base_app: cmd2.Cmd) -> None:
     run_cmd(base_app, 'alias create fake run_pyscript')
     run_cmd(base_app, 'alias create ls !ls -hal')
 
-    results = base_app._get_alias_completion_items()
-    assert len(results) == len(base_app.aliases)
+    choices = base_app._get_alias_choices()
 
-    for cur_res in results:
-        assert cur_res in base_app.aliases
-        # Strip trailing spaces from table output
-        assert cur_res.descriptive_data[0].rstrip() == base_app.aliases[cur_res]
+    aliases = base_app.aliases
+    assert len(choices) == len(aliases)
+
+    for cur_choice in choices:
+        assert cur_choice.text in aliases
+        assert cur_choice.display_meta == aliases[cur_choice.text]
+        assert cur_choice.table_row == (aliases[cur_choice.text],)
 
 
-def test_get_macro_completion_items(base_app) -> None:
+def test_get_macro_choices(base_app: cmd2.Cmd) -> None:
     run_cmd(base_app, 'macro create foo !echo foo')
     run_cmd(base_app, 'macro create bar !echo bar')
 
-    results = base_app._get_macro_completion_items()
-    assert len(results) == len(base_app.macros)
+    choices = base_app._get_macro_choices()
 
-    for cur_res in results:
-        assert cur_res in base_app.macros
-        # Strip trailing spaces from table output
-        assert cur_res.descriptive_data[0].rstrip() == base_app.macros[cur_res].value
+    macros = base_app.macros
+    assert len(choices) == len(macros)
+
+    for cur_choice in choices:
+        assert cur_choice.text in macros
+        assert cur_choice.display_meta == macros[cur_choice.text].value
+        assert cur_choice.table_row == (macros[cur_choice.text].value,)
 
 
-def test_get_commands_aliases_and_macros_for_completion(base_app) -> None:
+def test_get_commands_aliases_and_macros_choices(base_app: cmd2.Cmd) -> None:
     # Add an alias and a macro
     run_cmd(base_app, 'alias create fake_alias help')
     run_cmd(base_app, 'macro create fake_macro !echo macro')
@@ -2308,50 +2312,46 @@ def test_get_commands_aliases_and_macros_for_completion(base_app) -> None:
 
     base_app.do_no_doc = types.MethodType(do_no_doc, base_app)
 
-    results = base_app._get_commands_aliases_and_macros_for_completion()
+    choices = base_app._get_commands_aliases_and_macros_choices()
 
     # All visible commands + our new command + alias + macro
     expected_count = len(base_app.get_visible_commands()) + len(base_app.aliases) + len(base_app.macros)
-    assert len(results) == expected_count
+    assert len(choices) == expected_count
 
     # Verify alias
-    alias_item = next((item for item in results if item == 'fake_alias'), None)
+    alias_item = next((item for item in choices if item == 'fake_alias'), None)
     assert alias_item is not None
-    assert alias_item.descriptive_data[0] == "Alias for: help"
+    assert alias_item.display_meta == "Alias for: help"
 
     # Verify macro
-    macro_item = next((item for item in results if item == 'fake_macro'), None)
+    macro_item = next((item for item in choices if item == 'fake_macro'), None)
     assert macro_item is not None
-    assert macro_item.descriptive_data[0] == "Macro: !echo macro"
+    assert macro_item.display_meta == "Macro: !echo macro"
 
     # Verify command with docstring (help)
-    help_item = next((item for item in results if item == 'help'), None)
+    help_item = next((item for item in choices if item == 'help'), None)
     assert help_item is not None
     # First line of help docstring
-    assert "List available commands" in help_item.descriptive_data[0]
+    assert "List available commands" in help_item.display_meta
 
     # Verify command without docstring
-    no_doc_item = next((item for item in results if item == 'no_doc'), None)
+    no_doc_item = next((item for item in choices if item == 'no_doc'), None)
     assert no_doc_item is not None
-    assert no_doc_item.descriptive_data[0] == ""
+    assert no_doc_item.display_meta == ""
 
 
-def test_get_settable_completion_items(base_app) -> None:
-    results = base_app._get_settable_completion_items()
-    assert len(results) == len(base_app.settables)
+def test_get_settable_choices(base_app: cmd2.Cmd) -> None:
+    choices = base_app._get_settable_choices()
+    assert len(choices) == len(base_app.settables)
 
-    for cur_res in results:
-        cur_settable = base_app.settables.get(cur_res)
+    for cur_choice in choices:
+        cur_settable = base_app.settables.get(cur_choice.text)
         assert cur_settable is not None
 
-        # These CompletionItem descriptions are a two column table (Settable Value and Settable Description)
-        # First check if the description text starts with the value
         str_value = str(cur_settable.value)
-        assert cur_res.descriptive_data[0].startswith(str_value)
-
-        # The second column is likely to have wrapped long text. So we will just examine the
-        # first couple characters to look for the Settable's description.
-        assert cur_settable.description[0:10] in cur_res.descriptive_data[1]
+        assert cur_choice.display_meta == str_value
+        assert cur_choice.table_row[0] == str_value
+        assert cur_choice.table_row[1] == cur_settable.description
 
 
 def test_completion_supported(base_app) -> None:
@@ -3296,8 +3296,8 @@ class DisableCommandsApp(cmd2.Cmd):
     def help_has_helper_funcs(self) -> None:
         self.poutput('Help for has_helper_funcs')
 
-    def complete_has_helper_funcs(self, *args):
-        return ['result']
+    def complete_has_helper_funcs(self, *args) -> Completions:
+        return Completions.from_strings(['result'])
 
     @cmd2.with_category(category_name)
     def do_has_no_helper_funcs(self, arg) -> None:
@@ -3316,11 +3316,11 @@ class DisableCommandSet(CommandSet):
 
 
 @pytest.fixture
-def disable_commands_app():
+def disable_commands_app() -> DisableCommandsApp:
     return DisableCommandsApp()
 
 
-def test_disable_and_enable_category(disable_commands_app) -> None:
+def test_disable_and_enable_category(disable_commands_app: DisableCommandsApp) -> None:
     ##########################################################################
     # Disable the category
     ##########################################################################
@@ -3346,16 +3346,16 @@ def test_disable_and_enable_category(disable_commands_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
-    assert first_match is None
+    completions = disable_commands_app.complete(text, line, begidx, endidx)
+    assert not completions
 
     text = ''
     line = f'has_no_helper_funcs {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
-    assert first_match is None
+    completions = disable_commands_app.complete(text, line, begidx, endidx)
+    assert not completions
 
     # Make sure both commands are invisible
     visible_commands = disable_commands_app.get_visible_commands()
@@ -3390,9 +3390,8 @@ def test_disable_and_enable_category(disable_commands_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
-    assert first_match is not None
-    assert disable_commands_app.completion_matches == ['result ']
+    completions = disable_commands_app.complete(text, line, begidx, endidx)
+    assert completions[0].text == "result"
 
     # has_no_helper_funcs had no completer originally, so there should be no results
     text = ''
@@ -3400,8 +3399,8 @@ def test_disable_and_enable_category(disable_commands_app) -> None:
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
-    assert first_match is None
+    completions = disable_commands_app.complete(text, line, begidx, endidx)
+    assert not completions
 
     # Make sure both commands are visible
     visible_commands = disable_commands_app.get_visible_commands()
@@ -3927,45 +3926,3 @@ def test_auto_suggest_default():
     assert app.auto_suggest is not None
     assert isinstance(app.auto_suggest, AutoSuggestFromHistory)
     assert app.session.auto_suggest is app.auto_suggest
-
-
-def test_completion_quoting_with_spaces_and_no_common_prefix(tmp_path):
-    """Test that completion results with spaces are quoted even if there is no common prefix."""
-    # Create files in a temporary directory
-    has_space_dir = tmp_path / "has space"
-    has_space_dir.mkdir()
-    foo_file = tmp_path / "foo.txt"
-    foo_file.write_text("content")
-
-    # Change CWD to the temporary directory
-    cwd = os.getcwd()
-    os.chdir(tmp_path)
-
-    try:
-        # Define a custom command with path_complete
-        class PathApp(cmd2.Cmd):
-            def do_test_path(self, _):
-                pass
-
-            def complete_test_path(self, text, line, begidx, endidx):
-                return self.path_complete(text, line, begidx, endidx)
-
-        app = PathApp()
-
-        text = ''
-        line = f'test_path {text}'
-        endidx = len(line)
-        begidx = endidx - len(text)
-
-        complete_tester(text, line, begidx, endidx, app)
-
-        matches = app.completion_matches
-
-        # Find the match for our directory
-        has_space_match = next((m for m in matches if "has space" in m), None)
-        assert has_space_match is not None
-
-        # Check if it is quoted.
-        assert has_space_match.startswith(('"', "'"))
-    finally:
-        os.chdir(cwd)
