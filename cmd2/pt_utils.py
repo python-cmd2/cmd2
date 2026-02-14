@@ -37,7 +37,11 @@ BASE_DELIMITERS = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRE
 class Cmd2Completer(Completer):
     """Completer that delegates to cmd2's completion logic."""
 
-    def __init__(self, cmd_app: 'Cmd', custom_settings: utils.CustomCompletionSettings | None = None) -> None:
+    def __init__(
+        self,
+        cmd_app: 'Cmd',
+        custom_settings: utils.CustomCompletionSettings | None = None,
+    ) -> None:
         """Initialize prompt_toolkit based completer class."""
         self.cmd_app = cmd_app
         self.custom_settings = custom_settings
@@ -155,10 +159,31 @@ class Cmd2History(History):
 class Cmd2Lexer(Lexer):
     """Lexer that highlights cmd2 command names, aliases, and macros."""
 
-    def __init__(self, cmd_app: 'Cmd') -> None:
-        """Initialize the lexer."""
+    def __init__(
+        self,
+        cmd_app: 'Cmd',
+        command_color: str = 'ansigreen',
+        alias_color: str = 'ansicyan',
+        macro_color: str = 'ansimagenta',
+        flag_color: str = 'ansired',
+        argument_color: str = 'ansiyellow',
+    ) -> None:
+        """Initialize the Lexer.
+
+        :param cmd_app: cmd2.Cmd instance
+        :param command_color: color to use for commands, defaults to 'ansigreen'
+        :param alias_color: color to use for aliases, defaults to 'ansicyan'
+        :param macro_color: color to use for macros, defaults to 'ansimagenta'
+        :param flag_color: color to use for flags, defaults to 'ansired'
+        :param argument_color: color to use for arguments, defaults to 'ansiyellow'
+        """
         super().__init__()
         self.cmd_app = cmd_app
+        self.command_color = command_color
+        self.alias_color = alias_color
+        self.macro_color = macro_color
+        self.flag_color = flag_color
+        self.argument_color = argument_color
 
     def lex_document(self, document: Document) -> Callable[[int], Any]:
         """Lex the document."""
@@ -182,16 +207,30 @@ class Cmd2Lexer(Lexer):
 
                 if command:
                     # Determine the style for the command
-                    style = ''
-                    if command in self.cmd_app.get_all_commands():
-                        style = 'ansigreen'
-                    elif command in self.cmd_app.aliases:
-                        style = 'ansicyan'
-                    elif command in self.cmd_app.macros:
-                        style = 'ansimagenta'
+                    shortcut_found = False
+                    for shortcut, _ in self.cmd_app.statement_parser.shortcuts:
+                        if command.startswith(shortcut):
+                            # Add the shortcut with the command style
+                            tokens.append((self.command_color, shortcut))
 
-                    # Add the command with the determined style
-                    tokens.append((style, command))
+                            # If there's more in the command word, it's an argument
+                            if len(command) > len(shortcut):
+                                tokens.append((self.argument_color, command[len(shortcut) :]))
+
+                            shortcut_found = True
+                            break
+
+                    if not shortcut_found:
+                        style = ''
+                        if command in self.cmd_app.get_all_commands():
+                            style = self.command_color
+                        elif command in self.cmd_app.aliases:
+                            style = self.alias_color
+                        elif command in self.cmd_app.macros:
+                            style = self.macro_color
+
+                        # Add the command with the determined style
+                        tokens.append((style, command))
 
                 # Add the rest of the line
                 if cmd_end < len(line):
@@ -211,9 +250,9 @@ class Cmd2Lexer(Lexer):
                         if space:
                             tokens.append(('', text))
                         elif flag:
-                            tokens.append(('ansired', text))
+                            tokens.append((self.flag_color, text))
                         elif (quoted or word) and text not in exclude_tokens:
-                            tokens.append(('ansiyellow', text))
+                            tokens.append((self.argument_color, text))
                         else:
                             tokens.append(('', text))
             elif line:
