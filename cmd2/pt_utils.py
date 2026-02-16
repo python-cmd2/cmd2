@@ -63,7 +63,7 @@ class Cmd2Completer(Completer):
         )
 
         if completions.completion_error:
-            print_formatted_text(ANSI(completions.completion_error + "\n"))
+            print_formatted_text(ANSI(completions.completion_error))
             return
 
         # Print completion table if present

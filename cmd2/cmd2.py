@@ -1488,7 +1488,7 @@ class Cmd:
                     )
                     final_msg.append(help_msg)
 
-                console.print(final_msg, end="")
+                console.print(final_msg)
 
         return capture.get()
 
@@ -1506,7 +1506,7 @@ class Cmd:
                        method and still call `super()` without encountering unexpected keyword argument errors.
         """
         formatted_exception = self.format_exception(exception)
-        self.print_to(sys.stderr, formatted_exception + "\n")
+        self.print_to(sys.stderr, formatted_exception)
 
     def pfeedback(
         self,
@@ -2519,11 +2519,14 @@ class Cmd:
 
             # Don't display anything if the error is blank (e.g. _NoResultsError for an argument which supresses hints)
             if err_str:
+                # _NoResultsError completion hints already include a trailing "\n".
+                end = "" if isinstance(ex, argparse_completer._NoResultsError) else "\n"
+
                 console = ru.Cmd2GeneralConsole()
                 with console.capture() as capture:
                     console.print(
                         Text(err_str, style=Cmd2Style.ERROR if ex.apply_style else ""),
-                        end="",
+                        end=end,
                     )
                 completion_error = capture.get()
             return Completions(completion_error=completion_error)
