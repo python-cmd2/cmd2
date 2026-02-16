@@ -2,6 +2,7 @@ import pytest
 from prompt_toolkit.shortcuts import CompleteStyle
 
 import cmd2
+from cmd2 import Completions
 
 
 class AutoStyleApp(cmd2.Cmd):
@@ -11,16 +12,18 @@ class AutoStyleApp(cmd2.Cmd):
     def do_foo(self, args):
         pass
 
-    def complete_foo(self, text, line, begidx, endidx):
+    def complete_foo(self, text, line, begidx, endidx) -> Completions:
         # Return 10 items
-        return [f'item{i}' for i in range(10) if f'item{i}'.startswith(text)]
+        items = [f'item{i}' for i in range(10) if f'item{i}'.startswith(text)]
+        return Completions.from_values(items)
 
     def do_bar(self, args):
         pass
 
-    def complete_bar(self, text, line, begidx, endidx):
+    def complete_bar(self, text, line, begidx, endidx) -> Completions:
         # Return 5 items
-        return [f'item{i}' for i in range(5) if f'item{i}'.startswith(text)]
+        items = [f'item{i}' for i in range(5) if f'item{i}'.startswith(text)]
+        return Completions.from_values(items)
 
 
 @pytest.fixture
