@@ -58,7 +58,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     # Add subcommands to music -> create
     music_create_subparsers = music_create_parser.add_subparsers()
     music_create_jazz_parser = music_create_subparsers.add_parser('jazz', help='create jazz')
-    music_create_rock_parser = music_create_subparsers.add_parser('rock', help='create rocks')
+    music_create_rock_parser = music_create_subparsers.add_parser('rock', help='create rock')
 
     @with_argparser(music_parser)
     def do_music(self, args: argparse.Namespace) -> None:
@@ -74,6 +74,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     flag_parser.add_argument('-a', '--append_flag', help='append flag', action='append')
     flag_parser.add_argument('-o', '--append_const_flag', help='append const flag', action='append_const', const=True)
     flag_parser.add_argument('-c', '--count_flag', help='count flag', action='count')
+    flag_parser.add_argument('-e', '--extend_flag', help='extend flag', action='extend')
     flag_parser.add_argument('-s', '--suppressed_flag', help=argparse.SUPPRESS, action='store_true')
     flag_parser.add_argument('-r', '--remainder_flag', nargs=argparse.REMAINDER, help='a remainder flag')
     flag_parser.add_argument('-q', '--required_flag', required=True, help='a required flag', action='store_true')
@@ -146,14 +147,14 @@ class ArgparseCompleterTester(cmd2.Cmd):
         "-p", "--provider", help="a flag populated with a choices provider", choices_provider=choices_provider
     )
     choices_parser.add_argument(
-        "--desc_header",
-        help='this arg has a descriptive header',
+        "--table_header",
+        help='this arg has a table header',
         choices_provider=completion_item_method,
         table_header=CUSTOM_TABLE_HEADER,
     )
     choices_parser.add_argument(
         "--no_header",
-        help='this arg has no descriptive header',
+        help='this arg has no table header',
         choices_provider=completion_item_method,
         metavar=STR_METAVAR,
     )
@@ -299,7 +300,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     arg_tokens_parser = Cmd2ArgumentParser()
     arg_tokens_parser.add_argument('parent_arg', help='arg from a parent parser')
 
-    # Create a subcommand for to exercise receiving parent_tokens and subcommand name in arg_tokens
+    # Create a subcommand to exercise receiving parent_tokens and subcommand name in arg_tokens
     arg_tokens_subparser = arg_tokens_parser.add_subparsers(dest='subcommand')
     arg_tokens_subcmd_parser = arg_tokens_subparser.add_parser('subcmd')
 
@@ -338,6 +339,26 @@ class ArgparseCompleterTester(cmd2.Cmd):
 
     @with_argparser(standalone_parser)
     def do_standalone(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
+    # Begin code related to display_meta data
+    ############################################################################################################
+    meta_parser = Cmd2ArgumentParser()
+
+    # Add subcommands to meta
+    meta_subparsers = meta_parser.add_subparsers()
+
+    # Create subcommands with and without help text
+    meta_helpful_parser = meta_subparsers.add_parser('helpful', help='my helpful text')
+    meta_helpless_parser = meta_subparsers.add_parser('helpless')
+
+    # Create flags with and without help text
+    meta_helpful_parser.add_argument('--helpful_flag', help="a helpful flag")
+    meta_helpless_parser.add_argument('--helpless_flag')
+
+    @with_argparser(meta_parser)
+    def do_meta(self, args: argparse.Namespace) -> None:
         pass
 
 
@@ -402,142 +423,122 @@ def test_subcommand_completions(ac_app, subcommand, text, expected) -> None:
 
 
 @pytest.mark.parametrize(
-    ('command_and_args', 'text', 'expected_matches', 'expected_displays'),
+    # expected_data is a list of tuples with completion text and display values
+    ('command_and_args', 'text', 'expected_data'),
     [
         # Complete all flags (suppressed will not show)
         (
             'flag',
             '-',
             [
-                '-a',
-                '-c',
-                '-h',
-                '-n',
-                '-o',
-                '-q',
-                '-r',
-            ],
-            [
-                '-q, --required_flag',
-                '[-o, --append_const_flag]',
-                '[-a, --append_flag]',
-                '[-c, --count_flag]',
-                '[-h, --help]',
-                '[-n, --normal_flag]',
-                '[-r, --remainder_flag]',
+                ("-a", "[-a, --append_flag]"),
+                ("-c", "[-c, --count_flag]"),
+                ('-e', '[-e, --extend_flag]'),
+                ("-h", "[-h, --help]"),
+                ("-n", "[-n, --normal_flag]"),
+                ("-o", "[-o, --append_const_flag]"),
+                ("-q", "-q, --required_flag"),
+                ("-r", "[-r, --remainder_flag]"),
             ],
         ),
         (
             'flag',
             '--',
             [
-                '--append_const_flag',
-                '--append_flag',
-                '--count_flag',
-                '--help',
-                '--normal_flag',
-                '--remainder_flag',
-                '--required_flag',
-            ],
-            [
-                '--required_flag',
-                '[--append_const_flag]',
-                '[--append_flag]',
-                '[--count_flag]',
-                '[--help]',
-                '[--normal_flag]',
-                '[--remainder_flag]',
+                ('--append_const_flag', '[--append_const_flag]'),
+                ('--append_flag', '[--append_flag]'),
+                ('--count_flag', '[--count_flag]'),
+                ('--extend_flag', '[--extend_flag]'),
+                ('--help', '[--help]'),
+                ('--normal_flag', '[--normal_flag]'),
+                ('--remainder_flag', '[--remainder_flag]'),
+                ('--required_flag', '--required_flag'),
             ],
         ),
         # Complete individual flag
-        ('flag', '-n', ['-n'], ['[-n]']),
-        ('flag', '--n', ['--normal_flag'], ['[--normal_flag]']),
+        ('flag', '-n', [('-n', '[-n]')]),
+        ('flag', '--n', [('--normal_flag', '[--normal_flag]')]),
         # No flags should complete until current flag has its args
-        ('flag --append_flag', '-', [], []),
+        ('flag --append_flag', '-', []),
         # Complete REMAINDER flag name
-        ('flag', '-r', ['-r'], ['[-r]']),
-        ('flag', '--rem', ['--remainder_flag'], ['[--remainder_flag]']),
+        ('flag', '-r', [('-r', '[-r]')]),
+        ('flag', '--rem', [('--remainder_flag', '[--remainder_flag]')]),
         # No flags after a REMAINDER should complete
-        ('flag -r value', '-', [], []),
-        ('flag --remainder_flag value', '--', [], []),
+        ('flag -r value', '-', []),
+        ('flag --remainder_flag value', '--', []),
         # Suppressed flag should not complete
-        ('flag', '-s', [], []),
-        ('flag', '--s', [], []),
+        ('flag', '-s', []),
+        ('flag', '--s', []),
         # A used flag should not show in completions
         (
             'flag -n',
             '--',
-            ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--remainder_flag', '--required_flag'],
             [
-                '--required_flag',
-                '[--append_const_flag]',
-                '[--append_flag]',
-                '[--count_flag]',
-                '[--help]',
-                '[--remainder_flag]',
+                ('--append_const_flag', '[--append_const_flag]'),
+                ('--append_flag', '[--append_flag]'),
+                ('--count_flag', '[--count_flag]'),
+                ('--extend_flag', '[--extend_flag]'),
+                ('--help', '[--help]'),
+                ('--remainder_flag', '[--remainder_flag]'),
+                ('--required_flag', '--required_flag'),
             ],
         ),
-        # Flags with actions set to append, append_const, and count will always show even if they've been used
+        # Flags with actions set to append, append_const, extend, and count will always show even if they've been used
         (
-            'flag --append_const_flag -c --append_flag value',
+            'flag --append_flag value --append_const_flag --count_flag --extend_flag value',
             '--',
             [
-                '--append_const_flag',
-                '--append_flag',
-                '--count_flag',
-                '--help',
-                '--normal_flag',
-                '--remainder_flag',
-                '--required_flag',
-            ],
-            [
-                '--required_flag',
-                '[--append_const_flag]',
-                '[--append_flag]',
-                '[--count_flag]',
-                '[--help]',
-                '[--normal_flag]',
-                '[--remainder_flag]',
+                ('--append_const_flag', '[--append_const_flag]'),
+                ('--append_flag', '[--append_flag]'),
+                ('--count_flag', '[--count_flag]'),
+                ('--extend_flag', '[--extend_flag]'),
+                ('--help', '[--help]'),
+                ('--normal_flag', '[--normal_flag]'),
+                ('--remainder_flag', '[--remainder_flag]'),
+                ('--required_flag', '--required_flag'),
             ],
         ),
         # Non-default flag prefix character (+)
         (
             'plus_flag',
             '+',
-            ['+h', '+n', '+q'],
-            ['+q, ++required_flag', '[+h, ++help]', '[+n, ++normal_flag]'],
+            [
+                ('+h', '[+h, ++help]'),
+                ('+n', '[+n, ++normal_flag]'),
+                ('+q', '+q, ++required_flag'),
+            ],
         ),
         (
             'plus_flag',
             '++',
-            ['++help', '++normal_flag', '++required_flag'],
-            ['++required_flag', '[++help]', '[++normal_flag]'],
+            [
+                ('++help', '[++help]'),
+                ('++normal_flag', '[++normal_flag]'),
+                ('++required_flag', '++required_flag'),
+            ],
         ),
         # Flag completion should not occur after '--' since that tells argparse all remaining arguments are non-flags
-        ('flag --', '--', [], []),
-        ('flag --help --', '--', [], []),
-        ('plus_flag --', '++', [], []),
-        ('plus_flag ++help --', '++', [], []),
+        ('flag --', '--', []),
+        ('flag --help --', '--', []),
+        ('plus_flag --', '++', []),
+        ('plus_flag ++help --', '++', []),
         # Test remaining flag names complete after all positionals are complete
-        ('pos_and_flag', '', ['a', 'choice'], ['a', 'choice']),
-        ('pos_and_flag choice ', '', ['-f', '-h'], ['[-f, --flag]', '[-h, --help]']),
-        ('pos_and_flag choice -f ', '', ['-h'], ['[-h, --help]']),
-        ('pos_and_flag choice -f -h ', '', [], []),
+        ('pos_and_flag', '', [('a', 'a'), ('choice', 'choice')]),
+        ('pos_and_flag choice ', '', [('-f', '[-f, --flag]'), ('-h', '[-h, --help]')]),
+        ('pos_and_flag choice -f ', '', [('-h', '[-h, --help]')]),
+        ('pos_and_flag choice -f -h ', '', []),
     ],
 )
-def test_autcomp_flag_completion(ac_app, command_and_args, text, expected_matches, expected_displays) -> None:
+def test_autcomp_flag_completion(ac_app, command_and_args, text, expected_data) -> None:
     line = f'{command_and_args} {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    if completion_matches:
-        assert first_match is not None
-    else:
-        assert first_match is None
+    expected_completions = Completions(items=[CompletionItem(value=v, display=d) for v, d in expected_data])
+    completions = ac_app.complete(text, line, begidx, endidx)
 
-    assert ac_app.completion_matches == sorted(completion_matches, key=ac_app.default_sort_key)
-    assert ac_app.display_matches == sorted(display_matches, key=ac_app.default_sort_key)
+    assert completions.to_strings() == expected_completions.to_strings()
+    assert [item.display for item in completions] == [item.display for item in expected_completions]
 
 
 @pytest.mark.parametrize(
@@ -576,33 +577,13 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, expected) -> None:
     ],
 )
 def test_autocomp_positional_choices_completion(ac_app, pos, text, expected) -> None:
-    # Generate line were preceding positionals are already filled
+    # Generate line where preceding positionals are already filled
     line = 'choices {} {}'.format('foo ' * (pos - 1), text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     completions = ac_app.complete(text, line, begidx, endidx)
     assert completions.to_strings() == Completions.from_values(expected).to_strings()
-
-
-def test_flag_sorting(ac_app) -> None:
-    # This test exercises the case where a positional arg has non-negative integers for its choices.
-    # ArgparseCompleter will sort these numerically before converting them to strings. As a result,
-    # cmd2.matches_sorted gets set to True. If no completion matches are returned and the entered
-    # text looks like the beginning of a flag (e.g -), then ArgparseCompleter will try to complete
-    # flag names next. Before it does this, cmd2.matches_sorted is reset to make sure the flag names
-    # get sorted correctly.
-    option_strings = [action.option_strings[0] for action in ac_app.choices_parser._actions if action.option_strings]
-    option_strings.sort(key=ac_app.default_sort_key)
-
-    text = '-'
-    line = f'choices arg1 arg2 arg3 {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None
-    assert ac_app.completion_matches == option_strings
 
 
 @pytest.mark.parametrize(
@@ -848,12 +829,12 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error) -> None
 def test_completion_table_arg_header(ac_app) -> None:
     # Test when metavar is None
     text = ''
-    line = f'choices --desc_header {text}'
+    line = f'choices --table_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert "DESC_HEADER" in normalize(completions.completion_table)[0]
+    assert "TABLE_HEADER" in normalize(completions.completion_table)[0]
 
     # Test when metavar is a string
     text = ''
@@ -901,7 +882,7 @@ def test_completion_table_header(ac_app) -> None:
 
     # This argument provided a table header
     text = ''
-    line = f'choices --desc_header {text}'
+    line = f'choices --table_header {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -1122,6 +1103,31 @@ def test_complete_standalone(ac_app, flag, expected) -> None:
 
     completions = ac_app.complete(text, line, begidx, endidx)
     assert completions.to_strings() == Completions.from_values(expected).to_strings()
+
+
+@pytest.mark.parametrize(
+    ('subcommand', 'flag', 'display_meta'),
+    [
+        ('helpful', '', 'my helpful text'),
+        ('helpful', '--helpful_flag', "a helpful flag"),
+        ('helpless', '', ''),
+        ('helpless', '--helpless_flag', ''),
+    ],
+)
+def test_display_meta(ac_app, subcommand, flag, display_meta) -> None:
+    """Test that subcommands and flags can have display_meta data."""
+    if flag:
+        text = flag
+        line = line = f'meta {subcommand} {text}'
+    else:
+        text = subcommand
+        line = line = f'meta {text}'
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = ac_app.complete(text, line, begidx, endidx)
+    assert completions[0].display_meta == display_meta
 
 
 # Custom ArgparseCompleter-based class
