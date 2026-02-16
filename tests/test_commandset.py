@@ -7,6 +7,7 @@ import pytest
 
 import cmd2
 from cmd2 import (
+    Completions,
     Settable,
 )
 from cmd2.exceptions import (
@@ -15,7 +16,6 @@ from cmd2.exceptions import (
 
 from .conftest import (
     WithCommandSets,
-    complete_tester,
     normalize,
     run_cmd,
 )
@@ -497,8 +497,8 @@ class LoadableVegetables(cmd2.CommandSet):
     def do_arugula(self, _: cmd2.Statement) -> None:
         self._cmd.poutput('Arugula')
 
-    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
-        return ['quartered', 'diced']
+    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
+        return Completions.from_values(['quartered', 'diced'])
 
     bokchoy_parser = cmd2.Cmd2ArgumentParser()
     bokchoy_parser.add_argument('style', completer=complete_style_arg)
@@ -549,11 +549,10 @@ def test_subcommands(manual_command_sets_app) -> None:
     line = f'cut {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
-    assert first_match is not None
     # check that the alias shows up correctly
-    assert manual_command_sets_app.completion_matches == ['banana', 'bananer', 'bokchoy']
+    assert completions.to_strings() == Completions.from_values(['banana', 'bananer', 'bokchoy']).to_strings()
 
     cmd_result = manual_command_sets_app.app_cmd('cut banana discs')
     assert 'cutting banana: discs' in cmd_result.stdout
@@ -562,11 +561,10 @@ def test_subcommands(manual_command_sets_app) -> None:
     line = f'cut bokchoy {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
-    assert first_match is not None
     # verify that argparse completer in commandset functions correctly
-    assert manual_command_sets_app.completion_matches == ['diced', 'quartered']
+    assert completions.to_strings() == Completions.from_values(['diced', 'quartered']).to_strings()
 
     # verify that command set uninstalls without problems
     manual_command_sets_app.unregister_command_set(fruit_cmds)
@@ -594,21 +592,19 @@ def test_subcommands(manual_command_sets_app) -> None:
     line = f'cut {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
-    assert first_match is not None
     # check that the alias shows up correctly
-    assert manual_command_sets_app.completion_matches == ['banana', 'bananer', 'bokchoy']
+    assert completions.to_strings() == Completions.from_values(['banana', 'bananer', 'bokchoy']).to_strings()
 
     text = ''
     line = f'cut bokchoy {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
-    assert first_match is not None
     # verify that argparse completer in commandset functions correctly
-    assert manual_command_sets_app.completion_matches == ['diced', 'quartered']
+    assert completions.to_strings() == Completions.from_values(['diced', 'quartered']).to_strings()
 
     # disable again and verify can still uninstnall
     manual_command_sets_app.disable_command('cut', 'disabled for test')
@@ -735,8 +731,8 @@ class AppWithSubCommands(cmd2.Cmd):
         """Cut banana"""
         self.poutput('cutting banana: ' + ns.direction)
 
-    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
-        return ['quartered', 'diced']
+    def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
+        return Completions.from_values(['quartered', 'diced'])
 
     bokchoy_parser = cmd2.Cmd2ArgumentParser()
     bokchoy_parser.add_argument('style', completer=complete_style_arg)
@@ -759,21 +755,19 @@ def test_static_subcommands(static_subcommands_app) -> None:
     line = f'cut {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, static_subcommands_app)
+    completions = static_subcommands_app.complete(text, line, begidx, endidx)
 
-    assert first_match is not None
     # check that the alias shows up correctly
-    assert static_subcommands_app.completion_matches == ['banana', 'bananer', 'bokchoy']
+    assert completions.to_strings() == Completions.from_values(['banana', 'bananer', 'bokchoy']).to_strings()
 
     text = ''
     line = f'cut bokchoy {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, static_subcommands_app)
+    completions = static_subcommands_app.complete(text, line, begidx, endidx)
 
-    assert first_match is not None
     # verify that argparse completer in commandset functions correctly
-    assert static_subcommands_app.completion_matches == ['diced', 'quartered']
+    assert completions.to_strings() == Completions.from_values(['diced', 'quartered']).to_strings()
 
 
 complete_states_expected_self = None
@@ -789,7 +783,7 @@ class SupportFuncProvider(cmd2.CommandSet):
         """Dummy variable prevents this from being autoloaded in other tests"""
         super().__init__()
 
-    def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
+    def complete_states(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
         assert self is complete_states_expected_self
         return self._cmd.basic_complete(text, line, begidx, endidx, self.states)
 
@@ -831,7 +825,7 @@ class SupportFuncUserUnrelated(cmd2.CommandSet):
         self._cmd.poutput(f'something {ns.state}')
 
 
-def test_cross_commandset_completer(manual_command_sets_app, capsys) -> None:
+def test_cross_commandset_completer(manual_command_sets_app) -> None:
     global complete_states_expected_self  # noqa: PLW0603
     # This tests the different ways to locate the matching CommandSet when completing an argparse argument.
     # Exercises the 3 cases in cmd2.Cmd._resolve_func_self() which is called during argparse tab completion.
@@ -858,11 +852,10 @@ def test_cross_commandset_completer(manual_command_sets_app, capsys) -> None:
     endidx = len(line)
     begidx = endidx
     complete_states_expected_self = user_sub1
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
     complete_states_expected_self = None
 
-    assert first_match == 'alabama'
-    assert manual_command_sets_app.completion_matches == list(SupportFuncProvider.states)
+    assert completions.to_strings() == Completions.from_values(SupportFuncProvider.states).to_strings()
 
     assert (
         getattr(manual_command_sets_app.cmd_func('user_sub1').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY)
@@ -885,11 +878,10 @@ def test_cross_commandset_completer(manual_command_sets_app, capsys) -> None:
     endidx = len(line)
     begidx = endidx
     complete_states_expected_self = func_provider
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
     complete_states_expected_self = None
 
-    assert first_match == 'alabama'
-    assert manual_command_sets_app.completion_matches == list(SupportFuncProvider.states)
+    assert completions.to_strings() == Completions.from_values(SupportFuncProvider.states).to_strings()
 
     manual_command_sets_app.unregister_command_set(user_unrelated)
     manual_command_sets_app.unregister_command_set(func_provider)
@@ -908,11 +900,10 @@ def test_cross_commandset_completer(manual_command_sets_app, capsys) -> None:
     endidx = len(line)
     begidx = endidx
     complete_states_expected_self = user_sub1
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
     complete_states_expected_self = None
 
-    assert first_match == 'alabama'
-    assert manual_command_sets_app.completion_matches == list(SupportFuncProvider.states)
+    assert completions.to_strings() == Completions.from_values(SupportFuncProvider.states).to_strings()
 
     manual_command_sets_app.unregister_command_set(user_unrelated)
     manual_command_sets_app.unregister_command_set(user_sub1)
@@ -929,12 +920,10 @@ def test_cross_commandset_completer(manual_command_sets_app, capsys) -> None:
     line = f'user_unrelated {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
-    out, _err = capsys.readouterr()
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
-    assert first_match is None
-    assert manual_command_sets_app.completion_matches == []
-    assert "Could not find CommandSet instance" in out
+    assert not completions
+    assert "Could not find CommandSet instance" in completions.completion_error
 
     manual_command_sets_app.unregister_command_set(user_unrelated)
 
@@ -952,12 +941,10 @@ def test_cross_commandset_completer(manual_command_sets_app, capsys) -> None:
     line = f'user_unrelated {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
-    out, _err = capsys.readouterr()
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
-    assert first_match is None
-    assert manual_command_sets_app.completion_matches == []
-    assert "Could not find CommandSet instance" in out
+    assert not completions
+    assert "Could not find CommandSet instance" in completions.completion_error
 
     manual_command_sets_app.unregister_command_set(user_unrelated)
     manual_command_sets_app.unregister_command_set(user_sub2)
@@ -986,9 +973,9 @@ def test_path_complete(manual_command_sets_app) -> None:
     line = f'path {text}'
     endidx = len(line)
     begidx = endidx
-    first_match = complete_tester(text, line, begidx, endidx, manual_command_sets_app)
+    completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
-    assert first_match is not None
+    assert completions
 
 
 def test_bad_subcommand() -> None:
