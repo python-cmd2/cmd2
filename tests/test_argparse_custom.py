@@ -6,6 +6,7 @@ import pytest
 
 import cmd2
 from cmd2 import (
+    Choices,
     Cmd2ArgumentParser,
     constants,
 )
@@ -292,14 +293,11 @@ def test_completion_items_as_choices(capsys) -> None:
     """Test cmd2's patch to Argparse._check_value() which supports CompletionItems as choices.
     Choices are compared to CompletionItems.orig_value instead of the CompletionItem instance.
     """
-    from cmd2.argparse_custom import (
-        CompletionItem,
-    )
 
     ##############################################################
     # Test CompletionItems with str values
     ##############################################################
-    choices = [CompletionItem("1", "Description One"), CompletionItem("2", "Two")]
+    choices = Choices.from_values(["1", "2"])
     parser = Cmd2ArgumentParser()
     parser.add_argument("choices_arg", type=str, choices=choices)
 
@@ -321,7 +319,7 @@ def test_completion_items_as_choices(capsys) -> None:
     ##############################################################
     # Test CompletionItems with int values
     ##############################################################
-    choices = [CompletionItem(1, "Description One"), CompletionItem(2, "Two")]
+    choices = Choices.from_values([1, 2])
     parser = Cmd2ArgumentParser()
     parser.add_argument("choices_arg", type=int, choices=choices)
 

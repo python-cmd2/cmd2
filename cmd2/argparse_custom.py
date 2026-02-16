@@ -284,6 +284,7 @@ from . import rich_utils as ru
 from .completion import (
     ChoicesProviderUnbound,
     CompleterUnbound,
+    CompletionItem,
 )
 from .rich_utils import Cmd2RichArgparseConsole
 from .styles import Cmd2Style
@@ -899,6 +900,34 @@ def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_comp
 
 
 setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap_completer_type)
+
+
+############################################################################################################
+# Patch ArgumentParser._check_value to support CompletionItems as choices
+############################################################################################################
+def _ArgumentParser_check_value(_self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:  # noqa: N802
+    """Check_value that supports CompletionItems as choices (Custom override of ArgumentParser._check_value).
+
+    When displaying choices, use CompletionItem.value instead of the CompletionItem instance.
+
+    :param self: ArgumentParser instance
+    :param action: the action being populated
+    :param value: value from command line already run through conversion function by argparse
+    """
+    # Import gettext like argparse does
+    from gettext import (
+        gettext as _,
+    )
+
+    if action.choices is not None and value not in action.choices:
+        # If any choice is a CompletionItem, then display its value property.
+        choices = [c.value if isinstance(c, CompletionItem) else c for c in action.choices]
+        args = {'value': value, 'choices': ', '.join(map(repr, choices))}
+        msg = _('invalid choice: %(value)r (choose from %(choices)s)')
+        raise ArgumentError(action, msg % args)
+
+
+setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 
 
 ############################################################################################################
