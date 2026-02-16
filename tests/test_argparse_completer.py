@@ -1118,10 +1118,10 @@ def test_display_meta(ac_app, subcommand, flag, display_meta) -> None:
     """Test that subcommands and flags can have display_meta data."""
     if flag:
         text = flag
-        line = line = f'meta {subcommand} {text}'
+        line = f'meta {subcommand} {text}'
     else:
         text = subcommand
-        line = line = f'meta {text}'
+        line = f'meta {text}'
 
     endidx = len(line)
     begidx = endidx - len(text)
