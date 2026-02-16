@@ -36,6 +36,7 @@ class MockCmd:
         self.history = []
         self.statement_parser = Mock()
         self.statement_parser.terminators = [';']
+        self.statement_parser.shortcuts = []
         self.statement_parser._command_pattern = re.compile(r'\A\s*(\S*?)(\s|\Z)')
         self.aliases = {}
         self.macros = {}
@@ -157,6 +158,25 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [('ansigreen', 'echo'), ('', ' '), ('ansiyellow', '"hello')]
+
+    def test_lex_document_shortcut(self, mock_cmd_app):
+        """Test lexing a shortcut."""
+        mock_cmd_app.statement_parser.shortcuts = [('!', 'shell')]
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        # Case 1: Shortcut glued to argument
+        line = "!ls"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+        assert tokens == [('ansigreen', '!'), ('ansiyellow', 'ls')]
+
+        # Case 2: Shortcut with space
+        line = "! ls"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+        assert tokens == [('ansigreen', '!'), ('', ' '), ('ansiyellow', 'ls')]
 
 
 class TestCmd2Completer:
