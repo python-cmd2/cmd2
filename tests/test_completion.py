@@ -288,7 +288,7 @@ def test_complete_macro(base_app, request) -> None:
     assert completions.to_strings() == Completions.from_values(expected).to_strings()
 
 
-def test_default_sort_key(cmd2_app) -> None:
+def test_default_str_sort_key(cmd2_app) -> None:
     text = ''
     line = f'test_sort_key {text}'
     endidx = len(line)
