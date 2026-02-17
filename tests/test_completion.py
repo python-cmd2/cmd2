@@ -915,6 +915,27 @@ def test_add_opening_quote_nothing_added(cmd2_app) -> None:
     assert not completions._quote_char
 
 
+def test_word_break_in_quote(cmd2_app) -> None:
+    """Test case where search text has a space and is in a quote."""
+
+    # Cmd2Completer still performs word breaks after a quote. Since space
+    # is word-break character, it says the search text starts at 'S' and
+    # passes that to the complete() function.
+    text = 'S'
+    line = 'test_basic "Ham S'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Since the search text is within an opening quote, cmd2 will rebuild
+    # the whole search token as 'Ham S' and match it to 'Ham Sandwich'.
+    # But before it returns the results back to Cmd2Completer, it removes
+    # anything before the original search text since this is what Cmd2Completer
+    # expects. Therefore the actual match text is 'Sandwich'.
+    expected = ["Sandwich"]
+    completions = cmd2_app.complete(text, line, begidx, endidx)
+    assert completions.to_strings() == Completions.from_values(expected).to_strings()
+
+
 def test_no_completer(cmd2_app) -> None:
     text = ''
     line = f'test_no_completer {text}'
