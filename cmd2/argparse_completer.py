@@ -36,7 +36,6 @@ from .argparse_custom import (
 )
 from .command_definition import CommandSet
 from .completion import (
-    Choices,
     CompletionItem,
     Completions,
     all_display_numeric,
@@ -698,7 +697,9 @@ class ArgparseCompleter:
                 ]
 
             # Standard choices
-            return Choices.from_values(arg_state.action.choices)
+            return [
+                choice if isinstance(choice, CompletionItem) else CompletionItem(choice) for choice in arg_state.action.choices
+            ]
 
         choices_callable: ChoicesCallable | None = arg_state.action.get_choices_callable()  # type: ignore[attr-defined]
         return choices_callable

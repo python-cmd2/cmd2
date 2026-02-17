@@ -5,6 +5,7 @@ import sys
 from collections.abc import (
     Callable,
     Collection,
+    Iterable,
     Iterator,
     Sequence,
 )
@@ -149,7 +150,7 @@ class CompletionResultsBase:
         object.__setattr__(self, "items", tuple(unique_items))
 
     @classmethod
-    def from_values(cls, values: Iterator[Any], *, is_sorted: bool = False) -> Self:
+    def from_values(cls, values: Iterable[Any], *, is_sorted: bool = False) -> Self:
         """Create a CompletionItem instance from arbitrary objects.
 
         :param values: the raw objects (e.g. strs, ints, Paths) to be converted into CompletionItems.
