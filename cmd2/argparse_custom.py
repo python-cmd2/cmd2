@@ -48,18 +48,18 @@ argument's value. Only one can be used at a time.
         my_list = ['An Option', 'SomeOtherOption']
         parser.add_argument('-o', '--options', choices=my_list)
 
-``choices_provider`` - pass a function that returns choices. This is good in
+``choices_provider`` - pass a function that returns a Choices object. This is good in
 cases where the choices are dynamically generated when the user hits tab.
 
     Example::
 
-        def my_choices_provider(self):
+        def my_choices_provider(self) -> Choices:
             ...
             return my_choices
 
         parser.add_argument("arg", choices_provider=my_choices_provider)
 
-``completer`` - pass a function that does custom completion.
+``completer`` - pass a function that does custom completion and returns a Completions object.
 
 cmd2 provides a few completer methods for convenience (e.g., path_complete,
 delimiter_complete)
@@ -107,8 +107,8 @@ choices/completer function should have an argument called arg_tokens.
 
     Example::
 
-        def my_choices_provider(self, arg_tokens)
-        def my_completer(self, text, line, begidx, endidx, arg_tokens)
+        def my_choices_provider(self, arg_tokens) -> Choices
+        def my_completer(self, text, line, begidx, endidx, arg_tokens) -> Completions
 
 All values of the arg_tokens dictionary are lists, even if a particular
 argument expects only 1 token. Since ArgparseCompleter is for completion,
@@ -117,12 +117,31 @@ values. All tokens are stored in the dictionary as the raw strings provided on
 the command line. It is up to the developer to determine if the user entered
 the correct argument type (e.g. int) and validate their values.
 
-CompletionItem Class - This class was added to help in cases where
-uninformative data is being completed. For instance, completing ID
-numbers isn't very helpful to a user without context. Returning a list of
-CompletionItems instead of a regular string for completion results will signal
-the ArgparseCompleter to output the completion results in a table of completion
-tokens with descriptive data instead of just a table of tokens::
+**CompletionItem Class**
+
+This class represents a single completion result and what the ``Choices``
+and ``Completion`` classes contain.
+
+``CompletionItem`` provides the following optional metadata fields which enhance
+completion results displayed to the screen.
+
+1. display - string for displaying the completion differently in the completion menu
+2. display_meta - meta information about completion which displays in the completion menu
+3. table_row - row data for completion tables
+
+They can also be used as argparse choices. When a ``CompletionItem`` is created, it
+stores the original value (e.g. ID number) and makes it accessible through a property
+called ``value``. cmd2 has patched argparse so that when evaluating choices, input
+is compared to ``CompletionItem.value`` instead of the ``CompletionItem`` instance.
+
+**Completion Tables**
+
+These were added to help in cases where uninformative data is being completed.
+For instance, completing ID numbers isn't very helpful to a user without context.
+
+Providing ``table_row`` data in your ``CompletionItem`` signals ArgparseCompleter
+to output the completion results in a table with descriptive data instead of just a table
+of tokens::
 
     Instead of this:
         1     2     3
@@ -139,15 +158,8 @@ The left-most column is the actual value being completed and its header is
 that value's name. The right column header is defined using the
 ``table_header`` parameter of add_argument(), which is a list of header
 names that defaults to ["Description"]. The right column values come from the
-``row_data`` argument to ``CompletionItem``. It's a ``Sequence`` with the
+``table_row`` argument to ``CompletionItem``. It's a ``Sequence`` with the
 same number of items as ``table_header``.
-
-To use CompletionItems, just return them from your choices_provider or
-completer functions. They can also be used as argparse choices. When a
-CompletionItem is created, it stores the original value (e.g. ID number) and
-makes it accessible through a property called orig_value. cmd2 has patched
-argparse so that when evaluating choices, input is compared to
-CompletionItem.orig_value instead of the CompletionItem instance.
 
 Example::
 
@@ -157,22 +169,23 @@ Example::
             add_argument(
             "item_id",
             type=int,
-            choices_provider=get_items,
+            choices_provider=get_choices,
             table_header=["Item Name", "Checked Out", "Due Date"],
         )
 
-    Implement the choices_provider to return CompletionItems.
+    Implement the choices_provider to return Choices.
 
-        def get_items(self) -> list[CompletionItems]:
+        def get_choices(self) -> Choices:
             \"\"\"choices_provider which returns CompletionItems\"\"\"
 
             # Populate CompletionItem's table_row argument.
             # Its item count should match that of table_header.
-            return [
+            items = [
                 CompletionItem(1, table_row=["My item", True, "02/02/2022"]),
                 CompletionItem(2, table_row=["Another item", False, ""]),
                 CompletionItem(3, table_row=["Yet another item", False, ""]),
             ]
+            return Choices(items)
 
     This is what the user will see during completion.
 
@@ -197,10 +210,10 @@ when you create the ``Column``.
 ``table_row`` items can include Rich objects, including styled Text and Tables.
 
 To avoid printing a excessive information to the screen at once when a user
-presses tab, there is a maximum threshold for the number of CompletionItems
+presses tab, there is a maximum threshold for the number of ``CompletionItems``
 that will be shown. Its value is defined in ``cmd2.Cmd.max_completion_table_items``.
 It defaults to 50, but can be changed. If the number of completion suggestions
-exceeds this number, they then a completion table won't be displayed.
+exceeds this number, then a completion table won't be displayed.
 
 
 **Patched argparse functions**
