@@ -4,6 +4,7 @@ import re
 import sys
 from collections.abc import (
     Callable,
+    Collection,
     Iterator,
     Sequence,
 )
@@ -148,13 +149,13 @@ class CompletionResultsBase:
         object.__setattr__(self, "items", tuple(unique_items))
 
     @classmethod
-    def from_values(cls, values: Sequence[str], *, is_sorted: bool = False) -> Self:
-        """Create a completion results instance from a sequence of arbitrary objects.
+    def from_values(cls, values: Iterator[Any], *, is_sorted: bool = False) -> Self:
+        """Create a CompletionItem instance from arbitrary objects.
 
         :param values: the raw objects (e.g. strs, ints, Paths) to be converted into CompletionItems.
         :param is_sorted: whether the values are already in the desired order.
         """
-        items = [CompletionItem(value=v) for v in values]
+        items = [v if isinstance(v, CompletionItem) else CompletionItem(value=v) for v in values]
         return cls(items=items, is_sorted=is_sorted)
 
     def to_strings(self) -> tuple[str, ...]:
@@ -244,7 +245,7 @@ class Completions(CompletionResultsBase):
     _quote_char: str = ""
 
 
-def all_display_numeric(items: Sequence[CompletionItem]) -> bool:
+def all_display_numeric(items: Collection[CompletionItem]) -> bool:
     """Return True if items is non-empty and every item.display is a numeric string."""
     return bool(items) and all(NUMERIC_RE.match(item.display) for item in items)
 
