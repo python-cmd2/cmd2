@@ -82,12 +82,12 @@ def test_apcustom_choices_callables_wrong_property() -> None:
     """Test using the wrong property when retrieving the to_call value from a ChoicesCallable."""
     choices_callable = ChoicesCallable(is_completer=True, to_call=fake_func)
     with pytest.raises(AttributeError) as excinfo:
-        to_call = choices_callable.choices_provider
+        _ = choices_callable.choices_provider
     assert 'This instance is configured as a completer' in str(excinfo.value)
 
     choices_callable = ChoicesCallable(is_completer=False, to_call=fake_func)
     with pytest.raises(AttributeError) as excinfo:
-        to_call = choices_callable.completer
+        _ = choices_callable.completer
     assert 'This instance is configured as a choices_provider' in str(excinfo.value)
 
 
