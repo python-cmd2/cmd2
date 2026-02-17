@@ -947,7 +947,7 @@ def test_no_completer(cmd2_app) -> None:
     assert completions.to_strings() == Completions.from_values(expected).to_strings()
 
 
-def test_wordbreak_in_command(cmd2_app) -> None:
+def test_word_break_in_command(cmd2_app) -> None:
     text = ''
     line = f'"{text}'
     endidx = len(line)
@@ -981,6 +981,17 @@ def test_complete_multiline_on_multiple_lines(cmd2_app) -> None:
     expected = ['Bat', 'Basket', 'Basketball']
     completions = cmd2_app.complete(text, line, begidx, endidx)
     assert completions.to_strings() == Completions.from_values(expected).to_strings()
+
+
+def test_completions_iteration() -> None:
+    items = [CompletionItem(1), CompletionItem(2)]
+    completions = Completions(items)
+
+    # Test __iter__
+    assert list(completions) == items
+
+    # Test __reversed__
+    assert list(reversed(completions)) == items[::-1]
 
 
 # Used by redirect_complete tests

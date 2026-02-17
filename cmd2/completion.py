@@ -21,7 +21,7 @@ from typing import (
     overload,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
     from .command_definition import CommandSet
 

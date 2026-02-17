@@ -10,7 +10,10 @@ from cmd2 import (
     Cmd2ArgumentParser,
     constants,
 )
-from cmd2.argparse_custom import generate_range_error
+from cmd2.argparse_custom import (
+    ChoicesCallable,
+    generate_range_error,
+)
 
 from .conftest import run_cmd
 
@@ -73,6 +76,19 @@ def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs) -> None:
     with pytest.raises(TypeError) as excinfo:
         parser.add_argument('--name', action='store_true', **kwargs)
     assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
+
+
+def test_apcustom_choices_callables_wrong_property() -> None:
+    """Test using the wrong property when retrieving the to_call value from a ChoicesCallable."""
+    choices_callable = ChoicesCallable(is_completer=True, to_call=fake_func)
+    with pytest.raises(AttributeError) as excinfo:
+        to_call = choices_callable.choices_provider
+    assert 'This instance is configured as a completer' in str(excinfo.value)
+
+    choices_callable = ChoicesCallable(is_completer=False, to_call=fake_func)
+    with pytest.raises(AttributeError) as excinfo:
+        to_call = choices_callable.completer
+    assert 'This instance is configured as a choices_provider' in str(excinfo.value)
 
 
 def test_apcustom_usage() -> None:
