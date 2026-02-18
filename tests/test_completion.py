@@ -19,6 +19,7 @@ from cmd2 import (
     Completions,
     utils,
 )
+from cmd2.completion import all_display_numeric
 
 from .conftest import (
     normalize,
@@ -875,6 +876,125 @@ def test_completions_iteration() -> None:
 
     # Test __reversed__
     assert list(reversed(completions)) == items[::-1]
+
+
+def test_numeric_sorting() -> None:
+    """Test that numbers and numeric strings are sorted numerically."""
+    numbers = [5, 6, 4, 3, 7.2, 9.1]
+    completions = Completions.from_values(numbers)
+    assert [item.value for item in completions] == sorted(numbers)
+
+    number_strs = ["5", "6", "4", "3", "7.2", "9.1"]
+    completions = Completions.from_values(number_strs)
+    assert list(completions.to_strings()) == sorted(number_strs, key=float)
+
+    mixed = ["5", "6", "4", 3, "7.2", 9.1]
+    completions = Completions.from_values(mixed)
+    assert list(completions.to_strings()) == [str(v) for v in sorted(number_strs, key=float)]
+
+
+def test_is_sorted() -> None:
+    """Test that already sorted results are not re-sorted."""
+    values = [5, 6, 4, 3]
+    already_sorted = Completions.from_values(values, is_sorted=True)
+    sorted_on_creation = Completions.from_values(values, is_sorted=False)
+
+    assert already_sorted.to_strings() != sorted_on_creation.to_strings()
+    assert [item.value for item in already_sorted] == values
+
+
+@pytest.mark.parametrize(
+    ('values', 'all_nums'),
+    [
+        ([2, 3], True),
+        ([2, 3.7], True),
+        ([2, "3"], True),
+        ([2.2, "3.4"], True),
+        ([2, "3g"], False),
+        # The display_plain field strips off ANSI sequences
+        (["\x1b[31m5\x1b[0m", "\x1b[32m9.2\x1b[0m"], True),
+        (["\x1b[31mNOT_STRING\x1b[0m", "\x1b[32m9.2\x1b[0m"], False),
+    ],
+)
+def test_all_display_numeric(values: list[int | float | str], all_nums: bool) -> None:
+    """Test that all_display_numeric() evaluates the display_plain field."""
+
+    items = [CompletionItem(v) for v in values]
+    assert all_display_numeric(items) == all_nums
+
+
+def test_remove_duplicates() -> None:
+    """Test that duplicate CompletionItems are removed."""
+
+    # Create items which alter the fields used in CompletionItem.__eq__().
+    orig_item = CompletionItem(value="orig item", display="orig display", display_meta="orig meta")
+    new_value = dataclasses.replace(orig_item, value="new value")
+    new_text = dataclasses.replace(orig_item, text="new text")
+    new_display = dataclasses.replace(orig_item, display="new display")
+    new_meta = dataclasses.replace(orig_item, display_meta="new meta")
+
+    # Include each item twice.
+    items = [orig_item, orig_item, new_value, new_value, new_text, new_text, new_display, new_display, new_meta, new_meta]
+    completions = Completions(items)
+
+    # Make sure we have exactly 1 of each item.
+    assert len(completions) == 5
+    assert orig_item in completions
+    assert new_value in completions
+    assert new_text in completions
+    assert new_display in completions
+    assert new_meta in completions
+
+
+def test_plain_fields() -> None:
+    """Test the plain text fields in CompletionItem."""
+    display = "\x1b[31mApple\x1b[0m"
+    display_meta = "\x1b[32mA tasty apple\x1b[0m"
+
+    # Show that the plain fields remove the ANSI sequences.
+    completion_item = CompletionItem("apple", display=display, display_meta=display_meta)
+    assert completion_item.display == display
+    assert completion_item.display_plain == "Apple"
+    assert completion_item.display_meta == display_meta
+    assert completion_item.display_meta_plain == "A tasty apple"
+
+
+def test_styled_completion_sort() -> None:
+    """Test that sorting is done with the display_plain field."""
+
+    # First sort with strings that include ANSI style sequences.
+    red_apple = "\x1b[31mApple\x1b[0m"
+    green_cherry = "\x1b[32mCherry\x1b[0m"
+    blue_banana = "\x1b[34mBanana\x1b[0m"
+
+    # This sorts by ASCII: [31m (Red), [32m (Green), [34m (Blue)
+    unsorted_strs = [blue_banana, red_apple, green_cherry]
+    sorted_strs = sorted(unsorted_strs, key=utils.DEFAULT_STR_SORT_KEY)
+    assert sorted_strs == [red_apple, green_cherry, blue_banana]
+
+    # Now create a Completions object with these values.
+    unsorted_items = [
+        CompletionItem("banana", display=blue_banana),
+        CompletionItem("cherry", display=green_cherry),
+        CompletionItem("apple", display=red_apple),
+    ]
+
+    completions = Completions(unsorted_items)
+
+    # Expected order: Apple (A), Banana (B), Cherry (C)
+    expected_plain = ["Apple", "Banana", "Cherry"]
+    expected_styled = [red_apple, blue_banana, green_cherry]
+
+    for index, item in enumerate(completions):
+        # Prove the ANSI stripping worked correctly
+        assert item.display_plain == expected_plain[index]
+
+        # Prove the sort order used the plain text, not the ANSI codes
+        assert item.display == expected_styled[index]
+
+    # Prove the order of completions is not the same as the raw string sort order
+    completion_displays = [item.display for item in completions]
+    assert completion_displays != sorted_strs
 
 
 # Used by redirect_complete tests
