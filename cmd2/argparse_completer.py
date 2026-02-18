@@ -18,6 +18,8 @@ from typing import (
     cast,
 )
 
+from rich.text import Text
+
 from .constants import INFINITY
 from .rich_utils import Cmd2GeneralConsole
 
@@ -587,7 +589,7 @@ class ArgparseCompleter:
         return Completions(items)
 
     def _format_completions(self, arg_state: _ArgumentState, completions: Completions) -> Completions:
-        """Format CompletionItems into hint table."""
+        """Format CompletionItems into completion table."""
         # Skip table generation for single results or if the list exceeds the
         # user-defined threshold for table display.
         if len(completions) < 2 or len(completions) > self._cmd2_app.max_completion_table_items:
@@ -611,7 +613,7 @@ class ArgparseCompleter:
         # Determine if all display values are numeric so we can right-align them
         all_nums = all_display_numeric(completions.items)
 
-        # Build header row for the hint table
+        # Build header row
         rich_columns: list[Column] = []
         rich_columns.append(Column(destination.upper(), justify="right" if all_nums else "left", no_wrap=True))
         table_header = cast(Sequence[str | Column] | None, arg_state.action.get_table_header())  # type: ignore[attr-defined]
@@ -621,12 +623,12 @@ class ArgparseCompleter:
             column if isinstance(column, Column) else Column(column, overflow="fold") for column in table_header
         )
 
-        # Build the hint table
+        # Add the data rows
         hint_table = Table(*rich_columns, box=SIMPLE_HEAD, show_edge=False, border_style=Cmd2Style.TABLE_BORDER)
         for item in completions:
-            hint_table.add_row(item.display, *item.table_row)
+            hint_table.add_row(Text.from_ansi(item.display), *item.table_row)
 
-        # Generate the hint table string
+        # Generate the table string
         console = Cmd2GeneralConsole()
         with console.capture() as capture:
             console.print(hint_table, end="", soft_wrap=False)

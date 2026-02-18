@@ -24,6 +24,7 @@ from . import (
     constants,
     utils,
 )
+from . import rich_utils as ru
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
@@ -101,6 +102,9 @@ class Cmd2Completer(Completer):
             buffer.cursor_right(search_text_length)
             return
 
+        # Determine if we should remove style from completion text
+        remove_style = ru.ALLOW_STYLE == ru.AllowStyle.NEVER
+
         # Return the completions
         for item in completions:
             # Set offset to the start of the current word to overwrite it with the completion
@@ -129,8 +133,8 @@ class Cmd2Completer(Completer):
             yield Completion(
                 match_text,
                 start_position=start_position,
-                display=item.display,
-                display_meta=item.display_meta,
+                display=item.display_plain if remove_style else ANSI(item.display),
+                display_meta=item.display_meta_plain if remove_style else ANSI(item.display_meta),
             )
 
 
