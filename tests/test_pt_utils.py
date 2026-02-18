@@ -7,9 +7,18 @@ from unittest.mock import Mock
 import pytest
 from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.document import Document
+from prompt_toolkit.formatted_text import (
+    ANSI,
+    to_formatted_text,
+)
 
 import cmd2
-from cmd2 import pt_utils, utils
+from cmd2 import (
+    Cmd2Style,
+    pt_utils,
+    stylize,
+    utils,
+)
 from cmd2.history import HistoryItem
 from cmd2.parsing import Statement
 
@@ -191,10 +200,19 @@ class TestCmd2Completer:
         line = ""
         document = Document(line, cursor_position=0)
 
+        # Test plain and styled values for display and display_meta
+        foo_text = "foo"
+        foo_display = "Foo Display"
+        foo_meta = "Foo Meta"
+
+        bar_text = "bar"
+        bar_display = stylize("Bar Display", Cmd2Style.SUCCESS)
+        bar_meta = stylize("Bar Meta", Cmd2Style.WARNING)
+
         # Set up matches
         completion_items = [
-            cmd2.CompletionItem("foo", display="Foo Display"),
-            cmd2.CompletionItem("bar", display="Bar Display"),
+            cmd2.CompletionItem(foo_text, display=foo_display, display_meta=foo_meta),
+            cmd2.CompletionItem(bar_text, display=bar_display, display_meta=bar_meta),
         ]
         cmd2_completions = cmd2.Completions(completion_items, completion_table="Table Data")
         mock_cmd_app.complete.return_value = cmd2_completions
@@ -202,13 +220,15 @@ class TestCmd2Completer:
         # Call get_completions
         completions = list(completer.get_completions(document, None))
 
-        # Verify completions which are sorted by display field.
         assert len(completions) == len(cmd2_completions)
-        assert completions[0].text == "bar"
-        assert completions[0].display == [('', 'Bar Display')]
 
-        assert completions[1].text == "foo"
-        assert completions[1].display == [('', 'Foo Display')]
+        assert completions[0].text == bar_text
+        assert to_formatted_text(completions[0].display) == to_formatted_text(ANSI(bar_display))
+        assert to_formatted_text(completions[0].display_meta) == to_formatted_text(ANSI(bar_meta))
+
+        assert completions[1].text == foo_text
+        assert to_formatted_text(completions[1].display) == to_formatted_text(ANSI(foo_display))
+        assert to_formatted_text(completions[1].display_meta) == to_formatted_text(ANSI(foo_meta))
 
         # Verify that only the completion table printed
         assert mock_print.call_count == 1

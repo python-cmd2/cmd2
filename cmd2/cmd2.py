@@ -1189,12 +1189,20 @@ class Cmd:
                     f"must be {ru.AllowStyle.ALWAYS}, {ru.AllowStyle.NEVER}, or {ru.AllowStyle.TERMINAL} (case-insensitive)"
                 ) from ex
 
+        settable_description = Text.assemble(
+            'Allow styled text in output (Options: ',
+            (str(ru.AllowStyle.ALWAYS), Style(bold=True)),
+            ", ",
+            (str(ru.AllowStyle.NEVER), Style(bold=True)),
+            ", ",
+            (str(ru.AllowStyle.TERMINAL), Style(bold=True)),
+            ")",
+        )
         self.add_settable(
             Settable(
                 'allow_style',
                 allow_style_type,
-                'Allow ANSI text style sequences in output (valid values: '
-                f'{ru.AllowStyle.ALWAYS}, {ru.AllowStyle.NEVER}, {ru.AllowStyle.TERMINAL})',
+                ru.rich_text_to_string(settable_description),
                 self,
                 choices_provider=get_allow_style_choices,
             )
@@ -1211,7 +1219,7 @@ class Cmd:
             Settable(
                 'max_completion_table_items',
                 int,
-                "Maximum number of completion results allowed for a completion table to appear",
+                "Max results allowed to display a table",
                 self,
             )
         )
@@ -1219,7 +1227,7 @@ class Cmd:
             Settable(
                 'max_column_completion_results',
                 int,
-                "Maximum number of completion results to display in a single column",
+                "Max results to display in a single column",
                 self,
             )
         )
@@ -2496,11 +2504,13 @@ class Cmd:
         items: list[CompletionItem] = []
 
         for name, settable in self.settables.items():
+            value_str = str(settable.value)
             table_row = [
-                str(settable.value),
+                value_str,
                 settable.description,
             ]
-            items.append(CompletionItem(name, display_meta=str(settable.value), table_row=table_row))
+            display_meta = f"[Current: {su.stylize(value_str, Style(bold=True))}] {settable.description}"
+            items.append(CompletionItem(name, display_meta=display_meta, table_row=table_row))
 
         return Choices(items=items)
 

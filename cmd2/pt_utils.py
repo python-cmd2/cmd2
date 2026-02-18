@@ -129,8 +129,8 @@ class Cmd2Completer(Completer):
             yield Completion(
                 match_text,
                 start_position=start_position,
-                display=item.display,
-                display_meta=item.display_meta,
+                display=ANSI(item.display),
+                display_meta=ANSI(item.display_meta),
             )
 
 
