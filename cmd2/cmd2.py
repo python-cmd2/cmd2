@@ -2907,8 +2907,7 @@ class Cmd:
             # Make sure all input has been read and convert it to a Statement
             statement = self._complete_statement(line)
 
-            # If this is the first loop iteration, save the original line and stop
-            # combining multiline history entries in the remaining iterations.
+            # If this is the first loop iteration, save the original line
             if orig_line is None:
                 orig_line = statement.raw
 

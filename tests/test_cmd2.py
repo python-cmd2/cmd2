@@ -1767,7 +1767,7 @@ def test_multiline_complete_statement_without_terminator(multiline_app, monkeypa
     statement = multiline_app._complete_statement(line)
     assert statement == args
     assert statement.command == command
-    assert statement.multiline_command == command
+    assert statement.multiline_command
 
 
 def test_multiline_complete_statement_with_unclosed_quotes(multiline_app, monkeypatch) -> None:
@@ -1780,7 +1780,7 @@ def test_multiline_complete_statement_with_unclosed_quotes(multiline_app, monkey
     statement = multiline_app._complete_statement(line)
     assert statement == 'hi "partially open\nquotes\n" now closed'
     assert statement.command == 'orate'
-    assert statement.multiline_command == 'orate'
+    assert statement.multiline_command
     assert statement.terminator == ';'
 
 
@@ -1797,7 +1797,7 @@ def test_multiline_input_line_to_statement(multiline_app, monkeypatch) -> None:
     assert statement.raw == 'orate hi\nperson\n\n'
     assert statement == 'hi person'
     assert statement.command == 'orate'
-    assert statement.multiline_command == 'orate'
+    assert statement.multiline_command
 
 
 def test_multiline_history_added(multiline_app, monkeypatch) -> None:

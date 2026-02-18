@@ -129,8 +129,8 @@ class Statement(str):  # noqa: SLOT000
     # list of arguments to the command, not including any output redirection or terminators; quoted args remain quoted
     arg_list: list[str] = field(default_factory=list)
 
-    # if the command is a multiline command, the name of the command, otherwise empty
-    multiline_command: str = ''
+    # if the command is a multiline command
+    multiline_command: bool = False
 
     # the character which terminated the multiline command, if there was one
     terminator: str = ''
@@ -510,7 +510,7 @@ class StatementParser:
                 arg_list = tokens[1:]
 
         # set multiline
-        multiline_command = command if command in self.multiline_commands else ''
+        multiline_command = command in self.multiline_commands
 
         # build the statement
         return Statement(
@@ -580,7 +580,7 @@ class StatementParser:
                 args = ''
 
         # set multiline
-        multiline_command = command if command in self.multiline_commands else ''
+        multiline_command = command in self.multiline_commands
 
         # build the statement
         return Statement(args, raw=rawinput, command=command, multiline_command=multiline_command)
