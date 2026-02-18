@@ -5,24 +5,35 @@ from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
+from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.document import Document
 
+import cmd2
 from cmd2 import pt_utils, utils
-from cmd2.argparse_custom import CompletionItem
 from cmd2.history import HistoryItem
 from cmd2.parsing import Statement
+
+
+class MockSession:
+    """Simulates a prompt_toolkit PromptSession."""
+
+    def __init__(self):
+        # Contains the CLI text and cursor position
+        self.buffer = Buffer()
+
+        # Mock the app structure: session -> app -> current_buffer
+        self.app = Mock()
+        self.app.current_buffer = self.buffer
 
 
 # Mock for cmd2.Cmd
 class MockCmd:
     def __init__(self):
-        self.complete = Mock()
-        self.completion_matches = []
-        self.display_matches = []
+        # Return empty completions by default
+        self.complete = Mock(return_value=cmd2.Completions())
+
+        self.always_show_hint = False
         self.history = []
-        self.formatted_completions = ''
-        self.completion_hint = ''
-        self.completion_header = ''
         self.statement_parser = Mock()
         self.statement_parser.terminators = [';']
         self.statement_parser.shortcuts = []
@@ -30,6 +41,7 @@ class MockCmd:
         self.aliases = {}
         self.macros = {}
         self.all_commands = []
+        self.session = MockSession()
 
     def get_all_commands(self):
         return self.all_commands
@@ -168,90 +180,251 @@ class TestCmd2Lexer:
 
 
 class TestCmd2Completer:
-    def test_get_completions_basic(self, mock_cmd_app):
-        """Test basic completion without display matches."""
+    def test_get_completions(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
+        """Test get_completions with matches."""
+        mock_print = Mock()
+        monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
+
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
-        # Setup document
-        text = "foo"
-        line = "command foo"
-        cursor_position = len(line)
+        # Set up document
+        line = ""
+        document = Document(line, cursor_position=0)
+
+        # Set up matches
+        completion_items = [
+            cmd2.CompletionItem("foo", display="Foo Display"),
+            cmd2.CompletionItem("bar", display="Bar Display"),
+        ]
+        cmd2_completions = cmd2.Completions(completion_items, completion_table="Table Data")
+        mock_cmd_app.complete.return_value = cmd2_completions
+
+        # Call get_completions
+        completions = list(completer.get_completions(document, None))
+
+        # Verify completions which are sorted by display field.
+        assert len(completions) == len(cmd2_completions)
+        assert completions[0].text == "bar"
+        assert completions[0].display == [('', 'Bar Display')]
+
+        assert completions[1].text == "foo"
+        assert completions[1].display == [('', 'Foo Display')]
+
+        # Verify that only the completion table printed
+        assert mock_print.call_count == 1
+        args, _ = mock_print.call_args
+        assert cmd2_completions.completion_table in str(args[0])
+
+    def test_get_completions_no_matches(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
+        """Test get_completions with no matches."""
+        mock_print = Mock()
+        monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
+
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        document = Document("", cursor_position=0)
+
+        # Set up matches
+        cmd2_completions = cmd2.Completions(completion_hint="Completion Hint")
+        mock_cmd_app.complete.return_value = cmd2_completions
+
+        completions = list(completer.get_completions(document, None))
+        assert not completions
+
+        # Verify that only the completion hint printed
+        assert mock_print.call_count == 1
+        args, _ = mock_print.call_args
+        assert cmd2_completions.completion_hint in str(args[0])
+
+    def test_get_completions_always_show_hints(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
+        """Test that get_completions respects 'always_show_hint' and prints a hint even with no matches."""
+        mock_print = Mock()
+        monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
+
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+        document = Document("test", cursor_position=4)
+
+        # Enable hint printing when there are no matches.
+        mock_cmd_app.always_show_hint = True
+
+        # Set up matches
+        cmd2_completions = cmd2.Completions(completion_hint="Completion Hint")
+        mock_cmd_app.complete.return_value = cmd2_completions
+
+        completions = list(completer.get_completions(document, None))
+        assert not completions
+
+        # Verify that only the completion hint printed
+        assert mock_print.call_count == 1
+        args, _ = mock_print.call_args
+        assert cmd2_completions.completion_hint in str(args[0])
+
+    def test_get_completions_with_error(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
+        """Test get_completions with a completion_error."""
+        mock_print = Mock()
+        monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
+
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        document = Document("", cursor_position=0)
+
+        # Set up matches
+        cmd2_completions = cmd2.Completions(completion_error="Completion Error")
+        mock_cmd_app.complete.return_value = cmd2_completions
+
+        completions = list(completer.get_completions(document, None))
+        assert not completions
+
+        # Verify that only the completion error printed
+        assert mock_print.call_count == 1
+        args, _ = mock_print.call_args
+        assert cmd2_completions.completion_error in str(args[0])
+
+    @pytest.mark.parametrize(
+        # search_text_offset is the starting index of the user-provided search text within a full match.
+        # This accounts for leading shortcuts (e.g., in '@has', the offset is 1).
+        ('line', 'match', 'search_text_offset'),
+        [
+            ('has', 'has space', 0),
+            ('@has', '@has space', 1),
+        ],
+    )
+    def test_get_completions_add_opening_quote_and_abort(self, line, match, search_text_offset, mock_cmd_app) -> None:
+        """Test case where adding an opening quote changes text before cursor.
+
+        This applies when there is search text.
+        """
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        # Set up document
+        document = Document(line, cursor_position=len(line))
+
+        # Set up matches
+        completion_items = [cmd2.CompletionItem(match)]
+        cmd2_completions = cmd2.Completions(
+            completion_items,
+            _add_opening_quote=True,
+            _search_text_offset=search_text_offset,
+            _quote_char='"',
+        )
+        mock_cmd_app.complete.return_value = cmd2_completions
+
+        # Call get_completions
+        completions = list(completer.get_completions(document, None))
+
+        # get_completions inserted an opening quote in the buffer and then aborted before returning completions
+        assert not completions
+
+    @pytest.mark.parametrize(
+        # search_text_offset is the starting index of the user-provided search text within a full match.
+        # This accounts for leading shortcuts (e.g., in '@has', the offset is 1).
+        ('line', 'matches', 'search_text_offset', 'quote_char', 'expected'),
+        [
+            # Single matches need opening quote, closing quote, and trailing space
+            ('', ['has space'], 0, '"', ['"has space" ']),
+            ('@', ['@has space'], 1, "'", ["@'has space' "]),
+            # Multiple matches only need opening quote
+            ('', ['has space', 'more space'], 0, '"', ['"has space', '"more space']),
+            ('@', ['@has space', '@more space'], 1, "'", ["@'has space", "@'more space"]),
+        ],
+    )
+    def test_get_completions_add_opening_quote_and_return_results(
+        self, line, matches, search_text_offset, quote_char, expected, mock_cmd_app
+    ) -> None:
+        """Test case where adding an opening quote does not change text before cursor.
+
+        This applies when search text is empty.
+        """
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        # Set up document
+        document = Document(line, cursor_position=len(line))
+
+        # Set up matches
+        completion_items = [cmd2.CompletionItem(match) for match in matches]
+
+        cmd2_completions = cmd2.Completions(
+            completion_items,
+            _add_opening_quote=True,
+            _search_text_offset=search_text_offset,
+            _quote_char=quote_char,
+        )
+        mock_cmd_app.complete.return_value = cmd2_completions
+
+        # Call get_completions
+        completions = list(completer.get_completions(document, None))
+
+        # Compare results
+        completion_texts = [c.text for c in completions]
+        assert completion_texts == expected
+
+    @pytest.mark.parametrize(
+        ('line', 'match', 'quote_char', 'end_of_line', 'expected'),
+        [
+            # --- Unquoted search text ---
+            # Append a trailing space when end_of_line is True
+            ('ma', 'match', '', True, 'match '),
+            ('ma', 'match', '', False, 'match'),
+            # --- Quoted search text ---
+            # Ensure closing quotes are added
+            # Append a trailing space when end_of_line is True
+            ('"ma', '"match', '"', True, '"match" '),
+            ("'ma", "'match", "'", False, "'match'"),
+        ],
+    )
+    def test_get_completions_allow_finalization(
+        self, line, match, quote_char, end_of_line, expected, mock_cmd_app: MockCmd
+    ) -> None:
+        """Test that get_completions corectly handles finalizing single matches."""
+        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
+
+        # Set up document
+        cursor_position = len(line) if end_of_line else len(line) - 1
         document = Document(line, cursor_position=cursor_position)
 
-        # Setup matches
-        mock_cmd_app.completion_matches = ["foobar", "food"]
-        mock_cmd_app.display_matches = []  # Empty means use completion matches for display
+        # Set up matches
+        completion_items = [cmd2.CompletionItem(match)]
+        cmd2_completions = cmd2.Completions(completion_items, _quote_char=quote_char)
+        mock_cmd_app.complete.return_value = cmd2_completions
 
-        # Call get_completions
+        # Call get_completions and compare results
         completions = list(completer.get_completions(document, None))
+        assert completions[0].text == expected
 
-        # Verify cmd_app.complete was called correctly
-        # begidx = cursor_position - len(text) = 11 - 3 = 8
-        mock_cmd_app.complete.assert_called_once_with(text, 0, line=line, begidx=8, endidx=11, custom_settings=None)
-
-        # Verify completions
-        assert len(completions) == 2
-        assert completions[0].text == "foobar"
-        assert completions[0].start_position == -3
-        # prompt_toolkit 3.0+ uses FormattedText for display
-        assert completions[0].display == [('', 'foobar')]
-
-        assert completions[1].text == "food"
-        assert completions[1].start_position == -3
-        assert completions[1].display == [('', 'food')]
-
-    def test_get_completions_with_display_matches(self, mock_cmd_app):
-        """Test completion with display matches."""
+    @pytest.mark.parametrize(
+        ('line', 'match', 'quote_char', 'end_of_line', 'expected'),
+        [
+            # Do not add a trailing space or closing quote to any of the matches
+            ('ma', 'match', '', True, 'match'),
+            ('ma', 'match', '', False, 'match'),
+            ('"ma', '"match', '"', True, '"match'),
+            ("'ma", "'match", "'", False, "'match"),
+        ],
+    )
+    def test_get_completions_do_not_allow_finalization(
+        self, line, match, quote_char, end_of_line, expected, mock_cmd_app: MockCmd
+    ) -> None:
+        """Test that get_completions does not finalize single matches when allow_finalization if False."""
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
-        # Setup document
-        line = "f"
-        document = Document(line, cursor_position=1)
+        # Set up document
+        cursor_position = len(line) if end_of_line else len(line) - 1
+        document = Document(line, cursor_position=cursor_position)
 
-        # Setup matches
-        mock_cmd_app.completion_matches = ["foo", "bar"]
-        mock_cmd_app.display_matches = ["Foo Display", "Bar Display"]
+        # Set up matches
+        completion_items = [cmd2.CompletionItem(match)]
+        cmd2_completions = cmd2.Completions(
+            completion_items,
+            allow_finalization=False,
+            _quote_char=quote_char,
+        )
+        mock_cmd_app.complete.return_value = cmd2_completions
 
-        # Call get_completions
+        # Call get_completions and compare results
         completions = list(completer.get_completions(document, None))
+        assert completions[0].text == expected
 
-        # Verify completions
-        assert len(completions) == 2
-        assert completions[0].text == "foo"
-        assert completions[0].display == [('', 'Foo Display')]
-
-        assert completions[1].text == "bar"
-        assert completions[1].display == [('', 'Bar Display')]
-
-    def test_get_completions_mismatched_display_matches(self, mock_cmd_app):
-        """Test completion when display_matches length doesn't match completion_matches."""
-        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-
-        document = Document("", cursor_position=0)
-
-        mock_cmd_app.completion_matches = ["foo", "bar"]
-        mock_cmd_app.display_matches = ["Foo Display"]  # Length mismatch
-
-        completions = list(completer.get_completions(document, None))
-
-        # Should ignore display_matches and use completion_matches for display
-        assert len(completions) == 2
-        assert completions[0].display == [('', 'foo')]
-        assert completions[1].display == [('', 'bar')]
-
-    def test_get_completions_empty(self, mock_cmd_app):
-        """Test completion with no matches."""
-        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-
-        document = Document("", cursor_position=0)
-
-        mock_cmd_app.completion_matches = []
-
-        completions = list(completer.get_completions(document, None))
-
-        assert len(completions) == 0
-
-    def test_init_with_custom_settings(self, mock_cmd_app):
+    def test_init_with_custom_settings(self, mock_cmd_app: MockCmd) -> None:
         """Test initializing with custom settings."""
         mock_parser = Mock()
         custom_settings = utils.CustomCompletionSettings(parser=mock_parser)
@@ -259,67 +432,14 @@ class TestCmd2Completer:
 
         document = Document("", cursor_position=0)
 
-        mock_cmd_app.completion_matches = []
+        mock_cmd_app.complete.return_value = cmd2.Completions()
 
         list(completer.get_completions(document, None))
 
         mock_cmd_app.complete.assert_called_once()
         assert mock_cmd_app.complete.call_args[1]['custom_settings'] == custom_settings
 
-    def test_get_completions_with_hints(self, mock_cmd_app, monkeypatch):
-        """Test that hints and formatted completions are printed even with no matches."""
-        mock_print = Mock()
-        monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
-
-        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-        document = Document("test", cursor_position=4)
-
-        mock_cmd_app.formatted_completions = "Table Data"
-        mock_cmd_app.completion_hint = "Hint Text"
-        mock_cmd_app.completion_matches = []
-        mock_cmd_app.always_show_hint = True
-
-        list(completer.get_completions(document, None))
-
-        assert mock_print.call_count == 2
-        assert mock_cmd_app.formatted_completions == ""
-        assert mock_cmd_app.completion_hint == ""
-
-    def test_get_completions_with_header(self, mock_cmd_app, monkeypatch):
-        """Test that completion header is printed even with no matches."""
-        mock_print = Mock()
-        monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
-
-        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-        document = Document("test", cursor_position=4)
-
-        mock_cmd_app.completion_header = "Header Text"
-        mock_cmd_app.completion_matches = []
-
-        list(completer.get_completions(document, None))
-
-        assert mock_print.call_count == 1
-        assert mock_cmd_app.completion_header == ""
-
-    def test_get_completions_completion_item_meta(self, mock_cmd_app):
-        """Test that CompletionItem descriptive data is used as display_meta."""
-        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-        document = Document("foo", cursor_position=3)
-
-        # item1 with desc, item2 without desc
-        item1 = CompletionItem("foobar", ["My Description"])
-        item2 = CompletionItem("food", [])
-        mock_cmd_app.completion_matches = [item1, item2]
-
-        completions = list(completer.get_completions(document, None))
-
-        assert len(completions) == 2
-        assert completions[0].text == "foobar"
-        # display_meta is converted to FormattedText
-        assert completions[0].display_meta == [('', 'My Description')]
-        assert completions[1].display_meta == [('', '')]
-
-    def test_get_completions_no_statement_parser(self, mock_cmd_app):
+    def test_get_completions_no_statement_parser(self, mock_cmd_app: MockCmd) -> None:
         """Test initialization and completion without statement_parser."""
         del mock_cmd_app.statement_parser
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
@@ -330,7 +450,7 @@ class TestCmd2Completer:
         # Should still work with default delimiters
         mock_cmd_app.complete.assert_called_once()
 
-    def test_get_completions_custom_delimiters(self, mock_cmd_app):
+    def test_get_completions_custom_delimiters(self, mock_cmd_app: MockCmd) -> None:
         """Test that custom delimiters (terminators) are respected."""
         mock_cmd_app.statement_parser.terminators = ['#']
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
@@ -340,7 +460,7 @@ class TestCmd2Completer:
         list(completer.get_completions(document, None))
 
         # text should be "arg", begidx=4, endidx=7
-        mock_cmd_app.complete.assert_called_with("arg", 0, line="cmd#arg", begidx=4, endidx=7, custom_settings=None)
+        mock_cmd_app.complete.assert_called_with("arg", line="cmd#arg", begidx=4, endidx=7, custom_settings=None)
 
 
 class TestCmd2History:
@@ -355,7 +475,7 @@ class TestCmd2History:
         """Test loading history strings yields all items in forward order."""
         history = pt_utils.Cmd2History(cast(Any, mock_cmd_app))
 
-        # Setup history items
+        # Set up history items
         # History in cmd2 is oldest to newest
         items = [
             self.make_history_item("cmd1"),

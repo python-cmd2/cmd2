@@ -1,15 +1,16 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
 import re
-from collections.abc import Callable, Iterable
+from collections.abc import (
+    Callable,
+    Iterable,
+)
 from typing import (
     TYPE_CHECKING,
     Any,
 )
 
-from prompt_toolkit import (
-    print_formatted_text,
-)
+from prompt_toolkit import print_formatted_text
 from prompt_toolkit.completion import (
     Completer,
     Completion,
@@ -18,16 +19,13 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
-from rich.text import Text
 
 from . import (
     constants,
-    rich_utils,
     utils,
 )
-from .argparse_custom import CompletionItem
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
 
 
@@ -67,55 +65,73 @@ class Cmd2Completer(Completer):
         endidx = cursor_pos
         text = line[begidx:endidx]
 
-        # Call cmd2's complete method.
-        # We pass state=0 to trigger the completion calculation.
-        self.cmd_app.complete(text, 0, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings)
+        completions = self.cmd_app.complete(
+            text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
+        )
 
-        # Print formatted completions (tables) above the prompt if present
-        if self.cmd_app.formatted_completions:
-            print_formatted_text(ANSI("\n" + self.cmd_app.formatted_completions))
-            self.cmd_app.formatted_completions = ""
-
-        # Print completion header (e.g. CompletionError) if present
-        if self.cmd_app.completion_header:
-            print_formatted_text(ANSI(self.cmd_app.completion_header))
-            self.cmd_app.completion_header = ""
-
-        matches = self.cmd_app.completion_matches
-
-        # Print hint if present and settings say we should
-        if self.cmd_app.completion_hint and (self.cmd_app.always_show_hint or not matches):
-            print_formatted_text(ANSI(self.cmd_app.completion_hint))
-            self.cmd_app.completion_hint = ""
-
-        if not matches:
+        if completions.completion_error:
+            print_formatted_text(ANSI(completions.completion_error))
             return
 
-        # Now we iterate over self.cmd_app.completion_matches and self.cmd_app.display_matches
-        # cmd2 separates completion matches (what is inserted) from display matches (what is shown).
-        # prompt_toolkit Completion object takes 'text' (what is inserted) and 'display' (what is shown).
+        # Print completion table if present
+        if completions.completion_table:
+            print_formatted_text(ANSI("\n" + completions.completion_table))
 
-        # Check if we have display matches and if they match the length of completion matches
-        display_matches = self.cmd_app.display_matches
-        use_display_matches = len(display_matches) == len(matches)
+        # Print hint if present and settings say we should
+        if completions.completion_hint and (self.cmd_app.always_show_hint or not completions):
+            print_formatted_text(ANSI(completions.completion_hint))
 
-        for i, match in enumerate(matches):
-            display = display_matches[i] if use_display_matches else match
-            display_meta: str | ANSI | None = None
-            if isinstance(match, CompletionItem) and match.descriptive_data:
-                if isinstance(match.descriptive_data[0], str):
-                    display_meta = match.descriptive_data[0]
-                elif isinstance(match.descriptive_data[0], Text):
-                    # Convert rich renderable to prompt-toolkit formatted text
-                    display_meta = ANSI(rich_utils.rich_text_to_string(match.descriptive_data[0]))
+        if not completions:
+            return
 
-            # prompt_toolkit replaces the word before cursor by default if we use the default Completer?
-            # No, we yield Completion(text, start_position=...).
-            # Default start_position is 0 (append).
+        # The length of the user's input minus any shortcut.
+        search_text_length = len(text) - completions._search_text_offset
 
+        # If matches require quoting but the word isn't quoted yet, we insert the
+        # opening quote directly into the buffer. We do this because if any completions
+        # change text before the cursor (like prepending a quote), prompt-toolkit will
+        # not return a common prefix to the command line. By modifying the buffer
+        # and returning early, we trigger a new completion cycle where the quote
+        # is already present, allowing for proper common prefix calculation.
+        if completions._add_opening_quote and search_text_length > 0:
+            buffer = self.cmd_app.session.app.current_buffer
+
+            buffer.cursor_left(search_text_length)
+            buffer.insert_text(completions._quote_char)
+            buffer.cursor_right(search_text_length)
+            return
+
+        # Return the completions
+        for item in completions:
+            # Set offset to the start of the current word to overwrite it with the completion
             start_position = -len(text)
+            match_text = item.text
 
-            yield Completion(match, start_position=start_position, display=display, display_meta=display_meta)
+            # If we need a quote but didn't interrupt (because text was empty),
+            # prepend the quote here so it's included in the insertion.
+            if completions._add_opening_quote:
+                match_text = (
+                    match_text[: completions._search_text_offset]
+                    + completions._quote_char
+                    + match_text[completions._search_text_offset :]
+                )
+
+            # Finalize if there's only one match
+            if len(completions) == 1 and completions.allow_finalization:
+                # Close any open quote
+                if completions._quote_char:
+                    match_text += completions._quote_char
+
+                # Add trailing space if the cursor is at the end of the line
+                if endidx == len(line):
+                    match_text += " "
+
+            yield Completion(
+                match_text,
+                start_position=start_position,
+                display=item.display,
+                display_meta=item.display_meta,
+            )
 
 
 class Cmd2History(History):

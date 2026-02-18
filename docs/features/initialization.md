@@ -31,7 +31,6 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **debug**: if `True`, show full stack trace on error (Default: `False`)
 - **default_category**: if any command has been categorized, then all other commands that haven't been categorized will display under this section in the help output.
 - **default_error**: the error that prints when a non-existent command is run
-- **default_sort_key**: the default key for sorting string results. Its default value performs a case-insensitive alphabetical sort.
 - **default_to_shell**: if `True`, attempt to run unrecognized commands as shell commands (Default: `False`)
 - **disabled_commands**: commands that have been disabled from use. This is to support commands that are only available during specific states of the application. This dictionary's keys are the command names and its values are DisabledCommand objects.
 - **doc_header**: Set the header used for the help function's listing of documented functions
@@ -45,7 +44,7 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **last_result**: stores results from the last command run to enable usage of results in a Python script or interactive console. Built-in commands don't make use of this. It is purely there for user-defined commands and convenience.
 - **macros**: dictionary of macro names and their values
 - **max_column_completion_results**: The maximum number of completion results to display in a single column (Default: 7)
-- **max_completion_items**: max number of CompletionItems to display during tab completion (Default: 50)
+- **max_completion_table_items**: The maximum number of completion results allowed for a completion table to appear (Default: 50)
 - **pager**: sets the pager command used by the `Cmd.ppaged()` method for displaying wrapped output using a pager
 - **pager_chop**: sets the pager command used by the `Cmd.ppaged()` method for displaying chopped/truncated output using a pager
 - **py_bridge_name**: name by which embedded Python environments and scripts refer to the `cmd2` application by in order to call commands (Default: `app`)

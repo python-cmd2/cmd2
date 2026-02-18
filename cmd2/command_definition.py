@@ -1,8 +1,12 @@
 """Supports the definition of commands in separate classes to be composed into cmd2.Cmd."""
 
-from collections.abc import Callable, Mapping
+from collections.abc import (
+    Callable,
+    Mapping,
+)
 from typing import (
     TYPE_CHECKING,
+    TypeAlias,
     TypeVar,
 )
 
@@ -10,19 +14,15 @@ from .constants import (
     CLASS_ATTR_DEFAULT_HELP_CATEGORY,
     COMMAND_FUNC_PREFIX,
 )
-from .exceptions import (
-    CommandSetRegistrationError,
-)
-from .utils import (
-    Settable,
-)
+from .exceptions import CommandSetRegistrationError
+from .utils import Settable
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2
 
 #: Callable signature for a basic command  function
 #: Further refinements are needed to define the input parameters
-CommandFunc = Callable[..., bool | None]
+CommandFunc: TypeAlias = Callable[..., bool | None]
 
 CommandSetType = TypeVar('CommandSetType', bound=type['CommandSet'])
 

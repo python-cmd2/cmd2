@@ -68,14 +68,14 @@ If `True` the output is sent to `stdout` (which is often the screen but may be
 [redirected](./redirection.md#output-redirection-and-pipes)). The feedback output will be mixed in
 with and indistinguishable from output generated with `cmd2.Cmd.poutput`.
 
-### max_completion_items
+### max_completion_table_items
 
-Maximum number of CompletionItems to display during tab completion. A CompletionItem is a special
-kind of tab completion hint which displays both a value and description and uses one line for each
-hint. Tab complete the `set` command for an example.
+The maximum number of items to display in a completion table. A completion table is a special kind
+of completion hint which displays details about items being completed. Tab complete the `set`
+command for an example.
 
-If the number of tab completion hints exceeds `max_completion_items`, then they will be displayed in
-the typical columnized format and will not include the description text of the CompletionItem.
+If the number of completion suggestions exceeds `max_completion_table_items`, then no table will
+appear.
 
 ### quiet
 

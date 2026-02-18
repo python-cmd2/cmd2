@@ -22,9 +22,7 @@ from . import string_utils as su
 from . import utils
 
 if TYPE_CHECKING:  # pragma: no cover
-    from cmd2 import (
-        Cmd,
-    )
+    from cmd2 import Cmd
 
 
 class Cmd2TestCase(unittest.TestCase):

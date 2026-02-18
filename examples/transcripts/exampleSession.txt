@@ -8,7 +8,7 @@ debug: False
 echo: False
 editor: /.*?/
 feedback_to_output: False
-max_completion_items: 50
+max_completion_table_items: 50
 maxrepeats: 3
 quiet: False
 timing: False

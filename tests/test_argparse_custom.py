@@ -6,10 +6,14 @@ import pytest
 
 import cmd2
 from cmd2 import (
+    Choices,
     Cmd2ArgumentParser,
     constants,
 )
-from cmd2.argparse_custom import generate_range_error
+from cmd2.argparse_custom import (
+    ChoicesCallable,
+    generate_range_error,
+)
 
 from .conftest import run_cmd
 
@@ -72,6 +76,19 @@ def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs) -> None:
     with pytest.raises(TypeError) as excinfo:
         parser.add_argument('--name', action='store_true', **kwargs)
     assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
+
+
+def test_apcustom_choices_callables_wrong_property() -> None:
+    """Test using the wrong property when retrieving the to_call value from a ChoicesCallable."""
+    choices_callable = ChoicesCallable(is_completer=True, to_call=fake_func)
+    with pytest.raises(AttributeError) as excinfo:
+        _ = choices_callable.choices_provider
+    assert 'This instance is configured as a completer' in str(excinfo.value)
+
+    choices_callable = ChoicesCallable(is_completer=False, to_call=fake_func)
+    with pytest.raises(AttributeError) as excinfo:
+        _ = choices_callable.completer
+    assert 'This instance is configured as a choices_provider' in str(excinfo.value)
 
 
 def test_apcustom_usage() -> None:
@@ -292,14 +309,11 @@ def test_completion_items_as_choices(capsys) -> None:
     """Test cmd2's patch to Argparse._check_value() which supports CompletionItems as choices.
     Choices are compared to CompletionItems.orig_value instead of the CompletionItem instance.
     """
-    from cmd2.argparse_custom import (
-        CompletionItem,
-    )
 
     ##############################################################
     # Test CompletionItems with str values
     ##############################################################
-    choices = [CompletionItem("1", "Description One"), CompletionItem("2", "Two")]
+    choices = Choices.from_values(["1", "2"])
     parser = Cmd2ArgumentParser()
     parser.add_argument("choices_arg", type=str, choices=choices)
 
@@ -321,7 +335,7 @@ def test_completion_items_as_choices(capsys) -> None:
     ##############################################################
     # Test CompletionItems with int values
     ##############################################################
-    choices = [CompletionItem(1, "Description One"), CompletionItem(2, "Two")]
+    choices = Choices.from_values([1, 2])
     parser = Cmd2ArgumentParser()
     parser.add_argument("choices_arg", type=int, choices=choices)
 
