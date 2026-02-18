@@ -56,19 +56,6 @@ complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.pa
     >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
     >   example for a demonstration of how to use this feature
 
-- [flag_based_complete][cmd2.Cmd.flag_based_complete] - helper method for tab completion based on a
-  particular flag preceding the token being completed
-
-- [index_based_complete][cmd2.Cmd.index_based_complete] - helper method for tab completion based on
-  a fixed position in the input string
-
-    > - See the
-    >   [basic_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
-    >   example for a demonstration of how to use these features
-    > - `flag_based_complete()` and `index_based_complete()` are basic methods and should only be
-    >   used if you are not familiar with argparse. The recommended approach for tab completing
-    >   positional tokens and flags is to use [argparse-based](#argparse-based) completion.
-
 ## Raising Exceptions During Completion
 
 There are times when an error occurs while tab completing and a message needs to be reported to the

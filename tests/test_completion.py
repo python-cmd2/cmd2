@@ -137,22 +137,6 @@ delimited_strs = [
     '/home/other user/tests',
 ]
 
-# Dictionary used with flag based completion functions
-flag_dict = {
-    # Tab complete food items after -f and --food flag in command line
-    '-f': food_item_strs,
-    '--food': food_item_strs,
-    # Tab complete sport items after -s and --sport flag in command line
-    '-s': sport_item_strs,
-    '--sport': sport_item_strs,
-}
-
-# Dictionary used with index based completion functions
-index_dict = {
-    1: food_item_strs,  # Tab complete food items at index 1 in command line
-    2: sport_item_strs,  # Tab complete sport items at index 2 in command line
-}
-
 
 class CompletionsExample(cmd2.Cmd):
     """Example cmd2 application used to exercise tab completion tests"""
@@ -718,107 +702,6 @@ def test_delimiter_completion_nomatch(cmd2_app) -> None:
 
     completions = cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
     assert not completions
-
-
-def test_flag_based_completion(cmd2_app) -> None:
-    text = 'P'
-    line = f'list_food -f {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    expected = ['Pizza', 'Potato']
-    completions = cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict)
-    assert completions.to_strings() == Completions.from_values(expected).to_strings()
-
-
-def test_flag_based_completion_nomatch(cmd2_app) -> None:
-    text = 'q'
-    line = f'list_food -f {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    completions = cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict)
-    assert not completions
-
-
-def test_flag_based_default_completer(cmd2_app, request) -> None:
-    test_dir = os.path.dirname(request.module.__file__)
-
-    text = os.path.join(test_dir, 'c')
-    line = f'list_food {text}'
-
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    expected = [text + 'onftest.py']
-    completions = cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=cmd2_app.path_complete)
-    assert completions.to_strings() == Completions.from_values(expected).to_strings()
-
-
-def test_flag_based_callable_completer(cmd2_app, request) -> None:
-    test_dir = os.path.dirname(request.module.__file__)
-
-    text = os.path.join(test_dir, 'c')
-    line = f'list_food -o {text}'
-
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    flag_dict['-o'] = cmd2_app.path_complete
-
-    expected = [text + 'onftest.py']
-    completions = cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict)
-    assert completions.to_strings() == Completions.from_values(expected).to_strings()
-
-
-def test_index_based_completion(cmd2_app) -> None:
-    text = ''
-    line = f'command Pizza {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    expected = sport_item_strs
-    completions = cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict)
-    assert completions.to_strings() == Completions.from_values(expected).to_strings()
-
-
-def test_index_based_completion_nomatch(cmd2_app) -> None:
-    text = 'q'
-    line = f'command {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-    completions = cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict)
-    assert not completions
-
-
-def test_index_based_default_completer(cmd2_app, request) -> None:
-    test_dir = os.path.dirname(request.module.__file__)
-
-    text = os.path.join(test_dir, 'c')
-    line = f'command Pizza Bat Computer {text}'
-
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    expected = [text + 'onftest.py']
-    completions = cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict, all_else=cmd2_app.path_complete)
-    assert completions.to_strings() == Completions.from_values(expected).to_strings()
-
-
-def test_index_based_callable_completer(cmd2_app, request) -> None:
-    test_dir = os.path.dirname(request.module.__file__)
-
-    text = os.path.join(test_dir, 'c')
-    line = f'command Pizza Bat {text}'
-
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    index_dict[3] = cmd2_app.path_complete
-
-    expected = [text + 'onftest.py']
-    completions = cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict)
-    assert completions.to_strings() == Completions.from_values(expected).to_strings()
 
 
 def test_tokens_for_completion_quoted(cmd2_app) -> None:

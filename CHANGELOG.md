@@ -38,6 +38,8 @@ shell, and the option for a persistent bottom bar that can display realtime stat
         1. `Cmd.formatted_completions` -> `Completions.completion_table`
         1. `Cmd.matches_delimited` -> `Completions.is_delimited`
         1. `Cmd.allow_appended_space/allow_closing_quote` -> `Completions.allow_finalization`
+    - Removed `flag_based_complete` and `index_based_complete` functions since their functionality
+      is already provided in arpgarse-based completion.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
