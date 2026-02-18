@@ -21,6 +21,8 @@ from typing import (
     overload,
 )
 
+from . import string_utils as su
+
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
     from .command_definition import CommandSet
@@ -64,14 +66,21 @@ class CompletionItem:
     text: str = ""
 
     # Optional string for displaying the completion differently in the completion menu.
+    # This can contain ANSI style sequences. A plain version is stored in display_plain.
     display: str = ""
 
     # Optional meta information about completion which displays in the completion menu.
+    # This can contain ANSI style sequences. A plain version is stored in display_meta_plain.
     display_meta: str = ""
 
     # Optional row data for completion tables. Length must match the associated argparse
     # argument's table_header. This is stored internally as a tuple.
     table_row: Sequence[Any] = field(default_factory=tuple)
+
+    # Plain text versions of display fields (stripped of ANSI) for sorting/filtering.
+    # These are set in __post_init__().
+    display_plain: str = field(init=False)
+    display_meta_plain: str = field(init=False)
 
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
@@ -82,6 +91,11 @@ class CompletionItem:
         # Ensure display is never blank.
         if not self.display:
             object.__setattr__(self, "display", self.text)
+
+        # Pre-calculate plain text versions by stripping ANSI sequences.
+        # These are stored as attributes for fast access during sorting/filtering.
+        object.__setattr__(self, "display_plain", su.strip_style(self.display))
+        object.__setattr__(self, "display_meta_plain", su.strip_style(self.display_meta))
 
         # Make sure all table row objects are renderable by a Rich table.
         renderable_data = [obj if is_renderable(obj) else str(obj) for obj in self.table_row]
@@ -140,10 +154,10 @@ class CompletionResultsBase:
         if not self.is_sorted:
             if all_display_numeric(unique_items):
                 # Sort numerically
-                unique_items.sort(key=lambda item: float(item.display))
+                unique_items.sort(key=lambda item: float(item.display_plain))
             else:
                 # Standard string sort
-                unique_items.sort(key=lambda item: utils.DEFAULT_STR_SORT_KEY(item.display))
+                unique_items.sort(key=lambda item: utils.DEFAULT_STR_SORT_KEY(item.display_plain))
 
             object.__setattr__(self, "is_sorted", True)
 
@@ -247,8 +261,8 @@ class Completions(CompletionResultsBase):
 
 
 def all_display_numeric(items: Collection[CompletionItem]) -> bool:
-    """Return True if items is non-empty and every item.display is a numeric string."""
-    return bool(items) and all(NUMERIC_RE.match(item.display) for item in items)
+    """Return True if items is non-empty and every item.display_plain value is a numeric string."""
+    return bool(items) and all(NUMERIC_RE.match(item.display_plain) for item in items)
 
 
 #############################################

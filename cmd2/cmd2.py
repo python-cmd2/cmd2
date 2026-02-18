@@ -4424,7 +4424,7 @@ class Cmd:
             settable_table.add_row(
                 param,
                 str(settable.value),
-                settable.description,
+                Text.from_ansi(settable.description),
             )
             self.last_result[param] = settable.value
 

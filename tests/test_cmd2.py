@@ -465,11 +465,11 @@ def test_run_script_nested_run_scripts(base_app, request) -> None:
     expected = f"""
 {initial_run}
 _relative_run_script precmds.txt
-set allow_style Always
+set always_show_hint True
 help
 shortcuts
 _relative_run_script postcmds.txt
-set allow_style Never"""
+set always_show_hint False"""
     out, _err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
@@ -482,11 +482,11 @@ def test_runcmds_plus_hooks(base_app, request) -> None:
     base_app.runcmds_plus_hooks(['run_script ' + prefilepath, 'help', 'shortcuts', 'run_script ' + postfilepath])
     expected = f"""
 run_script {prefilepath}
-set allow_style Always
+set always_show_hint True
 help
 shortcuts
 run_script {postfilepath}
-set allow_style Never"""
+set always_show_hint False"""
 
     out, _err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)

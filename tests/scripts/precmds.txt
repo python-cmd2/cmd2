@@ -1,1 +1,1 @@
-set allow_style Always
+set always_show_hint True
