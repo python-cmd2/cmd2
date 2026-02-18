@@ -2,13 +2,12 @@
 
 import json
 import re
-from collections import (
-    OrderedDict,
+from collections import OrderedDict
+from collections.abc import (
+    Callable,
+    Iterable,
 )
-from collections.abc import Callable, Iterable
-from dataclasses import (
-    dataclass,
-)
+from dataclasses import dataclass
 from typing import (
     Any,
     overload,

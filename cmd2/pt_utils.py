@@ -1,7 +1,10 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
 import re
-from collections.abc import Callable, Iterable
+from collections.abc import (
+    Callable,
+    Iterable,
+)
 from typing import (
     TYPE_CHECKING,
     Any,

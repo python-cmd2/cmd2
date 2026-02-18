@@ -14,9 +14,7 @@ from typing import (
     cast,
 )
 
-from .utils import (  # namedtuple_with_defaults,
-    StdSim,
-)
+from .utils import StdSim  # namedtuple_with_defaults,
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2

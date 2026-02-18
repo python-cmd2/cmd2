@@ -1,12 +1,8 @@
 """Classes for the cmd2 lifecycle hooks that you can register multiple callback functions/methods with."""
 
-from dataclasses import (
-    dataclass,
-)
+from dataclasses import dataclass
 
-from .parsing import (
-    Statement,
-)
+from .parsing import Statement
 
 
 @dataclass

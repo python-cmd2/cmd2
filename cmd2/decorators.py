@@ -1,7 +1,10 @@
 """Decorators for ``cmd2`` commands."""
 
 import argparse
-from collections.abc import Callable, Sequence
+from collections.abc import (
+    Callable,
+    Sequence,
+)
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -10,22 +13,14 @@ from typing import (
     Union,
 )
 
-from . import (
-    constants,
-)
-from .argparse_custom import (
-    Cmd2AttributeWrapper,
-)
+from . import constants
+from .argparse_custom import Cmd2AttributeWrapper
 from .command_definition import (
     CommandFunc,
     CommandSet,
 )
-from .exceptions import (
-    Cmd2ArgparseError,
-)
-from .parsing import (
-    Statement,
-)
+from .exceptions import Cmd2ArgparseError
+from .parsing import Statement
 
 if TYPE_CHECKING:  # pragma: no cover
     import cmd2
