@@ -146,7 +146,7 @@ class History(list[HistoryItem]):
     """
 
     # Used in JSON dictionaries
-    _history_version = '1.0.0'
+    _history_version = '4.0.0'
     _history_version_field = 'history_version'
     _history_items_field = 'history_items'
 

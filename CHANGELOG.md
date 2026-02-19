@@ -33,13 +33,20 @@ shell, and the option for a persistent bottom bar that can display realtime stat
     - `CompletionItem.descriptive_data` is now called `CompletionItem.table_row`.
     - `Cmd.default_sort_key` moved to `utils.DEFAULT_STR_SORT_KEY`.
     - Moved completion state data, which previously resided in `Cmd`, into other classes.
-        1. `Cmd.matches_sorted` -> `Completions.is_sorted` and `Choices.is_sorted`
-        1. `Cmd.completion_hint` -> `Completions.completion_hint`
-        1. `Cmd.formatted_completions` -> `Completions.completion_table`
-        1. `Cmd.matches_delimited` -> `Completions.is_delimited`
-        1. `Cmd.allow_appended_space/allow_closing_quote` -> `Completions.allow_finalization`
+        - `Cmd.matches_sorted` -> `Completions.is_sorted` and `Choices.is_sorted`
+        - `Cmd.completion_hint` -> `Completions.completion_hint`
+        - `Cmd.formatted_completions` -> `Completions.completion_table`
+        - `Cmd.matches_delimited` -> `Completions.is_delimited`
+        - `Cmd.allow_appended_space/allow_closing_quote` -> `Completions.allow_finalization`
     - Removed `flag_based_complete` and `index_based_complete` functions since their functionality
       is already provided in arpgarse-based completion.
+    - Changed `Statement.multiline_command` from a string to a bool.
+    - Made `Statement.arg_list` a property which generates the list on-demand.
+    - Renamed `Statement.output` to `Statement.redirector`.
+    - Renamed `Statement.output_to` to `Statement.redirect_to`.
+    - Removed `Statement.pipe_to` since it can be handled by `Statement.redirector` and
+      `Statement.redirect_to`.
+    - Changed `StatementParser.parse_command_only()` to return a `PartialStatement` object.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
