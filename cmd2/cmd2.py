@@ -2921,20 +2921,14 @@ class Cmd:
             else:
                 break
 
-        # This will be true when a macro was used
+        # If a macro was expanded, the 'statement' now contains the expanded text.
+        # We need to swap the 'raw' attribute back to the string the user typed
+        # so history shows the original line.
         if orig_line != statement.raw:
-            # Build a Statement that contains the resolved macro line
-            # but the originally typed line for its raw member.
-            statement = Statement(
-                statement.args,
-                raw=orig_line,
-                command=statement.command,
-                multiline_command=statement.multiline_command,
-                terminator=statement.terminator,
-                suffix=statement.suffix,
-                redirector=statement.redirector,
-                redirect_to=statement.redirect_to,
-            )
+            statement_dict = statement.to_dict()
+            statement_dict["raw"] = orig_line
+            statement = Statement.from_dict(statement_dict)
+
         return statement
 
     def _resolve_macro(self, statement: Statement) -> str | None:
