@@ -41,10 +41,7 @@ import sys
 import tempfile
 import threading
 from code import InteractiveConsole
-from collections import (
-    OrderedDict,
-    namedtuple,
-)
+from collections import namedtuple
 from collections.abc import (
     Callable,
     Iterable,
@@ -4961,7 +4958,7 @@ class Cmd:
             self.last_result = history
         return None
 
-    def _get_history(self, args: argparse.Namespace) -> 'OrderedDict[int, HistoryItem]':
+    def _get_history(self, args: argparse.Namespace) -> dict[int, HistoryItem]:
         """If an argument was supplied, then retrieve partial contents of the history; otherwise retrieve entire history.
 
         This function returns a dictionary with history items keyed by their 1-based index in ascending order.
@@ -4969,7 +4966,7 @@ class Cmd:
         if args.arg:
             try:
                 int_arg = int(args.arg)
-                return OrderedDict({int_arg: self.history.get(int_arg)})
+                return {int_arg: self.history.get(int_arg)}
             except ValueError:
                 pass
 
