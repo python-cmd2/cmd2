@@ -595,7 +595,7 @@ class Cmd:
             if os.path.exists(startup_script):
                 script_cmd = f"run_script {su.quote(startup_script)}"
                 if silence_startup_script:
-                    script_cmd += f" {constants.REDIRECTION_OUTPUT} {os.devnull}"
+                    script_cmd += f" {constants.REDIRECTION_OVERWRITE} {os.devnull}"
                 self._startup_commands.append(script_cmd)
 
         # Transcript files to run instead of interactive command loop
@@ -2140,7 +2140,7 @@ class Cmd:
 
                     if prior_token == constants.REDIRECTION_PIPE:
                         do_shell_completion = True
-                    elif in_pipe or prior_token in (constants.REDIRECTION_OUTPUT, constants.REDIRECTION_APPEND):
+                    elif in_pipe or prior_token in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
                         do_path_completion = True
 
                 prior_token = cur_token
@@ -2190,14 +2190,14 @@ class Cmd:
         # Parse the command line to get the command token.
         command = ''
         if custom_settings is None:
-            statement = self.statement_parser.parse_command_only(line)
-            command = statement.command
+            partial_statement = self.statement_parser.parse_command_only(line)
+            command = partial_statement.command
 
             # Malformed command line (e.g. quoted command token)
             if not command:
                 return Completions()
 
-            expanded_line = statement.command_and_args
+            expanded_line = partial_statement.command_and_args
 
             if not expanded_line[-1:].isspace():
                 # Unquoted trailing whitespace gets stripped by parse_command_only().
@@ -2642,8 +2642,8 @@ class Cmd:
         :param line: line read by prompt-toolkit
         :return: tuple containing (command, args, line)
         """
-        statement = self.statement_parser.parse_command_only(line)
-        return statement.command, statement.args, statement.command_and_args
+        partial_statement = self.statement_parser.parse_command_only(line)
+        return partial_statement.command, partial_statement.args, partial_statement.command_and_args
 
     def onecmd_plus_hooks(
         self,
@@ -2853,8 +2853,8 @@ class Cmd:
             except Cmd2ShlexError:
                 # we have an unclosed quotation mark, let's parse only the command
                 # and see if it's a multiline
-                statement = self.statement_parser.parse_command_only(line)
-                if not statement.multiline_command:
+                partial_statement = self.statement_parser.parse_command_only(line)
+                if not partial_statement.multiline_command:
                     # not a multiline command, so raise the exception
                     raise
 
@@ -2929,13 +2929,11 @@ class Cmd:
                 statement.args,
                 raw=orig_line,
                 command=statement.command,
-                arg_list=statement.arg_list,
                 multiline_command=statement.multiline_command,
                 terminator=statement.terminator,
                 suffix=statement.suffix,
-                pipe_to=statement.pipe_to,
-                output=statement.output,
-                output_to=statement.output_to,
+                redirector=statement.redirector,
+                redirect_to=statement.redirect_to,
             )
         return statement
 
@@ -3003,7 +3001,7 @@ class Cmd:
             # Don't return since we set some state variables at the end of the function
             pass
 
-        elif statement.pipe_to:
+        elif statement.redirector == constants.REDIRECTION_PIPE:
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
@@ -3027,7 +3025,7 @@ class Cmd:
 
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
             proc = subprocess.Popen(  # noqa: S602
-                statement.pipe_to,
+                statement.redirect_to,
                 stdin=subproc_stdin,
                 stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
                 stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
@@ -3054,14 +3052,14 @@ class Cmd:
             if stdouts_match:
                 sys.stdout = self.stdout
 
-        elif statement.output:
-            if statement.output_to:
+        elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
+            if statement.redirect_to:
                 # redirecting to a file
                 # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
-                mode = 'a' if statement.output == constants.REDIRECTION_APPEND else 'w'
+                mode = 'a' if statement.redirector == constants.REDIRECTION_APPEND else 'w'
                 try:
                     # Use line buffering
-                    new_stdout = cast(TextIO, open(su.strip_quotes(statement.output_to), mode=mode, buffering=1))  # noqa: SIM115
+                    new_stdout = cast(TextIO, open(su.strip_quotes(statement.redirect_to), mode=mode, buffering=1))  # noqa: SIM115
                 except OSError as ex:
                     raise RedirectionError('Failed to redirect output') from ex
 
@@ -3092,7 +3090,7 @@ class Cmd:
                 if stdouts_match:
                     sys.stdout = self.stdout
 
-                if statement.output == constants.REDIRECTION_APPEND:
+                if statement.redirector == constants.REDIRECTION_APPEND:
                     self.stdout.write(current_paste_buffer)
                     self.stdout.flush()
 
@@ -3110,7 +3108,10 @@ class Cmd:
         """
         if saved_redir_state.redirecting:
             # If we redirected output to the clipboard
-            if statement.output and not statement.output_to:
+            if (
+                statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                and not statement.redirect_to
+            ):
                 self.stdout.seek(0)
                 write_to_paste_buffer(self.stdout.read())
 

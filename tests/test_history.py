@@ -77,20 +77,18 @@ def hist():
 # Represents the hist fixture's JSON
 hist_json = (
     '{\n'
-    '  "history_version": "1.0.0",\n'
+    '  "history_version": "4.0.0",\n'
     '  "history_items": [\n'
     '    {\n'
     '      "statement": {\n'
     '        "args": "",\n'
     '        "raw": "first",\n'
     '        "command": "",\n'
-    '        "arg_list": [],\n'
     '        "multiline_command": false,\n'
     '        "terminator": "",\n'
     '        "suffix": "",\n'
-    '        "pipe_to": "",\n'
-    '        "output": "",\n'
-    '        "output_to": ""\n'
+    '        "redirector": "",\n'
+    '        "redirect_to": ""\n'
     '      }\n'
     '    },\n'
     '    {\n'
@@ -98,13 +96,11 @@ hist_json = (
     '        "args": "",\n'
     '        "raw": "second",\n'
     '        "command": "",\n'
-    '        "arg_list": [],\n'
     '        "multiline_command": false,\n'
     '        "terminator": "",\n'
     '        "suffix": "",\n'
-    '        "pipe_to": "",\n'
-    '        "output": "",\n'
-    '        "output_to": ""\n'
+    '        "redirector": "",\n'
+    '        "redirect_to": ""\n'
     '      }\n'
     '    },\n'
     '    {\n'
@@ -112,13 +108,11 @@ hist_json = (
     '        "args": "",\n'
     '        "raw": "third",\n'
     '        "command": "",\n'
-    '        "arg_list": [],\n'
     '        "multiline_command": false,\n'
     '        "terminator": "",\n'
     '        "suffix": "",\n'
-    '        "pipe_to": "",\n'
-    '        "output": "",\n'
-    '        "output_to": ""\n'
+    '        "redirector": "",\n'
+    '        "redirect_to": ""\n'
     '      }\n'
     '    },\n'
     '    {\n'
@@ -126,13 +120,11 @@ hist_json = (
     '        "args": "",\n'
     '        "raw": "fourth",\n'
     '        "command": "",\n'
-    '        "arg_list": [],\n'
     '        "multiline_command": false,\n'
     '        "terminator": "",\n'
     '        "suffix": "",\n'
-    '        "pipe_to": "",\n'
-    '        "output": "",\n'
-    '        "output_to": ""\n'
+    '        "redirector": "",\n'
+    '        "redirect_to": ""\n'
     '      }\n'
     '    }\n'
     '  ]\n'
@@ -365,7 +357,7 @@ def test_history_from_json(hist) -> None:
     invalid_ver_json = hist.to_json()
     History._history_version = backed_up_ver
 
-    expected_err = "Unsupported history file version: BAD_VERSION. This application uses version 1.0.0."
+    expected_err = f"Unsupported history file version: BAD_VERSION. This application uses version {History._history_version}."
     with pytest.raises(ValueError, match=expected_err):
         hist.from_json(invalid_ver_json)
 
@@ -386,7 +378,6 @@ def histitem():
         'history',
         raw='help history',
         command='help',
-        arg_list=['history'],
     )
     return HistoryItem(statement)
 
@@ -487,7 +478,6 @@ def test_history_item_instantiate() -> None:
         'history',
         raw='help history',
         command='help',
-        arg_list=['history'],
     )
     with pytest.raises(TypeError):
         _ = HistoryItem()
