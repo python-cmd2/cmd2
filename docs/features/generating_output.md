@@ -121,7 +121,6 @@ following sections:
 - [cmd2.colors][]
 - [cmd2.rich_utils][]
 - [cmd2.string_utils][]
-- [cmd2.terminal_utils][]
 
 The [color.py](https://github.com/python-cmd2/cmd2/blob/main/examples/color.py) example demonstrates
 all colors available to your `cmd2` application.

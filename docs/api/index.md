@@ -18,6 +18,7 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.colors](./colors.md) - StrEnum of all color names supported by the Rich library
 - [cmd2.command_definition](./command_definition.md) - supports the definition of commands in
   separate classes to be composed into cmd2.Cmd
+- [cmd2.completion](./completion.md) - classes and functions related to command-line completion
 - [cmd2.constants](./constants.md) - constants used in `cmd2`
 - [cmd2.decorators](./decorators.md) - decorators for `cmd2` commands
 - [cmd2.exceptions](./exceptions.md) - custom `cmd2` exceptions
@@ -30,6 +31,5 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.rich_utils](./rich_utils.md) - common utilities to support Rich in cmd2 applications
 - [cmd2.string_utils](./string_utils.md) - string utility functions
 - [cmd2.styles](./styles.md) - cmd2-specific Rich styles and a StrEnum of their corresponding names
-- [cmd2.terminal_utils](./terminal_utils.md) - support for terminal control escape sequences
 - [cmd2.transcript](./transcript.md) - functions and classes for running and validating transcripts
 - [cmd2.utils](./utils.md) - various utility classes and functions

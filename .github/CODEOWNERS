@@ -31,7 +31,8 @@ cmd2/argparse_*.py         @kmvanbrunt @anselor
 cmd2/clipboard.py          @tleonhardt
 cmd2/cmd2.py               @tleonhardt @kmvanbrunt
 cmd2/colors.py             @tleonhardt @kmvanbrunt
-cmd2/command_definition.py @anselor
+cmd2/command_definition.py @anselor @kmvanbrunt
+cmd2/completion.py         @kmvanbrunt
 cmd2/constants.py          @tleonhardt @kmvanbrunt
 cmd2/decorators.py         @kmvanbrunt @anselor
 cmd2/exceptions.py         @kmvanbrunt @anselor
@@ -43,7 +44,6 @@ cmd2/py_bridge.py          @kmvanbrunt
 cmd2/rich_utils.py         @kmvanbrunt
 cmd2/string_utils.py       @kmvanbrunt
 cmd2/styles.py             @tleonhardt @kmvanbrunt
-cmd2/terminal_utils.py     @kmvanbrunt
 cmd2/transcript.py         @tleonhardt
 cmd2/utils.py              @tleonhardt @kmvanbrunt
 
