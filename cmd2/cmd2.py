@@ -2948,7 +2948,7 @@ class Cmd:
         # Resolve the arguments in reverse and read their values from statement.argv since those
         # are unquoted. Macro args should have been quoted when the macro was created.
         resolved = macro.value
-        reverse_arg_list = sorted(macro.arg_list, key=lambda ma: ma.start_index, reverse=True)
+        reverse_arg_list = sorted(macro.args, key=lambda ma: ma.start_index, reverse=True)
 
         for macro_arg in reverse_arg_list:
             if macro_arg.is_escaped:
@@ -3740,7 +3740,7 @@ class Cmd:
             value += ' ' + ' '.join(args.command_args)
 
         # Find all normal arguments
-        arg_list = []
+        macro_args = []
         normal_matches = re.finditer(MacroArg.macro_normal_arg_pattern, value)
         max_arg_num = 0
         arg_nums = set()
@@ -3759,7 +3759,7 @@ class Cmd:
                 arg_nums.add(cur_num)
                 max_arg_num = max(max_arg_num, cur_num)
 
-                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=False))
+                macro_args.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=False))
         except StopIteration:
             pass
 
@@ -3778,7 +3778,7 @@ class Cmd:
                 # Get the number string between the braces
                 cur_num_str = re.findall(MacroArg.digit_pattern, cur_match.group())[0]
 
-                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=True))
+                macro_args.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=True))
         except StopIteration:
             pass
 
@@ -3786,7 +3786,7 @@ class Cmd:
         result = "overwritten" if args.name in self.macros else "created"
         self.poutput(f"Macro '{args.name}' {result}")
 
-        self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
+        self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, args=macro_args)
         self.last_result = True
 
     # macro -> delete

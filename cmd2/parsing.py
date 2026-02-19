@@ -3,13 +3,19 @@
 import re
 import shlex
 import sys
-from collections.abc import Iterable
+from collections.abc import (
+    Iterable,
+    Sequence,
+)
 from dataclasses import (
     asdict,
     dataclass,
     field,
 )
-from typing import Any
+from typing import (
+    Any,
+    ClassVar,
+)
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -37,13 +43,9 @@ def shlex_split(str_to_split: str) -> list[str]:
     return shlex.split(str_to_split, comments=False, posix=False)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class MacroArg:
-    """Information used to replace or unescape arguments in a macro value when the macro is resolved.
-
-    Normal argument syntax:    {5}
-    Escaped argument syntax:  {{5}}.
-    """
+    """Information used to resolve or unescape macro arguments."""
 
     # The starting index of this argument in the macro value
     start_index: int
@@ -56,21 +58,22 @@ class MacroArg:
     # Tells if this argument is escaped and therefore needs to be unescaped
     is_escaped: bool
 
-    # Pattern used to find normal argument
-    # Digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
-    # Match strings like: {5}, {{{{{4}, {2}}}}}
-    macro_normal_arg_pattern = re.compile(r'(?<!{){\d+}|{\d+}(?!})')
+    # Matches normal args like {5}
+    # Uses lookarounds to ensure exactly one brace.
+    # (?<!{){ -> Match '{' not preceded by '{'
+    # \d+     -> Match digits
+    # }(?!})  -> Match '}' not followed by '}'
+    macro_normal_arg_pattern: ClassVar[re.Pattern[str]] = re.compile(r'(?<!{){\d+}|{\d+}(?!})')
 
-    # Pattern used to find escaped arguments
-    # Digits surrounded by 2 or more braces on both sides
-    # Match strings like: {{5}}, {{{{{4}}, {{2}}}}}
-    macro_escaped_arg_pattern = re.compile(r'{{2}\d+}{2}')
+    # Matches escaped args like {{5}}
+    # Specifically looking for exactly two braces on each side.
+    macro_escaped_arg_pattern: ClassVar[re.Pattern[str]] = re.compile(r'{{2}\d+}{2}')
 
     # Finds a string of digits
-    digit_pattern = re.compile(r'\d+')
+    digit_pattern: ClassVar[re.Pattern[str]] = re.compile(r'\d+')
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Macro:
     """Defines a cmd2 macro."""
 
@@ -83,8 +86,15 @@ class Macro:
     # The minimum number of args the user has to pass to this macro
     minimum_arg_count: int
 
-    # Used to fill in argument placeholders in the macro
-    arg_list: list[MacroArg] = field(default_factory=list)
+    # Metadata for argument placeholders and escaped sequences found in 'value'.
+    # This is stored internally as a tuple.
+    args: Sequence[MacroArg] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        """Finalize the object after initialization."""
+        # Convert args to an immutable tuple.
+        if not isinstance(self.args, tuple):
+            object.__setattr__(self, 'args', tuple(self.args))
 
 
 @dataclass(frozen=True)
