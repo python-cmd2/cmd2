@@ -40,7 +40,12 @@ shell, and the option for a persistent bottom bar that can display realtime stat
         - `Cmd.allow_appended_space/allow_closing_quote` -> `Completions.allow_finalization`
     - Removed `flag_based_complete` and `index_based_complete` functions since their functionality
       is already provided in arpgarse-based completion.
-    - Changed `Statement.multiline_command` field from a string to a bool.
+    - Changed `Statement.multiline_command` from a string to a bool.
+    - Made `Statement.arg_list` a property which generates the list on-demand.
+    - Renamed `Statement.output` to `Statement.redirector`.
+    - Renamed `Statement.output_to` to `Statement.redirect_to`.
+    - Removed `Statement.pipe_to` since it can be handled by `Statement.redirector` and
+      `Statement.redirect_to`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
