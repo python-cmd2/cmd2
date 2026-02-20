@@ -63,7 +63,8 @@ The major things users should be aware of when upgrading to 3.x are detailed in 
 #### ansi
 
 The functionality within the `cmd2.ansi` module has either been removed or changed to be based on
-`rich` and moved to one of the new modules: [cmd2.string_utils][] or [cmd2.styles][].
+`rich` and moved to one of the new modules: [cmd2.string_utils][], [cmd2.styles][], or
+[cmd2.terminal_utils][].
 
 To ease the migration path from `cmd2` 2.x to 3.x, we have created the `cmd2-ansi` module which is a
 backport of the `cmd2.ansi` module present in `cmd2` 2.7.0 in a standalone fashion. Relevant links:
@@ -145,6 +146,18 @@ Various string utility functions have been moved from the `cmd2.ansi` module to 
 This includes functions for styling, aligning, and quoting/un-quoting text. See the
 [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
 example for a demonstration of how to use the common [cmd2.string_utils.stylize][] function.
+
+#### terminal_utils
+
+Support for terminal control escape sequences for things like setting the window title and
+asynchronous alerts has been moved from `cmd2.ansi` to the new [cmd2.terminal_utils][] module.
+
+This isn't really intended to be used by end users, but is used by higher-level functionality that
+is intended to be used by end users such as [cmd2.Cmd.set_window_title][] and
+[cmd2.Cmd.async_alert][].
+
+See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
+for an example of how to use this functionality in a `cmd2` application.
 
 ### Argparse HelpFormatter classes
 
