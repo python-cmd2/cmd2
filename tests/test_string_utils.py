@@ -150,7 +150,7 @@ def test_preserve_non_style_csi() -> None:
 
 
 def test_preserve_private_modes() -> None:
-    # Test that DEC private modes (containing '?') are not stripped
+    # Test that DEC Private Modes (containing '?') are not stripped
     # Hide cursor (\x1b[?25l) and Show cursor (\x1b[?25h)
     hide_cursor = "\x1b[?25l"
     show_cursor = "\x1b[?25h"
