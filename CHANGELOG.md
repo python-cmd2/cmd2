@@ -73,7 +73,7 @@ prompt is displayed.
 
 - Bug Fixes
     - Updated `rich_utils.ANSI_STYLE_SEQUENCE_RE` to only match ANSI SGR (Select Graphic Rendition)
-      sequences for text styling.
+      sequences for text styling. It previously also matched DEC Private Mode sequences.
 
 ## 3.2.1 (February 21, 2026)
 
