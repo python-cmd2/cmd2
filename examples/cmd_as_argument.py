@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 """A sample application for cmd2.
 
-This example is very similar to transcript_example.py, but had additional
-code in main() that shows how to accept a command from
+This example has additional code in main() that shows how to accept a command from
 the command line at invocation:
 
 $ python cmd_as_argument.py speak -p hello there
-
-
 """
 
 import argparse

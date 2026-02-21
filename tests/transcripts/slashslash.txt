@@ -1,4 +1,0 @@
-# ensure consecutive slashes are parsed correctly
-
-(Cmd) say //
-\/\/

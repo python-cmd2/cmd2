@@ -3538,12 +3538,6 @@ def test_startup_script_with_odd_file_names(startup_script) -> None:
     os.path.exists = saved_exists
 
 
-def test_transcripts_at_init() -> None:
-    transcript_files = ['foo', 'bar']
-    app = cmd2.Cmd(allow_cli_args=False, transcript_files=transcript_files)
-    assert app._transcript_files == transcript_files
-
-
 def test_command_parser_retrieval(outsim_app: cmd2.Cmd) -> None:
     # Pass something that isn't a method
     not_a_method = "just a string"
