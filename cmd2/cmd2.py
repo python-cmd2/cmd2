@@ -5744,6 +5744,8 @@ class Cmd:
             update_terminal = False
 
             if alert_msg:
+                if self.allow_style == ru.AllowStyle.NEVER:
+                    alert_msg = su.strip_style(alert_msg)
                 alert_msg += '\n'
                 update_terminal = True
 
