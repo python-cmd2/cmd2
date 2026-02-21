@@ -3,8 +3,8 @@
 - Bug Fixes
     - The `async_alert` and `async_prompt_update` methods of `cmd2.Cmd` now respect the current
       value of the `allow_style` settable
-        - If `allow_style` is `NEVER`, all ANSI escape codes will be stripped to ensure plain text
-          output
+        - If `allow_style` is `NEVER`, all style-related ANSI escape codes will be stripped to
+          ensure plain text output
 
 ## 3.2.0 (February 5, 2026)
 
