@@ -1,3 +1,9 @@
+## 3.2.2 (February 21, 2026)
+
+- Bug Fixes
+    - Updated `rich_utils.ANSI_STYLE_SEQUENCE_RE` to only match ANSI SGR (Select Graphic Rendition)
+      sequences for text styling.
+
 ## 3.2.1 (February 21, 2026)
 
 - Bug Fixes

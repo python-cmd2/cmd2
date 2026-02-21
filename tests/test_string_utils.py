@@ -126,11 +126,44 @@ def test_stylize() -> None:
     assert restyled_string == "\x1b[1;4;9;32;44mHello, world!\x1b[0m"
 
 
-def test_strip_style() -> None:
-    base_str = HELLO_WORLD
-    styled_str = su.stylize(base_str, style=Color.GREEN)
-    assert base_str != styled_str
-    assert base_str == su.strip_style(styled_str)
+def test_strip_basic_styles() -> None:
+    # Test bold, colors, and resets
+    assert su.strip_style("\x1b[1mBold\x1b[0m") == "Bold"
+    assert su.strip_style("\x1b[31mRed\x1b[0m") == "Red"
+    assert su.strip_style("\x1b[4;32mUnderline Green\x1b[0m") == "Underline Green"
+
+
+def test_strip_complex_colors() -> None:
+    # Test 256-color and RGB (TrueColor) sequences
+    # These use semicolons as separators and end in 'm'
+    assert su.strip_style("\x1b[38;5;208mOrange\x1b[0m") == "Orange"
+    assert su.strip_style("\x1b[38;2;255;87;51mCustom RGB\x1b[0m") == "Custom RGB"
+
+
+def test_preserve_non_style_csi() -> None:
+    # Test that cursor movements and other CSI codes are not stripped
+    # Cursor Up (\x1b[A) and Cursor Position (\x1b[10;5H)
+    cursor_up = "\x1b[A"
+    cursor_pos = "\x1b[10;5H"
+    assert su.strip_style(cursor_up) == cursor_up
+    assert su.strip_style(cursor_pos) == cursor_pos
+
+
+def test_preserve_private_modes() -> None:
+    # Test that DEC private modes (containing '?') are not stripped
+    # Hide cursor (\x1b[?25l) and Show cursor (\x1b[?25h)
+    hide_cursor = "\x1b[?25l"
+    show_cursor = "\x1b[?25h"
+    assert su.strip_style(hide_cursor) == hide_cursor
+    assert su.strip_style(show_cursor) == show_cursor
+
+
+def test_mixed_content() -> None:
+    # Test a string that has both style and control sequences
+    # Red text + Hide Cursor
+    mixed = "\x1b[31mRed Text\x1b[0m\x1b[?25l"
+    # Only the red style should be removed
+    assert su.strip_style(mixed) == "Red Text\x1b[?25l"
 
 
 def test_str_width() -> None:
