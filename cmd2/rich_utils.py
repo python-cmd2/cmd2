@@ -30,8 +30,11 @@ from rich_argparse import RichHelpFormatter
 
 from .styles import DEFAULT_CMD2_STYLES
 
-# A compiled regular expression to detect ANSI style sequences.
-ANSI_STYLE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;?]*m")
+# Matches ANSI SGR (Select Graphic Rendition) sequences for text styling.
+# \x1b[   - the CSI (Control Sequence Introducer)
+# [0-9;]* - zero or more digits or semicolons (parameters for the style)
+# m       - the SGR final character
+ANSI_STYLE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 class AllowStyle(Enum):

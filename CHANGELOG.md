@@ -76,6 +76,12 @@ prompt is displayed.
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
 
+## 3.2.2 (February 21, 2026)
+
+- Bug Fixes
+    - Updated `rich_utils.ANSI_STYLE_SEQUENCE_RE` to only match ANSI SGR (Select Graphic Rendition)
+      sequences for text styling. It previously also matched DEC Private Mode sequences.
+
 ## 3.2.1 (February 21, 2026)
 
 - Bug Fixes
