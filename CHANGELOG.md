@@ -11,7 +11,8 @@ frustrating developer and user experience due to small inconsistencies in these 
 libraries. Now we have consistent cross-platform support for tab-completion, user terminal input,
 and history. Additionally, this opens up some cool advanced features such as support for syntax
 highlighting of user input while typing, auto-suggestions similar to those provided by the fish
-shell, and the option for a persistent bottom bar that can display realtime status updates.
+shell, and the option for a persistent bottom bar that can display realtime status updates while the
+prompt is displayed.
 
 ### Details
 
