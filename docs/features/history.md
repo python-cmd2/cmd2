@@ -167,20 +167,6 @@ text file:
 
     (Cmd) history :5 -o history.txt
 
-The `history` command can also save both the commands and their output to a text file. This is
-called a transcript. See [Transcripts](./transcripts.md) for more information on how transcripts
-work, and what you can use them for. To create a transcript use the `-t` or `--transcription`
-option:
-
-    (Cmd) history 2:3 --transcript transcript.txt
-
-The `--transcript` option implies `--run`: the commands must be re-run in order to capture their
-output to the transcript file.
-
-!!! warning
-
-    Unlike the `-o`/`--output-file` option, the `-t`/`--transcript` option will actually run the selected history commands again. This is necessary for creating a transcript file since the history saves the commands themselves but does not save their output. Please note that a side-effect of this is that the commands will appear again at the end of the history.
-
 The last action the history command can perform is to clear the command history using `-c` or
 `--clear`:
 
@@ -189,11 +175,11 @@ The last action the history command can perform is to clear the command history 
 In addition to these five actions, the `history` command also has some options to control how the
 output is formatted. With no arguments, the `history` command displays the command number before
 each command. This is great when displaying history to the screen because it gives you an easy
-reference to identify previously entered commands. However, when creating a script or a transcript,
-the command numbers would prevent the script from loading properly. The `-s` or `--script` option
-instructs the `history` command to suppress the line numbers. This option is automatically set by
-the `--output-file`, `--transcript`, and `--edit` options. If you want to output the history
-commands with line numbers to a file, you can do it with output redirection:
+reference to identify previously entered commands. However, when creating a script, the command
+numbers would prevent the script from loading properly. The `-s` or `--script` option instructs the
+`history` command to suppress the line numbers. This option is automatically set by the
+`--output-file` and `--edit` options. If you want to output the history commands with line numbers
+to a file, you can do it with output redirection:
 
     (Cmd) history 1:4 > history.txt
 
