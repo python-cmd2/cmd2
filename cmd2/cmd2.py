@@ -45,6 +45,8 @@ from collections.abc import (
     Callable,
     Iterable,
     Mapping,
+    MutableSequence,
+    Sequence,
 )
 from types import FrameType
 from typing import (
@@ -299,14 +301,14 @@ class Cmd:
         include_ipy: bool = False,
         include_py: bool = False,
         intro: RenderableType = '',
-        multiline_commands: list[str] | None = None,
+        multiline_commands: Iterable[str] | None = None,
         persistent_history_file: str = '',
         persistent_history_length: int = 1000,
-        shortcuts: dict[str, str] | None = None,
+        shortcuts: Mapping[str, str] | None = None,
         silence_startup_script: bool = False,
         startup_script: str = '',
         suggest_similar_command: bool = False,
-        terminators: list[str] | None = None,
+        terminators: Iterable[str] | None = None,
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
@@ -337,24 +339,24 @@ class Cmd:
         :param include_ipy: should the "ipy" command be included for an embedded IPython shell
         :param include_py: should the "py" command be included for an embedded Python shell
         :param intro: introduction to display at startup
-        :param multiline_commands: list of commands allowed to accept multi-line input
+        :param multiline_commands: Iterable of commands allowed to accept multi-line input
         :param persistent_history_file: file path to load a persistent cmd2 command history from
         :param persistent_history_length: max number of history items to write
                                           to the persistent history file
-        :param shortcuts: dictionary containing shortcuts for commands. If not supplied,
+        :param shortcuts: Mapping containing shortcuts for commands. If not supplied,
                           then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
-                          any shortcuts, pass an empty dictionary.
+                          any shortcuts, pass None and an empty dictionary will be created.
         :param silence_startup_script: if ``True``, then the startup script's output will be
                                        suppressed. Anything written to stderr will still display.
         :param startup_script: file path to a script to execute at startup
         :param suggest_similar_command: if ``True``, then when a command is not found,
                                         [cmd2.Cmd][] will look for similar commands and suggest them.
-        :param terminators: list of characters that terminate a command. These are mainly
+        :param terminators: Iterable of characters that terminate a command. These are mainly
                             intended for terminating multiline commands, but will also
                             terminate single-line commands. If not supplied, the default
                             is a semicolon. If your app only contains single-line commands
                             and you want terminators to be treated as literals by the parser,
-                            then set this to an empty list.
+                            then set this to None.
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -996,7 +998,9 @@ class Cmd:
                     f"Could not find argparser for command '{command_name}' needed by subcommand: {method}"
                 )
 
-            def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
+            def find_subcommand(
+                action: argparse.ArgumentParser, subcmd_names: MutableSequence[str]
+            ) -> argparse.ArgumentParser:
                 if not subcmd_names:
                     return action
                 cur_subcmd = subcmd_names.pop(0)
@@ -2766,7 +2770,7 @@ class Cmd:
 
     def runcmds_plus_hooks(
         self,
-        cmds: list[HistoryItem] | list[str],
+        cmds: Iterable[HistoryItem] | Iterable[str],
         *,
         add_to_history: bool = True,
         stop_on_keyboard_interrupt: bool = False,
@@ -3169,7 +3173,7 @@ class Cmd:
         self.perror(err_msg, style=None)
         return None
 
-    def completedefault(self, *_ignored: list[str]) -> Completions:
+    def completedefault(self, *_ignored: Sequence[str]) -> Completions:
         """Call to complete an input line when no command-specific complete_*() method is available.
 
         This method is only called for non-argparse-based commands.
@@ -3185,7 +3189,7 @@ class Cmd:
         self,
         prompt: str = '',
         *,
-        history: list[str] | None = None,
+        history: Iterable[str] | None = None,
         completion_mode: utils.CompletionMode = utils.CompletionMode.NONE,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
@@ -3198,7 +3202,7 @@ class Cmd:
         Also supports completion and up-arrow history while input is being entered.
 
         :param prompt: prompt to display to user
-        :param history: optional list of strings to use for up-arrow history. If completion_mode is
+        :param history: optional Iterable of strings to use for up-arrow history. If completion_mode is
                         CompletionMode.COMMANDS and this is None, then cmd2's command list history will
                         be used. The passed in history will not be edited. It is the caller's responsibility
                         to add the returned input to history if desired. Defaults to None.
@@ -3873,7 +3877,7 @@ class Cmd:
         return self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
     def complete_help_subcommands(
-        self, text: str, line: str, begidx: int, endidx: int, arg_tokens: dict[str, list[str]]
+        self, text: str, line: str, begidx: int, endidx: int, arg_tokens: Mapping[str, Sequence[str]]
     ) -> Completions:
         """Completes the subcommands argument of help."""
         # Make sure we have a command whose subcommands we will complete
@@ -4014,13 +4018,13 @@ class Cmd:
                 self.perror(err_msg, style=None)
                 self.last_result = False
 
-    def print_topics(self, header: str, cmds: list[str] | None, cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
+    def print_topics(self, header: str, cmds: Sequence[str] | None, cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
         """Print groups of commands and topics in columns and an optional header.
 
         Override of cmd's print_topics() to use Rich.
 
         :param header: string to print above commands being printed
-        :param cmds: list of topics to print
+        :param cmds: Sequence of topics to print
         :param cmdlen: unused, even by cmd's version
         :param maxcol: max number of display columns to fit into
         """
@@ -4039,7 +4043,7 @@ class Cmd:
         self.columnize(cmds, maxcol)
         self.poutput()
 
-    def _print_documented_command_topics(self, header: str, cmds: list[str], verbose: bool) -> None:
+    def _print_documented_command_topics(self, header: str, cmds: Sequence[str], verbose: bool) -> None:
         """Print topics which are documented commands, switching between verbose or traditional output."""
         import io
 
@@ -4103,14 +4107,14 @@ class Cmd:
         self.poutput(category_grid, soft_wrap=False)
         self.poutput()
 
-    def render_columns(self, str_list: list[str] | None, display_width: int = 80) -> str:
+    def render_columns(self, str_list: Sequence[str] | None, display_width: int = 80) -> str:
         """Render a list of single-line strings as a compact set of columns.
 
         This method correctly handles strings containing ANSI style sequences and
         full-width characters (like those used in CJK languages). Each column is
         only as wide as necessary and columns are separated by two spaces.
 
-        :param str_list: list of single-line strings to display
+        :param str_list: Sequence of single-line strings to display
         :param display_width: max number of display columns to fit into
         :return: a string containing the columnized output
         """
@@ -4162,14 +4166,14 @@ class Cmd:
 
         return "\n".join(rows)
 
-    def columnize(self, str_list: list[str] | None, display_width: int = 80) -> None:
+    def columnize(self, str_list: Sequence[str] | None, display_width: int = 80) -> None:
         """Display a list of single-line strings as a compact set of columns.
 
         Override of cmd's columnize() that uses the render_columns() method.
         The method correctly handles strings with ANSI style sequences and
         full-width characters (like those used in CJK languages).
 
-        :param str_list: list of single-line strings to display
+        :param str_list: Sequence of single-line strings to display
         :param display_width: max number of display columns to fit into
         """
         columnized_strs = self.render_columns(str_list, display_width)
@@ -4220,7 +4224,7 @@ class Cmd:
         self.last_result = True
         return True
 
-    def select(self, opts: str | list[str] | list[tuple[Any, str | None]], prompt: str = 'Your choice? ') -> Any:
+    def select(self, opts: str | Iterable[str] | Iterable[tuple[Any, str | None]], prompt: str = 'Your choice? ') -> Any:
         """Present a numbered menu to the user.
 
         Modeled after the bash shell's SELECT.  Returns the item chosen.
@@ -4233,7 +4237,7 @@ class Cmd:
                                 that the return value can differ from
                                 the text advertised to the user
         """
-        local_opts: list[str] | list[tuple[Any, str | None]]
+        local_opts: Iterable[str] | Iterable[tuple[Any, str | None]]
         if isinstance(opts, str):
             local_opts = cast(list[tuple[Any, str | None]], list(zip(opts.split(), opts.split(), strict=False)))
         else:
@@ -4295,7 +4299,7 @@ class Cmd:
         return base_set_parser
 
     def complete_set_value(
-        self, text: str, line: str, begidx: int, endidx: int, arg_tokens: dict[str, list[str]]
+        self, text: str, line: str, begidx: int, endidx: int, arg_tokens: Mapping[str, Sequence[str]]
     ) -> Completions:
         """Completes the value argument of set."""
         param = arg_tokens['param'][0]

@@ -14,6 +14,7 @@ import threading
 from collections.abc import (
     Callable,
     Iterable,
+    MutableSequence,
 )
 from difflib import SequenceMatcher
 from enum import Enum
@@ -247,7 +248,7 @@ def natural_sort(list_to_sort: Iterable[str]) -> list[str]:
     return sorted(list_to_sort, key=natural_keys)
 
 
-def quote_specific_tokens(tokens: list[str], tokens_to_quote: list[str]) -> None:
+def quote_specific_tokens(tokens: MutableSequence[str], tokens_to_quote: Iterable[str]) -> None:
     """Quote specific tokens in a list.
 
     :param tokens: token list being edited
@@ -258,7 +259,7 @@ def quote_specific_tokens(tokens: list[str], tokens_to_quote: list[str]) -> None
             tokens[i] = su.quote(token)
 
 
-def unquote_specific_tokens(tokens: list[str], tokens_to_unquote: list[str]) -> None:
+def unquote_specific_tokens(tokens: MutableSequence[str], tokens_to_unquote: Iterable[str]) -> None:
     """Unquote specific tokens in a list.
 
     :param tokens: token list being edited
@@ -291,7 +292,7 @@ def expand_user(token: str) -> str:
     return token
 
 
-def expand_user_in_tokens(tokens: list[str]) -> None:
+def expand_user_in_tokens(tokens: MutableSequence[str]) -> None:
     """Call expand_user() on all tokens in a list of strings.
 
     :param tokens: tokens to expand.
@@ -344,12 +345,12 @@ def files_from_glob_pattern(pattern: str, access: int = os.F_OK) -> list[str]:
     return [f for f in glob.glob(pattern) if os.path.isfile(f) and os.access(f, access)]
 
 
-def files_from_glob_patterns(patterns: list[str], access: int = os.F_OK) -> list[str]:
+def files_from_glob_patterns(patterns: Iterable[str], access: int = os.F_OK) -> list[str]:
     """Return a list of file paths based on a list of glob patterns.
 
     Only files are returned, not directories, and optionally only files for which the user has a specified access to.
 
-    :param patterns: list of file names and/or glob patterns
+    :param patterns: Iterable of file names and/or glob patterns
     :param access: file access type to verify (os.* where * is F_OK, R_OK, W_OK, or X_OK)
     :return: list of files matching the names and/or glob patterns
     """

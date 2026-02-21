@@ -10,7 +10,11 @@ from collections import (
     defaultdict,
     deque,
 )
-from collections.abc import Sequence
+from collections.abc import (
+    Mapping,
+    MutableSequence,
+    Sequence,
+)
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -164,13 +168,13 @@ class ArgparseCompleter:
         parser: argparse.ArgumentParser,
         cmd2_app: 'Cmd',
         *,
-        parent_tokens: dict[str, list[str]] | None = None,
+        parent_tokens: Mapping[str, MutableSequence[str]] | None = None,
     ) -> None:
         """Create an ArgparseCompleter.
 
         :param parser: ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this ArgparseCompleter
-        :param parent_tokens: optional dictionary mapping parent parsers' arg names to their tokens
+        :param parent_tokens: optional Mapping of parent parsers' arg names to their tokens
                               This is only used by ArgparseCompleter when recursing on subcommand parsers
                               Defaults to None
         """
@@ -216,7 +220,7 @@ class ArgparseCompleter:
         line: str,
         begidx: int,
         endidx: int,
-        tokens: list[str],
+        tokens: Sequence[str],
         *,
         cmd_set: CommandSet | None = None,
     ) -> Completions:
@@ -226,7 +230,7 @@ class ArgparseCompleter:
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param tokens: list of argument tokens being passed to the parser
+        :param tokens: Sequence of argument tokens being passed to the parser
         :param cmd_set: if completing a command, the CommandSet the command's function belongs to, if applicable.
                         Defaults to None.
         :return: a Completions object
@@ -638,7 +642,7 @@ class ArgparseCompleter:
             completion_table=capture.get(),
         )
 
-    def complete_subcommand_help(self, text: str, line: str, begidx: int, endidx: int, tokens: list[str]) -> Completions:
+    def complete_subcommand_help(self, text: str, line: str, begidx: int, endidx: int, tokens: Sequence[str]) -> Completions:
         """Supports cmd2's help command in the completion of subcommand names.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
@@ -664,7 +668,7 @@ class ArgparseCompleter:
                 break
         return Completions()
 
-    def print_help(self, tokens: list[str], file: IO[str] | None = None) -> None:
+    def print_help(self, tokens: Sequence[str], file: IO[str] | None = None) -> None:
         """Supports cmd2's help command in the printing of help text.
 
         :param tokens: arguments passed to help command

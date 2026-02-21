@@ -5,6 +5,7 @@ import shlex
 import sys
 from collections.abc import (
     Iterable,
+    Mapping,
     Sequence,
 )
 from dataclasses import (
@@ -284,8 +285,8 @@ class StatementParser:
         self,
         terminators: Iterable[str] | None = None,
         multiline_commands: Iterable[str] | None = None,
-        aliases: dict[str, str] | None = None,
-        shortcuts: dict[str, str] | None = None,
+        aliases: Mapping[str, str] | None = None,
+        shortcuts: Mapping[str, str] | None = None,
     ) -> None:
         """Initialize an instance of StatementParser.
 
@@ -303,7 +304,7 @@ class StatementParser:
         else:
             self.terminators = tuple(terminators)
         self.multiline_commands: tuple[str, ...] = tuple(multiline_commands) if multiline_commands is not None else ()
-        self.aliases: dict[str, str] = aliases if aliases is not None else {}
+        self.aliases: dict[str, str] = dict(aliases) if aliases is not None else {}
 
         if shortcuts is None:
             shortcuts = constants.DEFAULT_SHORTCUTS
