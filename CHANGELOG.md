@@ -1,4 +1,4 @@
-## 3.2.1 (February TBD, 2026)
+## 3.2.1 (February 21, 2026)
 
 - Bug Fixes
     - The `async_alert` and `async_prompt_update` methods of `cmd2.Cmd` now respect the current
