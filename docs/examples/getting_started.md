@@ -152,7 +152,6 @@ The last thing you'll notice is that we used the `self.poutput()` method to disp
 
 1.  Allows the user to redirect output to a text file or pipe it to a shell process
 1.  Gracefully handles `BrokenPipeError` exceptions for redirected output
-1.  Makes the output show up in a [transcript](../features/transcripts.md)
 1.  Honors the setting to [strip embedded ANSI sequences](../features/settings.md#allow_style)
     (typically used for background and foreground colors)
 

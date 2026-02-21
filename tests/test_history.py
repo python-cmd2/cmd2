@@ -764,7 +764,7 @@ def test_history_clear(mocker, hist_file) -> None:
 
 def test_history_verbose_with_other_options(base_app) -> None:
     # make sure -v shows a usage error if any other options are present
-    options_to_test = ['-r', '-e', '-o file', '-t file', '-c', '-x']
+    options_to_test = ['-r', '-e', '-o file', '-c', '-x']
     for opt in options_to_test:
         out, _err = run_cmd(base_app, 'history -v ' + opt)
         assert '-v cannot be used with any other options' in out
@@ -789,11 +789,11 @@ def test_history_verbose(base_app) -> None:
 
 
 def test_history_script_with_invalid_options(base_app) -> None:
-    # make sure -s shows a usage error if -c, -r, -e, -o, or -t are present
-    options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
+    # make sure -s shows a usage error if -c, -r, -e, or -o are present
+    options_to_test = ['-r', '-e', '-o file', '-c']
     for opt in options_to_test:
         out, _err = run_cmd(base_app, 'history -s ' + opt)
-        assert '-s and -x cannot be used with -c, -r, -e, -o, or -t' in out
+        assert '-s and -x cannot be used with -c, -r, -e, or -o' in out
         assert base_app.last_result is False
 
 
@@ -807,11 +807,11 @@ def test_history_script(base_app) -> None:
 
 
 def test_history_expanded_with_invalid_options(base_app) -> None:
-    # make sure -x shows a usage error if -c, -r, -e, -o, or -t are present
-    options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
+    # make sure -x shows a usage error if -c, -r, -e, or -o are present
+    options_to_test = ['-r', '-e', '-o file', '-c']
     for opt in options_to_test:
         out, _err = run_cmd(base_app, 'history -x ' + opt)
-        assert '-s and -x cannot be used with -c, -r, -e, -o, or -t' in out
+        assert '-s and -x cannot be used with -c, -r, -e, or -o' in out
         assert base_app.last_result is False
 
 

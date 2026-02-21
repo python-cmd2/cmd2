@@ -52,9 +52,6 @@ capabilities, without you having to do anything:
 - [Clipboard Integration](../features/clipboard.md) allows you to save command output to the
   operating system clipboard.
 - A built-in [Timer](../features/misc.md#Timer) can show how long it takes a command to execute
-- A [Transcript](../features/transcripts.md) is a file which contains both the input and output of a
-  successful session of a `cmd2`-based app. The transcript can be played back into the app as a unit
-  test.
 
 ## Next Steps
 

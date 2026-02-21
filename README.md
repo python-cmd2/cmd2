@@ -77,8 +77,6 @@ command line argument parsing and execution of cmd2 scripting.
 - Text file scripting of your application with `run_script` (`@`) and `_relative_run_script` (`@@`)
 - Powerful and flexible built-in Python scripting of your application using the `run_pyscript`
   command
-- Transcripts for use with built-in regression can be automatically generated from `history -t` or
-  `run_script -t`
 
 ## Installation
 

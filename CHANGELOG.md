@@ -11,7 +11,8 @@ frustrating developer and user experience due to small inconsistencies in these 
 libraries. Now we have consistent cross-platform support for tab-completion, user terminal input,
 and history. Additionally, this opens up some cool advanced features such as support for syntax
 highlighting of user input while typing, auto-suggestions similar to those provided by the fish
-shell, and the option for a persistent bottom bar that can display realtime status updates.
+shell, and the option for a persistent bottom bar that can display realtime status updates while the
+prompt is displayed.
 
 ### Details
 
@@ -21,6 +22,13 @@ shell, and the option for a persistent bottom bar that can display realtime stat
       each platform and provided utility functions related to `readline`
     - Added a dependency on `prompt-toolkit` and a new `cmd2.pt_utils` module with supporting
       utilities
+    - Removed **Transcript Testing** feature set along with the `history -t` option for generating
+      transcript files and the `cmd2.transcript` module
+        - This was an extremely brittle regression testing framework which should never have been
+          built into cmd2
+        - We recommend using [pytest](https://docs.pytest.org/) for unit and integration tests and
+          [Robot Framework](https://robotframework.org/) for acceptance tests. Both of these
+          frameworks can be used to create tests which are far more reliable and less brittle.
     - Async specific: `prompt-toolkit` starts its own `asyncio` event loop in every `cmd2`
       application
         - Removed `cmd2.Cmd.terminal_lock` as it is no longer required to support things like
@@ -68,6 +76,20 @@ shell, and the option for a persistent bottom bar that can display realtime stat
     - New settables:
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
+
+## 3.2.2 (February 21, 2026)
+
+- Bug Fixes
+    - Updated `rich_utils.ANSI_STYLE_SEQUENCE_RE` to only match ANSI SGR (Select Graphic Rendition)
+      sequences for text styling. It previously also matched DEC Private Mode sequences.
+
+## 3.2.1 (February 21, 2026)
+
+- Bug Fixes
+    - The `async_alert` and `async_prompt_update` methods of `cmd2.Cmd` now respect the current
+      value of the `allow_style` settable
+        - If `allow_style` is `NEVER`, all style-related ANSI escape codes will be stripped to
+          ensure plain text output
 
 ## 3.2.0 (February 5, 2026)
 

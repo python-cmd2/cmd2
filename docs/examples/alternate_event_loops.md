@@ -78,5 +78,4 @@ integrate with any specific event loop is beyond the scope of this documentation
 running in this fashion comes with several disadvantages, including:
 
 - Requires the developer to write more code
-- Does not support transcript testing
 - Does not allow commands at invocation via command-line arguments

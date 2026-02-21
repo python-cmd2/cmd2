@@ -44,7 +44,6 @@ cmd2/py_bridge.py          @kmvanbrunt
 cmd2/rich_utils.py         @kmvanbrunt
 cmd2/string_utils.py       @kmvanbrunt
 cmd2/styles.py             @tleonhardt @kmvanbrunt
-cmd2/transcript.py         @tleonhardt
 cmd2/utils.py              @tleonhardt @kmvanbrunt
 
 # Documentation

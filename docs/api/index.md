@@ -31,5 +31,4 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.rich_utils](./rich_utils.md) - common utilities to support Rich in cmd2 applications
 - [cmd2.string_utils](./string_utils.md) - string utility functions
 - [cmd2.styles](./styles.md) - cmd2-specific Rich styles and a StrEnum of their corresponding names
-- [cmd2.transcript](./transcript.md) - functions and classes for running and validating transcripts
 - [cmd2.utils](./utils.md) - various utility classes and functions

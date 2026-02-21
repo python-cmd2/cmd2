@@ -93,7 +93,5 @@ each:
     - Shell script that launches two applications using tmux in different windows/tabs
 - [tmux_split.sh](https://github.com/python-cmd2/cmd2/blob/main/examples/tmux_split.sh)
     - Shell script that launches two applications using tmux in a split pane view
-- [transcript_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/transcript_example.py)
-    - This example is intended to demonstrate `cmd2's` build-in transcript testing capability
 - [unicode_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/unicode_commands.py)
     - Shows that cmd2 supports unicode everywhere, including within command names

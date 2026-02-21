@@ -95,7 +95,10 @@ def stylize(val: str, style: StyleType) -> str:
 
 
 def strip_style(val: str) -> str:
-    """Strip all ANSI style sequences from a string.
+    """Strip all ANSI style sequences (colors, bold, etc.) from a string.
+
+    This targets SGR sequences specifically and leaves other terminal
+    control codes intact.
 
     :param val: string to be stripped
     :return: the stripped string

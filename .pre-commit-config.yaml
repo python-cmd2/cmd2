@@ -6,12 +6,10 @@ repos:
       - id: check-merge-conflict
       - id: check-toml
       - id: end-of-file-fixer
-        exclude: ^examples/transcripts/
       - id: trailing-whitespace
-        exclude: ^examples/transcripts/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.15.1"
+    rev: "v0.15.2"
     hooks:
       - id: ruff-format
         args: [--config=ruff.toml]

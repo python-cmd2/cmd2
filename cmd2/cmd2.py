@@ -13,7 +13,6 @@ Extra features include:
 - Settable environment parameters
 - Parsing commands with `argparse` argument parsers (flags)
 - Redirection to file or paste buffer (clipboard) with > or >>
-- Easy transcript-based testing of applications (see examples/transcript_example.py)
 - Bash-style ``select`` available
 
 Note, if self.stdout is different than sys.stdout, then redirection with > and |
@@ -52,7 +51,6 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    ClassVar,
     TextIO,
     TypeVar,
     Union,
@@ -282,12 +280,7 @@ class Cmd:
     """
 
     DEFAULT_COMPLETEKEY = 'tab'
-
     DEFAULT_EDITOR = utils.find_editor()
-
-    # List for storing transcript test file names
-    testfiles: ClassVar[list[str]] = []
-
     DEFAULT_PROMPT = '(Cmd) '
 
     def __init__(
@@ -314,7 +307,6 @@ class Cmd:
         startup_script: str = '',
         suggest_similar_command: bool = False,
         terminators: list[str] | None = None,
-        transcript_files: list[str] | None = None,
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
@@ -322,8 +314,7 @@ class Cmd:
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
         :param allow_cli_args: if ``True``, then [cmd2.Cmd.__init__][] will process command
-                               line arguments as either commands to be run or, if ``-t`` or
-                               ``--test`` are given, transcript files to run. This should be
+                               line arguments as either commands to be run. This should be
                                set to ``False`` if your application parses its own command line
                                arguments.
         :param allow_clipboard: If False, cmd2 will disable clipboard interactions
@@ -364,10 +355,6 @@ class Cmd:
                             is a semicolon. If your app only contains single-line commands
                             and you want terminators to be treated as literals by the parser,
                             then set this to an empty list.
-        :param transcript_files: pass a list of transcript files to be run on initialization.
-                                 This allows running transcript tests when ``allow_cli_args``
-                                 is ``False``. If ``allow_cli_args`` is ``True`` this parameter
-                                 is ignored.
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -595,23 +582,14 @@ class Cmd:
                     script_cmd += f" {constants.REDIRECTION_OVERWRITE} {os.devnull}"
                 self._startup_commands.append(script_cmd)
 
-        # Transcript files to run instead of interactive command loop
-        self._transcript_files: list[str] | None = None
-
         # Check for command line args
         if allow_cli_args:
             parser = argparse_custom.DEFAULT_ARGUMENT_PARSER()
-            parser.add_argument('-t', '--test', action="store_true", help='Test against transcript(s) in FILE (wildcards OK)')
-            callopts, callargs = parser.parse_known_args()
+            _callopts, callargs = parser.parse_known_args()
 
-            # If transcript testing was called for, use other arguments as transcript files
-            if callopts.test:
-                self._transcript_files = callargs
             # If commands were supplied at invocation, then add them to the command queue
-            elif callargs:
+            if callargs:
                 self._startup_commands.extend(callargs)
-        elif transcript_files:
-            self._transcript_files = transcript_files
 
         # Set the pager(s) for use when displaying output using a pager
         if sys.platform.startswith('win'):
@@ -1252,8 +1230,7 @@ class Cmd:
     def visible_prompt(self) -> str:
         """Read-only property to get the visible prompt with any ANSI style sequences stripped.
 
-        Used by transcript testing to make it easier and more reliable when users are doing things like
-        coloring the prompt.
+        Useful for test frameworks doing comparisons without having to worry about color/style.
 
         :return: the stripped prompt
         """
@@ -4823,13 +4800,6 @@ class Cmd:
             help='output commands to a script file, implies -s',
             completer=cls.path_complete,
         )
-        history_action_group.add_argument(
-            '-t',
-            '--transcript',
-            metavar='TRANSCRIPT_FILE',
-            help='create a transcript file by re-running the commands, implies both -r and -s',
-            completer=cls.path_complete,
-        )
         history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
 
         history_format_group = history_parser.add_argument_group(title='formatting')
@@ -4879,13 +4849,13 @@ class Cmd:
 
         # -v must be used alone with no other options
         if args.verbose:  # noqa: SIM102
-            if args.clear or args.edit or args.output_file or args.run or args.transcript or args.expanded or args.script:
+            if args.clear or args.edit or args.output_file or args.run or args.expanded or args.script:
                 self.poutput("-v cannot be used with any other options")
                 return None
 
         # -s and -x can only be used if none of these options are present: [-c -r -e -o -t]
-        if (args.script or args.expanded) and (args.clear or args.edit or args.output_file or args.run or args.transcript):
-            self.poutput("-s and -x cannot be used with -c, -r, -e, -o, or -t")
+        if (args.script or args.expanded) and (args.clear or args.edit or args.output_file or args.run):
+            self.poutput("-s and -x cannot be used with -c, -r, -e, or -o")
             return None
 
         if args.clear:
@@ -4948,9 +4918,6 @@ class Cmd:
             else:
                 self.pfeedback(f"{len(history)} command{plural} saved to {full_path}")
                 self.last_result = True
-        elif args.transcript:
-            # self.last_result will be set by _generate_transcript()
-            self._generate_transcript(list(history.values()), args.transcript)
         else:
             # Display the history items retrieved
             for idx, hi in history.items():
@@ -5085,101 +5052,6 @@ class Cmd:
         except OSError as ex:
             self.perror(f"Cannot write persistent history file '{self.persistent_history_file}': {ex}")
 
-    def _generate_transcript(
-        self,
-        history: list[HistoryItem] | list[str],
-        transcript_file: str,
-        *,
-        add_to_history: bool = True,
-    ) -> None:
-        """Generate a transcript file from a given history of commands."""
-        self.last_result = False
-
-        # Validate the transcript file path to make sure directory exists and write access is available
-        transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
-        transcript_dir = os.path.dirname(transcript_path)
-        if not os.path.isdir(transcript_dir) or not os.access(transcript_dir, os.W_OK):
-            self.perror(f"'{transcript_dir}' is not a directory or you don't have write access")
-            return
-
-        commands_run = 0
-        try:
-            with self.sigint_protection:
-                # Disable echo while we manually redirect stdout to a StringIO buffer
-                saved_echo = self.echo
-                saved_stdout = self.stdout
-                self.echo = False
-
-            # The problem with supporting regular expressions in transcripts
-            # is that they shouldn't be processed in the command, just the output.
-            # In addition, when we generate a transcript, any slashes in the output
-            # are not really intended to indicate regular expressions, so they should
-            # be escaped.
-            #
-            # We have to jump through some hoops here in order to catch the commands
-            # separately from the output and escape the slashes in the output.
-            transcript = ''
-            for history_item in history:
-                # build the command, complete with prompts. When we replay
-                # the transcript, we look for the prompts to separate
-                # the command from the output
-                first = True
-                command = ''
-                if isinstance(history_item, HistoryItem):
-                    history_item = history_item.raw  # noqa: PLW2901
-                for line in history_item.splitlines():
-                    if first:
-                        command += f"{self.prompt}{line}\n"
-                        first = False
-                    else:
-                        command += f"{self.continuation_prompt}{line}\n"
-                transcript += command
-
-                # Use a StdSim object to capture output
-                stdsim = utils.StdSim(self.stdout)
-                self.stdout = cast(TextIO, stdsim)
-
-                # then run the command and let the output go into our buffer
-                try:
-                    stop = self.onecmd_plus_hooks(
-                        history_item,
-                        add_to_history=add_to_history,
-                        raise_keyboard_interrupt=True,
-                    )
-                except KeyboardInterrupt as ex:
-                    self.perror(ex)
-                    stop = True
-
-                commands_run += 1
-
-                # add the regex-escaped output to the transcript
-                transcript += stdsim.getvalue().replace('/', r'\/')
-
-                # check if we are supposed to stop
-                if stop:
-                    break
-        finally:
-            with self.sigint_protection:
-                # Restore altered attributes to their original state
-                self.echo = saved_echo
-                self.stdout = saved_stdout
-
-        # Check if all commands ran
-        if commands_run < len(history):
-            self.pwarning(f"Command {commands_run} triggered a stop and ended transcript generation early")
-
-        # finally, we can write the transcript out to the file
-        try:
-            with open(transcript_path, 'w') as fout:
-                fout.write(transcript)
-        except OSError as ex:
-            self.perror(f"Error saving transcript file '{transcript_path}': {ex}")
-        else:
-            # and let the user know what we did
-            plural = 'command and its output' if commands_run == 1 else 'commands and their outputs'
-            self.pfeedback(f"{commands_run} {plural} saved to transcript file '{transcript_path}'")
-            self.last_result = True
-
     @classmethod
     def _build_edit_parser(cls) -> Cmd2ArgumentParser:
         edit_description = "Run a text editor and optionally open a file with it."
@@ -5247,16 +5119,7 @@ class Cmd:
 
     @classmethod
     def _build_run_script_parser(cls) -> Cmd2ArgumentParser:
-        run_script_parser = cls._build_base_run_script_parser()
-        run_script_parser.add_argument(
-            '-t',
-            '--transcript',
-            metavar='TRANSCRIPT_FILE',
-            help='record the output of the script as a transcript file',
-            completer=cls.path_complete,
-        )
-
-        return run_script_parser
+        return cls._build_base_run_script_parser()
 
     @with_argparser(_build_run_script_parser)
     def do_run_script(self, args: argparse.Namespace) -> bool | None:
@@ -5297,29 +5160,18 @@ class Cmd:
 
         try:
             self._script_dir.append(os.path.dirname(expanded_path))
-
-            if args.transcript:
-                # self.last_result will be set by _generate_transcript()
-                self._generate_transcript(
-                    script_commands,
-                    os.path.expanduser(args.transcript),
-                    add_to_history=self.scripts_add_to_history,
-                )
-            else:
-                stop = self.runcmds_plus_hooks(
-                    script_commands,
-                    add_to_history=self.scripts_add_to_history,
-                    stop_on_keyboard_interrupt=True,
-                )
-                self.last_result = True
-                return stop
-
+            stop = self.runcmds_plus_hooks(
+                script_commands,
+                add_to_history=self.scripts_add_to_history,
+                stop_on_keyboard_interrupt=True,
+            )
+            self.last_result = True
+            return stop
         finally:
             with self.sigint_protection:
                 # Check if a script dir was added before an exception occurred
                 if orig_script_dir_count != len(self._script_dir):
                     self._script_dir.pop()
-        return None
 
     @classmethod
     def _build_relative_run_script_parser(cls) -> Cmd2ArgumentParser:
@@ -5356,70 +5208,6 @@ class Cmd:
 
         # self.last_result will be set by do_run_script()
         return self.do_run_script(su.quote(relative_path))
-
-    def _run_transcript_tests(self, transcript_paths: list[str]) -> None:
-        """Run transcript tests for provided file(s).
-
-        This is called when either -t is provided on the command line or the transcript_files argument is provided
-        during construction of the cmd2.Cmd instance.
-
-        :param transcript_paths: list of transcript test file paths
-        """
-        import time
-        import unittest
-
-        import cmd2
-
-        from .transcript import (
-            Cmd2TestCase,
-        )
-
-        class TestMyAppCase(Cmd2TestCase):
-            cmdapp = self
-
-        # Validate that there is at least one transcript file
-        transcripts_expanded = utils.files_from_glob_patterns(transcript_paths, access=os.R_OK)
-        if not transcripts_expanded:
-            self.perror('No test files found - nothing to test')
-            self.exit_code = 1
-            return
-
-        verinfo = ".".join(map(str, sys.version_info[:3]))
-        num_transcripts = len(transcripts_expanded)
-        plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(
-            Rule("cmd2 transcript test", characters=self.ruler, style=Style.null()),
-            style=Style(bold=True),
-        )
-        self.poutput(f'platform {sys.platform} -- Python {verinfo}, cmd2-{cmd2.__version__}')
-        self.poutput(f'cwd: {os.getcwd()}')
-        self.poutput(f'cmd2 app: {sys.argv[0]}')
-        self.poutput(f'collected {num_transcripts} transcript{plural}', style=Style(bold=True))
-
-        self.__class__.testfiles = transcripts_expanded
-        sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
-        testcase = TestMyAppCase()
-        stream = cast(TextIO, utils.StdSim(sys.stderr))
-        runner = unittest.TextTestRunner(stream=stream)
-        start_time = time.time()
-        test_results = runner.run(testcase)
-        execution_time = time.time() - start_time
-        if test_results.wasSuccessful():
-            self.perror(stream.read(), end="", style=None)
-            finish_msg = f'{num_transcripts} transcript{plural} passed in {execution_time:.3f} seconds'
-            self.psuccess(Rule(finish_msg, characters=self.ruler, style=Style.null()))
-        else:
-            # Strip off the initial traceback which isn't particularly useful for end users
-            error_str = stream.read()
-            end_of_trace = error_str.find('AssertionError:')
-            file_offset = error_str[end_of_trace:].find('File ')
-            start = end_of_trace + file_offset
-
-            # But print the transcript file name and line number followed by what was expected and what was observed
-            self.perror(error_str[start:])
-
-            # Return a failure error code to support automated transcript-based testing
-            self.exit_code = 1
 
     def async_alert(self, alert_msg: str, new_prompt: str | None = None) -> None:
         """Display an important message to the user while they are at a command line prompt.
@@ -5616,7 +5404,6 @@ class Cmd:
         """Deal with extra features provided by cmd2, this is an outer wrapper around _cmdloop().
 
         _cmdloop() provides the main loop.  This provides the following extra features provided by cmd2:
-        - transcript testing
         - intro banner
         - exit code
 
@@ -5646,20 +5433,16 @@ class Cmd:
             func()
         self.preloop()
 
-        # If transcript-based regression testing was requested, then do that instead of the main loop
-        if self._transcript_files is not None:
-            self._run_transcript_tests([os.path.expanduser(tf) for tf in self._transcript_files])
-        else:
-            # If an intro was supplied in the method call, allow it to override the default
-            if intro:
-                self.intro = intro
+        # If an intro was supplied in the method call, allow it to override the default
+        if intro:
+            self.intro = intro
 
-            # Print the intro, if there is one, right after the preloop
-            if self.intro:
-                self.poutput(self.intro)
+        # Print the intro, if there is one, right after the preloop
+        if self.intro:
+            self.poutput(self.intro)
 
-            # And then call _cmdloop() to enter the main loop
-            self._cmdloop()
+        # And then call _cmdloop() to enter the main loop
+        self._cmdloop()
 
         # Run the postloop() no matter what
         for func in self._postloop_hooks:

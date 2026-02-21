@@ -74,7 +74,6 @@ loop behavior:
 
 - `allow_cli_args` - allows commands to be specified on the operating system command line which are
   executed before the command processing loop begins
-- `transcript_files` - see [Transcripts](./transcripts.md) for more information
 - `startup_script` - run a script on initialization. See [Scripting](./scripting.md) for more
   information
 

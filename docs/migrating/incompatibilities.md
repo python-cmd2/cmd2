@@ -38,8 +38,8 @@ new input is needed; if it is nonempty, its elements will be processed in order,
 the prompt.
 
 Since version 0.9.13 `cmd2` has removed support for `Cmd.cmdqueue`. Because `cmd2` supports running
-commands via the main `cmdloop()`, text scripts, Python scripts, transcripts, and history replays,
-the only way to preserve consistent behavior across these methods was to eliminate the command
-queue. Additionally, reasoning about application behavior is much easier without this queue present.
+commands via the main `cmdloop()`, text scripts, Python scripts, and history replays, the only way
+to preserve consistent behavior across these methods was to eliminate the command queue.
+Additionally, reasoning about application behavior is much easier without this queue present.
 
 [cmd]: https://docs.python.org/3/library/cmd
