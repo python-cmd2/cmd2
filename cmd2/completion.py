@@ -7,6 +7,7 @@ from collections.abc import (
     Collection,
     Iterable,
     Iterator,
+    Mapping,
     Sequence,
 )
 from dataclasses import (
@@ -270,7 +271,7 @@ def all_display_numeric(items: Collection[CompletionItem]) -> bool:
 #############################################
 
 # Represents the parsed tokens from argparse during completion
-ArgTokens: TypeAlias = dict[str, list[str]]
+ArgTokens: TypeAlias = Mapping[str, Sequence[str]]
 
 # Unbound choices_provider function types used by argparse-based completion.
 # These expect a Cmd or CommandSet instance as the first argument.

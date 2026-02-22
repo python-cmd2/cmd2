@@ -354,7 +354,7 @@ def as_subcommand_to(
     | Callable[[CommandParentClass], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
     *,
     help: str | None = None,  # noqa: A002
-    aliases: list[str] | None = None,
+    aliases: Sequence[str] | None = None,
 ) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]:
     """Tag this method as a subcommand to an existing argparse decorated command.
 
