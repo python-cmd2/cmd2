@@ -4,7 +4,6 @@
 # nothing here should be considered part of the public API of this module
 
 INFINITY = float('inf')
-EOF = 'eof'
 
 # Used for command parsing, output redirection, completion, and word breaks. Do not change.
 QUOTES = ['"', "'"]

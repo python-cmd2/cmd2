@@ -433,7 +433,7 @@ class Cmd:
         self.self_in_py = False
 
         # Commands to exclude from the help menu and completion
-        self.hidden_commands = [constants.EOF, '_relative_run_script']
+        self.hidden_commands = ['_eof', '_relative_run_script']
 
         # Initialize history from a persistent history file (if present)
         self.persistent_history_file = ''
@@ -453,7 +453,7 @@ class Cmd:
         self.session = self._init_session()
 
         # Commands to exclude from the history command
-        self.exclude_from_history = [constants.EOF, 'history']
+        self.exclude_from_history = ['_eof', 'history']
 
         # Dictionary of macro names and their values
         self.macros: dict[str, Macro] = {}
@@ -2821,11 +2821,6 @@ class Cmd:
     def _complete_statement(self, line: str) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
-        There is some pretty hacky code here to handle some quirks of
-        self._read_command_line(). It returns a literal 'eof' if the input
-        pipe runs out. We can't refactor it because we need to retain
-        backwards compatibility with the standard library version of cmd.
-
         :param line: the line being parsed
         :return: the completed Statement
         :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
@@ -2859,12 +2854,10 @@ class Cmd:
                 self._multiline_in_progress = line + '\n'
 
                 # Get next line of this command
-                nextline = self._read_command_line(self.continuation_prompt)
-                if nextline == constants.EOF:
-                    # they entered either a blank line, or we hit an EOF
-                    # for some other reason. Turn the literal 'eof'
-                    # into a blank line, which serves as a command
-                    # terminator
+                try:
+                    nextline = self._read_command_line(self.continuation_prompt)
+                except EOFError:
+                    # Add a blank line, which serves as a command terminator.
                     nextline = '\n'
                     self.poutput(nextline)
 
@@ -3332,26 +3325,25 @@ class Cmd:
         """Read the next command line from the input stream.
 
         :param prompt: prompt to display to user
-        :return: command line text or 'eof' if an EOFError was caught
-        :raises Exception: any exceptions raised by prompt(), except EOFError
+        :return: the line read from stdin with all trailing new lines removed
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        :raises Exception: any other exceptions raised by prompt()
         """
-        try:
-            # Use dynamic prompt if the prompt matches self.prompt
-            def get_prompt() -> ANSI | str:
-                return ANSI(self.prompt)
 
-            prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
-            if prompt == self.prompt:
-                prompt_to_use = get_prompt
+        # Use dynamic prompt if the prompt matches self.prompt
+        def get_prompt() -> ANSI | str:
+            return ANSI(self.prompt)
 
-            return self._read_raw_input(
-                prompt=prompt_to_use,
-                session=self.session,
-                completer=self.completer,
-                pre_run=self.pre_prompt,
-            )
-        except EOFError:
-            return constants.EOF
+        prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
+        if prompt == self.prompt:
+            prompt_to_use = get_prompt
+
+        return self._read_raw_input(
+            prompt=prompt_to_use,
+            session=self.session,
+            completer=self.completer,
+            pre_run=self.pre_prompt,
+        )
 
     def _cmdloop(self) -> None:
         """Repeatedly issue a prompt, accept input, parse it, and dispatch to apporpriate commands.
@@ -3373,6 +3365,8 @@ class Cmd:
                 except KeyboardInterrupt:
                     self.poutput('^C')
                     line = ''
+                except EOFError:
+                    line = "_eof"
 
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
@@ -4193,17 +4187,17 @@ class Cmd:
         self.last_result = True
 
     @staticmethod
-    def _build_eof_parser() -> Cmd2ArgumentParser:
-        eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
-        eof_parser.epilog = eof_parser.create_text_group(
+    def _build__eof_parser() -> Cmd2ArgumentParser:
+        _eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
+        _eof_parser.epilog = _eof_parser.create_text_group(
             "Note",
             "This command is for internal use and is not intended to be called from the command line.",
         )
 
-        return eof_parser
+        return _eof_parser
 
-    @with_argparser(_build_eof_parser)
-    def do_eof(self, _: argparse.Namespace) -> bool | None:
+    @with_argparser(_build__eof_parser)
+    def do__eof(self, _: argparse.Namespace) -> bool | None:
         """Quit with no arguments, called when Ctrl-D is pressed.
 
         This can be overridden if quit should be called differently.

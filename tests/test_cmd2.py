@@ -1181,14 +1181,14 @@ def say_app():
 
 def test_ctrl_c_at_prompt(say_app, monkeypatch) -> None:
     read_command_mock = mock.MagicMock(name='_read_command_line')
-    read_command_mock.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', constants.EOF]
+    read_command_mock.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'quit']
     monkeypatch.setattr("cmd2.Cmd._read_command_line", read_command_mock)
 
     say_app.cmdloop()
 
     # And verify the expected output to stdout
     out = say_app.stdout.getvalue()
-    assert out == 'hello\n^C\ngoodbye\n\n'
+    assert out == 'hello\n^C\ngoodbye\n'
 
 
 class ShellApp(cmd2.Cmd):
@@ -1877,14 +1877,13 @@ def test_is_text_file_bad_input(base_app) -> None:
         utils.is_text_file('.')
 
 
-def test_eof(base_app) -> None:
-    # Only thing to verify is that it returns True
-    assert base_app.do_eof('')
-    assert base_app.last_result is True
+def test__eof(base_app) -> None:
+    base_app.do_quit = mock.MagicMock(return_value=True)
+    assert base_app.do__eof('')
+    base_app.do_quit.assert_called_once_with('')
 
 
 def test_quit(base_app) -> None:
-    # Only thing to verify is that it returns True
     assert base_app.do_quit('')
     assert base_app.last_result is True
 
@@ -2063,11 +2062,21 @@ def test_custom_stdout() -> None:
 
 
 def test_read_command_line_eof(base_app, monkeypatch) -> None:
+    """Test that _read_command_line passes up EOFErrors."""
     read_raw_mock = mock.MagicMock(name='_read_raw_input', side_effect=EOFError)
     monkeypatch.setattr("cmd2.Cmd._read_raw_input", read_raw_mock)
 
-    line = base_app._read_command_line("Prompt> ")
-    assert line == constants.EOF
+    with pytest.raises(EOFError):
+        base_app._read_command_line("Prompt> ")
+
+
+def test_read_input_eof(base_app, monkeypatch) -> None:
+    """Test that read_input passes up EOFErrors."""
+    read_raw_mock = mock.MagicMock(name='_read_raw_input', side_effect=EOFError)
+    monkeypatch.setattr("cmd2.Cmd._read_raw_input", read_raw_mock)
+
+    with pytest.raises(EOFError):
+        base_app.read_input("Prompt> ")
 
 
 def test_poutput_string(outsim_app) -> None:
@@ -3002,10 +3011,10 @@ def test_get_all_commands(base_app) -> None:
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
     expected_commands = [
+        '_eof',
         '_relative_run_script',
         'alias',
         'edit',
-        constants.EOF,
         'help',
         'history',
         'ipy',
