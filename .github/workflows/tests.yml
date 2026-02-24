@@ -18,9 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     defaults:
       run:
-        # Use a conditional expression to set the default shell
-        # 'cmd' on Windows, 'bash' on other platforms (Linux, macOS)
-        shell: ${{ matrix.os == 'windows-latest' && 'cmd' || 'bash' }}
+        shell: bash
     steps:
       - name: Check out
         uses: actions/checkout@v6.0.2
@@ -39,9 +37,8 @@ jobs:
 
       - name: Run tests
         if: runner.os == 'Windows'
-        run:
-          winpty uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml
-          tests
+        shell: powershell
+        run: uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
 
       - name: Run tests
         if: runner.os != 'Windows'
