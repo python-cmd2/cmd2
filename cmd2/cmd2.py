@@ -645,8 +645,10 @@ class Cmd:
 
         if self.stdin.isatty():
             try:
-                kwargs["input"] = create_input(stdin=self.stdin)
-                kwargs["output"] = create_output(stdout=self.stdout)
+                if self.stdin != sys.stdin:
+                    kwargs["input"] = create_input(stdin=self.stdin)
+                if self.stdout != sys.stdout:
+                    kwargs["output"] = create_output(stdout=self.stdout)
                 return PromptSession(**kwargs)
 
             except (NoConsoleScreenBufferError, AttributeError, ValueError):
