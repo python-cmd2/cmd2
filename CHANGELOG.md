@@ -56,6 +56,7 @@ prompt is displayed.
       `Statement.redirect_to`.
     - Changed `StatementParser.parse_command_only()` to return a `PartialStatement` object.
     - Renamed `Macro.arg_list` to `Macro.args`.
+    - Removed `terminal_utils.py` since `prompt-toolkit` provides this functionality.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These

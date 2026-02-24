@@ -60,6 +60,7 @@ from typing import (
 )
 
 import rich.box
+from prompt_toolkit.application import get_app
 from rich.console import (
     Group,
     RenderableType,
@@ -150,9 +151,9 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, FormattedText
 from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit.input import DummyInput
+from prompt_toolkit.input import DummyInput, create_input
 from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.output import DummyOutput
+from prompt_toolkit.output import DummyOutput, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, set_title
 
@@ -371,7 +372,6 @@ class Cmd:
         # Configure a few defaults
         self.prompt = Cmd.DEFAULT_PROMPT
         self.intro = intro
-        self.use_rawinput = True
 
         # What to use for standard input
         if stdin is not None:
@@ -387,23 +387,16 @@ class Cmd:
 
         # Key used for completion
         self.completekey = completekey
-        key_bindings = None
-        if self.completekey != self.DEFAULT_COMPLETEKEY:
-            # Configure prompt_toolkit `KeyBindings` with the custom key for completion
-            key_bindings = KeyBindings()
-
-            @key_bindings.add(self.completekey)
-            def _(event: Any) -> None:  # pragma: no cover
-                """Trigger completion."""
-                b = event.current_buffer
-                if b.complete_state:
-                    b.complete_next()
-                else:
-                    b.start_completion(select_first=False)
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
+
+        # If True, cmd2 treats redirected input (pipes/files) as an interactive session.
+        # It will display the prompt before reading each line to synchronize with
+        # automation tools (like Pexpect) and will skip echoing the input to prevent
+        # duplicate prompts in the output.
+        self.interactive_pipe = False
 
         # Attributes which ARE dynamically settable via the set command at runtime
         self.always_show_hint = False
@@ -440,7 +433,7 @@ class Cmd:
         self.self_in_py = False
 
         # Commands to exclude from the help menu and completion
-        self.hidden_commands = ['eof', '_relative_run_script']
+        self.hidden_commands = ['_eof', '_relative_run_script']
 
         # Initialize history from a persistent history file (if present)
         self.persistent_history_file = ''
@@ -457,38 +450,10 @@ class Cmd:
         if auto_suggest:
             self.auto_suggest = AutoSuggestFromHistory()
 
-        try:
-            self.session: PromptSession[str] = PromptSession(
-                auto_suggest=self.auto_suggest,
-                bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
-                complete_in_thread=True,
-                complete_style=CompleteStyle.MULTI_COLUMN,
-                complete_while_typing=False,
-                completer=self.completer,
-                history=self.history_adapter,
-                key_bindings=key_bindings,
-                lexer=self.lexer,
-            )
-        except (NoConsoleScreenBufferError, AttributeError, ValueError):
-            # Fallback to dummy input/output if PromptSession initialization fails.
-            # This can happen in some CI environments (like GitHub Actions on Windows)
-            # where isatty() is True but there is no real console.
-            self.session = PromptSession(
-                auto_suggest=self.auto_suggest,
-                bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
-                complete_in_thread=True,
-                complete_style=CompleteStyle.MULTI_COLUMN,
-                complete_while_typing=False,
-                completer=self.completer,
-                history=self.history_adapter,
-                input=DummyInput(),
-                key_bindings=key_bindings,
-                lexer=self.lexer,
-                output=DummyOutput(),
-            )
+        self.session = self._init_session()
 
         # Commands to exclude from the history command
-        self.exclude_from_history = ['eof', 'history']
+        self.exclude_from_history = ['_eof', 'history']
 
         # Dictionary of macro names and their values
         self.macros: dict[str, Macro] = {}
@@ -611,11 +576,6 @@ class Cmd:
         # This determines the value returned by cmdloop() when exiting the application
         self.exit_code = 0
 
-        # This flag is set to True when the prompt is displayed and the application is waiting for user input.
-        # It is used by async_alert() to determine if it is safe to alert the user.
-        self._in_prompt = False
-        self._in_prompt_lock = threading.Lock()
-
         # Commands disabled during specific application states
         # Key: Command name | Value: DisabledCommand object
         self.disabled_commands: dict[str, DisabledCommand] = {}
@@ -654,6 +614,63 @@ class Cmd:
 
         # the current command being executed
         self.current_command: Statement | None = None
+
+    def _init_session(self) -> PromptSession[str]:
+        """Initialize and return the core PromptSession for the application.
+
+        Builds an interactive session if stdin is a TTY. Otherwise, uses
+        dummy drivers to support non-interactive streams like pipes or files.
+        """
+        key_bindings = None
+        if self.completekey != self.DEFAULT_COMPLETEKEY:
+            # Configure prompt_toolkit `KeyBindings` with the custom key for completion
+            key_bindings = KeyBindings()
+
+            @key_bindings.add(self.completekey)
+            def _(event: Any) -> None:  # pragma: no cover
+                """Trigger completion."""
+                b = event.current_buffer
+                if b.complete_state:
+                    b.complete_next()
+                else:
+                    b.start_completion(select_first=False)
+
+        # Base configuration
+        kwargs: dict[str, Any] = {
+            "auto_suggest": self.auto_suggest,
+            "bottom_toolbar": self.get_bottom_toolbar if self.bottom_toolbar else None,
+            "complete_style": CompleteStyle.MULTI_COLUMN,
+            "complete_in_thread": True,
+            "complete_while_typing": False,
+            "completer": self.completer,
+            "history": self.history_adapter,
+            "key_bindings": key_bindings,
+            "lexer": self.lexer,
+            "rprompt": self.get_rprompt,
+        }
+
+        if self.stdin.isatty():
+            try:
+                if self.stdin != sys.stdin:
+                    kwargs["input"] = create_input(stdin=self.stdin)
+                if self.stdout != sys.stdout:
+                    kwargs["output"] = create_output(stdout=self.stdout)
+                return PromptSession(**kwargs)
+
+            except (NoConsoleScreenBufferError, AttributeError, ValueError):
+                # Fallback to dummy input/output if PromptSession initialization fails.
+                # This can happen in some CI environments (like GitHub Actions on Windows)
+                # where isatty() is True but there is no real console.
+                pass
+
+        # Fallback to dummy drivers for non-interactive environments.
+        kwargs.update(
+            {
+                "input": DummyInput(),
+                "output": DummyOutput(),
+            }
+        )
+        return PromptSession(**kwargs)
 
     def find_commandsets(self, commandset_type: type[CommandSet], *, subclass_match: bool = False) -> list[CommandSet]:
         """Find all CommandSets that match the provided CommandSet type.
@@ -1225,10 +1242,6 @@ class Cmd:
     def allow_style(self, new_val: ru.AllowStyle) -> None:
         """Setter property needed to support do_set when it updates allow_style."""
         ru.ALLOW_STYLE = new_val
-
-    def _completion_supported(self) -> bool:
-        """Return whether completion is supported."""
-        return self.use_rawinput and bool(self.completekey)
 
     @property
     def visible_prompt(self) -> str:
@@ -2808,11 +2821,6 @@ class Cmd:
     def _complete_statement(self, line: str) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
-        There is some pretty hacky code here to handle some quirks of
-        self._read_command_line(). It returns a literal 'eof' if the input
-        pipe runs out. We can't refactor it because we need to retain
-        backwards compatibility with the standard library version of cmd.
-
         :param line: the line being parsed
         :return: the completed Statement
         :raises Cmd2ShlexError: if a shlex error occurs (e.g. No closing quotation)
@@ -2846,12 +2854,10 @@ class Cmd:
                 self._multiline_in_progress = line + '\n'
 
                 # Get next line of this command
-                nextline = self._read_command_line(self.continuation_prompt)
-                if nextline == 'eof':
-                    # they entered either a blank line, or we hit an EOF
-                    # for some other reason. Turn the literal 'eof'
-                    # into a blank line, which serves as a command
-                    # terminator
+                try:
+                    nextline = self._read_command_line(self.continuation_prompt)
+                except EOFError:
+                    # Add a blank line, which serves as a command terminator.
                     nextline = '\n'
                     self.poutput(nextline)
 
@@ -3185,173 +3191,159 @@ class Cmd:
     def _suggest_similar_command(self, command: str) -> str | None:
         return suggest_similar(command, self.get_visible_commands())
 
+    def _read_raw_input(
+        self,
+        prompt: Callable[[], ANSI | str] | ANSI | str,
+        session: PromptSession[str],
+        completer: Completer,
+        **prompt_kwargs: Any,
+    ) -> str:
+        """Execute the low-level input read from either a terminal or a redirected stream.
+
+        If the session is interactive (TTY), it uses `prompt_toolkit` to render a
+        rich UI with completion and `patch_stdout` protection. If non-interactive
+        (Pipe/File), it performs a direct line read from `stdin`.
+
+        :param prompt: the prompt text or a callable that returns the prompt.
+        :param session: the PromptSession instance to use for reading.
+        :param completer: the completer to use for this specific input.
+        :param prompt_kwargs: additional arguments passed directly to session.prompt().
+        :return: the stripped input string.
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        """
+        # Check if the session is configured for interactive terminal use.
+        if not isinstance(session.input, DummyInput):
+            with patch_stdout():
+                return session.prompt(prompt, completer=completer, **prompt_kwargs)
+
+        # We're not at a terminal, so we're likely reading from a file or a pipe.
+        prompt_obj = prompt() if callable(prompt) else prompt
+        prompt_str = prompt_obj.value if isinstance(prompt_obj, ANSI) else prompt_obj
+
+        # If this is an interactive pipe, then display the prompt first
+        if self.interactive_pipe:
+            self.poutput(prompt_str, end='')
+            self.stdout.flush()
+
+        # Wait for the next line of input
+        line = self.stdin.readline()
+
+        # If the stream is empty, we've reached the end of the input.
+        if not line:
+            raise EOFError
+
+        # If not interactive and echo is on, we want the output to simulate a
+        # live session. Print the prompt and the command so they appear in the
+        # output stream before the results.
+        if not self.interactive_pipe and self.echo:
+            end = "" if line.endswith('\n') else "\n"
+
+            self.poutput(f'{prompt_str}{line}', end=end)
+
+        return line.rstrip('\r\n')
+
+    def _resolve_completer(
+        self,
+        preserve_quotes: bool = False,
+        choices: Iterable[Any] | None = None,
+        choices_provider: ChoicesProviderUnbound | None = None,
+        completer: CompleterUnbound | None = None,
+        parser: argparse.ArgumentParser | None = None,
+    ) -> Completer:
+        """Determine the appropriate completer based on provided arguments."""
+        if not any((parser, choices, choices_provider, completer)):
+            return DummyCompleter()
+
+        if parser and any((choices, choices_provider, completer)):
+            err_msg = "None of the following parameters can be used alongside a parser:\nchoices, choices_provider, completer"
+            raise ValueError(err_msg)
+
+        if parser is None:
+            parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
+            parser.add_argument(
+                'arg',
+                suppress_tab_hint=True,
+                choices=choices,
+                choices_provider=choices_provider,
+                completer=completer,
+            )
+
+        settings = utils.CustomCompletionSettings(parser, preserve_quotes=preserve_quotes)
+        return Cmd2Completer(self, custom_settings=settings)
+
     def read_input(
         self,
         prompt: str = '',
         *,
-        history: Iterable[str] | None = None,
-        completion_mode: utils.CompletionMode = utils.CompletionMode.NONE,
+        history: Sequence[str] | None = None,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
         choices_provider: ChoicesProviderUnbound | None = None,
         completer: CompleterUnbound | None = None,
         parser: argparse.ArgumentParser | None = None,
     ) -> str:
-        """Read input from appropriate stdin value.
-
-        Also supports completion and up-arrow history while input is being entered.
+        """Read a line of input with optional completion and history.
 
         :param prompt: prompt to display to user
-        :param history: optional Iterable of strings to use for up-arrow history. If completion_mode is
-                        CompletionMode.COMMANDS and this is None, then cmd2's command list history will
-                        be used. The passed in history will not be edited. It is the caller's responsibility
-                        to add the returned input to history if desired. Defaults to None.
-        :param completion_mode: tells what type of completion to support. Completion only works when
-                                self.use_rawinput is True and sys.stdin is a terminal. Defaults to
-                                CompletionMode.NONE.
-        The following optional settings apply when completion_mode is CompletionMode.CUSTOM:
+        :param history: optional Sequence of strings to use for up-arrow history. The passed in history
+                        will not be edited. It is the caller's responsibility to add the returned input
+                        to history if desired. Defaults to None.
         :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
                                 ArgparseCompleter. This is helpful in cases when you're completing
                                 flag-like tokens (e.g. -o, --option) and you don't want them to be
                                 treated as argparse flags when quoted. Set this to True if you plan
                                 on passing the string to argparse with the tokens still quoted.
+
         A maximum of one of these should be provided:
         :param choices: iterable of accepted values for single argument
         :param choices_provider: function that provides choices for single argument
         :param completer: completion function that provides choices for single argument
         :param parser: an argument parser which supports the completion of multiple arguments
         :return: the line read from stdin with all trailing new lines removed
-        :raises Exception: any exceptions raised by prompt()
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        :raises Exception: any other exceptions raised by prompt()
         """
-        with self._in_prompt_lock:
-            self._in_prompt = True
-        try:
-            if self.use_rawinput and self.stdin.isatty():
-                # Determine completer
-                completer_to_use: Completer
-                if completion_mode == utils.CompletionMode.NONE:
-                    completer_to_use = DummyCompleter()
+        completer_to_use = self._resolve_completer(
+            preserve_quotes=preserve_quotes,
+            choices=choices,
+            choices_provider=choices_provider,
+            completer=completer,
+            parser=parser,
+        )
 
-                    # No up-arrow history when CompletionMode.NONE and history is None
-                    if history is None:
-                        history = []
-                elif completion_mode == utils.CompletionMode.COMMANDS:
-                    completer_to_use = self.completer
-                else:
-                    # Custom completion
-                    if parser is None:
-                        parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
-                        parser.add_argument(
-                            'arg',
-                            suppress_tab_hint=True,
-                            choices=choices,
-                            choices_provider=choices_provider,
-                            completer=completer,
-                        )
-                    custom_settings = utils.CustomCompletionSettings(parser, preserve_quotes=preserve_quotes)
-                    completer_to_use = Cmd2Completer(self, custom_settings=custom_settings)
+        temp_session: PromptSession[str] = PromptSession(
+            complete_style=self.session.complete_style,
+            complete_while_typing=self.session.complete_while_typing,
+            history=InMemoryHistory(history) if history is not None else InMemoryHistory(),
+            input=self.session.input,
+            output=self.session.output,
+        )
 
-                # Use dynamic prompt if the prompt matches self.prompt
-                def get_prompt() -> ANSI | str:
-                    return ANSI(self.prompt)
-
-                prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
-                if prompt == self.prompt:
-                    prompt_to_use = get_prompt
-
-                with patch_stdout():
-                    if history is not None:
-                        # If custom history is provided, we use the prompt() shortcut
-                        # which can take a history object.
-                        history_to_use = InMemoryHistory()
-                        for item in history:
-                            history_to_use.append_string(item)
-
-                        temp_session1: PromptSession[str] = PromptSession(
-                            complete_style=self.session.complete_style,
-                            complete_while_typing=self.session.complete_while_typing,
-                            history=history_to_use,
-                            input=self.session.input,
-                            lexer=self.lexer,
-                            output=self.session.output,
-                        )
-
-                        return temp_session1.prompt(
-                            prompt_to_use,
-                            bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
-                            completer=completer_to_use,
-                            lexer=self.lexer,
-                            pre_run=self.pre_prompt,
-                            rprompt=self.get_rprompt,
-                        )
-
-                    # history is None
-                    return self.session.prompt(
-                        prompt_to_use,
-                        bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
-                        completer=completer_to_use,
-                        lexer=self.lexer,
-                        pre_run=self.pre_prompt,
-                        rprompt=self.get_rprompt,
-                    )
-
-            # Otherwise read from self.stdin
-            elif self.stdin.isatty():
-                # on a tty, print the prompt first, then read the line
-                temp_session2: PromptSession[str] = PromptSession(
-                    input=self.session.input,
-                    output=self.session.output,
-                    lexer=self.lexer,
-                    complete_style=self.session.complete_style,
-                    complete_while_typing=self.session.complete_while_typing,
-                )
-                line = temp_session2.prompt(
-                    prompt,
-                    bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
-                    pre_run=self.pre_prompt,
-                    rprompt=self.get_rprompt,
-                )
-                if len(line) == 0:
-                    raise EOFError
-                return line.rstrip('\n')
-            else:
-                # not a tty, just read the line
-                temp_session3: PromptSession[str] = PromptSession(
-                    complete_style=self.session.complete_style,
-                    complete_while_typing=self.session.complete_while_typing,
-                    input=self.session.input,
-                    lexer=self.lexer,
-                    output=self.session.output,
-                )
-                line = temp_session3.prompt(
-                    bottom_toolbar=self.get_bottom_toolbar if self.bottom_toolbar else None,
-                    pre_run=self.pre_prompt,
-                    rprompt=self.get_rprompt,
-                )
-                if len(line) == 0:
-                    raise EOFError
-                line = line.rstrip('\n')
-
-                if self.echo:
-                    self.poutput(f'{prompt}{line}')
-
-                return line
-
-        finally:
-            with self._in_prompt_lock:
-                self._in_prompt = False
+        return self._read_raw_input(prompt, temp_session, completer_to_use)
 
     def _read_command_line(self, prompt: str) -> str:
-        """Read command line from appropriate stdin.
+        """Read the next command line from the input stream.
 
         :param prompt: prompt to display to user
-        :return: command line text of 'eof' if an EOFError was caught
-        :raises Exception: whatever exceptions are raised by input() except for EOFError
+        :return: the line read from stdin with all trailing new lines removed
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        :raises Exception: any other exceptions raised by prompt()
         """
-        try:
-            return self.read_input(prompt, completion_mode=utils.CompletionMode.COMMANDS)
-        except EOFError:
-            return 'eof'
+
+        # Use dynamic prompt if the prompt matches self.prompt
+        def get_prompt() -> ANSI | str:
+            return ANSI(self.prompt)
+
+        prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
+        if prompt == self.prompt:
+            prompt_to_use = get_prompt
+
+        return self._read_raw_input(
+            prompt=prompt_to_use,
+            session=self.session,
+            completer=self.completer,
+            pre_run=self.pre_prompt,
+        )
 
     def _cmdloop(self) -> None:
         """Repeatedly issue a prompt, accept input, parse it, and dispatch to apporpriate commands.
@@ -3373,6 +3365,8 @@ class Cmd:
                 except KeyboardInterrupt:
                     self.poutput('^C')
                     line = ''
+                except EOFError:
+                    line = "_eof"
 
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
@@ -4193,17 +4187,17 @@ class Cmd:
         self.last_result = True
 
     @staticmethod
-    def _build_eof_parser() -> Cmd2ArgumentParser:
-        eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
-        eof_parser.epilog = eof_parser.create_text_group(
+    def _build__eof_parser() -> Cmd2ArgumentParser:
+        _eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
+        _eof_parser.epilog = _eof_parser.create_text_group(
             "Note",
             "This command is for internal use and is not intended to be called from the command line.",
         )
 
-        return eof_parser
+        return _eof_parser
 
-    @with_argparser(_build_eof_parser)
-    def do_eof(self, _: argparse.Namespace) -> bool | None:
+    @with_argparser(_build__eof_parser)
+    def do__eof(self, _: argparse.Namespace) -> bool | None:
         """Quit with no arguments, called when Ctrl-D is pressed.
 
         This can be overridden if quit should be called differently.
@@ -5178,12 +5172,12 @@ class Cmd:
                     self._script_dir.pop()
 
     @classmethod
-    def _build_relative_run_script_parser(cls) -> Cmd2ArgumentParser:
-        relative_run_script_parser = cls._build_base_run_script_parser()
+    def _build__relative_run_script_parser(cls) -> Cmd2ArgumentParser:
+        _relative_run_script_parser = cls._build_base_run_script_parser()
 
         # Append to existing description
-        relative_run_script_parser.description = Group(
-            cast(Group, relative_run_script_parser.description),
+        _relative_run_script_parser.description = Group(
+            cast(Group, _relative_run_script_parser.description),
             "\n",
             (
                 "If this is called from within an already-running script, the filename will be "
@@ -5191,14 +5185,14 @@ class Cmd:
             ),
         )
 
-        relative_run_script_parser.epilog = relative_run_script_parser.create_text_group(
+        _relative_run_script_parser.epilog = _relative_run_script_parser.create_text_group(
             "Note",
             "This command is intended to be used from within a text script.",
         )
 
-        return relative_run_script_parser
+        return _relative_run_script_parser
 
-    @with_argparser(_build_relative_run_script_parser)
+    @with_argparser(_build__relative_run_script_parser)
     def do__relative_run_script(self, args: argparse.Namespace) -> bool | None:
         """Run text script.
 
@@ -5232,11 +5226,8 @@ class Cmd:
         :raises RuntimeError: if called from the main thread.
         :raises RuntimeError: if main thread is not currently at the prompt.
         """
-        # Check if prompt is currently displayed and waiting for user input
-        with self._in_prompt_lock:
-            if not self._in_prompt or not self.session.app.is_running:
-                raise RuntimeError("Main thread is not at the prompt")
 
+        # Check if prompt is currently displayed and waiting for user input
         def _alert() -> None:
             if new_prompt is not None:
                 self.prompt = new_prompt
@@ -5248,11 +5239,11 @@ class Cmd:
 
             if hasattr(self, 'session'):
                 # Invalidate to force prompt update
-                self.session.app.invalidate()
+                get_app().invalidate()
 
         # Schedule the alert to run on the main thread's event loop
         try:
-            self.session.app.loop.call_soon_threadsafe(_alert)  # type: ignore[union-attr]
+            get_app().loop.call_soon_threadsafe(_alert)  # type: ignore[union-attr]
         except AttributeError:
             # Fallback if loop is not accessible (e.g. prompt not running or session not initialized)
             # This shouldn't happen if _in_prompt is True, unless prompt exited concurrently.

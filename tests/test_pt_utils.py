@@ -5,7 +5,6 @@ from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
-from prompt_toolkit.buffer import Buffer
 from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import (
     ANSI,
@@ -23,21 +22,9 @@ from cmd2.history import HistoryItem
 from cmd2.parsing import Statement
 
 
-class MockSession:
-    """Simulates a prompt_toolkit PromptSession."""
-
-    def __init__(self):
-        # Contains the CLI text and cursor position
-        self.buffer = Buffer()
-
-        # Mock the app structure: session -> app -> current_buffer
-        self.app = Mock()
-        self.app.current_buffer = self.buffer
-
-
 # Mock for cmd2.Cmd
 class MockCmd:
-    def __init__(self):
+    def __init__(self) -> None:
         # Return empty completions by default
         self.complete = Mock(return_value=cmd2.Completions())
 
@@ -50,14 +37,13 @@ class MockCmd:
         self.aliases = {}
         self.macros = {}
         self.all_commands = []
-        self.session = MockSession()
 
-    def get_all_commands(self):
+    def get_all_commands(self) -> list[str]:
         return self.all_commands
 
 
 @pytest.fixture
-def mock_cmd_app():
+def mock_cmd_app() -> MockCmd:
     return MockCmd()
 
 

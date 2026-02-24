@@ -52,7 +52,6 @@ from .rich_utils import RichPrintKwargs
 from .string_utils import stylize
 from .styles import Cmd2Style
 from .utils import (
-    CompletionMode,
     CustomCompletionSettings,
     Settable,
     categorize,
@@ -103,7 +102,6 @@ __all__: list[str] = [  # noqa: RUF022
     "Cmd2Style",
     # Utilities
     'categorize',
-    'CompletionMode',
     'CustomCompletionSettings',
     'Settable',
     'set_default_str_sort_key',

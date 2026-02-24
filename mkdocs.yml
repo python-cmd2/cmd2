@@ -199,6 +199,7 @@ nav:
       - api/clipboard.md
       - api/colors.md
       - api/command_definition.md
+      - api/completion.md
       - api/constants.md
       - api/decorators.md
       - api/exceptions.md
@@ -210,7 +211,6 @@ nav:
       - api/rich_utils.md
       - api/string_utils.md
       - api/styles.md
-      - api/terminal_utils.md
       - api/utils.md
   - Version Upgrades:
       - upgrades.md

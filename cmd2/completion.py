@@ -1,4 +1,4 @@
-"""Provides classes and functions related to completion."""
+"""Provides classes and functions related to command-line completion."""
 
 import re
 import sys
