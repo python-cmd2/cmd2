@@ -3200,7 +3200,8 @@ class Cmd:
         """Read input from either an interactive terminal session or a redirected stream."""
         # _build_session() sets session.input to a DummyInput when not in a TTY.
         if not isinstance(session.input, DummyInput):
-            return session.prompt(prompt, completer=completer, **prompt_kwargs)  # type: ignore[arg-type]
+            with patch_stdout():
+                return session.prompt(prompt, completer=completer, **prompt_kwargs)  # type: ignore[arg-type]
 
         # We're not at a terminal, so we're likely reading from a file or a pipe.
         # We wait for a line of data before we print anything.
@@ -3311,13 +3312,12 @@ class Cmd:
             if prompt == self.prompt:
                 prompt_to_use = get_prompt
 
-            with patch_stdout():
-                return self._read_raw_input(
-                    prompt=prompt_to_use,
-                    session=self.session,
-                    completer=self.completer,
-                    pre_run=self.pre_prompt,
-                )
+            return self._read_raw_input(
+                prompt=prompt_to_use,
+                session=self.session,
+                completer=self.completer,
+                pre_run=self.pre_prompt,
+            )
         except EOFError:
             return constants.EOF
 
