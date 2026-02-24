@@ -1936,8 +1936,8 @@ def test_read_raw_input_pipe_echo(capsys) -> None:
 
 def test_read_raw_input_eof() -> None:
     app = cmd2.Cmd(stdin=io.StringIO(""))
-    result = app._read_raw_input("prompt> ", app.session, DummyCompleter())
-    assert result == constants.EOF
+    with pytest.raises(EOFError):
+        app._read_raw_input("prompt> ", app.session, DummyCompleter())
 
 
 def test_resolve_completer_none(base_app: cmd2.Cmd) -> None:
@@ -3502,7 +3502,7 @@ def test_custom_completekey():
     assert app.completekey == '?'
 
 
-def test_build_session_exception(monkeypatch):
+def test_init_session_exception(monkeypatch):
 
     # Mock PromptSession to raise ValueError on first call, then succeed
     valid_session_mock = mock.MagicMock(spec=PromptSession)
@@ -3590,7 +3590,7 @@ def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypa
     poutput_mock.assert_called_with('^C')
 
 
-def test_build_session_no_console_error(monkeypatch):
+def test_init_session_no_console_error(monkeypatch):
     from cmd2.cmd2 import NoConsoleScreenBufferError
 
     # Mock PromptSession to raise NoConsoleScreenBufferError on first call, then succeed
@@ -3608,6 +3608,40 @@ def test_build_session_no_console_error(monkeypatch):
     kwargs = call_args[1]
     assert isinstance(kwargs['input'], DummyInput)
     assert isinstance(kwargs['output'], DummyOutput)
+
+
+def test_init_session_with_custom_tty() -> None:
+    # Create a mock stdin with says it's a TTY
+    custom_stdin = mock.MagicMock(spec=io.TextIOWrapper)
+    custom_stdin.isatty.return_value = True
+    assert custom_stdin is not sys.stdin
+
+    # Create a mock stdout which is not sys.stdout
+    custom_stdout = mock.MagicMock(spec=io.TextIOWrapper)
+    assert custom_stdout is not sys.stdout
+
+    # Check if the streams were wrapped
+    with (
+        mock.patch('cmd2.cmd2.create_input') as mock_create_input,
+        mock.patch('cmd2.cmd2.create_output') as mock_create_output,
+    ):
+        app = cmd2.Cmd()
+        app.stdin = custom_stdin
+        app.stdout = custom_stdout
+        app._init_session()
+
+        mock_create_input.assert_called_once_with(stdin=custom_stdin)
+        mock_create_output.assert_called_once_with(stdout=custom_stdout)
+
+
+def test_init_session_non_interactive() -> None:
+    # Set up a mock for a non-TTY stream (like a pipe)
+    mock_stdin = mock.MagicMock(spec=io.TextIOWrapper)
+    mock_stdin.isatty.return_value = False
+
+    app = cmd2.Cmd(stdin=mock_stdin)
+    assert isinstance(app.session.input, DummyInput)
+    assert isinstance(app.session.output, DummyOutput)
 
 
 def test_no_console_screen_buffer_error_dummy():

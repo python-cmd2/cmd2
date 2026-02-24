@@ -444,7 +444,7 @@ class Cmd:
         if auto_suggest:
             self.auto_suggest = AutoSuggestFromHistory()
 
-        self.session = self._build_session()
+        self.session = self._init_session()
 
         # Commands to exclude from the history command
         self.exclude_from_history = [constants.EOF, 'history']
@@ -609,8 +609,8 @@ class Cmd:
         # the current command being executed
         self.current_command: Statement | None = None
 
-    def _build_session(self) -> PromptSession[str]:
-        """Construct the primary PromptSession for the cmd2 application.
+    def _init_session(self) -> PromptSession[str]:
+        """Initialize and return the core PromptSession for the application.
 
         Builds an interactive session if stdin is a TTY. Otherwise, uses
         dummy drivers to support non-interactive streams like pipes or files.
@@ -3197,13 +3197,25 @@ class Cmd:
         prompt: Callable[[], ANSI | str] | ANSI | str,
         session: PromptSession[str],
         completer: Completer,
-        **prompt_kwargs: Any,  # optional keyword args for session.prompt()
+        **prompt_kwargs: Any,
     ) -> str:
-        """Read input from either an interactive terminal session or a redirected stream."""
-        # _build_session() sets session.input to a DummyInput when not in a TTY.
+        """Execute the low-level input read from either a terminal or a redirected stream.
+
+        If the session is interactive (TTY), it uses `prompt_toolkit` to render a
+        rich UI with completion and `patch_stdout` protection. If non-interactive
+        (Pipe/File), it performs a direct line read from `stdin`.
+
+        :param prompt: the prompt text or a callable that returns the prompt.
+        :param session: the PromptSession instance to use for reading.
+        :param completer: the completer to use for this specific input.
+        :param prompt_kwargs: additional arguments passed directly to session.prompt().
+        :return: the stripped input string.
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        """
+        # Check if the session is configured for interactive terminal use.
         if not isinstance(session.input, DummyInput):
             with patch_stdout():
-                return session.prompt(prompt, completer=completer, **prompt_kwargs)  # type: ignore[arg-type]
+                return session.prompt(prompt, completer=completer, **prompt_kwargs)
 
         # We're not at a terminal, so we're likely reading from a file or a pipe.
         # We wait for a line of data before we print anything.
@@ -3211,7 +3223,7 @@ class Cmd:
 
         # If the stream is empty, we've reached the end of the input.
         if not line:
-            return constants.EOF
+            raise EOFError
 
         # If echo is on, we want the output to look like a session transcript.
         # Print the prompt and the command before the results.
@@ -3266,6 +3278,10 @@ class Cmd:
     ) -> str:
         """Read a line of input with optional completion and history.
 
+        :param prompt: prompt to display to user
+        :param history: optional Sequence of strings to use for up-arrow history. The passed in history
+                        will not be edited. It is the caller's responsibility to add the returned input
+                        to history if desired. Defaults to None.
         :param preserve_quotes: if True, then quoted tokens will keep their quotes when processed by
                                 ArgparseCompleter. This is helpful in cases when you're completing
                                 flag-like tokens (e.g. -o, --option) and you don't want them to be
@@ -3278,7 +3294,8 @@ class Cmd:
         :param completer: completion function that provides choices for single argument
         :param parser: an argument parser which supports the completion of multiple arguments
         :return: the line read from stdin with all trailing new lines removed
-        :raises Exception: any exceptions raised by prompt()
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        :raises Exception: any other exceptions raised by prompt()
         """
         completer_to_use = self._resolve_completer(
             preserve_quotes=preserve_quotes,
@@ -3303,7 +3320,7 @@ class Cmd:
 
         :param prompt: prompt to display to user
         :return: command line text or 'eof' if an EOFError was caught
-        :raises Exception: whatever exceptions are raised by input() except for EOFError
+        :raises Exception: any exceptions raised by prompt(), except EOFError
         """
         try:
             # Use dynamic prompt if the prompt matches self.prompt
