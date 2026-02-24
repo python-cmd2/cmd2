@@ -392,6 +392,12 @@ class Cmd:
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
 
+        # If True, cmd2 treats redirected input (pipes/files) as an interactive session.
+        # It will display the prompt before reading each line to synchronize with
+        # automation tools (like Pexpect) and will skip echoing the input to prevent
+        # duplicate prompts in the output.
+        self.interactive_pipe = False
+
         # Attributes which ARE dynamically settable via the set command at runtime
         self.always_show_hint = False
         self.debug = False
@@ -3218,18 +3224,25 @@ class Cmd:
                 return session.prompt(prompt, completer=completer, **prompt_kwargs)
 
         # We're not at a terminal, so we're likely reading from a file or a pipe.
-        # We wait for a line of data before we print anything.
+        prompt_obj = prompt() if callable(prompt) else prompt
+        prompt_str = prompt_obj.value if isinstance(prompt_obj, ANSI) else prompt_obj
+
+        # If this is an interactive pipe, then display the prompt first
+        if self.interactive_pipe:
+            self.poutput(prompt_str, end='')
+            self.stdout.flush()
+
+        # Wait for the next line of input
         line = self.stdin.readline()
 
         # If the stream is empty, we've reached the end of the input.
         if not line:
             raise EOFError
 
-        # If echo is on, we want the output to look like a session transcript.
-        # Print the prompt and the command before the results.
-        if self.echo:
-            prompt_obj = prompt() if callable(prompt) else prompt
-            prompt_str = prompt_obj.value if isinstance(prompt_obj, ANSI) else prompt_obj
+        # If not interactive and echo is on, we want the output to simulate a
+        # live session. Print the prompt and the command so they appear in the
+        # output stream before the results.
+        if not self.interactive_pipe and self.echo:
             end = "" if line.endswith('\n') else "\n"
 
             self.poutput(f'{prompt_str}{line}', end=end)

@@ -1918,20 +1918,42 @@ def test_read_raw_input_tty(base_app: cmd2.Cmd) -> None:
         assert result == "foo"
 
 
-def test_read_raw_input_pipe() -> None:
+def test_read_raw_input_interactive_pipe(capsys) -> None:
+    prompt = "prompt> "
     app = cmd2.Cmd(stdin=io.StringIO("input from pipe\n"))
-    result = app._read_raw_input("prompt> ", app.session, DummyCompleter())
+    app.interactive_pipe = True
+    result = app._read_raw_input(prompt, app.session, DummyCompleter())
     assert result == "input from pipe"
 
-
-def test_read_raw_input_pipe_echo(capsys) -> None:
-    app = cmd2.Cmd(stdin=io.StringIO("input from pipe\n"))
-    app.echo = True
-    result = app._read_raw_input("prompt> ", app.session, DummyCompleter())
-    assert result == "input from pipe"
-
+    # In interactive mode, _read_raw_input() prints the prompt.
     captured = capsys.readouterr()
-    assert "prompt> input from pipe" in captured.out
+    assert captured.out == prompt
+
+
+def test_read_raw_input_non_interactive_pipe_echo_off(capsys) -> None:
+    prompt = "prompt> "
+    app = cmd2.Cmd(stdin=io.StringIO("input from pipe\n"))
+    app.interactive_pipe = False
+    app.echo = False
+    result = app._read_raw_input(prompt, app.session, DummyCompleter())
+    assert result == "input from pipe"
+
+    # When not echoing in non-interactive mode, _read_raw_input() prints nothing.
+    captured = capsys.readouterr()
+    assert not captured.out
+
+
+def test_read_raw_input_non_interactive_pipe_echo_on(capsys) -> None:
+    prompt = "prompt> "
+    app = cmd2.Cmd(stdin=io.StringIO("input from pipe\n"))
+    app.interactive_pipe = False
+    app.echo = True
+    result = app._read_raw_input(prompt, app.session, DummyCompleter())
+    assert result == "input from pipe"
+
+    # When echoing in non-interactive mode, _read_raw_input() prints the prompt and input text.
+    captured = capsys.readouterr()
+    assert f"{prompt}input from pipe\n" == captured.out
 
 
 def test_read_raw_input_eof() -> None:
