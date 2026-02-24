@@ -5172,12 +5172,12 @@ class Cmd:
                     self._script_dir.pop()
 
     @classmethod
-    def _build_relative_run_script_parser(cls) -> Cmd2ArgumentParser:
-        relative_run_script_parser = cls._build_base_run_script_parser()
+    def _build__relative_run_script_parser(cls) -> Cmd2ArgumentParser:
+        _relative_run_script_parser = cls._build_base_run_script_parser()
 
         # Append to existing description
-        relative_run_script_parser.description = Group(
-            cast(Group, relative_run_script_parser.description),
+        _relative_run_script_parser.description = Group(
+            cast(Group, _relative_run_script_parser.description),
             "\n",
             (
                 "If this is called from within an already-running script, the filename will be "
@@ -5185,14 +5185,14 @@ class Cmd:
             ),
         )
 
-        relative_run_script_parser.epilog = relative_run_script_parser.create_text_group(
+        _relative_run_script_parser.epilog = _relative_run_script_parser.create_text_group(
             "Note",
             "This command is intended to be used from within a text script.",
         )
 
-        return relative_run_script_parser
+        return _relative_run_script_parser
 
-    @with_argparser(_build_relative_run_script_parser)
+    @with_argparser(_build__relative_run_script_parser)
     def do__relative_run_script(self, args: argparse.Namespace) -> bool | None:
         """Run text script.
 
