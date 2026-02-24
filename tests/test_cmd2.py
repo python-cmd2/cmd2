@@ -1900,6 +1900,10 @@ def test_echo(capsys) -> None:
     assert out.startswith(f'{app.prompt}{commands[0]}\nUsage: history')
 
 
+@pytest.mark.skipif(
+    sys.platform.startswith('win'),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
 def test_read_raw_input_tty(base_app: cmd2.Cmd) -> None:
     with create_pipe_input() as pipe_input:
         base_app.session = PromptSession(
@@ -3617,24 +3621,27 @@ def test_no_console_screen_buffer_error_dummy():
 def test_read_command_line_dynamic_prompt(base_app: cmd2.Cmd) -> None:
     """Test that _read_command_line uses a dynamic prompt when provided prompt matches app.prompt"""
 
-    # Set input to something other than DummyInput so _read_raw_input() will go down the TTY route.
-    mock_session = mock.MagicMock()
-    mock_session.input = mock.MagicMock()
-    base_app.session = mock_session
-    base_app._read_command_line(base_app.prompt)
+    # Mock patch_stdout to prevent it from attempting to access the Windows
+    # console buffer in a Windows test environment.
+    with mock.patch('prompt_toolkit.patch_stdout.patch_stdout', return_value=mock.MagicMock()):
+        # Set input to something other than DummyInput so _read_raw_input()
+        # will go down the TTY route.
+        mock_session = mock.MagicMock()
+        mock_session.input = mock.MagicMock()
+        base_app.session = mock_session
+        base_app._read_command_line(base_app.prompt)
 
-    # Check that mock_prompt was called with a callable for the prompt
-    # args[0] should be the prompt_to_use
-    args, _ = mock_session.prompt.call_args
-    prompt_arg = args[0]
-    assert callable(prompt_arg)
+        # Check that mock_prompt was called with a callable for the prompt
+        args, _ = mock_session.prompt.call_args
+        prompt_arg = args[0]
+        assert callable(prompt_arg)
 
-    # Verify the callable returns the expected ANSI formatted prompt
-    from prompt_toolkit.formatted_text import ANSI
+        # Verify the callable returns the expected ANSI formatted prompt
+        from prompt_toolkit.formatted_text import ANSI
 
-    result = prompt_arg()
-    assert isinstance(result, ANSI)
-    assert result.value == ANSI(base_app.prompt).value
+        result = prompt_arg()
+        assert isinstance(result, ANSI)
+        assert result.value == ANSI(base_app.prompt).value
 
 
 def test_read_input_history_isolation(base_app: cmd2.Cmd) -> None:
