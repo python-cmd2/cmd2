@@ -37,7 +37,7 @@ jobs:
 
       - name: Run tests
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
 
       - name: Run tests
