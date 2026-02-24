@@ -1191,6 +1191,18 @@ def test_ctrl_c_at_prompt(say_app, monkeypatch) -> None:
     assert out == 'hello\n^C\ngoodbye\n'
 
 
+def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
+    read_command_mock = mock.MagicMock(name='_read_command_line')
+    read_command_mock.side_effect = ['say hello', EOFError()]
+    monkeypatch.setattr("cmd2.Cmd._read_command_line", read_command_mock)
+
+    say_app.cmdloop()
+
+    # And verify the expected output to stdout
+    out = say_app.stdout.getvalue()
+    assert out == 'hello\n\n'
+
+
 class ShellApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
