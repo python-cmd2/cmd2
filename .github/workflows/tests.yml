@@ -18,7 +18,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     defaults:
       run:
-        shell: bash
+        # Use a conditional expression to set the default shell
+        # 'cmd' on Windows, 'bash' on other platforms (Linux, macOS)
+        shell: ${{ runner.os == 'Windows' && 'cmd' || 'bash' }}
     steps:
       - name: Check out
         uses: actions/checkout@v6.0.2
