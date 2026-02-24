@@ -40,7 +40,7 @@ jobs:
       - name: Run tests
         if: runner.os == 'Windows'
         run:
-          uv run winpty python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml
+          winpty uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml
           tests
 
       - name: Run tests
