@@ -46,6 +46,10 @@ See the
 example for a demonstration of how to implement a background thread that refreshes the toolbar
 periodically.
 
+### Deleted Modules
+
+Removed `rl_utils.py` and `terminal_utils.py` since `prompt-toolkit` provides this functionality.
+
 ## Upgrading to cmd2 3.x from 2.x
 
 For details about all of the changes in the 3.0.0 release, please refer to
