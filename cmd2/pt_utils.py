@@ -11,6 +11,7 @@ from typing import (
 )
 
 from prompt_toolkit import print_formatted_text
+from prompt_toolkit.application import get_app
 from prompt_toolkit.completion import (
     Completer,
     Completion,
@@ -95,7 +96,7 @@ class Cmd2Completer(Completer):
         # and returning early, we trigger a new completion cycle where the quote
         # is already present, allowing for proper common prefix calculation.
         if completions._add_opening_quote and search_text_length > 0:
-            buffer = self.cmd_app.session.app.current_buffer
+            buffer = get_app().current_buffer
 
             buffer.cursor_left(search_text_length)
             buffer.insert_text(completions._quote_char)

@@ -17,7 +17,6 @@ from collections.abc import (
     MutableSequence,
 )
 from difflib import SequenceMatcher
-from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -731,24 +730,6 @@ def get_defining_class(meth: Callable[..., Any]) -> type[Any] | None:
         if isinstance(cls, type):
             return cls
     return cast(type, getattr(meth, '__objclass__', None))  # handle special descriptor objects
-
-
-class CompletionMode(Enum):
-    """Enum for what type of completion to perform in cmd2.Cmd.read_input()."""
-
-    # Completion will be disabled during read_input() call
-    # Use of custom up-arrow history supported
-    NONE = 1
-
-    # read_input() will complete cmd2 commands and their arguments
-    # cmd2's command line history will be used for up arrow if history is not provided.
-    # Otherwise use of custom up-arrow history supported.
-    COMMANDS = 2
-
-    # read_input() will complete based on one of its following parameters:
-    #     choices, choices_provider, completer, parser
-    # Use of custom up-arrow history supported
-    CUSTOM = 3
 
 
 class CustomCompletionSettings:
