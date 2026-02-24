@@ -3623,7 +3623,7 @@ def test_read_command_line_dynamic_prompt(base_app: cmd2.Cmd) -> None:
 
     # Mock patch_stdout to prevent it from attempting to access the Windows
     # console buffer in a Windows test environment.
-    with mock.patch('prompt_toolkit.patch_stdout.patch_stdout', return_value=mock.MagicMock()):
+    with mock.patch('cmd2.cmd2.patch_stdout'):
         # Set input to something other than DummyInput so _read_raw_input()
         # will go down the TTY route.
         mock_session = mock.MagicMock()
