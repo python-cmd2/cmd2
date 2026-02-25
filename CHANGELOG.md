@@ -57,6 +57,9 @@ prompt is displayed.
     - Changed `StatementParser.parse_command_only()` to return a `PartialStatement` object.
     - Renamed `Macro.arg_list` to `Macro.args`.
     - Removed `terminal_utils.py` since `prompt-toolkit` provides this functionality.
+    - Replaced `async_alert()` and `async_update_prompt()` with a single function called
+      `add_alert()`. This new function is thread-safe and does not require you to acquire a mutex
+      before calling it like the previous functions did.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
