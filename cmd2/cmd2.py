@@ -3360,7 +3360,7 @@ class Cmd:
         while not self._alerter_shutdown.is_set():
             try:
                 # Wait for an alert
-                alert = self.alert_queue.get(timeout=0.5)
+                alert = self.alert_queue.get(timeout=0.1)
 
                 # Block if not at a prompt
                 while not self._alerter_gate.is_set():
@@ -3456,7 +3456,17 @@ class Cmd:
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
         finally:
-            pass
+            with self.sigint_protection:
+                # Shut down the _process_alerts_thread
+                if self._process_alerts_thread is not None and self._process_alerts_thread.is_alive():
+                    self._alerter_shutdown.set()
+
+                    # Worker is a daemon polling every 0.1s. We join with a 1.0s
+                    # safety timeout that is highly unlikely to be reached.
+                    # If it is, the daemon status ensures the OS reaps the
+                    # thread when the process exits rather than hanging.
+                    self._process_alerts_thread.join(timeout=1.0)
+                    self._process_alerts_thread = None
 
     #############################################################
     # Parsers and functions for alias command and subcommands
