@@ -129,7 +129,7 @@ class AlerterApp(cmd2.Cmd):
         """Randomly generates a colored prompt
         :return: the new prompt.
         """
-        rand_num = random.randint(1, 20)
+        rand_num = random.randint(1, 6)
 
         status_color = Color.DEFAULT
 

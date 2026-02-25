@@ -3367,20 +3367,22 @@ class Cmd:
                 # Get the next alert while still holding the condition lock.
                 alert = self._alert_queue.get()
 
+            # Only apply prompt changes generated after the current prompt started.
+            prompt_updated = False
+            if (alert.prompt is not None and
+                alert.prompt != self.prompt and
+                alert.timestamp > self._alert_prompt_timestamp):  # fmt: skip
+                self.prompt = alert.prompt
+                prompt_updated = True
+
             if alert.msg:
                 # Print the message above the current prompt.
                 with patch_stdout():
                     print_formatted_text(pt_filter_style(alert.msg))
 
-            # Only apply prompt changes generated after the current prompt started.
-            if (alert.prompt is not None and
-                alert.prompt != self.prompt and
-                alert.timestamp > self._alert_prompt_timestamp):  # fmt: skip
-                self.prompt = alert.prompt
-
-                # Refresh UI immediately unless at a continuation prompt.
-                if not self._at_continuation_prompt:
-                    get_app().invalidate()
+            # Refresh UI immediately unless at a continuation prompt.
+            if prompt_updated and not self._at_continuation_prompt:
+                get_app().invalidate()
 
     def _read_command_line(self, prompt: str) -> str:
         """Read the next command line from the input stream.
