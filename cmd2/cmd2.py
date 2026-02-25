@@ -107,12 +107,8 @@ from .command_definition import (
 )
 from .completion import (
     Choices,
-    ChoicesProviderUnbound,
-    CompleterBound,
-    CompleterUnbound,
     CompletionItem,
     Completions,
-    Matchable,
 )
 from .constants import (
     CLASS_ATTR_DEFAULT_HELP_CATEGORY,
@@ -121,7 +117,6 @@ from .constants import (
     HELP_FUNC_PREFIX,
 )
 from .decorators import (
-    CommandParent,
     as_subcommand_to,
     with_argparser,
 )
@@ -152,6 +147,13 @@ from .rich_utils import (
     RichPrintKwargs,
 )
 from .styles import Cmd2Style
+from .types import (
+    ChoicesProviderUnbound,
+    CmdOrSet,
+    CompleterBound,
+    CompleterUnbound,
+    Matchable,
+)
 
 with contextlib.suppress(ImportError):
     from IPython import start_ipython
@@ -840,7 +842,7 @@ class Cmd:
 
     def _build_parser(
         self,
-        parent: CommandParent,
+        parent: CmdOrSet,
         parser_builder: argparse.ArgumentParser
         | Callable[[], argparse.ArgumentParser]
         | StaticArgParseBuilder
@@ -849,7 +851,7 @@ class Cmd:
     ) -> argparse.ArgumentParser:
         """Build argument parser for a command/subcommand.
 
-        :param parent: CommandParent object which owns the command using the parser.
+        :param parent: object which owns the command using the parser.
                        When parser_builder is a classmethod, this function passes
                        parent's class to it.
         :param parser_builder: means used to build the parser
@@ -3283,8 +3285,8 @@ class Cmd:
         self,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderUnbound | None = None,
-        completer: CompleterUnbound | None = None,
+        choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
+        completer: CompleterUnbound[CmdOrSet] | None = None,
         parser: argparse.ArgumentParser | None = None,
     ) -> Completer:
         """Determine the appropriate completer based on provided arguments."""
@@ -3315,8 +3317,8 @@ class Cmd:
         history: Sequence[str] | None = None,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderUnbound | None = None,
-        completer: CompleterUnbound | None = None,
+        choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
+        completer: CompleterUnbound[CmdOrSet] | None = None,
         parser: argparse.ArgumentParser | None = None,
     ) -> str:
         """Read a line of input with optional completion and history.

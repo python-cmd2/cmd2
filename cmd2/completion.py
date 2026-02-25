@@ -3,11 +3,9 @@
 import re
 import sys
 from collections.abc import (
-    Callable,
     Collection,
     Iterable,
     Iterator,
-    Mapping,
     Sequence,
 )
 from dataclasses import (
@@ -15,18 +13,12 @@ from dataclasses import (
     field,
 )
 from typing import (
-    TYPE_CHECKING,
     Any,
-    TypeAlias,
     cast,
     overload,
 )
 
 from . import string_utils as su
-
-if TYPE_CHECKING:  # pragma: no cover
-    from .cmd2 import Cmd
-    from .command_definition import CommandSet
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -264,49 +256,3 @@ class Completions(CompletionResultsBase):
 def all_display_numeric(items: Collection[CompletionItem]) -> bool:
     """Return True if items is non-empty and every item.display_plain value is a numeric string."""
     return bool(items) and all(NUMERIC_RE.match(item.display_plain) for item in items)
-
-
-#############################################
-# choices_provider function types
-#############################################
-
-# Represents the parsed tokens from argparse during completion
-ArgTokens: TypeAlias = Mapping[str, Sequence[str]]
-
-# Unbound choices_provider function types used by argparse-based completion.
-# These expect a Cmd or CommandSet instance as the first argument.
-ChoicesProviderUnbound: TypeAlias = (
-    # Basic: (self) -> Choices
-    Callable[["Cmd"], Choices]
-    | Callable[["CommandSet"], Choices]
-    |
-    # Context-aware: (self, arg_tokens) -> Choices
-    Callable[["Cmd", ArgTokens], Choices]
-    | Callable[["CommandSet", ArgTokens], Choices]
-)
-
-#############################################
-# completer function types
-#############################################
-
-# Unbound completer function types used by argparse-based completion.
-# These expect a Cmd or CommandSet instance as the first argument.
-CompleterUnbound: TypeAlias = (
-    # Basic: (self, text, line, begidx, endidx) -> Completions
-    Callable[["Cmd", str, str, int, int], Completions]
-    | Callable[["CommandSet", str, str, int, int], Completions]
-    |
-    # Context-aware: (self, text, line, begidx, endidx, arg_tokens) -> Completions
-    Callable[["Cmd", str, str, int, int, ArgTokens], Completions]
-    | Callable[["CommandSet", str, str, int, int, ArgTokens], Completions]
-)
-
-# A bound completer used internally by cmd2 for basic completion logic.
-# The 'self' argument is already tied to an instance and is omitted.
-# Format: (text, line, begidx, endidx) -> Completions
-CompleterBound: TypeAlias = Callable[[str, str, int, int], Completions]
-
-# Represents a type that can be matched against when completing.
-# Strings are matched directly while CompletionItems are matched
-# against their 'text' member.
-Matchable: TypeAlias = str | CompletionItem

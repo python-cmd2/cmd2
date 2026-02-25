@@ -294,13 +294,14 @@ from rich_argparse import (
 
 from . import constants
 from . import rich_utils as ru
-from .completion import (
-    ChoicesProviderUnbound,
-    CompleterUnbound,
-    CompletionItem,
-)
+from .completion import CompletionItem
 from .rich_utils import Cmd2RichArgparseConsole
 from .styles import Cmd2Style
+from .types import (
+    ChoicesProviderUnbound,
+    CmdOrSet,
+    CompleterUnbound,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import ArgparseCompleter
@@ -384,7 +385,7 @@ class ChoicesCallable:
     def __init__(
         self,
         is_completer: bool,
-        to_call: ChoicesProviderUnbound | CompleterUnbound,
+        to_call: ChoicesProviderUnbound[CmdOrSet] | CompleterUnbound[CmdOrSet],
     ) -> None:
         """Initialize the ChoiceCallable instance.
 
@@ -396,18 +397,18 @@ class ChoicesCallable:
         self.to_call = to_call
 
     @property
-    def choices_provider(self) -> ChoicesProviderUnbound:
+    def choices_provider(self) -> ChoicesProviderUnbound[CmdOrSet]:
         """Retreive the internal choices_provider function."""
         if self.is_completer:
             raise AttributeError("This instance is configured as a completer, not a choices_provider")
-        return cast(ChoicesProviderUnbound, self.to_call)
+        return cast(ChoicesProviderUnbound[CmdOrSet], self.to_call)
 
     @property
-    def completer(self) -> CompleterUnbound:
+    def completer(self) -> CompleterUnbound[CmdOrSet]:
         """Retreive the internal completer function."""
         if not self.is_completer:
             raise AttributeError("This instance is configured as a choices_provider, not a completer")
-        return cast(CompleterUnbound, self.to_call)
+        return cast(CompleterUnbound[CmdOrSet], self.to_call)
 
 
 ############################################################################################################
@@ -476,7 +477,7 @@ setattr(argparse.Action, '_set_choices_callable', _action_set_choices_callable)
 
 def _action_set_choices_provider(
     self: argparse.Action,
-    choices_provider: ChoicesProviderUnbound,
+    choices_provider: ChoicesProviderUnbound[CmdOrSet],
 ) -> None:
     """Set choices_provider of an argparse Action.
 
@@ -496,7 +497,7 @@ setattr(argparse.Action, 'set_choices_provider', _action_set_choices_provider)
 
 def _action_set_completer(
     self: argparse.Action,
-    completer: CompleterUnbound,
+    completer: CompleterUnbound[CmdOrSet],
 ) -> None:
     """Set completer of an argparse Action.
 
@@ -694,8 +695,8 @@ def _add_argument_wrapper(
     self: argparse._ActionsContainer,
     *args: Any,
     nargs: int | str | tuple[int] | tuple[int, int] | tuple[int, float] | None = None,
-    choices_provider: ChoicesProviderUnbound | None = None,
-    completer: CompleterUnbound | None = None,
+    choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
+    completer: CompleterUnbound[CmdOrSet] | None = None,
     suppress_tab_hint: bool = False,
     table_header: Sequence[str | Column] | None = None,
     **kwargs: Any,

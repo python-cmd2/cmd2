@@ -10,7 +10,6 @@ from typing import (
     Any,
     TypeAlias,
     TypeVar,
-    Union,
 )
 
 from . import constants
@@ -21,9 +20,10 @@ from .command_definition import (
 )
 from .exceptions import Cmd2ArgparseError
 from .parsing import Statement
+from .types import CmdOrSet
 
 if TYPE_CHECKING:  # pragma: no cover
-    import cmd2
+    from .cmd2 import Cmd
 
 
 def with_category(category: str) -> Callable[[CommandFunc], CommandFunc]:
@@ -56,10 +56,8 @@ def with_category(category: str) -> Callable[[CommandFunc], CommandFunc]:
     return cat_decorator
 
 
-CommandParent = TypeVar('CommandParent', bound=Union['cmd2.Cmd', CommandSet])
-CommandParentClass = TypeVar('CommandParentClass', bound=type['cmd2.Cmd'] | type[CommandSet])
-
-RawCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CommandParent, Statement | str], bool | None]
+CmdOrSetClass = TypeVar('CmdOrSetClass', bound=type['Cmd'] | type[CommandSet])
+RawCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CmdOrSet, Statement | str], bool | None]
 
 
 ##########################
@@ -67,7 +65,7 @@ RawCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CommandParent, Statement
 # in cmd2 command functions/callables. As long as the 2-ple of arguments we expect to be there can be
 # found we can swap out the statement with each decorator's specific parameters
 ##########################
-def _parse_positionals(args: tuple[Any, ...]) -> tuple['cmd2.Cmd', Statement | str]:
+def _parse_positionals(args: tuple[Any, ...]) -> tuple['Cmd', Statement | str]:
     """Inspect the positional arguments until the cmd2.Cmd argument is found.
 
     Assumes that we will find cmd2.Cmd followed by the command statement object or string.
@@ -108,29 +106,29 @@ def _arg_swap(args: Sequence[Any], search_arg: Any, *replace_arg: Any) -> list[A
 
 #: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and optionally returns a boolean
-ArgListCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CommandParent, list[str]], bool | None]
+ArgListCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CmdOrSet, list[str]], bool | None]
 #: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and returns a boolean
-ArgListCommandFuncBoolReturn: TypeAlias = Callable[[CommandParent, list[str]], bool]
+ArgListCommandFuncBoolReturn: TypeAlias = Callable[[CmdOrSet, list[str]], bool]
 #: Function signature for a command function that accepts a pre-processed argument list from user input
 #: and returns Nothing
-ArgListCommandFuncNoneReturn: TypeAlias = Callable[[CommandParent, list[str]], None]
+ArgListCommandFuncNoneReturn: TypeAlias = Callable[[CmdOrSet, list[str]], None]
 
 #: Aggregate of all accepted function signatures for command functions that accept a pre-processed argument list
 ArgListCommandFunc: TypeAlias = (
-    ArgListCommandFuncOptionalBoolReturn[CommandParent]
-    | ArgListCommandFuncBoolReturn[CommandParent]
-    | ArgListCommandFuncNoneReturn[CommandParent]
+    ArgListCommandFuncOptionalBoolReturn[CmdOrSet]
+    | ArgListCommandFuncBoolReturn[CmdOrSet]
+    | ArgListCommandFuncNoneReturn[CmdOrSet]
 )
 
 
 def with_argument_list(
-    func_arg: ArgListCommandFunc[CommandParent] | None = None,
+    func_arg: ArgListCommandFunc[CmdOrSet] | None = None,
     *,
     preserve_quotes: bool = False,
 ) -> (
-    RawCommandFuncOptionalBoolReturn[CommandParent]
-    | Callable[[ArgListCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]
+    RawCommandFuncOptionalBoolReturn[CmdOrSet]
+    | Callable[[ArgListCommandFunc[CmdOrSet]], RawCommandFuncOptionalBoolReturn[CmdOrSet]]
 ):
     """Decorate a ``do_*`` method to alter the arguments passed to it so it is passed a list[str].
 
@@ -153,7 +151,7 @@ def with_argument_list(
     """
     import functools
 
-    def arg_decorator(func: ArgListCommandFunc[CommandParent]) -> RawCommandFuncOptionalBoolReturn[CommandParent]:
+    def arg_decorator(func: ArgListCommandFunc[CmdOrSet]) -> RawCommandFuncOptionalBoolReturn[CmdOrSet]:
         """Decorate function that ingests an Argument List function and returns a raw command function.
 
         The returned function will process the raw input into an argument list to be passed to the wrapped function.
@@ -188,41 +186,41 @@ def with_argument_list(
 
 #: Function signatures for command functions that use an argparse.ArgumentParser to process user input
 #: and optionally return a boolean
-ArgparseCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace], bool | None]
+ArgparseCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace], bool | None]
 ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn: TypeAlias = Callable[
-    [CommandParent, argparse.Namespace, list[str]], bool | None
+    [CmdOrSet, argparse.Namespace, list[str]], bool | None
 ]
 
 #: Function signatures for command functions that use an argparse.ArgumentParser to process user input
 #: and return a boolean
-ArgparseCommandFuncBoolReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace], bool]
-ArgparseCommandFuncWithUnknownArgsBoolReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace, list[str]], bool]
+ArgparseCommandFuncBoolReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace], bool]
+ArgparseCommandFuncWithUnknownArgsBoolReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace, list[str]], bool]
 
 #: Function signatures for command functions that use an argparse.ArgumentParser to process user input
 #: and return nothing
-ArgparseCommandFuncNoneReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace], None]
-ArgparseCommandFuncWithUnknownArgsNoneReturn: TypeAlias = Callable[[CommandParent, argparse.Namespace, list[str]], None]
+ArgparseCommandFuncNoneReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace], None]
+ArgparseCommandFuncWithUnknownArgsNoneReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace, list[str]], None]
 
 #: Aggregate of all accepted function signatures for an argparse command function
 ArgparseCommandFunc: TypeAlias = (
-    ArgparseCommandFuncOptionalBoolReturn[CommandParent]
-    | ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn[CommandParent]
-    | ArgparseCommandFuncBoolReturn[CommandParent]
-    | ArgparseCommandFuncWithUnknownArgsBoolReturn[CommandParent]
-    | ArgparseCommandFuncNoneReturn[CommandParent]
-    | ArgparseCommandFuncWithUnknownArgsNoneReturn[CommandParent]
+    ArgparseCommandFuncOptionalBoolReturn[CmdOrSet]
+    | ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn[CmdOrSet]
+    | ArgparseCommandFuncBoolReturn[CmdOrSet]
+    | ArgparseCommandFuncWithUnknownArgsBoolReturn[CmdOrSet]
+    | ArgparseCommandFuncNoneReturn[CmdOrSet]
+    | ArgparseCommandFuncWithUnknownArgsNoneReturn[CmdOrSet]
 )
 
 
 def with_argparser(
     parser: argparse.ArgumentParser  # existing parser
     | Callable[[], argparse.ArgumentParser]  # function or staticmethod
-    | Callable[[CommandParentClass], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
+    | Callable[[CmdOrSetClass], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
     with_unknown_args: bool = False,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], RawCommandFuncOptionalBoolReturn[CommandParent]]:
+) -> Callable[[ArgparseCommandFunc[CmdOrSet]], RawCommandFuncOptionalBoolReturn[CmdOrSet]]:
     """Decorate a ``do_*`` method to populate its ``args`` argument with the given instance of argparse.ArgumentParser.
 
     :param parser: instance of ArgumentParser or a callable that returns an ArgumentParser for this command
@@ -270,7 +268,7 @@ def with_argparser(
     """
     import functools
 
-    def arg_decorator(func: ArgparseCommandFunc[CommandParent]) -> RawCommandFuncOptionalBoolReturn[CommandParent]:
+    def arg_decorator(func: ArgparseCommandFunc[CmdOrSet]) -> RawCommandFuncOptionalBoolReturn[CmdOrSet]:
         """Decorate function that ingests an Argparse Command Function and returns a raw command function.
 
         The returned function will process the raw input into an argparse Namespace to be passed to the wrapped function.
@@ -351,11 +349,11 @@ def as_subcommand_to(
     subcommand: str,
     parser: argparse.ArgumentParser  # existing parser
     | Callable[[], argparse.ArgumentParser]  # function or staticmethod
-    | Callable[[CommandParentClass], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
+    | Callable[[CmdOrSetClass], argparse.ArgumentParser],  # Cmd or CommandSet classmethod
     *,
     help: str | None = None,  # noqa: A002
     aliases: Sequence[str] | None = None,
-) -> Callable[[ArgparseCommandFunc[CommandParent]], ArgparseCommandFunc[CommandParent]]:
+) -> Callable[[ArgparseCommandFunc[CmdOrSet]], ArgparseCommandFunc[CmdOrSet]]:
     """Tag this method as a subcommand to an existing argparse decorated command.
 
     :param command: Command Name. Space-delimited subcommands may optionally be specified
@@ -368,7 +366,7 @@ def as_subcommand_to(
     :return: Wrapper function that can receive an argparse.Namespace
     """
 
-    def arg_decorator(func: ArgparseCommandFunc[CommandParent]) -> ArgparseCommandFunc[CommandParent]:
+    def arg_decorator(func: ArgparseCommandFunc[CmdOrSet]) -> ArgparseCommandFunc[CmdOrSet]:
         # Set some custom attributes for this command
         setattr(func, constants.SUBCMD_ATTR_COMMAND, command)
         setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
