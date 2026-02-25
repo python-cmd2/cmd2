@@ -1203,6 +1203,10 @@ def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
     assert out == 'hello\n\n'
 
 
+@pytest.mark.skipif(
+    sys.platform.startswith('win'),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
 @pytest.mark.parametrize(
     ('msg', 'prompt', 'is_stale'),
     [
