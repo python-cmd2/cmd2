@@ -1222,7 +1222,7 @@ def test_async_alert(base_app, msg, prompt, is_stale) -> None:
 
     with mock.patch('cmd2.cmd2.print_formatted_text') as mock_print:
         base_app.add_alert(msg=msg, prompt=prompt)
-        alert = base_app._alert_queue.get()
+        alert = base_app._alert_queue[0]
 
         # Stale means alert was created before the current prompt.
         if is_stale:
@@ -1231,8 +1231,6 @@ def test_async_alert(base_app, msg, prompt, is_stale) -> None:
         else:
             # In the future
             alert.timestamp = time.monotonic() + 99999999
-
-        base_app._alert_queue.put(alert)
 
         with create_pipe_input() as pipe_input:
             base_app.session = PromptSession(
@@ -1255,17 +1253,17 @@ def test_async_alert(base_app, msg, prompt, is_stale) -> None:
 
 
 def test_add_alert(base_app) -> None:
-    orig_num_alerts = base_app._alert_queue.qsize()
+    orig_num_alerts = len(base_app._alert_queue)
 
     # Nothing is added when both are None
     base_app.add_alert(msg=None, prompt=None)
-    assert base_app._alert_queue.qsize() == orig_num_alerts
+    assert len(base_app._alert_queue) == orig_num_alerts
 
     # Now test valid alert arguments
     base_app.add_alert(msg="Hello", prompt=None)
     base_app.add_alert(msg="Hello", prompt="prompt> ")
     base_app.add_alert(msg=None, prompt="prompt> ")
-    assert base_app._alert_queue.qsize() == orig_num_alerts + 3
+    assert len(base_app._alert_queue) == orig_num_alerts + 3
 
 
 class ShellApp(cmd2.Cmd):
