@@ -3,9 +3,8 @@
 and changes the window title.
 """
 
-import asyncio
-import contextlib
 import random
+import threading
 import time
 
 import cmd2
@@ -31,63 +30,50 @@ ALERTS = [
 class AlerterApp(cmd2.Cmd):
     """An app that shows off async_alert() and async_update_prompt()."""
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self) -> None:
         """Initializer."""
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.prompt = "(APR)> "
 
-        # The task that will asynchronously alert the user of events
-        self._alerter_task: asyncio.Task | None = None
-        self._alerts_enabled = True
+        # The thread that will asynchronously alert the user of events
+        self._stop_event = threading.Event()
+        self._add_alert_thread = threading.Thread()
         self._alert_count = 0
-        self._next_alert_time = 0
+        self._next_alert_time = 0.0
 
-        # Register hook to stop alerts when the command loop finishes
+        # Create some hooks to handle the starting and stopping of our thread
+        self.register_preloop_hook(self._preloop_hook)
         self.register_postloop_hook(self._postloop_hook)
 
-    def pre_prompt(self) -> None:
-        """Start the alerter task if enabled.
-        This is called after the prompt event loop has started, so create_background_task works.
-        """
-        if self._alerts_enabled:
-            self._start_alerter_task()
+    def _preloop_hook(self) -> None:
+        """Start the alerter thread."""
+        self._stop_event.clear()
+        self._add_alert_thread = threading.Thread(name='alerter', target=self._add_alerts_func)
+        self._add_alert_thread.start()
 
     def _postloop_hook(self) -> None:
-        """Stops the alerter task."""
-        self._cancel_alerter_task()
+        """Stops the alerter thread."""
+        self._stop_event.set()
+        if self._add_alert_thread.is_alive():
+            self._add_alert_thread.join()
 
-    def do_start_alerts(self, _) -> None:
-        """Starts the alerter task."""
-        if self._alerts_enabled:
-            print("The alert task is already started")
+    def do_start_alerts(self, _: cmd2.Statement) -> None:
+        """Starts the alerter thread."""
+        if self._add_alert_thread.is_alive():
+            print("The alert thread is already started")
         else:
-            self._alerts_enabled = True
-            # Task will be started in pre_prompt at next prompt
+            self._stop_event.clear()
+            self._add_alert_thread = threading.Thread(name='alerter', target=self._add_alerts_func)
+            self._add_alert_thread.start()
 
-    def do_stop_alerts(self, _) -> None:
-        """Stops the alerter task."""
-        if not self._alerts_enabled:
-            print("The alert task is already stopped")
+    def do_stop_alerts(self, _: cmd2.Statement) -> None:
+        """Stops the alerter thread."""
+        self._stop_event.set()
+        if self._add_alert_thread.is_alive():
+            self._add_alert_thread.join()
         else:
-            self._alerts_enabled = False
-            self._cancel_alerter_task()
-
-    def _start_alerter_task(self) -> None:
-        """Start the alerter task if it's not running."""
-        if self._alerter_task is not None and not self._alerter_task.done():
-            return
-
-        # self.session.app is the prompt_toolkit Application.
-        # create_background_task creates a task that runs on the same loop as the app.
-        with contextlib.suppress(RuntimeError):
-            self._alerter_task = self.session.app.create_background_task(self._alerter())
-
-    def _cancel_alerter_task(self) -> None:
-        """Cancel the alerter task."""
-        if self._alerter_task is not None:
-            self._alerter_task.cancel()
-            self._alerter_task = None
+            print("The alert thread is already stopped")
 
     def _get_alerts(self) -> list[str]:
         """Reports alerts
@@ -160,38 +146,29 @@ class AlerterApp(cmd2.Cmd):
 
         return stylize(self.visible_prompt, style=status_color)
 
-    async def _alerter(self) -> None:
+    def _add_alerts_func(self) -> None:
         """Prints alerts and updates the prompt any time the prompt is showing."""
         self._alert_count = 0
         self._next_alert_time = 0
 
-        try:
-            while True:
-                # Get any alerts that need to be printed
-                alert_str = self._generate_alert_str()
+        while not self._stop_event.is_set():
+            # Get any alerts that need to be printed
+            alert_str = self._generate_alert_str()
 
-                # Generate a new prompt
-                new_prompt = self._generate_colored_prompt()
+            # Generate a new prompt
+            new_prompt = self._generate_colored_prompt()
 
-                # Check if we have alerts to print
-                if alert_str:
-                    # We are running on the main loop, so we can print directly.
-                    # patch_stdout (active during read_input) handles the output.
-                    print(alert_str)
+            # Check if we have alerts to print
+            if alert_str:
+                self.add_alert(msg=alert_str, prompt=new_prompt)
+                new_title = f"Alerts Printed: {self._alert_count}"
+                self.set_window_title(new_title)
 
-                    self.prompt = new_prompt
-                    new_title = f"Alerts Printed: {self._alert_count}"
-                    self.set_window_title(new_title)
-                    self.session.app.invalidate()
+            # Otherwise check if the prompt needs to be updated or refreshed
+            elif self.prompt != new_prompt:
+                self.add_alert(prompt=new_prompt)
 
-                # Otherwise check if the prompt needs to be updated or refreshed
-                elif self.prompt != new_prompt:
-                    self.prompt = new_prompt
-                    self.session.app.invalidate()
-
-                await asyncio.sleep(0.5)
-        except asyncio.CancelledError:
-            pass
+            self._stop_event.wait(0.5)
 
 
 if __name__ == '__main__':
