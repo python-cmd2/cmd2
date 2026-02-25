@@ -286,7 +286,11 @@ class AsyncAlert:
     """Contents of an asynchonous alert which display while user is at prompt.
 
     :param msg: an optional message to be printed above the prompt.
-    :param prompt: an optional string to dynamically replace the current prompt.
+    :param prompt: an optional string to dynamically replace the active prompt.
+
+    :ivar timestamp: monotonic creation time of the alert. If an alert was created
+                     before the active prompt started, the prompt update is ignored
+                     to avoid a stale display but the msg will still be displayed.
     """
 
     msg: str | None = None
@@ -3367,7 +3371,7 @@ class Cmd:
                 # Get the next alert while still holding the condition lock.
                 alert = self._alert_queue.get()
 
-            # Only apply prompt changes generated after the current prompt started.
+            # Only apply prompt changes generated after the active prompt started.
             prompt_updated = False
             if (alert.prompt is not None and
                 alert.prompt != self.prompt and
@@ -3376,7 +3380,7 @@ class Cmd:
                 prompt_updated = True
 
             if alert.msg:
-                # Print the message above the current prompt.
+                # Print the message above the active prompt.
                 with patch_stdout():
                     print_formatted_text(pt_filter_style(alert.msg))
 
@@ -5313,7 +5317,7 @@ class Cmd:
             add_alert(msg="Done", prompt="> ")    # Update both
 
         :param msg: an optional message to be printed above the prompt.
-        :param prompt: an optional string to dynamically replace the current prompt.
+        :param prompt: an optional string to dynamically replace the active prompt.
 
         """
         if msg is None and prompt is None:

@@ -69,8 +69,6 @@ prompt is displayed.
           displaying realtime status information while the prompt is displayed, see the
           `cmd2.Cmd2.get_bottom_toolbar` method that can be overridden as well as the updated
           `getting_started.py` example
-    - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
-      application is waiting for user input
     - New `cmd2.Cmd` methods
         - **get_bottom_toolbar**: populates bottom toolbar if `bottom_toolbar` is `True`
         - **get_rprompt**: override to populate right prompt
