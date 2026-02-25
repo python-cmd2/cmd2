@@ -66,6 +66,7 @@ from typing import (
 )
 
 import rich.box
+from prompt_toolkit import print_formatted_text
 from rich.console import (
     Group,
     RenderableType,
@@ -182,6 +183,7 @@ from .pt_utils import (
     Cmd2Completer,
     Cmd2History,
     Cmd2Lexer,
+    pt_filter_style,
 )
 from .utils import (
     Settable,
@@ -388,7 +390,7 @@ class Cmd:
         self._initialize_plugin_system()
 
         # Configure a few defaults
-        self.prompt = Cmd.DEFAULT_PROMPT
+        self.prompt: str = Cmd.DEFAULT_PROMPT
         self.intro = intro
 
         # What to use for standard input
@@ -3239,6 +3241,8 @@ class Cmd:
         # Check if the session is configured for interactive terminal use.
         if not isinstance(session.input, DummyInput):
             with patch_stdout():
+                if not callable(prompt):
+                    prompt = pt_filter_style(prompt)
                 return session.prompt(prompt, completer=completer, **prompt_kwargs)
 
         # We're not at a terminal, so we're likely reading from a file or a pipe.
@@ -3367,7 +3371,7 @@ class Cmd:
                 # Print and update
                 with patch_stdout():
                     if alert.msg:
-                        print(alert.msg)
+                        print_formatted_text(pt_filter_style(alert.msg))
 
                 # Only update if the alert was generated after the current prompt was drawn on the screen.
                 if (alert.prompt is not None and
@@ -3393,7 +3397,7 @@ class Cmd:
 
         # Use dynamic prompt if the prompt matches self.prompt
         def get_prompt() -> ANSI:
-            return ANSI(self.prompt)
+            return pt_filter_style(self.prompt)
 
         prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
         if prompt == self.prompt:

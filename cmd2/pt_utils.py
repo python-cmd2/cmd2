@@ -26,12 +26,28 @@ from . import (
     utils,
 )
 from . import rich_utils as ru
+from . import string_utils as su
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
 
 
 BASE_DELIMITERS = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRECTION_CHARS)
+
+
+def pt_filter_style(text: str | ANSI) -> str | ANSI:
+    """Strip styles if disallowed by ru.ALLOW_STYLE. Otherwise return an ANSI object.
+
+    This function is intended specifically for text rendered by prompt-toolkit.
+    """
+    # We only use prompt-toolkit to write to a terminal. Therefore
+    # we only have to check if ALLOW_STYLE is Never.
+    if ru.ALLOW_STYLE == ru.AllowStyle.NEVER:
+        raw_text = text.value if isinstance(text, ANSI) else text
+        return su.strip_style(raw_text)
+
+    # String must be an ANSI object for prompt-toolkit to render ANSI style sequences.
+    return text if isinstance(text, ANSI) else ANSI(text)
 
 
 class Cmd2Completer(Completer):
@@ -72,16 +88,16 @@ class Cmd2Completer(Completer):
         )
 
         if completions.completion_error:
-            print_formatted_text(ANSI(completions.completion_error))
+            print_formatted_text(pt_filter_style(completions.completion_error))
             return
 
         # Print completion table if present
         if completions.completion_table:
-            print_formatted_text(ANSI("\n" + completions.completion_table))
+            print_formatted_text(pt_filter_style("\n" + completions.completion_table))
 
         # Print hint if present and settings say we should
         if completions.completion_hint and (self.cmd_app.always_show_hint or not completions):
-            print_formatted_text(ANSI(completions.completion_hint))
+            print_formatted_text(pt_filter_style(completions.completion_hint))
 
         if not completions:
             return
@@ -102,9 +118,6 @@ class Cmd2Completer(Completer):
             buffer.insert_text(completions._quote_char)
             buffer.cursor_right(search_text_length)
             return
-
-        # Determine if we should remove style from completion text
-        remove_style = ru.ALLOW_STYLE == ru.AllowStyle.NEVER
 
         # Return the completions
         for item in completions:
@@ -134,8 +147,8 @@ class Cmd2Completer(Completer):
             yield Completion(
                 match_text,
                 start_position=start_position,
-                display=item.display_plain if remove_style else ANSI(item.display),
-                display_meta=item.display_meta_plain if remove_style else ANSI(item.display_meta),
+                display=pt_filter_style(item.display),
+                display_meta=pt_filter_style(item.display_meta),
             )
 
 
@@ -215,8 +228,9 @@ class Cmd2Lexer(Lexer):
             tokens: list[tuple[str, str]] = []
 
             # Use cmd2's command pattern to find the first word (the command)
-            match = self.cmd_app.statement_parser._command_pattern.search(line)
-            if match:
+            if ru.ALLOW_STYLE != ru.AllowStyle.NEVER and (
+                match := self.cmd_app.statement_parser._command_pattern.search(line)
+            ):
                 # Group 1 is the command, Group 2 is the character(s) that terminated the command match
                 command = match.group(1)
                 cmd_start = match.start(1)
@@ -277,7 +291,7 @@ class Cmd2Lexer(Lexer):
                         else:
                             tokens.append(('', text))
             elif line:
-                # No command match found, add the entire line unstyled
+                # No command match found or colors aren't allowed, add the entire line unstyled
                 tokens.append(('', line))
 
             return tokens
