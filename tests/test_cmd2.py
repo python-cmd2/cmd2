@@ -2824,6 +2824,27 @@ def test_perror_no_style(base_app, capsys) -> None:
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_psuccess(outsim_app) -> None:
+    msg = 'testing...'
+    end = '\n'
+    outsim_app.psuccess(msg)
+
+    expected = su.stylize(msg + end, style=Cmd2Style.SUCCESS)
+    assert outsim_app.stdout.getvalue() == expected
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_pwarning(base_app, capsys) -> None:
+    msg = 'testing...'
+    end = '\n'
+    base_app.pwarning(msg)
+
+    expected = su.stylize(msg + end, style=Cmd2Style.WARNING)
+    _out, err = capsys.readouterr()
+    assert err == expected
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_pexcept_style(base_app, capsys) -> None:
     msg = Exception('testing...')
 
