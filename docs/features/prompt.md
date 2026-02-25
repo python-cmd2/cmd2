@@ -42,9 +42,11 @@ Alerts can interact with the CLI in two ways:
 1. **Prompt Updates**: It can dynamically replace the text of the active prompt to reflect changing
    state.
 
-> **Note**: To ensure the user interface remains accurate, a prompt update is ignored if the alert
-> was created before the active prompt started. This prevents older alerts from overwriting a newer
-> prompt, though the alert's message will still be printed.
+!!! note
+
+    To ensure the user interface remains accurate, a prompt update is ignored if the alert
+    was created before the current prompt was rendered. This prevents older alerts from overwriting a newer
+    prompt, though the alert's message will still be printed.
 
 ### Terminal Window Management
 
