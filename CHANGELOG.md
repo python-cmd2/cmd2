@@ -57,6 +57,9 @@ prompt is displayed.
     - Changed `StatementParser.parse_command_only()` to return a `PartialStatement` object.
     - Renamed `Macro.arg_list` to `Macro.args`.
     - Removed `terminal_utils.py` since `prompt-toolkit` provides this functionality.
+    - Replaced `async_alert()` and `async_update_prompt()` with a single function called
+      `add_alert()`. This new function is thread-safe and does not require you to acquire a mutex
+      before calling it like the previous functions did.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
@@ -66,8 +69,6 @@ prompt is displayed.
           displaying realtime status information while the prompt is displayed, see the
           `cmd2.Cmd2.get_bottom_toolbar` method that can be overridden as well as the updated
           `getting_started.py` example
-    - Added `cmd2.Cmd._in_prompt` flag that is set to `True` when the prompt is displayed and the
-      application is waiting for user input
     - New `cmd2.Cmd` methods
         - **get_bottom_toolbar**: populates bottom toolbar if `bottom_toolbar` is `True`
         - **get_rprompt**: override to populate right prompt

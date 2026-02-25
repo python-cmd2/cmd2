@@ -28,18 +28,29 @@ for an example of dynamically updating the prompt.
 
 ## Asynchronous Feedback
 
-`cmd2` provides these functions to provide asynchronous feedback to the user without interfering
-with the command line. This means the feedback is provided to the user when they are still entering
-text at the prompt. To use this functionality, the application must be running in a terminal that
-supports [VT100](https://en.wikipedia.org/wiki/VT100) control characters. Linux, Mac, and Windows 10
-and greater all support these.
+`cmd2` provides a function to deliver asynchronous feedback to the user without interfering with the
+command line. This allows feedback to be provided while the user is still entering text at the
+prompt.
 
-- [cmd2.Cmd.async_alert][]
-- [cmd2.Cmd.async_update_prompt][]
+- [cmd2.Cmd.add_alert][]
 
-`cmd2` also provides a function to change the title of the terminal window. This feature requires
-the application be running in a terminal that supports VT100 control characters. Linux, Mac, and
-Windows 10 and greater all support these.
+### Asynchronous Feedback Mechanisms
+
+Alerts can interact with the CLI in two ways:
+
+1. **Message Printing**: It can print a message directly above the current prompt line.
+1. **Prompt Updates**: It can dynamically replace the text of the active prompt to reflect changing
+   state.
+
+!!! note
+
+    To ensure the user interface remains accurate, a prompt update is ignored if the alert
+    was created before the current prompt was rendered. This prevents older alerts from overwriting a newer
+    prompt, though the alert's message will still be printed.
+
+### Terminal Window Management
+
+`cmd2` also provides a function to change the title of the terminal window.
 
 - [cmd2.Cmd.set_window_title][]
 

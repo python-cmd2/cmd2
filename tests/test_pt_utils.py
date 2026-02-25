@@ -18,8 +18,13 @@ from cmd2 import (
     stylize,
     utils,
 )
+from cmd2 import rich_utils as ru
+from cmd2 import string_utils as su
 from cmd2.history import HistoryItem
 from cmd2.parsing import Statement
+from cmd2.pt_utils import pt_filter_style
+
+from .conftest import with_ansi_style
 
 
 # Mock for cmd2.Cmd
@@ -45,6 +50,48 @@ class MockCmd:
 @pytest.fixture
 def mock_cmd_app() -> MockCmd:
     return MockCmd()
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_pt_filter_style_always() -> None:
+    """This should preserve all styles and return ANSI."""
+    unstyled = "unstyled"
+    result = pt_filter_style(unstyled)
+    assert isinstance(result, ANSI)
+    assert result.value == unstyled
+
+    styled = stylize("styled", Cmd2Style.COMMAND_LINE)
+    result = pt_filter_style(styled)
+    assert isinstance(result, ANSI)
+    assert result.value == styled
+
+
+@with_ansi_style(ru.AllowStyle.TERMINAL)
+def test_pt_filter_style_terminal() -> None:
+    """This should preserve all styles and return ANSI."""
+    unstyled = "unstyled"
+    result = pt_filter_style(unstyled)
+    assert isinstance(result, ANSI)
+    assert result.value == unstyled
+
+    styled = stylize("styled", Cmd2Style.COMMAND_LINE)
+    result = pt_filter_style(styled)
+    assert isinstance(result, ANSI)
+    assert result.value == styled
+
+
+@with_ansi_style(ru.AllowStyle.NEVER)
+def test_pt_filter_style_never() -> None:
+    """This should strip all styles and return str."""
+    unstyled = "unstyled"
+    result = pt_filter_style(unstyled)
+    assert isinstance(result, str)
+    assert result == unstyled
+
+    styled = stylize("styled", Cmd2Style.COMMAND_LINE)
+    result = pt_filter_style(styled)
+    assert isinstance(result, str)
+    assert result == su.strip_style(styled)
 
 
 class TestCmd2Lexer:

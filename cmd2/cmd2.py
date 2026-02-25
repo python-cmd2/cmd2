@@ -39,14 +39,22 @@ import re
 import sys
 import tempfile
 import threading
+import time
 from code import InteractiveConsole
-from collections import namedtuple
+from collections import (
+    deque,
+    namedtuple,
+)
 from collections.abc import (
     Callable,
     Iterable,
     Mapping,
     MutableSequence,
     Sequence,
+)
+from dataclasses import (
+    dataclass,
+    field,
 )
 from types import FrameType
 from typing import (
@@ -60,6 +68,7 @@ from typing import (
 )
 
 import rich.box
+from prompt_toolkit import print_formatted_text
 from prompt_toolkit.application import get_app
 from rich.console import (
     Group,
@@ -177,6 +186,7 @@ from .pt_utils import (
     Cmd2Completer,
     Cmd2History,
     Cmd2Lexer,
+    pt_filter_style,
 )
 from .utils import (
     Settable,
@@ -271,6 +281,23 @@ class _CommandParsers:
         full_method_name = self._fully_qualified_name(command_method)
         if full_method_name in self._parsers:
             del self._parsers[full_method_name]
+
+
+@dataclass(kw_only=True)
+class AsyncAlert:
+    """Contents of an asynchonous alert which display while user is at prompt.
+
+    :param msg: an optional message to be printed above the prompt.
+    :param prompt: an optional string to dynamically replace the current prompt.
+
+    :ivar timestamp: monotonic creation time of the alert. If an alert was created
+                     before the current prompt was rendered, the prompt update is ignored
+                     to avoid a stale display but the msg will still be displayed.
+    """
+
+    msg: str | None = None
+    prompt: str | None = None
+    timestamp: float = field(default_factory=time.monotonic, init=False)
 
 
 class Cmd:
@@ -370,7 +397,7 @@ class Cmd:
         self._initialize_plugin_system()
 
         # Configure a few defaults
-        self.prompt = Cmd.DEFAULT_PROMPT
+        self.prompt: str = Cmd.DEFAULT_PROMPT
         self.intro = intro
 
         # What to use for standard input
@@ -586,6 +613,14 @@ class Cmd:
 
         # Command parsers for this Cmd instance.
         self._command_parsers: _CommandParsers = _CommandParsers(self)
+
+        # Members related to printing asychronous alerts
+        self._alert_queue: deque[AsyncAlert] = deque()
+        self._alert_condition = threading.Condition()
+        self._alert_allowed = False
+        self._alert_shutdown = False
+        self._alert_thread: threading.Thread | None = None
+        self._alert_prompt_timestamp: float = 0.0  # Uses time.monotonic()
 
         # Add functions decorated to be subcommands
         self._register_subcommands(self)
@@ -2588,7 +2623,7 @@ class Cmd:
         """Ran just before the prompt is displayed (and after the event loop has started)."""
 
     def precmd(self, statement: Statement | str) -> Statement:
-        """Ran just before the command is executed by [cmd2.Cmd.onecmd][] and after adding it to history (cmd  Hook method).
+        """Ran just before the command is executed by [cmd2.Cmd.onecmd][] and after adding it to history (cmd Hook method).
 
         :param statement: subclass of str which also contains the parsed input
         :return: a potentially modified version of the input Statement object
@@ -3200,9 +3235,9 @@ class Cmd:
     ) -> str:
         """Execute the low-level input read from either a terminal or a redirected stream.
 
-        If the session is interactive (TTY), it uses `prompt_toolkit` to render a
-        rich UI with completion and `patch_stdout` protection. If non-interactive
-        (Pipe/File), it performs a direct line read from `stdin`.
+        If input is coming from a TTY, it uses `prompt_toolkit` to render a
+        UI with completion and `patch_stdout` protection. Otherwise it performs
+        a direct line read from `stdin`.
 
         :param prompt: the prompt text or a callable that returns the prompt.
         :param session: the PromptSession instance to use for reading.
@@ -3214,6 +3249,8 @@ class Cmd:
         # Check if the session is configured for interactive terminal use.
         if not isinstance(session.input, DummyInput):
             with patch_stdout():
+                if not callable(prompt):
+                    prompt = pt_filter_style(prompt)
                 return session.prompt(prompt, completer=completer, **prompt_kwargs)
 
         # We're not at a terminal, so we're likely reading from a file or a pipe.
@@ -3321,6 +3358,60 @@ class Cmd:
 
         return self._read_raw_input(prompt, temp_session, completer_to_use)
 
+    def _process_alerts(self) -> None:
+        """Background worker that processes queued alerts and dynamic prompt updates."""
+        while True:
+            with self._alert_condition:
+                # Wait until we have alerts and are allowed to display them, or shutdown is signaled.
+                self._alert_condition.wait_for(
+                    lambda: (len(self._alert_queue) > 0 and self._alert_allowed) or self._alert_shutdown
+                )
+
+                # Shutdown immediately even if we have alerts.
+                if self._alert_shutdown:
+                    break
+
+                # Hold the condition lock while printing to block command execution. This
+                # prevents async alerts from printing once a command starts.
+
+                # Print all alerts at once to reduce flicker.
+                alert_text = "\n".join(alert.msg for alert in self._alert_queue if alert.msg)
+
+                # Find the latest prompt update among all pending alerts.
+                latest_prompt = None
+                for alert in reversed(self._alert_queue):
+                    if (
+                        alert.prompt is not None
+                        and alert.prompt != self.prompt
+                        and alert.timestamp > self._alert_prompt_timestamp
+                    ):
+                        latest_prompt = alert.prompt
+                        self._alert_prompt_timestamp = alert.timestamp
+                        break
+
+                # Clear the alerts
+                self._alert_queue.clear()
+
+                if alert_text:
+                    if not self._at_continuation_prompt and latest_prompt is not None:
+                        # Update prompt now so patch_stdout can redraw it immediately.
+                        self.prompt = latest_prompt
+
+                    # Print the alert messages above the prompt.
+                    with patch_stdout():
+                        print_formatted_text(pt_filter_style(alert_text))
+
+                    if self._at_continuation_prompt and latest_prompt is not None:
+                        # Update state only. The onscreen prompt won't change until the next prompt starts.
+                        self.prompt = latest_prompt
+
+                elif latest_prompt is not None:
+                    self.prompt = latest_prompt
+
+                    # Refresh UI immediately unless at a continuation prompt.
+                    if not self._at_continuation_prompt:
+                        get_app().invalidate()
+
     def _read_command_line(self, prompt: str) -> str:
         """Read the next command line from the input stream.
 
@@ -3331,19 +3422,43 @@ class Cmd:
         """
 
         # Use dynamic prompt if the prompt matches self.prompt
-        def get_prompt() -> ANSI | str:
-            return ANSI(self.prompt)
+        def get_prompt() -> str | ANSI:
+            return pt_filter_style(self.prompt)
 
         prompt_to_use: Callable[[], ANSI | str] | ANSI | str = ANSI(prompt)
         if prompt == self.prompt:
             prompt_to_use = get_prompt
 
-        return self._read_raw_input(
-            prompt=prompt_to_use,
-            session=self.session,
-            completer=self.completer,
-            pre_run=self.pre_prompt,
-        )
+        def _pre_prompt() -> None:
+            """Run standard pre-prompt processing and activate the background alerter."""
+            self.pre_prompt()
+
+            # Record when this prompt was rendered.
+            self._alert_prompt_timestamp = time.monotonic()
+
+            # Start alerter thread if it's not already running.
+            if self._alert_thread is None or not self._alert_thread.is_alive():
+                self._alert_allowed = False
+                self._alert_shutdown = False
+                self._alert_thread = threading.Thread(target=self._process_alerts, daemon=True)
+                self._alert_thread.start()
+
+            # Allow alerts to be printed now that we are at a prompt.
+            with self._alert_condition:
+                self._alert_allowed = True
+                self._alert_condition.notify_all()
+
+        try:
+            return self._read_raw_input(
+                prompt=prompt_to_use,
+                session=self.session,
+                completer=self.completer,
+                pre_run=_pre_prompt,
+            )
+        finally:
+            # Ensure no alerts print while not at a prompt.
+            with self._alert_condition:
+                self._alert_allowed = False
 
     def _cmdloop(self) -> None:
         """Repeatedly issue a prompt, accept input, parse it, and dispatch to apporpriate commands.
@@ -3371,7 +3486,18 @@ class Cmd:
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
         finally:
-            pass
+            with self.sigint_protection:
+                # Shut down the alert thread.
+                if self._alert_thread is not None:
+                    with self._alert_condition:
+                        self._alert_shutdown = True
+                        self._alert_condition.notify_all()
+
+                    # The thread is event-driven and stays suspended until notified.
+                    # We join with a 1 second timeout as a safety measure. If it hangs,
+                    # the daemon status allows the OS to reap it on exit.
+                    self._alert_thread.join(timeout=1.0)
+                    self._alert_thread = None
 
     #############################################################
     # Parsers and functions for alias command and subcommands
@@ -5207,66 +5333,25 @@ class Cmd:
         # self.last_result will be set by do_run_script()
         return self.do_run_script(su.quote(relative_path))
 
-    def async_alert(self, alert_msg: str, new_prompt: str | None = None) -> None:
-        """Display an important message to the user while they are at a command line prompt.
+    def add_alert(self, *, msg: str | None = None, prompt: str | None = None) -> None:
+        """Queue an asynchronous alert to be displayed when the prompt is active.
 
-        To the user it appears as if an alert message is printed above the prompt and their
-        current input text and cursor location is left alone.
+        Examples:
+            add_alert(msg="System error!")        # Print message only
+            add_alert(prompt="user@host> ")       # Update prompt only
+            add_alert(msg="Done", prompt="> ")    # Update both
 
-        This function checks self._in_prompt to ensure a prompt is on screen.
-        If the main thread is not at the prompt, a RuntimeError is raised.
+        :param msg: an optional message to be printed above the prompt.
+        :param prompt: an optional string to dynamically replace the current prompt.
 
-        This function is only needed when you need to print an alert or update the prompt while the
-        main thread is blocking at the prompt. Therefore, this should never be called from the main
-        thread. Doing so will raise a RuntimeError.
-
-        :param alert_msg: the message to display to the user
-        :param new_prompt: If you also want to change the prompt that is displayed, then include it here.
-                           See async_update_prompt() docstring for guidance on updating a prompt.
-        :raises RuntimeError: if called from the main thread.
-        :raises RuntimeError: if main thread is not currently at the prompt.
         """
+        if msg is None and prompt is None:
+            return
 
-        # Check if prompt is currently displayed and waiting for user input
-        def _alert() -> None:
-            if new_prompt is not None:
-                self.prompt = new_prompt
-
-            if alert_msg:
-                # Since we are running in the loop, patch_stdout context manager from read_input
-                # should be active (if tty), or at least we are in the main thread.
-                print(alert_msg)
-
-            if hasattr(self, 'session'):
-                # Invalidate to force prompt update
-                get_app().invalidate()
-
-        # Schedule the alert to run on the main thread's event loop
-        try:
-            get_app().loop.call_soon_threadsafe(_alert)  # type: ignore[union-attr]
-        except AttributeError:
-            # Fallback if loop is not accessible (e.g. prompt not running or session not initialized)
-            # This shouldn't happen if _in_prompt is True, unless prompt exited concurrently.
-            raise RuntimeError("Event loop not available") from None
-
-    def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
-        """Update the command line prompt while the user is still typing at it.
-
-        This is good for alerting the user to system changes dynamically in between commands.
-        For instance you could alter the color of the prompt to indicate a system status or increase a
-        counter to report an event. If you do alter the actual text of the prompt, it is best to keep
-        the prompt the same width as what's on screen. Otherwise the user's input text will be shifted
-        and the update will not be seamless.
-
-        If user is at a continuation prompt while entering a multiline command, the onscreen prompt will
-        not change. However, self.prompt will still be updated and display immediately after the multiline
-        line command completes.
-
-        :param new_prompt: what to change the prompt to
-        :raises RuntimeError: if called from the main thread.
-        :raises RuntimeError: if main thread is not currently at the prompt.
-        """
-        self.async_alert('', new_prompt)
+        with self._alert_condition:
+            alert = AsyncAlert(msg=msg, prompt=prompt)
+            self._alert_queue.append(alert)
+            self._alert_condition.notify_all()
 
     @staticmethod
     def set_window_title(title: str) -> None:  # pragma: no cover

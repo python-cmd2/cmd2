@@ -1203,6 +1203,96 @@ def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
     assert out == 'hello\n\n'
 
 
+@pytest.mark.skipif(
+    sys.platform.startswith('win'),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+@pytest.mark.parametrize(
+    ('msg', 'prompt', 'is_stale', 'at_continuation_prompt'),
+    [
+        ("msg_text", None, False, False),
+        ("msg_text", "new_prompt> ", False, False),
+        ("msg_text", "new_prompt> ", False, True),
+        ("msg_text", "new_prompt> ", True, False),
+        ("msg_text", "new_prompt> ", True, True),
+        (None, "new_prompt> ", False, False),
+        (None, "new_prompt> ", False, True),
+        (None, "new_prompt> ", True, False),
+        (None, "new_prompt> ", True, True),
+        # Blank prompt is acceptable
+        ("msg_text", "", False, False),
+        (None, "", False, False),
+    ],
+)
+def test_async_alert(base_app, msg, prompt, is_stale, at_continuation_prompt) -> None:
+    import time
+
+    with (
+        mock.patch('cmd2.cmd2.print_formatted_text') as mock_print,
+        mock.patch('cmd2.cmd2.get_app') as mock_get_app,
+    ):
+        # Set up the chained mock: get_app() returns mock_app, which has invalidate()
+        mock_app = mock.MagicMock()
+        mock_get_app.return_value = mock_app
+
+        base_app.add_alert(msg=msg, prompt=prompt)
+        alert = base_app._alert_queue[0]
+
+        # Stale means alert was created before the current prompt.
+        if is_stale:
+            # In the past
+            alert.timestamp = 0.0
+        else:
+            # In the future
+            alert.timestamp = time.monotonic() + 99999999
+
+        base_app._at_continuation_prompt = at_continuation_prompt
+
+        with create_pipe_input() as pipe_input:
+            base_app.session = PromptSession(
+                input=pipe_input,
+                output=DummyOutput(),
+                history=base_app.session.history,
+                completer=base_app.session.completer,
+            )
+            pipe_input.send_text("quit\n")
+
+            base_app._cmdloop()
+
+            # If there was a message, patch_stdout handles the redraw (no invalidate)
+            if msg:
+                assert msg in str(mock_print.call_args_list[0])
+                mock_app.invalidate.assert_not_called()
+
+            # If there's only a prompt update, we expect invalidate() only if not continuation/stale
+            elif prompt is not None:
+                if is_stale or at_continuation_prompt:
+                    mock_app.invalidate.assert_not_called()
+                else:
+                    mock_app.invalidate.assert_called_once()
+
+            # The state of base_app.prompt should always be correct regardless of redraw
+            if prompt is not None:
+                if is_stale:
+                    assert base_app.prompt != prompt
+                else:
+                    assert base_app.prompt == prompt
+
+
+def test_add_alert(base_app) -> None:
+    orig_num_alerts = len(base_app._alert_queue)
+
+    # Nothing is added when both are None
+    base_app.add_alert(msg=None, prompt=None)
+    assert len(base_app._alert_queue) == orig_num_alerts
+
+    # Now test valid alert arguments
+    base_app.add_alert(msg="Hello", prompt=None)
+    base_app.add_alert(msg="Hello", prompt="prompt> ")
+    base_app.add_alert(msg=None, prompt="prompt> ")
+    assert len(base_app._alert_queue) == orig_num_alerts + 3
+
+
 class ShellApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -2731,6 +2821,27 @@ def test_perror_no_style(base_app, capsys) -> None:
     base_app.perror(msg, style=None)
     _out, err = capsys.readouterr()
     assert err == msg + end
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_psuccess(outsim_app) -> None:
+    msg = 'testing...'
+    end = '\n'
+    outsim_app.psuccess(msg)
+
+    expected = su.stylize(msg + end, style=Cmd2Style.SUCCESS)
+    assert outsim_app.stdout.getvalue() == expected
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_pwarning(base_app, capsys) -> None:
+    msg = 'testing...'
+    end = '\n'
+    base_app.pwarning(msg)
+
+    expected = su.stylize(msg + end, style=Cmd2Style.WARNING)
+    _out, err = capsys.readouterr()
+    assert err == expected
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
