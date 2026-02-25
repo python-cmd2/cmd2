@@ -29,7 +29,8 @@ for an example of dynamically updating the prompt.
 ## Asynchronous Feedback
 
 `cmd2` provides a function to deliver asynchronous feedback to the user without interfering with the
-command line. This allows feedback to be provided while the user is still entering text at the prompt.
+command line. This allows feedback to be provided while the user is still entering text at the
+prompt.
 
 - [cmd2.Cmd.add_alert][]
 
