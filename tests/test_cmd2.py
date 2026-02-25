@@ -1203,6 +1203,67 @@ def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
     assert out == 'hello\n\n'
 
 
+@pytest.mark.parametrize(
+    ('msg', 'prompt', 'is_stale'),
+    [
+        ("msg_text", None, False),
+        (None, "new_prompt> ", False),
+        ("msg_text", "new_prompt> ", True),
+        # Blank prompt is acceptable
+        ("msg_text", "", False),
+    ],
+)
+def test_async_alert(base_app, msg, prompt, is_stale) -> None:
+    import time
+
+    with mock.patch('cmd2.cmd2.print_formatted_text') as mock_print:
+        base_app.add_alert(msg=msg, prompt=prompt)
+        alert = base_app._alert_queue.get()
+
+        # Stale means alert was created before the current prompt.
+        if is_stale:
+            # In the past
+            alert.timestamp = 0.0
+        else:
+            # In the future
+            alert.timestamp = time.monotonic() + 99999999
+
+        base_app._alert_queue.put(alert)
+
+        with create_pipe_input() as pipe_input:
+            base_app.session = PromptSession(
+                input=pipe_input,
+                output=DummyOutput(),
+                history=base_app.session.history,
+                completer=base_app.session.completer,
+            )
+            pipe_input.send_text("quit\n")
+
+            base_app._cmdloop()
+
+            if msg:
+                assert msg in str(mock_print.call_args_list[0])
+            if prompt is not None:
+                if is_stale:
+                    assert base_app.prompt != prompt
+                else:
+                    assert base_app.prompt == prompt
+
+
+def test_add_alert(base_app) -> None:
+    orig_num_alerts = base_app._alert_queue.qsize()
+
+    # Nothing is added when both are None
+    base_app.add_alert(msg=None, prompt=None)
+    assert base_app._alert_queue.qsize() == orig_num_alerts
+
+    # Now test valid alert arguments
+    base_app.add_alert(msg="Hello", prompt=None)
+    base_app.add_alert(msg="Hello", prompt="prompt> ")
+    base_app.add_alert(msg=None, prompt="prompt> ")
+    assert base_app._alert_queue.qsize() == orig_num_alerts + 3
+
+
 class ShellApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
