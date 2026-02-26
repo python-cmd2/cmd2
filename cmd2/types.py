@@ -15,7 +15,7 @@ from typing import (
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
     from .command_definition import CommandSet
-    from .completion import Choices, CompletionItem, Completions
+    from .completion import Choices, Completions
 
 # A Cmd or CommandSet
 CmdOrSet = TypeVar("CmdOrSet", bound=Union["Cmd", "CommandSet"])
@@ -26,11 +26,6 @@ CmdOrSet = TypeVar("CmdOrSet", bound=Union["Cmd", "CommandSet"])
 
 # Represents the parsed tokens from argparse during completion
 ArgTokens: TypeAlias = Mapping[str, Sequence[str]]
-
-# Represents a type that can be matched against when completing.
-# Strings are matched directly while CompletionItems are matched
-# against their 'text' member.
-Matchable: TypeAlias = Union[str, "CompletionItem"]
 
 ##################################################
 # choices_provider function types

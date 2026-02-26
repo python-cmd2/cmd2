@@ -153,7 +153,6 @@ from .types import (
     CmdOrSet,
     CompleterBound,
     CompleterUnbound,
-    Matchable,
 )
 
 with contextlib.suppress(ImportError):
@@ -1823,7 +1822,7 @@ class Cmd:
         line: str,  # noqa: ARG002
         begidx: int,  # noqa: ARG002
         endidx: int,  # noqa: ARG002
-        match_against: Iterable[Matchable],
+        match_against: Iterable[str | CompletionItem],
         *,
         sort: bool = True,
     ) -> Completions:
