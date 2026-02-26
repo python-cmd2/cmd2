@@ -34,7 +34,10 @@ def app():
 def test_dynamic_complete_style(app):
     # Cmd.complete() interacts with app.active_session.
     # Set it here since it's normally set when the prompt is created.
-    app.active_session: PromptSession[str] = PromptSession()
+    app.active_session: PromptSession[str] = PromptSession(
+        input=app.main_session.input,
+        output=app.main_session.output,
+    )
 
     # Default max_column_completion_results is 7
     assert app.max_column_completion_results == 7
@@ -52,7 +55,10 @@ def test_dynamic_complete_style(app):
 def test_dynamic_complete_style_custom_limit(app):
     # Cmd.complete() interacts with app.active_session.
     # Set it here since it's normally set when the prompt is created.
-    app.active_session: PromptSession[str] = PromptSession()
+    app.active_session: PromptSession[str] = PromptSession(
+        input=app.main_session.input,
+        output=app.main_session.output,
+    )
 
     # Change limit to 3
     app.max_column_completion_results = 3
