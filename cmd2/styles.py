@@ -24,8 +24,6 @@ For rich-argparse, the style names are defined in the
 
 """
 
-from __future__ import annotations
-
 import sys
 
 from rich.style import (

@@ -261,8 +261,6 @@ method which can be used to remove a subcommand.
 sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser` for more details.
 """
 
-from __future__ import annotations
-
 import argparse
 import re
 import sys
@@ -886,7 +884,7 @@ setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 ATTR_AP_COMPLETER_TYPE = 'ap_completer_type'
 
 
-def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> type[ArgparseCompleter] | None:  # noqa: N802
+def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> type['ArgparseCompleter'] | None:  # noqa: N802
     """Get the ap_completer_type attribute of an argparse ArgumentParser.
 
     This function is added by cmd2 as a method called ``get_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
@@ -902,7 +900,7 @@ def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> type
 setattr(argparse.ArgumentParser, 'get_ap_completer_type', _ArgumentParser_get_ap_completer_type)
 
 
-def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: type[ArgparseCompleter]) -> None:  # noqa: N802
+def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: type['ArgparseCompleter']) -> None:  # noqa: N802
     """Set the ap_completer_type attribute of an argparse ArgumentParser.
 
     This function is added by cmd2 as a method called ``set_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
@@ -1188,7 +1186,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         suggest_on_error: bool = False,
         color: bool = False,
         *,
-        ap_completer_type: type[ArgparseCompleter] | None = None,
+        ap_completer_type: type['ArgparseCompleter'] | None = None,
     ) -> None:
         """Initialize the Cmd2ArgumentParser instance, a custom ArgumentParser added by cmd2.
 

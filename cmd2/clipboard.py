@@ -1,7 +1,5 @@
 """Module provides basic ability to copy from and paste to the clipboard/pastebuffer."""
 
-from __future__ import annotations
-
 import typing
 
 import pyperclip  # type: ignore[import-untyped]

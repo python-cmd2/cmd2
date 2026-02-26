@@ -1,7 +1,6 @@
 """Shared utility functions."""
 
-from __future__ import annotations
-
+import argparse
 import contextlib
 import functools
 import glob
@@ -23,21 +22,21 @@ from typing import (
     Any,
     TextIO,
     TypeVar,
+    Union,
     cast,
 )
 
 from . import constants
 from . import string_utils as su
+from .completion import Choices
+from .types import (
+    ChoicesProviderUnbound,
+    CmdOrSet,
+    CompleterUnbound,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     PopenTextIO = subprocess.Popen[str]
-    import argparse
-
-    from .types import (
-        ChoicesProviderUnbound,
-        CmdOrSet,
-        CompleterUnbound,
-    )
 else:
     PopenTextIO = subprocess.Popen
 
@@ -115,7 +114,6 @@ class Settable:
         :param completer: completion function that provides choices for this argument
         """
         if val_type is bool:
-            from .completion import Choices
 
             def get_bool_choices(_cmd2_self: CmdOrSet) -> Choices:
                 """Tab complete lowercase boolean values."""
@@ -399,7 +397,7 @@ class StdSim:
 
     def __init__(
         self,
-        inner_stream: TextIO | StdSim,
+        inner_stream: Union[TextIO, 'StdSim'],
         *,
         echo: bool = False,
         encoding: str = 'utf-8',

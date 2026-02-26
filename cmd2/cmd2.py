@@ -22,8 +22,10 @@ GitHub: https://github.com/python-cmd2/cmd2
 Documentation: https://cmd2.readthedocs.io/
 """
 
-from __future__ import annotations
-
+# This module has many imports, quite a few of which are only
+# infrequently utilized. To reduce the initial overhead of
+# import this module, many of these imports are lazy-loaded
+# i.e. we only import the module when we use it.
 import argparse
 import contextlib
 import copy
@@ -54,13 +56,14 @@ from dataclasses import (
     dataclass,
     field,
 )
+from types import FrameType
 from typing import (
     IO,
     TYPE_CHECKING,
     Any,
     TextIO,
-    TypeAlias,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -93,6 +96,7 @@ from . import (
 )
 from . import rich_utils as ru
 from . import string_utils as su
+from .argparse_custom import Cmd2ArgumentParser
 from .clipboard import (
     get_paste_buffer,
     write_to_paste_buffer,
@@ -143,6 +147,13 @@ from .rich_utils import (
     RichPrintKwargs,
 )
 from .styles import Cmd2Style
+from .types import (
+    ChoicesProviderUnbound,
+    CmdOrSet,
+    CompleterBound,
+    CompleterUnbound,
+    Matchable,
+)
 
 with contextlib.suppress(ImportError):
     from IPython import start_ipython
@@ -187,24 +198,6 @@ from .utils import (
     suggest_similar,
 )
 
-if TYPE_CHECKING:  # pragma: no cover
-    StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
-    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], argparse.ArgumentParser]
-    from types import FrameType
-
-    from .argparse_custom import Cmd2ArgumentParser
-    from .types import (
-        ChoicesProviderUnbound,
-        CmdOrSet,
-        CompleterBound,
-        CompleterUnbound,
-        Matchable,
-    )
-
-else:
-    StaticArgParseBuilder = staticmethod
-    ClassArgParseBuilder = classmethod
-
 
 class _SavedCmd2Env:
     """cmd2 environment settings that are backed up when entering an interactive Python shell."""
@@ -218,13 +211,21 @@ class _SavedCmd2Env:
 DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function', 'completer_function'])  # noqa: PYI024
 
 
+if TYPE_CHECKING:  # pragma: no cover
+    StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
+    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], argparse.ArgumentParser]
+else:
+    StaticArgParseBuilder = staticmethod
+    ClassArgParseBuilder = classmethod
+
+
 class _CommandParsers:
     """Create and store all command method argument parsers for a given Cmd instance.
 
     Parser creation and retrieval are accomplished through the get() method.
     """
 
-    def __init__(self, cmd: Cmd) -> None:
+    def __init__(self, cmd: 'Cmd') -> None:
         self._cmd = cmd
 
         # Keyed by the fully qualified method names. This is more reliable than
@@ -1004,7 +1005,7 @@ class Cmd:
                 if command_parser is not None:
                     check_parser_uninstallable(command_parser)
 
-    def _register_subcommands(self, cmdset: CommandSet | Cmd) -> None:
+    def _register_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
         """Register subcommands with their base command.
 
         :param cmdset: CommandSet or cmd2.Cmd subclass containing subcommands
@@ -1097,7 +1098,7 @@ class Cmd:
 
                     break
 
-    def _unregister_subcommands(self, cmdset: CommandSet | Cmd) -> None:
+    def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
         """Unregister subcommands from their base command.
 
         :param cmdset: CommandSet containing subcommands
@@ -2194,8 +2195,8 @@ class Cmd:
         :param parser: the parser to examine
         :return: type of ArgparseCompleter
         """
-        CompleterType: TypeAlias = type[argparse_completer.ArgparseCompleter] | None
-        completer_type: CompleterType = parser.get_ap_completer_type()  # type: ignore[attr-defined]
+        Completer = type[argparse_completer.ArgparseCompleter] | None  # noqa: N806
+        completer_type: Completer = parser.get_ap_completer_type()  # type: ignore[attr-defined]
 
         if completer_type is None:
             completer_type = argparse_completer.DEFAULT_AP_COMPLETER
@@ -5660,7 +5661,7 @@ class Cmd:
     def _resolve_func_self(
         self,
         cmd_support_func: Callable[..., Any],
-        cmd_self: CommandSet | Cmd | None,
+        cmd_self: Union[CommandSet, 'Cmd', None],
     ) -> object | None:
         """Attempt to resolve a candidate instance to pass as 'self'.
 

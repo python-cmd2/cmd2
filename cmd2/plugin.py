@@ -1,12 +1,8 @@
 """Classes for the cmd2 lifecycle hooks that you can register multiple callback functions/methods with."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from .parsing import Statement
+from .parsing import Statement
 
 
 @dataclass

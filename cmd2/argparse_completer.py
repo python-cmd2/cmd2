@@ -3,8 +3,6 @@
 See the header of argparse_custom.py for instructions on how to use these features.
 """
 
-from __future__ import annotations
-
 import argparse
 import dataclasses
 import inspect
@@ -24,30 +22,32 @@ from typing import (
     cast,
 )
 
+from rich.text import Text
+
+from .constants import INFINITY
+from .rich_utils import Cmd2GeneralConsole
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .cmd2 import Cmd
+
 from rich.box import SIMPLE_HEAD
 from rich.table import (
     Column,
     Table,
 )
-from rich.text import Text
 
 from .argparse_custom import (
     ChoicesCallable,
     generate_range_error,
 )
+from .command_definition import CommandSet
 from .completion import (
     CompletionItem,
     Completions,
     all_display_numeric,
 )
-from .constants import INFINITY
 from .exceptions import CompletionError
-from .rich_utils import Cmd2GeneralConsole
 from .styles import Cmd2Style
-
-if TYPE_CHECKING:  # pragma: no cover
-    from .cmd2 import Cmd
-    from .command_definition import CommandSet
 
 # If no table header is supplied, then this will be used instead
 DEFAULT_TABLE_HEADER: Sequence[str | Column] = ['Description']
@@ -166,7 +166,7 @@ class ArgparseCompleter:
     def __init__(
         self,
         parser: argparse.ArgumentParser,
-        cmd2_app: Cmd,
+        cmd2_app: 'Cmd',
         *,
         parent_tokens: Mapping[str, MutableSequence[str]] | None = None,
     ) -> None:
