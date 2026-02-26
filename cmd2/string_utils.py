@@ -5,11 +5,17 @@ These utilities are designed to correctly handle strings with ANSI style sequenc
 full-width characters (like those used in CJK languages).
 """
 
-from rich.align import AlignMethod
-from rich.style import StyleType
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from rich.text import Text
 
 from . import rich_utils as ru
+
+if TYPE_CHECKING:
+    from rich.align import AlignMethod
+    from rich.style import StyleType
 
 
 def align(

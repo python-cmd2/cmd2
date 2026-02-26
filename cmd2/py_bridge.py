@@ -3,6 +3,8 @@
 Maintains a reasonable degree of isolation between the two.
 """
 
+from __future__ import annotations
+
 import sys
 from contextlib import redirect_stderr
 from typing import (
@@ -79,7 +81,7 @@ class PyBridge:
                            Defaults to True.
     """
 
-    def __init__(self, cmd2_app: 'Cmd', *, add_to_history: bool = True) -> None:
+    def __init__(self, cmd2_app: Cmd, *, add_to_history: bool = True) -> None:
         """Initialize PyBridge instances."""
         self._cmd2_app = cmd2_app
         self._add_to_history = add_to_history

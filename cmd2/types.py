@@ -1,5 +1,7 @@
 """Defines common types used throughout cmd2."""
 
+from __future__ import annotations
+
 from collections.abc import (
     Callable,
     Mapping,

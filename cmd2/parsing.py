@@ -1,19 +1,17 @@
 """Statement parsing classes for cmd2."""
 
+from __future__ import annotations
+
 import re
 import shlex
 import sys
-from collections.abc import (
-    Iterable,
-    Mapping,
-    Sequence,
-)
 from dataclasses import (
     asdict,
     dataclass,
     field,
 )
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
 )
@@ -29,6 +27,13 @@ from . import (
 )
 from . import string_utils as su
 from .exceptions import Cmd2ShlexError
+
+if TYPE_CHECKING:
+    from collections.abc import (
+        Iterable,
+        Mapping,
+        Sequence,
+    )
 
 
 def shlex_split(str_to_split: str) -> list[str]:

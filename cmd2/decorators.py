@@ -1,5 +1,7 @@
 """Decorators for ``cmd2`` commands."""
 
+from __future__ import annotations
+
 import argparse
 from collections.abc import (
     Callable,
@@ -65,7 +67,7 @@ RawCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CmdOrSet, Statement | st
 # in cmd2 command functions/callables. As long as the 2-ple of arguments we expect to be there can be
 # found we can swap out the statement with each decorator's specific parameters
 ##########################
-def _parse_positionals(args: tuple[Any, ...]) -> tuple['Cmd', Statement | str]:
+def _parse_positionals(args: tuple[Any, ...]) -> tuple[Cmd, Statement | str]:
     """Inspect the positional arguments until the cmd2.Cmd argument is found.
 
     Assumes that we will find cmd2.Cmd followed by the command statement object or string.

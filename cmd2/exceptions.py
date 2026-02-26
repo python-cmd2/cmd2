@@ -1,5 +1,7 @@
 """Custom exceptions for cmd2."""
 
+from __future__ import annotations
+
 from typing import Any
 
 ############################################################################################################

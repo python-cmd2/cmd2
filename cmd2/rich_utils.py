@@ -1,10 +1,12 @@
 """Provides common utilities to support Rich in cmd2-based applications."""
 
+from __future__ import annotations
+
 import re
-from collections.abc import Mapping
 from enum import Enum
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     TypedDict,
 )
@@ -19,7 +21,6 @@ from rich.console import (
 from rich.padding import Padding
 from rich.pretty import is_expandable
 from rich.protocol import rich_cast
-from rich.style import StyleType
 from rich.table import (
     Column,
     Table,
@@ -29,6 +30,12 @@ from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
 
 from .styles import DEFAULT_CMD2_STYLES
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+    from rich.style import StyleType
+
 
 # Matches ANSI SGR (Select Graphic Rendition) sequences for text styling.
 # \x1b[   - the CSI (Control Sequence Introducer)

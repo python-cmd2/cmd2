@@ -1,10 +1,8 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
+from __future__ import annotations
+
 import re
-from collections.abc import (
-    Callable,
-    Iterable,
-)
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -16,7 +14,6 @@ from prompt_toolkit.completion import (
     Completer,
     Completion,
 )
-from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
@@ -29,6 +26,13 @@ from . import rich_utils as ru
 from . import string_utils as su
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import (
+        Callable,
+        Iterable,
+    )
+
+    from prompt_toolkit.document import Document
+
     from .cmd2 import Cmd
 
 
@@ -55,7 +59,7 @@ class Cmd2Completer(Completer):
 
     def __init__(
         self,
-        cmd_app: 'Cmd',
+        cmd_app: Cmd,
         custom_settings: utils.CustomCompletionSettings | None = None,
     ) -> None:
         """Initialize prompt_toolkit based completer class."""
@@ -155,7 +159,7 @@ class Cmd2Completer(Completer):
 class Cmd2History(History):
     """History that bridges cmd2's history storage with prompt_toolkit."""
 
-    def __init__(self, cmd_app: 'Cmd') -> None:
+    def __init__(self, cmd_app: Cmd) -> None:
         """Initialize prompt_toolkit based history wrapper class."""
         super().__init__()
         self.cmd_app = cmd_app
@@ -195,7 +199,7 @@ class Cmd2Lexer(Lexer):
 
     def __init__(
         self,
-        cmd_app: 'Cmd',
+        cmd_app: Cmd,
         command_color: str = 'ansigreen',
         alias_color: str = 'ansicyan',
         macro_color: str = 'ansimagenta',
