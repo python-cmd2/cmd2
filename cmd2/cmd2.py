@@ -71,6 +71,15 @@ from typing import (
 import rich.box
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.application import get_app
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.completion import Completer, DummyCompleter
+from prompt_toolkit.formatted_text import ANSI, FormattedText
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.input import DummyInput, create_input
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.output import DummyOutput, create_output
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, set_title
 from rich.console import (
     Group,
     RenderableType,
@@ -157,16 +166,6 @@ from .types import (
 
 with contextlib.suppress(ImportError):
     from IPython import start_ipython
-
-from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
-from prompt_toolkit.completion import Completer, DummyCompleter
-from prompt_toolkit.formatted_text import ANSI, FormattedText
-from prompt_toolkit.history import InMemoryHistory
-from prompt_toolkit.input import DummyInput, create_input
-from prompt_toolkit.key_binding import KeyBindings
-from prompt_toolkit.output import DummyOutput, create_output
-from prompt_toolkit.patch_stdout import patch_stdout
-from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, set_title
 
 try:
     if sys.platform == "win32":
@@ -413,9 +412,6 @@ class Cmd:
         else:
             self.stdout = sys.stdout
 
-        # Key used for completion
-        self.completekey = completekey
-
         # Attributes which should NOT be dynamically settable via the set command at runtime
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
@@ -468,17 +464,14 @@ class Cmd:
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
 
-        # Initialize prompt-toolkit PromptSession
-        self.history_adapter = Cmd2History(self)
-        self.completer = Cmd2Completer(self)
-        self.lexer = Cmd2Lexer(self)
+        # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
+        self.main_session = self._create_main_session(auto_suggest, completekey)
 
-        self.auto_suggest = None
-        if auto_suggest:
-            self.auto_suggest = AutoSuggestFromHistory()
-
-        self.session = self._init_session()
+        # The session currently holding focus (either the main REPL or a command's
+        # custom prompt). Completion and UI logic should reference this variable
+        # to ensure they modify the correct session state.
+        self.active_session = self.main_session
 
         # Commands to exclude from the history command
         self.exclude_from_history = ['_eof', 'history']
@@ -651,18 +644,18 @@ class Cmd:
         # the current command being executed
         self.current_command: Statement | None = None
 
-    def _init_session(self) -> PromptSession[str]:
-        """Initialize and return the core PromptSession for the application.
+    def _create_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
+        """Create and return the main PromptSession for the application.
 
         Builds an interactive session if stdin is a TTY. Otherwise, uses
         dummy drivers to support non-interactive streams like pipes or files.
         """
         key_bindings = None
-        if self.completekey != self.DEFAULT_COMPLETEKEY:
+        if completekey != self.DEFAULT_COMPLETEKEY:
             # Configure prompt_toolkit `KeyBindings` with the custom key for completion
             key_bindings = KeyBindings()
 
-            @key_bindings.add(self.completekey)
+            @key_bindings.add(completekey)
             def _(event: Any) -> None:  # pragma: no cover
                 """Trigger completion."""
                 b = event.current_buffer
@@ -673,15 +666,15 @@ class Cmd:
 
         # Base configuration
         kwargs: dict[str, Any] = {
-            "auto_suggest": self.auto_suggest,
+            "auto_suggest": AutoSuggestFromHistory() if auto_suggest else None,
             "bottom_toolbar": self.get_bottom_toolbar if self.bottom_toolbar else None,
             "complete_style": CompleteStyle.MULTI_COLUMN,
             "complete_in_thread": True,
             "complete_while_typing": False,
-            "completer": self.completer,
-            "history": self.history_adapter,
+            "completer": Cmd2Completer(self),
+            "history": Cmd2History(self),
             "key_bindings": key_bindings,
-            "lexer": self.lexer,
+            "lexer": Cmd2Lexer(self),
             "rprompt": self.get_rprompt,
         }
 
@@ -2448,9 +2441,9 @@ class Cmd:
 
             # Swap between COLUMN and MULTI_COLUMN style based on the number of matches.
             if len(completions) > self.max_column_completion_results:
-                self.session.complete_style = CompleteStyle.MULTI_COLUMN
+                self.active_session.complete_style = CompleteStyle.MULTI_COLUMN
             else:
-                self.session.complete_style = CompleteStyle.COLUMN
+                self.active_session.complete_style = CompleteStyle.COLUMN
 
             return completions  # noqa: TRY300
 
@@ -3227,11 +3220,23 @@ class Cmd:
     def _suggest_similar_command(self, command: str) -> str | None:
         return suggest_similar(command, self.get_visible_commands())
 
+    @staticmethod
+    def _is_tty_session(session: PromptSession[str]) -> bool:
+        """Determine if the session supports full terminal interactions.
+
+        Returns True if the session is attached to a real TTY or a virtual
+        terminal (like PipeInput in tests). Returns False if the session is
+        running in a headless environment (DummyInput).
+        """
+        # Validate against the session's assigned input driver rather than sys.stdin.
+        # This respects the fallback logic in _create_main_session() and allows unit
+        # tests to inject PipeInput for programmatic interaction.
+        return not isinstance(session.input, DummyInput)
+
     def _read_raw_input(
         self,
         prompt: Callable[[], ANSI | str] | ANSI | str,
         session: PromptSession[str],
-        completer: Completer,
         **prompt_kwargs: Any,
     ) -> str:
         """Execute the low-level input read from either a terminal or a redirected stream.
@@ -3242,17 +3247,23 @@ class Cmd:
 
         :param prompt: the prompt text or a callable that returns the prompt.
         :param session: the PromptSession instance to use for reading.
-        :param completer: the completer to use for this specific input.
         :param prompt_kwargs: additional arguments passed directly to session.prompt().
         :return: the stripped input string.
         :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
         """
         # Check if the session is configured for interactive terminal use.
-        if not isinstance(session.input, DummyInput):
+        if self._is_tty_session(session):
+            if not callable(prompt):
+                prompt = pt_filter_style(prompt)
+
             with patch_stdout():
-                if not callable(prompt):
-                    prompt = pt_filter_style(prompt)
-                return session.prompt(prompt, completer=completer, **prompt_kwargs)
+                try:
+                    # Set this session as the active one for UI/completion logic.
+                    self.active_session = session
+                    return session.prompt(prompt, **prompt_kwargs)
+                finally:
+                    # Revert back to the main session.
+                    self.active_session = self.main_session
 
         # We're not at a terminal, so we're likely reading from a file or a pipe.
         prompt_obj = prompt() if callable(prompt) else prompt
@@ -3350,14 +3361,18 @@ class Cmd:
         )
 
         temp_session: PromptSession[str] = PromptSession(
-            complete_style=self.session.complete_style,
-            complete_while_typing=self.session.complete_while_typing,
+            auto_suggest=self.main_session.auto_suggest,
+            complete_style=self.main_session.complete_style,
+            complete_in_thread=self.main_session.complete_in_thread,
+            complete_while_typing=self.main_session.complete_while_typing,
+            completer=completer_to_use,
             history=InMemoryHistory(history) if history is not None else InMemoryHistory(),
-            input=self.session.input,
-            output=self.session.output,
+            key_bindings=self.main_session.key_bindings,
+            input=self.main_session.input,
+            output=self.main_session.output,
         )
 
-        return self._read_raw_input(prompt, temp_session, completer_to_use)
+        return self._read_raw_input(prompt, temp_session)
 
     def _process_alerts(self) -> None:
         """Background worker that processes queued alerts and dynamic prompt updates."""
@@ -3452,8 +3467,7 @@ class Cmd:
         try:
             return self._read_raw_input(
                 prompt=prompt_to_use,
-                session=self.session,
-                completer=self.completer,
+                session=self.main_session,
                 pre_run=_pre_prompt,
             )
         finally:

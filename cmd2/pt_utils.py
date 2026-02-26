@@ -70,8 +70,7 @@ class Cmd2Completer(Completer):
 
         # Define delimiters for completion to match cmd2/readline behavior
         delimiters = BASE_DELIMITERS
-        if hasattr(self.cmd_app, 'statement_parser'):
-            delimiters += "".join(self.cmd_app.statement_parser.terminators)
+        delimiters += "".join(self.cmd_app.statement_parser.terminators)
 
         # Find last delimiter before cursor to determine the word being completed
         begidx = 0
@@ -275,8 +274,7 @@ class Cmd2Lexer(Lexer):
 
                     # Get redirection tokens and terminators to avoid highlighting them as values
                     exclude_tokens = set(constants.REDIRECTION_TOKENS)
-                    if hasattr(self.cmd_app, 'statement_parser'):
-                        exclude_tokens.update(self.cmd_app.statement_parser.terminators)
+                    exclude_tokens.update(self.cmd_app.statement_parser.terminators)
 
                     for m in arg_pattern.finditer(rest):
                         space, flag, quoted, word = m.groups()

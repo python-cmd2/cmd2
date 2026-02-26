@@ -968,7 +968,7 @@ def test_history_populates_pt(hist_file) -> None:
     # prompt-toolkit only adds a single entry for multiple sequential identical commands
     # so we check to make sure that cmd2 populated the prompt-toolkit history
     # using the same rules
-    pt_history = app.session.history.get_strings()
+    pt_history = app.main_session.history.get_strings()
     assert len(pt_history) == 3
     assert pt_history[0] == 'help'
     assert pt_history[1] == 'shortcuts'
