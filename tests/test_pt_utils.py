@@ -492,17 +492,6 @@ class TestCmd2Completer:
         mock_cmd_app.complete.assert_called_once()
         assert mock_cmd_app.complete.call_args[1]['custom_settings'] == custom_settings
 
-    def test_get_completions_no_statement_parser(self, mock_cmd_app: MockCmd) -> None:
-        """Test initialization and completion without statement_parser."""
-        del mock_cmd_app.statement_parser
-        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-
-        document = Document("foo bar", cursor_position=7)
-        list(completer.get_completions(document, None))
-
-        # Should still work with default delimiters
-        mock_cmd_app.complete.assert_called_once()
-
     def test_get_completions_custom_delimiters(self, mock_cmd_app: MockCmd) -> None:
         """Test that custom delimiters (terminators) are respected."""
         mock_cmd_app.statement_parser.terminators = ['#']

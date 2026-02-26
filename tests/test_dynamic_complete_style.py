@@ -1,5 +1,5 @@
 import pytest
-from prompt_toolkit.shortcuts import CompleteStyle
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession
 
 import cmd2
 from cmd2 import Completions
@@ -32,30 +32,38 @@ def app():
 
 
 def test_dynamic_complete_style(app):
+    # Cmd.complete() interacts with app.active_session.
+    # Set it here since it's normally set when the prompt is created.
+    app.active_session: PromptSession[str] = PromptSession()
+
     # Default max_column_completion_results is 7
     assert app.max_column_completion_results == 7
 
     # Complete 'foo' which has 10 items (> 7)
     # text='item', state=0, line='foo item', begidx=4, endidx=8
     app.complete('item', 'foo item', 4, 8)
-    assert app.session.complete_style == CompleteStyle.MULTI_COLUMN
+    assert app.active_session.complete_style == CompleteStyle.MULTI_COLUMN
 
     # Complete 'bar' which has 5 items (<= 7)
     app.complete('item', 'bar item', 4, 8)
-    assert app.session.complete_style == CompleteStyle.COLUMN
+    assert app.active_session.complete_style == CompleteStyle.COLUMN
 
 
 def test_dynamic_complete_style_custom_limit(app):
+    # Cmd.complete() interacts with app.active_session.
+    # Set it here since it's normally set when the prompt is created.
+    app.active_session: PromptSession[str] = PromptSession()
+
     # Change limit to 3
     app.max_column_completion_results = 3
 
     # Complete 'bar' which has 5 items (> 3)
     app.complete('item', 'bar item', 4, 8)
-    assert app.session.complete_style == CompleteStyle.MULTI_COLUMN
+    assert app.active_session.complete_style == CompleteStyle.MULTI_COLUMN
 
     # Change limit to 15
     app.max_column_completion_results = 15
 
     # Complete 'foo' which has 10 items (<= 15)
     app.complete('item', 'foo item', 4, 8)
-    assert app.session.complete_style == CompleteStyle.COLUMN
+    assert app.active_session.complete_style == CompleteStyle.COLUMN

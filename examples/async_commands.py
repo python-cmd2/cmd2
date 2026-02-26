@@ -79,11 +79,11 @@ class AsyncCommandsApp(cmd2.Cmd):
         super().__init__()
         self.intro = 'Welcome to the Async Commands example. Type "help" to see available commands.'
 
-        if self.session.key_bindings is None:
-            self.session.key_bindings = KeyBindings()
+        if self.main_session.key_bindings is None:
+            self.main_session.key_bindings = KeyBindings()
 
         # Add a custom key binding for <CTRL>+T that calls a method so it has access to self
-        @self.session.key_bindings.add('c-t')
+        @self.main_session.key_bindings.add('c-t')
         def _(_event: Any) -> None:
             self.handle_control_t(_event)
 

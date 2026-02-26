@@ -1249,11 +1249,11 @@ def test_async_alert(base_app, msg, prompt, is_stale, at_continuation_prompt) ->
         base_app._at_continuation_prompt = at_continuation_prompt
 
         with create_pipe_input() as pipe_input:
-            base_app.session = PromptSession(
+            base_app.main_session = PromptSession(
                 input=pipe_input,
                 output=DummyOutput(),
-                history=base_app.session.history,
-                completer=base_app.session.completer,
+                history=base_app.main_session.history,
+                completer=base_app.main_session.completer,
             )
             pipe_input.send_text("quit\n")
 
@@ -2007,15 +2007,15 @@ def test_echo(capsys) -> None:
 )
 def test_read_raw_input_tty(base_app: cmd2.Cmd) -> None:
     with create_pipe_input() as pipe_input:
-        base_app.session = PromptSession(
+        base_app.main_session = PromptSession(
             input=pipe_input,
             output=DummyOutput(),
-            history=base_app.session.history,
-            completer=base_app.session.completer,
+            history=base_app.main_session.history,
+            completer=base_app.main_session.completer,
         )
         pipe_input.send_text("foo\n")
 
-        result = base_app._read_raw_input("prompt> ", base_app.session, DummyCompleter())
+        result = base_app._read_raw_input("prompt> ", base_app.main_session)
         assert result == "foo"
 
 
@@ -2023,7 +2023,7 @@ def test_read_raw_input_interactive_pipe(capsys) -> None:
     prompt = "prompt> "
     app = cmd2.Cmd(stdin=io.StringIO("input from pipe\n"))
     app.interactive_pipe = True
-    result = app._read_raw_input(prompt, app.session, DummyCompleter())
+    result = app._read_raw_input(prompt, app.main_session)
     assert result == "input from pipe"
 
     # In interactive mode, _read_raw_input() prints the prompt.
@@ -2036,7 +2036,7 @@ def test_read_raw_input_non_interactive_pipe_echo_off(capsys) -> None:
     app = cmd2.Cmd(stdin=io.StringIO("input from pipe\n"))
     app.interactive_pipe = False
     app.echo = False
-    result = app._read_raw_input(prompt, app.session, DummyCompleter())
+    result = app._read_raw_input(prompt, app.main_session)
     assert result == "input from pipe"
 
     # When not echoing in non-interactive mode, _read_raw_input() prints nothing.
@@ -2049,7 +2049,7 @@ def test_read_raw_input_non_interactive_pipe_echo_on(capsys) -> None:
     app = cmd2.Cmd(stdin=io.StringIO("input from pipe\n"))
     app.interactive_pipe = False
     app.echo = True
-    result = app._read_raw_input(prompt, app.session, DummyCompleter())
+    result = app._read_raw_input(prompt, app.main_session)
     assert result == "input from pipe"
 
     # When echoing in non-interactive mode, _read_raw_input() prints the prompt and input text.
@@ -2060,7 +2060,7 @@ def test_read_raw_input_non_interactive_pipe_echo_on(capsys) -> None:
 def test_read_raw_input_eof() -> None:
     app = cmd2.Cmd(stdin=io.StringIO(""))
     with pytest.raises(EOFError):
-        app._read_raw_input("prompt> ", app.session, DummyCompleter())
+        app._read_raw_input("prompt> ", app.main_session)
 
 
 def test_resolve_completer_none(base_app: cmd2.Cmd) -> None:
@@ -3650,13 +3650,27 @@ def test_command_synonym_parser() -> None:
     assert synonym_parser is help_parser
 
 
-def test_custom_completekey():
-    # Test setting a custom completekey
-    app = cmd2.Cmd(completekey='?')
-    assert app.completekey == '?'
+def test_custom_completekey_ctrl_k():
+    from prompt_toolkit.keys import Keys
+
+    # Test setting a custom completekey to <CTRL> + K
+    # In prompt_toolkit, this is 'c-k'
+    app = cmd2.Cmd(completekey='c-k')
+
+    assert app.main_session.key_bindings is not None
+
+    # Check that we have a binding for c-k (Keys.ControlK)
+    found = False
+    for binding in app.main_session.key_bindings.bindings:
+        # binding.keys is a tuple of keys
+        if binding.keys == (Keys.ControlK,):
+            found = True
+            break
+
+    assert found, "Could not find binding for 'c-k' (Keys.ControlK) in session key bindings"
 
 
-def test_init_session_exception(monkeypatch):
+def test_init_main_session_exception(monkeypatch):
 
     # Mock PromptSession to raise ValueError on first call, then succeed
     valid_session_mock = mock.MagicMock(spec=PromptSession)
@@ -3744,7 +3758,7 @@ def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypa
     poutput_mock.assert_called_with('^C')
 
 
-def test_init_session_no_console_error(monkeypatch):
+def test_init_main_session_no_console_error(monkeypatch):
     from cmd2.cmd2 import NoConsoleScreenBufferError
 
     # Mock PromptSession to raise NoConsoleScreenBufferError on first call, then succeed
@@ -3764,7 +3778,7 @@ def test_init_session_no_console_error(monkeypatch):
     assert isinstance(kwargs['output'], DummyOutput)
 
 
-def test_init_session_with_custom_tty() -> None:
+def test_init_main_session_with_custom_tty() -> None:
     # Create a mock stdin with says it's a TTY
     custom_stdin = mock.MagicMock(spec=io.TextIOWrapper)
     custom_stdin.isatty.return_value = True
@@ -3782,20 +3796,20 @@ def test_init_session_with_custom_tty() -> None:
         app = cmd2.Cmd()
         app.stdin = custom_stdin
         app.stdout = custom_stdout
-        app._init_session()
+        app._initialize_main_session(auto_suggest=True, completekey=app.DEFAULT_COMPLETEKEY)
 
         mock_create_input.assert_called_once_with(stdin=custom_stdin)
         mock_create_output.assert_called_once_with(stdout=custom_stdout)
 
 
-def test_init_session_non_interactive() -> None:
+def test_init_main_session_non_interactive() -> None:
     # Set up a mock for a non-TTY stream (like a pipe)
     mock_stdin = mock.MagicMock(spec=io.TextIOWrapper)
     mock_stdin.isatty.return_value = False
 
     app = cmd2.Cmd(stdin=mock_stdin)
-    assert isinstance(app.session.input, DummyInput)
-    assert isinstance(app.session.output, DummyOutput)
+    assert isinstance(app.main_session.input, DummyInput)
+    assert isinstance(app.main_session.output, DummyOutput)
 
 
 def test_no_console_screen_buffer_error_dummy():
@@ -3816,7 +3830,7 @@ def test_read_command_line_dynamic_prompt(base_app: cmd2.Cmd) -> None:
         # will go down the TTY route.
         mock_session = mock.MagicMock()
         mock_session.input = mock.MagicMock()
-        base_app.session = mock_session
+        base_app.main_session = mock_session
         base_app._read_command_line(base_app.prompt)
 
         # Check that mock_prompt was called with a callable for the prompt
@@ -3846,14 +3860,14 @@ def test_read_input_history_isolation(base_app: cmd2.Cmd) -> None:
         args, _ = mock_raw.call_args
         passed_session = args[1]
 
-        # Verify the session's history is an InMemoryHistory containing our list
+        # Verify the session's history contains our list
         loaded_history = list(passed_session.history.load_history_strings())
         assert "secret_command" in loaded_history
         assert "another_command" in loaded_history
 
         # Verify the main app session was not touched
         # This is the crucial check for isolation
-        main_history = base_app.session.history.get_strings()
+        main_history = base_app.main_session.history.get_strings()
         assert "secret_command" not in main_history
 
 
@@ -3868,11 +3882,11 @@ def test_pre_prompt_running_loop(base_app):
     # Set up pipe input to feed data to prompt_toolkit
     with create_pipe_input() as pipe_input:
         # Create a new session with our pipe input because the input property is read-only
-        base_app.session = PromptSession(
+        base_app.main_session = PromptSession(
             input=pipe_input,
             output=DummyOutput(),
-            history=base_app.session.history,
-            completer=base_app.session.completer,
+            history=base_app.main_session.history,
+            completer=base_app.main_session.completer,
         )
 
         loop_check = {'running': False}
@@ -3917,21 +3931,16 @@ def test_get_bottom_toolbar_narrow_terminal(base_app, monkeypatch):
 def test_auto_suggest_true():
     """Test that auto_suggest=True initializes AutoSuggestFromHistory."""
     app = cmd2.Cmd(auto_suggest=True)
-    assert app.auto_suggest is not None
-    assert isinstance(app.auto_suggest, AutoSuggestFromHistory)
-    assert app.session.auto_suggest is app.auto_suggest
+    assert isinstance(app.main_session.auto_suggest, AutoSuggestFromHistory)
 
 
 def test_auto_suggest_false():
     """Test that auto_suggest=False does not initialize AutoSuggestFromHistory."""
     app = cmd2.Cmd(auto_suggest=False)
-    assert app.auto_suggest is None
-    assert app.session.auto_suggest is None
+    assert app.main_session.auto_suggest is None
 
 
 def test_auto_suggest_default():
     """Test that auto_suggest defaults to True."""
     app = cmd2.Cmd()
-    assert app.auto_suggest is not None
-    assert isinstance(app.auto_suggest, AutoSuggestFromHistory)
-    assert app.session.auto_suggest is app.auto_suggest
+    assert isinstance(app.main_session.auto_suggest, AutoSuggestFromHistory)
