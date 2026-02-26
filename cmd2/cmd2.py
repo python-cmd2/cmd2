@@ -62,6 +62,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     TextIO,
+    TypeAlias,
     TypeVar,
     Union,
     cast,
@@ -198,6 +199,13 @@ from .utils import (
     suggest_similar,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
+    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], argparse.ArgumentParser]
+else:
+    StaticArgParseBuilder = staticmethod
+    ClassArgParseBuilder = classmethod
+
 
 class _SavedCmd2Env:
     """cmd2 environment settings that are backed up when entering an interactive Python shell."""
@@ -209,14 +217,6 @@ class _SavedCmd2Env:
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
 DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function', 'completer_function'])  # noqa: PYI024
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
-    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], argparse.ArgumentParser]
-else:
-    StaticArgParseBuilder = staticmethod
-    ClassArgParseBuilder = classmethod
 
 
 class _CommandParsers:
@@ -2195,8 +2195,8 @@ class Cmd:
         :param parser: the parser to examine
         :return: type of ArgparseCompleter
         """
-        Completer = type[argparse_completer.ArgparseCompleter] | None  # noqa: N806
-        completer_type: Completer = parser.get_ap_completer_type()  # type: ignore[attr-defined]
+        APCompleterType: TypeAlias = type[argparse_completer.ArgparseCompleter] | None
+        completer_type: APCompleterType = parser.get_ap_completer_type()  # type: ignore[attr-defined]
 
         if completer_type is None:
             completer_type = argparse_completer.DEFAULT_AP_COMPLETER

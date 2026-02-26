@@ -28,7 +28,6 @@ from typing import (
 
 from . import constants
 from . import string_utils as su
-from .completion import Choices
 from .types import (
     ChoicesProviderUnbound,
     CmdOrSet,
@@ -114,6 +113,7 @@ class Settable:
         :param completer: completion function that provides choices for this argument
         """
         if val_type is bool:
+            from .completion import Choices
 
             def get_bool_choices(_cmd2_self: CmdOrSet) -> Choices:
                 """Tab complete lowercase boolean values."""

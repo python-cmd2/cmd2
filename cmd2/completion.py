@@ -28,7 +28,6 @@ else:
 from rich.protocol import is_renderable
 
 from . import rich_utils as ru
-from . import utils
 
 # Regular expression to identify strings which we should sort numerically
 NUMERIC_RE = re.compile(
@@ -143,6 +142,8 @@ class CompletionResultsBase:
 
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
+        from . import utils
+
         unique_items = utils.remove_duplicates(self.items)
         if not self.is_sorted:
             if all_display_numeric(unique_items):
