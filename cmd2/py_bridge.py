@@ -17,7 +17,7 @@ from typing import (
 from .utils import StdSim  # namedtuple_with_defaults,
 
 if TYPE_CHECKING:  # pragma: no cover
-    import cmd2
+    from .cmd2 import Cmd
 
 
 class CommandResult(NamedTuple):
@@ -79,7 +79,7 @@ class PyBridge:
                            Defaults to True.
     """
 
-    def __init__(self, cmd2_app: 'cmd2.Cmd', *, add_to_history: bool = True) -> None:
+    def __init__(self, cmd2_app: 'Cmd', *, add_to_history: bool = True) -> None:
         """Initialize PyBridge instances."""
         self._cmd2_app = cmd2_app
         self._add_to_history = add_to_history

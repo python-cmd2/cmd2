@@ -62,6 +62,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     TextIO,
+    TypeAlias,
     TypeVar,
     Union,
     cast,
@@ -107,12 +108,8 @@ from .command_definition import (
 )
 from .completion import (
     Choices,
-    ChoicesProviderUnbound,
-    CompleterBound,
-    CompleterUnbound,
     CompletionItem,
     Completions,
-    Matchable,
 )
 from .constants import (
     CLASS_ATTR_DEFAULT_HELP_CATEGORY,
@@ -121,7 +118,6 @@ from .constants import (
     HELP_FUNC_PREFIX,
 )
 from .decorators import (
-    CommandParent,
     as_subcommand_to,
     with_argparser,
 )
@@ -152,6 +148,12 @@ from .rich_utils import (
     RichPrintKwargs,
 )
 from .styles import Cmd2Style
+from .types import (
+    ChoicesProviderUnbound,
+    CmdOrSet,
+    CompleterBound,
+    CompleterUnbound,
+)
 
 with contextlib.suppress(ImportError):
     from IPython import start_ipython
@@ -196,6 +198,13 @@ from .utils import (
     suggest_similar,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
+    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], argparse.ArgumentParser]
+else:
+    StaticArgParseBuilder = staticmethod
+    ClassArgParseBuilder = classmethod
+
 
 class _SavedCmd2Env:
     """cmd2 environment settings that are backed up when entering an interactive Python shell."""
@@ -207,14 +216,6 @@ class _SavedCmd2Env:
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
 DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function', 'completer_function'])  # noqa: PYI024
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
-    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], argparse.ArgumentParser]
-else:
-    StaticArgParseBuilder = staticmethod
-    ClassArgParseBuilder = classmethod
 
 
 class _CommandParsers:
@@ -840,7 +841,7 @@ class Cmd:
 
     def _build_parser(
         self,
-        parent: CommandParent,
+        parent: CmdOrSet,
         parser_builder: argparse.ArgumentParser
         | Callable[[], argparse.ArgumentParser]
         | StaticArgParseBuilder
@@ -849,7 +850,7 @@ class Cmd:
     ) -> argparse.ArgumentParser:
         """Build argument parser for a command/subcommand.
 
-        :param parent: CommandParent object which owns the command using the parser.
+        :param parent: object which owns the command using the parser.
                        When parser_builder is a classmethod, this function passes
                        parent's class to it.
         :param parser_builder: means used to build the parser
@@ -1821,7 +1822,7 @@ class Cmd:
         line: str,  # noqa: ARG002
         begidx: int,  # noqa: ARG002
         endidx: int,  # noqa: ARG002
-        match_against: Iterable[Matchable],
+        match_against: Iterable[str | CompletionItem],
         *,
         sort: bool = True,
     ) -> Completions:
@@ -2193,8 +2194,8 @@ class Cmd:
         :param parser: the parser to examine
         :return: type of ArgparseCompleter
         """
-        Completer = type[argparse_completer.ArgparseCompleter] | None  # noqa: N806
-        completer_type: Completer = parser.get_ap_completer_type()  # type: ignore[attr-defined]
+        APCompleterType: TypeAlias = type[argparse_completer.ArgparseCompleter] | None
+        completer_type: APCompleterType = parser.get_ap_completer_type()  # type: ignore[attr-defined]
 
         if completer_type is None:
             completer_type = argparse_completer.DEFAULT_AP_COMPLETER
@@ -3283,8 +3284,8 @@ class Cmd:
         self,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderUnbound | None = None,
-        completer: CompleterUnbound | None = None,
+        choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
+        completer: CompleterUnbound[CmdOrSet] | None = None,
         parser: argparse.ArgumentParser | None = None,
     ) -> Completer:
         """Determine the appropriate completer based on provided arguments."""
@@ -3315,8 +3316,8 @@ class Cmd:
         history: Sequence[str] | None = None,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderUnbound | None = None,
-        completer: CompleterUnbound | None = None,
+        choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
+        completer: CompleterUnbound[CmdOrSet] | None = None,
         parser: argparse.ArgumentParser | None = None,
     ) -> str:
         """Read a line of input with optional completion and history.

@@ -28,15 +28,13 @@ from typing import (
 
 from . import constants
 from . import string_utils as su
-from .completion import (
-    Choices,
+from .types import (
     ChoicesProviderUnbound,
+    CmdOrSet,
     CompleterUnbound,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .decorators import CommandParent
-
     PopenTextIO = subprocess.Popen[str]
 else:
     PopenTextIO = subprocess.Popen
@@ -78,8 +76,8 @@ class Settable:
         settable_attrib_name: str | None = None,
         onchange_cb: Callable[[str, _T, _T], Any] | None = None,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderUnbound | None = None,
-        completer: CompleterUnbound | None = None,
+        choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
+        completer: CompleterUnbound[CmdOrSet] | None = None,
     ) -> None:
         """Settable Initializer.
 
@@ -115,8 +113,9 @@ class Settable:
         :param completer: completion function that provides choices for this argument
         """
         if val_type is bool:
+            from .completion import Choices
 
-            def get_bool_choices(_cmd2_self: "CommandParent") -> Choices:
+            def get_bool_choices(_cmd2_self: CmdOrSet) -> Choices:
                 """Tab complete lowercase boolean values."""
                 return Choices.from_values(['true', 'false'])
 
