@@ -464,9 +464,9 @@ class Cmd:
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
 
-        # Initialize the main PromptSession
+        # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
-        self.main_session = self._initialize_main_session(auto_suggest, completekey)
+        self.main_session = self._create_main_session(auto_suggest, completekey)
 
         # The session currently holding focus (either the main REPL or a command's
         # custom prompt). Completion and UI logic should reference this variable
@@ -644,8 +644,8 @@ class Cmd:
         # the current command being executed
         self.current_command: Statement | None = None
 
-    def _initialize_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
-        """Initialize and return the core PromptSession for the application.
+    def _create_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
+        """Create and return the main PromptSession for the application.
 
         Builds an interactive session if stdin is a TTY. Otherwise, uses
         dummy drivers to support non-interactive streams like pipes or files.
@@ -3229,7 +3229,7 @@ class Cmd:
         running in a headless environment (DummyInput).
         """
         # Validate against the session's assigned input driver rather than sys.stdin.
-        # This respects the fallback logic in _initialize_session() and allows unit
+        # This respects the fallback logic in _create_main_session() and allows unit
         # tests to inject PipeInput for programmatic interaction.
         return not isinstance(session.input, DummyInput)
 

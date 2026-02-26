@@ -3670,7 +3670,7 @@ def test_custom_completekey_ctrl_k():
     assert found, "Could not find binding for 'c-k' (Keys.ControlK) in session key bindings"
 
 
-def test_init_main_session_exception(monkeypatch):
+def test_create_main_session_exception(monkeypatch):
 
     # Mock PromptSession to raise ValueError on first call, then succeed
     valid_session_mock = mock.MagicMock(spec=PromptSession)
@@ -3758,7 +3758,7 @@ def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypa
     poutput_mock.assert_called_with('^C')
 
 
-def test_init_main_session_no_console_error(monkeypatch):
+def test_create_main_session_no_console_error(monkeypatch):
     from cmd2.cmd2 import NoConsoleScreenBufferError
 
     # Mock PromptSession to raise NoConsoleScreenBufferError on first call, then succeed
@@ -3778,7 +3778,7 @@ def test_init_main_session_no_console_error(monkeypatch):
     assert isinstance(kwargs['output'], DummyOutput)
 
 
-def test_init_main_session_with_custom_tty() -> None:
+def test_create_main_session_with_custom_tty() -> None:
     # Create a mock stdin with says it's a TTY
     custom_stdin = mock.MagicMock(spec=io.TextIOWrapper)
     custom_stdin.isatty.return_value = True
@@ -3796,13 +3796,13 @@ def test_init_main_session_with_custom_tty() -> None:
         app = cmd2.Cmd()
         app.stdin = custom_stdin
         app.stdout = custom_stdout
-        app._initialize_main_session(auto_suggest=True, completekey=app.DEFAULT_COMPLETEKEY)
+        app._create_main_session(auto_suggest=True, completekey=app.DEFAULT_COMPLETEKEY)
 
         mock_create_input.assert_called_once_with(stdin=custom_stdin)
         mock_create_output.assert_called_once_with(stdout=custom_stdout)
 
 
-def test_init_main_session_non_interactive() -> None:
+def test_create_main_session_non_interactive() -> None:
     # Set up a mock for a non-TTY stream (like a pipe)
     mock_stdin = mock.MagicMock(spec=io.TextIOWrapper)
     mock_stdin.isatty.return_value = False
