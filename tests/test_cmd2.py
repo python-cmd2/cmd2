@@ -2187,9 +2187,11 @@ def test_read_input_passes_all_arguments_to_resolver(base_app):
         )
 
 
-def test_history_is_correctly_passed_to_session(base_app, mocker):
+def test_read_input_history_is_passed_to_session(base_app, monkeypatch, mocker):
     mock_session_cls = mocker.patch('cmd2.cmd2.PromptSession')
     mock_history_cls = mocker.patch('cmd2.cmd2.InMemoryHistory')
+    read_command_mock = mocker.MagicMock(name='_read_command_line', return_value='command')
+    monkeypatch.setattr("cmd2.Cmd._read_command_line", read_command_mock)
 
     # Test with custom history first
     my_history_list = ["help", "help alias", "help help"]
@@ -2201,6 +2203,7 @@ def test_history_is_correctly_passed_to_session(base_app, mocker):
 
     # Test with no history
     mock_history_cls.reset_mock()
+    mock_session_cls.reset_mock()
     my_history_list = ["help", "help alias", "help help"]
     base_app.read_input(history=None)
     mock_history_cls.assert_called_once_with()
@@ -2225,8 +2228,11 @@ def test_read_raw_input_session_usage_and_restore(base_app, mocker):
 
     mock_session.prompt.side_effect = check_and_return_input
 
-    # Call _read_raw_input()
-    result = base_app._read_raw_input("prompt> ", mock_session)
+    # Mock patch_stdout to prevent it from attempting to access the Windows
+    # console buffer in a Windows test environment.
+    with mock.patch('cmd2.cmd2.patch_stdout'):
+        result = base_app._read_raw_input("prompt> ", mock_session)
+
     assert result == command_text
 
     # Check if session.prompt() was called
@@ -2250,7 +2256,9 @@ def test_read_raw_input_restores_on_error(base_app, mocker):
 
     mock_session.prompt.side_effect = check_and_raise
 
-    with pytest.raises(KeyboardInterrupt):
+    # Mock patch_stdout to prevent it from attempting to access the Windows
+    # console buffer in a Windows test environment.
+    with mock.patch('cmd2.cmd2.patch_stdout'), pytest.raises(KeyboardInterrupt):
         base_app._read_raw_input("prompt> ", mock_session)
 
     # Even though an error occurred, the finally block restored active session
