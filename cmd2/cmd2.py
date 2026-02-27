@@ -672,7 +672,7 @@ class Cmd:
             "complete_in_thread": True,
             "complete_while_typing": False,
             "completer": Cmd2Completer(self),
-            "history": Cmd2History(self),
+            "history": Cmd2History(item.raw for item in self.history),
             "key_bindings": key_bindings,
             "lexer": Cmd2Lexer(self),
             "rprompt": self.get_rprompt,
@@ -2902,6 +2902,9 @@ class Cmd:
         if not statement.command:
             raise EmptyStatement
 
+        # Add the complete command to prompt-toolkit's history.
+        cast(Cmd2History, self.main_session.history).add_command(statement.raw)
+
         return statement
 
     def _input_line_to_statement(self, line: str) -> Statement:
@@ -5002,6 +5005,7 @@ class Cmd:
 
             # Clear command and prompt-toolkit history
             self.history.clear()
+            cast(Cmd2History, self.main_session.history).clear()
 
             if self.persistent_history_file:
                 try:

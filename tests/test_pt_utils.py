@@ -20,8 +20,6 @@ from cmd2 import (
 )
 from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
-from cmd2.history import HistoryItem
-from cmd2.parsing import Statement
 from cmd2.pt_utils import pt_filter_style
 
 from .conftest import with_ansi_style
@@ -34,7 +32,6 @@ class MockCmd:
         self.complete = Mock(return_value=cmd2.Completions())
 
         self.always_show_hint = False
-        self.history = []
         self.statement_parser = Mock()
         self.statement_parser.terminators = [';']
         self.statement_parser.shortcuts = []
@@ -506,68 +503,84 @@ class TestCmd2Completer:
 
 
 class TestCmd2History:
-    def make_history_item(self, text):
-        statement = Mock(spec=Statement)
-        statement.raw = text
-        item = Mock(spec=HistoryItem)
-        item.statement = statement
-        return item
+    def test_load_history_strings(self):
+        """Test loading history strings yields all items newest to oldest."""
 
-    def test_load_history_strings(self, mock_cmd_app):
-        """Test loading history strings yields all items in forward order."""
-        history = pt_utils.Cmd2History(cast(Any, mock_cmd_app))
+        history_strings = ["cmd1", "cmd2", "cmd2", "cmd3", "cmd2"]
+        history = pt_utils.Cmd2History(history_strings)
+        assert history._loaded
 
-        # Set up history items
-        # History in cmd2 is oldest to newest
-        items = [
-            self.make_history_item("cmd1"),
-            self.make_history_item("cmd2"),
-            self.make_history_item("cmd2"),  # Duplicate
-            self.make_history_item("cmd3"),
-        ]
-        mock_cmd_app.history = items
+        # Consecutive duplicates are removed
+        expected = ["cmd2", "cmd3", "cmd2", "cmd1"]
+        assert list(history.load_history_strings()) == expected
 
-        # Expected: cmd1, cmd2, cmd2, cmd3 (raw iteration)
-        result = list(history.load_history_strings())
-
-        assert result == ["cmd1", "cmd2", "cmd2", "cmd3"]
-
-    def test_load_history_strings_empty(self, mock_cmd_app):
+    def test_load_history_strings_empty(self):
         """Test loading history strings with empty history."""
-        history = pt_utils.Cmd2History(cast(Any, mock_cmd_app))
+        history = pt_utils.Cmd2History()
+        assert history._loaded
+        assert list(history.load_history_strings()) == []
 
-        mock_cmd_app.history = []
+        history = pt_utils.Cmd2History([])
+        assert history._loaded
+        assert list(history.load_history_strings()) == []
 
-        result = list(history.load_history_strings())
+        history = pt_utils.Cmd2History(None)
+        assert history._loaded
+        assert list(history.load_history_strings()) == []
 
-        assert result == []
+    def test_get_strings(self):
+        history_strings = ["cmd1", "cmd2", "cmd2", "cmd3", "cmd2"]
+        history = pt_utils.Cmd2History(history_strings)
+        assert history._loaded
 
-    def test_get_strings(self, mock_cmd_app):
-        """Test get_strings returns deduped strings and does not cache."""
-        history = pt_utils.Cmd2History(cast(Any, mock_cmd_app))
+        # Consecutive duplicates are removed
+        expected = ["cmd1", "cmd2", "cmd3", "cmd2"]
+        assert history.get_strings() == expected
 
-        items = [
-            self.make_history_item("cmd1"),
-            self.make_history_item("cmd2"),
-            self.make_history_item("cmd2"),  # Duplicate
-            self.make_history_item("cmd3"),
-        ]
-        mock_cmd_app.history = items
+    def test_append_string(self):
+        """Test that append_string() does nothing."""
+        history = pt_utils.Cmd2History()
+        assert history._loaded
+        assert not history._loaded_strings
 
-        # Expect deduped: cmd1, cmd2, cmd3
-        strings = history.get_strings()
-        assert strings == ["cmd1", "cmd2", "cmd3"]
+        history.append_string("new command")
+        assert not history._loaded_strings
 
-        # Modify underlying history to prove it does NOT use cache
-        mock_cmd_app.history.append(self.make_history_item("cmd4"))
-        strings2 = history.get_strings()
-        assert strings2 == ["cmd1", "cmd2", "cmd3", "cmd4"]
+    def test_store_string(self):
+        """Test that store_string() does nothing."""
+        history = pt_utils.Cmd2History()
+        assert history._loaded
+        assert not history._loaded_strings
 
-    def test_store_string(self, mock_cmd_app):
-        """Test store_string does nothing."""
-        history = pt_utils.Cmd2History(cast(Any, mock_cmd_app))
-
-        # Just ensure it doesn't raise error or modify cmd2 history
         history.store_string("new command")
+        assert not history._loaded_strings
 
-        assert len(mock_cmd_app.history) == 0
+    def test_add_command(self):
+        """Test that add_command() adds data."""
+        history = pt_utils.Cmd2History()
+        assert history._loaded
+        assert not history._loaded_strings
+
+        history.add_command("new command")
+        assert len(history._loaded_strings) == 1
+        assert history._loaded_strings[0] == "new command"
+
+        # Show that consecutive duplicates are filtered
+        history.add_command("new command")
+        assert len(history._loaded_strings) == 1
+        assert history._loaded_strings[0] == "new command"
+
+        # Show that new items are placed at the front
+        history.add_command("even newer command")
+        assert len(history._loaded_strings) == 2
+        assert history._loaded_strings[0] == "even newer command"
+        assert history._loaded_strings[1] == "new command"
+
+    def test_clear(self):
+        history_strings = ["cmd1", "cmd2"]
+        history = pt_utils.Cmd2History(history_strings)
+        assert history._loaded
+        assert history.get_strings() == history_strings
+
+        history.clear()
+        assert not history.get_strings()
