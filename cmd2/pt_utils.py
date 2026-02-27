@@ -244,8 +244,13 @@ class Cmd2Lexer(Lexer):
             line = document.lines[lineno]
             tokens: list[tuple[str, str]] = []
 
+            # No syntax highlighting if styles are disallowed
+            if ru.ALLOW_STYLE == ru.AllowStyle.NEVER:
+                tokens.append(('', line))
+                return tokens
+
             # Only attempt to match a command on the first line
-            if lineno == 0 and ru.ALLOW_STYLE != ru.AllowStyle.NEVER:
+            if lineno == 0:
                 # Use cmd2's command pattern to find the first word (the command)
                 match = self.cmd_app.statement_parser._command_pattern.search(line)
                 if match:
@@ -292,11 +297,8 @@ class Cmd2Lexer(Lexer):
                     # No command match found on the first line
                     tokens.append(('', line))
             else:
-                # All other lines are unstyled or treated as arguments
-                if ru.ALLOW_STYLE != ru.AllowStyle.NEVER:
-                    highlight_args(line, tokens)
-                else:
-                    tokens.append(('', line))
+                # All other lines are treated as arguments
+                highlight_args(line, tokens)
 
             return tokens
 
