@@ -210,12 +210,29 @@ class TestCmd2Lexer:
         tokens = get_line(0)
         assert tokens == [('ansigreen', '!'), ('ansiyellow', 'ls')]
 
-        # Case 2: Shortcut with space
         line = "! ls"
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
         assert tokens == [('ansigreen', '!'), ('', ' '), ('ansiyellow', 'ls')]
+
+    def test_lex_document_multiline(self, mock_cmd_app):
+        """Test lexing a multiline command."""
+        mock_cmd_app.all_commands = ["orate"]
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        # Command on first line, argument on second line that looks like a command
+        line = "orate\nhelp"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+
+        # First line should have command
+        tokens0 = get_line(0)
+        assert tokens0 == [('ansigreen', 'orate')]
+
+        # Second line should have argument (not command)
+        tokens1 = get_line(1)
+        assert tokens1 == [('ansiyellow', 'help')]
 
 
 class TestCmd2Completer:
