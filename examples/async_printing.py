@@ -32,7 +32,7 @@ class AlerterApp(cmd2.Cmd):
 
     def __init__(self) -> None:
         """Initializer."""
-        super().__init__()
+        super().__init__(multiline_commands=["help"])
 
         self.prompt = "(APR)> "
 

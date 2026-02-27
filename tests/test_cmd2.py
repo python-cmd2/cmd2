@@ -1208,23 +1208,19 @@ def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
     reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
 )
 @pytest.mark.parametrize(
-    ('msg', 'prompt', 'is_stale', 'at_continuation_prompt'),
+    ('msg', 'prompt', 'is_stale'),
     [
-        ("msg_text", None, False, False),
-        ("msg_text", "new_prompt> ", False, False),
-        ("msg_text", "new_prompt> ", False, True),
-        ("msg_text", "new_prompt> ", True, False),
-        ("msg_text", "new_prompt> ", True, True),
-        (None, "new_prompt> ", False, False),
-        (None, "new_prompt> ", False, True),
-        (None, "new_prompt> ", True, False),
-        (None, "new_prompt> ", True, True),
+        ("msg_text", None, False),
+        ("msg_text", "new_prompt> ", False),
+        ("msg_text", "new_prompt> ", True),
+        (None, "new_prompt> ", False),
+        (None, "new_prompt> ", True),
         # Blank prompt is acceptable
-        ("msg_text", "", False, False),
-        (None, "", False, False),
+        ("msg_text", "", False),
+        (None, "", False),
     ],
 )
-def test_async_alert(base_app, msg, prompt, is_stale, at_continuation_prompt) -> None:
+def test_async_alert(base_app, msg, prompt, is_stale) -> None:
     import time
 
     with (
@@ -1246,8 +1242,6 @@ def test_async_alert(base_app, msg, prompt, is_stale, at_continuation_prompt) ->
             # In the future
             alert.timestamp = time.monotonic() + 99999999
 
-        base_app._at_continuation_prompt = at_continuation_prompt
-
         with create_pipe_input() as pipe_input:
             base_app.main_session = PromptSession(
                 input=pipe_input,
@@ -1266,7 +1260,7 @@ def test_async_alert(base_app, msg, prompt, is_stale, at_continuation_prompt) ->
 
             # If there's only a prompt update, we expect invalidate() only if not continuation/stale
             elif prompt is not None:
-                if is_stale or at_continuation_prompt:
+                if is_stale:
                     mock_app.invalidate.assert_not_called()
                 else:
                     mock_app.invalidate.assert_called_once()
@@ -1847,10 +1841,10 @@ def test_multiline_input_line_to_statement(multiline_app, monkeypatch) -> None:
 
 def test_multiline_history_added(multiline_app, monkeypatch) -> None:
     # Test that multiline commands are added to history as a single item
+    run_cmd(multiline_app, "history --clear")
+
     read_command_mock = mock.MagicMock(name='_read_command_line', side_effect=['person', '\n'])
     monkeypatch.setattr("cmd2.Cmd._read_command_line", read_command_mock)
-
-    multiline_app.history.clear()
 
     # run_cmd calls onecmd_plus_hooks which triggers history addition
     run_cmd(multiline_app, "orate hi")
@@ -1861,10 +1855,10 @@ def test_multiline_history_added(multiline_app, monkeypatch) -> None:
 
 def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
     # Test combined multiline command with quotes is added to history correctly
+    run_cmd(multiline_app, "history --clear")
+
     read_command_mock = mock.MagicMock(name='_read_command_line', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
     monkeypatch.setattr("cmd2.Cmd._read_command_line", read_command_mock)
-
-    multiline_app.history.clear()
 
     line = 'orate Look, "There are newlines'
     run_cmd(multiline_app, line)
@@ -2784,6 +2778,45 @@ def test_nonexistent_macro(base_app) -> None:
         exception = e
 
     assert exception is not None
+
+
+@pytest.mark.parametrize(
+    # The line of text and whether to continue prompting to finish a multiline command.
+    ('line', 'should_continue'),
+    [
+        ("", False),
+        ("   ", False),
+        ("help", False),
+        ("help alias", False),
+        ("orate", True),
+        ("orate;", False),
+        ("orate\n", False),
+        ("orate\narg", True),
+        ("orate\narg;", False),
+        ("orate\narg\n", False),
+        ("single_mac", False),  # macro resolution error returns False (no arg passed)
+        ("single_mac arg", False),
+        ("multi_mac", False),  # macro resolution error returns False (no arg passed)
+        ("multi_mac arg", True),
+        ("multi_mac arg;", False),
+        ("multi_mac arg\n", False),
+        ("multi_mac\narg", True),
+        ("multi_mac\narg;", False),
+        ("multi_mac\narg\n", False),
+    ],
+)
+def test_should_continue_multiline(multiline_app: MultilineApp, line: str, should_continue: bool) -> None:
+    mock_buffer = mock.MagicMock()
+    mock_buffer.text = line
+
+    mock_app = mock.MagicMock()
+    mock_app.current_buffer = mock_buffer
+
+    run_cmd(multiline_app, "macro create single_mac help {1}")
+    run_cmd(multiline_app, "macro create multi_mac orate {1}")
+
+    with mock.patch('cmd2.cmd2.get_app', return_value=mock_app):
+        assert multiline_app._should_continue_multiline() is should_continue
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)

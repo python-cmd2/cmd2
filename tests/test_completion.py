@@ -830,12 +830,8 @@ def test_complete_multiline_on_single_line(cmd2_app) -> None:
 
 
 def test_complete_multiline_on_multiple_lines(cmd2_app) -> None:
-    # Set the same variables _complete_statement() sets when a user is entering data at a continuation prompt
-    cmd2_app._at_continuation_prompt = True
-    cmd2_app._multiline_in_progress = "test_multiline\n"
-
     text = 'Ba'
-    line = f'{text}'
+    line = f'test_multiline\n{text}'
     endidx = len(line)
     begidx = endidx - len(text)
 

@@ -152,41 +152,40 @@ class Cmd2Completer(Completer):
 
 
 class Cmd2History(History):
-    """History that bridges cmd2's history storage with prompt_toolkit."""
+    """A non-persistent, in-memory history buffer for prompt-toolkit.
 
-    def __init__(self, cmd_app: 'Cmd') -> None:
-        """Initialize prompt_toolkit based history wrapper class."""
+    This class serves as the backing store for UI history navigation (e.g., arrowing
+    through previous commands). It explicitly avoids handling persistence,
+    deferring all permanent storage logic to the cmd2 application.
+    """
+
+    def __init__(self, history_strings: Iterable[str] | None = None) -> None:
+        """Initialize the instance."""
         super().__init__()
-        self.cmd_app = cmd_app
 
-    def load_history_strings(self) -> Iterable[str]:
-        """Yield strings from cmd2's history to prompt_toolkit."""
-        for item in self.cmd_app.history:
-            yield item.statement.raw
+        if history_strings:
+            for string in history_strings:
+                self.append_string(string)
 
-    def get_strings(self) -> list[str]:
-        """Get the strings from the history."""
-        # We override this to always get the latest history from cmd2
-        # instead of caching it like the base class does.
-        strings: list[str] = []
-        last_item = None
-        for item in self.cmd_app.history:
-            if item.statement.raw != last_item:
-                strings.append(item.statement.raw)
-                last_item = item.statement.raw
-        return strings
+        # Mark that self._loaded_strings is populated.
+        self._loaded = True
+
+    def append_string(self, string: str) -> None:
+        """Override to filter our consecutive duplicates."""
+        # History is sorted newest to oldest, so we compare to the first element.
+        if string and (not self._loaded_strings or self._loaded_strings[0] != string):
+            super().append_string(string)
 
     def store_string(self, string: str) -> None:
-        """prompt_toolkit calls this when a line is accepted.
+        """No-op: Persistent history data is stored in cmd_app.history."""
 
-        cmd2 handles history addition in its own loop (postcmd).
-        We don't want to double add.
-        However, PromptSession needs to know about it for the *current* session history navigation.
-        If we don't store it here, UP arrow might not work for the just entered command
-        unless cmd2 re-initializes the session or history object.
+    def load_history_strings(self) -> Iterable[str]:
+        """Yield strings from newest to oldest."""
+        yield from self._loaded_strings
 
-        This method is intentionally empty.
-        """
+    def clear(self) -> None:
+        """Clear the UI history navigation data."""
+        self._loaded_strings.clear()
 
 
 class Cmd2Lexer(Lexer):
