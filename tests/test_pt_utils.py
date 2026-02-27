@@ -92,6 +92,18 @@ def test_pt_filter_style_never() -> None:
 
 
 class TestCmd2Lexer:
+    @with_ansi_style(ru.AllowStyle.NEVER)
+    def test_lex_document_no_style(self, mock_cmd_app):
+        """Test lexing when styles are disallowed."""
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "help something"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('', line)]
+
     def test_lex_document_command(self, mock_cmd_app):
         """Test lexing a command name."""
         mock_cmd_app.all_commands = ["help"]
