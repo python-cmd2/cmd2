@@ -538,13 +538,25 @@ class TestCmd2History:
         assert history.get_strings() == expected
 
     def test_append_string(self):
-        """Test that append_string() does nothing."""
+        """Test that append_string() adds data."""
         history = pt_utils.Cmd2History()
         assert history._loaded
         assert not history._loaded_strings
 
         history.append_string("new command")
-        assert not history._loaded_strings
+        assert len(history._loaded_strings) == 1
+        assert history._loaded_strings[0] == "new command"
+
+        # Show that consecutive duplicates are filtered
+        history.append_string("new command")
+        assert len(history._loaded_strings) == 1
+        assert history._loaded_strings[0] == "new command"
+
+        # Show that new items are placed at the front
+        history.append_string("even newer command")
+        assert len(history._loaded_strings) == 2
+        assert history._loaded_strings[0] == "even newer command"
+        assert history._loaded_strings[1] == "new command"
 
     def test_store_string(self):
         """Test that store_string() does nothing."""
@@ -554,27 +566,6 @@ class TestCmd2History:
 
         history.store_string("new command")
         assert not history._loaded_strings
-
-    def test_add_command(self):
-        """Test that add_command() adds data."""
-        history = pt_utils.Cmd2History()
-        assert history._loaded
-        assert not history._loaded_strings
-
-        history.add_command("new command")
-        assert len(history._loaded_strings) == 1
-        assert history._loaded_strings[0] == "new command"
-
-        # Show that consecutive duplicates are filtered
-        history.add_command("new command")
-        assert len(history._loaded_strings) == 1
-        assert history._loaded_strings[0] == "new command"
-
-        # Show that new items are placed at the front
-        history.add_command("even newer command")
-        assert len(history._loaded_strings) == 2
-        assert history._loaded_strings[0] == "even newer command"
-        assert history._loaded_strings[1] == "new command"
 
     def test_clear(self):
         history_strings = ["cmd1", "cmd2"]

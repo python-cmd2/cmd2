@@ -1208,23 +1208,19 @@ def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
     reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
 )
 @pytest.mark.parametrize(
-    ('msg', 'prompt', 'is_stale', 'at_continuation_prompt'),
+    ('msg', 'prompt', 'is_stale'),
     [
-        ("msg_text", None, False, False),
-        ("msg_text", "new_prompt> ", False, False),
-        ("msg_text", "new_prompt> ", False, True),
-        ("msg_text", "new_prompt> ", True, False),
-        ("msg_text", "new_prompt> ", True, True),
-        (None, "new_prompt> ", False, False),
-        (None, "new_prompt> ", False, True),
-        (None, "new_prompt> ", True, False),
-        (None, "new_prompt> ", True, True),
+        ("msg_text", None, False),
+        ("msg_text", "new_prompt> ", False),
+        ("msg_text", "new_prompt> ", True),
+        (None, "new_prompt> ", False),
+        (None, "new_prompt> ", True),
         # Blank prompt is acceptable
-        ("msg_text", "", False, False),
-        (None, "", False, False),
+        ("msg_text", "", False),
+        (None, "", False),
     ],
 )
-def test_async_alert(base_app, msg, prompt, is_stale, at_continuation_prompt) -> None:
+def test_async_alert(base_app, msg, prompt, is_stale) -> None:
     import time
 
     with (
@@ -1246,8 +1242,6 @@ def test_async_alert(base_app, msg, prompt, is_stale, at_continuation_prompt) ->
             # In the future
             alert.timestamp = time.monotonic() + 99999999
 
-        base_app._at_continuation_prompt = at_continuation_prompt
-
         with create_pipe_input() as pipe_input:
             base_app.main_session = PromptSession(
                 input=pipe_input,
@@ -1266,7 +1260,7 @@ def test_async_alert(base_app, msg, prompt, is_stale, at_continuation_prompt) ->
 
             # If there's only a prompt update, we expect invalidate() only if not continuation/stale
             elif prompt is not None:
-                if is_stale or at_continuation_prompt:
+                if is_stale:
                     mock_app.invalidate.assert_not_called()
                 else:
                     mock_app.invalidate.assert_called_once()
@@ -1819,9 +1813,6 @@ def test_multiline_complete_statement_without_terminator(multiline_app, monkeypa
     assert statement.command == command
     assert statement.multiline_command
 
-    pt_history = multiline_app.main_session.history.get_strings()
-    assert pt_history[0] == statement.raw
-
 
 def test_multiline_complete_statement_with_unclosed_quotes(multiline_app, monkeypatch) -> None:
     read_command_mock = mock.MagicMock(name='_read_command_line', side_effect=['quotes', '" now closed;'])
@@ -1833,9 +1824,6 @@ def test_multiline_complete_statement_with_unclosed_quotes(multiline_app, monkey
     assert statement.command == 'orate'
     assert statement.multiline_command
     assert statement.terminator == ';'
-
-    pt_history = multiline_app.main_session.history.get_strings()
-    assert pt_history[0] == statement.raw
 
 
 def test_multiline_input_line_to_statement(multiline_app, monkeypatch) -> None:
@@ -1850,9 +1838,6 @@ def test_multiline_input_line_to_statement(multiline_app, monkeypatch) -> None:
     assert statement.command == 'orate'
     assert statement.multiline_command
 
-    pt_history = multiline_app.main_session.history.get_strings()
-    assert pt_history[0] == statement.raw
-
 
 def test_multiline_history_added(multiline_app, monkeypatch) -> None:
     # Test that multiline commands are added to history as a single item
@@ -1864,13 +1849,8 @@ def test_multiline_history_added(multiline_app, monkeypatch) -> None:
     # run_cmd calls onecmd_plus_hooks which triggers history addition
     run_cmd(multiline_app, "orate hi")
 
-    expected = "orate hi\nperson\n\n"
     assert len(multiline_app.history) == 1
-    assert multiline_app.history.get(1).raw == expected
-
-    pt_history = multiline_app.main_session.history.get_strings()
-    assert len(pt_history) == 1
-    assert pt_history[0] == expected
+    assert multiline_app.history.get(1).raw == "orate hi\nperson\n\n"
 
 
 def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
@@ -1893,10 +1873,6 @@ def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
     assert history_lines[4] == 'quotes.'
     assert history_lines[5] == ';'
 
-    pt_history = multiline_app.main_session.history.get_strings()
-    assert len(pt_history) == 1
-    assert pt_history[0] == history_item.raw
-
 
 def test_multiline_complete_statement_eof(multiline_app, monkeypatch):
     # Mock poutput to verify it's called
@@ -1917,9 +1893,6 @@ def test_multiline_complete_statement_eof(multiline_app, monkeypatch):
     assert statement.command == command
     assert statement.args == args
     assert statement.terminator == '\n'
-
-    pt_history = multiline_app.main_session.history.get_strings()
-    assert pt_history[0] == statement.raw
 
     # Verify that poutput('\n') was called
     poutput_mock.assert_called_once_with('\n')
