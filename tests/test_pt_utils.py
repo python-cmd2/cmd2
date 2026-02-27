@@ -174,6 +174,19 @@ class TestCmd2Lexer:
 
         assert tokens == [('', '   ')]
 
+    def test_lex_document_no_match(self, mock_cmd_app):
+        """Test lexing when command pattern fails to match."""
+        # Force the pattern to not match anything
+        mock_cmd_app.statement_parser._command_pattern = re.compile(r'something_impossible')
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        line = "test command"
+        document = Document(line)
+        get_line = lexer.lex_document(document)
+        tokens = get_line(0)
+
+        assert tokens == [('', line)]
+
     def test_lex_document_arguments(self, mock_cmd_app):
         """Test lexing a command with flags and values."""
         mock_cmd_app.all_commands = ["help"]
