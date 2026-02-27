@@ -2190,8 +2190,8 @@ def test_read_input_passes_all_arguments_to_resolver(base_app):
 def test_read_input_history_is_passed_to_session(base_app, monkeypatch, mocker):
     mock_session_cls = mocker.patch('cmd2.cmd2.PromptSession')
     mock_history_cls = mocker.patch('cmd2.cmd2.InMemoryHistory')
-    read_command_mock = mocker.MagicMock(name='_read_command_line', return_value='command')
-    monkeypatch.setattr("cmd2.Cmd._read_command_line", read_command_mock)
+    read_raw_mock = mocker.MagicMock(name='_read_raw_input', return_value='command')
+    monkeypatch.setattr("cmd2.Cmd._read_raw_input", read_raw_mock)
 
     # Test with custom history first
     my_history_list = ["help", "help alias", "help help"]
