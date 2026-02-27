@@ -219,77 +219,86 @@ class Cmd2Lexer(Lexer):
 
     def lex_document(self, document: Document) -> Callable[[int], Any]:
         """Lex the document."""
+        # Get redirection tokens and terminators to avoid highlighting them as values
+        exclude_tokens = set(constants.REDIRECTION_TOKENS)
+        exclude_tokens.update(self.cmd_app.statement_parser.terminators)
+        arg_pattern = re.compile(r'(\s+)|(--?[^\s\'"]+)|("[^"]*"?|\'[^\']*\'?)|([^\s\'"]+)')
+
+        def highlight_args(text: str, tokens: list[tuple[str, str]]) -> None:
+            """Highlight arguments in a string."""
+            for m in arg_pattern.finditer(text):
+                space, flag, quoted, word = m.groups()
+                match_text = m.group(0)
+
+                if space:
+                    tokens.append(('', match_text))
+                elif flag:
+                    tokens.append((self.flag_color, match_text))
+                elif (quoted or word) and match_text not in exclude_tokens:
+                    tokens.append((self.argument_color, match_text))
+                else:
+                    tokens.append(('', match_text))
 
         def get_line(lineno: int) -> list[tuple[str, str]]:
             """Return the tokens for the given line number."""
             line = document.lines[lineno]
             tokens: list[tuple[str, str]] = []
 
-            # Use cmd2's command pattern to find the first word (the command)
-            if ru.ALLOW_STYLE != ru.AllowStyle.NEVER and (
-                match := self.cmd_app.statement_parser._command_pattern.search(line)
-            ):
-                # Group 1 is the command, Group 2 is the character(s) that terminated the command match
-                command = match.group(1)
-                cmd_start = match.start(1)
-                cmd_end = match.end(1)
-
-                # Add any leading whitespace
-                if cmd_start > 0:
-                    tokens.append(('', line[:cmd_start]))
-
-                if command:
-                    # Determine the style for the command
-                    shortcut_found = False
-                    for shortcut, _ in self.cmd_app.statement_parser.shortcuts:
-                        if command.startswith(shortcut):
-                            # Add the shortcut with the command style
-                            tokens.append((self.command_color, shortcut))
-
-                            # If there's more in the command word, it's an argument
-                            if len(command) > len(shortcut):
-                                tokens.append((self.argument_color, command[len(shortcut) :]))
-
-                            shortcut_found = True
-                            break
-
-                    if not shortcut_found:
-                        style = ''
-                        if command in self.cmd_app.get_all_commands():
-                            style = self.command_color
-                        elif command in self.cmd_app.aliases:
-                            style = self.alias_color
-                        elif command in self.cmd_app.macros:
-                            style = self.macro_color
-
-                        # Add the command with the determined style
-                        tokens.append((style, command))
-
-                # Add the rest of the line
-                if cmd_end < len(line):
-                    rest = line[cmd_end:]
-                    # Regex to match whitespace, flags, quoted strings, or other words
-                    arg_pattern = re.compile(r'(\s+)|(--?[^\s\'"]+)|("[^"]*"?|\'[^\']*\'?)|([^\s\'"]+)')
-
-                    # Get redirection tokens and terminators to avoid highlighting them as values
-                    exclude_tokens = set(constants.REDIRECTION_TOKENS)
-                    exclude_tokens.update(self.cmd_app.statement_parser.terminators)
-
-                    for m in arg_pattern.finditer(rest):
-                        space, flag, quoted, word = m.groups()
-                        text = m.group(0)
-
-                        if space:
-                            tokens.append(('', text))
-                        elif flag:
-                            tokens.append((self.flag_color, text))
-                        elif (quoted or word) and text not in exclude_tokens:
-                            tokens.append((self.argument_color, text))
-                        else:
-                            tokens.append(('', text))
-            elif line:
-                # No command match found or colors aren't allowed, add the entire line unstyled
+            # No syntax highlighting if styles are disallowed
+            if ru.ALLOW_STYLE == ru.AllowStyle.NEVER:
                 tokens.append(('', line))
+                return tokens
+
+            # Only attempt to match a command on the first line
+            if lineno == 0:
+                # Use cmd2's command pattern to find the first word (the command)
+                match = self.cmd_app.statement_parser._command_pattern.search(line)
+                if match:
+                    # Group 1 is the command, Group 2 is the character(s) that terminated the command match
+                    command = match.group(1)
+                    cmd_start = match.start(1)
+                    cmd_end = match.end(1)
+
+                    # Add any leading whitespace
+                    if cmd_start > 0:
+                        tokens.append(('', line[:cmd_start]))
+
+                    if command:
+                        # Determine the style for the command
+                        shortcut_found = False
+                        for shortcut, _ in self.cmd_app.statement_parser.shortcuts:
+                            if command.startswith(shortcut):
+                                # Add the shortcut with the command style
+                                tokens.append((self.command_color, shortcut))
+
+                                # If there's more in the command word, it's an argument
+                                if len(command) > len(shortcut):
+                                    tokens.append((self.argument_color, command[len(shortcut) :]))
+
+                                shortcut_found = True
+                                break
+
+                        if not shortcut_found:
+                            style = ''
+                            if command in self.cmd_app.get_all_commands():
+                                style = self.command_color
+                            elif command in self.cmd_app.aliases:
+                                style = self.alias_color
+                            elif command in self.cmd_app.macros:
+                                style = self.macro_color
+
+                            # Add the command with the determined style
+                            tokens.append((style, command))
+
+                    # Add the rest of the line as arguments
+                    if cmd_end < len(line):
+                        highlight_args(line[cmd_end:], tokens)
+                else:
+                    # No command match found on the first line
+                    tokens.append(('', line))
+            else:
+                # All other lines are treated as arguments
+                highlight_args(line, tokens)
 
             return tokens
 
