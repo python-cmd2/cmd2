@@ -2780,6 +2780,45 @@ def test_nonexistent_macro(base_app) -> None:
     assert exception is not None
 
 
+@pytest.mark.parametrize(
+    # The line of text and whether to continue prompting to finish a multiline command.
+    ('line', 'should_continue'),
+    [
+        ("", False),
+        ("   ", False),
+        ("help", False),
+        ("help alias", False),
+        ("orate", True),
+        ("orate;", False),
+        ("orate\n", False),
+        ("orate\narg", True),
+        ("orate\narg;", False),
+        ("orate\narg\n", False),
+        ("single_mac", False),  # macro resolution error returns False (no arg passed)
+        ("single_mac arg", False),
+        ("multi_mac", False),  # macro resolution error returns False (no arg passed)
+        ("multi_mac arg", True),
+        ("multi_mac arg;", False),
+        ("multi_mac arg\n", False),
+        ("multi_mac\narg", True),
+        ("multi_mac\narg;", False),
+        ("multi_mac\narg\n", False),
+    ],
+)
+def test_should_continue_multiline(multiline_app: MultilineApp, line: str, should_continue: bool) -> None:
+    mock_buffer = mock.MagicMock()
+    mock_buffer.text = line
+
+    mock_app = mock.MagicMock()
+    mock_app.current_buffer = mock_buffer
+
+    run_cmd(multiline_app, "macro create single_mac help {1}")
+    run_cmd(multiline_app, "macro create multi_mac orate {1}")
+
+    with mock.patch('cmd2.cmd2.get_app', return_value=mock_app):
+        assert multiline_app._should_continue_multiline() is should_continue
+
+
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_perror_style(base_app, capsys) -> None:
     msg = 'testing...'
