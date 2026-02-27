@@ -60,6 +60,7 @@ prompt is displayed.
     - Replaced `async_alert()` and `async_update_prompt()` with a single function called
       `add_alert()`. This new function is thread-safe and does not require you to acquire a mutex
       before calling it like the previous functions did.
+    - Removed `Cmd.default_to_shell`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These

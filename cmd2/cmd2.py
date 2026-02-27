@@ -413,7 +413,6 @@ class Cmd:
             self.stdout = sys.stdout
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
-        self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
 
         # If True, cmd2 treats redirected input (pipes/files) as an interactive session.
@@ -2277,9 +2276,6 @@ class Cmd:
                         completer_func = self.completedefault  # type: ignore[assignment]
 
             # Not a recognized macro or command
-            # Check if this command should be run as a shell command
-            elif self.default_to_shell and command in utils.get_exes_in_path(command):
-                completer_func = self.path_complete
             else:
                 completer_func = self.completedefault  # type: ignore[assignment]
 
@@ -3196,11 +3192,6 @@ class Cmd:
 
         :param statement: Statement object with parsed input
         """
-        if self.default_to_shell:
-            if 'shell' not in self.exclude_from_history:
-                self.history.append(statement)
-            return self.do_shell(statement.command_and_args)
-
         err_msg = self.default_error.format(statement.command)
         if self.suggest_similar_command and (suggested_command := self._suggest_similar_command(statement.command)):
             err_msg += f"\n{self.default_suggestion_message.format(suggested_command)}"
