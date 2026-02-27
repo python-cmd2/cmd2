@@ -176,6 +176,7 @@ class Cmd2History(History):
 
         Ensures consecutive duplicates are not stored.
         """
+        # self._loaded_strings is sorted newest to oldest, so we compare to the first element.
         if string and (not self._loaded_strings or self._loaded_strings[0] != string):
             super().append_string(string)
 
