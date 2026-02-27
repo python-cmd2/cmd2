@@ -2187,6 +2187,76 @@ def test_read_input_passes_all_arguments_to_resolver(base_app):
         )
 
 
+def test_history_is_correctly_passed_to_session(base_app, mocker):
+    mock_session_cls = mocker.patch('cmd2.cmd2.PromptSession')
+    mock_history_cls = mocker.patch('cmd2.cmd2.InMemoryHistory')
+
+    # Test with custom history first
+    my_history_list = ["help", "help alias", "help help"]
+    base_app.read_input(history=my_history_list)
+    mock_history_cls.assert_called_once_with(my_history_list)
+
+    called_kwargs = mock_session_cls.call_args.kwargs
+    assert called_kwargs['history'] == mock_history_cls.return_value
+
+    # Test with no history
+    mock_history_cls.reset_mock()
+    my_history_list = ["help", "help alias", "help help"]
+    base_app.read_input(history=None)
+    mock_history_cls.assert_called_once_with()
+
+    called_kwargs = mock_session_cls.call_args.kwargs
+    assert called_kwargs['history'] == mock_history_cls.return_value
+
+
+def test_read_raw_input_session_usage_and_restore(base_app, mocker):
+    mock_session = mocker.MagicMock(name="temp_session")
+    base_app.main_session = mocker.MagicMock(name="main_session")
+
+    # Make sure we look like a terminal
+    mocker.patch.object(base_app, '_is_tty_session', return_value=True)
+
+    command_text = "help alias"
+
+    def check_and_return_input(*args, **kwargs):
+        # Check if the active session was the one we passed in
+        assert base_app.active_session == mock_session
+        return command_text
+
+    mock_session.prompt.side_effect = check_and_return_input
+
+    # Call _read_raw_input()
+    result = base_app._read_raw_input("prompt> ", mock_session)
+    assert result == command_text
+
+    # Check if session.prompt() was called
+    mock_session.prompt.assert_called_once()
+
+    # Verify that active session was restored
+    assert base_app.active_session == base_app.main_session
+
+
+def test_read_raw_input_restores_on_error(base_app, mocker):
+    mock_session = mocker.MagicMock()
+    base_app.main_session = mocker.MagicMock(name="main_session")
+
+    # Make sure we look like a terminal
+    mocker.patch.object(base_app, '_is_tty_session', return_value=True)
+
+    def check_and_raise(*args, **kwargs):
+        # Check if the active session was the one we passed in
+        assert base_app.active_session == mock_session
+        raise KeyboardInterrupt
+
+    mock_session.prompt.side_effect = check_and_raise
+
+    with pytest.raises(KeyboardInterrupt):
+        base_app._read_raw_input("prompt> ", mock_session)
+
+    # Even though an error occurred, the finally block restored active session
+    assert base_app.active_session == base_app.main_session
+
+
 def test_poutput_string(outsim_app) -> None:
     msg = 'This is a test'
     outsim_app.poutput(msg)
