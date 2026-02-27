@@ -31,7 +31,6 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **debug**: if `True`, show full stack trace on error (Default: `False`)
 - **default_category**: if any command has been categorized, then all other commands that haven't been categorized will display under this section in the help output.
 - **default_error**: the error that prints when a non-existent command is run
-- **default_to_shell**: if `True`, attempt to run unrecognized commands as shell commands (Default: `False`)
 - **disabled_commands**: commands that have been disabled from use. This is to support commands that are only available during specific states of the application. This dictionary's keys are the command names and its values are DisabledCommand objects.
 - **doc_header**: Set the header used for the help function's listing of documented functions
 - **echo**: if `True`, each command the user issues will be repeated to the screen before it is executed. This is particularly useful when running scripts. This behavior does not occur when running a command at the prompt. (Default: `False`)

@@ -484,29 +484,6 @@ def test_path_completion_nomatch(cmd2_app, request) -> None:
     assert not completions
 
 
-def test_default_to_shell_completion(cmd2_app, request) -> None:
-    cmd2_app.default_to_shell = True
-    test_dir = os.path.dirname(request.module.__file__)
-
-    text = os.path.join(test_dir, 'conftest')
-
-    if sys.platform == "win32":
-        command = 'calc.exe'
-    else:
-        command = 'egrep'
-
-    # Make sure the command is on the testing system
-    assert command in utils.get_exes_in_path(command)
-    line = f'{command} {text}'
-
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    expected = [text + '.py']
-    completions = cmd2_app.complete(text, line, begidx, endidx)
-    assert completions.to_strings() == Completions.from_values(expected).to_strings()
-
-
 def test_path_completion_no_text(cmd2_app) -> None:
     # Run path complete with no search text which should show what's in cwd
     text = ''
