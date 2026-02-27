@@ -77,5 +77,13 @@ class EmptyStatement(Exception):  # noqa: N818
     """Custom exception class for handling behavior when the user just presses <Enter>."""
 
 
+class IncompleteStatement(Exception):  # noqa: N818
+    """Raised when more input is required to complete a multiline statement."""
+
+
+class MacroError(Exception):
+    """Raised when a macro fails to resolve (e.g., insufficient arguments)."""
+
+
 class RedirectionError(Exception):
     """Custom exception class for when redirecting or piping output fails."""

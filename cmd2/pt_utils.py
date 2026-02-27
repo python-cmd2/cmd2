@@ -152,10 +152,11 @@ class Cmd2Completer(Completer):
 
 
 class Cmd2History(History):
-    """An in-memory prompt-toolkit History implementation designed for cmd2.
+    """A non-persistent, in-memory history buffer for prompt-toolkit.
 
-    This class gives cmd2 total control over what appears in the up-arrow
-    history, preventing multiline fragments from appearing in the navigation.
+    This class serves as the backing store for UI history navigation (e.g., arrowing
+    through previous commands). It explicitly avoids handling persistence,
+    deferring all permanent storage logic to the cmd2 application.
     """
 
     def __init__(self, history_strings: Iterable[str] | None = None) -> None:
@@ -163,25 +164,17 @@ class Cmd2History(History):
         super().__init__()
 
         if history_strings:
-            # Use add_command() to filter consecutive duplicates
-            # and save history strings from newest to oldest.
             for string in history_strings:
-                self.add_command(string)
+                self.append_string(string)
 
-        # Mark that self._loaded_strings is loaded.
+        # Mark that self._loaded_strings is populated.
         self._loaded = True
 
-    def add_command(self, string: str) -> None:
-        """Manually add a finalized command string to the UI history stack.
-
-        Ensures consecutive duplicates are not stored.
-        """
-        # self._loaded_strings is sorted newest to oldest, so we compare to the first element.
+    def append_string(self, string: str) -> None:
+        """Override to filter our consecutive duplicates."""
+        # History is sorted newest to oldest, so we compare to the first element.
         if string and (not self._loaded_strings or self._loaded_strings[0] != string):
             super().append_string(string)
-
-    def append_string(self, string: str) -> None:
-        """No-op: Blocks prompt-toolkit from storing multiline fragments."""
 
     def store_string(self, string: str) -> None:
         """No-op: Persistent history data is stored in cmd_app.history."""
