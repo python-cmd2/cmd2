@@ -2462,6 +2462,16 @@ def test_alias_create(base_app) -> None:
     assert base_app.last_result['fake'] == "help"
 
 
+def test_nested_alias_usage(base_app) -> None:
+    run_cmd(base_app, 'alias create nested help')
+    run_cmd(base_app, 'alias create wrapper nested')
+    nested_out = run_cmd(base_app, "nested")
+    wrapper_out = run_cmd(base_app, "wrapper")
+    help_out = run_cmd(base_app, "help")
+
+    assert nested_out == wrapper_out == help_out
+
+
 def test_alias_create_with_quoted_tokens(base_app) -> None:
     """Demonstrate that quotes in alias value will be preserved"""
     alias_name = "fake"
@@ -2676,6 +2686,19 @@ def test_macro_usage_with_exta_args(base_app) -> None:
     assert "Usage: alias create" in out[0]
 
 
+def test_nested_macro_usage(base_app) -> None:
+    run_cmd(base_app, 'macro create nested help')
+    run_cmd(base_app, 'macro create wrapper nested {1}')
+    nested_out = run_cmd(base_app, "nested")
+    help_out = run_cmd(base_app, "help")
+    assert nested_out == help_out
+
+    wrapper_out = run_cmd(base_app, "wrapper alias")
+    help_alias_out = run_cmd(base_app, "help alias")
+
+    assert wrapper_out == help_alias_out
+
+
 def test_macro_create_with_missing_arg_nums(base_app) -> None:
     # Create the macro
     _out, err = run_cmd(base_app, 'macro create fake help {1} {3}')
@@ -2784,18 +2807,23 @@ def test_nonexistent_macro(base_app) -> None:
     # The line of text and whether to continue prompting to finish a multiline command.
     ('line', 'should_continue'),
     [
+        # Empty lines
         ("", False),
         ("   ", False),
+        # Single-line commands
         ("help", False),
         ("help alias", False),
+        # Multi-line commands
         ("orate", True),
         ("orate;", False),
         ("orate\n", False),
         ("orate\narg", True),
         ("orate\narg;", False),
         ("orate\narg\n", False),
+        # Single-line macros
         ("single_mac", False),  # macro resolution error returns False (no arg passed)
         ("single_mac arg", False),
+        # Multi-line macros
         ("multi_mac", False),  # macro resolution error returns False (no arg passed)
         ("multi_mac arg", True),
         ("multi_mac arg;", False),
@@ -2803,6 +2831,11 @@ def test_nonexistent_macro(base_app) -> None:
         ("multi_mac\narg", True),
         ("multi_mac\narg;", False),
         ("multi_mac\narg\n", False),
+        # Nested multi-line macros
+        ("wrapper_mac", False),  # macro resolution error returns False (no args passed)
+        ("wrapper_mac arg", False),  # macro resolution error returns False (not enough args passed)
+        ("wrapper_mac arg arg2", True),
+        ("wrapper_mac arg\narg2;", False),
     ],
 )
 def test_should_continue_multiline(multiline_app: MultilineApp, line: str, should_continue: bool) -> None:
@@ -2814,6 +2847,7 @@ def test_should_continue_multiline(multiline_app: MultilineApp, line: str, shoul
 
     run_cmd(multiline_app, "macro create single_mac help {1}")
     run_cmd(multiline_app, "macro create multi_mac orate {1}")
+    run_cmd(multiline_app, "macro create wrapper_mac multi_mac {1} {2}")
 
     with mock.patch('cmd2.cmd2.get_app', return_value=mock_app):
         assert multiline_app._should_continue_multiline() is should_continue
