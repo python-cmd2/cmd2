@@ -2155,6 +2155,38 @@ def test_read_input_eof(base_app, monkeypatch) -> None:
         base_app.read_input("Prompt> ")
 
 
+def test_read_input_passes_all_arguments_to_resolver(base_app):
+    mock_choices = ["choice1", "choice2"]
+    mock_provider = mock.MagicMock(name="provider")
+    mock_completer = mock.MagicMock(name="completer")
+    mock_parser = mock.MagicMock(name="parser")
+
+    with (
+        mock.patch.object(base_app, '_resolve_completer') as mock_resolver,
+        mock.patch.object(base_app, '_read_raw_input') as mock_reader,
+    ):
+        mock_resolver.return_value = mock.MagicMock()
+        mock_reader.return_value = mock.MagicMock()
+
+        base_app.read_input(
+            prompt="Enter command: ",
+            history=["prev_cmd"],
+            preserve_quotes=True,
+            choices=mock_choices,
+            choices_provider=mock_provider,
+            completer=mock_completer,
+            parser=mock_parser,
+        )
+
+        mock_resolver.assert_called_once_with(
+            preserve_quotes=True,
+            choices=mock_choices,
+            choices_provider=mock_provider,
+            completer=mock_completer,
+            parser=mock_parser,
+        )
+
+
 def test_poutput_string(outsim_app) -> None:
     msg = 'This is a test'
     outsim_app.poutput(msg)
