@@ -37,8 +37,6 @@ class CmdLineApp(cmd2.Cmd):
 
     """
 
-    # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
-    # default_to_shell = True  # noqa: ERA001
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 

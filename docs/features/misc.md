@@ -54,23 +54,3 @@ See the definitions of these functions for descriptions of their arguments.
 See the `do_enable_commands()` and `do_disable_commands()` functions in the
 [help_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/help_categories.py)
 example for a demonstration.
-
-## Default to shell
-
-Every `cmd2` application can execute operating-system level (shell) commands with `shell` or a `!`
-shortcut:
-
-    (Cmd) shell which python
-    /usr/bin/python
-    (Cmd) !which python
-    /usr/bin/python
-
-However, if the parameter `default_to_shell` is `True`, then _every_ thing entered which doesn't
-match another command will be attempted on the operating system. Only if that attempt fails (i.e.,
-produces a nonzero return value) will the application's own `default` method be called.
-
-    (Cmd) which python
-    /usr/bin/python
-    (Cmd) my dog has fleas
-    sh: my: not found
-    *** Unknown syntax: my dog has fleas

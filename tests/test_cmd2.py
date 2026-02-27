@@ -1293,26 +1293,6 @@ def test_add_alert(base_app) -> None:
     assert len(base_app._alert_queue) == orig_num_alerts + 3
 
 
-class ShellApp(cmd2.Cmd):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.default_to_shell = True
-
-
-def test_default_to_shell(base_app, monkeypatch) -> None:
-    if sys.platform.startswith('win'):
-        line = 'dir'
-    else:
-        line = 'ls'
-
-    base_app.default_to_shell = True
-    m = mock.Mock()
-    monkeypatch.setattr("{}.Popen".format('subprocess'), m)
-    out, _err = run_cmd(base_app, line)
-    assert out == []
-    assert m.called
-
-
 def test_visible_prompt() -> None:
     app = cmd2.Cmd()
 
