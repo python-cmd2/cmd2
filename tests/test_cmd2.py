@@ -1839,6 +1839,9 @@ def test_multiline_complete_statement_without_terminator(multiline_app, monkeypa
     assert statement.command == command
     assert statement.multiline_command
 
+    pt_history = multiline_app.main_session.history.get_strings()
+    assert pt_history[0] == statement.raw
+
 
 def test_multiline_complete_statement_with_unclosed_quotes(multiline_app, monkeypatch) -> None:
     read_command_mock = mock.MagicMock(name='_read_command_line', side_effect=['quotes', '" now closed;'])
@@ -1850,6 +1853,9 @@ def test_multiline_complete_statement_with_unclosed_quotes(multiline_app, monkey
     assert statement.command == 'orate'
     assert statement.multiline_command
     assert statement.terminator == ';'
+
+    pt_history = multiline_app.main_session.history.get_strings()
+    assert pt_history[0] == statement.raw
 
 
 def test_multiline_input_line_to_statement(multiline_app, monkeypatch) -> None:
@@ -1864,27 +1870,35 @@ def test_multiline_input_line_to_statement(multiline_app, monkeypatch) -> None:
     assert statement.command == 'orate'
     assert statement.multiline_command
 
+    pt_history = multiline_app.main_session.history.get_strings()
+    assert pt_history[0] == statement.raw
+
 
 def test_multiline_history_added(multiline_app, monkeypatch) -> None:
     # Test that multiline commands are added to history as a single item
+    run_cmd(multiline_app, "history --clear")
+
     read_command_mock = mock.MagicMock(name='_read_command_line', side_effect=['person', '\n'])
     monkeypatch.setattr("cmd2.Cmd._read_command_line", read_command_mock)
-
-    multiline_app.history.clear()
 
     # run_cmd calls onecmd_plus_hooks which triggers history addition
     run_cmd(multiline_app, "orate hi")
 
+    expected = "orate hi\nperson\n\n"
     assert len(multiline_app.history) == 1
-    assert multiline_app.history.get(1).raw == "orate hi\nperson\n\n"
+    assert multiline_app.history.get(1).raw == expected
+
+    pt_history = multiline_app.main_session.history.get_strings()
+    assert len(pt_history) == 1
+    assert pt_history[0] == expected
 
 
 def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
     # Test combined multiline command with quotes is added to history correctly
+    run_cmd(multiline_app, "history --clear")
+
     read_command_mock = mock.MagicMock(name='_read_command_line', side_effect=['  and spaces  ', ' "', ' in', 'quotes.', ';'])
     monkeypatch.setattr("cmd2.Cmd._read_command_line", read_command_mock)
-
-    multiline_app.history.clear()
 
     line = 'orate Look, "There are newlines'
     run_cmd(multiline_app, line)
@@ -1898,6 +1912,10 @@ def test_multiline_history_with_quotes(multiline_app, monkeypatch) -> None:
     assert history_lines[3] == ' in'
     assert history_lines[4] == 'quotes.'
     assert history_lines[5] == ';'
+
+    pt_history = multiline_app.main_session.history.get_strings()
+    assert len(pt_history) == 1
+    assert pt_history[0] == history_item.raw
 
 
 def test_multiline_complete_statement_eof(multiline_app, monkeypatch):
@@ -1919,6 +1937,9 @@ def test_multiline_complete_statement_eof(multiline_app, monkeypatch):
     assert statement.command == command
     assert statement.args == args
     assert statement.terminator == '\n'
+
+    pt_history = multiline_app.main_session.history.get_strings()
+    assert pt_history[0] == statement.raw
 
     # Verify that poutput('\n') was called
     poutput_mock.assert_called_once_with('\n')
