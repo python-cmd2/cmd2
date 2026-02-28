@@ -1,9 +1,9 @@
 # 3.2.3 (TBD)
 
-  - Enhancements
-    - Added ability to pass a console object to `Cmd.print_to()`. This provides support for
-      things like wrapping a `print_to()` call in a `console.status()` or `console.capture()`
-      context manager.
+- Enhancements
+    - Added ability to pass a console object to `Cmd.print_to()`. This provides support for things
+      like wrapping a `print_to()` call in a `console.status()` or `console.capture()` context
+      manager.
 
 ## 3.2.2 (February 21, 2026)
 
