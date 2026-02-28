@@ -1257,20 +1257,38 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print objects to a given destination (file stream or cmd2 console).
 
-        This method is configured for general-purpose printing. By default, it enables
-        soft wrap and disables Rich's automatic detection for markup, emoji, and highlighting.
-        These defaults can be overridden by passing explicit keyword arguments.
+        If ``destination`` is a file-like object, it is wrapped in a ``Cmd2GeneralConsole``
+        which is configured for general-purpose printing. By default, it enables soft wrap and
+        disables Rich's automatic detection for markup, emoji, and highlighting. These defaults
+        can be overridden by passing explicit keyword arguments.
+
+        If ``destination`` is a ``Cmd2BaseConsole``, the console's default settings for
+        soft wrap, markup, emoji, and highlighting are used unless overridden by passing
+        explicit keyword arguments.
 
         See the Rich documentation for more details on emoji codes, markup tags, and highlighting.
+
+        **Why use this method instead of console.print()?**
+
+        This method calls ``cmd2.rich_utils.prepare_objects_for_rendering()`` on the objects
+        being printed. This ensures that strings containing ANSI style sequences are correctly
+        converted to Rich Text objects, preserving their style and calculating the correct
+        display width. This is particularly important when capturing output from a console.
+
+        Example:
+        ```py
+        with console.capture() as capture:
+            self.print_to(console, some_ansi_styled_string)
+        ```
 
         !!! note
 
@@ -1292,7 +1310,8 @@ class Cmd:
         :param sep: string to write between printed text. Defaults to " ".
         :param end: string to write at end of printed text. Defaults to a newline.
         :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. Defaults to True.
+        :param soft_wrap: Enable soft wrap mode. Defaults to None.
+                          If None, the destination console's default behavior is used.
                           If True, text that doesn't fit will run on to the following line,
                           just like with print(). This is useful for raw text and logs.
                           If False, Rich wraps text to fit the terminal width.
@@ -1301,19 +1320,23 @@ class Cmd:
                           For example, when soft_wrap is True Panels truncate text
                           which is wider than the terminal.
         :param emoji: If True, Rich will replace emoji codes (e.g., :smiley:) with their
-                      corresponding Unicode characters. Defaults to False.
+                      corresponding Unicode characters. Defaults to None.
+                      If None, the destination console's default behavior is used.
         :param markup: If True, Rich will interpret strings with tags (e.g., [bold]hello[/bold])
-                       as styled output. Defaults to False.
+                       as styled output. Defaults to None.
+                       If None, the destination console's default behavior is used.
         :param highlight: If True, Rich will automatically apply highlighting to elements within
                           strings, such as common Python data types like numbers, booleans, or None.
                           This is particularly useful when pretty printing objects like lists and
-                          dictionaries to display them in color. Defaults to False.
+                          dictionaries to display them in color. Defaults to None.
+                          If None, the destination console's default behavior is used.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
                        These arguments are not passed to Rich's Console.print().
         :raises TypeError: If ``destination`` is a non-cmd2 ``Console`` instance that
                            does not derive from ``Cmd2BaseConsole``.
+
         """
         if isinstance(destination, Console):
             if not isinstance(destination, Cmd2BaseConsole):
@@ -1359,10 +1382,10 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1389,10 +1412,10 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = Cmd2Style.ERROR,
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1420,10 +1443,10 @@ class Cmd:
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1448,10 +1471,10 @@ class Cmd:
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1531,10 +1554,10 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1579,9 +1602,9 @@ class Cmd:
         style: StyleType | None = None,
         chop: bool = False,
         soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
