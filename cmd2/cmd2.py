@@ -65,7 +65,11 @@ from typing import (
 )
 
 import rich.box
-from rich.console import Group, RenderableType
+from rich.console import (
+    Console,
+    Group,
+    RenderableType,
+)
 from rich.highlighter import ReprHighlighter
 from rich.rule import Rule
 from rich.style import Style, StyleType
@@ -133,6 +137,7 @@ from .parsing import (
     shlex_split,
 )
 from .rich_utils import (
+    Cmd2BaseConsole,
     Cmd2ExceptionConsole,
     Cmd2GeneralConsole,
     RichPrintKwargs,
@@ -165,7 +170,7 @@ from .utils import (
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
-    Cmd2GeneralConsole(sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
+    Cmd2GeneralConsole(file=sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
 else:
     from .rl_utils import (
         readline,
@@ -1247,30 +1252,66 @@ class Cmd:
 
     def print_to(
         self,
-        file: IO[str],
+        destination: IO[str] | Cmd2BaseConsole,
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Print objects to a given file stream.
+        """Print objects to a given destination (file stream or cmd2 console).
 
-        This method is configured for general-purpose printing. By default, it enables
-        soft wrap and disables Rich's automatic detection for markup, emoji, and highlighting.
-        These defaults can be overridden by passing explicit keyword arguments.
+        If ``destination`` is a file-like object, it is wrapped in a ``Cmd2GeneralConsole``
+        which is configured for general-purpose printing. By default, it enables soft wrap and
+        disables Rich's automatic detection for markup, emoji, and highlighting. These defaults
+        can be overridden by passing explicit keyword arguments.
 
-        :param file: file stream being written to
+        If ``destination`` is a ``Cmd2BaseConsole``, the console's default settings for
+        soft wrap, markup, emoji, and highlighting are used unless overridden by passing
+        explicit keyword arguments.
+
+        See the Rich documentation for more details on emoji codes, markup tags, and highlighting.
+
+        **Why use this method instead of console.print()?**
+
+        This method calls ``cmd2.rich_utils.prepare_objects_for_rendering()`` on the objects
+        being printed. This ensures that strings containing ANSI style sequences are converted
+        to Rich Text objects, so that Rich can correctly calculate their display width when
+        printing.
+
+        Example:
+        ```py
+        with console.capture() as capture:
+            self.print_to(console, some_ansi_styled_string)
+        ```
+
+        !!! note
+
+            To ensure consistent behavior, this method requires a file-like object or
+            an instance of ``Cmd2BaseConsole``.
+            Consoles not derived from ``Cmd2BaseConsole`` are disallowed because:
+
+            1. **Style Control**: They ignore the global ``ALLOW_STYLE`` setting.
+            2. **Theming**: They do not respect the application-wide ``APP_THEME``.
+            3. **Error Handling**: They trigger a ``SystemExit`` on broken pipes.
+               ``Cmd2BaseConsole`` instead raises a catchable ``BrokenPipeError``,
+               ensuring the CLI application remains alive if a pipe is closed.
+
+        :param destination: The output target. File-like objects are automatically
+                            wrapped in a ``Cmd2GeneralConsole`` to ensure they respect
+                            cmd2 global settings; otherwise, this must be an
+                            instance of ``Cmd2BaseConsole``.
         :param objects: objects to print
         :param sep: string to write between printed text. Defaults to " ".
         :param end: string to write at end of printed text. Defaults to a newline.
         :param style: optional style to apply to output
-        :param soft_wrap: Enable soft wrap mode. Defaults to True.
+        :param soft_wrap: Enable soft wrap mode. Defaults to None.
+                          If None, the destination console's default behavior is used.
                           If True, text that doesn't fit will run on to the following line,
                           just like with print(). This is useful for raw text and logs.
                           If False, Rich wraps text to fit the terminal width.
@@ -1279,24 +1320,43 @@ class Cmd:
                           For example, when soft_wrap is True Panels truncate text
                           which is wider than the terminal.
         :param emoji: If True, Rich will replace emoji codes (e.g., :smiley:) with their
-                      corresponding Unicode characters. Defaults to False.
+                      corresponding Unicode characters. Defaults to None.
+                      If None, the destination console's default behavior is used.
         :param markup: If True, Rich will interpret strings with tags (e.g., [bold]hello[/bold])
-                       as styled output. Defaults to False.
+                       as styled output. Defaults to None.
+                       If None, the destination console's default behavior is used.
         :param highlight: If True, Rich will automatically apply highlighting to elements within
                           strings, such as common Python data types like numbers, booleans, or None.
                           This is particularly useful when pretty printing objects like lists and
-                          dictionaries to display them in color. Defaults to False.
+                          dictionaries to display them in color. Defaults to None.
+                          If None, the destination console's default behavior is used.
         :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
                        These arguments are not passed to Rich's Console.print().
+        :raises TypeError: If ``destination`` is a non-cmd2 ``Console`` instance that
+                           does not derive from ``Cmd2BaseConsole``.
 
-        See the Rich documentation for more details on emoji codes, markup tags, and highlighting.
         """
+        if isinstance(destination, Console):
+            if not isinstance(destination, Cmd2BaseConsole):
+                # Explicitly reject non-cmd2 consoles to ensure safe behavior
+                raise TypeError(
+                    f"destination must be a 'Cmd2BaseConsole' or a file-like object, "
+                    f"not a non-cmd2 '{type(destination).__name__}'. "
+                    "Consoles not derived from 'Cmd2BaseConsole' bypass cmd2's "
+                    "'ALLOW_STYLE' logic, 'APP_THEME' settings, and trigger 'SystemExit' "
+                    "on broken pipes."
+                )
+            console = destination
+        else:
+            # It's a file-like object (e.g., sys.stdout, StringIO)
+            console = Cmd2GeneralConsole(file=destination)
+
         prepared_objects = ru.prepare_objects_for_rendering(*objects)
 
         try:
-            Cmd2GeneralConsole(file).print(
+            console.print(
                 *prepared_objects,
                 sep=sep,
                 end=end,
@@ -1313,8 +1373,8 @@ class Cmd:
             # writing. If you would like your application to print a
             # warning message, then set the broken_pipe_warning attribute
             # to the message you want printed.
-            if self.broken_pipe_warning and file != sys.stderr:
-                Cmd2GeneralConsole(sys.stderr).print(self.broken_pipe_warning)
+            if self.broken_pipe_warning and console.file != sys.stderr:
+                Cmd2GeneralConsole(file=sys.stderr).print(self.broken_pipe_warning)
 
     def poutput(
         self,
@@ -1322,10 +1382,10 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1352,10 +1412,10 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = Cmd2Style.ERROR,
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1383,10 +1443,10 @@ class Cmd:
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1411,10 +1471,10 @@ class Cmd:
         *objects: Any,
         sep: str = " ",
         end: str = "\n",
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1447,7 +1507,7 @@ class Cmd:
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
         """
-        console = Cmd2ExceptionConsole(sys.stderr)
+        console = Cmd2ExceptionConsole(file=sys.stderr)
 
         # Only print a traceback if we're in debug mode and one exists.
         if self.debug and sys.exc_info() != (None, None, None):
@@ -1494,10 +1554,10 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         style: StyleType | None = None,
-        soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        soft_wrap: bool | None = None,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1542,9 +1602,9 @@ class Cmd:
         style: StyleType | None = None,
         chop: bool = False,
         soft_wrap: bool = True,
-        emoji: bool = False,
-        markup: bool = False,
-        highlight: bool = False,
+        emoji: bool | None = None,
+        markup: bool | None = None,
+        highlight: bool | None = None,
         rich_print_kwargs: RichPrintKwargs | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
@@ -1581,17 +1641,16 @@ class Cmd:
 
         # Check if we are outputting to a pager.
         if functional_terminal and can_block:
-            prepared_objects = ru.prepare_objects_for_rendering(*objects)
-
             # Chopping overrides soft_wrap
             if chop:
                 soft_wrap = True
 
             # Generate the bytes to send to the pager
-            console = Cmd2GeneralConsole(self.stdout)
+            console = Cmd2GeneralConsole(file=self.stdout)
             with console.capture() as capture:
-                console.print(
-                    *prepared_objects,
+                self.print_to(
+                    console,
+                    *objects,
                     sep=sep,
                     end=end,
                     style=style,
