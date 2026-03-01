@@ -1507,7 +1507,7 @@ class Cmd:
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
         """
-        console = Cmd2ExceptionConsole()
+        console = Cmd2ExceptionConsole(file=sys.stderr)
 
         # Only print a traceback if we're in debug mode and one exists.
         if self.debug and sys.exc_info() != (None, None, None):

@@ -243,12 +243,10 @@ class Cmd2ExceptionConsole(Cmd2BaseConsole):
         """Cmd2ExceptionConsole initializer.
 
         :param file: optional file object where the console should write to.
-                     If None, output defaults to sys.stderr.
+                     Defaults to sys.stdout.
         """
-        # Use stderr=True so that Rich defaults to sys.stderr if file is None.
         super().__init__(
             file=file,
-            stderr=True,
             soft_wrap=False,
             markup=False,
             emoji=False,
