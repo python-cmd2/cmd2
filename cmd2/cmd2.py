@@ -1280,9 +1280,9 @@ class Cmd:
         **Why use this method instead of console.print()?**
 
         This method calls ``cmd2.rich_utils.prepare_objects_for_rendering()`` on the objects
-        being printed. This ensures that strings containing ANSI style sequences are correctly
-        converted to Rich Text objects, preserving their style and calculating the correct
-        display width. This is particularly important when capturing output from a console.
+        being printed. This ensures that strings containing ANSI style sequences are converted
+        to Rich Text objects, so that Rich can correctly calculate their display width when
+        printing.
 
         Example:
         ```py
