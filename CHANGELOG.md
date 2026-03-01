@@ -79,7 +79,7 @@ prompt is displayed.
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
 
-# 3.3.0 (TBD)
+## 3.3.0 (March 1, 2026)
 
 - Enhancements
     - Added ability to pass a console object to `Cmd.print_to()`. This provides support for things
