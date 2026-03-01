@@ -633,7 +633,7 @@ class ArgparseCompleter:
             hint_table.add_row(Text.from_ansi(item.display), *item.table_row)
 
         # Generate the table string
-        console = Cmd2GeneralConsole()
+        console = Cmd2GeneralConsole(file=self._cmd2_app.stdout)
         with console.capture() as capture:
             console.print(hint_table, end="", soft_wrap=False)
 
