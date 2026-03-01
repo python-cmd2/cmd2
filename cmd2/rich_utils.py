@@ -124,6 +124,7 @@ class Cmd2BaseConsole(Console):
 
     def __init__(
         self,
+        *,
         file: IO[str] | None = None,
         **kwargs: Any,
     ) -> None:
@@ -180,17 +181,19 @@ class Cmd2BaseConsole(Console):
 
 
 class Cmd2GeneralConsole(Cmd2BaseConsole):
-    """Rich console for general-purpose printing."""
+    """Rich console for general-purpose printing.
 
-    def __init__(self, file: IO[str] | None = None) -> None:
+    It enables soft wrap and disables Rich's automatic detection for markup,
+    emoji, and highlighting. These defaults can be overridden in calls to the
+    console's or cmd2's print methods.
+    """
+
+    def __init__(self, *, file: IO[str] | None = None) -> None:
         """Cmd2GeneralConsole initializer.
 
         :param file: optional file object where the console should write to.
                      Defaults to sys.stdout.
         """
-        # This console is configured for general-purpose printing. It enables soft wrap
-        # and disables Rich's automatic detection for markup, emoji, and highlighting.
-        # These defaults can be overridden in calls to the console's or cmd2's print methods.
         super().__init__(
             file=file,
             soft_wrap=True,
@@ -203,23 +206,25 @@ class Cmd2GeneralConsole(Cmd2BaseConsole):
 class Cmd2RichArgparseConsole(Cmd2BaseConsole):
     """Rich console for rich-argparse output.
 
-    This class ensures long lines in help text are not truncated by avoiding soft_wrap,
+    Ensures long lines in help text are not truncated by disabling soft_wrap,
     which conflicts with rich-argparse's explicit no_wrap and overflow settings.
+
+    Since this console is used to print error messages which may not be intended
+    for Rich formatting, it disables Rich's automatic detection for markup, emoji,
+    and highlighting. Because rich-argparse does markup and highlighting without
+    involving the console, disabling these settings does not affect the library's
+    internal functionality.
     """
 
-    def __init__(self, file: IO[str] | None = None) -> None:
+    def __init__(self, *, file: IO[str] | None = None) -> None:
         """Cmd2RichArgparseConsole initializer.
 
         :param file: optional file object where the console should write to.
                      Defaults to sys.stdout.
         """
-        # Since this console is used to print error messages which may not have
-        # been pre-formatted by rich-argparse, disable Rich's automatic detection
-        # for markup, emoji, and highlighting. rich-argparse does markup and
-        # highlighting without involving the console so these won't affect its
-        # internal functionality.
         super().__init__(
             file=file,
+            soft_wrap=False,
             markup=False,
             emoji=False,
             highlight=False,
@@ -227,10 +232,26 @@ class Cmd2RichArgparseConsole(Cmd2BaseConsole):
 
 
 class Cmd2ExceptionConsole(Cmd2BaseConsole):
-    """Rich console for printing exceptions.
+    """Rich console for printing exceptions and Rich Tracebacks.
 
-    Ensures that long exception messages word wrap for readability by keeping soft_wrap disabled.
+    Ensures that output is always word-wrapped for readability and disables
+    Rich's automatic detection for markup, emoji, and highlighting to prevent
+    interference with raw error data.
     """
+
+    def __init__(self, *, file: IO[str] | None = None) -> None:
+        """Cmd2ExceptionConsole initializer.
+
+        :param file: optional file object where the console should write to.
+                     Defaults to sys.stdout.
+        """
+        super().__init__(
+            file=file,
+            soft_wrap=False,
+            markup=False,
+            emoji=False,
+            highlight=False,
+        )
 
 
 def console_width() -> int:

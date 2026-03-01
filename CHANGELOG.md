@@ -79,6 +79,19 @@ prompt is displayed.
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
 
+# 3.3.0 (TBD)
+
+- Enhancements
+    - Added ability to pass a console object to `Cmd.print_to()`. This provides support for things
+      like wrapping a `print_to()` call in a `console.status()` or `console.capture()` context
+      manager.
+
+- Breaking Changes
+    - Renamed the `file` parameter of `Cmd.print_to()` to `destination` to support file-like objects
+      and console objects.
+    - `Cmd2BaseConsole(file)` argument is now a keyword-only argument to be consistent with the
+      `rich.console.Console` class.
+
 ## 3.2.2 (February 21, 2026)
 
 - Bug Fixes

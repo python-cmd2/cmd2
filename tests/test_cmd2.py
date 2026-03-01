@@ -5,9 +5,7 @@ import os
 import signal
 import sys
 import tempfile
-from code import (
-    InteractiveConsole,
-)
+from code import InteractiveConsole
 from typing import NoReturn
 from unittest import mock
 
@@ -2263,6 +2261,22 @@ def test_read_raw_input_restores_on_error(base_app, mocker):
 
     # Even though an error occurred, the finally block restored active session
     assert base_app.active_session == base_app.main_session
+
+
+def test_print_to_custom_console(base_app) -> None:
+    console = ru.Cmd2GeneralConsole()
+    with console.capture() as capture:
+        base_app.print_to(console, "hello")
+    assert capture.get() == "hello\n"
+
+
+def test_print_to_invalid_console_type(base_app) -> None:
+    from rich.console import Console
+
+    console = Console()
+    with pytest.raises(TypeError) as excinfo:
+        base_app.print_to(console, "hello")
+    assert "destination must be a 'Cmd2BaseConsole'" in str(excinfo.value)
 
 
 def test_poutput_string(outsim_app) -> None:
