@@ -170,7 +170,7 @@ from .utils import (
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
-    Cmd2GeneralConsole(sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
+    Cmd2GeneralConsole(file=sys.stderr).print(rl_warning, style=Cmd2Style.WARNING)
 else:
     from .rl_utils import (
         readline,
@@ -1351,7 +1351,7 @@ class Cmd:
             console = destination
         else:
             # It's a file-like object (e.g., sys.stdout, StringIO)
-            console = Cmd2GeneralConsole(destination)
+            console = Cmd2GeneralConsole(file=destination)
 
         prepared_objects = ru.prepare_objects_for_rendering(*objects)
 
@@ -1374,7 +1374,7 @@ class Cmd:
             # warning message, then set the broken_pipe_warning attribute
             # to the message you want printed.
             if self.broken_pipe_warning and console.file != sys.stderr:
-                Cmd2GeneralConsole(sys.stderr).print(self.broken_pipe_warning)
+                Cmd2GeneralConsole(file=sys.stderr).print(self.broken_pipe_warning)
 
     def poutput(
         self,
@@ -1507,7 +1507,7 @@ class Cmd:
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
         """
-        console = Cmd2ExceptionConsole(sys.stderr)
+        console = Cmd2ExceptionConsole()
 
         # Only print a traceback if we're in debug mode and one exists.
         if self.debug and sys.exc_info() != (None, None, None):
@@ -1646,7 +1646,7 @@ class Cmd:
                 soft_wrap = True
 
             # Generate the bytes to send to the pager
-            console = Cmd2GeneralConsole(self.stdout)
+            console = Cmd2GeneralConsole(file=self.stdout)
             with console.capture() as capture:
                 self.print_to(
                     console,
