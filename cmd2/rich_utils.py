@@ -273,9 +273,6 @@ def rich_text_to_string(text: Text) -> str:
         force_terminal=True,
         soft_wrap=True,
         no_color=False,
-        markup=False,
-        emoji=False,
-        highlight=False,
         theme=APP_THEME,
     )
     with console.capture() as capture:
