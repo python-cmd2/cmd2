@@ -1250,10 +1250,10 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.print_usage(sys.stderr)
 
-        # Add error style to message
+        # Use console to add style since it will respect ALLOW_STYLE's value
         console = self._get_formatter().console
         with console.capture() as capture:
-            console.print(formatted_message, style=Cmd2Style.ERROR, crop=False)
+            console.print(formatted_message, style=Cmd2Style.ERROR)
         formatted_message = f"{capture.get()}"
 
         self.exit(2, f'{formatted_message}\n')
