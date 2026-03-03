@@ -232,11 +232,6 @@ class Completions(CompletionResultsBase):
     # This flag is ignored if there are multiple matches.
     allow_finalization: bool = True
 
-    # If True, indicates that matches represent portions of a hierarchical
-    # string (e.g., paths or "a::b::c"). This signals the shell to use
-    # specialized quoting logic.
-    is_delimited: bool = False
-
     #####################################################################
     # The following fields are used internally by cmd2 to handle
     # automatic quoting and are not intended for user modification.
