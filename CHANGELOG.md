@@ -1,4 +1,4 @@
-## 3.4.0 (TBD)
+## 3.4.0 (March 3, 2026)
 
 - Enhancements
     - Moved cmd2-specific printing logic from `Cmd.print_to()` into `Cmd2BaseConsole.print()` and
