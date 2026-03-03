@@ -1,3 +1,15 @@
+## 3.4.0 (TBD)
+
+- Enhancements
+    - Moved cmd2-specific printing logic from `Cmd.print_to()` into `Cmd2BaseConsole.print()` and
+      `Cmd2BaseConsole.log()`. This removes need to pass a console object to `Cmd.print_to()`.
+    - Addressed a bug in `rich.console.Console` where complex renderables (like `Table` and `Rule`)
+      may not receive formatting settings passed to `console.print()` and `console.log()`.
+
+- Breaking Changes
+    - Renamed the `destination` parameter of `Cmd.print_to()` back to `file` since you can no longer
+      pass in a console.
+
 ## 3.3.0 (March 1, 2026)
 
 - Enhancements
