@@ -1952,7 +1952,7 @@ class Cmd:
             for value, display in unique_results.items()
         ]
 
-        return Completions(items, allow_finalization=allow_finalization, is_delimited=True)
+        return Completions(items, allow_finalization=allow_finalization)
 
     @staticmethod
     def _complete_users(text: str, add_trailing_sep_if_dir: bool) -> Completions:
@@ -1990,7 +1990,7 @@ class Cmd:
 
         # Since all ~user matches resolve to directories, set allow_finalization to False
         # so the user can continue into the subdirectory structure.
-        return Completions(items=items, allow_finalization=False, is_delimited=True)
+        return Completions(items=items, allow_finalization=False)
 
     def path_complete(
         self,
@@ -2100,7 +2100,7 @@ class Cmd:
             for match, display in zip(matches, display_matches, strict=True)
         ]
 
-        return Completions(items=items, allow_finalization=allow_finalization, is_delimited=True)
+        return Completions(items=items, allow_finalization=allow_finalization)
 
     def shell_cmd_complete(
         self, text: str, line: str, begidx: int, endidx: int, *, complete_blank: bool = False

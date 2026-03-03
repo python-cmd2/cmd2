@@ -44,8 +44,8 @@ prompt is displayed.
         - `Cmd.matches_sorted` -> `Completions.is_sorted` and `Choices.is_sorted`
         - `Cmd.completion_hint` -> `Completions.completion_hint`
         - `Cmd.formatted_completions` -> `Completions.completion_table`
-        - `Cmd.matches_delimited` -> `Completions.is_delimited`
         - `Cmd.allow_appended_space/allow_closing_quote` -> `Completions.allow_finalization`
+    - Removed `Cmd.matches_delimited` since it's no longer used.
     - Removed `flag_based_complete` and `index_based_complete` functions since their functionality
       is already provided in arpgarse-based completion.
     - Changed `Statement.multiline_command` from a string to a bool.
