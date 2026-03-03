@@ -13,6 +13,8 @@ from cmd2 import (
 )
 from cmd2 import rich_utils as ru
 
+from .conftest import with_ansi_style
+
 
 def test_cmd2_base_console() -> None:
     # Test the keyword arguments which are not allowed.
@@ -142,3 +144,51 @@ def test_from_ansi_wrapper() -> None:
     # Test empty string
     input_string = ""
     assert Text.from_ansi(input_string).plain == input_string
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_cmd2_base_console_print() -> None:
+    """Test that Cmd2BaseConsole.print() correctly propagates formatting overrides to structured renderables."""
+    from rich.rule import Rule
+
+    # Create a console that defaults to no formatting
+    console = ru.Cmd2BaseConsole(emoji=False, markup=False)
+
+    # Use a Rule with emoji and markup in the title
+    rule = Rule(title="[green]Success :1234:[/green]")
+
+    with console.capture() as capture:
+        # Override settings in the print() call
+        console.print(rule, emoji=True, markup=True)
+
+    result = capture.get()
+
+    # Verify that the overrides were respected by checking for the emoji and the color code
+    assert "🔢" in result
+    assert "\x1b[32mSuccess" in result
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_cmd2_base_console_log() -> None:
+    """Test that Cmd2BaseConsole.log() correctly propagates formatting overrides to structured renderables."""
+    from rich.rule import Rule
+
+    # Create a console that defaults to no formatting
+    console = ru.Cmd2BaseConsole(emoji=False, markup=False)
+
+    # Use a Rule with emoji and markup in the title
+    rule = Rule(title="[green]Success :1234:[/green]")
+
+    with console.capture() as capture:
+        # Override settings in the log() call
+        console.log(rule, emoji=True, markup=True)
+
+    result = capture.get()
+
+    # Verify that the formatting overrides were respected
+    assert "🔢" in result
+    assert "\x1b[32mSuccess" in result
+
+    # Verify stack offset: the log line should point to this file, not rich_utils.py
+    # Rich logs include the filename and line number on the right.
+    assert "test_rich_utils.py" in result
