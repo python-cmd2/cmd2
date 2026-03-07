@@ -1801,6 +1801,27 @@ def test_select_uneven_tuples_labels(outsim_app, monkeypatch) -> None:
     assert '3. v3' in out
 
 
+def test_select_indexable_no_len(outsim_app, monkeypatch) -> None:
+    # Test that an object with __getitem__ but no __len__ works.
+    # This covers the except (IndexError, TypeError) block in select()
+    class IndexableNoLen:
+        def __getitem__(self, item: int) -> str:
+            if item == 0:
+                return 'value'
+            raise IndexError
+
+    # Mock read_input to return '1'
+    read_input_mock = mock.MagicMock(name='read_input', return_value='1')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    options = [IndexableNoLen()]
+    result = outsim_app.select(options, 'Choice? ')
+    assert result == 'value'
+
+    out = outsim_app.stdout.getvalue()
+    assert '1. value' in out
+
+
 class HelpNoDocstringApp(cmd2.Cmd):
     greet_parser = cmd2.Cmd2ArgumentParser()
     greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
