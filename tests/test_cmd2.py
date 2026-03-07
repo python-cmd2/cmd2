@@ -1745,6 +1745,62 @@ def test_select_ctrl_c(outsim_app, monkeypatch) -> None:
     assert out.rstrip().endswith('^C')
 
 
+def test_select_choice_tty(outsim_app, monkeypatch) -> None:
+    # Mock choice to return the first option
+    choice_mock = mock.MagicMock(name='choice', return_value='sweet')
+    monkeypatch.setattr("cmd2.cmd2.choice", choice_mock)
+
+    # Mock isatty to be True for both stdin and stdout
+    monkeypatch.setattr(outsim_app.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(outsim_app.stdout, "isatty", lambda: True)
+
+    prompt = 'Sauce? '
+    options = ['sweet', 'salty']
+    result = outsim_app.select(options, prompt)
+
+    assert result == 'sweet'
+    choice_mock.assert_called_once_with(message=prompt, options=[('sweet', 'sweet'), ('salty', 'salty')])
+
+
+def test_select_choice_tty_ctrl_c(outsim_app, monkeypatch) -> None:
+    # Mock choice to raise KeyboardInterrupt
+    choice_mock = mock.MagicMock(name='choice', side_effect=KeyboardInterrupt)
+    monkeypatch.setattr("cmd2.cmd2.choice", choice_mock)
+
+    # Mock isatty to be True for both stdin and stdout
+    monkeypatch.setattr(outsim_app.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(outsim_app.stdout, "isatty", lambda: True)
+
+    prompt = 'Sauce? '
+    options = ['sweet', 'salty']
+
+    with pytest.raises(KeyboardInterrupt):
+        outsim_app.select(options, prompt)
+
+    out = outsim_app.stdout.getvalue()
+    assert out.rstrip().endswith('^C')
+
+
+def test_select_uneven_tuples_labels(outsim_app, monkeypatch) -> None:
+    # Test that uneven tuples still work and labels are handled correctly
+    # Case 1: (value, label) - normal
+    # Case 2: (value,) - label should be value
+    # Case 3: (value, None) - label should be value
+    options = [('v1', 'l1'), ('v2',), ('v3', None)]
+
+    # Mock read_input to return '1'
+    read_input_mock = mock.MagicMock(name='read_input', return_value='1')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    result = outsim_app.select(options, 'Choice? ')
+    assert result == 'v1'
+
+    out = outsim_app.stdout.getvalue()
+    assert '1. l1' in out
+    assert '2. v2' in out
+    assert '3. v3' in out
+
+
 class HelpNoDocstringApp(cmd2.Cmd):
     greet_parser = cmd2.Cmd2ArgumentParser()
     greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
