@@ -353,3 +353,46 @@ def test_completion_items_as_choices(capsys) -> None:
     # Confirm error text contains correct value type of int
     _out, err = capsys.readouterr()
     assert 'invalid choice: 3 (choose from 1, 2)' in err
+
+
+def test_formatter_coverage(mocker) -> None:
+    import sys
+
+    from cmd2.argparse_custom import (
+        Cmd2HelpFormatter,
+        Cmd2RichArgparseConsole,
+    )
+
+    # Line 1031: self._console = console (inside console.setter)
+    formatter = Cmd2HelpFormatter(prog='test')
+    new_console = Cmd2RichArgparseConsole()
+    formatter.console = new_console
+    assert formatter._console is new_console
+
+    # Line 1041: return (inside _set_color if sys.version_info < (3, 14))
+    mocker.patch('cmd2.argparse_custom.sys.version_info', (3, 13, 0))
+    # This should return early without calling super()._set_color
+    mock_set_color = mocker.patch('rich_argparse.RichHelpFormatter._set_color')
+    formatter._set_color(True)
+    mock_set_color.assert_not_called()
+
+    # Line 1045 and 1047: except TypeError and super()._set_color(color)
+    mocker.patch('cmd2.argparse_custom.sys.version_info', (3, 15, 0))
+
+    # Reset mock and make it raise TypeError when called with kwargs
+    mock_set_color.reset_mock()
+
+    def side_effect(color, **kwargs):
+        if kwargs:
+            raise TypeError("unexpected keyword argument 'file'")
+        return
+
+    mock_set_color.side_effect = side_effect
+
+    # This call should trigger the TypeError and then the fallback call
+    formatter._set_color(True, file=sys.stdout)
+
+    # It should have been called twice: once with kwargs (failed) and once without (fallback)
+    assert mock_set_color.call_count == 2
+    mock_set_color.assert_any_call(True, file=sys.stdout)
+    mock_set_color.assert_any_call(True)

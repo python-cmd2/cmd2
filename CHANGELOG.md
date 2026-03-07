@@ -81,6 +81,7 @@ prompt is displayed.
     - `cmd2.Cmd.select` has been revamped to use the
       [choice](https://python-prompt-toolkit.readthedocs.io/en/3.0.52/pages/asking_for_a_choice.html)
       function from `prompt-toolkit` when both **stdin** and **stdout** are TTYs
+    - Add support for Python 3.15 by fixing various bugs related to internal `argparse` changes
     - Added `common_prefix` method to `cmd2.string_utils` module as a replacement for
       `os.path.commonprefix` since that is now deprecated in Python 3.15
 
