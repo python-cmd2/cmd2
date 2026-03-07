@@ -82,7 +82,7 @@ from prompt_toolkit.input import DummyInput, create_input
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.output import DummyOutput, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
-from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, set_title
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
 from rich.console import (
     Group,
     RenderableType,
@@ -4368,7 +4368,7 @@ class Cmd:
         return True
 
     def select(self, opts: str | Iterable[str] | Iterable[tuple[Any, str | None]], prompt: str = 'Your choice? ') -> Any:
-        """Present a numbered menu to the user.
+        """Present a menu to the user.
 
         Modeled after the bash shell's SELECT.  Returns the item chosen.
 
@@ -4385,15 +4385,29 @@ class Cmd:
             local_opts = cast(list[tuple[Any, str | None]], list(zip(opts.split(), opts.split(), strict=False)))
         else:
             local_opts = opts
-        fulloptions: list[tuple[Any, str | None]] = []
+        fulloptions: list[tuple[Any, str]] = []
         for opt in local_opts:
             if isinstance(opt, str):
                 fulloptions.append((opt, opt))
             else:
                 try:
-                    fulloptions.append((opt[0], opt[1]))
-                except IndexError:
-                    fulloptions.append((opt[0], opt[0]))
+                    val = opt[0]
+                    text = str(opt[1]) if len(opt) > 1 and opt[1] is not None else str(val)
+                    fulloptions.append((val, text))
+                except (IndexError, TypeError):
+                    fulloptions.append((opt[0], str(opt[0])))
+
+        if self.stdin.isatty() and self.stdout.isatty():
+            try:
+                while True:
+                    result = choice(message=prompt, options=fulloptions)
+                    if result is not None:
+                        return result
+            except KeyboardInterrupt:
+                self.poutput('^C')
+                raise
+
+        # Non-interactive fallback
         for idx, (_, text) in enumerate(fulloptions):
             self.poutput('  %2d. %s' % (idx + 1, text))  # noqa: UP031
 
@@ -4411,10 +4425,10 @@ class Cmd:
                 continue
 
             try:
-                choice = int(response)
-                if choice < 1:
+                choice_idx = int(response)
+                if choice_idx < 1:
                     raise IndexError  # noqa: TRY301
-                return fulloptions[choice - 1][0]
+                return fulloptions[choice_idx - 1][0]
             except (ValueError, IndexError):
                 self.poutput(f"'{response}' isn't a valid choice. Pick a number between 1 and {len(fulloptions)}:")
 
