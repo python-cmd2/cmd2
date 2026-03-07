@@ -1921,7 +1921,7 @@ class Cmd:
         match_strings = basic_completions.to_strings()
 
         # Calculate what portion of the match we are completing
-        common_prefix = os.path.commonprefix(match_strings)
+        common_prefix = su.common_prefix(match_strings)
         prefix_tokens = common_prefix.split(delimiter)
         display_token_index = len(prefix_tokens) - 1
 

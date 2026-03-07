@@ -246,3 +246,29 @@ def test_unicode_casefold() -> None:
     micro_cf = micro.casefold()
     assert micro != micro_cf
     assert su.norm_fold(micro) == su.norm_fold(micro_cf)
+
+
+def test_common_prefix() -> None:
+    # Empty list
+    assert su.common_prefix([]) == ""
+
+    # Single item
+    assert su.common_prefix(["abc"]) == "abc"
+
+    # Common prefix exists
+    assert su.common_prefix(["abcdef", "abcde", "abcd"]) == "abcd"
+
+    # No common prefix
+    assert su.common_prefix(["abc", "def"]) == ""
+
+    # One is a prefix of another
+    assert su.common_prefix(["apple", "app"]) == "app"
+
+    # Identical strings
+    assert su.common_prefix(["test", "test"]) == "test"
+
+    # Case sensitivity (matches os.path.commonprefix behavior)
+    assert su.common_prefix(["Apple", "apple"]) == ""
+
+    # Empty string in list
+    assert su.common_prefix(["abc", ""]) == ""
