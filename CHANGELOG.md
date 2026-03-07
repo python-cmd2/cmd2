@@ -78,6 +78,9 @@ prompt is displayed.
     - New settables:
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
+    - `cmd2.Cmd.select` has been revamped to use the
+      [choice](https://python-prompt-toolkit.readthedocs.io/en/3.0.52/pages/asking_for_a_choice.html)
+      function from `prompt-toolkit` when both **stdin** and **stdout** are TTYs
 
 ## 3.4.0 (March 3, 2026)
 
