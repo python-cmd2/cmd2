@@ -3842,10 +3842,16 @@ def test_create_main_session_exception(monkeypatch):
     mock_session = mock.MagicMock(side_effect=[ValueError, valid_session_mock])
     monkeypatch.setattr("cmd2.cmd2.PromptSession", mock_session)
 
-    cmd2.Cmd()
+    # Mock isatty to ensure we enter the try block
+    with (
+        mock.patch('sys.stdin.isatty', return_value=True),
+        mock.patch('sys.stdout.isatty', return_value=True),
+    ):
+        cmd2.Cmd()
 
     # Check that fallback to DummyInput/Output happened
     assert mock_session.call_count == 2
+
     # Check args of second call
     call_args = mock_session.call_args_list[1]
     kwargs = call_args[1]
@@ -3931,7 +3937,12 @@ def test_create_main_session_no_console_error(monkeypatch):
     mock_session = mock.MagicMock(side_effect=[NoConsoleScreenBufferError, valid_session_mock])
     monkeypatch.setattr("cmd2.cmd2.PromptSession", mock_session)
 
-    cmd2.Cmd()
+    # Mock isatty to ensure we enter the try block
+    with (
+        mock.patch('sys.stdin.isatty', return_value=True),
+        mock.patch('sys.stdout.isatty', return_value=True),
+    ):
+        cmd2.Cmd()
 
     # Check that fallback to DummyInput/Output happened
     assert mock_session.call_count == 2
@@ -3949,8 +3960,9 @@ def test_create_main_session_with_custom_tty() -> None:
     custom_stdin.isatty.return_value = True
     assert custom_stdin is not sys.stdin
 
-    # Create a mock stdout which is not sys.stdout
+    # Create a mock stdout with says it's a TTY
     custom_stdout = mock.MagicMock(spec=io.TextIOWrapper)
+    custom_stdout.isatty.return_value = True
     assert custom_stdout is not sys.stdout
 
     # Check if the streams were wrapped
@@ -3967,12 +3979,22 @@ def test_create_main_session_with_custom_tty() -> None:
         mock_create_output.assert_called_once_with(stdout=custom_stdout)
 
 
-def test_create_main_session_non_interactive() -> None:
-    # Set up a mock for a non-TTY stream (like a pipe)
+def test_create_main_session_stdin_non_tty() -> None:
+    # Set up a mock for a non-TTY stdin stream
     mock_stdin = mock.MagicMock(spec=io.TextIOWrapper)
     mock_stdin.isatty.return_value = False
 
     app = cmd2.Cmd(stdin=mock_stdin)
+    assert isinstance(app.main_session.input, DummyInput)
+    assert isinstance(app.main_session.output, DummyOutput)
+
+
+def test_create_main_session_stdout_non_tty() -> None:
+    # Set up a mock for a non-TTY stdout stream
+    mock_stdout = mock.MagicMock(spec=io.TextIOWrapper)
+    mock_stdout.isatty.return_value = False
+
+    app = cmd2.Cmd(stdout=mock_stdout)
     assert isinstance(app.main_session.input, DummyInput)
     assert isinstance(app.main_session.output, DummyOutput)
 

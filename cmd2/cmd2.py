@@ -680,8 +680,9 @@ class Cmd:
     def _create_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
         """Create and return the main PromptSession for the application.
 
-        Builds an interactive session if stdin is a TTY. Otherwise, uses
-        dummy drivers to support non-interactive streams like pipes or files.
+        Builds an interactive session if self.stdin and self.stdout are TTYs.
+        Otherwise, uses dummy drivers to support non-interactive streams like
+        pipes or files.
         """
         key_bindings = None
         if completekey != self.DEFAULT_COMPLETEKEY:
@@ -713,7 +714,7 @@ class Cmd:
             "rprompt": self.get_rprompt,
         }
 
-        if self.stdin.isatty():
+        if self.stdin.isatty() and self.stdout.isatty():
             try:
                 if self.stdin != sys.stdin:
                     kwargs["input"] = create_input(stdin=self.stdin)
@@ -3245,7 +3246,8 @@ class Cmd:
         """
         # Validate against the session's assigned input driver rather than sys.stdin.
         # This respects the fallback logic in _create_main_session() and allows unit
-        # tests to inject PipeInput for programmatic interaction.
+        # tests to inject PipeInput for programmatic interaction even if paired with
+        # a DummyOutput.
         return not isinstance(session.input, DummyInput)
 
     def _read_raw_input(
