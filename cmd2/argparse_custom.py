@@ -1036,7 +1036,11 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         This override is needed because Python 3.15 added a 'file' keyword argument
         to _set_color() which some versions of RichHelpFormatter don't support.
         """
-        try:
+        # Argparse didn't add color support until 3.14
+        if sys.version_info < (3, 14):
+            return
+
+        try:  # type: ignore[unreachable]
             super()._set_color(color, **kwargs)
         except TypeError:
             # Fallback for older versions of RichHelpFormatter that don't support keyword arguments
