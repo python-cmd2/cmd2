@@ -1,6 +1,7 @@
 """Unit/functional testing for argparse customizations in cmd2"""
 
 import argparse
+import sys
 
 import pytest
 
@@ -12,6 +13,8 @@ from cmd2 import (
 )
 from cmd2.argparse_custom import (
     ChoicesCallable,
+    Cmd2HelpFormatter,
+    Cmd2RichArgparseConsole,
     generate_range_error,
 )
 
@@ -355,28 +358,29 @@ def test_completion_items_as_choices(capsys) -> None:
     assert 'invalid choice: 3 (choose from 1, 2)' in err
 
 
-def test_formatter_coverage(mocker) -> None:
-    import sys
-
-    from cmd2.argparse_custom import (
-        Cmd2HelpFormatter,
-        Cmd2RichArgparseConsole,
-    )
-
-    # Line 1031: self._console = console (inside console.setter)
+def test_formatter_console() -> None:
+    # self._console = console (inside console.setter)
     formatter = Cmd2HelpFormatter(prog='test')
     new_console = Cmd2RichArgparseConsole()
     formatter.console = new_console
     assert formatter._console is new_console
 
-    # Line 1041: return (inside _set_color if sys.version_info < (3, 14))
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="Argparse didn't support color until Python 3.14",
+)
+def test_formatter_set_color(mocker) -> None:
+    formatter = Cmd2HelpFormatter(prog='test')
+
+    # return (inside _set_color if sys.version_info < (3, 14))
     mocker.patch('cmd2.argparse_custom.sys.version_info', (3, 13, 0))
     # This should return early without calling super()._set_color
     mock_set_color = mocker.patch('rich_argparse.RichHelpFormatter._set_color')
     formatter._set_color(True)
     mock_set_color.assert_not_called()
 
-    # Line 1045 and 1047: except TypeError and super()._set_color(color)
+    # except TypeError and super()._set_color(color)
     mocker.patch('cmd2.argparse_custom.sys.version_info', (3, 15, 0))
 
     # Reset mock and make it raise TypeError when called with kwargs
