@@ -34,6 +34,10 @@ Sauce? 2
 wheaties with salty sauce, yum!
 ```
 
+See the `do_eat` method in the
+[read_input.py](https://github.com/python-cmd2/cmd2/blob/main/examples/read_input.py) file for a
+example of how to use `select.
+
 ## Disabling Commands
 
 `cmd2` supports disabling commands during runtime. This is useful if certain commands should only be

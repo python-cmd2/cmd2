@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-"""A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion."""
+"""A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion.
+
+It also demonstrates how to use the cmd2.Cmd.select method.
+"""
 
 import contextlib
 
@@ -93,6 +96,16 @@ class ReadInputApp(cmd2.Cmd):
             pass
         else:
             self.custom_history.append(input_str)
+
+    def do_eat(self, arg):
+        """Example of using the select method for reading multiple choice input.
+
+        Usage: eat wheatties
+        """
+        sauce = self.select('sweet salty', 'Sauce? ')
+        result = '{food} with {sauce} sauce, yum!'
+        result = result.format(food=arg, sauce=sauce)
+        self.stdout.write(result + '\n')
 
 
 if __name__ == '__main__':
