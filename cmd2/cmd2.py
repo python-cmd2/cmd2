@@ -73,7 +73,7 @@ from prompt_toolkit import (
     filters,
     print_formatted_text,
 )
-from prompt_toolkit.application import get_app
+from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, FormattedText
@@ -4399,10 +4399,11 @@ class Cmd:
                 except (IndexError, TypeError):
                     fulloptions.append((opt[0], str(opt[0])))
 
-        if self.stdin.isatty() and self.stdout.isatty():
+        if self._is_tty_session(self.main_session):
             try:
                 while True:
-                    result = choice(message=prompt, options=fulloptions)
+                    with create_app_session(input=self.main_session.input, output=self.main_session.output):
+                        result = choice(message=prompt, options=fulloptions)
                     if result is not None:
                         return result
             except KeyboardInterrupt:

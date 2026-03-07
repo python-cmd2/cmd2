@@ -1750,13 +1750,16 @@ def test_select_choice_tty(outsim_app, monkeypatch) -> None:
     choice_mock = mock.MagicMock(name='choice', return_value='sweet')
     monkeypatch.setattr("cmd2.cmd2.choice", choice_mock)
 
-    # Mock isatty to be True for both stdin and stdout
-    monkeypatch.setattr(outsim_app.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(outsim_app.stdout, "isatty", lambda: True)
-
     prompt = 'Sauce? '
     options = ['sweet', 'salty']
-    result = outsim_app.select(options, prompt)
+
+    with create_pipe_input() as pipe_input:
+        outsim_app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+        )
+
+        result = outsim_app.select(options, prompt)
 
     assert result == 'sweet'
     choice_mock.assert_called_once_with(message=prompt, options=[('sweet', 'sweet'), ('salty', 'salty')])
@@ -1767,17 +1770,20 @@ def test_select_choice_tty_ctrl_c(outsim_app, monkeypatch) -> None:
     choice_mock = mock.MagicMock(name='choice', side_effect=KeyboardInterrupt)
     monkeypatch.setattr("cmd2.cmd2.choice", choice_mock)
 
-    # Mock isatty to be True for both stdin and stdout
-    monkeypatch.setattr(outsim_app.stdin, "isatty", lambda: True)
-    monkeypatch.setattr(outsim_app.stdout, "isatty", lambda: True)
-
     prompt = 'Sauce? '
     options = ['sweet', 'salty']
 
-    with pytest.raises(KeyboardInterrupt):
-        outsim_app.select(options, prompt)
+    # Mock isatty to be True for both stdin and stdout
+    with create_pipe_input() as pipe_input:
+        outsim_app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+        )
 
-    out = outsim_app.stdout.getvalue()
+        with pytest.raises(KeyboardInterrupt):
+            outsim_app.select(options, prompt)
+
+        out = outsim_app.stdout.getvalue()
     assert out.rstrip().endswith('^C')
 
 
