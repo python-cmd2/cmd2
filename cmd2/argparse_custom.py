@@ -1030,6 +1030,22 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         """Set our console instance."""
         self._console = console
 
+    def _set_color(self, color: bool, **kwargs: Any) -> None:
+        """Set the color for the help output.
+
+        This override is needed because Python 3.15 added a 'file' keyword argument
+        to _set_color() which some versions of RichHelpFormatter don't support.
+        """
+        # Argparse didn't add color support until 3.14
+        if sys.version_info < (3, 14):
+            return
+
+        try:  # type: ignore[unreachable]
+            super()._set_color(color, **kwargs)
+        except TypeError:
+            # Fallback for older versions of RichHelpFormatter that don't support keyword arguments
+            super()._set_color(color)
+
     def _build_nargs_range_str(self, nargs_range: tuple[int, int | float]) -> str:
         """Generate nargs range string for help text."""
         if nargs_range[1] == constants.INFINITY:
@@ -1134,7 +1150,7 @@ class TextGroup:
         self,
         title: str,
         text: RenderableType,
-        formatter_creator: Callable[[], Cmd2HelpFormatter],
+        formatter_creator: Callable[..., Cmd2HelpFormatter],
     ) -> None:
         """TextGroup initializer.
 
@@ -1258,9 +1274,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.exit(2, f'{formatted_message}\n')
 
-    def _get_formatter(self) -> Cmd2HelpFormatter:
+    def _get_formatter(self, **kwargs: Any) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
-        return cast(Cmd2HelpFormatter, super()._get_formatter())
+        return cast(Cmd2HelpFormatter, super()._get_formatter(**kwargs))
 
     def format_help(self) -> str:
         """Override to add a newline."""
