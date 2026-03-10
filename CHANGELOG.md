@@ -75,6 +75,7 @@ prompt is displayed.
         - **get_rprompt**: override to populate right prompt
         - **pre_prompt**: hook method that is called before the prompt is displayed, but after
           `prompt-toolkit` event loop has started
+        - **read_secret**: read secrets like passwords without displaying them to the terminal
     - New settables:
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
