@@ -77,8 +77,8 @@ each:
     - Shows how cmd2's built-in `run_pyscript` command can provide advanced Python scripting of cmd2
       applications
 - [read_input.py](https://github.com/python-cmd2/cmd2/blob/main/examples/read_input.py)
-    - Demonstrates the various ways to call `cmd2.Cmd.read_input()` for input history and tab
-      completion
+    - Demonstrates the various ways to call `cmd2.Cmd.read_input()` and `cmd2.Cmd.read_secret()` for
+      input history, tab completion, and password masking
 - [remove_builtin_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/remove_builtin_commands.py)
     - Shows how to remove any built-in cmd2 commands you do not want to be present in your cmd2
       application
