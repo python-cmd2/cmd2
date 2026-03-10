@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-"""A simple example demonstrating the various ways to call cmd2.Cmd.read_input() for input history and tab completion.
+"""A simple example demonstrating the various ways to call cmd2.Cmd.read_input() and cmd2.Cmd.read_secret().
 
+These methods can be used to read input from stdin with optional history, tab completion, or password masking.
 It also demonstrates how to use the cmd2.Cmd.select method.
 """
 
@@ -96,6 +97,19 @@ class ReadInputApp(cmd2.Cmd):
             pass
         else:
             self.custom_history.append(input_str)
+
+    @cmd2.with_category(EXAMPLE_COMMANDS)
+    def do_read_password(self, _) -> None:
+        """Call read_secret to read a password without displaying it while being typed.
+
+        WARNING: Password will be displayed for verification after it is typed.
+        """
+        self.poutput("The input will not be displayed on the screen")
+        try:
+            password = self.read_secret("Password: ")
+            self.poutput(f"You entered: {password}")
+        except EOFError:
+            pass
 
     def do_eat(self, arg):
         """Example of using the select method for reading multiple choice input.

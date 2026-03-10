@@ -3391,6 +3391,24 @@ class Cmd:
 
         return self._read_raw_input(prompt, temp_session)
 
+    def read_secret(
+        self,
+        prompt: str = '',
+    ) -> str:
+        """Read a secret from stdin without displaying the value on the screen.
+
+        :param prompt: prompt to display to user
+        :return: the secret read from stdin with all trailing new lines removed
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        :raises Exception: any other exceptions raised by prompt()
+        """
+        temp_session: PromptSession[str] = PromptSession(
+            input=self.main_session.input,
+            output=self.main_session.output,
+        )
+
+        return self._read_raw_input(prompt, temp_session, is_password=True)
+
     def _process_alerts(self) -> None:
         """Background worker that processes queued alerts and dynamic prompt updates."""
         while True:

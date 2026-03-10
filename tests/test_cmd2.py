@@ -2236,6 +2236,29 @@ def test_read_input_eof(base_app, monkeypatch) -> None:
         base_app.read_input("Prompt> ")
 
 
+def test_read_secret(base_app, monkeypatch):
+    """Test read_secret passes is_password=True to _read_raw_input."""
+    with mock.patch.object(base_app, '_read_raw_input') as mock_reader:
+        mock_reader.return_value = "my_secret"
+
+        secret = base_app.read_secret("Secret: ")
+
+        assert secret == "my_secret"
+        # Verify it called _read_raw_input with is_password=True
+        args, kwargs = mock_reader.call_args
+        assert args[0] == "Secret: "
+        assert kwargs['is_password'] is True
+
+
+def test_read_secret_eof(base_app, monkeypatch):
+    """Test that read_secret passes up EOFErrors."""
+    read_raw_mock = mock.MagicMock(name='_read_raw_input', side_effect=EOFError)
+    monkeypatch.setattr("cmd2.Cmd._read_raw_input", read_raw_mock)
+
+    with pytest.raises(EOFError):
+        base_app.read_secret("Secret: ")
+
+
 def test_read_input_passes_all_arguments_to_resolver(base_app):
     mock_choices = ["choice1", "choice2"]
     mock_provider = mock.MagicMock(name="provider")
