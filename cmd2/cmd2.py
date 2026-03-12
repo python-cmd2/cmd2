@@ -298,8 +298,8 @@ class AsyncAlert:
     :param prompt: an optional string to dynamically replace the current prompt.
 
     :ivar timestamp: monotonic creation time of the alert. If an alert was created
-                     before the current prompt was rendered, the prompt update is ignored
-                     to avoid a stale display but the msg will still be displayed.
+                     before the current prompt was rendered, its prompt data is ignored
+                     to avoid a stale display, but its msg data will still be displayed.
     """
 
     msg: str | None = None
@@ -2634,7 +2634,11 @@ class Cmd:
         raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def pre_prompt(self) -> None:
-        """Ran just before the prompt is displayed (and after the event loop has started)."""
+        """Ran just before the prompt is displayed (and after the event loop has started).
+
+        This is the ideal location to update `self.prompt` or any other state that should
+        be current when the prompt appears.
+        """
 
     def precmd(self, statement: Statement | str) -> Statement:
         """Ran just before the command is executed by [cmd2.Cmd.onecmd][] and after adding it to history (cmd Hook method).
@@ -3475,10 +3479,10 @@ class Cmd:
 
         def _pre_prompt() -> None:
             """Run standard pre-prompt processing and activate the background alerter."""
-            self.pre_prompt()
-
-            # Record when this prompt was rendered.
+            # Record prompt start time so any async prompt updates queued during
+            # pre_prompt() are considered current.
             self._alert_prompt_timestamp = time.monotonic()
+            self.pre_prompt()
 
             # Start alerter thread if it's not already running.
             if self._alert_thread is None or not self._alert_thread.is_alive():
