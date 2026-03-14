@@ -48,9 +48,6 @@ from .completion import (
 from .exceptions import CompletionError
 from .styles import Cmd2Style
 
-# If no table header is supplied, then this will be used instead
-DEFAULT_TABLE_HEADER: Sequence[str | Column] = ['Description']
-
 # Name of the choice/completer function argument that, if present, will be passed a dictionary of
 # command line tokens up through the token being completed mapped to their argparse destination name.
 ARG_TOKENS = 'arg_tokens'
@@ -591,15 +588,48 @@ class ArgparseCompleter:
 
         return Completions(items)
 
+    @staticmethod
+    def _validate_table_data(arg_state: _ArgumentState, completions: Completions) -> None:
+        """Verify the integrity of completion table data.
+
+        :raises ValueError: if there is an error with the data.
+        """
+        table_header = arg_state.action.get_table_header()  # type: ignore[attr-defined]
+        has_table_data = any(item.table_row for item in completions)
+
+        if table_header is None:
+            if has_table_data:
+                raise ValueError(
+                    f"Argument '{arg_state.action.dest}' has CompletionItems with table_row, "
+                    f"but no table_header was defined in add_argument()."
+                )
+            return
+
+        # If header is defined, then every item must have data, and lengths must match
+        for item in completions:
+            if not item.table_row:
+                raise ValueError(
+                    f"Argument '{arg_state.action.dest}' has table_header defined, "
+                    f"but the CompletionItem for '{item.text}' is missing table_row."
+                )
+            if len(item.table_row) != len(table_header):
+                raise ValueError(
+                    f"Argument '{arg_state.action.dest}': table_row length ({len(item.table_row)}) "
+                    f"does not match table_header length ({len(table_header)}) for item '{item.text}'."
+                )
+
     def _build_completion_table(self, arg_state: _ArgumentState, completions: Completions) -> Completions:
         """Build a rich.Table for completion results if applicable."""
-        # Skip table generation for single results or if the list exceeds the
-        # user-defined threshold for table display.
-        if len(completions) < 2 or len(completions) > self._cmd2_app.max_completion_table_items:
-            return completions
+        # Verify integrity of completion data
+        self._validate_table_data(arg_state, completions)
 
-        # Ensure every item provides table metadata to avoid an incomplete table.
-        if not all(item.table_row for item in completions):
+        table_header = cast(
+            Sequence[str | Column] | None,
+            arg_state.action.get_table_header(),  # type: ignore[attr-defined]
+        )
+
+        # Skip table generation if results are outside thresholds or no columns are defined
+        if len(completions) < 2 or len(completions) > self._cmd2_app.max_completion_table_items or table_header is None:
             return completions
 
         # If a metavar was defined, use that instead of the dest field
@@ -619,9 +649,6 @@ class ArgparseCompleter:
         # Build header row
         rich_columns: list[Column] = []
         rich_columns.append(Column(destination.upper(), justify="right" if all_nums else "left", no_wrap=True))
-        table_header = cast(Sequence[str | Column] | None, arg_state.action.get_table_header())  # type: ignore[attr-defined]
-        if table_header is None:
-            table_header = DEFAULT_TABLE_HEADER
         rich_columns.extend(
             column if isinstance(column, Column) else Column(column, overflow="fold") for column in table_header
         )
