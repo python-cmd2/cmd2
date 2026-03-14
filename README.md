@@ -107,7 +107,7 @@ examples.
 - [cmd2 example applications](https://github.com/python-cmd2/cmd2/tree/main/examples)
     - Basic cmd2 examples to demonstrate how to use various features
 - [Advanced Examples](https://github.com/jayrod/cmd2-example-apps)
-    - More complex examples that demonstrate more featuers about how to put together a complete
+    - More complex examples that demonstrate more features about how to put together a complete
       application
 - [Cookiecutter](https://github.com/cookiecutter/cookiecutter) Templates from community
     - Basic cookiecutter template for cmd2 application :

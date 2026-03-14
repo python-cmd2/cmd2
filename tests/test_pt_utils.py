@@ -474,7 +474,7 @@ class TestCmd2Completer:
     def test_get_completions_allow_finalization(
         self, line, match, quote_char, end_of_line, expected, mock_cmd_app: MockCmd
     ) -> None:
-        """Test that get_completions corectly handles finalizing single matches."""
+        """Test that get_completions correctly handles finalizing single matches."""
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
         # Set up document

@@ -397,14 +397,14 @@ class ChoicesCallable:
 
     @property
     def choices_provider(self) -> ChoicesProviderUnbound[CmdOrSet]:
-        """Retreive the internal choices_provider function."""
+        """Retrieve the internal choices_provider function."""
         if self.is_completer:
             raise AttributeError("This instance is configured as a completer, not a choices_provider")
         return cast(ChoicesProviderUnbound[CmdOrSet], self.to_call)
 
     @property
     def completer(self) -> CompleterUnbound[CmdOrSet]:
-        """Retreive the internal completer function."""
+        """Retrieve the internal completer function."""
         if not self.is_completer:
             raise AttributeError("This instance is configured as a choices_provider, not a completer")
         return cast(CompleterUnbound[CmdOrSet], self.to_call)

@@ -42,7 +42,7 @@ each:
     - Demonstrates usage of `@with_default_category` decorator to group and categorize commands and
       `CommandSet` use
 - [dynamic_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/dynamic_commands.py)
-    - Shows how `do_*` commands can be dynamically created programatically at runtime
+    - Shows how `do_*` commands can be dynamically created programmatically at runtime
 - [environment.py](https://github.com/python-cmd2/cmd2/blob/main/examples/environment.py)
     - Shows how to create custom `cmd2.Settable` parameters which serve as internal environment
       variables
@@ -63,7 +63,7 @@ each:
     - Shows how to use various `cmd2` application lifecycle hooks
 - [migrating.py](https://github.com/python-cmd2/cmd2/blob/main/examples/migrating.py)
     - A simple `cmd` application that you can migrate to `cmd2` by changing one line
-- [modular_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_commands.py)
+- [modular_commandsets.py](https://github.com/python-cmd2/cmd2/blob/main/examples/modular_commandsets.py)
     - Complex example demonstrating a variety of methods to load `CommandSets` using a mix of
       command decorators
 - [paged_output.py](https://github.com/python-cmd2/cmd2/blob/main/examples/paged_output.py)

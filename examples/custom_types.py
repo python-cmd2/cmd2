@@ -51,7 +51,7 @@ def integer(value_str: str) -> int:
 
 
 def hexadecimal(value_str: str) -> int:
-    """Parse hexidecimal integer, with optional '0x' prefix."""
+    """Parse hexadecimal integer, with optional '0x' prefix."""
     return int(value_str, base=16)
 
 

@@ -7,8 +7,8 @@ install: ## Install the virtual environment with dependencies
 	@echo "🚀 Creating uv Python virtual environment"
 	@uv python install 3.14
 	@uv sync --python=3.14
-	@echo "🚀 Installing Git pre-commit hooks locally"
-	@uv run pre-commit install
+	@echo "🚀 Installing Git prek hooks locally"
+	@uv run prek install -f
 	@echo "🚀 Installing Prettier using npm"
 	@npm install -q --no-fund --include=dev
 
@@ -16,8 +16,8 @@ install: ## Install the virtual environment with dependencies
 check: ## Run code quality tools.
 	@echo "🚀 Checking lock file consistency with 'pyproject.toml'"
 	@uv lock --locked
-	@echo "🚀 Linting code and documentation: Running pre-commit"
-	@uv run pre-commit run -a
+	@echo "🚀 Auto-formatting/Linting code and documentation: Running prek"
+	@uv run prek run -a
 	@echo "🚀 Static type checking: Running mypy"
 	@uv run mypy
 
