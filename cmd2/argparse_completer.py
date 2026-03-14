@@ -594,28 +594,28 @@ class ArgparseCompleter:
 
         :raises ValueError: if there is an error with the data.
         """
-        table_header = arg_state.action.get_table_header()  # type: ignore[attr-defined]
-        has_table_data = any(item.table_row for item in completions)
+        table_columns = arg_state.action.get_table_columns()  # type: ignore[attr-defined]
+        has_table_data = any(item.table_data for item in completions)
 
-        if table_header is None:
+        if table_columns is None:
             if has_table_data:
                 raise ValueError(
-                    f"Argument '{arg_state.action.dest}' has CompletionItems with table_row, "
-                    f"but no table_header was defined in add_argument()."
+                    f"Argument '{arg_state.action.dest}' has CompletionItems with table_data, "
+                    f"but no table_columns were defined in add_argument()."
                 )
             return
 
-        # If header is defined, then every item must have data, and lengths must match
+        # If columns are defined, then every item must have data, and lengths must match
         for item in completions:
-            if not item.table_row:
+            if not item.table_data:
                 raise ValueError(
-                    f"Argument '{arg_state.action.dest}' has table_header defined, "
-                    f"but the CompletionItem for '{item.text}' is missing table_row."
+                    f"Argument '{arg_state.action.dest}' has table_columns defined, "
+                    f"but the CompletionItem for '{item.text}' is missing table_data."
                 )
-            if len(item.table_row) != len(table_header):
+            if len(item.table_data) != len(table_columns):
                 raise ValueError(
-                    f"Argument '{arg_state.action.dest}': table_row length ({len(item.table_row)}) "
-                    f"does not match table_header length ({len(table_header)}) for item '{item.text}'."
+                    f"Argument '{arg_state.action.dest}': table_data length ({len(item.table_data)}) "
+                    f"does not match table_columns length ({len(table_columns)}) for item '{item.text}'."
                 )
 
     def _build_completion_table(self, arg_state: _ArgumentState, completions: Completions) -> Completions:
@@ -623,13 +623,17 @@ class ArgparseCompleter:
         # Verify integrity of completion data
         self._validate_table_data(arg_state, completions)
 
-        table_header = cast(
+        table_columns = cast(
             Sequence[str | Column] | None,
-            arg_state.action.get_table_header(),  # type: ignore[attr-defined]
+            arg_state.action.get_table_columns(),  # type: ignore[attr-defined]
         )
 
         # Skip table generation if results are outside thresholds or no columns are defined
-        if len(completions) < 2 or len(completions) > self._cmd2_app.max_completion_table_items or table_header is None:
+        if (
+            len(completions) < 2
+            or len(completions) > self._cmd2_app.max_completion_table_items
+            or table_columns is None
+        ):  # fmt: skip
             return completions
 
         # If a metavar was defined, use that instead of the dest field
@@ -650,13 +654,13 @@ class ArgparseCompleter:
         rich_columns: list[Column] = []
         rich_columns.append(Column(destination.upper(), justify="right" if all_nums else "left", no_wrap=True))
         rich_columns.extend(
-            column if isinstance(column, Column) else Column(column, overflow="fold") for column in table_header
+            column if isinstance(column, Column) else Column(column, overflow="fold") for column in table_columns
         )
 
         # Build the table
         table = Table(*rich_columns, box=SIMPLE_HEAD, show_edge=False, border_style=Cmd2Style.TABLE_BORDER)
         for item in completions:
-            table.add_row(Text.from_ansi(item.display), *item.table_row)
+            table.add_row(Text.from_ansi(item.display), *item.table_data)
 
         return dataclasses.replace(
             completions,

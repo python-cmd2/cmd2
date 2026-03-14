@@ -67,9 +67,9 @@ class CompletionItem:
     # This can contain ANSI style sequences. A plain version is stored in display_meta_plain.
     display_meta: str = ""
 
-    # Optional row data for completion tables. Length must match the associated argparse
-    # argument's table_header. This is stored internally as a tuple.
-    table_row: Sequence[Any] = field(default_factory=tuple)
+    # Optional data for completion tables. Length must match the associated argparse
+    # argument's table_columns. This is stored internally as a tuple.
+    table_data: Sequence[Any] = field(default_factory=tuple)
 
     # Plain text versions of display fields (stripped of ANSI) for sorting/filtering.
     # These are set in __post_init__().
@@ -91,13 +91,13 @@ class CompletionItem:
         object.__setattr__(self, "display_plain", su.strip_style(self.display))
         object.__setattr__(self, "display_meta_plain", su.strip_style(self.display_meta))
 
-        # Make sure all table row objects are renderable by a Rich table.
-        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in self.table_row]
+        # Make sure all table data objects are renderable by a Rich table.
+        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in self.table_data]
 
         # Convert strings containing ANSI style sequences to Rich Text objects for correct display width.
         object.__setattr__(
             self,
-            'table_row',
+            'table_data',
             ru.prepare_objects_for_rendering(*renderable_data),
         )
 
@@ -109,7 +109,7 @@ class CompletionItem:
         """Compare this CompletionItem for equality.
 
         Identity is determined by value, text, display, and display_meta.
-        table_row is excluded from equality checks to ensure that items
+        table_data is excluded from equality checks to ensure that items
         with the same functional value are treated as duplicates.
 
         Also supports comparison against non-CompletionItems to facilitate argparse

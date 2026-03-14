@@ -2526,7 +2526,7 @@ class Cmd:
         items: list[CompletionItem] = []
 
         for name, value in self.aliases.items():
-            items.append(CompletionItem(name, display_meta=value, table_row=[value]))
+            items.append(CompletionItem(name, display_meta=value, table_data=[value]))
 
         return Choices(items=items)
 
@@ -2535,7 +2535,7 @@ class Cmd:
         items: list[CompletionItem] = []
 
         for name, macro in self.macros.items():
-            items.append(CompletionItem(name, display_meta=macro.value, table_row=[macro.value]))
+            items.append(CompletionItem(name, display_meta=macro.value, table_data=[macro.value]))
 
         return Choices(items=items)
 
@@ -2545,12 +2545,12 @@ class Cmd:
 
         for name, settable in self.settables.items():
             value_str = str(settable.value)
-            table_row = [
+            table_data = [
                 value_str,
                 settable.description,
             ]
             display_meta = f"[Current: {su.stylize(value_str, Style(bold=True))}] {settable.description}"
-            items.append(CompletionItem(name, display_meta=display_meta, table_row=table_row))
+            items.append(CompletionItem(name, display_meta=display_meta, table_data=table_data))
 
         return Choices(items=items)
 
@@ -3658,7 +3658,7 @@ class Cmd:
             nargs=argparse.ZERO_OR_MORE,
             help='alias(es) to delete',
             choices_provider=cls._get_alias_choices,
-            table_header=["Value"],
+            table_columns=["Value"],
         )
 
         return alias_delete_parser
@@ -3700,7 +3700,7 @@ class Cmd:
             nargs=argparse.ZERO_OR_MORE,
             help='alias(es) to list',
             choices_provider=cls._get_alias_choices,
-            table_header=["Value"],
+            table_columns=["Value"],
         )
 
         return alias_list_parser
@@ -3949,7 +3949,7 @@ class Cmd:
             nargs=argparse.ZERO_OR_MORE,
             help='macro(s) to delete',
             choices_provider=cls._get_macro_choices,
-            table_header=["Value"],
+            table_columns=["Value"],
         )
 
         return macro_delete_parser
@@ -3991,7 +3991,7 @@ class Cmd:
             nargs=argparse.ZERO_OR_MORE,
             help='macro(s) to list',
             choices_provider=cls._get_macro_choices,
-            table_header=["Value"],
+            table_columns=["Value"],
         )
 
         return macro_list_parser
@@ -4475,7 +4475,7 @@ class Cmd:
             nargs=argparse.OPTIONAL,
             help='parameter to set or view',
             choices_provider=cls._get_settable_choices,
-            table_header=["Value", "Description"],
+            table_columns=["Value", "Description"],
         )
 
         return base_set_parser
