@@ -2467,26 +2467,26 @@ class Cmd:
             return completions  # noqa: TRY300
 
         except CompletionError as ex:
-            err_str = str(ex)
-            completion_error = ""
+            error_msg = str(ex)
+            formatted_error = ""
 
-            # Don't display anything if the error is blank (e.g. _NoResultsError for an argument which supresses hints)
-            if err_str:
+            # Don't display anything if the error is blank (e.g. _NoResultsError for an argument which suppresses hints)
+            if error_msg:
                 # _NoResultsError completion hints already include a trailing "\n".
                 end = "" if isinstance(ex, argparse_completer._NoResultsError) else "\n"
 
                 console = Cmd2GeneralConsole(file=self.stdout)
                 with console.capture() as capture:
                     console.print(
-                        err_str,
+                        error_msg,
                         style=Cmd2Style.ERROR if ex.apply_style else "",
                         end=end,
                     )
-                completion_error = capture.get()
-            return Completions(completion_error=completion_error)
+                formatted_error = capture.get()
+            return Completions(error=formatted_error)
         except Exception as ex:  # noqa: BLE001
             formatted_exception = self.format_exception(ex)
-            return Completions(completion_error=formatted_exception)
+            return Completions(error=formatted_exception)
 
     def in_script(self) -> bool:
         """Return whether a text script is running."""
@@ -2526,7 +2526,7 @@ class Cmd:
         items: list[CompletionItem] = []
 
         for name, value in self.aliases.items():
-            items.append(CompletionItem(name, display_meta=value, table_row=[value]))
+            items.append(CompletionItem(name, display_meta=value, table_data=[value]))
 
         return Choices(items=items)
 
@@ -2535,7 +2535,7 @@ class Cmd:
         items: list[CompletionItem] = []
 
         for name, macro in self.macros.items():
-            items.append(CompletionItem(name, display_meta=macro.value, table_row=[macro.value]))
+            items.append(CompletionItem(name, display_meta=macro.value, table_data=[macro.value]))
 
         return Choices(items=items)
 
@@ -2545,12 +2545,12 @@ class Cmd:
 
         for name, settable in self.settables.items():
             value_str = str(settable.value)
-            table_row = [
+            table_data = [
                 value_str,
                 settable.description,
             ]
             display_meta = f"[Current: {su.stylize(value_str, Style(bold=True))}] {settable.description}"
-            items.append(CompletionItem(name, display_meta=display_meta, table_row=table_row))
+            items.append(CompletionItem(name, display_meta=display_meta, table_data=table_data))
 
         return Choices(items=items)
 
@@ -3658,7 +3658,7 @@ class Cmd:
             nargs=argparse.ZERO_OR_MORE,
             help='alias(es) to delete',
             choices_provider=cls._get_alias_choices,
-            table_header=["Value"],
+            table_columns=["Value"],
         )
 
         return alias_delete_parser
@@ -3700,7 +3700,7 @@ class Cmd:
             nargs=argparse.ZERO_OR_MORE,
             help='alias(es) to list',
             choices_provider=cls._get_alias_choices,
-            table_header=["Value"],
+            table_columns=["Value"],
         )
 
         return alias_list_parser
@@ -3949,7 +3949,7 @@ class Cmd:
             nargs=argparse.ZERO_OR_MORE,
             help='macro(s) to delete',
             choices_provider=cls._get_macro_choices,
-            table_header=["Value"],
+            table_columns=["Value"],
         )
 
         return macro_delete_parser
@@ -3991,7 +3991,7 @@ class Cmd:
             nargs=argparse.ZERO_OR_MORE,
             help='macro(s) to list',
             choices_provider=cls._get_macro_choices,
-            table_header=["Value"],
+            table_columns=["Value"],
         )
 
         return macro_list_parser
@@ -4475,7 +4475,7 @@ class Cmd:
             nargs=argparse.OPTIONAL,
             help='parameter to set or view',
             choices_provider=cls._get_settable_choices,
-            table_header=["Value", "Description"],
+            table_columns=["Value", "Description"],
         )
 
         return base_set_parser

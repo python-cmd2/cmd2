@@ -18,6 +18,8 @@ from typing import (
     overload,
 )
 
+from rich.table import Table
+
 from . import string_utils as su
 
 if sys.version_info >= (3, 11):
@@ -65,9 +67,9 @@ class CompletionItem:
     # This can contain ANSI style sequences. A plain version is stored in display_meta_plain.
     display_meta: str = ""
 
-    # Optional row data for completion tables. Length must match the associated argparse
-    # argument's table_header. This is stored internally as a tuple.
-    table_row: Sequence[Any] = field(default_factory=tuple)
+    # Optional data for completion tables. Length must match the associated argparse
+    # argument's table_columns. This is stored internally as a tuple.
+    table_data: Sequence[Any] = field(default_factory=tuple)
 
     # Plain text versions of display fields (stripped of ANSI) for sorting/filtering.
     # These are set in __post_init__().
@@ -89,13 +91,13 @@ class CompletionItem:
         object.__setattr__(self, "display_plain", su.strip_style(self.display))
         object.__setattr__(self, "display_meta_plain", su.strip_style(self.display_meta))
 
-        # Make sure all table row objects are renderable by a Rich table.
-        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in self.table_row]
+        # Make sure all table data objects are renderable by a Rich table.
+        renderable_data = [obj if is_renderable(obj) else str(obj) for obj in self.table_data]
 
         # Convert strings containing ANSI style sequences to Rich Text objects for correct display width.
         object.__setattr__(
             self,
-            'table_row',
+            'table_data',
             ru.prepare_objects_for_rendering(*renderable_data),
         )
 
@@ -107,7 +109,7 @@ class CompletionItem:
         """Compare this CompletionItem for equality.
 
         Identity is determined by value, text, display, and display_meta.
-        table_row is excluded from equality checks to ensure that items
+        table_data is excluded from equality checks to ensure that items
         with the same functional value are treated as duplicates.
 
         Also supports comparison against non-CompletionItems to facilitate argparse
@@ -214,14 +216,14 @@ class Choices(CompletionResultsBase):
 class Completions(CompletionResultsBase):
     """The results of a completion operation."""
 
-    # An optional hint which prints above completion suggestions
-    completion_hint: str = ""
+    # Optional hint which prints above completion suggestions
+    hint: str = ""
 
     # Optional message to display if an error occurs during completion
-    completion_error: str = ""
+    error: str = ""
 
-    # An optional table string populated by the argparse completer
-    completion_table: str = ""
+    # Optional Rich table which provides more context for the data being completed
+    table: Table | None = None
 
     # If True, the completion engine is allowed to finalize a completion
     # when a single match is found by appending a trailing space and

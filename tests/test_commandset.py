@@ -923,7 +923,7 @@ def test_cross_commandset_completer(manual_command_sets_app) -> None:
     completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
     assert not completions
-    assert "Could not find CommandSet instance" in completions.completion_error
+    assert "Could not find CommandSet instance" in completions.error
 
     manual_command_sets_app.unregister_command_set(user_unrelated)
 
@@ -944,7 +944,7 @@ def test_cross_commandset_completer(manual_command_sets_app) -> None:
     completions = manual_command_sets_app.complete(text, line, begidx, endidx)
 
     assert not completions
-    assert "Could not find CommandSet instance" in completions.completion_error
+    assert "Could not find CommandSet instance" in completions.error
 
     manual_command_sets_app.unregister_command_set(user_unrelated)
     manual_command_sets_app.unregister_command_set(user_sub2)

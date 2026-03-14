@@ -25,7 +25,6 @@ from typing import (
 from rich.text import Text
 
 from .constants import INFINITY
-from .rich_utils import Cmd2GeneralConsole
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
@@ -48,9 +47,6 @@ from .completion import (
 )
 from .exceptions import CompletionError
 from .styles import Cmd2Style
-
-# If no table header is supplied, then this will be used instead
-DEFAULT_TABLE_HEADER: Sequence[str | Column] = ['Description']
 
 # Name of the choice/completer function argument that, if present, will be passed a dictionary of
 # command line tokens up through the token being completed mapped to their argparse destination name.
@@ -500,11 +496,11 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completions:
-                if not completions.completion_hint:
+                if not completions.hint:
                     # Add a hint even though there are results in case Cmd.always_show_hint is True.
                     completions = dataclasses.replace(
                         completions,
-                        completion_hint=_build_hint(self._parser, flag_arg_state.action),
+                        hint=_build_hint(self._parser, flag_arg_state.action),
                     )
 
                 return completions
@@ -528,11 +524,11 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completions:
-                if not completions.completion_hint:
+                if not completions.hint:
                     # Add a hint even though there are results in case Cmd.always_show_hint is True.
                     completions = dataclasses.replace(
                         completions,
-                        completion_hint=_build_hint(self._parser, pos_arg_state.action),
+                        hint=_build_hint(self._parser, pos_arg_state.action),
                     )
                 return completions
 
@@ -592,15 +588,52 @@ class ArgparseCompleter:
 
         return Completions(items)
 
-    def _format_completions(self, arg_state: _ArgumentState, completions: Completions) -> Completions:
-        """Format CompletionItems into completion table."""
-        # Skip table generation for single results or if the list exceeds the
-        # user-defined threshold for table display.
-        if len(completions) < 2 or len(completions) > self._cmd2_app.max_completion_table_items:
-            return completions
+    @staticmethod
+    def _validate_table_data(arg_state: _ArgumentState, completions: Completions) -> None:
+        """Verify the integrity of completion table data.
 
-        # Ensure every item provides table metadata to avoid an incomplete table.
-        if not all(item.table_row for item in completions):
+        :raises ValueError: if there is an error with the data.
+        """
+        table_columns = arg_state.action.get_table_columns()  # type: ignore[attr-defined]
+        has_table_data = any(item.table_data for item in completions)
+
+        if table_columns is None:
+            if has_table_data:
+                raise ValueError(
+                    f"Argument '{arg_state.action.dest}' has CompletionItems with table_data, "
+                    f"but no table_columns were defined in add_argument()."
+                )
+            return
+
+        # If columns are defined, then every item must have data, and lengths must match
+        for item in completions:
+            if not item.table_data:
+                raise ValueError(
+                    f"Argument '{arg_state.action.dest}' has table_columns defined, "
+                    f"but the CompletionItem for '{item.text}' is missing table_data."
+                )
+            if len(item.table_data) != len(table_columns):
+                raise ValueError(
+                    f"Argument '{arg_state.action.dest}': table_data length ({len(item.table_data)}) "
+                    f"does not match table_columns length ({len(table_columns)}) for item '{item.text}'."
+                )
+
+    def _build_completion_table(self, arg_state: _ArgumentState, completions: Completions) -> Completions:
+        """Build a rich.Table for completion results if applicable."""
+        # Verify integrity of completion data
+        self._validate_table_data(arg_state, completions)
+
+        table_columns = cast(
+            Sequence[str | Column] | None,
+            arg_state.action.get_table_columns(),  # type: ignore[attr-defined]
+        )
+
+        # Skip table generation if results are outside thresholds or no columns are defined
+        if (
+            len(completions) < 2
+            or len(completions) > self._cmd2_app.max_completion_table_items
+            or table_columns is None
+        ):  # fmt: skip
             return completions
 
         # If a metavar was defined, use that instead of the dest field
@@ -620,26 +653,18 @@ class ArgparseCompleter:
         # Build header row
         rich_columns: list[Column] = []
         rich_columns.append(Column(destination.upper(), justify="right" if all_nums else "left", no_wrap=True))
-        table_header = cast(Sequence[str | Column] | None, arg_state.action.get_table_header())  # type: ignore[attr-defined]
-        if table_header is None:
-            table_header = DEFAULT_TABLE_HEADER
         rich_columns.extend(
-            column if isinstance(column, Column) else Column(column, overflow="fold") for column in table_header
+            column if isinstance(column, Column) else Column(column, overflow="fold") for column in table_columns
         )
 
-        # Add the data rows
-        hint_table = Table(*rich_columns, box=SIMPLE_HEAD, show_edge=False, border_style=Cmd2Style.TABLE_BORDER)
+        # Build the table
+        table = Table(*rich_columns, box=SIMPLE_HEAD, show_edge=False, border_style=Cmd2Style.TABLE_BORDER)
         for item in completions:
-            hint_table.add_row(Text.from_ansi(item.display), *item.table_row)
-
-        # Generate the table string
-        console = Cmd2GeneralConsole(file=self._cmd2_app.stdout)
-        with console.capture() as capture:
-            console.print(hint_table, end="", soft_wrap=False)
+            table.add_row(Text.from_ansi(item.display), *item.table_data)
 
         return dataclasses.replace(
             completions,
-            completion_table=capture.get(),
+            table=table,
         )
 
     def complete_subcommand_help(self, text: str, line: str, begidx: int, endidx: int, tokens: Sequence[str]) -> Completions:
@@ -780,7 +805,7 @@ class ArgparseCompleter:
             filtered = [choice for choice in all_choices if choice.text not in used_values]
             completions = self._cmd2_app.basic_complete(text, line, begidx, endidx, filtered)
 
-        return self._format_completions(arg_state, completions)
+        return self._build_completion_table(arg_state, completions)
 
 
 # The default ArgparseCompleter class for a cmd2 app

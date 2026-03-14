@@ -37,13 +37,15 @@ prompt is displayed.
           longer needed
     - `completer` functions must now return a `cmd2.Completions` object instead of `list[str]`.
     - `choices_provider` functions must now return a `cmd2.Choices` object instead of `list[str]`.
-    - An argparse argument's `descriptive_headers` field is now called `table_header`.
-    - `CompletionItem.descriptive_data` is now called `CompletionItem.table_row`.
+    - An argparse argument's `descriptive_headers` field is now called `table_columns`.
+    - `CompletionItem.descriptive_data` is now called `CompletionItem.table_data`.
+    - Removed `DEFAULT_DESCRIPTIVE_HEADERS`. This means you must define `table_columns` when using
+      `CompletionItem.table_data` data.
     - `Cmd.default_sort_key` moved to `utils.DEFAULT_STR_SORT_KEY`.
     - Moved completion state data, which previously resided in `Cmd`, into other classes.
         - `Cmd.matches_sorted` -> `Completions.is_sorted` and `Choices.is_sorted`
-        - `Cmd.completion_hint` -> `Completions.completion_hint`
-        - `Cmd.formatted_completions` -> `Completions.completion_table`
+        - `Cmd.completion_hint` -> `Completions.hint`
+        - `Cmd.formatted_completions` -> `Completions.table` (Now a Rich Table)
         - `Cmd.allow_appended_space/allow_closing_quote` -> `Completions.allow_finalization`
     - Removed `Cmd.matches_delimited` since it's no longer used.
     - Removed `flag_based_complete` and `index_based_complete` functions since their functionality

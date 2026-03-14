@@ -21,7 +21,6 @@ from cmd2 import (
 from cmd2 import rich_utils as ru
 
 from .conftest import (
-    normalize,
     run_cmd,
     with_ansi_style,
 )
@@ -106,7 +105,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     STR_METAVAR = "HEADLESS"
     TUPLE_METAVAR = ('arg1', 'others')
-    CUSTOM_TABLE_HEADER = ("Custom Header",)
+    DESCRIPTION_TABLE_COLUMNS = ("Description",)
 
     # tuples (for sake of immutability) used in our tests (there is a mix of sorted and unsorted on purpose)
     non_negative_num_choices = (1, 2, 3, 0.5, 22)
@@ -114,17 +113,16 @@ class ArgparseCompleterTester(cmd2.Cmd):
     static_choices_list = ('static', 'choices', 'stop', 'here')
     choices_from_provider = ('choices', 'provider', 'probably', 'improved')
     completion_item_choices = (
-        CompletionItem('choice_1', table_row=['Description 1']),
-        # Make this the longest description so we can test display width.
-        CompletionItem('choice_2', table_row=[su.stylize("String with style", style=cmd2.Color.BLUE)]),
-        CompletionItem('choice_3', table_row=[Text("Text with style", style=cmd2.Color.RED)]),
+        CompletionItem('choice_1', table_data=['Description 1']),
+        CompletionItem('choice_2', table_data=[su.stylize("String with style", style=cmd2.Color.BLUE)]),
+        CompletionItem('choice_3', table_data=[Text("Text with style", style=cmd2.Color.RED)]),
     )
 
     # This tests that CompletionItems created with numerical values are sorted as numbers.
     num_completion_items = (
-        CompletionItem(5, table_row=["Five"]),
-        CompletionItem(1.5, table_row=["One.Five"]),
-        CompletionItem(2, table_row=["Five"]),
+        CompletionItem(5, table_data=["Five"]),
+        CompletionItem(1.5, table_data=["One.Five"]),
+        CompletionItem(2, table_data=["Two"]),
     )
 
     def choices_provider(self) -> Choices:
@@ -136,51 +134,88 @@ class ArgparseCompleterTester(cmd2.Cmd):
         items = []
         for i in range(10):
             main_str = f'main_str{i}'
-            items.append(CompletionItem(main_str, table_row=['blah blah']))
+            items.append(CompletionItem(main_str, table_data=['blah blah']))
         return items
 
     choices_parser = Cmd2ArgumentParser()
 
     # Flag args for choices command. Include string and non-string arg types.
-    choices_parser.add_argument("-l", "--list", help="a flag populated with a choices list", choices=static_choices_list)
     choices_parser.add_argument(
-        "-p", "--provider", help="a flag populated with a choices provider", choices_provider=choices_provider
+        "-l",
+        "--list",
+        help="a flag populated with a choices list",
+        choices=static_choices_list,
     )
     choices_parser.add_argument(
-        "--table_header",
-        help='this arg has a table header',
+        "-p",
+        "--provider",
+        help="a flag populated with a choices provider",
+        choices_provider=choices_provider,
+    )
+    choices_parser.add_argument(
+        "--no_metavar",
+        help='this arg has no metavar',
         choices_provider=completion_item_method,
-        table_header=CUSTOM_TABLE_HEADER,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
     choices_parser.add_argument(
-        "--no_header",
-        help='this arg has no table header',
+        "--str_metavar",
+        help='this arg has str for a metavar',
         choices_provider=completion_item_method,
         metavar=STR_METAVAR,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
     choices_parser.add_argument(
         '-t',
         "--tuple_metavar",
         help='this arg has tuple for a metavar',
-        choices_provider=completion_item_method,
         metavar=TUPLE_METAVAR,
         nargs=argparse.ONE_OR_MORE,
+        choices_provider=completion_item_method,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
-    choices_parser.add_argument('-n', '--num', type=int, help='a flag with an int type', choices=num_choices)
-    choices_parser.add_argument('--completion_items', help='choices are CompletionItems', choices=completion_item_choices)
     choices_parser.add_argument(
-        '--num_completion_items', help='choices are numerical CompletionItems', choices=num_completion_items
+        '-n',
+        '--num',
+        type=int,
+        help='a flag with an int type',
+        choices=num_choices,
+    )
+    choices_parser.add_argument(
+        '--completion_items',
+        help='choices are CompletionItems',
+        choices=completion_item_choices,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
+    )
+    choices_parser.add_argument(
+        '--num_completion_items',
+        help='choices are numerical CompletionItems',
+        choices=num_completion_items,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
 
     # Positional args for choices command
-    choices_parser.add_argument("list_pos", help="a positional populated with a choices list", choices=static_choices_list)
     choices_parser.add_argument(
-        "method_pos", help="a positional populated with a choices provider", choices_provider=choices_provider
+        "list_pos",
+        help="a positional populated with a choices list",
+        choices=static_choices_list,
     )
     choices_parser.add_argument(
-        'non_negative_num', type=int, help='a positional with non-negative numerical choices', choices=non_negative_num_choices
+        "method_pos",
+        help="a positional populated with a choices provider",
+        choices_provider=choices_provider,
     )
-    choices_parser.add_argument('empty_choices', help='a positional with empty choices', choices=[])
+    choices_parser.add_argument(
+        'non_negative_num',
+        type=int,
+        help='a positional with non-negative numerical choices',
+        choices=non_negative_num_choices,
+    )
+    choices_parser.add_argument(
+        'empty_choices',
+        help='a positional with empty choices',
+        choices=[],
+    )
 
     @with_argparser(choices_parser)
     def do_choices(self, args: argparse.Namespace) -> None:
@@ -271,13 +306,13 @@ class ArgparseCompleterTester(cmd2.Cmd):
         """Raises CompletionError"""
         raise CompletionError('completer broke something')
 
-    def choice_raise_error(self) -> list[str]:
+    def choice_raise_completion_error(self) -> list[str]:
         """Raises CompletionError"""
         raise CompletionError('choice broke something')
 
     comp_error_parser = Cmd2ArgumentParser()
     comp_error_parser.add_argument('completer_pos', help='positional arg', completer=completer_raise_error)
-    comp_error_parser.add_argument('--choice', help='flag arg', choices_provider=choice_raise_error)
+    comp_error_parser.add_argument('--choice', help='flag arg', choices_provider=choice_raise_completion_error)
 
     @with_argparser(comp_error_parser)
     def do_raise_completion_error(self, args: argparse.Namespace) -> None:
@@ -655,8 +690,8 @@ def test_autocomp_blank_token(ac_app) -> None:
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
-def test_completion_tables(ac_app) -> None:
-    # First test completion table created from strings
+def test_completion_tables_strings(ac_app) -> None:
+    # Test completion table created from strings
     text = ''
     line = f'choices --completion_items {text}'
     endidx = len(line)
@@ -664,22 +699,38 @@ def test_completion_tables(ac_app) -> None:
 
     completions = ac_app.complete(text, line, begidx, endidx)
     assert len(completions) == len(ac_app.completion_item_choices)
-    lines = completions.completion_table.splitlines()
+    assert completions.table is not None
 
-    # Since the completion table was created from strings, the left-most column is left-aligned.
-    # Therefore choice_1 will begin the line (with 1 space for padding).
-    assert lines[2].startswith(' choice_1')
-    assert lines[2].strip().endswith('Description 1')
+    # Verify the column for the item being completed
+    col_0_cells = list(completions.table.columns[0].cells)
+    assert len(col_0_cells) == 3
 
-    # Verify that the styled string was converted to a Rich Text object so that
-    # Rich could correctly calculate its display width. Since it was the longest
-    # description in the table, we should only see one space of padding after it.
-    assert lines[3].endswith("\x1b[34mString with style\x1b[0m ")
+    # Since the completed item column is all strings, it is left-aligned
+    assert completions.table.columns[0].justify == "left"
+    assert completions.table.columns[0].header == "COMPLETION_ITEMS"
 
-    # Verify that the styled Rich Text also rendered.
-    assert lines[4].endswith("\x1b[31mText with style  \x1b[0m ")
+    # ArgparseCompleter converts all items in this column to Rich Text objects
+    assert col_0_cells[0].plain == "choice_1"
+    assert col_0_cells[1].plain == "choice_2"
+    assert col_0_cells[2].plain == "choice_3"
 
-    # Now test completion table created from numbers
+    # Verify the column containing contextual data about the item being completed
+    col_1_cells = list(completions.table.columns[1].cells)
+    assert len(col_1_cells) == 3
+
+    # Strings with no ANSI style remain strings
+    assert col_1_cells[0] == "Description 1"
+
+    # CompletionItem converts strings with ANSI styles to Rich Text objects
+    assert col_1_cells[1].plain == "String with style"
+
+    # This item was already a Rich Text object
+    assert col_1_cells[2].plain == "Text with style"
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_completion_tables_numbers(ac_app) -> None:
+    # Test completion table created from numbers
     text = ''
     line = f'choices --num_completion_items {text}'
     endidx = len(line)
@@ -687,12 +738,26 @@ def test_completion_tables(ac_app) -> None:
 
     completions = ac_app.complete(text, line, begidx, endidx)
     assert len(completions) == len(ac_app.num_completion_items)
-    lines = completions.completion_table.splitlines()
+    assert completions.table is not None
 
-    # Since the completion table was created from numbers, the left-most column is right-aligned.
-    # Therefore 1.5 will be right-aligned.
-    assert lines[2].startswith("                  1.5")
-    assert lines[2].strip().endswith('One.Five')
+    # Verify the column for the item being completed
+    col_0_cells = list(completions.table.columns[0].cells)
+    assert len(col_0_cells) == 3
+
+    # Since the completed item column is all numbers, it is right-aligned
+    assert completions.table.columns[0].justify == "right"
+
+    # ArgparseCompleter converts all items in this column to Rich Text objects
+    assert col_0_cells[0].plain == "1.5"
+    assert col_0_cells[1].plain == "2"
+    assert col_0_cells[2].plain == "5"
+
+    # Verify the column containing contextual data about the item being completed
+    col_1_cells = list(completions.table.columns[1].cells)
+    assert len(col_1_cells) == 3
+    assert col_1_cells[0] == "One.Five"
+    assert col_1_cells[1] == "Two"
+    assert col_1_cells[2] == "Five"
 
 
 @pytest.mark.parametrize(
@@ -720,7 +785,7 @@ def test_max_completion_table_items(ac_app, num_aliases, show_table) -> None:
 
     completions = ac_app.complete(text, line, begidx, endidx)
     assert len(completions) == num_aliases
-    assert bool(completions.completion_table) == show_table
+    assert show_table == (completions.table is not None)
 
 
 @pytest.mark.parametrize(
@@ -823,27 +888,29 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error) -> None
     begidx = endidx - len(text)
 
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert is_error == all(x in completions.completion_error for x in ["Error: argument", "expected"])
+    assert is_error == all(x in completions.error for x in ["Error: argument", "expected"])
 
 
-def test_completion_table_arg_header(ac_app) -> None:
+def test_completion_table_metavar(ac_app) -> None:
     # Test when metavar is None
     text = ''
-    line = f'choices --table_header {text}'
+    line = f'choices --no_metavar {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert "TABLE_HEADER" in normalize(completions.completion_table)[0]
+    assert completions.table is not None
+    assert completions.table.columns[0].header == "NO_METAVAR"
 
     # Test when metavar is a string
     text = ''
-    line = f'choices --no_header {text}'
+    line = f'choices --str_metavar {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert ac_app.STR_METAVAR in normalize(completions.completion_table)[0]
+    assert completions.table is not None
+    assert completions.table.columns[0].header == ac_app.STR_METAVAR
 
     # Test when metavar is a tuple
     text = ''
@@ -853,7 +920,8 @@ def test_completion_table_arg_header(ac_app) -> None:
 
     # We are completing the first argument of this flag. The first element in the tuple should be the column header.
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert ac_app.TUPLE_METAVAR[0].upper() in normalize(completions.completion_table)[0]
+    assert completions.table is not None
+    assert completions.table.columns[0].header == ac_app.TUPLE_METAVAR[0].upper()
 
     text = ''
     line = f'choices --tuple_metavar token_1 {text}'
@@ -862,7 +930,8 @@ def test_completion_table_arg_header(ac_app) -> None:
 
     # We are completing the second argument of this flag. The second element in the tuple should be the column header.
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert ac_app.TUPLE_METAVAR[1].upper() in normalize(completions.completion_table)[0]
+    assert completions.table is not None
+    assert completions.table.columns[0].header == ac_app.TUPLE_METAVAR[1].upper()
 
     text = ''
     line = f'choices --tuple_metavar token_1 token_2 {text}'
@@ -872,31 +941,8 @@ def test_completion_table_arg_header(ac_app) -> None:
     # We are completing the third argument of this flag. It should still be the second tuple element
     # in the column header since the tuple only has two strings in it.
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert ac_app.TUPLE_METAVAR[1].upper() in normalize(completions.completion_table)[0]
-
-
-def test_completion_table_header(ac_app) -> None:
-    from cmd2.argparse_completer import (
-        DEFAULT_TABLE_HEADER,
-    )
-
-    # This argument provided a table header
-    text = ''
-    line = f'choices --table_header {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    completions = ac_app.complete(text, line, begidx, endidx)
-    assert ac_app.CUSTOM_TABLE_HEADER[0] in normalize(completions.completion_table)[0]
-
-    # This argument did not provide a table header, so it should be DEFAULT_TABLE_HEADER
-    text = ''
-    line = f'choices --no_header {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    completions = ac_app.complete(text, line, begidx, endidx)
-    assert DEFAULT_TABLE_HEADER[0] in normalize(completions.completion_table)[0]
+    assert completions.table is not None
+    assert completions.table.columns[0].header == ac_app.TUPLE_METAVAR[1].upper()
 
 
 @pytest.mark.parametrize(
@@ -933,9 +979,9 @@ def test_autocomp_no_results_hint(ac_app, command_and_args, text, has_hint) -> N
 
     completions = ac_app.complete(text, line, begidx, endidx)
     if has_hint:
-        assert "Hint:\n" in completions.completion_error
+        assert "Hint:\n" in completions.error
     else:
-        assert not completions.completion_error
+        assert not completions.error
 
 
 def test_autocomp_hint_no_help_text(ac_app) -> None:
@@ -946,7 +992,7 @@ def test_autocomp_hint_no_help_text(ac_app) -> None:
     begidx = endidx - len(text)
 
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert completions.completion_error.strip() == "Hint:\n  no_help_pos"
+    assert completions.error.strip() == "Hint:\n  no_help_pos"
 
 
 @pytest.mark.parametrize(
@@ -964,7 +1010,7 @@ def test_completion_error(ac_app, args, text) -> None:
     begidx = endidx - len(text)
 
     completions = ac_app.complete(text, line, begidx, endidx)
-    assert f"{text} broke something" in completions.completion_error
+    assert f"{text} broke something" in completions.error
 
 
 @pytest.mark.parametrize(
@@ -1022,7 +1068,7 @@ def test_complete_mutex_group(ac_app, command_and_args, text, output_contains, f
     else:
         assert first_match == completions[0].text
 
-    assert output_contains in completions.completion_error
+    assert output_contains in completions.error
 
 
 def test_single_prefix_char() -> None:
@@ -1128,6 +1174,94 @@ def test_display_meta(ac_app, subcommand, flag, display_meta) -> None:
 
     completions = ac_app.complete(text, line, begidx, endidx)
     assert completions[0].display_meta == display_meta
+
+
+def test_validate_table_data_no_table() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.set_table_columns(None)
+    arg_state = argparse_completer._ArgumentState(action)
+    completions = Completions(
+        [
+            CompletionItem('item1'),
+            CompletionItem('item2'),
+        ]
+    )
+
+    # This should not raise an exception
+    argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
+
+
+def test_validate_table_data_missing_columns() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.set_table_columns(None)
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = Completions(
+        [
+            CompletionItem('item1', table_data=['data1']),
+            CompletionItem('item2', table_data=['data2']),
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Argument 'foo' has CompletionItems with table_data, but no table_columns were defined",
+    ):
+        argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
+
+
+def test_validate_table_data_missing_item_data() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.set_table_columns(['Col1'])
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = Completions(
+        [
+            CompletionItem('item1', table_data=['data1']),
+            CompletionItem('item2'),  # Missing table_data
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Argument 'foo' has table_columns defined, but the CompletionItem for 'item2' is missing table_data",
+    ):
+        argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
+
+
+def test_validate_table_data_length_mismatch() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.set_table_columns(['Col1', 'Col2'])
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = Completions(
+        [
+            CompletionItem('item1', table_data=['data1a', 'data1b']),
+            CompletionItem('item2', table_data=['only_one']),
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"Argument 'foo': table_data length \(1\) does not match table_columns length \(2\) for item 'item2'.",
+    ):
+        argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
+
+
+def test_validate_table_data_valid() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.get_table_columns = lambda: ['Col1', 'Col2']
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = Completions(
+        [
+            CompletionItem('item1', table_data=['data1a', 'data1b']),
+            CompletionItem('item2', table_data=['data2a', 'data2b']),
+        ]
+    )
+
+    # This should not raise an exception
+    argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
 
 
 # Custom ArgparseCompleter-based class

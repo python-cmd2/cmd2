@@ -127,7 +127,7 @@ completion results displayed to the screen.
 
 1. display - string for displaying the completion differently in the completion menu
 2. display_meta - meta information about completion which displays in the completion menu
-3. table_row - row data for completion tables
+3. table_data - supplemental data for completion tables
 
 They can also be used as argparse choices. When a ``CompletionItem`` is created, it
 stores the original value (e.g. ID number) and makes it accessible through a property
@@ -139,8 +139,8 @@ is compared to ``CompletionItem.value`` instead of the ``CompletionItem`` instan
 These were added to help in cases where uninformative data is being completed.
 For instance, completing ID numbers isn't very helpful to a user without context.
 
-Providing ``table_row`` data in your ``CompletionItem`` signals ArgparseCompleter
-to output the completion results in a table with descriptive data instead of just a table
+Providing ``table_data`` in your ``CompletionItem`` signals ArgparseCompleter
+to output the completion results in a table with supplemental data instead of just a table
 of tokens::
 
     Instead of this:
@@ -155,22 +155,21 @@ of tokens::
 
 
 The left-most column is the actual value being completed and its header is
-that value's name. The right column header is defined using the
-``table_header`` parameter of add_argument(), which is a list of header
-names that defaults to ["Description"]. The right column values come from the
-``table_row`` argument to ``CompletionItem``. It's a ``Sequence`` with the
-same number of items as ``table_header``.
+that value's name. Any additional column headers are defined using the
+``table_columns`` parameter of add_argument(), which is a list of header
+names. The supplemental column values come from the
+``table_data`` argument to ``CompletionItem``. It's a ``Sequence`` with the
+same number of items as ``table_columns``.
 
 Example::
 
-    Add an argument and define its table_header.
+    Add an argument and define its table_columns.
 
         parser.add_argument(
-            add_argument(
             "item_id",
             type=int,
             choices_provider=get_choices,
-            table_header=["Item Name", "Checked Out", "Due Date"],
+            table_columns=["Item Name", "Checked Out", "Due Date"],
         )
 
     Implement the choices_provider to return Choices.
@@ -178,12 +177,12 @@ Example::
         def get_choices(self) -> Choices:
             \"\"\"choices_provider which returns CompletionItems\"\"\"
 
-            # Populate CompletionItem's table_row argument.
-            # Its item count should match that of table_header.
+            # Populate CompletionItem's table_data argument.
+            # Its item count should match that of table_columns.
             items = [
-                CompletionItem(1, table_row=["My item", True, "02/02/2022"]),
-                CompletionItem(2, table_row=["Another item", False, ""]),
-                CompletionItem(3, table_row=["Yet another item", False, ""]),
+                CompletionItem(1, table_data=["My item", True, "02/02/2022"]),
+                CompletionItem(2, table_data=["Another item", False, ""]),
+                CompletionItem(3, table_data=["Yet another item", False, ""]),
             ]
             return Choices(items)
 
@@ -195,7 +194,7 @@ Example::
               2   Another item       False
               3   Yet another item   False
 
-``table_header`` can be strings or ``Rich.table.Columns`` for more
+``table_columns`` can be strings or ``Rich.table.Columns`` for more
 control over things like alignment.
 
 - If a header is a string, it will render as a left-aligned column with its
@@ -207,9 +206,9 @@ This means a long string which exceeds the width of its column will be
 truncated with an ellipsis at the end. You can override this and other settings
 when you create the ``Column``.
 
-``table_row`` items can include Rich objects, including styled Text and Tables.
+``table_data`` items can include Rich objects, including styled Text and Tables.
 
-To avoid printing a excessive information to the screen at once when a user
+To avoid printing excessive information to the screen at once when a user
 presses tab, there is a maximum threshold for the number of ``CompletionItems``
 that will be shown. Its value is defined in ``cmd2.Cmd.max_completion_table_items``.
 It defaults to 50, but can be changed. If the number of completion suggestions
@@ -240,8 +239,8 @@ for cases in which you need to manually access the cmd2-specific attributes.
 - ``argparse.Action.get_choices_callable()`` - See `action_get_choices_callable` for more details.
 - ``argparse.Action.set_choices_provider()`` - See `_action_set_choices_provider` for more details.
 - ``argparse.Action.set_completer()`` - See `_action_set_completer` for more details.
-- ``argparse.Action.get_table_header()`` - See `_action_get_table_header` for more details.
-- ``argparse.Action.set_table_header()`` - See `_action_set_table_header` for more details.
+- ``argparse.Action.get_table_columns()`` - See `_action_get_table_columns` for more details.
+- ``argparse.Action.set_table_columns()`` - See `_action_set_table_columns` for more details.
 - ``argparse.Action.get_nargs_range()`` - See `_action_get_nargs_range` for more details.
 - ``argparse.Action.set_nargs_range()`` - See `_action_set_nargs_range` for more details.
 - ``argparse.Action.get_suppress_tab_hint()`` - See `_action_get_suppress_tab_hint` for more details.
@@ -309,21 +308,21 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def generate_range_error(range_min: int, range_max: float) -> str:
     """Generate an error message when the the number of arguments provided is not within the expected range."""
-    err_str = "expected "
+    err_msg = "expected "
 
     if range_max == constants.INFINITY:
         plural = '' if range_min == 1 else 's'
-        err_str += f"at least {range_min}"
+        err_msg += f"at least {range_min}"
     else:
         plural = '' if range_max == 1 else 's'
         if range_min == range_max:
-            err_str += f"{range_min}"
+            err_msg += f"{range_min}"
         else:
-            err_str += f"{range_min} to {range_max}"
+            err_msg += f"{range_min} to {range_max}"
 
-    err_str += f" argument{plural}"
+    err_msg += f" argument{plural}"
 
-    return err_str
+    return err_msg
 
 
 def set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
@@ -418,8 +417,8 @@ class ChoicesCallable:
 # ChoicesCallable object that specifies the function to be called which provides choices to the argument
 ATTR_CHOICES_CALLABLE = 'choices_callable'
 
-# A completion table header
-ATTR_TABLE_HEADER = 'table_header'
+# Completion table columns
+ATTR_TABLE_COLUMNS = 'table_columns'
 
 # A tuple specifying nargs as a range (min, max)
 ATTR_NARGS_RANGE = 'nargs_range'
@@ -516,38 +515,38 @@ setattr(argparse.Action, 'set_completer', _action_set_completer)
 
 
 ############################################################################################################
-# Patch argparse.Action with accessors for table_header attribute
+# Patch argparse.Action with accessors for table_columns attribute
 ############################################################################################################
-def _action_get_table_header(self: argparse.Action) -> Sequence[str | Column] | None:
-    """Get the table_header attribute of an argparse Action.
+def _action_get_table_columns(self: argparse.Action) -> Sequence[str | Column] | None:
+    """Get the table_columns attribute of an argparse Action.
 
-    This function is added by cmd2 as a method called ``get_table_header()`` to ``argparse.Action`` class.
+    This function is added by cmd2 as a method called ``get_table_columns()`` to ``argparse.Action`` class.
 
-    To call: ``action.get_table_header()``
+    To call: ``action.get_table_columns()``
 
     :param self: argparse Action being queried
-    :return: The value of table_header or None if attribute does not exist
+    :return: The value of table_columns or None if attribute does not exist
     """
-    return cast(Sequence[str | Column] | None, getattr(self, ATTR_TABLE_HEADER, None))
+    return cast(Sequence[str | Column] | None, getattr(self, ATTR_TABLE_COLUMNS, None))
 
 
-setattr(argparse.Action, 'get_table_header', _action_get_table_header)
+setattr(argparse.Action, 'get_table_columns', _action_get_table_columns)
 
 
-def _action_set_table_header(self: argparse.Action, table_header: Sequence[str | Column] | None) -> None:
-    """Set the table_header attribute of an argparse Action.
+def _action_set_table_columns(self: argparse.Action, table_columns: Sequence[str | Column] | None) -> None:
+    """Set the table_columns attribute of an argparse Action.
 
-    This function is added by cmd2 as a method called ``set_table_header()`` to ``argparse.Action`` class.
+    This function is added by cmd2 as a method called ``set_table_columns()`` to ``argparse.Action`` class.
 
-    To call: ``action.set_table_header(table_header)``
+    To call: ``action.set_table_columns(table_columns)``
 
     :param self: argparse Action being updated
-    :param table_header: value being assigned
+    :param table_columns: value being assigned
     """
-    setattr(self, ATTR_TABLE_HEADER, table_header)
+    setattr(self, ATTR_TABLE_COLUMNS, table_columns)
 
 
-setattr(argparse.Action, 'set_table_header', _action_set_table_header)
+setattr(argparse.Action, 'set_table_columns', _action_set_table_columns)
 
 
 ############################################################################################################
@@ -698,7 +697,7 @@ def _add_argument_wrapper(
     choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
     completer: CompleterUnbound[CmdOrSet] | None = None,
     suppress_tab_hint: bool = False,
-    table_header: Sequence[str | Column] | None = None,
+    table_columns: Sequence[str | Column] | None = None,
     **kwargs: Any,
 ) -> argparse.Action:
     """Wrap ActionsContainer.add_argument() which supports more settings used by cmd2.
@@ -718,7 +717,7 @@ def _add_argument_wrapper(
                               current argument's help text as a hint. Set this to True to suppress the hint. If this
                               argument's help text is set to argparse.SUPPRESS, then tab hints will not display
                               regardless of the value passed for suppress_tab_hint. Defaults to False.
-    :param table_header: optional header for when displaying a completion table. Defaults to None.
+    :param table_columns: optional headers for when displaying a completion table. Defaults to None.
 
     # Args from original function
     :param kwargs: keyword-arguments recognized by argparse._ActionsContainer.add_argument
@@ -809,7 +808,7 @@ def _add_argument_wrapper(
         new_arg.set_completer(completer)  # type: ignore[attr-defined]
 
     new_arg.set_suppress_tab_hint(suppress_tab_hint)  # type: ignore[attr-defined]
-    new_arg.set_table_header(table_header)  # type: ignore[attr-defined]
+    new_arg.set_table_columns(table_columns)  # type: ignore[attr-defined]
 
     for keyword, value in custom_attribs.items():
         attr_setter = getattr(new_arg, f'set_{keyword}', None)
