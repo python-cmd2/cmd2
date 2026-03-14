@@ -270,25 +270,25 @@ def test_apcustom_print_message(capsys) -> None:
 
 def test_generate_range_error() -> None:
     # max is INFINITY
-    err_str = generate_range_error(1, constants.INFINITY)
-    assert err_str == "expected at least 1 argument"
+    err_msg = generate_range_error(1, constants.INFINITY)
+    assert err_msg == "expected at least 1 argument"
 
-    err_str = generate_range_error(2, constants.INFINITY)
-    assert err_str == "expected at least 2 arguments"
+    err_msg = generate_range_error(2, constants.INFINITY)
+    assert err_msg == "expected at least 2 arguments"
 
     # min and max are equal
-    err_str = generate_range_error(1, 1)
-    assert err_str == "expected 1 argument"
+    err_msg = generate_range_error(1, 1)
+    assert err_msg == "expected 1 argument"
 
-    err_str = generate_range_error(2, 2)
-    assert err_str == "expected 2 arguments"
+    err_msg = generate_range_error(2, 2)
+    assert err_msg == "expected 2 arguments"
 
     # min and max are not equal
-    err_str = generate_range_error(0, 1)
-    assert err_str == "expected 0 to 1 argument"
+    err_msg = generate_range_error(0, 1)
+    assert err_msg == "expected 0 to 1 argument"
 
-    err_str = generate_range_error(0, 2)
-    assert err_str == "expected 0 to 2 arguments"
+    err_msg = generate_range_error(0, 2)
+    assert err_msg == "expected 0 to 2 arguments"
 
 
 def test_apcustom_metavar_tuple() -> None:
