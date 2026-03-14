@@ -42,8 +42,8 @@ prompt is displayed.
     - `Cmd.default_sort_key` moved to `utils.DEFAULT_STR_SORT_KEY`.
     - Moved completion state data, which previously resided in `Cmd`, into other classes.
         - `Cmd.matches_sorted` -> `Completions.is_sorted` and `Choices.is_sorted`
-        - `Cmd.completion_hint` -> `Completions.completion_hint`
-        - `Cmd.formatted_completions` -> `Completions.completion_table`
+        - `Cmd.completion_hint` -> `Completions.hint`
+        - `Cmd.formatted_completions` -> `Completions.table` (Now a Rich Table)
         - `Cmd.allow_appended_space/allow_closing_quote` -> `Completions.allow_finalization`
     - Removed `Cmd.matches_delimited` since it's no longer used.
     - Removed `flag_based_complete` and `index_based_complete` functions since their functionality

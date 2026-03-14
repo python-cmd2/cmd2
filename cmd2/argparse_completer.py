@@ -25,7 +25,6 @@ from typing import (
 from rich.text import Text
 
 from .constants import INFINITY
-from .rich_utils import Cmd2GeneralConsole
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
@@ -500,11 +499,11 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completions:
-                if not completions.completion_hint:
+                if not completions.hint:
                     # Add a hint even though there are results in case Cmd.always_show_hint is True.
                     completions = dataclasses.replace(
                         completions,
-                        completion_hint=_build_hint(self._parser, flag_arg_state.action),
+                        hint=_build_hint(self._parser, flag_arg_state.action),
                     )
 
                 return completions
@@ -528,11 +527,11 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completions:
-                if not completions.completion_hint:
+                if not completions.hint:
                     # Add a hint even though there are results in case Cmd.always_show_hint is True.
                     completions = dataclasses.replace(
                         completions,
-                        completion_hint=_build_hint(self._parser, pos_arg_state.action),
+                        hint=_build_hint(self._parser, pos_arg_state.action),
                     )
                 return completions
 
@@ -592,8 +591,8 @@ class ArgparseCompleter:
 
         return Completions(items)
 
-    def _format_completions(self, arg_state: _ArgumentState, completions: Completions) -> Completions:
-        """Format CompletionItems into completion table."""
+    def _build_completion_table(self, arg_state: _ArgumentState, completions: Completions) -> Completions:
+        """Build a rich.Table for completion results if applicable."""
         # Skip table generation for single results or if the list exceeds the
         # user-defined threshold for table display.
         if len(completions) < 2 or len(completions) > self._cmd2_app.max_completion_table_items:
@@ -627,19 +626,14 @@ class ArgparseCompleter:
             column if isinstance(column, Column) else Column(column, overflow="fold") for column in table_header
         )
 
-        # Add the data rows
-        hint_table = Table(*rich_columns, box=SIMPLE_HEAD, show_edge=False, border_style=Cmd2Style.TABLE_BORDER)
+        # Build the table
+        table = Table(*rich_columns, box=SIMPLE_HEAD, show_edge=False, border_style=Cmd2Style.TABLE_BORDER)
         for item in completions:
-            hint_table.add_row(Text.from_ansi(item.display), *item.table_row)
-
-        # Generate the table string
-        console = Cmd2GeneralConsole(file=self._cmd2_app.stdout)
-        with console.capture() as capture:
-            console.print(hint_table, end="", soft_wrap=False)
+            table.add_row(Text.from_ansi(item.display), *item.table_row)
 
         return dataclasses.replace(
             completions,
-            completion_table=capture.get(),
+            table=table,
         )
 
     def complete_subcommand_help(self, text: str, line: str, begidx: int, endidx: int, tokens: Sequence[str]) -> Completions:
@@ -780,7 +774,7 @@ class ArgparseCompleter:
             filtered = [choice for choice in all_choices if choice.text not in used_values]
             completions = self._cmd2_app.basic_complete(text, line, begidx, endidx, filtered)
 
-        return self._format_completions(arg_state, completions)
+        return self._build_completion_table(arg_state, completions)
 
 
 # The default ArgparseCompleter class for a cmd2 app

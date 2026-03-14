@@ -114,7 +114,7 @@ class ArgparseCompletion(Cmd):
         choices_provider=choices_completion_tables,
         metavar="ITEM_ID",
         table_header=["Description"],
-        help="demonstrate use of CompletionItems",
+        help="demonstrate use of completion table",
     )
 
     # Demonstrate use of arg_tokens dictionary

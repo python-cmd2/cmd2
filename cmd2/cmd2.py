@@ -2467,26 +2467,26 @@ class Cmd:
             return completions  # noqa: TRY300
 
         except CompletionError as ex:
-            err_str = str(ex)
-            completion_error = ""
+            error_msg = str(ex)
+            formatted_error = ""
 
             # Don't display anything if the error is blank (e.g. _NoResultsError for an argument which supresses hints)
-            if err_str:
+            if error_msg:
                 # _NoResultsError completion hints already include a trailing "\n".
                 end = "" if isinstance(ex, argparse_completer._NoResultsError) else "\n"
 
                 console = Cmd2GeneralConsole(file=self.stdout)
                 with console.capture() as capture:
                     console.print(
-                        err_str,
+                        error_msg,
                         style=Cmd2Style.ERROR if ex.apply_style else "",
                         end=end,
                     )
-                completion_error = capture.get()
-            return Completions(completion_error=completion_error)
+                formatted_error = capture.get()
+            return Completions(error=formatted_error)
         except Exception as ex:  # noqa: BLE001
             formatted_exception = self.format_exception(ex)
-            return Completions(completion_error=formatted_exception)
+            return Completions(error=formatted_exception)
 
     def in_script(self) -> bool:
         """Return whether a text script is running."""

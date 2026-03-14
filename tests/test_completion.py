@@ -228,7 +228,7 @@ def test_command_completion_nomatch(cmd2_app) -> None:
     assert not completions
 
     # ArgparseCompleter raises a _NoResultsError in this case
-    assert "Hint" in completions.completion_error
+    assert "Hint" in completions.error
 
 
 def test_complete_bogus_command(cmd2_app) -> None:
@@ -251,7 +251,7 @@ def test_complete_exception(cmd2_app) -> None:
     completions = cmd2_app.complete(text, line, begidx, endidx)
 
     assert not completions
-    assert "IndexError" in completions.completion_error
+    assert "IndexError" in completions.error
 
 
 def test_complete_macro(base_app, request) -> None:
@@ -1050,7 +1050,7 @@ def test_complete_set_value(cmd2_app) -> None:
     expected = ["SUCCESS"]
     completions = cmd2_app.complete(text, line, begidx, endidx)
     assert completions.to_strings() == Completions.from_values(expected).to_strings()
-    assert completions.completion_hint.strip() == "Hint:\n  value  a test settable param"
+    assert completions.hint.strip() == "Hint:\n  value  a test settable param"
 
 
 def test_complete_set_value_invalid_settable(cmd2_app) -> None:
@@ -1061,7 +1061,7 @@ def test_complete_set_value_invalid_settable(cmd2_app) -> None:
 
     completions = cmd2_app.complete(text, line, begidx, endidx)
     assert not completions
-    assert "fake is not a settable parameter" in completions.completion_error
+    assert "fake is not a settable parameter" in completions.error
 
 
 @pytest.fixture
