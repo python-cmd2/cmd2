@@ -16,7 +16,7 @@ install: ## Install the virtual environment with dependencies
 check: ## Run code quality tools.
 	@echo "🚀 Checking lock file consistency with 'pyproject.toml'"
 	@uv lock --locked
-	@echo "🚀 Auto-formatting, Linting, and Type Checking code and documentation: Running prek"
+	@echo "🚀 Auto-formatting/Linting code and documentation: Running prek"
 	@uv run prek run -a
 	@echo "🚀 Static type checking: Running mypy"
 	@uv run mypy
