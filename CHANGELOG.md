@@ -39,6 +39,8 @@ prompt is displayed.
     - `choices_provider` functions must now return a `cmd2.Choices` object instead of `list[str]`.
     - An argparse argument's `descriptive_headers` field is now called `table_header`.
     - `CompletionItem.descriptive_data` is now called `CompletionItem.table_row`.
+    - Removed `DEFAULT_DESCRIPTIVE_HEADERS`. This means you must define `table_header` when using
+      `CompletionItem.table_row` data.
     - `Cmd.default_sort_key` moved to `utils.DEFAULT_STR_SORT_KEY`.
     - Moved completion state data, which previously resided in `Cmd`, into other classes.
         - `Cmd.matches_sorted` -> `Completions.is_sorted` and `Choices.is_sorted`

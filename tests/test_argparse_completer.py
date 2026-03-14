@@ -105,7 +105,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     STR_METAVAR = "HEADLESS"
     TUPLE_METAVAR = ('arg1', 'others')
-    CUSTOM_TABLE_HEADER = ("Custom Header",)
+    DESCRIPTION_TABLE_HEADER = ("Description",)
 
     # tuples (for sake of immutability) used in our tests (there is a mix of sorted and unsorted on purpose)
     non_negative_num_choices = (1, 2, 3, 0.5, 22)
@@ -140,45 +140,82 @@ class ArgparseCompleterTester(cmd2.Cmd):
     choices_parser = Cmd2ArgumentParser()
 
     # Flag args for choices command. Include string and non-string arg types.
-    choices_parser.add_argument("-l", "--list", help="a flag populated with a choices list", choices=static_choices_list)
     choices_parser.add_argument(
-        "-p", "--provider", help="a flag populated with a choices provider", choices_provider=choices_provider
+        "-l",
+        "--list",
+        help="a flag populated with a choices list",
+        choices=static_choices_list,
     )
     choices_parser.add_argument(
-        "--table_header",
-        help='this arg has a table header',
+        "-p",
+        "--provider",
+        help="a flag populated with a choices provider",
+        choices_provider=choices_provider,
+    )
+    choices_parser.add_argument(
+        "--no_metavar",
+        help='this arg has no metavar',
         choices_provider=completion_item_method,
-        table_header=CUSTOM_TABLE_HEADER,
+        table_header=DESCRIPTION_TABLE_HEADER,
     )
     choices_parser.add_argument(
-        "--no_header",
-        help='this arg has no table header',
+        "--str_metavar",
+        help='this arg has str for a metavar',
         choices_provider=completion_item_method,
         metavar=STR_METAVAR,
+        table_header=DESCRIPTION_TABLE_HEADER,
     )
     choices_parser.add_argument(
         '-t',
         "--tuple_metavar",
         help='this arg has tuple for a metavar',
-        choices_provider=completion_item_method,
         metavar=TUPLE_METAVAR,
         nargs=argparse.ONE_OR_MORE,
+        choices_provider=completion_item_method,
+        table_header=DESCRIPTION_TABLE_HEADER,
     )
-    choices_parser.add_argument('-n', '--num', type=int, help='a flag with an int type', choices=num_choices)
-    choices_parser.add_argument('--completion_items', help='choices are CompletionItems', choices=completion_item_choices)
     choices_parser.add_argument(
-        '--num_completion_items', help='choices are numerical CompletionItems', choices=num_completion_items
+        '-n',
+        '--num',
+        type=int,
+        help='a flag with an int type',
+        choices=num_choices,
+    )
+    choices_parser.add_argument(
+        '--completion_items',
+        help='choices are CompletionItems',
+        choices=completion_item_choices,
+        table_header=DESCRIPTION_TABLE_HEADER,
+    )
+    choices_parser.add_argument(
+        '--num_completion_items',
+        help='choices are numerical CompletionItems',
+        choices=num_completion_items,
+        table_header=DESCRIPTION_TABLE_HEADER,
     )
 
     # Positional args for choices command
-    choices_parser.add_argument("list_pos", help="a positional populated with a choices list", choices=static_choices_list)
     choices_parser.add_argument(
-        "method_pos", help="a positional populated with a choices provider", choices_provider=choices_provider
+        "list_pos",
+        help="a positional populated with a choices list",
+        choices=static_choices_list,
     )
     choices_parser.add_argument(
-        'non_negative_num', type=int, help='a positional with non-negative numerical choices', choices=non_negative_num_choices
+        "method_pos",
+        help="a positional populated with a choices provider",
+        choices_provider=choices_provider,
     )
-    choices_parser.add_argument('empty_choices', help='a positional with empty choices', choices=[])
+    choices_parser.add_argument(
+        'non_negative_num',
+        type=int,
+        help='a positional with non-negative numerical choices',
+        choices=non_negative_num_choices,
+    )
+    choices_parser.add_argument(
+        'empty_choices',
+        help='a positional with empty choices',
+        choices=[],
+    )
 
     @with_argparser(choices_parser)
     def do_choices(self, args: argparse.Namespace) -> None:
@@ -854,20 +891,20 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error) -> None
     assert is_error == all(x in completions.error for x in ["Error: argument", "expected"])
 
 
-def test_completion_table_arg_header(ac_app) -> None:
+def test_completion_table_metavar(ac_app) -> None:
     # Test when metavar is None
     text = ''
-    line = f'choices --table_header {text}'
+    line = f'choices --no_metavar {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     completions = ac_app.complete(text, line, begidx, endidx)
     assert completions.table is not None
-    assert completions.table.columns[0].header == "TABLE_HEADER"
+    assert completions.table.columns[0].header == "NO_METAVAR"
 
     # Test when metavar is a string
     text = ''
-    line = f'choices --no_header {text}'
+    line = f'choices --str_metavar {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -906,32 +943,6 @@ def test_completion_table_arg_header(ac_app) -> None:
     completions = ac_app.complete(text, line, begidx, endidx)
     assert completions.table is not None
     assert completions.table.columns[0].header == ac_app.TUPLE_METAVAR[1].upper()
-
-
-def test_completion_table_header(ac_app) -> None:
-    from cmd2.argparse_completer import (
-        DEFAULT_TABLE_HEADER,
-    )
-
-    # This argument provided a table header
-    text = ''
-    line = f'choices --table_header {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    completions = ac_app.complete(text, line, begidx, endidx)
-    assert completions.table is not None
-    assert ac_app.CUSTOM_TABLE_HEADER[0] == completions.table.columns[1].header
-
-    # This argument did not provide a table header, so it should be DEFAULT_TABLE_HEADER
-    text = ''
-    line = f'choices --no_header {text}'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    completions = ac_app.complete(text, line, begidx, endidx)
-    assert completions.table is not None
-    assert DEFAULT_TABLE_HEADER[0] == completions.table.columns[1].header
 
 
 @pytest.mark.parametrize(
@@ -1163,6 +1174,94 @@ def test_display_meta(ac_app, subcommand, flag, display_meta) -> None:
 
     completions = ac_app.complete(text, line, begidx, endidx)
     assert completions[0].display_meta == display_meta
+
+
+def test_validate_table_data_no_table() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.set_table_header(None)
+    arg_state = argparse_completer._ArgumentState(action)
+    completions = Completions(
+        [
+            CompletionItem('item1'),
+            CompletionItem('item2'),
+        ]
+    )
+
+    # This should not raise an exception
+    argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
+
+
+def test_validate_table_data_missing_header() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.set_table_header(None)
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = Completions(
+        [
+            CompletionItem('item1', table_row=['data1']),
+            CompletionItem('item2', table_row=['data2']),
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Argument 'foo' has CompletionItems with table_row, but no table_header was defined",
+    ):
+        argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
+
+
+def test_validate_table_data_missing_row_data() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.set_table_header(['Col1'])
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = Completions(
+        [
+            CompletionItem('item1', table_row=['data1']),
+            CompletionItem('item2'),  # Missing table_row
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Argument 'foo' has table_header defined, but the CompletionItem for 'item2' is missing table_row",
+    ):
+        argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
+
+
+def test_validate_table_row_data_length_mismatch() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.set_table_header(['Col1', 'Col2'])
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = Completions(
+        [
+            CompletionItem('item1', table_row=['data1a', 'data1b']),
+            CompletionItem('item2', table_row=['only_one']),
+        ]
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"Argument 'foo': table_row length \(1\) does not match table_header length \(2\) for item 'item2'.",
+    ):
+        argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
+
+
+def test_validate_table_data_valid() -> None:
+    action = argparse.Action(option_strings=['-f'], dest='foo')
+    action.get_table_header = lambda: ['Col1', 'Col2']
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = Completions(
+        [
+            CompletionItem('item1', table_row=['data1a', 'data1b']),
+            CompletionItem('item2', table_row=['data2a', 'data2b']),
+        ]
+    )
+
+    # This should not raise an exception
+    argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
 
 
 # Custom ArgparseCompleter-based class
