@@ -2470,7 +2470,7 @@ class Cmd:
             error_msg = str(ex)
             formatted_error = ""
 
-            # Don't display anything if the error is blank (e.g. _NoResultsError for an argument which supresses hints)
+            # Don't display anything if the error is blank (e.g. _NoResultsError for an argument which suppresses hints)
             if error_msg:
                 # _NoResultsError completion hints already include a trailing "\n".
                 end = "" if isinstance(ex, argparse_completer._NoResultsError) else "\n"
