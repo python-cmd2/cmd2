@@ -644,12 +644,12 @@ The one plugin we consider essential for PyCharm is
 [RyeCharm](https://plugins.jetbrains.com/plugin/25230-ryecharm). `RyeCharm` is an all-in-one PyCharm
 plugin for [Astral](https://astral.sh/)-backed Python tools: [uv](https://github.com/astral-sh/uv),
 [Ruff](https://github.com/astral-sh/ruff), and [ty](https://github.com/astral-sh/ty). NOTE: `ty`
-support is provisional as that new type checker is in early alpha developement.
+support is provisional as that new type checker is in early alpha development.
 
 #### VSCode Settings
 
 While **VSCode** is a phenomenal IDE for developing in Python, the out-of-the-box experience leaves
-a lot to be desired. You will need to install a number of extenstions and tweak the default
+a lot to be desired. You will need to install a number of extensions and tweak the default
 configuration for many of them in order to get an optimal developer experience.
 
 Recommended VSCode extensions:

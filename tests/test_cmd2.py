@@ -2900,7 +2900,7 @@ def test_macro_usage_with_missing_args(base_app) -> None:
     assert "expects at least 2 arguments" in err[0]
 
 
-def test_macro_usage_with_exta_args(base_app) -> None:
+def test_macro_usage_with_extra_args(base_app) -> None:
     # Create the macro
     out, _err = run_cmd(base_app, 'macro create fake help {1}')
     assert out == normalize("Macro 'fake' created")

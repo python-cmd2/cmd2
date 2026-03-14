@@ -292,7 +292,7 @@ class _CommandParsers:
 
 @dataclass(kw_only=True)
 class AsyncAlert:
-    """Contents of an asynchonous alert which display while user is at prompt.
+    """Contents of an asynchronous alert which display while user is at prompt.
 
     :param msg: an optional message to be printed above the prompt.
     :param prompt: an optional string to dynamically replace the current prompt.
@@ -608,7 +608,7 @@ class Cmd:
         # Command parsers for this Cmd instance.
         self._command_parsers: _CommandParsers = _CommandParsers(self)
 
-        # Members related to printing asychronous alerts
+        # Members related to printing asynchronous alerts
         self._alert_queue: deque[AsyncAlert] = deque()
         self._alert_condition = threading.Condition()
         self._alert_allowed = False
@@ -3508,7 +3508,7 @@ class Cmd:
                 self._alert_allowed = False
 
     def _cmdloop(self) -> None:
-        """Repeatedly issue a prompt, accept input, parse it, and dispatch to apporpriate commands.
+        """Repeatedly issue a prompt, accept input, parse it, and dispatch to appropriate commands.
 
         Parse an initial prefix off the received input and dispatch to action methods, passing them
         the remainder of the line as argument.

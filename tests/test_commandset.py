@@ -159,7 +159,7 @@ def test_command_synonyms() -> None:
 
         # Create a synonym to a command outside of this CommandSet with subcommands.
         # This will best test the synonym check in cmd2.Cmd._check_uninstallable() when
-        # we unresgister this CommandSet.
+        # we unregister this CommandSet.
         do_alias_synonym = cmd2.Cmd.do_alias
 
     cs = SynonymCommandSet("foo")

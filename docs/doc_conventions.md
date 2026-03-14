@@ -49,7 +49,7 @@ or [The Markdown Guide](https://www.markdownguide.org/) for a more complete refe
 
 Code blocks can be created in two ways:
 
-- Indent the block - this will show as a monospace code block, but won't include highighting
+- Indent the block - this will show as a monospace code block, but won't include highlighting
 - use the triple backticks followed by the code language, e.g. `python` and close with triple
   backticks
 

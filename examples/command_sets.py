@@ -6,7 +6,7 @@ CommandSets to add subcommands, as well as how to categorize command in CommandS
 most commands trivial because the intent is to focus on the CommandSet feature set.
 
 The `AutoLoadCommandSet` is a basic command set which is loaded automatically at application startup and stays loaded until
-application exit. Ths is the simplest case of simply modularizing command definitions to different classes and/or files.
+application exit. This is the simplest case of simply modularizing command definitions to different classes and/or files.
 
 The `LoadableFruits` and `LoadableVegetables` CommandSets are dynamically loadable and un-loadable at runtime using the `load`
 and `unload` commands. This demonstrates the ability to load and unload CommandSets based on application state. Each of these
@@ -102,7 +102,7 @@ class CommandSetApp(cmd2.Cmd):
 
         self.register_command_set(AutoLoadCommandSet())
 
-        # Store the dyanmic CommandSet classes for ease of loading and unloading
+        # Store the dynamic CommandSet classes for ease of loading and unloading
         self._fruits = LoadableFruits()
         self._vegetables = LoadableVegetables()
 
@@ -147,7 +147,7 @@ class CommandSetApp(cmd2.Cmd):
     @with_argparser(cut_parser)
     @with_category(COMMANDSET_SUBCOMMAND)
     def do_cut(self, ns: argparse.Namespace) -> None:
-        """Intended to be used with dyanmically loaded subcommands specifically."""
+        """Intended to be used with dynamically loaded subcommands specifically."""
         handler = ns.cmd2_handler.get()
         if handler is not None:
             handler(ns)

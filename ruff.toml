@@ -154,7 +154,7 @@ mccabe.max-complexity = 49
 # Ignore starting a process with a partial executable path (i.e. git)
 "scripts/validate_tag.py" = ["S607"]
 
-# Ingore various rulesets in test directories
+# Ignore various rulesets in test directories
 "{tests}/*.py" = [
     "ANN",  # Ignore all type annotation rules in test folders
     "ARG",  # Ignore all unused argument warnings in test folders

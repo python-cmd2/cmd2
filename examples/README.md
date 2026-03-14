@@ -42,7 +42,7 @@ each:
     - Demonstrates usage of `@with_default_category` decorator to group and categorize commands and
       `CommandSet` use
 - [dynamic_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/dynamic_commands.py)
-    - Shows how `do_*` commands can be dynamically created programatically at runtime
+    - Shows how `do_*` commands can be dynamically created programmatically at runtime
 - [environment.py](https://github.com/python-cmd2/cmd2/blob/main/examples/environment.py)
     - Shows how to create custom `cmd2.Settable` parameters which serve as internal environment
       variables
