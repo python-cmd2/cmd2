@@ -18,6 +18,8 @@ from typing import (
     overload,
 )
 
+from rich.table import Table
+
 from . import string_utils as su
 
 if sys.version_info >= (3, 11):
@@ -214,14 +216,14 @@ class Choices(CompletionResultsBase):
 class Completions(CompletionResultsBase):
     """The results of a completion operation."""
 
-    # An optional hint which prints above completion suggestions
-    completion_hint: str = ""
+    # Optional hint which prints above completion suggestions
+    hint: str = ""
 
     # Optional message to display if an error occurs during completion
-    completion_error: str = ""
+    error: str = ""
 
-    # An optional table string populated by the argparse completer
-    completion_table: str = ""
+    # Optional Rich table which provides more context for the data being completed
+    table: Table | None = None
 
     # If True, the completion engine is allowed to finalize a completion
     # when a single match is found by appending a trailing space and

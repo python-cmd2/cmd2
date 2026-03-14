@@ -86,17 +86,20 @@ class Cmd2Completer(Completer):
             text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
         )
 
-        if completions.completion_error:
-            print_formatted_text(pt_filter_style(completions.completion_error))
+        if completions.error:
+            print_formatted_text(pt_filter_style(completions.error))
             return
 
         # Print completion table if present
-        if completions.completion_table:
-            print_formatted_text(pt_filter_style("\n" + completions.completion_table))
+        if completions.table is not None:
+            console = ru.Cmd2GeneralConsole(file=self.cmd_app.stdout)
+            with console.capture() as capture:
+                console.print(completions.table, end="", soft_wrap=False)
+            print_formatted_text(pt_filter_style("\n" + capture.get()))
 
         # Print hint if present and settings say we should
-        if completions.completion_hint and (self.cmd_app.always_show_hint or not completions):
-            print_formatted_text(pt_filter_style(completions.completion_hint))
+        if completions.hint and (self.cmd_app.always_show_hint or not completions):
+            print_formatted_text(pt_filter_style(completions.hint))
 
         if not completions:
             return

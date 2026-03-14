@@ -1,5 +1,6 @@
 """Unit tests for cmd2/pt_utils.py"""
 
+import io
 import re
 from typing import Any, cast
 from unittest.mock import Mock
@@ -10,6 +11,7 @@ from prompt_toolkit.formatted_text import (
     ANSI,
     to_formatted_text,
 )
+from rich.table import Table
 
 import cmd2
 from cmd2 import (
@@ -31,6 +33,7 @@ class MockCmd:
         # Return empty completions by default
         self.complete = Mock(return_value=cmd2.Completions())
 
+        self.stdout = io.StringIO()
         self.always_show_hint = False
         self.statement_parser = Mock()
         self.statement_parser.terminators = [';']
@@ -286,7 +289,10 @@ class TestCmd2Completer:
             cmd2.CompletionItem(foo_text, display=foo_display, display_meta=foo_meta),
             cmd2.CompletionItem(bar_text, display=bar_display, display_meta=bar_meta),
         ]
-        cmd2_completions = cmd2.Completions(completion_items, completion_table="Table Data")
+
+        table = Table("Table Header")
+        table.add_row("Table Data")
+        cmd2_completions = cmd2.Completions(completion_items, table=table)
         mock_cmd_app.complete.return_value = cmd2_completions
 
         # Call get_completions
@@ -305,7 +311,8 @@ class TestCmd2Completer:
         # Verify that only the completion table printed
         assert mock_print.call_count == 1
         args, _ = mock_print.call_args
-        assert cmd2_completions.completion_table in str(args[0])
+        assert "Table Header" in str(args[0])
+        assert "Table Data" in str(args[0])
 
     def test_get_completions_no_matches(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
         """Test get_completions with no matches."""
@@ -317,7 +324,7 @@ class TestCmd2Completer:
         document = Document("", cursor_position=0)
 
         # Set up matches
-        cmd2_completions = cmd2.Completions(completion_hint="Completion Hint")
+        cmd2_completions = cmd2.Completions(hint="Completion Hint")
         mock_cmd_app.complete.return_value = cmd2_completions
 
         completions = list(completer.get_completions(document, None))
@@ -326,7 +333,7 @@ class TestCmd2Completer:
         # Verify that only the completion hint printed
         assert mock_print.call_count == 1
         args, _ = mock_print.call_args
-        assert cmd2_completions.completion_hint in str(args[0])
+        assert cmd2_completions.hint in str(args[0])
 
     def test_get_completions_always_show_hints(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
         """Test that get_completions respects 'always_show_hint' and prints a hint even with no matches."""
@@ -340,7 +347,7 @@ class TestCmd2Completer:
         mock_cmd_app.always_show_hint = True
 
         # Set up matches
-        cmd2_completions = cmd2.Completions(completion_hint="Completion Hint")
+        cmd2_completions = cmd2.Completions(hint="Completion Hint")
         mock_cmd_app.complete.return_value = cmd2_completions
 
         completions = list(completer.get_completions(document, None))
@@ -349,10 +356,10 @@ class TestCmd2Completer:
         # Verify that only the completion hint printed
         assert mock_print.call_count == 1
         args, _ = mock_print.call_args
-        assert cmd2_completions.completion_hint in str(args[0])
+        assert cmd2_completions.hint in str(args[0])
 
     def test_get_completions_with_error(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
-        """Test get_completions with a completion_error."""
+        """Test get_completions with a completion error."""
         mock_print = Mock()
         monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
 
@@ -361,7 +368,7 @@ class TestCmd2Completer:
         document = Document("", cursor_position=0)
 
         # Set up matches
-        cmd2_completions = cmd2.Completions(completion_error="Completion Error")
+        cmd2_completions = cmd2.Completions(error="Completion Error")
         mock_cmd_app.complete.return_value = cmd2_completions
 
         completions = list(completer.get_completions(document, None))
@@ -370,7 +377,7 @@ class TestCmd2Completer:
         # Verify that only the completion error printed
         assert mock_print.call_count == 1
         args, _ = mock_print.call_args
-        assert cmd2_completions.completion_error in str(args[0])
+        assert cmd2_completions.error in str(args[0])
 
     @pytest.mark.parametrize(
         # search_text_offset is the starting index of the user-provided search text within a full match.
