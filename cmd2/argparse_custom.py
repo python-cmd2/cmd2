@@ -309,21 +309,21 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def generate_range_error(range_min: int, range_max: float) -> str:
     """Generate an error message when the the number of arguments provided is not within the expected range."""
-    err_str = "expected "
+    err_msg = "expected "
 
     if range_max == constants.INFINITY:
         plural = '' if range_min == 1 else 's'
-        err_str += f"at least {range_min}"
+        err_msg += f"at least {range_min}"
     else:
         plural = '' if range_max == 1 else 's'
         if range_min == range_max:
-            err_str += f"{range_min}"
+            err_msg += f"{range_min}"
         else:
-            err_str += f"{range_min} to {range_max}"
+            err_msg += f"{range_min} to {range_max}"
 
-    err_str += f" argument{plural}"
+    err_msg += f" argument{plural}"
 
-    return err_str
+    return err_msg
 
 
 def set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
