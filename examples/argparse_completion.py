@@ -67,13 +67,13 @@ class ArgparseCompletion(Cmd):
             5: table_item,
         }
 
-        completion_items = [CompletionItem(item_id, table_row=[description]) for item_id, description in item_dict.items()]
+        completion_items = [CompletionItem(item_id, table_data=[description]) for item_id, description in item_dict.items()]
         return Choices(items=completion_items)
 
     def choices_arg_tokens(self, arg_tokens: dict[str, list[str]]) -> Choices:
         """If a choices or completer function/method takes a value called arg_tokens, then it will be
         passed a dictionary that maps the command line tokens up through the one being completed
-        to their argparse argument name.  All values of the arg_tokens dictionary are lists, even if
+        to their argparse destination name.  All values of the arg_tokens dictionary are lists, even if
         a particular argument expects only 1 token.
         """
         # Check if choices_provider flag has appeared
@@ -113,7 +113,7 @@ class ArgparseCompletion(Cmd):
         '--completion_table',
         choices_provider=choices_completion_tables,
         metavar="ITEM_ID",
-        table_header=["Description"],
+        table_columns=["Description"],
         help="demonstrate use of completion table",
     )
 

@@ -105,7 +105,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
     ############################################################################################################
     STR_METAVAR = "HEADLESS"
     TUPLE_METAVAR = ('arg1', 'others')
-    DESCRIPTION_TABLE_HEADER = ("Description",)
+    DESCRIPTION_TABLE_COLUMNS = ("Description",)
 
     # tuples (for sake of immutability) used in our tests (there is a mix of sorted and unsorted on purpose)
     non_negative_num_choices = (1, 2, 3, 0.5, 22)
@@ -113,16 +113,16 @@ class ArgparseCompleterTester(cmd2.Cmd):
     static_choices_list = ('static', 'choices', 'stop', 'here')
     choices_from_provider = ('choices', 'provider', 'probably', 'improved')
     completion_item_choices = (
-        CompletionItem('choice_1', table_row=['Description 1']),
-        CompletionItem('choice_2', table_row=[su.stylize("String with style", style=cmd2.Color.BLUE)]),
-        CompletionItem('choice_3', table_row=[Text("Text with style", style=cmd2.Color.RED)]),
+        CompletionItem('choice_1', table_data=['Description 1']),
+        CompletionItem('choice_2', table_data=[su.stylize("String with style", style=cmd2.Color.BLUE)]),
+        CompletionItem('choice_3', table_data=[Text("Text with style", style=cmd2.Color.RED)]),
     )
 
     # This tests that CompletionItems created with numerical values are sorted as numbers.
     num_completion_items = (
-        CompletionItem(5, table_row=["Five"]),
-        CompletionItem(1.5, table_row=["One.Five"]),
-        CompletionItem(2, table_row=["Two"]),
+        CompletionItem(5, table_data=["Five"]),
+        CompletionItem(1.5, table_data=["One.Five"]),
+        CompletionItem(2, table_data=["Two"]),
     )
 
     def choices_provider(self) -> Choices:
@@ -134,7 +134,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         items = []
         for i in range(10):
             main_str = f'main_str{i}'
-            items.append(CompletionItem(main_str, table_row=['blah blah']))
+            items.append(CompletionItem(main_str, table_data=['blah blah']))
         return items
 
     choices_parser = Cmd2ArgumentParser()
@@ -156,14 +156,14 @@ class ArgparseCompleterTester(cmd2.Cmd):
         "--no_metavar",
         help='this arg has no metavar',
         choices_provider=completion_item_method,
-        table_header=DESCRIPTION_TABLE_HEADER,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
     choices_parser.add_argument(
         "--str_metavar",
         help='this arg has str for a metavar',
         choices_provider=completion_item_method,
         metavar=STR_METAVAR,
-        table_header=DESCRIPTION_TABLE_HEADER,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
     choices_parser.add_argument(
         '-t',
@@ -172,7 +172,7 @@ class ArgparseCompleterTester(cmd2.Cmd):
         metavar=TUPLE_METAVAR,
         nargs=argparse.ONE_OR_MORE,
         choices_provider=completion_item_method,
-        table_header=DESCRIPTION_TABLE_HEADER,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
     choices_parser.add_argument(
         '-n',
@@ -185,13 +185,13 @@ class ArgparseCompleterTester(cmd2.Cmd):
         '--completion_items',
         help='choices are CompletionItems',
         choices=completion_item_choices,
-        table_header=DESCRIPTION_TABLE_HEADER,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
     choices_parser.add_argument(
         '--num_completion_items',
         help='choices are numerical CompletionItems',
         choices=num_completion_items,
-        table_header=DESCRIPTION_TABLE_HEADER,
+        table_columns=DESCRIPTION_TABLE_COLUMNS,
     )
 
     # Positional args for choices command
@@ -1178,7 +1178,7 @@ def test_display_meta(ac_app, subcommand, flag, display_meta) -> None:
 
 def test_validate_table_data_no_table() -> None:
     action = argparse.Action(option_strings=['-f'], dest='foo')
-    action.set_table_header(None)
+    action.set_table_columns(None)
     arg_state = argparse_completer._ArgumentState(action)
     completions = Completions(
         [
@@ -1191,72 +1191,72 @@ def test_validate_table_data_no_table() -> None:
     argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
 
 
-def test_validate_table_data_missing_header() -> None:
+def test_validate_table_data_missing_columns() -> None:
     action = argparse.Action(option_strings=['-f'], dest='foo')
-    action.set_table_header(None)
+    action.set_table_columns(None)
     arg_state = argparse_completer._ArgumentState(action)
 
     completions = Completions(
         [
-            CompletionItem('item1', table_row=['data1']),
-            CompletionItem('item2', table_row=['data2']),
+            CompletionItem('item1', table_data=['data1']),
+            CompletionItem('item2', table_data=['data2']),
         ]
     )
 
     with pytest.raises(
         ValueError,
-        match="Argument 'foo' has CompletionItems with table_row, but no table_header was defined",
+        match="Argument 'foo' has CompletionItems with table_data, but no table_columns were defined",
     ):
         argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
 
 
-def test_validate_table_data_missing_row_data() -> None:
+def test_validate_table_data_missing_item_data() -> None:
     action = argparse.Action(option_strings=['-f'], dest='foo')
-    action.set_table_header(['Col1'])
+    action.set_table_columns(['Col1'])
     arg_state = argparse_completer._ArgumentState(action)
 
     completions = Completions(
         [
-            CompletionItem('item1', table_row=['data1']),
-            CompletionItem('item2'),  # Missing table_row
+            CompletionItem('item1', table_data=['data1']),
+            CompletionItem('item2'),  # Missing table_data
         ]
     )
 
     with pytest.raises(
         ValueError,
-        match="Argument 'foo' has table_header defined, but the CompletionItem for 'item2' is missing table_row",
+        match="Argument 'foo' has table_columns defined, but the CompletionItem for 'item2' is missing table_data",
     ):
         argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
 
 
-def test_validate_table_row_data_length_mismatch() -> None:
+def test_validate_table_data_length_mismatch() -> None:
     action = argparse.Action(option_strings=['-f'], dest='foo')
-    action.set_table_header(['Col1', 'Col2'])
+    action.set_table_columns(['Col1', 'Col2'])
     arg_state = argparse_completer._ArgumentState(action)
 
     completions = Completions(
         [
-            CompletionItem('item1', table_row=['data1a', 'data1b']),
-            CompletionItem('item2', table_row=['only_one']),
+            CompletionItem('item1', table_data=['data1a', 'data1b']),
+            CompletionItem('item2', table_data=['only_one']),
         ]
     )
 
     with pytest.raises(
         ValueError,
-        match=r"Argument 'foo': table_row length \(1\) does not match table_header length \(2\) for item 'item2'.",
+        match=r"Argument 'foo': table_data length \(1\) does not match table_columns length \(2\) for item 'item2'.",
     ):
         argparse_completer.ArgparseCompleter._validate_table_data(arg_state, completions)
 
 
 def test_validate_table_data_valid() -> None:
     action = argparse.Action(option_strings=['-f'], dest='foo')
-    action.get_table_header = lambda: ['Col1', 'Col2']
+    action.get_table_columns = lambda: ['Col1', 'Col2']
     arg_state = argparse_completer._ArgumentState(action)
 
     completions = Completions(
         [
-            CompletionItem('item1', table_row=['data1a', 'data1b']),
-            CompletionItem('item2', table_row=['data2a', 'data2b']),
+            CompletionItem('item1', table_data=['data1a', 'data1b']),
+            CompletionItem('item2', table_data=['data2a', 'data2b']),
         ]
     )
 

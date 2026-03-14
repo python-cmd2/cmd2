@@ -2563,7 +2563,7 @@ def test_get_alias_choices(base_app: cmd2.Cmd) -> None:
     for cur_choice in choices:
         assert cur_choice.text in aliases
         assert cur_choice.display_meta == aliases[cur_choice.text]
-        assert cur_choice.table_row == (aliases[cur_choice.text],)
+        assert cur_choice.table_data == (aliases[cur_choice.text],)
 
 
 def test_get_macro_choices(base_app: cmd2.Cmd) -> None:
@@ -2578,7 +2578,7 @@ def test_get_macro_choices(base_app: cmd2.Cmd) -> None:
     for cur_choice in choices:
         assert cur_choice.text in macros
         assert cur_choice.display_meta == macros[cur_choice.text].value
-        assert cur_choice.table_row == (macros[cur_choice.text].value,)
+        assert cur_choice.table_data == (macros[cur_choice.text].value,)
 
 
 def test_get_commands_aliases_and_macros_choices(base_app: cmd2.Cmd) -> None:
@@ -2633,11 +2633,11 @@ def test_get_settable_choices(base_app: cmd2.Cmd) -> None:
         # Convert fields so we can compare them
         str_value = str(cur_settable.value)
 
-        choice_value = cur_choice.table_row[0]
+        choice_value = cur_choice.table_data[0]
         if isinstance(choice_value, Text):
             choice_value = ru.rich_text_to_string(choice_value)
 
-        choice_description = cur_choice.table_row[1]
+        choice_description = cur_choice.table_data[1]
         if isinstance(choice_description, Text):
             choice_description = ru.rich_text_to_string(choice_description)
 
