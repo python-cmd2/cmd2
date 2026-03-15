@@ -5,7 +5,6 @@ repos:
       - id: check-case-conflict
       - id: check-executables-have-shebangs
       - id: check-merge-conflict
-      - id: check-symlinks
       - id: check-toml
       - id: check-yaml
       - id: detect-private-key
