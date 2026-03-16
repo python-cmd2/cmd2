@@ -25,15 +25,12 @@ from typing import (
 from rich.text import Text
 
 from .constants import INFINITY
+from .rich_utils import Cmd2SimpleTable
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
 
-from rich.box import SIMPLE_HEAD
-from rich.table import (
-    Column,
-    Table,
-)
+from rich.table import Column
 
 from .argparse_custom import (
     ChoicesCallable,
@@ -46,7 +43,6 @@ from .completion import (
     all_display_numeric,
 )
 from .exceptions import CompletionError
-from .styles import Cmd2Style
 
 # Name of the choice/completer function argument that, if present, will be passed a dictionary of
 # command line tokens up through the token being completed mapped to their argparse destination name.
@@ -658,7 +654,7 @@ class ArgparseCompleter:
         )
 
         # Build the table
-        table = Table(*rich_columns, box=SIMPLE_HEAD, show_edge=False, border_style=Cmd2Style.TABLE_BORDER)
+        table = Cmd2SimpleTable(*rich_columns)
         for item in completions:
             table.add_row(Text.from_ansi(item.display), *item.table_data)
 

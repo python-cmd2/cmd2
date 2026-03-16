@@ -68,7 +68,6 @@ from typing import (
     cast,
 )
 
-import rich.box
 from prompt_toolkit import (
     filters,
     print_formatted_text,
@@ -160,6 +159,7 @@ from .rich_utils import (
     Cmd2BaseConsole,
     Cmd2ExceptionConsole,
     Cmd2GeneralConsole,
+    Cmd2SimpleTable,
     RichPrintKwargs,
 )
 from .styles import Cmd2Style
@@ -516,9 +516,6 @@ class Cmd:
 
         # Used to keep track of whether we are redirecting or piping output
         self._redirecting = False
-
-        # Characters used to draw a horizontal rule. Should not be blank.
-        self.ruler = "─"
 
         # Set text which prints right before all of the help tables are listed.
         self.doc_leader = ""
@@ -4185,6 +4182,15 @@ class Cmd:
                 self.perror(err_msg, style=None)
                 self.last_result = False
 
+    def _create_help_grid(self, title: str, *content: RenderableType) -> Table:
+        """Create a titled grid for help headers with a ruler and optional content."""
+        grid = Table.grid()
+        grid.add_row(Text(title, style=Cmd2Style.HELP_HEADER))
+        grid.add_row(Rule(style=Cmd2Style.TABLE_BORDER))
+        for item in content:
+            grid.add_row(item)
+        return grid
+
     def print_topics(self, header: str, cmds: Sequence[str] | None, cmdlen: int, maxcol: int) -> None:  # noqa: ARG002
         """Print groups of commands and topics in columns and an optional header.
 
@@ -4198,12 +4204,11 @@ class Cmd:
         if not cmds:
             return
 
-        # Print a row that looks like a table header.
         if header:
-            header_grid = Table.grid()
-            header_grid.add_row(Text(header, style=Cmd2Style.HELP_HEADER))
-            header_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
-            self.poutput(header_grid, soft_wrap=False)
+            self.poutput(
+                self._create_help_grid(header),
+                soft_wrap=False,
+            )
 
         # Subtract 1 from maxcol to account for a one-space right margin.
         maxcol = min(maxcol, ru.console_width()) - 1
@@ -4221,17 +4226,9 @@ class Cmd:
             self.print_topics(header, cmds, 15, 80)
             return
 
-        # Create a grid to hold the header and the topics table
-        category_grid = Table.grid()
-        category_grid.add_row(Text(header, style=Cmd2Style.HELP_HEADER))
-        category_grid.add_row(Rule(characters=self.ruler, style=Cmd2Style.TABLE_BORDER))
-
-        topics_table = Table(
+        topic_table = Cmd2SimpleTable(
             Column("Name", no_wrap=True),
             Column("Description", overflow="fold"),
-            box=rich.box.SIMPLE_HEAD,
-            show_edge=False,
-            border_style=Cmd2Style.TABLE_BORDER,
         )
 
         # Try to get the documentation string for each command
@@ -4268,10 +4265,12 @@ class Cmd:
             cmd_desc = strip_doc_annotations(doc) if doc else ''
 
             # Add this command to the table
-            topics_table.add_row(command, cmd_desc)
+            topic_table.add_row(command, cmd_desc)
 
-        category_grid.add_row(topics_table)
-        self.poutput(category_grid, soft_wrap=False)
+        self.poutput(
+            self._create_help_grid(header, topic_table),
+            soft_wrap=False,
+        )
         self.poutput()
 
     def render_columns(self, str_list: Sequence[str] | None, display_width: int = 80) -> str:
@@ -4560,14 +4559,10 @@ class Cmd:
             # Show all settables
             to_show = list(self.settables.keys())
 
-        # Define the table structure
-        settable_table = Table(
+        settable_table = Cmd2SimpleTable(
             Column("Name", no_wrap=True),
             Column("Value", overflow="fold"),
             Column("Description", overflow="fold"),
-            box=rich.box.SIMPLE_HEAD,
-            show_edge=False,
-            border_style=Cmd2Style.TABLE_BORDER,
         )
 
         # Build the table and populate self.last_result
