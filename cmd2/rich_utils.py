@@ -426,7 +426,13 @@ def rich_text_to_string(text: Text) -> str:
 
     :param text: the text object to convert
     :return: the resulting string with ANSI styles preserved.
+    :raises TypeError: if text is not a rich.text.Text object
     """
+    # Strictly enforce Text type. While console.print() can render any object,
+    # this function is specifically tailored to convert Text instances to strings.
+    if not isinstance(text, Text):
+        raise TypeError(f"rich_text_to_string() expected a rich.text.Text object, but got {type(text).__name__}")
+
     console = Console(
         force_terminal=True,
         soft_wrap=True,

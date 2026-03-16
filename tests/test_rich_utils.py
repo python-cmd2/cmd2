@@ -81,6 +81,12 @@ def test_rich_text_to_string(rich_text: Text, string: str) -> None:
     assert ru.rich_text_to_string(rich_text) == string
 
 
+def test_rich_text_to_string_type_error() -> None:
+    with pytest.raises(TypeError) as excinfo:
+        ru.rich_text_to_string("not a Text object")  # type: ignore[arg-type]
+    assert "rich_text_to_string() expected a rich.text.Text object, but got str" in str(excinfo.value)
+
+
 def test_set_theme() -> None:
     # Save a cmd2, rich-argparse, and rich-specific style.
     cmd2_style_key = Cmd2Style.ERROR
