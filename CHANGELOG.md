@@ -63,6 +63,7 @@ prompt is displayed.
       `add_alert()`. This new function is thread-safe and does not require you to acquire a mutex
       before calling it like the previous functions did.
     - Removed `Cmd.default_to_shell`.
+    - Removed `Cmd.ruler` since `cmd2` no longer uses it.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These

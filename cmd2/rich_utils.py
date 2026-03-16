@@ -10,6 +10,7 @@ from typing import (
     TypedDict,
 )
 
+from rich.box import SIMPLE_HEAD
 from rich.console import (
     Console,
     ConsoleRenderable,
@@ -29,7 +30,10 @@ from rich.text import Text
 from rich.theme import Theme
 from rich_argparse import RichHelpFormatter
 
-from .styles import DEFAULT_CMD2_STYLES
+from .styles import (
+    DEFAULT_CMD2_STYLES,
+    Cmd2Style,
+)
 
 # Matches ANSI SGR (Select Graphic Rendition) sequences for text styling.
 # \x1b[   - the CSI (Control Sequence Introducer)
@@ -392,6 +396,19 @@ class Cmd2ExceptionConsole(Cmd2BaseConsole):
             markup=False,
             emoji=False,
             highlight=False,
+        )
+
+
+class Cmd2SimpleTable(Table):
+    """A clean, lightweight Rich Table tailored for cmd2's internal use."""
+
+    def __init__(self, *headers: Column | str) -> None:
+        """Cmd2SimpleTable initializer."""
+        super().__init__(
+            *headers,
+            box=SIMPLE_HEAD,
+            show_edge=False,
+            border_style=Cmd2Style.TABLE_BORDER,
         )
 
 
