@@ -1320,6 +1320,7 @@ class Cmd:
 
     def _create_base_printing_console(
         self,
+        *,
         file: IO[str],
         emoji: bool,
         markup: bool,
@@ -1327,9 +1328,10 @@ class Cmd:
     ) -> Cmd2BaseConsole:
         """Create a Cmd2BaseConsole with formatting overrides.
 
-        This works around a bug in Rich where complex renderables (like Table and Rule)
-        may not receive formatting settings passed directly to print() or log(). Passing
-        them to the constructor instead ensures they are correctly propagated.
+        This works around a bug in Rich where passing these formatting settings directly to
+        console.print() or console.log() does not always work when printing certain Renderables.
+        Passing them to the constructor instead ensures they are correctly propagated.
+
         See: https://github.com/Textualize/rich/issues/4028
         """
         return Cmd2BaseConsole(
