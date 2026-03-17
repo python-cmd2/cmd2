@@ -414,7 +414,9 @@ class Cmd:
         else:
             self.stdin = sys.stdin
 
-        # What to use for standard output
+        # Standard output stream. The interactive UI remains attached to this initial
+        # stream even when self.stdout is temporarily swapped during command output
+        # redirection.
         if stdout is not None:
             self.stdout = stdout
         else:
