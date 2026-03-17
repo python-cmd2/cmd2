@@ -1,7 +1,6 @@
 """Provides common utilities to support Rich in cmd2-based applications."""
 
 import re
-import threading
 from collections.abc import Mapping
 from enum import Enum
 from typing import (
@@ -178,30 +177,11 @@ class Cmd2BaseConsole(Console):
             theme=APP_THEME,
             **kwargs,
         )
-        self._thread_local = threading.local()
 
     def on_broken_pipe(self) -> None:
         """Override which raises BrokenPipeError instead of SystemExit."""
         self.quiet = True
         raise BrokenPipeError
-
-    def render_str(
-        self,
-        text: str,
-        highlight: bool | None = None,
-        markup: bool | None = None,
-        emoji: bool | None = None,
-        **kwargs: Any,
-    ) -> Text:
-        """Override to ensure formatting overrides passed to print() and log() are respected."""
-        if emoji is None:
-            emoji = getattr(self._thread_local, "emoji", None)
-        if markup is None:
-            markup = getattr(self._thread_local, "markup", None)
-        if highlight is None:
-            highlight = getattr(self._thread_local, "highlight", None)
-
-        return super().render_str(text, highlight=highlight, markup=markup, emoji=emoji, **kwargs)
 
     def print(
         self,
@@ -221,52 +201,32 @@ class Cmd2BaseConsole(Console):
         soft_wrap: bool | None = None,
         new_line_start: bool = False,
     ) -> None:
-        """Override to support ANSI sequences and address a bug in Rich.
+        """Override to support ANSI sequences.
 
         This method calls [cmd2.rich_utils.prepare_objects_for_rendering][] on the
         objects being printed. This ensures that strings containing ANSI style
         sequences are converted to Rich Text objects, so that Rich can correctly
         calculate their display width.
-
-        Additionally, it works around a bug in Rich where complex renderables
-        (like Table and Rule) may not receive formatting settings passed to print().
-        By temporarily injecting these settings into thread-local storage, we ensure
-        that all internal rendering calls within the print() operation respect the
-        requested overrides.
-
-        There is an issue on Rich to fix the latter:
-        https://github.com/Textualize/rich/issues/4028
         """
         prepared_objects = prepare_objects_for_rendering(*objects)
 
-        # Inject overrides into thread-local storage
-        self._thread_local.emoji = emoji
-        self._thread_local.markup = markup
-        self._thread_local.highlight = highlight
-
-        try:
-            super().print(
-                *prepared_objects,
-                sep=sep,
-                end=end,
-                style=style,
-                justify=justify,
-                overflow=overflow,
-                no_wrap=no_wrap,
-                emoji=emoji,
-                markup=markup,
-                highlight=highlight,
-                width=width,
-                height=height,
-                crop=crop,
-                soft_wrap=soft_wrap,
-                new_line_start=new_line_start,
-            )
-        finally:
-            # Clear overrides from thread-local storage
-            self._thread_local.emoji = None
-            self._thread_local.markup = None
-            self._thread_local.highlight = None
+        super().print(
+            *prepared_objects,
+            sep=sep,
+            end=end,
+            style=style,
+            justify=justify,
+            overflow=overflow,
+            no_wrap=no_wrap,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
+            width=width,
+            height=height,
+            crop=crop,
+            soft_wrap=soft_wrap,
+            new_line_start=new_line_start,
+        )
 
     def log(
         self,
@@ -281,56 +241,35 @@ class Cmd2BaseConsole(Console):
         log_locals: bool = False,
         _stack_offset: int = 1,
     ) -> None:
-        """Override to support ANSI sequences and address a bug in Rich.
+        """Override to support ANSI sequences.
 
         This method calls [cmd2.rich_utils.prepare_objects_for_rendering][] on the
         objects being logged. This ensures that strings containing ANSI style
         sequences are converted to Rich Text objects, so that Rich can correctly
         calculate their display width.
-
-        Additionally, it works around a bug in Rich where complex renderables
-        (like Table and Rule) may not receive formatting settings passed to log().
-        By temporarily injecting these settings into thread-local storage, we ensure
-        that all internal rendering calls within the log() operation respect the
-        requested overrides.
-
-        There is an issue on Rich to fix the latter:
-        https://github.com/Textualize/rich/issues/4028
         """
         prepared_objects = prepare_objects_for_rendering(*objects)
 
-        # Inject overrides into thread-local storage
-        self._thread_local.emoji = emoji
-        self._thread_local.markup = markup
-        self._thread_local.highlight = highlight
-
-        try:
-            # Increment _stack_offset because we added this wrapper frame
-            super().log(
-                *prepared_objects,
-                sep=sep,
-                end=end,
-                style=style,
-                justify=justify,
-                emoji=emoji,
-                markup=markup,
-                highlight=highlight,
-                log_locals=log_locals,
-                _stack_offset=_stack_offset + 1,
-            )
-        finally:
-            # Clear overrides from thread-local storage
-            self._thread_local.emoji = None
-            self._thread_local.markup = None
-            self._thread_local.highlight = None
+        # Increment _stack_offset because we added this wrapper frame
+        super().log(
+            *prepared_objects,
+            sep=sep,
+            end=end,
+            style=style,
+            justify=justify,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
+            log_locals=log_locals,
+            _stack_offset=_stack_offset + 1,
+        )
 
 
 class Cmd2GeneralConsole(Cmd2BaseConsole):
     """Rich console for general-purpose printing.
 
-    It enables soft wrap and disables Rich's automatic detection for markup,
-    emoji, and highlighting. These defaults can be overridden in calls to the
-    console's or cmd2's print methods.
+    It enables soft wrap and disables Rich's automatic detection
+    for markup, emoji, and highlighting.
     """
 
     def __init__(self, *, file: IO[str] | None = None) -> None:

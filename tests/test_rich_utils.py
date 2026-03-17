@@ -2,6 +2,7 @@
 
 import pytest
 import rich.box
+from pytest_mock import MockerFixture
 from rich.console import Console
 from rich.style import Style
 from rich.table import Table
@@ -12,8 +13,6 @@ from cmd2 import (
     Color,
 )
 from cmd2 import rich_utils as ru
-
-from .conftest import with_ansi_style
 
 
 def test_cmd2_base_console() -> None:
@@ -152,49 +151,43 @@ def test_from_ansi_wrapper() -> None:
     assert Text.from_ansi(input_string).plain == input_string
 
 
-@with_ansi_style(ru.AllowStyle.ALWAYS)
-def test_cmd2_base_console_print() -> None:
-    """Test that Cmd2BaseConsole.print() correctly propagates formatting overrides to structured renderables."""
-    from rich.rule import Rule
+def test_cmd2_base_console_print(mocker: MockerFixture) -> None:
+    """Test that Cmd2BaseConsole.print() calls prepare_objects_for_rendering()."""
+    # Mock prepare_objects_for_rendering to return a specific value
+    prepared_val = ("prepared",)
+    mock_prepare = mocker.patch("cmd2.rich_utils.prepare_objects_for_rendering", return_value=prepared_val)
 
-    # Create a console that defaults to no formatting
-    console = ru.Cmd2BaseConsole(emoji=False, markup=False)
+    # Mock the superclass print() method
+    mock_super_print = mocker.patch("rich.console.Console.print")
 
-    # Use a Rule with emoji and markup in the title
-    rule = Rule(title="[green]Success :1234:[/green]")
+    console = ru.Cmd2BaseConsole()
+    console.print("hello")
 
-    with console.capture() as capture:
-        # Override settings in the print() call
-        console.print(rule, emoji=True, markup=True)
+    # Verify that prepare_objects_for_rendering() was called with the input objects
+    mock_prepare.assert_called_once_with("hello")
 
-    result = capture.get()
-
-    # Verify that the overrides were respected by checking for the emoji and the color code
-    assert "🔢" in result
-    assert "\x1b[32mSuccess" in result
+    # Verify that the superclass print() method was called with the prepared objects
+    args, _ = mock_super_print.call_args
+    assert args == prepared_val
 
 
-@with_ansi_style(ru.AllowStyle.ALWAYS)
-def test_cmd2_base_console_log() -> None:
-    """Test that Cmd2BaseConsole.log() correctly propagates formatting overrides to structured renderables."""
-    from rich.rule import Rule
+def test_cmd2_base_console_log(mocker: MockerFixture) -> None:
+    """Test that Cmd2BaseConsole.log() calls prepare_objects_for_rendering() and increments _stack_offset."""
+    # Mock prepare_objects_for_rendering to return a specific value
+    prepared_val = ("prepared",)
+    mock_prepare = mocker.patch("cmd2.rich_utils.prepare_objects_for_rendering", return_value=prepared_val)
 
-    # Create a console that defaults to no formatting
-    console = ru.Cmd2BaseConsole(emoji=False, markup=False)
+    # Mock the superclass log() method
+    mock_super_log = mocker.patch("rich.console.Console.log")
 
-    # Use a Rule with emoji and markup in the title
-    rule = Rule(title="[green]Success :1234:[/green]")
+    console = ru.Cmd2BaseConsole()
+    console.log("test", _stack_offset=2)
 
-    with console.capture() as capture:
-        # Override settings in the log() call
-        console.log(rule, emoji=True, markup=True)
+    # Verify that prepare_objects_for_rendering() was called with the input objects
+    mock_prepare.assert_called_once_with("test")
 
-    result = capture.get()
-
-    # Verify that the formatting overrides were respected
-    assert "🔢" in result
-    assert "\x1b[32mSuccess" in result
-
-    # Verify stack offset: the log line should point to this file, not rich_utils.py
-    # Rich logs include the filename and line number on the right.
-    assert "test_rich_utils.py" in result
+    # Verify that the superclass log() method was called with the prepared objects
+    # and that the stack offset was correctly incremented.
+    args, kwargs = mock_super_log.call_args
+    assert args == prepared_val
+    assert kwargs["_stack_offset"] == 3
