@@ -1765,6 +1765,7 @@ class Cmd:
                 end=end,
                 style=style,
                 soft_wrap=soft_wrap,
+                justify=justify,
                 emoji=emoji,
                 markup=markup,
                 highlight=highlight,
