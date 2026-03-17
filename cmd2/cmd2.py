@@ -84,6 +84,7 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
 from rich.console import (
     Group,
+    JustifyMethod,
     RenderableType,
 )
 from rich.highlighter import ReprHighlighter
@@ -1344,6 +1345,7 @@ class Cmd:
         end: str = "\n",
         style: StyleType | None = None,
         soft_wrap: bool = True,
+        justify: JustifyMethod | None = None,
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
@@ -1369,6 +1371,7 @@ class Cmd:
                           Tables, Panels, or Columns to ensure they render as expected.
                           For example, when soft_wrap is True Panels truncate text
                           which is wider than the terminal.
+        :param justify: justify method ("left", "center", "right", "full"). Defaults to None.
         :param emoji: If True, Rich will replace emoji codes (e.g., :smiley:) with their
                       corresponding Unicode characters. Defaults to False.
         :param markup: If True, Rich will interpret strings with tags (e.g., [bold]hello[/bold])
@@ -1395,6 +1398,7 @@ class Cmd:
                 sep=sep,
                 end=end,
                 style=style,
+                justify=justify,
                 soft_wrap=soft_wrap,
                 **(rich_print_kwargs if rich_print_kwargs is not None else {}),
             )
@@ -1414,6 +1418,7 @@ class Cmd:
         end: str = "\n",
         style: StyleType | None = None,
         soft_wrap: bool = True,
+        justify: JustifyMethod | None = None,
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
@@ -1431,6 +1436,7 @@ class Cmd:
             end=end,
             style=style,
             soft_wrap=soft_wrap,
+            justify=justify,
             emoji=emoji,
             markup=markup,
             highlight=highlight,
@@ -1444,6 +1450,7 @@ class Cmd:
         end: str = "\n",
         style: StyleType | None = Cmd2Style.ERROR,
         soft_wrap: bool = True,
+        justify: JustifyMethod | None = None,
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
@@ -1463,6 +1470,7 @@ class Cmd:
             end=end,
             style=style,
             soft_wrap=soft_wrap,
+            justify=justify,
             emoji=emoji,
             markup=markup,
             highlight=highlight,
@@ -1475,6 +1483,7 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         soft_wrap: bool = True,
+        justify: JustifyMethod | None = None,
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
@@ -1491,6 +1500,7 @@ class Cmd:
             end=end,
             style=Cmd2Style.SUCCESS,
             soft_wrap=soft_wrap,
+            justify=justify,
             emoji=emoji,
             markup=markup,
             highlight=highlight,
@@ -1503,6 +1513,7 @@ class Cmd:
         sep: str = " ",
         end: str = "\n",
         soft_wrap: bool = True,
+        justify: JustifyMethod | None = None,
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
@@ -1519,6 +1530,7 @@ class Cmd:
             end=end,
             style=Cmd2Style.WARNING,
             soft_wrap=soft_wrap,
+            justify=justify,
             emoji=emoji,
             markup=markup,
             highlight=highlight,
@@ -1597,6 +1609,7 @@ class Cmd:
         end: str = "\n",
         style: StyleType | None = None,
         soft_wrap: bool = True,
+        justify: JustifyMethod | None = None,
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
@@ -1618,6 +1631,7 @@ class Cmd:
                     end=end,
                     style=style,
                     soft_wrap=soft_wrap,
+                    justify=justify,
                     emoji=emoji,
                     markup=markup,
                     highlight=highlight,
@@ -1630,6 +1644,7 @@ class Cmd:
                     end=end,
                     style=style,
                     soft_wrap=soft_wrap,
+                    justify=justify,
                     emoji=emoji,
                     markup=markup,
                     highlight=highlight,
@@ -1644,6 +1659,7 @@ class Cmd:
         style: StyleType | None = None,
         chop: bool = False,
         soft_wrap: bool = True,
+        justify: JustifyMethod | None = None,
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
@@ -1700,6 +1716,7 @@ class Cmd:
                     sep=sep,
                     end=end,
                     style=style,
+                    justify=justify,
                     soft_wrap=soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
@@ -1748,6 +1765,7 @@ class Cmd:
                 end=end,
                 style=style,
                 soft_wrap=soft_wrap,
+                justify=justify,
                 emoji=emoji,
                 markup=markup,
                 highlight=highlight,

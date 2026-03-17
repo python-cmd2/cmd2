@@ -99,7 +99,7 @@ __all__: list[str] = [  # noqa: RUF022
     # String Utils
     'stylize',
     # Styles,
-    "Cmd2Style",
+    'Cmd2Style',
     # Utilities
     'categorize',
     'CustomCompletionSettings',
