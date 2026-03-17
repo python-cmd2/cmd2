@@ -101,16 +101,18 @@ APP_THEME = _create_default_theme()
 
 
 class RichPrintKwargs(TypedDict, total=False):
-    """Keyword arguments that can be passed to rich.console.Console.print() via cmd2's print methods.
+    """Infrequently used Rich Console.print() keyword arguments.
 
-    See Rich's Console.print() documentation for full details on these parameters.
+    These arguments are supported by cmd2's print methods (e.g., poutput())
+    via their ``rich_print_kwargs`` parameter.
+
+    See Rich's Console.print() documentation for full details:
     https://rich.readthedocs.io/en/stable/reference/console.html#rich.console.Console.print
 
-    Note: All fields are optional (total=False). If a key is not present in the
-    dictionary, Rich's default behavior for that argument will apply.
+    Note: All fields are optional (total=False). If a key is not present,
+    Rich's default behavior for that argument will apply.
     """
 
-    justify: JustifyMethod | None
     overflow: OverflowMethod | None
     no_wrap: bool | None
     width: int | None

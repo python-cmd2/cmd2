@@ -162,7 +162,7 @@ each line is aligned independently.
 
 !!! tip "Advanced alignment customization"
 
-      You can also control output alignment using the `rich_print_kwargs.justify` member when calling
+      You can also control output alignment using the `justify` parameter when calling
       `cmd2`'s print methods.
 
 ## Columnar Output

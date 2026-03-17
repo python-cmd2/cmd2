@@ -2466,11 +2466,12 @@ def test_poutput_emoji(outsim_app):
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_justify_and_width(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(justify="right", width=10)
+    rich_print_kwargs = RichPrintKwargs(width=10)
 
     # Use a styled-string when justifying to check if its display width is correct.
     outsim_app.poutput(
         su.stylize("Hello", style="blue"),
+        justify="right",
         rich_print_kwargs=rich_print_kwargs,
     )
     out = outsim_app.stdout.getvalue()
@@ -2504,7 +2505,6 @@ def test_poutput_pretty_print(outsim_app):
 def test_poutput_all_keyword_args(outsim_app):
     """Test that all fields in RichPrintKwargs are recognized by Rich's Console.print()."""
     rich_print_kwargs = RichPrintKwargs(
-        justify="center",
         overflow="ellipsis",
         no_wrap=True,
         width=40,
