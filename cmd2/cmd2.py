@@ -1315,6 +1315,27 @@ class Cmd:
         """
         return su.strip_style(self.prompt)
 
+    def _create_base_printing_console(
+        self,
+        file: IO[str],
+        emoji: bool,
+        markup: bool,
+        highlight: bool,
+    ) -> Cmd2BaseConsole:
+        """Create a Cmd2BaseConsole with formatting overrides.
+
+        This works around a bug in Rich where complex renderables (like Table and Rule)
+        may not receive formatting settings passed directly to print() or log(). Passing
+        them to the constructor instead ensures they are correctly propagated.
+        See: https://github.com/Textualize/rich/issues/4028
+        """
+        return Cmd2BaseConsole(
+            file=file,
+            emoji=emoji,
+            markup=markup,
+            highlight=highlight,
+        )
+
     def print_to(
         self,
         file: IO[str],
@@ -1364,15 +1385,17 @@ class Cmd:
         See the Rich documentation for more details on emoji codes, markup tags, and highlighting.
         """
         try:
-            Cmd2BaseConsole(file=file).print(
+            self._create_base_printing_console(
+                file=file,
+                emoji=emoji,
+                markup=markup,
+                highlight=highlight,
+            ).print(
                 *objects,
                 sep=sep,
                 end=end,
                 style=style,
                 soft_wrap=soft_wrap,
-                emoji=emoji,
-                markup=markup,
-                highlight=highlight,
                 **(rich_print_kwargs if rich_print_kwargs is not None else {}),
             )
         except BrokenPipeError:
@@ -1665,7 +1688,12 @@ class Cmd:
                 soft_wrap = True
 
             # Generate the bytes to send to the pager
-            console = Cmd2BaseConsole(file=self.stdout)
+            console = self._create_base_printing_console(
+                file=self.stdout,
+                emoji=emoji,
+                markup=markup,
+                highlight=highlight,
+            )
             with console.capture() as capture:
                 console.print(
                     *objects,
@@ -1673,9 +1701,6 @@ class Cmd:
                     end=end,
                     style=style,
                     soft_wrap=soft_wrap,
-                    emoji=emoji,
-                    markup=markup,
-                    highlight=highlight,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
             output_bytes = capture.get().encode('utf-8', 'replace')
