@@ -38,6 +38,7 @@ from .decorators import (
     with_argparser,
     with_argument_list,
     with_category,
+    with_typer,
 )
 from .exceptions import (
     Cmd2ArgparseError,
@@ -84,6 +85,7 @@ __all__: list[str] = [  # noqa: RUF022
     'with_category',
     'with_default_category',
     'as_subcommand_to',
+    'with_typer',
     # Exceptions
     'Cmd2ArgparseError',
     'CommandSetRegistrationError',

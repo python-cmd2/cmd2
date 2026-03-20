@@ -38,6 +38,12 @@ CLASS_ATTR_DEFAULT_HELP_CATEGORY = 'cmd2_default_help_category'
 # The argparse parser for the command
 CMD_ATTR_ARGPARSER = 'argparser'
 
+# The typer app for the command (or None if auto-built from function signature)
+CMD_ATTR_TYPER = 'typer'
+CMD_ATTR_TYPER_FUNC = 'typer_func'
+CMD_ATTR_TYPER_KWARGS = 'typer_kwargs'
+CMD_ATTR_TYPER_CONTEXT_SETTINGS = 'typer_context_settings'
+
 # Whether or not tokens are unquoted before sending to argparse
 CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
 

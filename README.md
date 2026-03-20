@@ -86,6 +86,12 @@ On all operating systems, the latest stable version of `cmd2` can be installed u
 pip install -U cmd2
 ```
 
+To enable Typer-based argument parsing, install the optional extra:
+
+```bash
+pip install -U cmd2[typer]
+```
+
 cmd2 works with Python 3.10+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party
 dependencies. It works with both conventional CPython and free-threaded variants.
 

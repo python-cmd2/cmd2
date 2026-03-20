@@ -204,6 +204,14 @@ from .utils import (
     suggest_similar,
 )
 
+try:
+    from .typer_custom import TyperParser
+except ImportError:
+
+    class TyperParser:  # type: ignore[no-redef]
+        """Sentinel: isinstance checks always return False when typer is not installed."""
+
+
 if TYPE_CHECKING:  # pragma: no cover
     StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
     ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], argparse.ArgumentParser]
@@ -229,6 +237,7 @@ class _CommandParsers:
     """Create and store all command method argument parsers for a given Cmd instance.
 
     Parser creation and retrieval are accomplished through the get() method.
+    Supports both argparse-based and Typer/Click-based commands.
     """
 
     def __init__(self, cmd: 'Cmd') -> None:
@@ -236,7 +245,8 @@ class _CommandParsers:
 
         # Keyed by the fully qualified method names. This is more reliable than
         # the methods themselves, since wrapping a method will change its address.
-        self._parsers: dict[str, argparse.ArgumentParser] = {}
+        # Values are argparse.ArgumentParser for argparse commands or TyperParser (click.Command) for Typer commands.
+        self._parsers: dict[str, argparse.ArgumentParser | TyperParser] = {}
 
     @staticmethod
     def _fully_qualified_name(command_method: CommandFunc) -> str:
@@ -250,15 +260,16 @@ class _CommandParsers:
         """Return whether a given method's parser is in self.
 
         If the parser does not yet exist, it will be created if applicable.
-        This is basically for checking if a method is argarse-based.
+        This is basically for checking if a method uses argparse or Typer.
         """
         parser = self.get(command_method)
         return bool(parser)
 
-    def get(self, command_method: CommandFunc) -> argparse.ArgumentParser | None:
-        """Return a given method's parser or None if the method is not argparse-based.
+    def get(self, command_method: CommandFunc) -> argparse.ArgumentParser | TyperParser | None:
+        """Return a given method's parser or None if the method is not parser-based.
 
         If the parser does not yet exist, it will be created.
+        Handles both argparse and Typer/Click commands.
         """
         full_method_name = self._fully_qualified_name(command_method)
         if not full_method_name:
@@ -268,6 +279,14 @@ class _CommandParsers:
             if not command_method.__name__.startswith(COMMAND_FUNC_PREFIX):
                 return None
             command = command_method.__name__[len(COMMAND_FUNC_PREFIX) :]
+
+            # Check for Typer command
+            if getattr(command_method, constants.CMD_ATTR_TYPER_FUNC, None) is not None:
+                from .typer_custom import build_typer_command
+
+                parent = self._cmd.find_commandset_for_command(command) or self._cmd
+                self._parsers[full_method_name] = build_typer_command(parent, command_method)
+                return self._parsers[full_method_name]
 
             parser_builder = getattr(command_method, constants.CMD_ATTR_ARGPARSER, None)
             if parser_builder is None:
@@ -1030,7 +1049,7 @@ class Cmd:
             # is the actual command since command synonyms don't own it.
             if cmd_func_name == command_method.__name__:
                 command_parser = self._command_parsers.get(command_method)
-                if command_parser is not None:
+                if isinstance(command_parser, argparse.ArgumentParser):
                     check_parser_uninstallable(command_parser)
 
     def _register_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
@@ -1075,7 +1094,7 @@ class Cmd:
             if command_func is None:
                 raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method}")
             command_parser = self._command_parsers.get(command_func)
-            if command_parser is None:
+            if not isinstance(command_parser, argparse.ArgumentParser):
                 raise CommandSetRegistrationError(
                     f"Could not find argparser for command '{command_name}' needed by subcommand: {method}"
                 )
@@ -1161,7 +1180,7 @@ class Cmd:
                 # but keeping in case it does for some strange reason
                 raise CommandSetRegistrationError(f"Could not find command '{command_name}' needed by subcommand: {method}")
             command_parser = self._command_parsers.get(command_func)
-            if command_parser is None:  # pragma: no cover
+            if not isinstance(command_parser, argparse.ArgumentParser):  # pragma: no cover
                 # This really shouldn't be possible since _register_subcommands would prevent this from happening
                 # but keeping in case it does for some strange reason
                 raise CommandSetRegistrationError(
@@ -2333,11 +2352,11 @@ class Cmd:
                 if func_attr is not None:
                     completer_func = func_attr
                 else:
-                    # There's no completer function, next see if the command uses argparse
+                    # There's no completer function, next see if the command uses a parser
                     func = self.cmd_func(command)
                     argparser = None if func is None else self._command_parsers.get(func)
 
-                    if func is not None and argparser is not None:
+                    if func is not None and isinstance(argparser, argparse.ArgumentParser):
                         # Get arguments for complete()
                         preserve_quotes = getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES)
                         cmd_set = self.find_commandset_for_command(command)
@@ -2348,6 +2367,16 @@ class Cmd:
 
                         completer_func = functools.partial(
                             completer.complete, tokens=raw_tokens[1:] if preserve_quotes else tokens[1:], cmd_set=cmd_set
+                        )
+                    elif func is not None and isinstance(argparser, TyperParser):
+                        from .typer_custom import typer_complete
+
+                        preserve_quotes = getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES)
+                        completer_func = functools.partial(
+                            typer_complete,
+                            self,
+                            command_func=func,
+                            args=raw_tokens[1:] if preserve_quotes else tokens[1:],
                         )
                     else:
                         completer_func = self.completedefault  # type: ignore[assignment]
@@ -4097,11 +4126,30 @@ class Cmd:
             return Completions()
 
         # Check if this command uses argparse
-        if (func := self.cmd_func(command)) is None or (argparser := self._command_parsers.get(func)) is None:
+        func = self.cmd_func(command)
+        if func is None:
             return Completions()
 
-        completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
-        return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
+        argparser = self._command_parsers.get(func)
+        if isinstance(argparser, argparse.ArgumentParser):
+            completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
+            return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
+
+        # Typer/Click subcommand help completion
+        if isinstance(argparser, TyperParser):
+            from .typer_custom import typer_complete_subcommand_help
+
+            return typer_complete_subcommand_help(
+                self,
+                text,
+                line,
+                begidx,
+                endidx,
+                command_func=func,
+                subcommands=arg_tokens['subcommands'],
+            )
+
+        return Completions()
 
     def _build_command_info(self) -> tuple[dict[str, list[str]], list[str], list[str], list[str]]:
         """Categorizes and sorts visible commands and help topics for display.
@@ -4211,10 +4259,21 @@ class Cmd:
             argparser = None if func is None else self._command_parsers.get(func)
 
             # If the command function uses argparse, then use argparse's help
-            if func is not None and argparser is not None:
+            if func is not None and isinstance(argparser, argparse.ArgumentParser):
                 completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
                 completer.print_help(args.subcommands, self.stdout)
+            # If the command function uses Typer, then use Click's help
+            elif func is not None and isinstance(argparser, TyperParser):
+                from .typer_custom import resolve_typer_subcommand
 
+                try:
+                    target_command, resolved_names = resolve_typer_subcommand(argparser, args.subcommands)
+                except KeyError:
+                    target_command, resolved_names = argparser, []
+                info_name = ' '.join([args.command, *resolved_names])
+                ctx = target_command.make_context(info_name, [], resilient_parsing=True)
+                with contextlib.redirect_stdout(self.stdout):
+                    target_command.get_help(ctx)
             # If the command has a custom help function, then call it
             elif help_func is not None:
                 help_func()

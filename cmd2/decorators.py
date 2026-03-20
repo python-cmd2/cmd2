@@ -1,6 +1,8 @@
 """Decorators for ``cmd2`` commands."""
 
 import argparse
+import inspect
+import sys
 from collections.abc import (
     Callable,
     Sequence,
@@ -295,9 +297,9 @@ def with_argparser(
 
             # Pass cmd_wrapper instead of func, since it contains the parser info.
             arg_parser = cmd2_app._command_parsers.get(cmd_wrapper)
-            if arg_parser is None:
+            if not isinstance(arg_parser, argparse.ArgumentParser):
                 # This shouldn't be possible to reach
-                raise ValueError(f'No argument parser found for {command_name}')  # pragma: no cover
+                raise TypeError(f'No argument parser found for {command_name}')  # pragma: no cover
 
             if ns_provider is None:
                 namespace = None
@@ -341,6 +343,120 @@ def with_argparser(
 
         return cmd_wrapper
 
+    return arg_decorator
+
+
+def with_typer(
+    func_arg: CommandFunc | Any | None = None,
+    *,
+    preserve_quotes: bool = False,
+    context_settings: dict[str, Any] | None = None,
+) -> RawCommandFuncOptionalBoolReturn[CmdOrSet] | Callable[[CommandFunc], RawCommandFuncOptionalBoolReturn[CmdOrSet]]:
+    """Decorate a ``do_*`` method to process its arguments using Typer/Click.
+
+    :param func_arg: Single-element positional argument list containing ``do_*`` method
+                     this decorator is wrapping, or an explicit Typer app
+    :param preserve_quotes: if ``True``, then argument quotes will not be stripped
+    :param context_settings: optional dict of Click context settings passed to Typer
+    :return: function that gets passed Typer-parsed arguments
+
+    Example:
+    ```py
+    class MyApp(cmd2.Cmd):
+        @cmd2.with_typer
+        def do_add(
+            self,
+            a: int,
+            b: Annotated[int, typer.Option("--b")] = 2,
+        ) -> None:
+            self.poutput(str(a + b))
+    ```
+
+    """
+    import functools
+
+    try:
+        import typer
+    except ModuleNotFoundError as exc:
+        raise ImportError("Typer support requires the 'typer' package. Install it with: pip install cmd2[typer]") from exc
+
+    explicit_app = None
+    if isinstance(func_arg, typer.Typer):
+        explicit_app = func_arg
+
+    def arg_decorator(func: CommandFunc) -> RawCommandFuncOptionalBoolReturn[CmdOrSet]:
+        """Decorate function that ingests a command function and returns a raw command function.
+
+        The returned function will process the raw input through Typer/Click to be passed to the wrapped function.
+
+        :param func: The defined Typer command function
+        :return: Function that takes raw input and converts to Typer-parsed arguments passed to the wrapped function.
+        """
+
+        @functools.wraps(func)
+        def cmd_wrapper(*args: Any, **kwargs: dict[str, Any]) -> bool | None:
+            """Command function wrapper which translates command line into Typer-parsed arguments and command function.
+
+            :param args: All positional arguments to this function.  We're expecting there to be:
+                            cmd2_app, statement: Union[Statement, str]
+                            contiguously somewhere in the list
+            :param kwargs: any keyword arguments being passed to command function
+            :return: return value of command function
+            :raises Cmd2ArgparseError: if Typer/Click has error parsing command line
+            """
+            cmd2_app, statement_arg = _parse_positionals(args)
+            _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name, statement_arg, preserve_quotes)
+
+            # Pass cmd_wrapper instead of func, since it contains the typer attribute info.
+            import click
+
+            parser = cmd2_app._command_parsers.get(cmd_wrapper)
+            if not isinstance(parser, click.Command):
+                raise TypeError(f'No Typer command found for {command_name}')  # pragma: no cover
+
+            try:
+                setattr(cmd_wrapper, constants.CMD_ATTR_TYPER_KWARGS, dict(kwargs))
+                result = parser.main(
+                    args=parsed_arglist,
+                    prog_name=command_name,
+                    standalone_mode=False,
+                )
+            except Exception as exc:
+                if isinstance(exc, click.ClickException):
+                    exc.show(file=sys.stderr)
+                    raise Cmd2ArgparseError from exc
+                if isinstance(exc, (click.exceptions.Exit, SystemExit)):
+                    raise Cmd2ArgparseError from exc
+                raise
+            finally:
+                if hasattr(cmd_wrapper, constants.CMD_ATTR_TYPER_KWARGS):
+                    delattr(cmd_wrapper, constants.CMD_ATTR_TYPER_KWARGS)
+
+            # clicks command return Any type
+            return result  # type: ignore[no-any-return]
+
+        command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
+
+        # Typer relies on signature + annotations to build its CLI; strip self.
+        sig = inspect.signature(func)
+        params = list(sig.parameters.values())
+        if params and params[0].name == "self":
+            params = params[1:]
+            cmd_wrapper.__signature__ = sig.replace(parameters=params)  # type: ignore[attr-defined]
+            annotations = dict(getattr(func, "__annotations__", {}))
+            annotations.pop("self", None)
+            cmd_wrapper.__annotations__ = annotations
+
+        # Set some custom attributes for this command
+        setattr(cmd_wrapper, constants.CMD_ATTR_TYPER, explicit_app)
+        setattr(cmd_wrapper, constants.CMD_ATTR_TYPER_FUNC, func)
+        setattr(cmd_wrapper, constants.CMD_ATTR_TYPER_CONTEXT_SETTINGS, context_settings)
+        setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
+
+        return cmd_wrapper
+
+    if explicit_app is None and callable(func_arg):
+        return arg_decorator(func_arg)
     return arg_decorator
 
 
