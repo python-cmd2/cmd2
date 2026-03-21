@@ -5,6 +5,7 @@ from typing import Annotated
 import pytest
 
 import cmd2
+from cmd2 import string_utils as su
 from cmd2 import utils
 
 from .conftest import run_cmd
@@ -127,7 +128,7 @@ def test_typer_execution(typer_app: TyperApp, cmd_input: str, expected: list[str
 
 def test_typer_invalid_syntax(typer_app: TyperApp) -> None:
     _out, err = run_cmd(typer_app, 'add "')
-    assert err[0] == 'Invalid syntax: No closing quotation'
+    assert su.strip_style(err[0]) == 'Invalid syntax: No closing quotation'
 
 
 def test_typer_with_no_args(typer_app: TyperApp) -> None:
@@ -159,7 +160,7 @@ def test_typer_help_uses_app_stdout(typer_app: TyperApp, capsys: pytest.CaptureF
 
     typer_app.onecmd_plus_hooks('help add')
 
-    out = typer_app.stdout.getvalue()
+    out = su.strip_style(typer_app.stdout.getvalue())
     assert 'Usage: add' in out
     assert '--b' in out
     assert capsys.readouterr().out == ''
@@ -167,13 +168,15 @@ def test_typer_help_uses_app_stdout(typer_app: TyperApp, capsys: pytest.CaptureF
 
 def test_typer_help_uses_docstring(typer_app: TyperApp) -> None:
     out, _err = run_cmd(typer_app, 'help documented')
-    assert any('Usage: documented' in line for line in out)
-    assert any('Documented typer command.' in line for line in out)
+    plain = [su.strip_style(line) for line in out]
+    assert any('Usage: documented' in line for line in plain)
+    assert any('Documented typer command.' in line for line in plain)
 
 
 def test_typer_help_prog_name(typer_app: TyperApp) -> None:
     out, _err = run_cmd(typer_app, 'help add')
-    usage_line = next(line for line in out if 'Usage: add' in line)
+    plain = [su.strip_style(line) for line in out]
+    usage_line = next(line for line in plain if 'Usage: add' in line)
     assert usage_line.strip().startswith('Usage: add')
 
 
@@ -215,8 +218,9 @@ def test_typer_commandset_binding() -> None:
 def test_typer_commandset_help() -> None:
     app = TyperApp(command_sets=[TyperCommandSet()])
     out, _err = run_cmd(app, 'help scale')
-    assert any('Usage: scale' in line for line in out)
-    assert any('--factor' in line for line in out)
+    plain = [su.strip_style(line) for line in out]
+    assert any('Usage: scale' in line for line in plain)
+    assert any('--factor' in line for line in plain)
 
 
 # ---------------------------------------------------------------------------
@@ -289,8 +293,9 @@ def test_typer_subcommand_invalid(subcmd_app: TyperApp) -> None:
 )
 def test_typer_subcommand_help(subcmd_app: TyperApp, cmd_input: str, expected_strings: list[str]) -> None:
     out, _err = run_cmd(subcmd_app, cmd_input)
+    plain = [su.strip_style(line) for line in out]
     for s in expected_strings:
-        assert any(s in line for line in out)
+        assert any(s in line for line in plain)
 
 
 def test_typer_subcommand_parse_error_stays_in_repl(
