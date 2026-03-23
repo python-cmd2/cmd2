@@ -41,9 +41,12 @@ How annotations map to argparse settings:
 - ``int``, ``float`` -- sets ``type=`` for argparse
 - ``bool`` with default ``False`` -- ``--flag`` with ``store_true``
 - ``bool`` with default ``True`` -- ``--no-flag`` with ``store_false``
+- positional ``bool`` -- parsed from ``true/false``, ``yes/no``, ``on/off``, ``1/0``
 - ``pathlib.Path`` -- sets ``type=Path``
 - ``enum.Enum`` subclass -- ``type=converter``, ``choices`` from member values
-- ``list[T]`` -- ``nargs='+'`` (or ``'*'`` if has a default)
+- ``decimal.Decimal`` -- sets ``type=Decimal``
+- ``Literal[...]`` -- sets ``type=converter`` and ``choices`` from literal values
+- ``Collection[T]`` / ``list[T]`` / ``set[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` if has a default)
 - ``T | None`` -- unwrapped to ``T``, treated as optional
 
 Note: ``Path`` and ``Enum`` types also get automatic tab completion via
@@ -52,14 +55,19 @@ and ``@with_argparser`` -- see the ``argparse_completer`` module.
 """
 
 import argparse
+import decimal
 import enum
 import inspect
 import pathlib
 import types
-from collections.abc import Callable
+from collections.abc import (
+    Callable,
+    Collection,
+)
 from typing import (
     Annotated,
     Any,
+    Literal,
     Union,
     get_args,
     get_origin,
@@ -144,6 +152,63 @@ class Option(_BaseArgMetadata):
 
 _NoneType = type(None)
 
+_BOOL_TRUE_VALUES = {'1', 'true', 't', 'yes', 'y', 'on'}
+_BOOL_FALSE_VALUES = {'0', 'false', 'f', 'no', 'n', 'off'}
+
+
+def _parse_bool(value: str) -> bool:
+    """Parse a string into a boolean value for argparse type conversion."""
+    lowered = value.strip().lower()
+    if lowered in _BOOL_TRUE_VALUES:
+        return True
+    if lowered in _BOOL_FALSE_VALUES:
+        return False
+    raise argparse.ArgumentTypeError(f"invalid boolean value: {value!r} (choose from: 1, 0, true, false, yes, no, on, off)")
+
+
+def _make_literal_type(literal_values: list[Any]) -> Callable[[str], Any]:
+    """Create an argparse converter for a Literal's exact values."""
+    value_map = {str(value): value for value in literal_values}
+
+    def _convert(value: str) -> Any:
+        if value in value_map:
+            return value_map[value]
+        if value.lower() in _BOOL_TRUE_VALUES:
+            bool_value = True
+        elif value.lower() in _BOOL_FALSE_VALUES:
+            bool_value = False
+        else:
+            bool_value = None
+
+        if bool_value is not None and bool_value in literal_values:
+            return bool_value
+
+        valid = ', '.join(str(v) for v in literal_values)
+        raise argparse.ArgumentTypeError(f"invalid choice: {value!r} (choose from {valid})")
+
+    _convert.__name__ = 'literal'
+    return _convert
+
+
+class _CollectionStoreAction(argparse._StoreAction):
+    """Store action that can coerce parsed collection values to a container type."""
+
+    def __init__(self, *args: Any, container_factory: Callable[[list[Any]], Any] | None = None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._container_factory = container_factory
+
+    def __call__(
+        self,
+        _parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Any,
+        _option_string: str | None = None,
+    ) -> None:
+        result = values
+        if self._container_factory is not None and isinstance(values, list):
+            result = self._container_factory(values)
+        setattr(namespace, self.dest, result)
+
 
 def _make_enum_type(enum_class: type[enum.Enum]) -> Callable[[str], enum.Enum]:
     """Create an argparse *type* converter for an Enum class.
@@ -165,6 +230,8 @@ def _make_enum_type(enum_class: type[enum.Enum]) -> Callable[[str], enum.Enum]:
             raise argparse.ArgumentTypeError(f"invalid choice: {value!r} (choose from {valid})") from err
 
     _convert.__name__ = enum_class.__name__
+    # Preserve the enum class for downstream consumers like tab completion.
+    _convert._cmd2_enum_class = enum_class
     return _convert
 
 
@@ -194,13 +261,42 @@ def _unwrap_optional(tp: Any) -> tuple[Any, bool]:
     return tp, False
 
 
-def _unwrap_list(tp: Any) -> tuple[Any, bool]:
-    """Strip ``list[T]`` and return ``(inner_type, is_list)``."""
-    if get_origin(tp) is list:
+def _unwrap_collection(tp: Any) -> tuple[Any, str | None]:
+    """Strip collection[T] and return ``(inner_type, collection_kind)``."""
+    origin = get_origin(tp)
+    if origin is list:
         args = get_args(tp)
         if args:
-            return args[0], True
-    return tp, False
+            return args[0], 'list'
+
+    if origin is set:
+        args = get_args(tp)
+        if args:
+            return args[0], 'set'
+
+    if origin is Collection:
+        args = get_args(tp)
+        if args:
+            return args[0], 'collection'
+
+    if origin is tuple:
+        args = get_args(tp)
+        if len(args) == 2 and args[1] is Ellipsis:
+            return args[0], 'tuple'
+    return tp, None
+
+
+def _unwrap_literal(tp: Any) -> tuple[Any, list[Any] | None]:
+    """Strip ``Literal[...]`` and return ``(base_type, literal_values)``."""
+    if get_origin(tp) is Literal:
+        literal_values = list(get_args(tp))
+        if not literal_values:
+            return Any, []
+        first_type = type(literal_values[0])
+        if all(type(v) is first_type for v in literal_values):
+            return first_type, literal_values
+        return Any, literal_values
+    return tp, None
 
 
 # ---------------------------------------------------------------------------
@@ -243,12 +339,16 @@ def build_parser_from_function(func: Callable[..., Any]) -> argparse.ArgumentPar
         # 2. Unwrap Optional[T] / T | None
         base_type, is_optional = _unwrap_optional(base_type)
 
-        # 3. Unwrap list[T]
-        inner_type, is_list = _unwrap_list(base_type)
-        if is_list:
+        # 3. Unwrap collection[T]
+        inner_type, collection_kind = _unwrap_collection(base_type)
+        is_collection = collection_kind is not None
+        if is_collection:
             base_type = inner_type
 
-        # 4. Determine positional vs option
+        # 4. Unwrap Literal[...]
+        base_type, literal_choices = _unwrap_literal(base_type)
+
+        # 5. Determine positional vs option
         if isinstance(metadata, Argument):
             is_positional = True
         elif isinstance(metadata, Option):
@@ -258,7 +358,7 @@ def build_parser_from_function(func: Callable[..., Any]) -> argparse.ArgumentPar
         else:
             is_positional = False
 
-        # 5. Build add_argument kwargs
+        # 6. Build add_argument kwargs
         kwargs: dict[str, Any] = {}
 
         # Help text
@@ -275,12 +375,18 @@ def build_parser_from_function(func: Callable[..., Any]) -> argparse.ArgumentPar
         explicit_nargs = metadata.nargs if metadata else None
         if explicit_nargs is not None:
             kwargs['nargs'] = explicit_nargs
-        elif is_list:
+        elif is_collection:
             kwargs['nargs'] = '*' if has_default else '+'
+            if collection_kind in ('set', 'tuple'):
+                kwargs['action'] = _CollectionStoreAction
+                kwargs['container_factory'] = set if collection_kind == 'set' else tuple
 
         # Type-specific handling
         is_bool_flag = False
-        if base_type is bool and not is_list and not is_positional:
+        if literal_choices is not None:
+            kwargs['type'] = _make_literal_type(literal_choices)
+            kwargs['choices'] = literal_choices
+        elif base_type is bool and not is_collection and not is_positional:
             is_bool_flag = True
             action_str = getattr(metadata, 'action', None) if metadata else None
             if action_str:
@@ -289,11 +395,17 @@ def build_parser_from_function(func: Callable[..., Any]) -> argparse.ArgumentPar
                 kwargs['action'] = 'store_false'
             else:
                 kwargs['action'] = 'store_true'
+        elif base_type is bool:
+            kwargs['type'] = _parse_bool
         elif isinstance(base_type, type) and issubclass(base_type, enum.Enum):
+            # Keep validation in the converter to support any Enum subclass,
+            # including enums whose members are not directly comparable to raw
+            # argparse input strings.
             kwargs['type'] = _make_enum_type(base_type)
-            kwargs['choices'] = [m.value for m in base_type]
         elif base_type is pathlib.Path or (isinstance(base_type, type) and issubclass(base_type, pathlib.Path)):
             kwargs['type'] = pathlib.Path
+        elif base_type is decimal.Decimal:
+            kwargs['type'] = decimal.Decimal
         elif base_type in (int, float, str):
             if base_type is not str:
                 kwargs['type'] = base_type
@@ -321,7 +433,7 @@ def build_parser_from_function(func: Callable[..., Any]) -> argparse.ArgumentPar
         if suppress_tab_hint:
             kwargs['suppress_tab_hint'] = suppress_tab_hint
 
-        # 6. Call add_argument
+        # 7. Call add_argument
         if is_positional:
             parser.add_argument(name, **kwargs)
         else:

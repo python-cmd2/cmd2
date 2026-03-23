@@ -1,9 +1,14 @@
 """Tests for the @with_annotated decorator and type inference in ArgparseCompleter."""
 
 import argparse
+import decimal
 import enum
+from collections.abc import Collection
 from pathlib import Path
-from typing import Annotated
+from typing import (
+    Annotated,
+    Literal,
+)
 
 import pytest
 
@@ -57,6 +62,12 @@ def _func_float_option(self, rate: float = 1.0) -> None: ...
 def _func_positional_bool(self, flag: bool) -> None: ...
 def _func_enum_with_default(self, color: _Color = _Color.blue) -> None: ...
 def _func_positional_path(self, path: Path) -> None: ...
+def _func_decimal(self, amount: decimal.Decimal = decimal.Decimal("1.25")) -> None: ...
+def _func_collection(self, ids: Collection[int]) -> None: ...
+def _func_set_collection(self, tags: set[str]) -> None: ...
+def _func_tuple_collection(self, values: tuple[int, ...]) -> None: ...
+def _func_literal_option(self, mode: Literal["fast", "slow"] = "fast") -> None: ...
+def _func_literal_positional_int(self, level: Literal[1, 2, 3]) -> None: ...
 
 
 FOOD_ITEMS = ['Pizza', 'Ham', 'Potato']
@@ -72,6 +83,12 @@ class _IntColor(enum.IntEnum):
     red = 1
     green = 2
     blue = 3
+
+
+class _PlainColor(enum.Enum):
+    RED = "red"
+    GREEN = "green"
+    BLUE = "blue"
 
 
 def _func_int_enum(self, color: _IntColor) -> None: ...
@@ -120,7 +137,7 @@ class TestBuildParserParams:
             pytest.param(
                 _func_enum,
                 "color",
-                {"option_strings": [], "choices": ["red", "green", "blue"]},
+                {"option_strings": []},
                 id="enum_choices",
             ),
             pytest.param(
@@ -150,13 +167,13 @@ class TestBuildParserParams:
             pytest.param(
                 _func_positional_bool,
                 "flag",
-                {"option_strings": [], "type": None},
-                id="positional_bool_no_action",
+                {"option_strings": []},
+                id="positional_bool_parse_rule",
             ),
             pytest.param(
                 _func_enum_with_default,
                 "color",
-                {"option_strings": ["--color"], "choices": ["red", "green", "blue"]},
+                {"option_strings": ["--color"]},
                 id="enum_with_default_becomes_option",
             ),
             pytest.param(
@@ -164,6 +181,42 @@ class TestBuildParserParams:
                 "path",
                 {"option_strings": [], "type": Path},
                 id="positional_path_no_default",
+            ),
+            pytest.param(
+                _func_decimal,
+                "amount",
+                {"option_strings": ["--amount"], "type": decimal.Decimal, "default": decimal.Decimal("1.25")},
+                id="decimal_option",
+            ),
+            pytest.param(
+                _func_collection,
+                "ids",
+                {"option_strings": [], "nargs": "+", "type": int},
+                id="collection_positional",
+            ),
+            pytest.param(
+                _func_set_collection,
+                "tags",
+                {"option_strings": [], "nargs": "+"},
+                id="set_collection_positional",
+            ),
+            pytest.param(
+                _func_tuple_collection,
+                "values",
+                {"option_strings": [], "nargs": "+", "type": int},
+                id="tuple_collection_positional",
+            ),
+            pytest.param(
+                _func_literal_option,
+                "mode",
+                {"option_strings": ["--mode"], "choices": ["fast", "slow"], "default": "fast"},
+                id="literal_option",
+            ),
+            pytest.param(
+                _func_literal_positional_int,
+                "level",
+                {"option_strings": [], "choices": [1, 2, 3]},
+                id="literal_positional_int",
             ),
             pytest.param(
                 _func_static_choices,
@@ -284,6 +337,52 @@ class TestBuildParserEdgeCases:
         action = _find_action(parser, "verbose")
         # 'count' action from metadata
         assert isinstance(action, argparse._CountAction)
+
+    def test_positional_bool_parse_rule(self):
+        parser = build_parser_from_function(_func_positional_bool)
+        assert parser.parse_args(["true"]).flag is True
+        assert parser.parse_args(["0"]).flag is False
+
+        with pytest.raises(SystemExit):
+            parser.parse_args(["definitely"])
+
+    def test_literal_int_parses_as_int(self):
+        parser = build_parser_from_function(_func_literal_positional_int)
+        assert parser.parse_args(["2"]).level == 2
+
+        with pytest.raises(SystemExit):
+            parser.parse_args(["7"])
+
+    def test_set_collection_cast(self):
+        parser = build_parser_from_function(_func_set_collection)
+        parsed = parser.parse_args(["a", "b", "a"])
+        assert isinstance(parsed.tags, set)
+        assert parsed.tags == {"a", "b"}
+
+    def test_tuple_collection_cast(self):
+        parser = build_parser_from_function(_func_tuple_collection)
+        parsed = parser.parse_args(["1", "2", "3"])
+        assert isinstance(parsed.values, tuple)
+        assert parsed.values == (1, 2, 3)
+
+    def test_collection_cast_uses_store_action(self):
+        from cmd2.annotated import _CollectionStoreAction
+
+        set_parser = build_parser_from_function(_func_set_collection)
+        set_action = _find_action(set_parser, "tags")
+        assert isinstance(set_action, _CollectionStoreAction)
+
+        tuple_parser = build_parser_from_function(_func_tuple_collection)
+        tuple_action = _find_action(tuple_parser, "values")
+        assert isinstance(tuple_action, _CollectionStoreAction)
+
+    def test_plain_enum_parses_by_value_and_name(self):
+        def _func_plain_enum(self, color: _PlainColor) -> None: ...
+
+        parser = build_parser_from_function(_func_plain_enum)
+        assert parser.parse_args(["red"]).color is _PlainColor.RED
+        assert parser.parse_args(["green"]).color is _PlainColor.GREEN
+        assert parser.parse_args(["BLUE"]).color is _PlainColor.BLUE
 
 
 class TestAnnotatedMetadata:
@@ -564,6 +663,14 @@ class TestUnknownArgs:
         out, _ = run_cmd(unknown_app, "flex Alice --extra stuff")
         assert out[0] == "name=Alice"
         assert "unknown=" in out[1]
+
+    def test_with_unknown_args_requires_unknown_parameter(self):
+        with pytest.raises(TypeError, match="requires a parameter named _unknown"):
+
+            class _BadUnknownArgsApp(cmd2.Cmd):
+                @cmd2.with_annotated(with_unknown_args=True)
+                def do_bad(self, name: str) -> None:
+                    self.poutput(name)
 
 
 # ---------------------------------------------------------------------------

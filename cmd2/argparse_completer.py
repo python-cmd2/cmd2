@@ -749,6 +749,10 @@ class ArgparseCompleter:
             if isinstance(action_type, type) and issubclass(action_type, enum.Enum):
                 return [CompletionItem(str(m.value), display_meta=m.name) for m in action_type]
 
+            enum_from_converter = getattr(action_type, '_cmd2_enum_class', None)
+            if isinstance(enum_from_converter, type) and issubclass(enum_from_converter, enum.Enum):
+                return [CompletionItem(str(m.value), display_meta=m.name) for m in enum_from_converter]
+
         # Standard choices
         return [
             choice if isinstance(choice, CompletionItem) else CompletionItem(choice) for choice in arg_state.action.choices

@@ -2,6 +2,7 @@
 
 import argparse
 import functools
+import inspect
 from collections.abc import (
     Callable,
     Sequence,
@@ -371,6 +372,13 @@ def with_annotated(
     from .annotated import build_parser_from_function
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+        if with_unknown_args:
+            unknown_param = inspect.signature(fn).parameters.get('_unknown')
+            if unknown_param is None:
+                raise TypeError('with_annotated(with_unknown_args=True) requires a parameter named _unknown')
+            if unknown_param.kind is inspect.Parameter.POSITIONAL_ONLY:
+                raise TypeError('Parameter _unknown must be keyword-compatible when with_unknown_args=True')
+
         command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
         @functools.wraps(fn)

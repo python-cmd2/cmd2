@@ -19,7 +19,7 @@ following for you:
 These features are provided by two decorators:
 
 - [@with_argparser][cmd2.with_argparser] -- build parsers manually with `add_argument()` calls
-- [@with_annotated][cmd2.annotated.with_annotated] -- build parsers automatically from type hints
+- [@with_annotated][cmd2.decorators.with_annotated] -- build parsers automatically from type hints
 
 See the
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
@@ -30,7 +30,7 @@ examples to compare the two styles side by side.
 arguments passed to commands:
 
 - [cmd2.decorators.with_argparser][]
-- [cmd2.annotated.with_annotated][]
+- [cmd2.decorators.with_annotated][]
 - [cmd2.decorators.with_argument_list][]
 
 All of these decorators accept an optional **preserve_quotes** argument which defaults to `False`.
@@ -57,7 +57,7 @@ stores internally. A consequence is that parsers don't need to be unique across 
 
 ## with_annotated decorator
 
-The [@with_annotated][cmd2.annotated.with_annotated] decorator builds an argparse parser
+The [@with_annotated][cmd2.decorators.with_annotated] decorator builds an argparse parser
 automatically from the decorated function's type annotations. No manual `add_argument()` calls are
 required.
 
@@ -85,16 +85,26 @@ them as keyword arguments.
 
 The decorator converts Python type annotations into `add_argument()` calls:
 
-| Type annotation          | Generated argparse setting                     |
-| ------------------------ | ---------------------------------------------- |
-| `str`                    | default (no `type=` needed)                    |
-| `int`, `float`           | `type=int` or `type=float`                     |
-| `bool` (default `False`) | `--flag` with `action='store_true'`            |
-| `bool` (default `True`)  | `--no-flag` with `action='store_false'`        |
-| `Path`                   | `type=Path`                                    |
-| `Enum` subclass          | `type=converter`, `choices` from member values |
-| `list[T]`                | `nargs='+'` (or `'*'` if it has a default)     |
-| `T \| None`              | unwrapped to `T`, treated as optional          |
+| Type annotation                                          | Generated argparse setting                          |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| `str`                                                    | default (no `type=` needed)                         |
+| `int`, `float`                                           | `type=int` or `type=float`                          |
+| `bool` (default `False`)                                 | `--flag` with `action='store_true'`                 |
+| `bool` (default `True`)                                  | `--no-flag` with `action='store_false'`             |
+| positional `bool`                                        | parsed from `true/false`, `yes/no`, `on/off`, `1/0` |
+| `Path`                                                   | `type=Path`                                         |
+| `Enum` subclass                                          | `type=converter`, `choices` from member values      |
+| `decimal.Decimal`                                        | `type=decimal.Decimal`                              |
+| `Literal[...]`                                           | `type=literal-converter`, `choices` from values     |
+| `Collection[T]` / `list[T]` / `set[T]` / `tuple[T, ...]` | `nargs='+'` (or `'*'` if it has a default)          |
+| `T \| None`                                              | unwrapped to `T`, treated as optional               |
+
+When collection types are used with `@with_annotated`, parsed values are passed to the command
+function as:
+
+- `list[T]` and `Collection[T]` as `list`
+- `set[T]` as `set`
+- `tuple[T, ...]` as `tuple`
 
 ### Annotated metadata
 
