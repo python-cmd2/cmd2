@@ -308,6 +308,14 @@ class AsyncAlert:
     timestamp: float = field(default_factory=time.monotonic, init=False)
 
 
+class _ConsoleCache(threading.local):
+    """Thread-local storage for cached Rich consoles used by print_to()."""
+
+    def __init__(self) -> None:
+        self.stdout: Cmd2BaseConsole | None = None
+        self.stderr: Cmd2BaseConsole | None = None
+
+
 class Cmd:
     """An easy but powerful framework for writing line-oriented command interpreters.
 
@@ -440,6 +448,9 @@ class Cmd:
         self.quiet = False  # Do not suppress nonessential output
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
         self.timing = False  # Prints elapsed time for each command
+
+        # Thread-local storage for cached Rich consoles used by print_to()
+        self._console_cache = _ConsoleCache()
 
         # The maximum number of items to display in a completion table. If the number of completion
         # suggestions exceeds this number, then no table will appear.
@@ -1332,20 +1343,48 @@ class Cmd:
         markup: bool,
         highlight: bool,
     ) -> Cmd2BaseConsole:
-        """Create a Cmd2BaseConsole with formatting overrides.
+        """Get a Cmd2BaseConsole configured for the specified stream and formatting settings.
 
-        This works around a bug in Rich where passing these formatting settings directly to
-        console.print() or console.log() does not always work when printing certain Renderables.
-        Passing them to the constructor instead ensures they are correctly propagated.
+        This method manages a thread-local cache for consoles printing to self.stdout or
+        sys.stderr to avoid the overhead of repeated initialization. It returns a cached
+        instance if its configuration matches the request. Otherwise, a new console is
+        created and cached.
 
-        See: https://github.com/Textualize/rich/issues/4028
+        Note: This implementation works around a bug in Rich where passing formatting settings
+        (emoji, markup, and highlight) directly to console.print() or console.log() does not
+        always work when printing certain Renderables. Passing them to the constructor instead
+        ensures they are correctly propagated. Once this bug is fixed, these parameters can
+        be removed from this method. For more details, see:
+        https://github.com/Textualize/rich/issues/4028
         """
-        return Cmd2BaseConsole(
-            file=file,
-            emoji=emoji,
-            markup=markup,
-            highlight=highlight,
-        )
+        # Dictionary of settings to check against cached consoles
+        kwargs = {
+            "emoji": emoji,
+            "markup": markup,
+            "highlight": highlight,
+        }
+
+        # Check if we should use or update a cached console
+        if file is self.stdout:
+            cached = self._console_cache.stdout
+            if cached is not None and cached.matches_config(file, **kwargs):
+                return cached
+
+            # Create new console and update cache
+            self._console_cache.stdout = Cmd2BaseConsole(file=file, **kwargs)
+            return self._console_cache.stdout
+
+        if file is sys.stderr:
+            cached = self._console_cache.stderr
+            if cached is not None and cached.matches_config(file, **kwargs):
+                return cached
+
+            # Create new console and update cache
+            self._console_cache.stderr = Cmd2BaseConsole(file=file, **kwargs)
+            return self._console_cache.stderr
+
+        # For any other file, just create a new console
+        return Cmd2BaseConsole(file=file, **kwargs)
 
     def print_to(
         self,
