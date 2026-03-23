@@ -2536,14 +2536,12 @@ def test_poutput_all_keyword_args(outsim_app):
         (True, False, True),
     ],
 )
-def test_create_base_printing_console_caching(
-    base_app: cmd2.Cmd, stream: str, emoji: bool, markup: bool, highlight: bool
-) -> None:
-    """Test that base printing consoles are cached and reused when settings match."""
+def test_get_core_print_console_caching(base_app: cmd2.Cmd, stream: str, emoji: bool, markup: bool, highlight: bool) -> None:
+    """Test that printing consoles are cached and reused when settings match."""
     file = sys.stderr if stream == 'stderr' else base_app.stdout
 
     # Initial creation
-    console1 = base_app._create_base_printing_console(
+    console1 = base_app._get_core_print_console(
         file=file,
         emoji=emoji,
         markup=markup,
@@ -2555,7 +2553,7 @@ def test_create_base_printing_console_caching(
     assert cached is console1
 
     # Identical request should return the same object
-    console2 = base_app._create_base_printing_console(
+    console2 = base_app._get_core_print_console(
         file=file,
         emoji=emoji,
         markup=markup,
@@ -2568,12 +2566,12 @@ def test_create_base_printing_console_caching(
     'stream',
     ['stdout', 'stderr'],
 )
-def test_create_base_printing_console_invalidation(base_app: cmd2.Cmd, stream: str) -> None:
+def test_get_core_print_console_invalidation(base_app: cmd2.Cmd, stream: str) -> None:
     """Test that changing settings, theme, or ALLOW_STYLE invalidates the cache."""
     file = sys.stderr if stream == 'stderr' else base_app.stdout
 
     # Initial creation
-    console1 = base_app._create_base_printing_console(
+    console1 = base_app._get_core_print_console(
         file=file,
         emoji=True,
         markup=True,
@@ -2581,7 +2579,7 @@ def test_create_base_printing_console_invalidation(base_app: cmd2.Cmd, stream: s
     )
 
     # Changing emoji should create a new console
-    console2 = base_app._create_base_printing_console(
+    console2 = base_app._get_core_print_console(
         file=file,
         emoji=False,
         markup=True,
@@ -2591,7 +2589,7 @@ def test_create_base_printing_console_invalidation(base_app: cmd2.Cmd, stream: s
     assert getattr(base_app._console_cache, stream) is console2
 
     # Changing markup should create a new console
-    console3 = base_app._create_base_printing_console(
+    console3 = base_app._get_core_print_console(
         file=file,
         emoji=False,
         markup=False,
@@ -2601,7 +2599,7 @@ def test_create_base_printing_console_invalidation(base_app: cmd2.Cmd, stream: s
     assert getattr(base_app._console_cache, stream) is console3
 
     # Changing highlight should create a new console
-    console4 = base_app._create_base_printing_console(
+    console4 = base_app._get_core_print_console(
         file=file,
         emoji=False,
         markup=False,
@@ -2614,7 +2612,7 @@ def test_create_base_printing_console_invalidation(base_app: cmd2.Cmd, stream: s
     orig_allow_style = ru.ALLOW_STYLE
     try:
         ru.ALLOW_STYLE = ru.AllowStyle.ALWAYS if orig_allow_style != ru.AllowStyle.ALWAYS else ru.AllowStyle.NEVER
-        console5 = base_app._create_base_printing_console(
+        console5 = base_app._get_core_print_console(
             file=file,
             emoji=False,
             markup=False,
@@ -2631,7 +2629,7 @@ def test_create_base_printing_console_invalidation(base_app: cmd2.Cmd, stream: s
     old_theme = ru.APP_THEME
     try:
         ru.APP_THEME = Theme()
-        console6 = base_app._create_base_printing_console(
+        console6 = base_app._get_core_print_console(
             file=file,
             emoji=False,
             markup=False,
@@ -2643,11 +2641,11 @@ def test_create_base_printing_console_invalidation(base_app: cmd2.Cmd, stream: s
         ru.APP_THEME = old_theme
 
 
-def test_create_base_printing_console_non_cached(base_app: cmd2.Cmd) -> None:
+def test_get_core_print_console_non_cached(base_app: cmd2.Cmd) -> None:
     """Test that arbitrary file objects are not cached."""
     file = io.StringIO()
 
-    console1 = base_app._create_base_printing_console(
+    console1 = base_app._get_core_print_console(
         file=file,
         emoji=True,
         markup=True,
@@ -2659,7 +2657,7 @@ def test_create_base_printing_console_non_cached(base_app: cmd2.Cmd) -> None:
     assert base_app._console_cache.stderr is None
 
     # A second request for the same file should still create a new object
-    console2 = base_app._create_base_printing_console(
+    console2 = base_app._get_core_print_console(
         file=file,
         emoji=True,
         markup=True,

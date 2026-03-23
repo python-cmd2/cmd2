@@ -309,7 +309,7 @@ class AsyncAlert:
 
 
 class _ConsoleCache(threading.local):
-    """Thread-local storage for cached Rich consoles used by print_to()."""
+    """Thread-local storage for cached Rich consoles used by core print methods."""
 
     def __init__(self) -> None:
         self.stdout: Cmd2BaseConsole | None = None
@@ -449,7 +449,7 @@ class Cmd:
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
         self.timing = False  # Prints elapsed time for each command
 
-        # Thread-local storage for cached Rich consoles used by print_to()
+        # Cached Rich consoles used by core print methods.
         self._console_cache = _ConsoleCache()
 
         # The maximum number of items to display in a completion table. If the number of completion
@@ -1335,7 +1335,7 @@ class Cmd:
         """
         return su.strip_style(self.prompt)
 
-    def _create_base_printing_console(
+    def _get_core_print_console(
         self,
         *,
         file: IO[str],
@@ -1343,12 +1343,13 @@ class Cmd:
         markup: bool,
         highlight: bool,
     ) -> Cmd2BaseConsole:
-        """Get a Cmd2BaseConsole configured for the specified stream and formatting settings.
+        """Get a console configured for the specified stream and formatting settings.
 
-        This method manages a thread-local cache for consoles printing to self.stdout or
-        sys.stderr to avoid the overhead of repeated initialization. It returns a cached
-        instance if its configuration matches the request. Otherwise, a new console is
-        created and cached.
+        This method is intended for internal use by cmd2's core print methods.
+        To avoid the overhead of repeated initialization, it manages a thread-local
+        cache for consoles targeting ``self.stdout`` or ``sys.stderr``. It returns a cached
+        instance if its configuration matches the request. For all other streams, or if
+        the configuration has changed, a new console is created.
 
         Note: This implementation works around a bug in Rich where passing formatting settings
         (emoji, markup, and highlight) directly to console.print() or console.log() does not
@@ -1437,7 +1438,7 @@ class Cmd:
         See the Rich documentation for more details on emoji codes, markup tags, and highlighting.
         """
         try:
-            self._create_base_printing_console(
+            self._get_core_print_console(
                 file=file,
                 emoji=emoji,
                 markup=markup,
@@ -1753,7 +1754,7 @@ class Cmd:
                 soft_wrap = True
 
             # Generate the bytes to send to the pager
-            console = self._create_base_printing_console(
+            console = self._get_core_print_console(
                 file=self.stdout,
                 emoji=emoji,
                 markup=markup,
