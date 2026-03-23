@@ -690,7 +690,7 @@ class Cmd:
         # Add a binding for 'enter' that triggers only when a completion is selected.
         # This allows accepting a completion without submitting the command.
         @key_bindings.add('enter', filter=filters.completion_is_selected)
-        def _(event: Any) -> None:
+        def _(event: Any) -> None:  # pragma: no cover
             event.current_buffer.complete_state = None
 
         if completekey != self.DEFAULT_COMPLETEKEY:
