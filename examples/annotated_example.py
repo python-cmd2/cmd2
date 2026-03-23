@@ -42,6 +42,9 @@ class LogLevel(str, Enum):
     error = "error"
 
 
+ANNOTATED_CATEGORY = "Annotated Commands"
+
+
 class AnnotatedExample(Cmd):
     """Demonstrates @with_annotated strengths over @with_argparser."""
 
@@ -57,6 +60,7 @@ class AnnotatedExample(Cmd):
     # Here the decorator infers everything from the annotations.
 
     @cmd2.with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_add(self, a: int, b: int = 0, verbose: bool = False) -> None:
         """Add two integers. Types are inferred from annotations.
 
@@ -75,6 +79,7 @@ class AnnotatedExample(Cmd):
     # Here the Enum type provides choices and validation automatically.
 
     @cmd2.with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_paint(
         self,
         item: str,
@@ -94,6 +99,7 @@ class AnnotatedExample(Cmd):
     # Here the Path type triggers filesystem completion automatically.
 
     @cmd2.with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_copy(self, src: Path, dst: Path) -> None:
         """Copy a file. Path parameters auto-complete filesystem paths.
 
@@ -109,6 +115,7 @@ class AnnotatedExample(Cmd):
     #   True default  -> --no-flag (store_false)
 
     @cmd2.with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_build(
         self,
         target: str,
@@ -135,6 +142,7 @@ class AnnotatedExample(Cmd):
     # Here list[float] does both at once.
 
     @cmd2.with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_sum(self, numbers: list[float]) -> None:
         """Sum numbers. ``list[T]`` becomes ``nargs='+'`` automatically.
 
@@ -148,6 +156,7 @@ class AnnotatedExample(Cmd):
     # Here each parameter is a typed local variable.
 
     @cmd2.with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_greet(self, name: str, count: int = 1, loud: bool = False) -> None:
         """Greet someone. Parameters are typed -- no Namespace unpacking.
 
@@ -175,6 +184,7 @@ class AnnotatedExample(Cmd):
         return Choices.from_values(["play"])
 
     @cmd2.with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_score(
         self,
         sport: Annotated[
@@ -205,6 +215,7 @@ class AnnotatedExample(Cmd):
     # -- Preserve quotes -----------------------------------------------------
 
     @cmd2.with_annotated(preserve_quotes=True)
+    @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_echo(self, text: str) -> None:
         """Echo text with quotes preserved.
 
