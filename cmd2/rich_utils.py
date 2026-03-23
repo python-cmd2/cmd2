@@ -160,6 +160,9 @@ class Cmd2BaseConsole(Console):
                 "Passing 'theme' is not allowed. Its behavior is controlled by the global APP_THEME and set_theme()."
             )
 
+        # Store the configuration used to create this console for caching purposes.
+        self._config_key = self._generate_config_key(file=file, **kwargs)
+
         force_terminal: bool | None = None
         force_interactive: bool | None = None
 
@@ -179,6 +182,41 @@ class Cmd2BaseConsole(Console):
             theme=APP_THEME,
             **kwargs,
         )
+
+    @staticmethod
+    def _generate_config_key(
+        *,
+        file: IO[str] | None,
+        **kwargs: Any,
+    ) -> tuple[Any, ...]:
+        """Generate a key representing the settings used to initialize a console.
+
+        This key includes the file identity, global settings (ALLOW_STYLE, APP_THEME),
+        and any other settings passed in via kwargs.
+
+        :param file: file stream being checked
+        :param kwargs: other console settings
+        """
+        return (
+            id(file),
+            ALLOW_STYLE,
+            id(APP_THEME),
+            tuple(sorted(kwargs.items())),
+        )
+
+    def matches_config(
+        self,
+        *,
+        file: IO[str] | None,
+        **kwargs: Any,
+    ) -> bool:
+        """Check if this console instance was initialized with the specified settings.
+
+        :param file: file stream being checked
+        :param kwargs: other console settings being checked
+        :return: True if the settings match this console's configuration
+        """
+        return self._config_key == self._generate_config_key(file=file, **kwargs)
 
     def on_broken_pipe(self) -> None:
         """Override which raises BrokenPipeError instead of SystemExit."""

@@ -2524,6 +2524,148 @@ def test_poutput_all_keyword_args(outsim_app):
     assert "My string" in out
 
 
+@pytest.mark.parametrize(
+    'stream',
+    ['stdout', 'stderr'],
+)
+@pytest.mark.parametrize(
+    ('emoji', 'markup', 'highlight'),
+    [
+        (True, True, True),
+        (False, False, False),
+        (True, False, True),
+    ],
+)
+def test_get_core_print_console_caching(base_app: cmd2.Cmd, stream: str, emoji: bool, markup: bool, highlight: bool) -> None:
+    """Test that printing consoles are cached and reused when settings match."""
+    file = sys.stderr if stream == 'stderr' else base_app.stdout
+
+    # Initial creation
+    console1 = base_app._get_core_print_console(
+        file=file,
+        emoji=emoji,
+        markup=markup,
+        highlight=highlight,
+    )
+
+    # Verify it's in the cache
+    cached = getattr(base_app._console_cache, stream)
+    assert cached is console1
+
+    # Identical request should return the same object
+    console2 = base_app._get_core_print_console(
+        file=file,
+        emoji=emoji,
+        markup=markup,
+        highlight=highlight,
+    )
+    assert console2 is console1
+
+
+@pytest.mark.parametrize(
+    'stream',
+    ['stdout', 'stderr'],
+)
+def test_get_core_print_console_invalidation(base_app: cmd2.Cmd, stream: str) -> None:
+    """Test that changing settings, theme, or ALLOW_STYLE invalidates the cache."""
+    file = sys.stderr if stream == 'stderr' else base_app.stdout
+
+    # Initial creation
+    console1 = base_app._get_core_print_console(
+        file=file,
+        emoji=True,
+        markup=True,
+        highlight=True,
+    )
+
+    # Changing emoji should create a new console
+    console2 = base_app._get_core_print_console(
+        file=file,
+        emoji=False,
+        markup=True,
+        highlight=True,
+    )
+    assert console2 is not console1
+    assert getattr(base_app._console_cache, stream) is console2
+
+    # Changing markup should create a new console
+    console3 = base_app._get_core_print_console(
+        file=file,
+        emoji=False,
+        markup=False,
+        highlight=True,
+    )
+    assert console3 is not console2
+    assert getattr(base_app._console_cache, stream) is console3
+
+    # Changing highlight should create a new console
+    console4 = base_app._get_core_print_console(
+        file=file,
+        emoji=False,
+        markup=False,
+        highlight=False,
+    )
+    assert console4 is not console3
+    assert getattr(base_app._console_cache, stream) is console4
+
+    # Changing ALLOW_STYLE should create a new console
+    orig_allow_style = ru.ALLOW_STYLE
+    try:
+        ru.ALLOW_STYLE = ru.AllowStyle.ALWAYS if orig_allow_style != ru.AllowStyle.ALWAYS else ru.AllowStyle.NEVER
+        console5 = base_app._get_core_print_console(
+            file=file,
+            emoji=False,
+            markup=False,
+            highlight=False,
+        )
+        assert console5 is not console4
+        assert getattr(base_app._console_cache, stream) is console5
+    finally:
+        ru.ALLOW_STYLE = orig_allow_style
+
+    # Changing the theme should create a new console
+    from rich.theme import Theme
+
+    old_theme = ru.APP_THEME
+    try:
+        ru.APP_THEME = Theme()
+        console6 = base_app._get_core_print_console(
+            file=file,
+            emoji=False,
+            markup=False,
+            highlight=False,
+        )
+        assert console6 is not console5
+        assert getattr(base_app._console_cache, stream) is console6
+    finally:
+        ru.APP_THEME = old_theme
+
+
+def test_get_core_print_console_non_cached(base_app: cmd2.Cmd) -> None:
+    """Test that arbitrary file objects are not cached."""
+    file = io.StringIO()
+
+    console1 = base_app._get_core_print_console(
+        file=file,
+        emoji=True,
+        markup=True,
+        highlight=True,
+    )
+
+    # Cache for stdout/stderr should still be None (assuming they haven't been touched yet)
+    assert base_app._console_cache.stdout is None
+    assert base_app._console_cache.stderr is None
+
+    # A second request for the same file should still create a new object
+    console2 = base_app._get_core_print_console(
+        file=file,
+        emoji=True,
+        markup=True,
+        highlight=True,
+    )
+    assert console2 is not console1
+
+
 def test_broken_pipe_error(outsim_app, monkeypatch, capsys):
     write_mock = mock.MagicMock()
     write_mock.side_effect = BrokenPipeError

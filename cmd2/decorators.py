@@ -278,7 +278,7 @@ def with_argparser(
         """
 
         @functools.wraps(func)
-        def cmd_wrapper(*args: Any, **kwargs: dict[str, Any]) -> bool | None:
+        def cmd_wrapper(*args: Any, **kwargs: Any) -> bool | None:
             """Command function wrapper which translates command line into argparse Namespace and call actual command function.
 
             :param args: All positional arguments to this function.  We're expecting there to be:
