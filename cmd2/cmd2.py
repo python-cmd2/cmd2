@@ -684,11 +684,17 @@ class Cmd:
         Otherwise, uses dummy drivers to support non-interactive streams like
         pipes or files.
         """
-        key_bindings = None
+        # Configure custom key bindings
+        key_bindings = KeyBindings()
+
+        # Add a binding for 'enter' that triggers only when a completion is selected.
+        # This allows accepting a completion without submitting the command.
+        @key_bindings.add('enter', filter=filters.completion_is_selected)
+        def _(event: Any) -> None:  # pragma: no cover
+            event.current_buffer.complete_state = None
+
         if completekey != self.DEFAULT_COMPLETEKEY:
             # Configure prompt_toolkit `KeyBindings` with the custom key for completion
-            key_bindings = KeyBindings()
-
             @key_bindings.add(completekey)
             def _(event: Any) -> None:  # pragma: no cover
                 """Trigger completion."""
