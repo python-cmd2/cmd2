@@ -1367,7 +1367,7 @@ class Cmd:
         # Check if we should use or update a cached console
         if file is self.stdout:
             cached = self._console_cache.stdout
-            if cached is not None and cached.matches_config(file, **kwargs):
+            if cached is not None and cached.matches_config(file=file, **kwargs):
                 return cached
 
             # Create new console and update cache
@@ -1376,7 +1376,7 @@ class Cmd:
 
         if file is sys.stderr:
             cached = self._console_cache.stderr
-            if cached is not None and cached.matches_config(file, **kwargs):
+            if cached is not None and cached.matches_config(file=file, **kwargs):
                 return cached
 
             # Create new console and update cache

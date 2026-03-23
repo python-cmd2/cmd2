@@ -161,7 +161,7 @@ class Cmd2BaseConsole(Console):
             )
 
         # Store the configuration used to create this console for caching purposes.
-        self._config_key = self._generate_config_key(file, kwargs)
+        self._config_key = self._generate_config_key(file=file, **kwargs)
 
         force_terminal: bool | None = None
         force_interactive: bool | None = None
@@ -185,13 +185,17 @@ class Cmd2BaseConsole(Console):
 
     @staticmethod
     def _generate_config_key(
+        *,
         file: IO[str] | None,
-        kwargs: dict[str, Any],
+        **kwargs: Any,
     ) -> tuple[Any, ...]:
         """Generate a key representing the settings used to initialize a console.
 
         This key includes the file identity, global settings (ALLOW_STYLE, APP_THEME),
         and any other settings passed in via kwargs.
+
+        :param file: file stream being checked
+        :param kwargs: other console settings
         """
         return (
             id(file),
@@ -202,16 +206,17 @@ class Cmd2BaseConsole(Console):
 
     def matches_config(
         self,
+        *,
         file: IO[str] | None,
         **kwargs: Any,
     ) -> bool:
-        """Check if this console instance is compatible with the given settings.
+        """Check if this console instance was initialized with the specified settings.
 
         :param file: file stream being checked
-        :param kwargs: formatting settings being checked
+        :param kwargs: other console settings being checked
         :return: True if the settings match this console's configuration
         """
-        return self._config_key == self._generate_config_key(file, kwargs)
+        return self._config_key == self._generate_config_key(file=file, **kwargs)
 
     def on_broken_pipe(self) -> None:
         """Override which raises BrokenPipeError instead of SystemExit."""
