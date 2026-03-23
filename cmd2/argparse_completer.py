@@ -5,7 +5,9 @@ See the header of argparse_custom.py for instructions on how to use these featur
 
 import argparse
 import dataclasses
+import enum
 import inspect
+import pathlib
 from collections import (
     defaultdict,
     deque,
@@ -730,6 +732,22 @@ class ArgparseCompleter:
                 CompletionItem(name, display_meta=parser_help.get(subparser, ''))
                 for name, subparser in arg_state.action.choices.items()
             ]
+
+        choices_callable: ChoicesCallable | None = arg_state.action.get_choices_callable()  # type: ignore[attr-defined]
+        if choices_callable is not None:
+            return choices_callable
+
+        # Type inference: auto-complete from action.type when no explicit
+        # choices or choices_callable is configured.
+        action_type = arg_state.action.type
+        if action_type is not None:
+            if action_type is pathlib.Path or (isinstance(action_type, type) and issubclass(action_type, pathlib.Path)):
+                from .cmd2 import Cmd
+
+                return ChoicesCallable(is_completer=True, to_call=Cmd.path_complete)
+
+            if isinstance(action_type, type) and issubclass(action_type, enum.Enum):
+                return [CompletionItem(str(m.value), display_meta=m.name) for m in action_type]
 
         # Standard choices
         return [

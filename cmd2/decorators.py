@@ -1,6 +1,7 @@
 """Decorators for ``cmd2`` commands."""
 
 import argparse
+import functools
 from collections.abc import (
     Callable,
     Sequence,
@@ -345,6 +346,78 @@ def with_argparser(
         return cmd_wrapper
 
     return arg_decorator
+
+
+def with_annotated(
+    func: Callable[..., Any] | None = None,
+    *,
+    preserve_quotes: bool = False,
+    with_unknown_args: bool = False,
+) -> Any:
+    """Decorate a ``do_*`` method to build its argparse parser from type annotations.
+
+    Can be used bare or with keyword arguments::
+
+        @with_annotated
+        def do_greet(self, name: str, count: int = 1): ...
+
+        @with_annotated(preserve_quotes=True)
+        def do_raw(self, text: str): ...
+
+    :param func: the command function (when used without parentheses)
+    :param preserve_quotes: if True, preserve quotes in arguments
+    :param with_unknown_args: if True, capture unknown args (passed as extra kwarg ``_unknown``)
+    """
+    from .annotated import build_parser_from_function
+
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+        command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
+
+        @functools.wraps(fn)
+        def cmd_wrapper(*args: Any, **_kwargs: Any) -> bool | None:
+            cmd2_app, statement_arg = _parse_positionals(args)
+            owner = args[0]  # Cmd or CommandSet instance
+            _statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(
+                command_name, statement_arg, preserve_quotes
+            )
+
+            arg_parser = cmd2_app._command_parsers.get(cmd_wrapper)
+            if arg_parser is None:
+                raise ValueError(f'No argument parser found for {command_name}')
+
+            try:
+                if with_unknown_args:
+                    ns, unknown = arg_parser.parse_known_args(parsed_arglist)
+                else:
+                    ns = arg_parser.parse_args(parsed_arglist)
+                    unknown = None
+            except SystemExit as exc:
+                raise Cmd2ArgparseError from exc
+
+            # Unpack Namespace into function kwargs
+            func_kwargs: dict[str, Any] = {}
+            for key, value in vars(ns).items():
+                if key.startswith('cmd2_') or key == constants.NS_ATTR_SUBCMD_HANDLER:
+                    continue
+                func_kwargs[key] = value
+
+            if with_unknown_args:
+                func_kwargs['_unknown'] = unknown
+
+            result: bool | None = fn(owner, **func_kwargs)
+            return result
+
+        # Store a parser-builder callable — _CommandParsers._build_parser()
+        # already handles callables by calling them with no arguments.
+        setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, lambda: build_parser_from_function(fn))
+        setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
+
+        return cmd_wrapper
+
+    # Support both @with_annotated and @with_annotated(...)
+    if func is not None:
+        return decorator(func)
+    return decorator
 
 
 def as_subcommand_to(
