@@ -753,6 +753,9 @@ class ArgparseCompleter:
             if isinstance(enum_from_converter, type) and issubclass(enum_from_converter, enum.Enum):
                 return [CompletionItem(str(m.value), display_meta=m.name) for m in enum_from_converter]
 
+            if action_type.__name__ == '_parse_bool':
+                return [CompletionItem(v) for v in ['true', 'false', 'yes', 'no', 'on', 'off', '1', '0']]
+
         # Standard choices
         return [
             choice if isinstance(choice, CompletionItem) else CompletionItem(choice) for choice in arg_state.action.choices

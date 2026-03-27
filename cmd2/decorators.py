@@ -352,8 +352,13 @@ def with_argparser(
 def with_annotated(
     func: Callable[..., Any] | None = None,
     *,
+    ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
     with_unknown_args: bool = False,
+    subcommand_to: str | None = None,
+    base_command: bool = False,
+    help: str | None = None,  # noqa: A002
+    aliases: Sequence[str] | None = None,
 ) -> Any:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
@@ -366,12 +371,22 @@ def with_annotated(
         def do_raw(self, text: str): ...
 
     :param func: the command function (when used without parentheses)
+    :param ns_provider: optional namespace provider, mirroring ``with_argparser``
     :param preserve_quotes: if True, preserve quotes in arguments
     :param with_unknown_args: if True, capture unknown args (passed as extra kwarg ``_unknown``)
     """
-    from .annotated import build_parser_from_function
+    from .annotated import (
+        _filtered_namespace_kwargs,
+        _validate_base_command_params,
+        build_parser_from_function,
+        build_subcommand_handler,
+    )
+    from .argparse_custom import Cmd2AttributeWrapper
 
     def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+        if subcommand_to is None and (help is not None or aliases):
+            raise TypeError("with_annotated(help=..., aliases=...) requires subcommand_to=...")
+
         if with_unknown_args:
             unknown_param = inspect.signature(fn).parameters.get('_unknown')
             if unknown_param is None:
@@ -379,13 +394,40 @@ def with_annotated(
             if unknown_param.kind is inspect.Parameter.POSITIONAL_ONLY:
                 raise TypeError('Parameter _unknown must be keyword-compatible when with_unknown_args=True')
 
+        if subcommand_to is not None:
+            handler, subcmd_name, subcmd_parser_builder = build_subcommand_handler(
+                fn,
+                subcommand_to,
+                base_command=base_command,
+            )
+            setattr(handler, constants.SUBCMD_ATTR_COMMAND, subcommand_to)
+            setattr(handler, constants.CMD_ATTR_ARGPARSER, subcmd_parser_builder)
+            setattr(handler, constants.SUBCMD_ATTR_NAME, subcmd_name)
+            add_parser_kwargs: dict[str, Any] = {}
+            if help is not None:
+                add_parser_kwargs['help'] = help
+            if aliases:
+                add_parser_kwargs['aliases'] = list(aliases)
+            setattr(handler, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, add_parser_kwargs)
+            return handler
+
         command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
+        if base_command:
+            _validate_base_command_params(fn)
+
+        accepted = set(inspect.signature(fn).parameters.keys()) - {'self'}
+
+        def parser_builder() -> argparse.ArgumentParser:
+            parser = build_parser_from_function(fn)
+            if base_command:
+                parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
+            return parser
 
         @functools.wraps(fn)
-        def cmd_wrapper(*args: Any, **_kwargs: Any) -> bool | None:
+        def cmd_wrapper(*args: Any, **kwargs: Any) -> bool | None:
             cmd2_app, statement_arg = _parse_positionals(args)
             owner = args[0]  # Cmd or CommandSet instance
-            _statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(
+            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(
                 command_name, statement_arg, preserve_quotes
             )
 
@@ -393,31 +435,39 @@ def with_annotated(
             if arg_parser is None:
                 raise ValueError(f'No argument parser found for {command_name}')
 
+            if ns_provider is None:
+                namespace = None
+            else:
+                provider_self = cmd2_app._resolve_func_self(ns_provider, args[0])
+                namespace = ns_provider(provider_self if provider_self is not None else cmd2_app)
+
             try:
                 if with_unknown_args:
-                    ns, unknown = arg_parser.parse_known_args(parsed_arglist)
+                    ns, unknown = arg_parser.parse_known_args(parsed_arglist, namespace)
                 else:
-                    ns = arg_parser.parse_args(parsed_arglist)
+                    ns = arg_parser.parse_args(parsed_arglist, namespace)
                     unknown = None
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
 
-            # Unpack Namespace into function kwargs
-            func_kwargs: dict[str, Any] = {}
-            for key, value in vars(ns).items():
-                if key.startswith('cmd2_') or key == constants.NS_ATTR_SUBCMD_HANDLER:
-                    continue
-                func_kwargs[key] = value
+            ns.cmd2_statement = Cmd2AttributeWrapper(statement)
+            handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
+            if base_command and handler is not None:
+                handler = functools.partial(handler, ns)
+            ns.cmd2_handler = Cmd2AttributeWrapper(handler)
+            if hasattr(ns, constants.NS_ATTR_SUBCMD_HANDLER):
+                delattr(ns, constants.NS_ATTR_SUBCMD_HANDLER)
+
+            func_kwargs = _filtered_namespace_kwargs(ns, accepted=accepted, exclude_subcommand=base_command)
 
             if with_unknown_args:
                 func_kwargs['_unknown'] = unknown
 
+            func_kwargs.update(kwargs)
             result: bool | None = fn(owner, **func_kwargs)
             return result
 
-        # Store a parser-builder callable — _CommandParsers._build_parser()
-        # already handles callables by calling them with no arguments.
-        setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, lambda: build_parser_from_function(fn))
+        setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, parser_builder)
         setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
 
         return cmd_wrapper
