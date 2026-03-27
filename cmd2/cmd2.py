@@ -88,6 +88,7 @@ from rich.console import (
     RenderableType,
 )
 from rich.highlighter import ReprHighlighter
+from rich.pretty import Pretty
 from rich.rule import Rule
 from rich.style import (
     Style,
@@ -1821,6 +1822,50 @@ class Cmd:
                 highlight=highlight,
                 rich_print_kwargs=rich_print_kwargs,
             )
+
+    def ppretty(
+        self,
+        obj: Any,
+        *,
+        file: IO[str] | None = None,
+        indent_size: int = 4,
+        indent_guides: bool = True,
+        max_length: int | None = None,
+        max_string: int | None = None,
+        max_depth: int | None = None,
+        expand_all: bool = False,
+    ) -> None:
+        """Pretty print an object.
+
+        This is a cmd2-compatible replacement for rich.pretty.pprint().
+
+        :param obj: object to pretty print
+        :param file: file stream being written to or None for self.stdout.
+                     Defaults to None.
+        :param indent_size: number of spaces in indent. Defaults to 4.
+        :param indent_guides: enable indentation guides. Defaults to True.
+        :param max_length: maximum length of containers before abbreviating, or None for no abbreviation.
+                           Defaults to None.
+        :param max_string: maximum length of strings before truncating, or None to disable. Defaults to None.
+        :param max_depth: maximum depth for nested data structures, or None for unlimited depth. Defaults to None.
+        :param expand_all: Expand all containers. Defaults to False.
+        """
+        pretty_obj = Pretty(
+            obj,
+            indent_size=indent_size,
+            indent_guides=indent_guides,
+            max_length=max_length,
+            max_string=max_string,
+            max_depth=max_depth,
+            expand_all=expand_all,
+            overflow="ignore",
+        )
+
+        self.print_to(
+            file or self.stdout,
+            pretty_obj,
+            soft_wrap=True,
+        )
 
     def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
         """Get the bottom toolbar content.

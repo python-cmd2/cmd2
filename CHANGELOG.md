@@ -88,6 +88,7 @@ prompt is displayed.
     - Add support for Python 3.15 by fixing various bugs related to internal `argparse` changes
     - Added `common_prefix` method to `cmd2.string_utils` module as a replacement for
       `os.path.commonprefix` since that is now deprecated in Python 3.15
+    - Added `Cmd.ppretty()` as a cmd2-compatible replacement for `rich.pretty.pprint()`.
 
 ## 3.4.0 (March 3, 2026)
 
