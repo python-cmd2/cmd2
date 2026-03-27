@@ -3505,6 +3505,7 @@ def test_ppretty(base_app: cmd2.Cmd) -> None:
             indent_size=2,
             max_depth=5,
             expand_all=True,
+            end="\n\n",
         )
 
         # Verify Pretty was instantiated with the correct arguments
@@ -3521,7 +3522,12 @@ def test_ppretty(base_app: cmd2.Cmd) -> None:
 
         # Verify print_to() was called with the mock pretty object and soft_wrap=True
         # It should default to self.stdout when no file is provided
-        mock_print_to.assert_called_once_with(base_app.stdout, mock_pretty_obj, soft_wrap=True)
+        mock_print_to.assert_called_once_with(
+            base_app.stdout,
+            mock_pretty_obj,
+            soft_wrap=True,
+            end="\n\n",
+        )
 
 
 # we override cmd.parseline() so we always get consistent

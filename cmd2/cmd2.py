@@ -1834,6 +1834,7 @@ class Cmd:
         max_string: int | None = None,
         max_depth: int | None = None,
         expand_all: bool = False,
+        end: str = "\n",
     ) -> None:
         """Pretty print an object.
 
@@ -1849,7 +1850,9 @@ class Cmd:
         :param max_string: maximum length of strings before truncating, or None to disable. Defaults to None.
         :param max_depth: maximum depth for nested data structures, or None for unlimited depth. Defaults to None.
         :param expand_all: Expand all containers. Defaults to False.
+        :param end: string to write at end of printed text. Defaults to a newline.
         """
+        # The overflow and soft_wrap settings match the behavior of rich.pretty.pprint().
         pretty_obj = Pretty(
             obj,
             indent_size=indent_size,
@@ -1865,6 +1868,7 @@ class Cmd:
             file or self.stdout,
             pretty_obj,
             soft_wrap=True,
+            end=end,
         )
 
     def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
