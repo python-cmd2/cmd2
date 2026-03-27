@@ -1852,7 +1852,7 @@ class Cmd:
         :param expand_all: Expand all containers. Defaults to False.
         :param end: string to write at end of printed text. Defaults to a newline.
         """
-        # The overflow and soft_wrap settings match the behavior of rich.pretty.pprint().
+        # The overflow and soft_wrap values match those in rich.pretty.pprint().
         pretty_obj = Pretty(
             obj,
             indent_size=indent_size,
