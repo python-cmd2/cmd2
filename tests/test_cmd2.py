@@ -3490,6 +3490,40 @@ def test_ppaged_terminal_restoration_oserror(outsim_app, monkeypatch) -> None:
     assert not termios_mock.tcsetattr.called
 
 
+def test_ppretty(base_app: cmd2.Cmd) -> None:
+    # Mock the Pretty class and the print_to() method
+    with mock.patch('cmd2.cmd2.Pretty') as mock_pretty, mock.patch.object(cmd2.Cmd, 'print_to') as mock_print_to:
+        # Set up the mock return value for Pretty
+        mock_pretty_obj = mock.Mock()
+        mock_pretty.return_value = mock_pretty_obj
+
+        test_obj = {"key": "value"}
+
+        # Call ppretty() with some custom arguments
+        base_app.ppretty(
+            test_obj,
+            indent_size=2,
+            max_depth=5,
+            expand_all=True,
+        )
+
+        # Verify Pretty was instantiated with the correct arguments
+        mock_pretty.assert_called_once_with(
+            test_obj,
+            indent_size=2,
+            indent_guides=True,
+            max_length=None,
+            max_string=None,
+            max_depth=5,
+            expand_all=True,
+            overflow="ignore",
+        )
+
+        # Verify print_to() was called with the mock pretty object and soft_wrap=True
+        # It should default to self.stdout when no file is provided
+        mock_print_to.assert_called_once_with(base_app.stdout, mock_pretty_obj, soft_wrap=True)
+
+
 # we override cmd.parseline() so we always get consistent
 # command parsing by parent methods we don't override
 # don't need to test all the parsing logic here, because
