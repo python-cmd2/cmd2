@@ -79,6 +79,7 @@ prompt is displayed.
         - **pre_prompt**: hook method that is called before the prompt is displayed, but after
           `prompt-toolkit` event loop has started
         - **read_secret**: read secrets like passwords without displaying them to the terminal
+        - **ppretty**: a cmd2-compatible replacement for `rich.pretty.pprint()`
     - New settables:
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
@@ -88,7 +89,6 @@ prompt is displayed.
     - Add support for Python 3.15 by fixing various bugs related to internal `argparse` changes
     - Added `common_prefix` method to `cmd2.string_utils` module as a replacement for
       `os.path.commonprefix` since that is now deprecated in Python 3.15
-    - Added `Cmd.ppretty()` as a cmd2-compatible replacement for `rich.pretty.pprint()`.
 
 ## 3.4.0 (March 3, 2026)
 

@@ -8,6 +8,9 @@ EXAMPLE_DATA = {
     "age": 30,
     "address": {"street": "123 Main St", "city": "Anytown", "state": "CA"},
     "hobbies": ["reading", "hiking", "coding", "cooking", "running", "painting", "music", "photography", "cycling"],
+    "member": True,
+    "vip": False,
+    "phone": None,
 }
 
 
