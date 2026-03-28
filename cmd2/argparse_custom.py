@@ -231,6 +231,10 @@ See _match_argument_wrapper for more details.
 sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser for
 more details.
 
+``argparse._SubParsersAction.add_existing_parser`` - new function which allows you to attach
+an existing ArgumentParser to a sub-parsers group. See _SubParsersAction_add_existing_parser
+for more details.
+
 **Added accessor methods**
 
 cmd2 has patched ``argparse.Action`` to include the following accessor methods
@@ -948,7 +952,10 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 ############################################################################################################
 
 
-def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore[type-arg]  # noqa: N802
+def _SubParsersAction_remove_parser(  # noqa: N802
+    self: argparse._SubParsersAction,  # type: ignore[type-arg]
+    name: str,
+) -> None:
     """Remove a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
 
     This function is added by cmd2 as a method called ``remove_parser()`` to ``argparse._SubParsersAction`` class.
@@ -977,6 +984,42 @@ def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str)
 
 setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_parser)
 
+############################################################################################################
+# Patch argparse._SubParsersAction to add add_existing_parser function
+############################################################################################################
+
+
+def _SubParsersAction_add_existing_parser(  # noqa: N802
+    self: argparse._SubParsersAction,  # type: ignore[type-arg]
+    name: str,
+    subcmd_parser: argparse.ArgumentParser,
+    **add_parser_kwargs: Any,
+) -> None:
+    """Attach an existing ArgumentParser to a sub-parsers group.
+
+    This is useful when a parser is pre-configured (e.g. by cmd2's subcommand decorator)
+    and needs to be attached to a parent parser.
+
+    This function is added by cmd2 as a method called ``add_existing_parser()``
+    to ``argparse._SubParsersAction`` class.
+
+    :param self: instance of the _SubParsersAction being edited
+    :param name: name of the subcommand to add
+    :param subcmd_parser: the parser for this new subcommand
+    :param add_parser_kwargs: registration-specific kwargs for add_parser() (e.g. help, aliases, deprecated)
+    """
+    # Use add_parser to register the subcommand name and any aliases
+    self.add_parser(name, **add_parser_kwargs)
+
+    # Replace the parser created by add_parser() with our pre-configured one
+    self._name_parser_map[name] = subcmd_parser
+
+    # Remap any aliases to our pre-configured parser
+    for alias in add_parser_kwargs.get("aliases", []):
+        self._name_parser_map[alias] = subcmd_parser
+
+
+setattr(argparse._SubParsersAction, 'add_existing_parser', _SubParsersAction_add_existing_parser)
 
 ############################################################################################################
 # Unless otherwise noted, everything below this point are copied from Python's
