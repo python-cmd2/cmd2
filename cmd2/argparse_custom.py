@@ -1003,6 +1003,8 @@ def _SubParsersAction_add_existing_parser(  # noqa: N802
     This function is added by cmd2 as a method called ``add_existing_parser()``
     to ``argparse._SubParsersAction`` class.
 
+    To call: ``action.add_existing_parser(name, subcmd_parser, **add_parser_kwargs)``
+
     :param self: instance of the _SubParsersAction being edited
     :param name: name of the subcommand to add
     :param subcmd_parser: the parser for this new subcommand
