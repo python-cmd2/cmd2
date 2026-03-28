@@ -222,46 +222,43 @@ completion and enables nargs range parsing. See _add_argument_wrapper for
 more details on these arguments.
 
 ``argparse.ArgumentParser._get_nargs_pattern`` - adds support for nargs ranges.
-See _get_nargs_pattern_wrapper for more details.
+See ``_get_nargs_pattern_wrapper`` for more details.
 
 ``argparse.ArgumentParser._match_argument`` - adds support for nargs ranges.
-See _match_argument_wrapper for more details.
-
-``argparse._SubParsersAction.remove_parser`` - new function which removes a
-sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser for
-more details.
-
-``argparse._SubParsersAction.add_existing_parser`` - new function which allows you to attach
-an existing ArgumentParser to a sub-parsers group. See _SubParsersAction_add_existing_parser
-for more details.
+See ``_match_argument_wrapper`` for more details.
 
 **Added accessor methods**
 
 cmd2 has patched ``argparse.Action`` to include the following accessor methods
 for cases in which you need to manually access the cmd2-specific attributes.
 
-- ``argparse.Action.get_choices_callable()`` - See `action_get_choices_callable` for more details.
-- ``argparse.Action.set_choices_provider()`` - See `_action_set_choices_provider` for more details.
-- ``argparse.Action.set_completer()`` - See `_action_set_completer` for more details.
-- ``argparse.Action.get_table_columns()`` - See `_action_get_table_columns` for more details.
-- ``argparse.Action.set_table_columns()`` - See `_action_set_table_columns` for more details.
-- ``argparse.Action.get_nargs_range()`` - See `_action_get_nargs_range` for more details.
-- ``argparse.Action.set_nargs_range()`` - See `_action_set_nargs_range` for more details.
-- ``argparse.Action.get_suppress_tab_hint()`` - See `_action_get_suppress_tab_hint` for more details.
-- ``argparse.Action.set_suppress_tab_hint()`` - See `_action_set_suppress_tab_hint` for more details.
+- ``argparse.Action.get_choices_callable()`` - See ``action_get_choices_callable`` for more details.
+- ``argparse.Action.set_choices_provider()`` - See ``_action_set_choices_provider`` for more details.
+- ``argparse.Action.set_completer()`` - See ``_action_set_completer`` for more details.
+- ``argparse.Action.get_table_columns()`` - See ``_action_get_table_columns`` for more details.
+- ``argparse.Action.set_table_columns()`` - See ``_action_set_table_columns`` for more details.
+- ``argparse.Action.get_nargs_range()`` - See ``_action_get_nargs_range`` for more details.
+- ``argparse.Action.set_nargs_range()`` - See ``_action_set_nargs_range`` for more details.
+- ``argparse.Action.get_suppress_tab_hint()`` - See ``_action_get_suppress_tab_hint`` for more details.
+- ``argparse.Action.set_suppress_tab_hint()`` - See ``_action_set_suppress_tab_hint`` for more details.
 
 cmd2 has patched ``argparse.ArgumentParser`` to include the following accessor methods
 
-- ``argparse.ArgumentParser.get_ap_completer_type()`` - See `_ArgumentParser_get_ap_completer_type` for more details.
-- ``argparse.Action.set_ap_completer_type()`` - See `_ArgumentParser_set_ap_completer_type` for more details.
+- ``argparse.ArgumentParser.get_ap_completer_type()`` - See ``_ArgumentParser_get_ap_completer_type`` for more details.
+- ``argparse.Action.set_ap_completer_type()`` - See ``_ArgumentParser_set_ap_completer_type`` for more details.
 
-**Subcommand removal**
+**Subcommand Manipulation**
 
-cmd2 has patched ``argparse._SubParsersAction`` to include a ``remove_parser()``
-method which can be used to remove a subcommand.
+cmd2 has patched ``argparse._SubParsersAction`` with new functions to better facilitate the
+addition and removal of subcommand parsers.
 
 ``argparse._SubParsersAction.remove_parser`` - new function which removes a
-sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser` for more details.
+sub-parser from a sub-parsers group. See ``_SubParsersAction_remove_parser`` for
+more details.
+
+``argparse._SubParsersAction.add_existing_parser`` - new function which allows you to attach
+an existing ArgumentParser to a sub-parsers group. See ``_SubParsersAction_add_existing_parser``
+for more details.
 """
 
 import argparse
@@ -1017,7 +1014,7 @@ def _SubParsersAction_add_existing_parser(  # noqa: N802
     self._name_parser_map[name] = subcmd_parser
 
     # Remap any aliases to our pre-configured parser
-    for alias in add_parser_kwargs.get("aliases", []):
+    for alias in add_parser_kwargs.get("aliases", ()):
         self._name_parser_map[alias] = subcmd_parser
 
 
