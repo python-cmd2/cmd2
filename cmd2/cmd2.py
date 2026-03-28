@@ -1853,6 +1853,8 @@ class Cmd:
         :param end: string to write at end of printed text. Defaults to a newline.
         """
         # The overflow and soft_wrap values match those in rich.pretty.pprint().
+        # This ensures long strings are neither truncated with ellipses nor broken
+        # up by injected newlines.
         pretty_obj = Pretty(
             obj,
             indent_size=indent_size,
