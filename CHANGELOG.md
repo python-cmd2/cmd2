@@ -79,6 +79,7 @@ prompt is displayed.
         - **pre_prompt**: hook method that is called before the prompt is displayed, but after
           `prompt-toolkit` event loop has started
         - **read_secret**: read secrets like passwords without displaying them to the terminal
+        - **ppretty**: a cmd2-compatible replacement for `rich.pretty.pprint()`
     - New settables:
         - **max_column_completion_results**: (int) the maximum number of completion results to
           display in a single column
