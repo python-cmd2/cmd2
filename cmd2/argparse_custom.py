@@ -1005,7 +1005,8 @@ def _SubParsersAction_add_existing_parser(  # noqa: N802
     :param self: instance of the _SubParsersAction being edited
     :param name: name of the subcommand to add
     :param subcmd_parser: the parser for this new subcommand
-    :param add_parser_kwargs: registration-specific kwargs for add_parser() (e.g. help, aliases, deprecated)
+    :param add_parser_kwargs: registration-specific kwargs for add_parser()
+                              (e.g. help, aliases, deprecated [Python 3.13+])
     """
     # Use add_parser to register the subcommand name and any aliases
     self.add_parser(name, **add_parser_kwargs)

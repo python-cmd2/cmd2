@@ -364,7 +364,8 @@ def as_subcommand_to(
                  This is passed as the help argument to subparsers.add_parser().
     :param aliases: Alternative names for this subcommand. This is passed as the alias argument to
                     subparsers.add_parser().
-    :param add_parser_kwargs: other registration-specific kwargs for add_parser() (e.g. deprecated)
+    :param add_parser_kwargs: other registration-specific kwargs for add_parser()
+                              (e.g. deprecated [Python 3.13+])
     :return: Wrapper function that can receive an argparse.Namespace
     """
 
