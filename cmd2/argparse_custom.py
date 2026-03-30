@@ -214,12 +214,6 @@ exceeds this number, then a completion table won't be displayed.
 completion and enables nargs range parsing. See _add_argument_wrapper for
 more details on these arguments.
 
-``argparse.ArgumentParser._get_nargs_pattern`` - adds support for nargs ranges.
-See ``_get_nargs_pattern_wrapper`` for more details.
-
-``argparse.ArgumentParser._match_argument`` - adds support for nargs ranges.
-See ``_match_argument_wrapper`` for more details.
-
 **Added accessor methods**
 
 cmd2 has patched ``argparse.Action`` to include the following accessor methods
@@ -694,7 +688,7 @@ def _add_argument_wrapper(
     table_columns: Sequence[str | Column] | None = None,
     **kwargs: Any,
 ) -> argparse.Action:
-    """Wrap ActionsContainer.add_argument() which supports more settings used by cmd2.
+    """Wrap ActionsContainer.add_argument() to support cmd2-specific settings.
 
     # Args from original function
     :param self: instance of the _ActionsContainer being added to
@@ -814,57 +808,6 @@ def _add_argument_wrapper(
 
 # Overwrite _ActionsContainer.add_argument with our wrapper
 setattr(argparse._ActionsContainer, 'add_argument', _add_argument_wrapper)
-
-############################################################################################################
-# Patch ArgumentParser._get_nargs_pattern with our wrapper to support nargs ranges
-############################################################################################################
-
-# Save original ArgumentParser._get_nargs_pattern so we can call it in our wrapper
-orig_argument_parser_get_nargs_pattern = argparse.ArgumentParser._get_nargs_pattern
-
-
-def _get_nargs_pattern_wrapper(self: argparse.ArgumentParser, action: argparse.Action) -> str:
-    # Wrapper around ArgumentParser._get_nargs_pattern behavior to support nargs ranges
-    nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
-    if nargs_range:
-        range_max = '' if nargs_range[1] == constants.INFINITY else nargs_range[1]
-        nargs_pattern = f'(-*A{{{nargs_range[0]},{range_max}}}-*)'
-
-        # if this is an optional action, -- is not allowed
-        if action.option_strings:
-            nargs_pattern = nargs_pattern.replace('-*', '')
-            nargs_pattern = nargs_pattern.replace('-', '')
-        return nargs_pattern
-
-    return orig_argument_parser_get_nargs_pattern(self, action)
-
-
-# Overwrite ArgumentParser._get_nargs_pattern with our wrapper
-setattr(argparse.ArgumentParser, '_get_nargs_pattern', _get_nargs_pattern_wrapper)
-
-
-############################################################################################################
-# Patch ArgumentParser._match_argument with our wrapper to support nargs ranges
-############################################################################################################
-orig_argument_parser_match_argument = argparse.ArgumentParser._match_argument
-
-
-def _match_argument_wrapper(self: argparse.ArgumentParser, action: argparse.Action, arg_strings_pattern: str) -> int:
-    # Wrapper around ArgumentParser._match_argument behavior to support nargs ranges
-    nargs_pattern = self._get_nargs_pattern(action)
-    match = re.match(nargs_pattern, arg_strings_pattern)
-
-    # raise an exception if we weren't able to find a match
-    if match is None:
-        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
-        if nargs_range is not None:
-            raise ArgumentError(action, generate_range_error(nargs_range[0], nargs_range[1]))
-
-    return orig_argument_parser_match_argument(self, action, arg_strings_pattern)
-
-
-# Overwrite ArgumentParser._match_argument with our wrapper
-setattr(argparse.ArgumentParser, '_match_argument', _match_argument_wrapper)
 
 
 ############################################################################################################
@@ -1324,6 +1267,34 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     def create_text_group(self, title: str, text: RenderableType) -> TextGroup:
         """Create a TextGroup using this parser's formatter creator."""
         return TextGroup(title, text, self._get_formatter)
+
+    def _get_nargs_pattern(self, action: argparse.Action) -> str:
+        """Override to support nargs ranges."""
+        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
+        if nargs_range:
+            range_max = '' if nargs_range[1] == constants.INFINITY else nargs_range[1]
+            nargs_pattern = f'(-*A{{{nargs_range[0]},{range_max}}}-*)'
+
+            # if this is an optional action, -- is not allowed
+            if action.option_strings:
+                nargs_pattern = nargs_pattern.replace('-*', '')
+                nargs_pattern = nargs_pattern.replace('-', '')
+            return nargs_pattern
+
+        return super()._get_nargs_pattern(action)
+
+    def _match_argument(self, action: argparse.Action, arg_strings_pattern: str) -> int:
+        """Override to support nargs ranges."""
+        nargs_pattern = self._get_nargs_pattern(action)
+        match = re.match(nargs_pattern, arg_strings_pattern)
+
+        # raise an exception if we weren't able to find a match
+        if match is None:
+            nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
+            if nargs_range is not None:
+                raise ArgumentError(action, generate_range_error(nargs_range[0], nargs_range[1]))
+
+        return super()._match_argument(action, arg_strings_pattern)
 
 
 class Cmd2AttributeWrapper:
