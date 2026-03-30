@@ -222,42 +222,43 @@ completion and enables nargs range parsing. See _add_argument_wrapper for
 more details on these arguments.
 
 ``argparse.ArgumentParser._get_nargs_pattern`` - adds support for nargs ranges.
-See _get_nargs_pattern_wrapper for more details.
+See ``_get_nargs_pattern_wrapper`` for more details.
 
 ``argparse.ArgumentParser._match_argument`` - adds support for nargs ranges.
-See _match_argument_wrapper for more details.
-
-``argparse._SubParsersAction.remove_parser`` - new function which removes a
-sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser for
-more details.
+See ``_match_argument_wrapper`` for more details.
 
 **Added accessor methods**
 
 cmd2 has patched ``argparse.Action`` to include the following accessor methods
 for cases in which you need to manually access the cmd2-specific attributes.
 
-- ``argparse.Action.get_choices_callable()`` - See `action_get_choices_callable` for more details.
-- ``argparse.Action.set_choices_provider()`` - See `_action_set_choices_provider` for more details.
-- ``argparse.Action.set_completer()`` - See `_action_set_completer` for more details.
-- ``argparse.Action.get_table_columns()`` - See `_action_get_table_columns` for more details.
-- ``argparse.Action.set_table_columns()`` - See `_action_set_table_columns` for more details.
-- ``argparse.Action.get_nargs_range()`` - See `_action_get_nargs_range` for more details.
-- ``argparse.Action.set_nargs_range()`` - See `_action_set_nargs_range` for more details.
-- ``argparse.Action.get_suppress_tab_hint()`` - See `_action_get_suppress_tab_hint` for more details.
-- ``argparse.Action.set_suppress_tab_hint()`` - See `_action_set_suppress_tab_hint` for more details.
+- ``argparse.Action.get_choices_callable()`` - See ``action_get_choices_callable`` for more details.
+- ``argparse.Action.set_choices_provider()`` - See ``_action_set_choices_provider`` for more details.
+- ``argparse.Action.set_completer()`` - See ``_action_set_completer`` for more details.
+- ``argparse.Action.get_table_columns()`` - See ``_action_get_table_columns`` for more details.
+- ``argparse.Action.set_table_columns()`` - See ``_action_set_table_columns`` for more details.
+- ``argparse.Action.get_nargs_range()`` - See ``_action_get_nargs_range`` for more details.
+- ``argparse.Action.set_nargs_range()`` - See ``_action_set_nargs_range`` for more details.
+- ``argparse.Action.get_suppress_tab_hint()`` - See ``_action_get_suppress_tab_hint`` for more details.
+- ``argparse.Action.set_suppress_tab_hint()`` - See ``_action_set_suppress_tab_hint`` for more details.
 
 cmd2 has patched ``argparse.ArgumentParser`` to include the following accessor methods
 
-- ``argparse.ArgumentParser.get_ap_completer_type()`` - See `_ArgumentParser_get_ap_completer_type` for more details.
-- ``argparse.Action.set_ap_completer_type()`` - See `_ArgumentParser_set_ap_completer_type` for more details.
+- ``argparse.ArgumentParser.get_ap_completer_type()`` - See ``_ArgumentParser_get_ap_completer_type`` for more details.
+- ``argparse.Action.set_ap_completer_type()`` - See ``_ArgumentParser_set_ap_completer_type`` for more details.
 
-**Subcommand removal**
+**Subcommand Manipulation**
 
-cmd2 has patched ``argparse._SubParsersAction`` to include a ``remove_parser()``
-method which can be used to remove a subcommand.
+cmd2 has patched ``argparse._SubParsersAction`` with new functions to better facilitate the
+addition and removal of subcommand parsers.
 
-``argparse._SubParsersAction.remove_parser`` - new function which removes a
-sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser` for more details.
+``argparse._SubParsersAction.attach_parser`` - new function to attach
+an existing ArgumentParser to a subparsers action. See ``_SubParsersAction_attach_parser``
+for more details.
+
+``argparse._SubParsersAction.detach_parser`` - new function to detach a
+parser from a subparsers action. See ``_SubParsersAction_detach_parser`` for
+more details.
 """
 
 import argparse
@@ -944,29 +945,68 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 
 
 ############################################################################################################
-# Patch argparse._SubParsersAction to add remove_parser function
+# Patch argparse._SubParsersAction to add attach_parser function
 ############################################################################################################
 
 
-def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str) -> None:  # type: ignore[type-arg]  # noqa: N802
-    """Remove a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
+def _SubParsersAction_attach_parser(  # noqa: N802
+    self: argparse._SubParsersAction,  # type: ignore[type-arg]
+    name: str,
+    subcmd_parser: argparse.ArgumentParser,
+    **add_parser_kwargs: Any,
+) -> None:
+    """Attach an existing ArgumentParser to a subparsers action.
 
-    This function is added by cmd2 as a method called ``remove_parser()`` to ``argparse._SubParsersAction`` class.
+    This is useful when a parser is pre-configured (e.g. by cmd2's subcommand decorator)
+    and needs to be attached to a parent parser.
 
-    To call: ``action.remove_parser(name)``
+    This function is added by cmd2 as a method called ``attach_parser()``
+    to ``argparse._SubParsersAction`` class.
+
+    To call: ``action.attach_parser(name, subcmd_parser, **add_parser_kwargs)``
 
     :param self: instance of the _SubParsersAction being edited
-    :param name: name of the subcommand for the sub-parser to remove
+    :param name: name of the subcommand to add
+    :param subcmd_parser: the parser for this new subcommand
+    :param add_parser_kwargs: registration-specific kwargs for add_parser()
+                              (e.g. help, aliases, deprecated [Python 3.13+])
     """
-    # Remove this subcommand from its base command's help text
-    for choice_action in self._choices_actions:
-        if choice_action.dest == name:
-            self._choices_actions.remove(choice_action)
-            break
+    # Use add_parser to register the subcommand name and any aliases
+    self.add_parser(name, **add_parser_kwargs)
 
-    # Remove this subcommand and all its aliases from the base command
+    # Replace the parser created by add_parser() with our pre-configured one
+    self._name_parser_map[name] = subcmd_parser
+
+    # Remap any aliases to our pre-configured parser
+    for alias in add_parser_kwargs.get("aliases", ()):
+        self._name_parser_map[alias] = subcmd_parser
+
+
+setattr(argparse._SubParsersAction, 'attach_parser', _SubParsersAction_attach_parser)
+
+############################################################################################################
+# Patch argparse._SubParsersAction to add detach_parser function
+############################################################################################################
+
+
+def _SubParsersAction_detach_parser(  # noqa: N802
+    self: argparse._SubParsersAction,  # type: ignore[type-arg]
+    name: str,
+) -> argparse.ArgumentParser | None:
+    """Detach a parser from a subparsers action and return it.
+
+    This function is added by cmd2 as a method called ``detach_parser()`` to ``argparse._SubParsersAction`` class.
+
+    To call: ``action.detach_parser(name)``
+
+    :param self: instance of the _SubParsersAction being edited
+    :param name: name of the subcommand for the parser to detach
+    :return: the parser which was detached or None if the subcommand doesn't exist
+    """
     subparser = self._name_parser_map.get(name)
+
     if subparser is not None:
+        # Remove this subcommand and all its aliases from the base command
         to_remove = []
         for cur_name, cur_parser in self._name_parser_map.items():
             if cur_parser is subparser:
@@ -974,9 +1014,16 @@ def _SubParsersAction_remove_parser(self: argparse._SubParsersAction, name: str)
         for cur_name in to_remove:
             del self._name_parser_map[cur_name]
 
+        # Remove this subcommand from its base command's help text
+        for choice_action in self._choices_actions:
+            if choice_action.dest == name:
+                self._choices_actions.remove(choice_action)
+                break
 
-setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_parser)
+    return subparser
 
+
+setattr(argparse._SubParsersAction, 'detach_parser', _SubParsersAction_detach_parser)
 
 ############################################################################################################
 # Unless otherwise noted, everything below this point are copied from Python's
