@@ -17,9 +17,14 @@ Usage::
 """
 
 import sys
+from argparse import Namespace
+from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from typing import Annotated
+from typing import (
+    Annotated,
+    Literal,
+)
 
 import cmd2
 from cmd2 import (
@@ -54,6 +59,7 @@ class AnnotatedExample(Cmd):
     def __init__(self) -> None:
         super().__init__(include_ipy=True)
         self._sports = ['Basketball', 'Football', 'Tennis', 'Hockey']
+        self._default_region = "staging"
 
     # -- Type inference: int, float, bool ------------------------------------
     # With @with_argparser you'd manually set type=int and action='store_true'.
@@ -109,10 +115,8 @@ class AnnotatedExample(Cmd):
         self.poutput(f"Copying {src} -> {dst}")
 
     # -- Bool flags ----------------------------------------------------------
-    # With @with_argparser you'd set action='store_true' or 'store_false'.
-    # Here bool defaults drive the flag style automatically.
-    #   False default -> --flag (store_true)
-    #   True default  -> --no-flag (store_false)
+    # With @with_argparser you'd spell out the action.
+    # Here bool defaults drive the generated boolean option.
 
     @cmd2.with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
@@ -124,8 +128,8 @@ class AnnotatedExample(Cmd):
     ) -> None:
         """Build a target. Bool flags are inferred from defaults.
 
-        ``verbose: bool = False`` becomes ``--verbose`` (store_true).
-        ``color: bool = True`` becomes ``--no-color`` (store_false).
+        ``verbose: bool = False`` becomes a boolean optional flag.
+        ``color: bool = True`` becomes a ``--color`` / ``--no-color`` style option.
 
         Try:
             build app --verbose --no-color
@@ -150,6 +154,25 @@ class AnnotatedExample(Cmd):
             sum 1.5 2.5 3.0
         """
         self.poutput(f"{' + '.join(str(n) for n in numbers)} = {sum(numbers)}")
+
+    # -- Literal + Decimal ---------------------------------------------------
+    # Literal values become validated choices. Decimal values preserve precision.
+
+    @cmd2.with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_deploy(
+        self,
+        service: str,
+        mode: Literal["safe", "fast"] = "safe",
+        budget: Decimal = Decimal("1.50"),
+    ) -> None:
+        """Deploy using Literal choices and Decimal parsing.
+
+        Try:
+            deploy api --mode <TAB>
+            deploy api --mode fast --budget 2.75
+        """
+        self.poutput(f"Deploying {service} in {mode} mode with budget {budget}")
 
     # -- Typed kwargs --------------------------------------------------------
     # With @with_argparser you'd access args.name, args.count on a Namespace.
@@ -211,6 +234,69 @@ class AnnotatedExample(Cmd):
             score Football <TAB>
         """
         self.poutput(f"{sport}: {play} for {points} point(s)")
+
+    # -- Namespace provider --------------------------------------------------
+    # This mirrors one of @with_argparser's advanced features.
+
+    def default_namespace(self) -> Namespace:
+        return Namespace(region=self._default_region)
+
+    @cmd2.with_annotated(ns_provider=default_namespace)
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_ship(self, package: str, region: str = "local") -> None:
+        """Use ns_provider to prepopulate parser defaults at runtime.
+
+        Try:
+            ship parcel
+            ship parcel --region remote
+        """
+        self.poutput(f"Shipping {package} to {region}")
+
+    # -- Unknown args --------------------------------------------------------
+
+    @cmd2.with_annotated(with_unknown_args=True)
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_flex(self, name: str, _unknown: list[str] | None = None) -> None:
+        """Capture unknown arguments instead of failing parse.
+
+        Try:
+            flex alice --future-flag value
+        """
+        self.poutput(f"name={name}")
+        if _unknown:
+            self.poutput(f"unknown={_unknown}")
+
+    # -- Subcommands ---------------------------------------------------------
+    # @with_annotated also supports typed subcommand trees.
+
+    @cmd2.with_annotated(base_command=True)
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_manage(self, verbose: bool = False, *, cmd2_handler) -> None:
+        """Base command for annotated subcommands.
+
+        Try:
+            help manage
+            manage project add demo
+        """
+        if verbose:
+            self.poutput("verbose mode")
+        handler = cmd2_handler.get()
+        if handler:
+            handler()
+
+    @cmd2.with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
+    def manage_project(self, *, cmd2_handler) -> None:
+        handler = cmd2_handler.get()
+        if handler:
+            handler()
+
+    @cmd2.with_annotated(subcommand_to="manage project", help="add a project")
+    def manage_project_add(self, name: str) -> None:
+        self.poutput(f"project added: {name}")
+
+    @cmd2.with_annotated(subcommand_to="manage project", help="list projects")
+    def manage_project_list(self) -> None:
+        self.poutput("project list: demo")
 
     # -- Preserve quotes -----------------------------------------------------
 

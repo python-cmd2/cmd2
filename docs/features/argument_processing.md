@@ -64,7 +64,9 @@ required.
 ### Basic usage
 
 Parameters without defaults become positional arguments. Parameters with defaults become `--option`
-flags. The function receives typed keyword arguments directly instead of an `argparse.Namespace`.
+flags. Keyword-only parameters (after `*`) always become options, and without a default they become
+required options. The function receives typed keyword arguments directly instead of an
+`argparse.Namespace`.
 
 ```py
 from cmd2 import with_annotated
@@ -89,14 +91,14 @@ The decorator converts Python type annotations into `add_argument()` calls:
 | -------------------------------------------------------- | --------------------------------------------------- |
 | `str`                                                    | default (no `type=` needed)                         |
 | `int`, `float`                                           | `type=int` or `type=float`                          |
-| `bool` (default `False`)                                 | `--flag` with `action='store_true'`                 |
-| `bool` (default `True`)                                  | `--no-flag` with `action='store_false'`             |
+| `bool` with a default                                    | boolean optional flag via `BooleanOptionalAction`   |
 | positional `bool`                                        | parsed from `true/false`, `yes/no`, `on/off`, `1/0` |
 | `Path`                                                   | `type=Path`                                         |
 | `Enum` subclass                                          | `type=converter`, `choices` from member values      |
 | `decimal.Decimal`                                        | `type=decimal.Decimal`                              |
 | `Literal[...]`                                           | `type=literal-converter`, `choices` from values     |
 | `Collection[T]` / `list[T]` / `set[T]` / `tuple[T, ...]` | `nargs='+'` (or `'*'` if it has a default)          |
+| `tuple[T, T]`                                            | fixed `nargs=N` with `type=T`                       |
 | `T \| None`                                              | unwrapped to `T`, treated as optional               |
 
 When collection types are used with `@with_annotated`, parsed values are passed to the command
@@ -105,6 +107,15 @@ function as:
 - `list[T]` and `Collection[T]` as `list`
 - `set[T]` as `set`
 - `tuple[T, ...]` as `tuple`
+
+Unsupported patterns raise `TypeError`, including:
+
+- unions with multiple non-`None` members such as `str | int`
+- mixed-type tuples such as `tuple[int, str]`
+- `Annotated[T, meta] | None`; write `Annotated[T | None, meta]` instead
+
+The parameter names `dest` and `subcommand` are reserved and may not be used as annotated parameter
+names.
 
 ### Annotated metadata
 
@@ -171,15 +182,69 @@ def do_greet(self, name: str, count: int = 1, loud: bool = False):
         self.poutput(msg.upper() if loud else msg)
 ```
 
-The annotated version is more concise and gives you typed parameters. The argparse version gives you
-more control (e.g. `ns_provider`, subcommand handlers via `cmd2_handler`).
+The annotated version is more concise and gives you typed parameters. It also supports several
+advanced cmd2 features directly, including `ns_provider`, `with_unknown_args`, and typed
+subcommands.
 
 ### Decorator options
 
-`@with_annotated` accepts the same keyword arguments as `@with_argparser`:
+`@with_annotated` currently supports:
 
+- `ns_provider` -- prepopulate the namespace before parsing, mirroring `@with_argparser`
 - `preserve_quotes` -- if `True`, quotes in arguments are preserved
 - `with_unknown_args` -- if `True`, unrecognised arguments are passed as `_unknown`
+- `subcommand_to` -- register the function as an annotated subcommand under a parent command
+- `base_command` -- create a base command whose parser also adds subparsers and exposes
+  `cmd2_handler`
+- `help` -- help text for an annotated subcommand
+- `aliases` -- aliases for an annotated subcommand
+
+```py
+@with_annotated(with_unknown_args=True)
+def do_rawish(self, name: str, _unknown: list[str] | None = None):
+    self.poutput((name, _unknown))
+```
+
+### Annotated subcommands
+
+`@with_annotated` can also build typed subcommand trees without manually constructing subparsers.
+
+```py
+@with_annotated(base_command=True)
+def do_manage(self, *, cmd2_handler):
+    handler = cmd2_handler.get()
+    if handler:
+        handler()
+
+@with_annotated(subcommand_to="manage", help="list projects")
+def manage_list(self):
+    self.poutput("listing")
+```
+
+For nested subcommands, `subcommand_to` can be space-delimited, for example
+`subcommand_to="manage project"`. The intermediate level must also be declared as a subcommand that
+creates its own subparsers:
+
+```py
+@with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
+def manage_project(self, *, cmd2_handler):
+    handler = cmd2_handler.get()
+    if handler:
+        handler()
+
+@with_annotated(subcommand_to="manage project", help="add a project")
+def manage_project_add(self, name: str):
+    self.poutput(f"added {name}")
+```
+
+### Lower-level parser building
+
+If you need parser grouping or mutually-exclusive groups while still using annotation-driven parser
+generation, [cmd2.annotated.build_parser_from_function][cmd2.annotated.build_parser_from_function]
+also supports:
+
+- `groups=((...), (...))`
+- `mutually_exclusive_groups=((...), (...))`
 
 ```py
 @with_annotated(preserve_quotes=True)
@@ -211,7 +276,7 @@ def do_load(self, args):
 ```
 
 With `@with_annotated`, the same inference happens because `Path` and `Enum` annotations generate
-`type=Path` and `type=converter` in the underlying parser.
+the equivalent parser configuration automatically.
 
 ## Argument Parsing
 

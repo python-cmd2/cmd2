@@ -1134,6 +1134,38 @@ def test_complete_command_help_no_tokens(ac_app) -> None:
     assert not completions
 
 
+def test_complete_for_arg_type_without_name(ac_app) -> None:
+    from cmd2.argparse_completer import (
+        ArgparseCompleter,
+    )
+
+    parser = Cmd2ArgumentParser()
+    parser.add_argument('value')
+    action = next(action for action in parser._actions if action.dest == 'value')
+
+    class TypeWithoutName:
+        __name__ = property(lambda self: (_ for _ in ()).throw(AttributeError("__name__")))
+
+    action.type = TypeWithoutName()
+    arg_state = argparse_completer._ArgumentState(action)
+    ac = ArgparseCompleter(parser, ac_app)
+
+    assert ac._get_raw_choices(arg_state) is None
+
+
+def test_bool_type_completion_values(ac_app) -> None:
+    from cmd2.annotated import _parse_bool
+
+    parser = Cmd2ArgumentParser()
+    parser.add_argument("flag", type=_parse_bool)
+    ac = argparse_completer.ArgparseCompleter(parser, ac_app)
+    action = next(action for action in parser._actions if action.dest == 'flag')
+    arg_state = argparse_completer._ArgumentState(action)
+
+    completions = ac._complete_arg(text="", line="", begidx=0, endidx=0, arg_state=arg_state, consumed_arg_values={})
+    assert list(completions.to_strings()) == ["0", "1", "false", "no", "off", "on", "true", "yes"]
+
+
 @pytest.mark.parametrize(
     ('flag', 'expected'),
     [

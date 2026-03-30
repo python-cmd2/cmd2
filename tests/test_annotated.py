@@ -98,6 +98,15 @@ def _func_default_type_mismatch(self, count: int = "1") -> None: ...  # type: ig
 def _func_path_default(self, file: Path = Path("/tmp")) -> None: ...
 def _func_optional_annotated_inside(self, name: Annotated[str | None, Option("--name")] = None) -> None: ...
 def _func_optional_annotated_outside(self, name: Annotated[str, Option("--name")] | None = None) -> None: ...
+def _func_multi(self, a: str, b: int, c: int = 1) -> None: ...
+def _func_grouped(
+    self,
+    *,
+    local: str | None = None,
+    remote: str | None = None,
+    force: bool = False,
+    dry_run: bool = False,
+) -> None: ...
 
 
 def _provider(cmd: cmd2.Cmd):
@@ -114,10 +123,6 @@ def _func_completer_on_path(
     self,
     file: Annotated[Path, Argument(completer=cmd2.Cmd.path_complete)],
 ) -> None: ...
-
-
-# Multi-parameter functions
-def _func_multi(self, a: str, b: int, c: int = 1) -> None: ...
 
 
 # ---------------------------------------------------------------------------
@@ -293,6 +298,38 @@ class TestBuildParser:
         assert positionals == ["a", "b"]
         dests = {a.dest for a in parser._actions}
         assert 'c' in dests
+
+    def test_groups_and_mutex_applied(self) -> None:
+        parser = build_parser_from_function(
+            _func_grouped,
+            groups=(("local", "remote"), ("force", "dry_run")),
+            mutually_exclusive_groups=(("local", "remote"), ("force", "dry_run")),
+        )
+
+        nonempty_groups = [group for group in parser._action_groups if group._group_actions]
+        grouped_dests = [{action.dest for action in group._group_actions} for group in nonempty_groups]
+        assert {"local", "remote"} in grouped_dests
+        assert {"force", "dry_run"} in grouped_dests
+
+        mutex_groups = [{action.dest for action in group._group_actions} for group in parser._mutually_exclusive_groups]
+        assert {"local", "remote"} in mutex_groups
+        assert {"force", "dry_run"} in mutex_groups
+
+    def test_group_nonexistent_param_raises(self) -> None:
+        with pytest.raises(ValueError, match="nonexistent parameter"):
+            build_parser_from_function(_func_grouped, groups=(("missing",),))
+
+    def test_param_in_multiple_groups_raises(self) -> None:
+        with pytest.raises(ValueError, match="cannot be assigned to both argument group"):
+            build_parser_from_function(_func_grouped, groups=(("local",), ("local", "remote")))
+
+    def test_mutex_group_spanning_different_argument_groups_raises(self) -> None:
+        with pytest.raises(ValueError, match="spans parameters in different argument groups"):
+            build_parser_from_function(
+                _func_grouped,
+                groups=(("local",), ("remote",)),
+                mutually_exclusive_groups=(("local", "remote"),),
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -726,9 +763,28 @@ class _IntegrationApp(cmd2.Cmd):
         self.poutput("ok")
 
 
+class _GroupedParserApp(cmd2.Cmd):
+    transfer_parser = build_parser_from_function(
+        _func_grouped,
+        groups=(("local", "remote"), ("force", "dry_run")),
+        mutually_exclusive_groups=(("local", "remote"), ("force", "dry_run")),
+    )
+
+    @cmd2.with_argparser(transfer_parser)
+    def do_transfer(self, args: argparse.Namespace) -> None:
+        target = args.local if args.local is not None else args.remote
+        mode = "force" if args.force else "dry-run" if args.dry_run else "normal"
+        self.poutput(f"Transfer {target} in {mode} mode")
+
+
 @pytest.fixture
 def app() -> _IntegrationApp:
     return _IntegrationApp()
+
+
+@pytest.fixture
+def grouped_app() -> _GroupedParserApp:
+    return _GroupedParserApp()
 
 
 class TestWithAnnotatedIntegration:
@@ -807,6 +863,24 @@ class TestWithAnnotatedIntegration:
             pytest.raises(ValueError, match="No argument parser found"),
         ):
             app.do_greet("Alice")
+
+
+class TestGroupedParserIntegration:
+    def test_grouped_command_executes(self, grouped_app) -> None:
+        out, _err = run_cmd(grouped_app, "transfer --local build.tar.gz --dry_run")
+        assert out == ["Transfer build.tar.gz in dry-run mode"]
+
+    def test_grouped_command_mutex_error(self, grouped_app) -> None:
+        _out, err = run_cmd(grouped_app, "transfer --local a --remote b")
+        assert any("not allowed with argument" in line.lower() for line in err)
+
+    def test_grouped_command_help_lists_flags(self, grouped_app) -> None:
+        out, _err = run_cmd(grouped_app, "help transfer")
+        help_text = "\n".join(out)
+        assert "--local" in help_text
+        assert "--remote" in help_text
+        assert "--force" in help_text
+        assert "--dry_run" in help_text
 
 
 # ---------------------------------------------------------------------------
