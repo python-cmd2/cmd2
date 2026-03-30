@@ -1,6 +1,5 @@
 """Cmd2 unit/functional testing"""
 
-import argparse
 import sys
 from collections.abc import Callable
 from contextlib import redirect_stderr
@@ -116,19 +115,6 @@ def with_ansi_style(style: ru.AllowStyle) -> Callable[[Callable[P, T]], Callable
 
 # These are odd file names for testing quoting of them
 odd_file_names = ['nothingweird', 'has   spaces', '"is_double_quoted"', "'is_single_quoted'"]
-
-
-def find_subcommand(action: argparse.ArgumentParser, subcmd_names: list[str]) -> argparse.ArgumentParser:
-    if not subcmd_names:
-        return action
-    cur_subcmd = subcmd_names.pop(0)
-    for sub_action in action._actions:
-        if isinstance(sub_action, argparse._SubParsersAction):
-            for choice_name, choice in sub_action.choices.items():
-                if choice_name == cur_subcmd:
-                    return find_subcommand(choice, subcmd_names)
-            break
-    raise ValueError(f"Could not find subcommand '{subcmd_names}'")
 
 
 if TYPE_CHECKING:

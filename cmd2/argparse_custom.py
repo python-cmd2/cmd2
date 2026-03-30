@@ -2,16 +2,9 @@
 
 It also defines a parser class called Cmd2ArgumentParser which improves error
 and help output over normal argparse. All cmd2 code uses this parser and it is
-recommended that developers of cmd2-based apps either use it or write their own
-parser that inherits from it. This will give a consistent look-and-feel between
-the help/error output of built-in cmd2 commands and the app-specific commands.
-If you wish to override the parser used by cmd2's built-in commands, see
-custom_parser.py example.
-
-Since the new capabilities are added by patching at the argparse API level,
-they are available whether or not Cmd2ArgumentParser is used. However, the help
-and error output of Cmd2ArgumentParser is customized to notate nargs ranges
-whereas any other parser class won't be as explicit in their output.
+required that developers of cmd2-based apps either use it or write their own
+parser that inherits from it. If you wish to override the parser used by cmd2's
+built-in commands, see custom_parser.py example.
 
 
 **Added capabilities**

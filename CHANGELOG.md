@@ -64,6 +64,8 @@ prompt is displayed.
       before calling it like the previous functions did.
     - Removed `Cmd.default_to_shell`.
     - Removed `Cmd.ruler` since `cmd2` no longer uses it.
+    - All parsers used with `cmd2` commands much be an instance of `Cmd2ArgumentParser` or a child
+      class of it.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These

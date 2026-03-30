@@ -206,8 +206,8 @@ from .utils import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    StaticArgParseBuilder = staticmethod[[], argparse.ArgumentParser]
-    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], argparse.ArgumentParser]
+    StaticArgParseBuilder = staticmethod[[], Cmd2ArgumentParser]
+    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], Cmd2ArgumentParser]
     from prompt_toolkit.buffer import Buffer
 else:
     StaticArgParseBuilder = staticmethod
@@ -237,7 +237,7 @@ class _CommandParsers:
 
         # Keyed by the fully qualified method names. This is more reliable than
         # the methods themselves, since wrapping a method will change its address.
-        self._parsers: dict[str, argparse.ArgumentParser] = {}
+        self._parsers: dict[str, Cmd2ArgumentParser] = {}
 
     @staticmethod
     def _fully_qualified_name(command_method: CommandFunc) -> str:
@@ -256,7 +256,7 @@ class _CommandParsers:
         parser = self.get(command_method)
         return bool(parser)
 
-    def get(self, command_method: CommandFunc) -> argparse.ArgumentParser | None:
+    def get(self, command_method: CommandFunc) -> Cmd2ArgumentParser | None:
         """Return a given method's parser or None if the method is not argparse-based.
 
         If the parser does not yet exist, it will be created.
@@ -889,12 +889,9 @@ class Cmd:
     def _build_parser(
         self,
         parent: CmdOrSet,
-        parser_builder: argparse.ArgumentParser
-        | Callable[[], argparse.ArgumentParser]
-        | StaticArgParseBuilder
-        | ClassArgParseBuilder,
+        parser_builder: Cmd2ArgumentParser | Callable[[], Cmd2ArgumentParser] | StaticArgParseBuilder | ClassArgParseBuilder,
         prog: str,
-    ) -> argparse.ArgumentParser:
+    ) -> Cmd2ArgumentParser:
         """Build argument parser for a command/subcommand.
 
         :param parent: object which owns the command using the parser.
@@ -911,7 +908,7 @@ class Cmd:
             parser = parser_builder.__func__(parent.__class__)
         elif callable(parser_builder):
             parser = parser_builder()
-        elif isinstance(parser_builder, argparse.ArgumentParser):
+        elif isinstance(parser_builder, Cmd2ArgumentParser):
             parser = copy.deepcopy(parser_builder)
         else:
             raise TypeError(f"Invalid type for parser_builder: {type(parser_builder)}")
@@ -1021,7 +1018,7 @@ class Cmd:
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
-        def check_parser_uninstallable(parser: argparse.ArgumentParser) -> None:
+        def check_parser_uninstallable(parser: Cmd2ArgumentParser) -> None:
             cmdset_id = id(cmdset)
             for action in parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
@@ -1098,9 +1095,7 @@ class Cmd:
                     f"Could not find argparser for command '{command_name}' needed by subcommand: {method}"
                 )
 
-            def find_subcommand(
-                action: argparse.ArgumentParser, subcmd_names: MutableSequence[str]
-            ) -> argparse.ArgumentParser:
+            def find_subcommand(action: Cmd2ArgumentParser, subcmd_names: MutableSequence[str]) -> Cmd2ArgumentParser:
                 if not subcmd_names:
                     return action
                 cur_subcmd = subcmd_names.pop(0)
@@ -2349,7 +2344,7 @@ class Cmd:
         return compfunc(text, line, begidx, endidx)
 
     @staticmethod
-    def _determine_ap_completer_type(parser: argparse.ArgumentParser) -> type[argparse_completer.ArgparseCompleter]:
+    def _determine_ap_completer_type(parser: Cmd2ArgumentParser) -> type[argparse_completer.ArgparseCompleter]:
         """Determine what type of ArgparseCompleter to use on a given parser.
 
         If the parser does not have one set, then use argparse_completer.DEFAULT_AP_COMPLETER.
@@ -3455,7 +3450,7 @@ class Cmd:
         choices: Iterable[Any] | None = None,
         choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
         completer: CompleterUnbound[CmdOrSet] | None = None,
-        parser: argparse.ArgumentParser | None = None,
+        parser: Cmd2ArgumentParser | None = None,
     ) -> Completer:
         """Determine the appropriate completer based on provided arguments."""
         if not any((parser, choices, choices_provider, completer)):
@@ -3487,7 +3482,7 @@ class Cmd:
         choices: Iterable[Any] | None = None,
         choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
         completer: CompleterUnbound[CmdOrSet] | None = None,
-        parser: argparse.ArgumentParser | None = None,
+        parser: Cmd2ArgumentParser | None = None,
     ) -> str:
         """Read a line of input with optional completion and history.
 

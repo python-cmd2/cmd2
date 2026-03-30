@@ -1,6 +1,5 @@
 """Shared utility functions."""
 
-import argparse
 import contextlib
 import functools
 import glob
@@ -36,6 +35,7 @@ from .types import (
 
 if TYPE_CHECKING:  # pragma: no cover
     PopenTextIO = subprocess.Popen[str]
+    from .argparse_custom import Cmd2ArgumentParser
 else:
     PopenTextIO = subprocess.Popen
 
@@ -734,7 +734,7 @@ def get_defining_class(meth: Callable[..., Any]) -> type[Any] | None:
 class CustomCompletionSettings:
     """Used by cmd2.Cmd.complete() to complete strings other than command arguments."""
 
-    def __init__(self, parser: argparse.ArgumentParser, *, preserve_quotes: bool = False) -> None:
+    def __init__(self, parser: 'Cmd2ArgumentParser', *, preserve_quotes: bool = False) -> None:
         """CustomCompletionSettings initializer.
 
         :param parser: arg parser defining format of string being completed

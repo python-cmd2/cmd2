@@ -77,7 +77,7 @@ When using `cmd2`'s [@with_argparser][cmd2.with_argparser] decorator, `cmd2` pro
 completion of flag names.
 
 Tab completion of argument values can be configured by using one of three parameters to
-[argparse.ArgumentParser.add_argument](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument)
+`Cmd2ArgumentParser.add_argument()`.
 
 - `choices`
 - `choices_provider`

@@ -34,6 +34,7 @@ from rich.table import Column
 
 from .argparse_custom import (
     ChoicesCallable,
+    Cmd2ArgumentParser,
     generate_range_error,
 )
 from .command_definition import CommandSet
@@ -49,7 +50,7 @@ from .exceptions import CompletionError
 ARG_TOKENS = 'arg_tokens'
 
 
-def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) -> str:
+def _build_hint(parser: Cmd2ArgumentParser, arg_action: argparse.Action) -> str:
     """Build completion hint for a given argument."""
     # Check if hinting is disabled for this argument
     suppress_hint = arg_action.get_suppress_tab_hint()  # type: ignore[attr-defined]
@@ -64,12 +65,12 @@ def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) ->
     return formatter.format_help()
 
 
-def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
+def _single_prefix_char(token: str, parser: Cmd2ArgumentParser) -> bool:
     """Is a token just a single flag prefix character."""
     return len(token) == 1 and token[0] in parser.prefix_chars
 
 
-def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
+def _looks_like_flag(token: str, parser: Cmd2ArgumentParser) -> bool:
     """Determine if a token looks like a flag.
 
     Unless an argument has nargs set to argparse.REMAINDER, then anything that looks like a flag
@@ -140,12 +141,12 @@ class _UnfinishedFlagError(CompletionError):
 
 
 class _NoResultsError(CompletionError):
-    def __init__(self, parser: argparse.ArgumentParser, arg_action: argparse.Action) -> None:
+    def __init__(self, parser: Cmd2ArgumentParser, arg_action: argparse.Action) -> None:
         """CompletionError which occurs when there are no results.
 
         If hinting is allowed on this argument, then its hint text will display.
 
-        :param parser: ArgumentParser instance which owns the action being completed
+        :param parser: Cmd2ArgumentParser instance which owns the action being completed
         :param arg_action: action being completed.
         """
         # Set apply_style to False because we don't want hints to look like errors
@@ -157,14 +158,14 @@ class ArgparseCompleter:
 
     def __init__(
         self,
-        parser: argparse.ArgumentParser,
+        parser: Cmd2ArgumentParser,
         cmd2_app: 'Cmd',
         *,
         parent_tokens: Mapping[str, MutableSequence[str]] | None = None,
     ) -> None:
         """Create an ArgparseCompleter.
 
-        :param parser: ArgumentParser instance
+        :param parser: Cmd2ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this ArgparseCompleter
         :param parent_tokens: optional Mapping of parent parsers' arg names to their tokens
                               This is only used by ArgparseCompleter when recursing on subcommand parsers
@@ -187,7 +188,7 @@ class ArgparseCompleter:
         self._positional_actions: list[argparse.Action] = []
 
         # This will be set if self._parser has subcommands
-        self._subcommand_action: argparse._SubParsersAction[argparse.ArgumentParser] | None = None
+        self._subcommand_action: argparse._SubParsersAction[Cmd2ArgumentParser] | None = None
 
         # Start digging through the argparse structures.
         # _actions is the top level container of parameter definitions
