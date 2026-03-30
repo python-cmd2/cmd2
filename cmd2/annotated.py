@@ -336,7 +336,10 @@ def _make_collection_resolver(collection_type: type) -> Callable[..., dict[str, 
                 'container_factory': collection_type,
             }
         if len(args) != 1:
-            return {}  # pragma: no cover
+            raise TypeError(
+                f"{collection_type.__name__}[...] with {len(args)} type arguments is not supported; "
+                f"use {collection_type.__name__}[T] with a single element type."
+            )
         element_type, inner = _resolve_element(args[0])
         return {
             **inner,
@@ -375,7 +378,10 @@ def _resolve_tuple(_tp: Any, args: tuple[Any, ...], *, has_default: bool = False
         _, inner = _resolve_element(first)
         return {**inner, 'is_collection': True, 'nargs': len(args), 'base_type': first, **cast_kwargs}
 
-    return {}  # pragma: no cover
+    raise TypeError(
+        "tuple with Ellipsis in an unexpected position is not supported; "
+        "use tuple[T, ...] for variable-length or tuple[T, T] for fixed-arity."
+    )
 
 
 def _resolve_literal(_tp: Any, args: tuple[Any, ...], **_ctx: Any) -> dict[str, Any]:
@@ -478,8 +484,10 @@ def _unwrap_optional(tp: type) -> tuple[type, bool]:
         if len(non_none) == 1:
             if has_none:
                 return non_none[0], True
-            # Single-element union without None shouldn't happen, pass through
-            return non_none[0], False  # pragma: no cover
+            raise TypeError(
+                f"Unexpected single-element Union without None: Union[{non_none[0]}]. "
+                f"Use the type directly instead of wrapping in Union."
+            )
         type_names = ' | '.join(a.__name__ if hasattr(a, '__name__') else str(a) for a in non_none)
         raise TypeError(f"Union type {type_names} is ambiguous for auto-resolution.")
     return tp, False
@@ -597,8 +605,9 @@ def _validate_base_command_params(
 
 
 # Parameters that are handled specially by the decorator and should not
-# be added to the argparse parser.
-_SKIP_PARAMS = frozenset({'self', 'cmd2_handler', 'cmd2_statement'})
+# be added to the argparse parser.  The first positional parameter (self/cls)
+# is always skipped by position; these cover additional decorator-managed names.
+_SKIP_PARAMS = frozenset({'cmd2_handler', 'cmd2_statement'})
 
 
 def _resolve_parameters(
@@ -617,7 +626,12 @@ def _resolve_parameters(
 
     resolved: list[_ResolvedParam] = []
 
-    for name, param in sig.parameters.items():
+    # Skip the first parameter by position (self/cls for methods)
+    params = list(sig.parameters.items())
+    if params:
+        params = params[1:]
+
+    for name, param in params:
         if name in skip_params:
             continue
 
@@ -766,7 +780,7 @@ def build_parser_from_function(
     Parameters without defaults become positional arguments.
     Parameters with defaults become ``--option`` flags.
     ``Annotated[T, Argument(...)]`` or ``Annotated[T, Option(...)]``
-    overrides the default behaviour.
+    overrides the default behavior.
 
     :param func: the command function to inspect
     :param skip_params: parameter names to exclude from the parser
@@ -844,7 +858,7 @@ def build_subcommand_handler(
     if base_command:
         _validate_base_command_params(func)
 
-    _accepted = set(inspect.signature(func).parameters.keys()) - {'self'}
+    _accepted = set(list(inspect.signature(func).parameters.keys())[1:])
 
     @functools.wraps(func)
     def handler(self_arg: Any, ns: Any) -> Any:

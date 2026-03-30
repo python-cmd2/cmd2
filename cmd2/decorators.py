@@ -355,27 +355,46 @@ def with_annotated(
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
     with_unknown_args: bool = False,
-    subcommand_to: str | None = None,
     base_command: bool = False,
+    subcommand_to: str | None = None,
     help: str | None = None,  # noqa: A002
     aliases: Sequence[str] | None = None,
+    groups: tuple[tuple[str, ...], ...] | None = None,
+    mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = None,
 ) -> Any:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
-    Can be used bare or with keyword arguments::
-
-        @with_annotated
-        def do_greet(self, name: str, count: int = 1): ...
-
-        @with_annotated(preserve_quotes=True)
-        def do_raw(self, text: str): ...
-
     :param func: the command function (when used without parentheses)
-    :param ns_provider: optional namespace provider, mirroring ``with_argparser``
-    :param preserve_quotes: if True, preserve quotes in arguments
-    :param with_unknown_args: if True, capture unknown args (passed as extra kwarg ``_unknown``)
+    :param ns_provider: optional callable returning a prepopulated argparse.Namespace.
+                        Not supported with ``subcommand_to``.
+    :param preserve_quotes: if True, preserve quotes in arguments.
+                            Not supported with ``subcommand_to``.
+    :param with_unknown_args: if True, capture unknown args (passed as extra kwarg ``_unknown``).
+                              Not supported with ``subcommand_to``.
+    :param base_command: if True, this command has subcommands (adds ``add_subparsers()``).
+                         Requires a ``cmd2_handler`` parameter and no positional arguments.
+    :param subcommand_to: parent command name (e.g. ``'team'`` or ``'team member'``).
+                          Function must be named ``{parent_underscored}_{subcommand}``.
+    :param help: help text for the subcommand (only valid with ``subcommand_to``)
+    :param aliases: alternative names for the subcommand (only valid with ``subcommand_to``)
+    :param groups: tuples of parameter names to place in argument groups (for help display)
+    :param mutually_exclusive_groups: tuples of parameter names that are mutually exclusive
+
+    Example::
+
+        class MyApp(cmd2.Cmd):
+            @with_annotated
+            def do_greet(self, name: str, count: int = 1): ...
+
+            @with_annotated(base_command=True)
+            def do_team(self, *, cmd2_handler): ...
+
+            @with_annotated(subcommand_to='team', help='create a team')
+            def team_create(self, name: str): ...
+
     """
     from .annotated import (
+        _SKIP_PARAMS,
         _filtered_namespace_kwargs,
         _validate_base_command_params,
         build_parser_from_function,
@@ -383,10 +402,24 @@ def with_annotated(
     )
     from .argparse_custom import Cmd2AttributeWrapper
 
-    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
-        if subcommand_to is None and (help is not None or aliases):
-            raise TypeError("with_annotated(help=..., aliases=...) requires subcommand_to=...")
+    if (help is not None or aliases is not None) and subcommand_to is None:
+        raise TypeError("'help' and 'aliases' are only valid with subcommand_to")
+    if subcommand_to is not None:
+        unsupported: list[str] = []
+        if ns_provider is not None:
+            unsupported.append('ns_provider')
+        if preserve_quotes:
+            unsupported.append('preserve_quotes')
+        if with_unknown_args:
+            unsupported.append('with_unknown_args')
+        if unsupported:
+            names = ', '.join(unsupported)
+            raise TypeError(
+                f"{names} {'is' if len(unsupported) == 1 else 'are'} not supported with subcommand_to. "
+                "Configure these behaviors on the base command instead."
+            )
 
+    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
         if with_unknown_args:
             unknown_param = inspect.signature(fn).parameters.get('_unknown')
             if unknown_param is None:
@@ -399,10 +432,12 @@ def with_annotated(
                 fn,
                 subcommand_to,
                 base_command=base_command,
+                groups=groups,
+                mutually_exclusive_groups=mutually_exclusive_groups,
             )
             setattr(handler, constants.SUBCMD_ATTR_COMMAND, subcommand_to)
-            setattr(handler, constants.CMD_ATTR_ARGPARSER, subcmd_parser_builder)
             setattr(handler, constants.SUBCMD_ATTR_NAME, subcmd_name)
+            setattr(handler, constants.CMD_ATTR_ARGPARSER, subcmd_parser_builder)
             add_parser_kwargs: dict[str, Any] = {}
             if help is not None:
                 add_parser_kwargs['help'] = help
@@ -412,13 +447,21 @@ def with_annotated(
             return handler
 
         command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
-        if base_command:
-            _validate_base_command_params(fn)
 
-        accepted = set(inspect.signature(fn).parameters.keys()) - {'self'}
+        skip_params = _SKIP_PARAMS | ({'_unknown'} if with_unknown_args else frozenset())
+        if base_command:
+            _validate_base_command_params(fn, skip_params=skip_params)
+
+        # Cache signature introspection at decoration time, not per-invocation
+        accepted = set(list(inspect.signature(fn).parameters.keys())[1:])
 
         def parser_builder() -> argparse.ArgumentParser:
-            parser = build_parser_from_function(fn)
+            parser = build_parser_from_function(
+                fn,
+                skip_params=skip_params,
+                groups=groups,
+                mutually_exclusive_groups=mutually_exclusive_groups,
+            )
             if base_command:
                 parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND', required=True)
             return parser

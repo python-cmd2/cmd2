@@ -21,11 +21,14 @@ from cmd2 import Cmd2ArgumentParser
 from cmd2.annotated import (
     Argument,
     Option,
+    _apply_mutex_group_targets,
+    _build_argument_group_targets,
     _CollectionCastingAction,
     _make_enum_type,
     _make_literal_type,
     _parse_bool,
     _resolve_annotation,
+    _validate_group_members,
     build_parser_from_function,
 )
 
@@ -98,6 +101,11 @@ def _func_default_type_mismatch(self, count: int = "1") -> None: ...  # type: ig
 def _func_path_default(self, file: Path = Path("/tmp")) -> None: ...
 def _func_optional_annotated_inside(self, name: Annotated[str | None, Option("--name")] = None) -> None: ...
 def _func_optional_annotated_outside(self, name: Annotated[str, Option("--name")] | None = None) -> None: ...
+def _func_int_enum(self, color: _IntColor) -> None: ...
+def _func_plain_enum(self, color: _PlainColor) -> None: ...
+def _func_list_int(self, nums: list[int]) -> None: ...
+def _func_set_int(self, nums: set[int]) -> None: ...
+def _func_tuple_fixed_triple(self, triple: tuple[int, int, int]) -> None: ...
 def _func_multi(self, a: str, b: int, c: int = 1) -> None: ...
 def _func_grouped(
     self,
@@ -170,6 +178,13 @@ class TestBuildParser:
             pytest.param(_func_enum, {"option_strings": [], "choices": ["red", "green", "blue"]}, id="enum_positional"),
             pytest.param(_func_literal, {"option_strings": [], "choices": ["fast", "slow"]}, id="literal_positional"),
             pytest.param(_func_literal_int, {"option_strings": [], "choices": [1, 2, 3]}, id="literal_int_positional"),
+            pytest.param(_func_int_enum, {"option_strings": [], "choices": [1, 2, 3]}, id="int_enum_positional"),
+            pytest.param(
+                _func_plain_enum, {"option_strings": [], "choices": ["red", "green", "blue"]}, id="plain_enum_positional"
+            ),
+            pytest.param(_func_list_int, {"option_strings": [], "nargs": "+", "type": int}, id="list_int"),
+            pytest.param(_func_set_int, {"option_strings": [], "nargs": "+", "type": int}, id="set_int"),
+            pytest.param(_func_tuple_fixed_triple, {"option_strings": [], "nargs": 3, "type": int}, id="tuple_fixed_triple"),
             pytest.param(_func_list, {"option_strings": [], "nargs": "+"}, id="list_positional"),
             pytest.param(_func_set, {"option_strings": [], "nargs": "+"}, id="set_positional"),
             pytest.param(_func_tuple_ellipsis, {"option_strings": [], "nargs": "+", "type": int}, id="tuple_ellipsis"),
@@ -253,12 +268,31 @@ class TestBuildParser:
         dests = {a.dest for a in parser._actions}
         assert 'self' not in dests
 
+    def test_no_params_produces_empty_parser(self) -> None:
+        """A function with zero parameters (not even self) produces a parser with no actions."""
+
+        def bare() -> None: ...
+
+        parser = build_parser_from_function(bare)
+        dests = {a.dest for a in parser._actions if a.dest != 'help'}
+        assert dests == set()
+
     def test_get_type_hints_failure_raises(self) -> None:
         def do_broken(self, name: 'NonExistentType'):  # noqa: F821
             pass
 
         with pytest.raises(TypeError, match="Failed to resolve type hints"):
             build_parser_from_function(do_broken)
+
+    def test_validate_base_command_type_hints_failure_raises(self) -> None:
+        """_validate_base_command_params should raise, not swallow, type hint failures."""
+        from cmd2.annotated import _validate_base_command_params
+
+        def do_broken(self, cmd2_handler, name: 'NonExistentType'):  # noqa: F821
+            pass
+
+        with pytest.raises(TypeError, match="Failed to resolve type hints"):
+            _validate_base_command_params(do_broken)
 
     def test_choices_provider_overrides_enum_choices(self) -> None:
         action = _get_param_action(_func_choices_provider_on_enum)
@@ -274,6 +308,12 @@ class TestBuildParser:
     def test_dest_param_raises(self) -> None:
         with pytest.raises(ValueError, match="dest"):
             build_parser_from_function(_func_dest_param)
+
+    def test_subcommand_param_raises(self) -> None:
+        def func(self, subcommand: str) -> None: ...
+
+        with pytest.raises(ValueError, match="subcommand"):
+            build_parser_from_function(func)
 
     def test_optional_annotated_outside_raises(self) -> None:
         with pytest.raises(TypeError, match="Annotated"):
@@ -299,6 +339,13 @@ class TestBuildParser:
         dests = {a.dest for a in parser._actions}
         assert 'c' in dests
 
+
+# ---------------------------------------------------------------------------
+# Argument groups and mutually exclusive groups
+# ---------------------------------------------------------------------------
+
+
+class TestArgumentGroups:
     def test_groups_and_mutex_applied(self) -> None:
         parser = build_parser_from_function(
             _func_grouped,
@@ -329,6 +376,146 @@ class TestBuildParser:
                 _func_grouped,
                 groups=(("local",), ("remote",)),
                 mutually_exclusive_groups=(("local", "remote"),),
+            )
+
+    def test_mutually_exclusive_group(self) -> None:
+        """Mutually exclusive params cannot be used together."""
+
+        def func(self, verbose: bool = False, quiet: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(("verbose", "quiet"),))
+        assert len(parser._mutually_exclusive_groups) == 1
+        group_dests = {a.dest for a in parser._mutually_exclusive_groups[0]._group_actions}
+        assert group_dests == {"verbose", "quiet"}
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--verbose", "--quiet"])
+
+    def test_multiple_mutually_exclusive_groups(self) -> None:
+        """Multiple mutually exclusive groups."""
+
+        def func(self, verbose: bool = False, quiet: bool = False, json: bool = False, csv: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(("verbose", "quiet"), ("json", "csv")))
+        assert len(parser._mutually_exclusive_groups) == 2
+
+    def test_argument_group(self) -> None:
+        """Arguments in a group appear under a shared heading in help."""
+
+        def func(self, src: str, dst: str, recursive: bool = False, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, groups=(("src", "dst"),))
+        default_titles = {'Positional Arguments', 'options'}
+        custom_groups = [g for g in parser._action_groups if g.title not in default_titles]
+        assert len(custom_groups) >= 1
+        all_custom_dests = {a.dest for g in custom_groups for a in g._group_actions}
+        assert {"src", "dst"} <= all_custom_dests
+
+    def test_mutually_exclusive_via_decorator(self) -> None:
+        """@with_annotated(mutually_exclusive_groups=...) works end-to-end."""
+
+        class App(cmd2.Cmd):
+            @cmd2.with_annotated(mutually_exclusive_groups=(("verbose", "quiet"),))
+            def do_run(self, verbose: bool = False, quiet: bool = False) -> None:
+                if verbose:
+                    self.poutput("verbose")
+                elif quiet:
+                    self.poutput("quiet")
+                else:
+                    self.poutput("normal")
+
+        app = App()
+        out, _err = run_cmd(app, "run --verbose")
+        assert out == ["verbose"]
+
+        _out, err = run_cmd(app, "run --verbose --quiet")
+        assert any("not allowed" in line.lower() for line in err)
+
+    def test_group_and_mutex_can_overlap(self) -> None:
+        def func(self, json: bool = False, csv: bool = False, plain: bool = False) -> None: ...
+
+        parser = build_parser_from_function(
+            func,
+            groups=(("json", "csv"),),
+            mutually_exclusive_groups=(("json", "csv"),),
+        )
+        custom_groups = [g for g in parser._action_groups if g.title not in {'Positional Arguments', 'options'}]
+        all_custom_dests = {a.dest for g in custom_groups for a in g._group_actions}
+        assert {"json", "csv"} <= all_custom_dests
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--json", "--csv"])
+
+
+class TestGroupHelpers:
+    def test_validate_group_members_rejects_nonexistent_param(self) -> None:
+        with pytest.raises(ValueError, match="nonexistent"):
+            _validate_group_members(("verbose", "nonexistent"), all_param_names={"verbose"}, group_type="groups")
+
+    def test_build_argument_group_targets(self) -> None:
+        parser = argparse.ArgumentParser()
+        target_for, argument_group_for = _build_argument_group_targets(
+            parser,
+            groups=(("src", "dst"),),
+            all_param_names={"src", "dst", "recursive"},
+        )
+        assert set(target_for) == {"src", "dst"}
+        assert set(argument_group_for) == {"src", "dst"}
+        assert target_for["src"] is argument_group_for["src"]
+        assert target_for["dst"] is argument_group_for["dst"]
+
+    def test_build_argument_group_targets_rejects_duplicate_assignment(self) -> None:
+        parser = argparse.ArgumentParser()
+        with pytest.raises(ValueError, match="argument group 1 and argument group 2"):
+            _build_argument_group_targets(
+                parser,
+                groups=(("verbose",), ("verbose",)),
+                all_param_names={"verbose"},
+            )
+
+    def test_apply_mutex_group_targets(self) -> None:
+        parser = argparse.ArgumentParser()
+        target_for, argument_group_for = _build_argument_group_targets(
+            parser,
+            groups=(("json", "csv"),),
+            all_param_names={"json", "csv", "plain"},
+        )
+
+        _apply_mutex_group_targets(
+            parser,
+            target_for=target_for,
+            argument_group_for=argument_group_for,
+            mutually_exclusive_groups=(("json", "csv"),),
+            all_param_names={"json", "csv", "plain"},
+        )
+
+        assert target_for["json"] is target_for["csv"]
+        assert isinstance(target_for["json"], argparse._MutuallyExclusiveGroup)
+
+    def test_apply_mutex_group_targets_rejects_duplicate_assignment(self) -> None:
+        parser = argparse.ArgumentParser()
+        with pytest.raises(ValueError, match="multiple mutually exclusive groups"):
+            _apply_mutex_group_targets(
+                parser,
+                target_for={},
+                argument_group_for={},
+                mutually_exclusive_groups=(("verbose",), ("verbose",)),
+                all_param_names={"verbose"},
+            )
+
+    def test_apply_mutex_group_targets_rejects_cross_group_members(self) -> None:
+        parser = argparse.ArgumentParser()
+        _target_for, argument_group_for = _build_argument_group_targets(
+            parser,
+            groups=(("src",), ("dst",)),
+            all_param_names={"src", "dst"},
+        )
+
+        with pytest.raises(ValueError, match="different argument groups"):
+            _apply_mutex_group_targets(
+                parser,
+                target_for={},
+                argument_group_for=argument_group_for,
+                mutually_exclusive_groups=(("src", "dst"),),
+                all_param_names={"src", "dst"},
             )
 
 
@@ -418,6 +605,38 @@ class TestUnsupportedPatterns:
         assert 'nargs' not in kwargs
         assert 'action' not in kwargs
 
+    @pytest.mark.parametrize(
+        "annotation",
+        [
+            pytest.param(list[int, str], id="list_multi_args"),
+            pytest.param(set[int, str], id="set_multi_args"),
+        ],
+    )
+    def test_collection_multiple_type_args_raises(self, annotation) -> None:
+        with pytest.raises(TypeError, match="type arguments is not supported"):
+            _resolve_annotation(annotation)
+
+    def test_tuple_ellipsis_wrong_position_raises(self) -> None:
+        with pytest.raises(TypeError, match="Ellipsis in an unexpected position"):
+            _resolve_annotation(tuple[..., int])
+
+    def test_single_element_union_without_none_raises(self) -> None:
+        """Union with one non-None type and no None should raise."""
+        from typing import Union
+        from unittest.mock import patch
+
+        from cmd2.annotated import _unwrap_optional
+
+        # Python normalizes Union[str] to str, so we can't construct this
+        # through normal typing. Patch get_origin/get_args to simulate it.
+        sentinel = object()
+        with (
+            patch('cmd2.annotated.get_origin', return_value=Union),
+            patch('cmd2.annotated.get_args', return_value=(str,)),
+            pytest.raises(TypeError, match="single-element Union"),
+        ):
+            _unwrap_optional(sentinel)
+
 
 # ---------------------------------------------------------------------------
 # Converters
@@ -480,6 +699,10 @@ class TestLiteralConverter:
     def test_direct_match_before_bool_coercion(self) -> None:
         assert _make_literal_type(["yes", "no"])("yes") == "yes"
 
+    def test_colliding_str_representations_raises(self) -> None:
+        with pytest.raises(TypeError, match="same string representation"):
+            _make_literal_type(["1", 1])
+
 
 # ---------------------------------------------------------------------------
 # Metadata classes
@@ -494,10 +717,24 @@ class TestMetadata:
             pytest.param({'help_text': "Name"}, {'help': 'Name'}, id="help_text"),
             pytest.param({'metavar': "NAME"}, {'metavar': 'NAME'}, id="metavar"),
             pytest.param({'choices': ["a", "b"]}, {'choices': ['a', 'b']}, id="choices"),
+            pytest.param({'table_columns': ("Name", "Age")}, {'table_columns': ("Name", "Age")}, id="table_columns"),
+            pytest.param({'suppress_tab_hint': True}, {'suppress_tab_hint': True}, id="suppress_tab_hint"),
         ],
     )
     def test_to_kwargs(self, meta_kwargs, expected) -> None:
         assert Argument(**meta_kwargs).to_kwargs() == expected
+
+    def test_nargs_not_in_to_kwargs(self) -> None:
+        """nargs is set directly by the resolver, not via to_kwargs."""
+        assert 'nargs' not in Argument(nargs=2).to_kwargs()
+
+    def test_to_kwargs_preserves_empty_string(self) -> None:
+        """Explicit empty string help_text should not be silently dropped."""
+        assert Argument(help_text="").to_kwargs() == {'help': ''}
+
+    def test_to_kwargs_preserves_empty_choices(self) -> None:
+        """Explicit empty choices list should not be silently dropped."""
+        assert Argument(choices=[]).to_kwargs() == {'choices': []}
 
     def test_option_excludes_names_action_required(self) -> None:
         opt = Option("--color", "-c", action="count", required=True, help_text="Pick")
@@ -547,7 +784,59 @@ class TestCollectionCastingAction:
 
 
 # ---------------------------------------------------------------------------
-# Extracted runtime coverage
+# _filtered_namespace_kwargs edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestFilteredNamespaceKwargs:
+    def test_excludes_subcmd_handler_key(self) -> None:
+        from cmd2.annotated import _filtered_namespace_kwargs
+        from cmd2.constants import NS_ATTR_SUBCMD_HANDLER
+
+        ns = argparse.Namespace(**{NS_ATTR_SUBCMD_HANDLER: lambda: None, 'name': 'Alice'})
+        result = _filtered_namespace_kwargs(ns)
+        assert NS_ATTR_SUBCMD_HANDLER not in result
+        assert result == {'name': 'Alice'}
+
+    def test_excludes_subcommand_key(self) -> None:
+        from cmd2.annotated import _filtered_namespace_kwargs
+
+        ns = argparse.Namespace(subcommand='add', name='Alice')
+        result = _filtered_namespace_kwargs(ns, exclude_subcommand=True)
+        assert 'subcommand' not in result
+        assert result == {'name': 'Alice'}
+
+
+# ---------------------------------------------------------------------------
+# _parse_positionals edge case
+# ---------------------------------------------------------------------------
+
+
+class TestParsePositionals:
+    def test_skips_non_statement_next_arg(self) -> None:
+        """When next_arg after Cmd is not Statement/str, loop continues."""
+        from cmd2.decorators import _parse_positionals
+
+        app = cmd2.Cmd()
+        # Two Cmd-like objects: first has non-str next, second has str next
+        result_cmd, result_stmt = _parse_positionals((app, 42, app, 'hello'))
+        assert result_cmd is app
+        assert result_stmt == 'hello'
+
+    def test_matches_statement_type(self) -> None:
+        """When next_arg is a Statement, it is accepted."""
+        from cmd2.decorators import _parse_positionals
+        from cmd2.parsing import Statement
+
+        app = cmd2.Cmd()
+        stmt = Statement('hello')
+        result_cmd, result_stmt = _parse_positionals((app, stmt))
+        assert result_cmd is app
+        assert result_stmt is stmt
+
+
+# ---------------------------------------------------------------------------
+# Runtime coverage
 # ---------------------------------------------------------------------------
 
 
@@ -610,7 +899,7 @@ def runtime_app() -> _RuntimeAnnotatedApp:
     return app
 
 
-class TestExtractedRuntimeExecution:
+class TestRuntimeExecution:
     @pytest.mark.parametrize(
         ("command", "expected"),
         [
@@ -638,7 +927,7 @@ class TestExtractedRuntimeExecution:
         assert "Color" in help_text or "color" in help_text
 
 
-class TestExtractedRuntimeCompletion:
+class TestRuntimeCompletion:
     def test_enum_completion(self, runtime_app) -> None:
         assert sorted(_complete_cmd(runtime_app, "paint wall --color ", "")) == ["blue", "green", "red"]
 
@@ -680,7 +969,7 @@ def infer_app() -> _RuntimeTypeInferenceApp:
     return app
 
 
-class TestExtractedTypeInference:
+class TestTypeInference:
     def test_enum_type_inference(self, infer_app) -> None:
         assert sorted(_complete_cmd(infer_app, "pick_color ", "")) == ["green", "red"]
 
@@ -714,7 +1003,7 @@ def cmdset_app() -> cmd2.Cmd:
     return app
 
 
-class TestExtractedCommandSet:
+class TestCommandSet:
     def test_command_set_execution(self, cmdset_app) -> None:
         out, _err = run_cmd(cmdset_app, "play football")
         assert out == ["Playing football"]
@@ -762,18 +1051,26 @@ class _IntegrationApp(cmd2.Cmd):
     def do_ns_test(self, cmd2_statement=None) -> None:
         self.poutput("ok")
 
+    @cmd2.with_annotated
+    def do_prefixed(self, cmd2_mode: int = 1) -> None:
+        self.poutput(f"cmd2_mode={cmd2_mode}")
+
 
 class _GroupedParserApp(cmd2.Cmd):
-    transfer_parser = build_parser_from_function(
-        _func_grouped,
+    @cmd2.with_annotated(
         groups=(("local", "remote"), ("force", "dry_run")),
         mutually_exclusive_groups=(("local", "remote"), ("force", "dry_run")),
     )
-
-    @cmd2.with_argparser(transfer_parser)
-    def do_transfer(self, args: argparse.Namespace) -> None:
-        target = args.local if args.local is not None else args.remote
-        mode = "force" if args.force else "dry-run" if args.dry_run else "normal"
+    def do_transfer(
+        self,
+        *,
+        local: str | None = None,
+        remote: str | None = None,
+        force: bool = False,
+        dry_run: bool = False,
+    ) -> None:
+        target = local if local is not None else remote
+        mode = "force" if force else "dry-run" if dry_run else "normal"
         self.poutput(f"Transfer {target} in {mode} mode")
 
 
@@ -801,27 +1098,19 @@ class TestWithAnnotatedIntegration:
         ],
     )
     def test_command_execution(self, app, command, expected) -> None:
-        from .conftest import run_cmd
-
         out, _err = run_cmd(app, command)
         assert out == expected
 
     def test_with_unknown_args(self, app) -> None:
-        from .conftest import run_cmd
-
         out, _err = run_cmd(app, "flex Alice --extra stuff")
         assert out[0] == "name=Alice"
         assert "unknown=" in out[1]
 
     def test_preserve_quotes(self, app) -> None:
-        from .conftest import run_cmd
-
         out, _err = run_cmd(app, 'raw "hello world"')
         assert out == ['raw: "hello world"']
 
     def test_error_produces_stderr(self, app) -> None:
-        from .conftest import run_cmd
-
         _out, err = run_cmd(app, "greet")
         assert any('error' in line.lower() or 'usage' in line.lower() for line in err)
 
@@ -844,16 +1133,27 @@ class TestWithAnnotatedIntegration:
                 pass
 
     def test_ns_provider(self, app) -> None:
-        from .conftest import run_cmd
-
         out, _err = run_cmd(app, "ns_test")
         assert out == ["ok"]
         assert app.ns_calls == 1
 
+    def test_cmd2_prefixed_param_is_preserved(self, app) -> None:
+        out, _err = run_cmd(app, "prefixed --cmd2_mode 5")
+        assert out == ["cmd2_mode=5"]
+
     def test_kwargs_passthrough(self, app) -> None:
-        app.stdout = cmd2.utils.StdSim(app.stdout)
         app.do_greet("Alice", keyword_arg="kwarg_value")
-        assert "kwarg_value" in app.stdout.getvalue()
+
+    def test_bare_call_decorator(self) -> None:
+        """@with_annotated() with empty parens works same as @with_annotated."""
+
+        class App(cmd2.Cmd):
+            @cmd2.with_annotated()
+            def do_echo(self, text: str) -> None:
+                self.poutput(text)
+
+        out, _err = run_cmd(App(), "echo hi")
+        assert out == ["hi"]
 
     def test_missing_parser_raises(self, app) -> None:
         from unittest.mock import patch
@@ -891,7 +1191,7 @@ class TestGroupedParserIntegration:
 class _SubcommandApp(cmd2.Cmd):
     # Level 1: base command
     @cmd2.with_annotated(base_command=True)
-    def do_manage(self, verbose: bool = False, *, cmd2_handler) -> None:
+    def do_manage(self, cmd2_handler, verbose: bool = False) -> None:
         """Management command with subcommands."""
         if verbose:
             self.poutput("verbose mode")
@@ -904,13 +1204,13 @@ class _SubcommandApp(cmd2.Cmd):
     def manage_add(self, value: str) -> None:
         self.poutput(f"added: {value}")
 
-    @cmd2.with_annotated(subcommand_to='manage', help='list things')
+    @cmd2.with_annotated(subcommand_to='manage', help='list things', aliases=['ls'])
     def manage_list(self) -> None:
         self.poutput("listing all")
 
     # Level 2: intermediate subcommand (also a base for level 3)
     @cmd2.with_annotated(subcommand_to='manage', base_command=True, help='manage members')
-    def manage_member(self, *, cmd2_handler) -> None:
+    def manage_member(self, cmd2_handler) -> None:
         handler = cmd2_handler.get()
         if handler:
             handler()
@@ -932,12 +1232,11 @@ class TestSubcommands:
         [
             pytest.param("manage add hello", ["added: hello"], id="add"),
             pytest.param("manage list", ["listing all"], id="list"),
+            pytest.param("manage ls", ["listing all"], id="list_alias"),
             pytest.param("manage member add Alice", ["member added: Alice"], id="nested_3_levels"),
         ],
     )
     def test_subcommand_executes(self, subcmd_app, command, expected) -> None:
-        from .conftest import run_cmd
-
         out, _err = run_cmd(subcmd_app, command)
         assert out == expected
 
@@ -950,14 +1249,10 @@ class TestSubcommands:
         ],
     )
     def test_subcommand_errors(self, subcmd_app, command) -> None:
-        from .conftest import run_cmd
-
         _out, err = run_cmd(subcmd_app, command)
         assert any('error' in line.lower() or 'usage' in line.lower() or 'invalid' in line.lower() for line in err)
 
     def test_subcommand_help(self, subcmd_app) -> None:
-        from .conftest import run_cmd
-
         out, _err = run_cmd(subcmd_app, 'help manage')
         help_text = '\n'.join(out)
         assert 'add' in help_text
@@ -989,11 +1284,67 @@ class TestSubcommandValidation:
             def do_bad(self, verbose: bool = False) -> None:
                 pass
 
-    def test_help_without_subcommand_to_raises(self) -> None:
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            pytest.param({"help": "not allowed"}, id="help_only"),
+            pytest.param({"aliases": ["x"]}, id="aliases_only"),
+        ],
+    )
+    def test_subcmd_only_params_without_subcommand_to_raises(self, kwargs) -> None:
         with pytest.raises(TypeError, match="subcommand_to"):
 
-            @cmd2.with_annotated(help="not allowed")
+            @cmd2.with_annotated(**kwargs)
             def do_bad(self, name: str) -> None:
+                pass
+
+    @pytest.mark.parametrize(
+        ("kwargs", "pattern"),
+        [
+            pytest.param({"with_unknown_args": True}, "with_unknown_args", id="with_unknown_args"),
+            pytest.param({"preserve_quotes": True}, "preserve_quotes", id="preserve_quotes"),
+            pytest.param({"ns_provider": lambda self: argparse.Namespace()}, "ns_provider", id="ns_provider"),
+        ],
+    )
+    def test_subcommand_rejects_unsupported_runtime_options(self, kwargs, pattern) -> None:
+        with pytest.raises(TypeError, match=pattern):
+
+            @cmd2.with_annotated(subcommand_to='team', **kwargs)
+            def team_add(self, name: str, _unknown: list[str] | None = None) -> None:
+                pass
+
+    def test_subcommand_with_mutually_exclusive_groups(self) -> None:
+        """mutually_exclusive_groups should work on subcommands."""
+
+        class App(cmd2.Cmd):
+            @cmd2.with_annotated(base_command=True)
+            def do_fmt(self, cmd2_handler) -> None:
+                handler = cmd2_handler.get()
+                if handler:
+                    handler()
+
+            @cmd2.with_annotated(subcommand_to='fmt', help='output', mutually_exclusive_groups=(("json", "csv"),))
+            def fmt_out(self, msg: str, json: bool = False, csv: bool = False) -> None:
+                self.poutput(f"json={json} csv={csv} {msg}")
+
+        app = App()
+        out, _err = run_cmd(app, "fmt out hello --json")
+        assert out == ["json=True csv=False hello"]
+        _out, err = run_cmd(app, "fmt out hello --json --csv")
+        assert any("not allowed" in line.lower() for line in err)
+
+    def test_intermediate_base_command_positional_raises(self) -> None:
+        with pytest.raises(TypeError, match="positional"):
+
+            @cmd2.with_annotated(subcommand_to='team', base_command=True)
+            def team_member(self, name: str, cmd2_handler) -> None:
+                pass
+
+    def test_intermediate_base_command_missing_handler_raises(self) -> None:
+        with pytest.raises(TypeError, match="cmd2_handler"):
+
+            @cmd2.with_annotated(subcommand_to='team', base_command=True)
+            def team_member(self) -> None:
                 pass
 
     @pytest.mark.parametrize(
@@ -1018,6 +1369,14 @@ class TestSubcommandValidation:
         assert getattr(team_create, constants.SUBCMD_ATTR_COMMAND) == 'team'
         assert getattr(team_create, constants.SUBCMD_ATTR_NAME) == 'create'
         assert getattr(team_create, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS) == {'help': 'create', 'aliases': ['c']}
-        # Parser builder is callable
         parser = getattr(team_create, constants.CMD_ATTR_ARGPARSER)()
         assert isinstance(parser, argparse.ArgumentParser)
+
+    def test_subcommand_without_help(self) -> None:
+        """Subcommand with no help or aliases -- covers the None/empty branches."""
+        from cmd2 import constants
+
+        @cmd2.with_annotated(subcommand_to='team')
+        def team_delete(self) -> None: ...
+
+        assert getattr(team_delete, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS) == {}
