@@ -308,6 +308,48 @@ def test_cmd2_attribute_wrapper() -> None:
     assert wrapper.get() == new_val
 
 
+def test_parser_attachment() -> None:
+    # Attach a parser as a subcommand
+    root_parser = Cmd2ArgumentParser(description="root command")
+    root_subparsers = root_parser.add_subparsers()
+
+    child_parser = Cmd2ArgumentParser(description="child command")
+    root_subparsers.attach_parser(  # type: ignore[attr-defined]
+        "child",
+        child_parser,
+        help="a child command",
+        aliases=["child_alias"],
+    )
+
+    # Verify the same parser instance was used
+    assert root_subparsers._name_parser_map["child"] is child_parser
+    assert root_subparsers._name_parser_map["child_alias"] is child_parser
+
+    # Verify an action with the help text exists
+    child_action = None
+    for action in root_subparsers._choices_actions:
+        if action.dest == "child":
+            child_action = action
+            break
+    assert child_action is not None
+    assert child_action.help == "a child command"
+
+    # Detatch the subcommand
+    detached_parser = root_subparsers.detach_parser("child")  # type: ignore[attr-defined]
+
+    # Verify subcommand and its aliases were removed
+    assert detached_parser is child_parser
+    assert "child" not in root_subparsers._name_parser_map
+    assert "child_alias" not in root_subparsers._name_parser_map
+
+    # Verify the help text action was removed
+    choices_actions = [action.dest for action in root_subparsers._choices_actions]
+    assert "child" not in choices_actions
+
+    # Verify it returns None when subcommand does not exist
+    assert root_subparsers.detach_parser("fake") is None  # type: ignore[attr-defined]
+
+
 def test_completion_items_as_choices(capsys) -> None:
     """Test cmd2's patch to Argparse._check_value() which supports CompletionItems as choices.
     Choices are compared to CompletionItems.orig_value instead of the CompletionItem instance.

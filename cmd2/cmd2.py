@@ -1132,8 +1132,8 @@ class Cmd:
                     # Get add_parser() kwargs (aliases, help, etc.) defined by the decorator
                     add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
 
-                    # Add the existing parser as a subcommand
-                    action.add_existing_parser(  # type: ignore[attr-defined]
+                    # Attach existing parser as a subcommand
+                    action.attach_parser(  # type: ignore[attr-defined]
                         subcommand_name,
                         subcmd_parser,
                         **add_parser_kwargs,
@@ -1184,7 +1184,7 @@ class Cmd:
 
             for action in command_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    action.remove_parser(subcommand_name)  # type: ignore[attr-defined]
+                    action.detach_parser(subcommand_name)  # type: ignore[attr-defined]
                     break
 
     @property

@@ -252,13 +252,13 @@ cmd2 has patched ``argparse.ArgumentParser`` to include the following accessor m
 cmd2 has patched ``argparse._SubParsersAction`` with new functions to better facilitate the
 addition and removal of subcommand parsers.
 
-``argparse._SubParsersAction.remove_parser`` - new function which removes a
-sub-parser from a sub-parsers group. See ``_SubParsersAction_remove_parser`` for
-more details.
-
-``argparse._SubParsersAction.add_existing_parser`` - new function which allows you to attach
-an existing ArgumentParser to a sub-parsers group. See ``_SubParsersAction_add_existing_parser``
+``argparse._SubParsersAction.attach_parser`` - new function to attach
+an existing ArgumentParser to a subparsers action. See ``_SubParsersAction_attach_parser``
 for more details.
+
+``argparse._SubParsersAction.detach_parser`` - new function to detach a
+parser from a subparsers action. See ``_SubParsersAction_detach_parser`` for
+more details.
 """
 
 import argparse
@@ -945,62 +945,25 @@ setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
 
 
 ############################################################################################################
-# Patch argparse._SubParsersAction to add remove_parser function
+# Patch argparse._SubParsersAction to add attach_parser function
 ############################################################################################################
 
 
-def _SubParsersAction_remove_parser(  # noqa: N802
-    self: argparse._SubParsersAction,  # type: ignore[type-arg]
-    name: str,
-) -> None:
-    """Remove a sub-parser from a sub-parsers group. Used to remove subcommands from a parser.
-
-    This function is added by cmd2 as a method called ``remove_parser()`` to ``argparse._SubParsersAction`` class.
-
-    To call: ``action.remove_parser(name)``
-
-    :param self: instance of the _SubParsersAction being edited
-    :param name: name of the subcommand for the sub-parser to remove
-    """
-    # Remove this subcommand from its base command's help text
-    for choice_action in self._choices_actions:
-        if choice_action.dest == name:
-            self._choices_actions.remove(choice_action)
-            break
-
-    # Remove this subcommand and all its aliases from the base command
-    subparser = self._name_parser_map.get(name)
-    if subparser is not None:
-        to_remove = []
-        for cur_name, cur_parser in self._name_parser_map.items():
-            if cur_parser is subparser:
-                to_remove.append(cur_name)
-        for cur_name in to_remove:
-            del self._name_parser_map[cur_name]
-
-
-setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_parser)
-
-############################################################################################################
-# Patch argparse._SubParsersAction to add add_existing_parser function
-############################################################################################################
-
-
-def _SubParsersAction_add_existing_parser(  # noqa: N802
+def _SubParsersAction_attach_parser(  # noqa: N802
     self: argparse._SubParsersAction,  # type: ignore[type-arg]
     name: str,
     subcmd_parser: argparse.ArgumentParser,
     **add_parser_kwargs: Any,
 ) -> None:
-    """Attach an existing ArgumentParser to a sub-parsers group.
+    """Attach an existing ArgumentParser to a subparsers action.
 
     This is useful when a parser is pre-configured (e.g. by cmd2's subcommand decorator)
     and needs to be attached to a parent parser.
 
-    This function is added by cmd2 as a method called ``add_existing_parser()``
+    This function is added by cmd2 as a method called ``attach_parser()``
     to ``argparse._SubParsersAction`` class.
 
-    To call: ``action.add_existing_parser(name, subcmd_parser, **add_parser_kwargs)``
+    To call: ``action.attach_parser(name, subcmd_parser, **add_parser_kwargs)``
 
     :param self: instance of the _SubParsersAction being edited
     :param name: name of the subcommand to add
@@ -1019,7 +982,48 @@ def _SubParsersAction_add_existing_parser(  # noqa: N802
         self._name_parser_map[alias] = subcmd_parser
 
 
-setattr(argparse._SubParsersAction, 'add_existing_parser', _SubParsersAction_add_existing_parser)
+setattr(argparse._SubParsersAction, 'attach_parser', _SubParsersAction_attach_parser)
+
+############################################################################################################
+# Patch argparse._SubParsersAction to add detach_parser function
+############################################################################################################
+
+
+def _SubParsersAction_detach_parser(  # noqa: N802
+    self: argparse._SubParsersAction,  # type: ignore[type-arg]
+    name: str,
+) -> argparse.ArgumentParser | None:
+    """Detach a parser from a subparsers action and return it.
+
+    This function is added by cmd2 as a method called ``detach_parser()`` to ``argparse._SubParsersAction`` class.
+
+    To call: ``action.detach_parser(name)``
+
+    :param self: instance of the _SubParsersAction being edited
+    :param name: name of the subcommand for the parser to detach
+    :return: the parser which was detached or None if the subcommand doesn't exist
+    """
+    subparser = self._name_parser_map.get(name)
+
+    if subparser is not None:
+        # Remove this subcommand and all its aliases from the base command
+        to_remove = []
+        for cur_name, cur_parser in self._name_parser_map.items():
+            if cur_parser is subparser:
+                to_remove.append(cur_name)
+        for cur_name in to_remove:
+            del self._name_parser_map[cur_name]
+
+        # Remove this subcommand from its base command's help text
+        for choice_action in self._choices_actions:
+            if choice_action.dest == name:
+                self._choices_actions.remove(choice_action)
+                break
+
+    return subparser
+
+
+setattr(argparse._SubParsersAction, 'detach_parser', _SubParsersAction_detach_parser)
 
 ############################################################################################################
 # Unless otherwise noted, everything below this point are copied from Python's
