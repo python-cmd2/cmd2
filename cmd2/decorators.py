@@ -353,6 +353,7 @@ def as_subcommand_to(
     *,
     help: str | None = None,  # noqa: A002
     aliases: Sequence[str] | None = None,
+    **add_parser_kwargs: Any,
 ) -> Callable[[ArgparseCommandFunc[CmdOrSet]], ArgparseCommandFunc[CmdOrSet]]:
     """Tag this method as a subcommand to an existing argparse decorated command.
 
@@ -363,6 +364,8 @@ def as_subcommand_to(
                  This is passed as the help argument to subparsers.add_parser().
     :param aliases: Alternative names for this subcommand. This is passed as the alias argument to
                     subparsers.add_parser().
+    :param add_parser_kwargs: other registration-specific kwargs for add_parser()
+                              (e.g. deprecated [Python 3.13+])
     :return: Wrapper function that can receive an argparse.Namespace
     """
 
@@ -373,13 +376,13 @@ def as_subcommand_to(
         setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
 
         # Keyword arguments for subparsers.add_parser()
-        add_parser_kwargs: dict[str, Any] = {}
+        final_kwargs: dict[str, Any] = dict(add_parser_kwargs)
         if help is not None:
-            add_parser_kwargs['help'] = help
+            final_kwargs['help'] = help
         if aliases:
-            add_parser_kwargs['aliases'] = aliases[:]
+            final_kwargs['aliases'] = tuple(aliases)
 
-        setattr(func, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, add_parser_kwargs)
+        setattr(func, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, final_kwargs)
 
         return func
 

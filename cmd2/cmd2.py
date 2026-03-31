@@ -1129,19 +1129,15 @@ class Cmd:
             # Find the argparse action that handles subcommands
             for action in target_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    # Get the kwargs for add_parser()
+                    # Get add_parser() kwargs (aliases, help, etc.) defined by the decorator
                     add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
 
-                    # Use add_parser to register the subcommand name and any aliases
-                    action.add_parser(subcommand_name, **add_parser_kwargs)
-
-                    # Replace the parser created by add_parser() with our pre-configured one
-                    action._name_parser_map[subcommand_name] = subcmd_parser
-
-                    # Also remap any aliases to our pre-configured parser
-                    for alias in add_parser_kwargs.get("aliases", []):
-                        action._name_parser_map[alias] = subcmd_parser
-
+                    # Attach existing parser as a subcommand
+                    action.attach_parser(  # type: ignore[attr-defined]
+                        subcommand_name,
+                        subcmd_parser,
+                        **add_parser_kwargs,
+                    )
                     break
 
     def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
@@ -1188,7 +1184,7 @@ class Cmd:
 
             for action in command_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    action.remove_parser(subcommand_name)  # type: ignore[attr-defined]
+                    action.detach_parser(subcommand_name)  # type: ignore[attr-defined]
                     break
 
     @property
