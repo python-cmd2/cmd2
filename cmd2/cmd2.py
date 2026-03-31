@@ -62,7 +62,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     TextIO,
-    TypeAlias,
     TypeVar,
     Union,
     cast,
@@ -2351,12 +2350,9 @@ class Cmd:
         :param parser: the parser to examine
         :return: type of ArgparseCompleter
         """
-        APCompleterType: TypeAlias = type[argparse_completer.ArgparseCompleter] | None
-        completer_type: APCompleterType = parser.get_ap_completer_type()  # type: ignore[attr-defined]
-
-        if completer_type is None:
-            completer_type = argparse_completer.DEFAULT_AP_COMPLETER
-        return completer_type
+        if parser.ap_completer_type is None:
+            return argparse_completer.DEFAULT_AP_COMPLETER
+        return parser.ap_completer_type
 
     def _perform_completion(
         self, text: str, line: str, begidx: int, endidx: int, custom_settings: utils.CustomCompletionSettings | None = None

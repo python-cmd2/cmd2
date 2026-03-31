@@ -66,6 +66,8 @@ prompt is displayed.
     - Removed `Cmd.ruler` since `cmd2` no longer uses it.
     - All parsers used with `cmd2` commands much be an instance of `Cmd2ArgumentParser` or a child
       class of it.
+    - Removed `set_ap_completer_type()` and `get_ap_completer_type()` since `ap_completer_type` is
+      now a public member of `Cmd2ArgumentParser`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These

@@ -229,11 +229,6 @@ for cases in which you need to manually access the cmd2-specific attributes.
 - ``argparse.Action.get_suppress_tab_hint()`` - See ``_action_get_suppress_tab_hint`` for more details.
 - ``argparse.Action.set_suppress_tab_hint()`` - See ``_action_set_suppress_tab_hint`` for more details.
 
-cmd2 has patched ``argparse.ArgumentParser`` to include the following accessor methods
-
-- ``argparse.ArgumentParser.get_ap_completer_type()`` - See ``_ArgumentParser_get_ap_completer_type`` for more details.
-- ``argparse.Action.set_ap_completer_type()`` - See ``_ArgumentParser_set_ap_completer_type`` for more details.
-
 **Subcommand Manipulation**
 
 cmd2 has patched ``argparse._SubParsersAction`` with new functions to better facilitate the
@@ -811,76 +806,6 @@ setattr(argparse._ActionsContainer, 'add_argument', _add_argument_wrapper)
 
 
 ############################################################################################################
-# Patch argparse.ArgumentParser with accessors for ap_completer_type attribute
-############################################################################################################
-
-# An ArgumentParser attribute which specifies a subclass of ArgparseCompleter for custom completion behavior on a
-# given parser. If this is None or not present, then cmd2 will use argparse_completer.DEFAULT_AP_COMPLETER when tab
-# completing a parser's arguments
-ATTR_AP_COMPLETER_TYPE = 'ap_completer_type'
-
-
-def _ArgumentParser_get_ap_completer_type(self: argparse.ArgumentParser) -> type['ArgparseCompleter'] | None:  # noqa: N802
-    """Get the ap_completer_type attribute of an argparse ArgumentParser.
-
-    This function is added by cmd2 as a method called ``get_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
-
-    To call: ``parser.get_ap_completer_type()``
-
-    :param self: ArgumentParser being queried
-    :return: An ArgparseCompleter-based class or None if attribute does not exist
-    """
-    return cast(type['ArgparseCompleter'] | None, getattr(self, ATTR_AP_COMPLETER_TYPE, None))
-
-
-setattr(argparse.ArgumentParser, 'get_ap_completer_type', _ArgumentParser_get_ap_completer_type)
-
-
-def _ArgumentParser_set_ap_completer_type(self: argparse.ArgumentParser, ap_completer_type: type['ArgparseCompleter']) -> None:  # noqa: N802
-    """Set the ap_completer_type attribute of an argparse ArgumentParser.
-
-    This function is added by cmd2 as a method called ``set_ap_completer_type()`` to ``argparse.ArgumentParser`` class.
-
-    To call: ``parser.set_ap_completer_type(ap_completer_type)``
-
-    :param self: ArgumentParser being edited
-    :param ap_completer_type: the custom ArgparseCompleter-based class to use when completing arguments for this parser
-    """
-    setattr(self, ATTR_AP_COMPLETER_TYPE, ap_completer_type)
-
-
-setattr(argparse.ArgumentParser, 'set_ap_completer_type', _ArgumentParser_set_ap_completer_type)
-
-
-############################################################################################################
-# Patch ArgumentParser._check_value to support CompletionItems as choices
-############################################################################################################
-def _ArgumentParser_check_value(_self: argparse.ArgumentParser, action: argparse.Action, value: Any) -> None:  # noqa: N802
-    """Check_value that supports CompletionItems as choices (Custom override of ArgumentParser._check_value).
-
-    When displaying choices, use CompletionItem.value instead of the CompletionItem instance.
-
-    :param self: ArgumentParser instance
-    :param action: the action being populated
-    :param value: value from command line already run through conversion function by argparse
-    """
-    # Import gettext like argparse does
-    from gettext import (
-        gettext as _,
-    )
-
-    if action.choices is not None and value not in action.choices:
-        # If any choice is a CompletionItem, then display its value property.
-        choices = [c.value if isinstance(c, CompletionItem) else c for c in action.choices]
-        args = {'value': value, 'choices': ', '.join(map(repr, choices))}
-        msg = _('invalid choice: %(value)r (choose from %(choices)s)')
-        raise ArgumentError(action, msg % args)
-
-
-setattr(argparse.ArgumentParser, '_check_value', _ArgumentParser_check_value)
-
-
-############################################################################################################
 # Patch argparse._SubParsersAction to add attach_parser function
 ############################################################################################################
 
@@ -1221,7 +1146,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.description: RenderableType | None  # type: ignore[assignment]
         self.epilog: RenderableType | None  # type: ignore[assignment]
 
-        self.set_ap_completer_type(ap_completer_type)  # type: ignore[attr-defined]
+        self.ap_completer_type = ap_completer_type
 
     def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:  # type: ignore[type-arg]
         """Add a subcommand parser.
@@ -1295,6 +1220,27 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 raise ArgumentError(action, generate_range_error(nargs_range[0], nargs_range[1]))
 
         return super()._match_argument(action, arg_strings_pattern)
+
+    def _check_value(self, action: argparse.Action, value: Any) -> None:
+        """Override that supports CompletionItems as choices.
+
+        When displaying choices, use CompletionItem.value instead of the CompletionItem instance.
+
+        :param self: ArgumentParser instance
+        :param action: the action being populated
+        :param value: value from command line already run through conversion function by argparse
+        """
+        # Import gettext like argparse does
+        from gettext import (
+            gettext as _,
+        )
+
+        if action.choices is not None and value not in action.choices:
+            # If any choice is a CompletionItem, then display its value property.
+            choices = [c.value if isinstance(c, CompletionItem) else c for c in action.choices]
+            args = {'value': value, 'choices': ', '.join(map(repr, choices))}
+            msg = _('invalid choice: %(value)r (choose from %(choices)s)')
+            raise ArgumentError(action, msg % args)
 
 
 class Cmd2AttributeWrapper:
