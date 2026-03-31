@@ -2716,8 +2716,8 @@ class Cmd:
 
     def sigint_handler(
         self,
-        signum: int,  # noqa: ARG002,
-        frame: FrameType | None,  # noqa: ARG002,
+        signum: int,  # noqa: ARG002
+        frame: FrameType | None,  # noqa: ARG002
     ) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
 

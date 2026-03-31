@@ -25,7 +25,7 @@ Example::
 **Completion**
 
 cmd2 uses its ArgparseCompleter class to enable argparse-based completion
-on all commands that use the @with_argparse wrappers. Out of the box you get
+on all commands that use the @with_argparser decorator. Out of the box you get
 completion of commands, subcommands, and flag names, as well as instructive
 hints about the current argument that print when tab is pressed. In addition,
 you can add completion for each argument's values using parameters passed
@@ -211,15 +211,15 @@ exceeds this number, then a completion table won't be displayed.
 **Patched argparse functions**
 
 ``argparse._ActionsContainer.add_argument`` - adds arguments related to tab
-completion and enables nargs range parsing. See _add_argument_wrapper for
-more details on these arguments.
+completion and enables nargs range parsing. See ``__ActionsContainer_add_argument``
+for more details on these arguments.
 
 **Added accessor methods**
 
 cmd2 has patched ``argparse.Action`` to include the following accessor methods
 for cases in which you need to manually access the cmd2-specific attributes.
 
-- ``argparse.Action.get_choices_callable()`` - See ``action_get_choices_callable`` for more details.
+- ``argparse.Action.get_choices_callable()`` - See ``_action_get_choices_callable`` for more details.
 - ``argparse.Action.set_choices_provider()`` - See ``_action_set_choices_provider`` for more details.
 - ``argparse.Action.set_completer()`` - See ``_action_set_completer`` for more details.
 - ``argparse.Action.get_table_columns()`` - See ``_action_get_table_columns`` for more details.
@@ -665,15 +665,15 @@ def register_argparse_argument_parameter(param_name: str, param_type: type[Any] 
 
 
 ############################################################################################################
-# Patch _ActionsContainer.add_argument with our wrapper to support more arguments
+# Patch _ActionsContainer.add_argument to support more arguments
 ############################################################################################################
 
 
-# Save original _ActionsContainer.add_argument so we can call it in our wrapper
+# Save original _ActionsContainer.add_argument so we can call it in our patch
 orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
-def _add_argument_wrapper(
+def __ActionsContainer_add_argument(  # noqa: N802
     self: argparse._ActionsContainer,
     *args: Any,
     nargs: int | str | tuple[int] | tuple[int, int] | tuple[int, float] | None = None,
@@ -683,7 +683,7 @@ def _add_argument_wrapper(
     table_columns: Sequence[str | Column] | None = None,
     **kwargs: Any,
 ) -> argparse.Action:
-    """Wrap ActionsContainer.add_argument() to support cmd2-specific settings.
+    """Patch ActionsContainer.add_argument() to support cmd2-specific settings.
 
     # Args from original function
     :param self: instance of the _ActionsContainer being added to
@@ -801,8 +801,8 @@ def _add_argument_wrapper(
     return new_arg
 
 
-# Overwrite _ActionsContainer.add_argument with our wrapper
-setattr(argparse._ActionsContainer, 'add_argument', _add_argument_wrapper)
+# Overwrite _ActionsContainer.add_argument with our patch
+setattr(argparse._ActionsContainer, 'add_argument', __ActionsContainer_add_argument)
 
 
 ############################################################################################################
