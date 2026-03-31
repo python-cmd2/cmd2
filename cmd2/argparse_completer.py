@@ -368,7 +368,7 @@ class ArgparseCompleter:
                     action = remaining_positionals.popleft()
 
                     # Are we at a subcommand? If so, forward to the matching completer
-                    if action == self._subcommand_action:
+                    if self._subcommand_action is not None and action == self._subcommand_action:
                         if token in self._subcommand_action.choices:
                             # Merge self._parent_tokens and consumed_arg_values
                             parent_tokens = {**self._parent_tokens, **consumed_arg_values}

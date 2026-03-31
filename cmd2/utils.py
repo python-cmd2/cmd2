@@ -75,7 +75,7 @@ class Settable:
         settable_object: object,
         *,
         settable_attrib_name: str | None = None,
-        onchange_cb: Callable[[str, _T, _T], Any] | None = None,
+        onchange_cb: Callable[[str, Any, Any], Any] | None = None,
         choices: Iterable[Any] | None = None,
         choices_provider: ChoicesProviderFunc | None = None,
         completer: CompleterFunc | None = None,
