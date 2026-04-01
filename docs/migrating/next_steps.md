@@ -9,13 +9,13 @@ leveraging other `cmd2` features. The three ideas here will get you started. Bro
 For all but the simplest of commands, it's probably easier to use
 [argparse](https://docs.python.org/3/library/argparse.html) to parse user input than to do it
 manually yourself for each command. `cmd2` provides a `@with_argparser()` decorator which associates
-an `ArgumentParser` object with one of your commands. Using this method will:
+a `Cmd2ArgumentParser` object with one of your commands. Using this method will:
 
 1.  Pass your command a
     [Namespace](https://docs.python.org/3/library/argparse.html#argparse.Namespace) containing the
     arguments instead of a string of text
 2.  Properly handle quoted string input from your users
-3.  Create a help message for you based on the `ArgumentParser`
+3.  Create a help message for you based on the `Cmd2ArgumentParser`
 4.  Give you a big head start adding [Tab Completion](../features/completion.md) to your application
 5.  Make it much easier to implement subcommands (i.e. `git` has a bunch of subcommands such as
     `git pull`, `git diff`, etc)

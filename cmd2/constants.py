@@ -31,23 +31,36 @@ HELP_FUNC_PREFIX = 'help_'
 # All command completer functions start with this
 COMPLETER_FUNC_PREFIX = 'complete_'
 
+# Prefix for private attributes injected by cmd2
+CMD2_ATTR_PREFIX = '_cmd2_'
+
+
+def cmd2_attr_name(name: str) -> str:
+    """Build an attribute name with the cmd2 prefix.
+
+    :param name: the name of the attribute
+    :return: the prefixed attribute name
+    """
+    return f'{CMD2_ATTR_PREFIX}{name}'
+
+
 # The custom help category a command belongs to
-CMD_ATTR_HELP_CATEGORY = 'help_category'
-CLASS_ATTR_DEFAULT_HELP_CATEGORY = 'cmd2_default_help_category'
+CMD_ATTR_HELP_CATEGORY = cmd2_attr_name('help_category')
+CLASS_ATTR_DEFAULT_HELP_CATEGORY = cmd2_attr_name('default_help_category')
 
 # The argparse parser for the command
-CMD_ATTR_ARGPARSER = 'argparser'
+CMD_ATTR_ARGPARSER = cmd2_attr_name('argparser')
 
 # Whether or not tokens are unquoted before sending to argparse
-CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
+CMD_ATTR_PRESERVE_QUOTES = cmd2_attr_name('preserve_quotes')
 
 # subcommand attributes for the base command name and the subcommand name
-SUBCMD_ATTR_COMMAND = 'parent_command'
-SUBCMD_ATTR_NAME = 'subcommand_name'
-SUBCMD_ATTR_ADD_PARSER_KWARGS = 'subcommand_add_parser_kwargs'
+SUBCMD_ATTR_COMMAND = cmd2_attr_name('parent_command')
+SUBCMD_ATTR_NAME = cmd2_attr_name('subcommand_name')
+SUBCMD_ATTR_ADD_PARSER_KWARGS = cmd2_attr_name('subcommand_add_parser_kwargs')
 
-# arpparse attribute uniquely identifying the command set instance
-PARSER_ATTR_COMMANDSET_ID = 'command_set_id'
+# argparse attribute uniquely identifying the command set instance
+PARSER_ATTR_COMMANDSET_ID = cmd2_attr_name('command_set_id')
 
 # custom attributes added to argparse Namespaces
-NS_ATTR_SUBCMD_HANDLER = '__subcmd_handler__'
+NS_ATTR_SUBCMD_HANDLER = cmd2_attr_name('subcmd_handler')

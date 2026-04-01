@@ -22,18 +22,11 @@ from typing import (
     cast,
 )
 
+from rich.table import Column
 from rich.text import Text
 
-from .constants import INFINITY
-from .rich_utils import Cmd2SimpleTable
-
-if TYPE_CHECKING:  # pragma: no cover
-    from .cmd2 import Cmd
-
-from rich.table import Column
-
 from .argparse_custom import (
-    ChoicesCallable,
+    Cmd2ArgumentParser,
     generate_range_error,
 )
 from .command_definition import CommandSet
@@ -42,14 +35,25 @@ from .completion import (
     Completions,
     all_display_numeric,
 )
+from .constants import INFINITY
 from .exceptions import CompletionError
+from .rich_utils import Cmd2SimpleTable
+from .types import (
+    ChoicesProviderUnbound,
+    CmdOrSet,
+    CompleterUnbound,
+)
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .cmd2 import Cmd
+
 
 # Name of the choice/completer function argument that, if present, will be passed a dictionary of
 # command line tokens up through the token being completed mapped to their argparse destination name.
 ARG_TOKENS = 'arg_tokens'
 
 
-def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) -> str:
+def _build_hint(parser: Cmd2ArgumentParser, arg_action: argparse.Action) -> str:
     """Build completion hint for a given argument."""
     # Check if hinting is disabled for this argument
     suppress_hint = arg_action.get_suppress_tab_hint()  # type: ignore[attr-defined]
@@ -64,12 +68,12 @@ def _build_hint(parser: argparse.ArgumentParser, arg_action: argparse.Action) ->
     return formatter.format_help()
 
 
-def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
+def _single_prefix_char(token: str, parser: Cmd2ArgumentParser) -> bool:
     """Is a token just a single flag prefix character."""
     return len(token) == 1 and token[0] in parser.prefix_chars
 
 
-def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
+def _looks_like_flag(token: str, parser: Cmd2ArgumentParser) -> bool:
     """Determine if a token looks like a flag.
 
     Unless an argument has nargs set to argparse.REMAINDER, then anything that looks like a flag
@@ -140,12 +144,12 @@ class _UnfinishedFlagError(CompletionError):
 
 
 class _NoResultsError(CompletionError):
-    def __init__(self, parser: argparse.ArgumentParser, arg_action: argparse.Action) -> None:
+    def __init__(self, parser: Cmd2ArgumentParser, arg_action: argparse.Action) -> None:
         """CompletionError which occurs when there are no results.
 
         If hinting is allowed on this argument, then its hint text will display.
 
-        :param parser: ArgumentParser instance which owns the action being completed
+        :param parser: Cmd2ArgumentParser instance which owns the action being completed
         :param arg_action: action being completed.
         """
         # Set apply_style to False because we don't want hints to look like errors
@@ -157,14 +161,14 @@ class ArgparseCompleter:
 
     def __init__(
         self,
-        parser: argparse.ArgumentParser,
+        parser: Cmd2ArgumentParser,
         cmd2_app: 'Cmd',
         *,
         parent_tokens: Mapping[str, MutableSequence[str]] | None = None,
     ) -> None:
         """Create an ArgparseCompleter.
 
-        :param parser: ArgumentParser instance
+        :param parser: Cmd2ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this ArgparseCompleter
         :param parent_tokens: optional Mapping of parent parsers' arg names to their tokens
                               This is only used by ArgparseCompleter when recursing on subcommand parsers
@@ -187,7 +191,7 @@ class ArgparseCompleter:
         self._positional_actions: list[argparse.Action] = []
 
         # This will be set if self._parser has subcommands
-        self._subcommand_action: argparse._SubParsersAction[argparse.ArgumentParser] | None = None
+        self._subcommand_action: argparse._SubParsersAction[Cmd2ArgumentParser] | None = None
 
         # Start digging through the argparse structures.
         # _actions is the top level container of parameter definitions
@@ -707,33 +711,32 @@ class ArgparseCompleter:
                 return
         self._parser.print_help(file=file)
 
-    def _get_raw_choices(self, arg_state: _ArgumentState) -> list[CompletionItem] | ChoicesCallable | None:
-        """Extract choices from action or return the choices_callable."""
-        if arg_state.action.choices is not None:
-            # If choices are subcommands, then get their help text to populate display_meta.
-            if isinstance(arg_state.action, argparse._SubParsersAction):
-                parser_help = {}
-                for action in arg_state.action._choices_actions:
-                    if action.dest in arg_state.action.choices:
-                        subparser = arg_state.action.choices[action.dest]
-                        parser_help[subparser] = action.help or ''
+    def _choices_to_items(self, arg_state: _ArgumentState) -> list[CompletionItem]:
+        """Convert choices from action to list of CompletionItems."""
+        if arg_state.action.choices is None:
+            return []
 
-                return [
-                    CompletionItem(name, display_meta=parser_help.get(subparser, ''))
-                    for name, subparser in arg_state.action.choices.items()
-                ]
+        # If choices are subcommands, then get their help text to populate display_meta.
+        if isinstance(arg_state.action, argparse._SubParsersAction):
+            parser_help = {}
+            for action in arg_state.action._choices_actions:
+                if action.dest in arg_state.action.choices:
+                    subparser = arg_state.action.choices[action.dest]
+                    parser_help[subparser] = action.help or ''
 
-            # Standard choices
             return [
-                choice if isinstance(choice, CompletionItem) else CompletionItem(choice) for choice in arg_state.action.choices
+                CompletionItem(name, display_meta=parser_help.get(subparser, ''))
+                for name, subparser in arg_state.action.choices.items()
             ]
 
-        choices_callable: ChoicesCallable | None = arg_state.action.get_choices_callable()  # type: ignore[attr-defined]
-        return choices_callable
+        # Standard choices
+        return [
+            choice if isinstance(choice, CompletionItem) else CompletionItem(choice) for choice in arg_state.action.choices
+        ]
 
     def _prepare_callable_params(
         self,
-        choices_callable: ChoicesCallable,
+        to_call: ChoicesProviderUnbound[CmdOrSet] | CompleterUnbound[CmdOrSet],
         arg_state: _ArgumentState,
         text: str,
         consumed_arg_values: dict[str, list[str]],
@@ -744,14 +747,14 @@ class ArgparseCompleter:
         kwargs: dict[str, Any] = {}
 
         # Resolve the 'self' instance for the method
-        self_arg = self._cmd2_app._resolve_func_self(choices_callable.to_call, cmd_set)
+        self_arg = self._cmd2_app._resolve_func_self(to_call, cmd_set)
         if self_arg is None:
-            raise CompletionError("Could not find CommandSet instance matching defining type for completer")
+            raise CompletionError("Could not find CommandSet instance matching defining type")
 
         args.append(self_arg)
 
         # Check if the function expects 'arg_tokens'
-        to_call_params = inspect.signature(choices_callable.to_call).parameters
+        to_call_params = inspect.signature(to_call).parameters
         if ARG_TOKENS in to_call_params:
             arg_tokens = {**self._parent_tokens, **consumed_arg_values}
             arg_tokens.setdefault(arg_state.action.dest, []).append(text)
@@ -775,26 +778,33 @@ class ArgparseCompleter:
         :return: a Completions object
         :raises CompletionError: if the completer or choices function this calls raises one
         """
-        raw_choices = self._get_raw_choices(arg_state)
-        if not raw_choices:
-            return Completions()
-
-        # Check if the argument uses a completer function
-        if isinstance(raw_choices, ChoicesCallable) and raw_choices.is_completer:
-            args, kwargs = self._prepare_callable_params(raw_choices, arg_state, text, consumed_arg_values, cmd_set)
+        # Check if the argument uses a completer
+        completer = arg_state.action.get_completer()  # type: ignore[attr-defined]
+        if completer is not None:
+            args, kwargs = self._prepare_callable_params(
+                completer,
+                arg_state,
+                text,
+                consumed_arg_values,
+                cmd_set,
+            )
             args.extend([text, line, begidx, endidx])
-            completions = raw_choices.completer(*args, **kwargs)
+            completions: Completions = completer(*args, **kwargs)
 
-        # Otherwise it uses a choices list or choices provider function
+        # Otherwise it uses a choices provider or choices list
         else:
-            all_choices: list[CompletionItem] = []
-
-            if isinstance(raw_choices, ChoicesCallable):
-                args, kwargs = self._prepare_callable_params(raw_choices, arg_state, text, consumed_arg_values, cmd_set)
-                choices_func = raw_choices.choices_provider
-                all_choices = list(choices_func(*args, **kwargs))
+            choices_provider = arg_state.action.get_choices_provider()  # type: ignore[attr-defined]
+            if choices_provider is not None:
+                args, kwargs = self._prepare_callable_params(
+                    choices_provider,
+                    arg_state,
+                    text,
+                    consumed_arg_values,
+                    cmd_set,
+                )
+                all_choices = list(choices_provider(*args, **kwargs))
             else:
-                all_choices = raw_choices
+                all_choices = self._choices_to_items(arg_state)
 
             # Filter used values and run basic completion
             used_values = consumed_arg_values.get(arg_state.action.dest, [])
