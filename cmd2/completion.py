@@ -31,8 +31,8 @@ from rich.protocol import is_renderable
 
 from . import rich_utils as ru
 
-# Regular expression to identify strings which we should sort numerically
-NUMERIC_RE = re.compile(
+# Regular expression to identify strings that we should sort numerically
+_NUMERIC_RE = re.compile(
     r"""
     ^              # Start of string
     [-+]?          # Optional sign
@@ -46,12 +46,14 @@ NUMERIC_RE = re.compile(
     re.VERBOSE,
 )
 
+# Regular expression to identify whitespace characters that are rendered as
+# control sequences (like ^J or ^I) in the completion menu.
+_CONTROL_WHITESPACE_RE = re.compile(r'\r\n|[\n\r\t\f\v]')
+
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CompletionItem:
     """A single completion result."""
-
-    _SANITIZE_RE = re.compile(r'\r\n|[\n\r\t\f\v]')
 
     # The underlying object this completion represents (e.g., str, int, Path).
     # This is used to support argparse choices validation.
@@ -78,15 +80,6 @@ class CompletionItem:
     display_plain: str = field(init=False)
     display_meta_plain: str = field(init=False)
 
-    @classmethod
-    def _sanitize_display_string(cls, val: str) -> str:
-        """Sanitize a string for display in the completion menu.
-
-        This replaces whitespace characters that are rendered as
-        control sequences (like ^J or ^I) with spaces.
-        """
-        return cls._SANITIZE_RE.sub(' ', val)
-
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
         # Derive text from value if it wasn't explicitly provided
@@ -98,8 +91,8 @@ class CompletionItem:
             object.__setattr__(self, "display", self.text)
 
         # Sanitize display and display_meta
-        object.__setattr__(self, "display", self._sanitize_display_string(self.display))
-        object.__setattr__(self, "display_meta", self._sanitize_display_string(self.display_meta))
+        object.__setattr__(self, "display", sanitize_display_string(self.display))
+        object.__setattr__(self, "display_meta", sanitize_display_string(self.display_meta))
 
         # Create plain text versions by stripping ANSI sequences.
         # These are stored as attributes for fast access during sorting/filtering.
@@ -268,4 +261,16 @@ class Completions(CompletionResultsBase):
 
 def all_display_numeric(items: Collection[CompletionItem]) -> bool:
     """Return True if items is non-empty and every item.display_plain value is a numeric string."""
-    return bool(items) and all(NUMERIC_RE.match(item.display_plain) for item in items)
+    return bool(items) and all(_NUMERIC_RE.match(item.display_plain) for item in items)
+
+
+def sanitize_display_string(val: str) -> str:
+    """Sanitize a string for display in the completion menu.
+
+    This replaces whitespace characters that are rendered as
+    control sequences (like ^J or ^I) with spaces.
+
+    :param val: string to be sanitized
+    :return: the sanitized string
+    """
+    return _CONTROL_WHITESPACE_RE.sub(' ', val)
