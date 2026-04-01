@@ -54,7 +54,7 @@ def fake_func() -> None:
         ({'choices_provider': fake_func, 'completer': fake_func}, False),
     ],
 )
-def test_apcustom_choices_callable_count(kwargs, is_valid) -> None:
+def test_apcustom_completion_callable_count(kwargs, is_valid) -> None:
     parser = Cmd2ArgumentParser()
     if is_valid:
         parser.add_argument('name', **kwargs)
@@ -65,17 +65,17 @@ def test_apcustom_choices_callable_count(kwargs, is_valid) -> None:
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
-def test_apcustom_no_choices_callables_alongside_choices(kwargs) -> None:
+def test_apcustom_no_completion_callable_alongside_choices(kwargs) -> None:
     parser = Cmd2ArgumentParser()
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         parser.add_argument('name', choices=['my', 'choices', 'list'], **kwargs)
     assert 'None of the following parameters can be used alongside a choices parameter' in str(excinfo.value)
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
-def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs) -> None:
+def test_apcustom_no_completion_callable_when_nargs_is_0(kwargs) -> None:
     parser = Cmd2ArgumentParser()
-    with pytest.raises(TypeError) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         parser.add_argument('--name', action='store_true', **kwargs)
     assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
 

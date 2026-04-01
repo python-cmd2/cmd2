@@ -396,26 +396,26 @@ def register_argparse_argument_parameter(
     CUSTOM_ACTION_ATTRIBS.add(param_name)
 
 
-def _choices_callable_validator(self: argparse.Action, value: Any) -> Any:
+def _validate_completion_callable(self: argparse.Action, value: Any) -> Any:
     """Validate choices_provider and completer values for potential conflicts."""
     if value is None:
         return None
 
     if self.choices is not None:
         err_msg = "None of the following parameters can be used alongside a choices parameter:\nchoices_provider, completer"
-        raise TypeError(err_msg)
+        raise ValueError(err_msg)
     if self.nargs == 0:
         err_msg = (
             "None of the following parameters can be used on an action that takes no arguments:\nchoices_provider, completer"
         )
-        raise TypeError(err_msg)
+        raise ValueError(err_msg)
     return value
 
 
 # Add new attributes to argparse.Action.
 # See _ActionsContainer_add_argument() for details on these attributes.
-register_argparse_argument_parameter('choices_provider', validator=_choices_callable_validator)
-register_argparse_argument_parameter('completer', validator=_choices_callable_validator)
+register_argparse_argument_parameter('choices_provider', validator=_validate_completion_callable)
+register_argparse_argument_parameter('completer', validator=_validate_completion_callable)
 register_argparse_argument_parameter('table_columns')
 register_argparse_argument_parameter('nargs_range')
 register_argparse_argument_parameter('suppress_tab_hint')
@@ -470,12 +470,8 @@ def _ActionsContainer_add_argument(  # noqa: N802
     :raises ValueError: on incorrect parameter usage
     """
     # Verify consistent use of arguments
-    choices_callables = [choices_provider, completer]
-    num_params_set = len(choices_callables) - choices_callables.count(None)
-
-    if num_params_set > 1:
-        err_msg = "Only one of the following parameters may be used at a time:\nchoices_provider, completer"
-        raise (ValueError(err_msg))
+    if choices_provider is not None and completer is not None:
+        raise ValueError("Only one of the following parameters may be used at a time:\nchoices_provider, completer")
 
     # Pre-process special ranged nargs
     nargs_range = None
