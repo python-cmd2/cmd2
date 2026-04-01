@@ -51,6 +51,8 @@ NUMERIC_RE = re.compile(
 class CompletionItem:
     """A single completion result."""
 
+    _SANITIZE_RE = re.compile(r'\r\n|[\n\r\t\f\v]')
+
     # The underlying object this completion represents (e.g., str, int, Path).
     # This is used to support argparse choices validation.
     value: Any = field(kw_only=False)
@@ -76,14 +78,14 @@ class CompletionItem:
     display_plain: str = field(init=False)
     display_meta_plain: str = field(init=False)
 
-    @staticmethod
-    def _sanitize_display_string(val: str) -> str:
+    @classmethod
+    def _sanitize_display_string(cls, val: str) -> str:
         """Sanitize a string for display in the completion menu.
 
         This replaces whitespace characters that are rendered as
         control sequences (like ^J or ^I) with spaces.
         """
-        return re.sub(r'\r\n|[\n\r\t\f\v]', ' ', val)
+        return cls._SANITIZE_RE.sub(' ', val)
 
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
