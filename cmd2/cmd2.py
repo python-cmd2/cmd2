@@ -896,21 +896,30 @@ class Cmd:
         :param parent: object which owns the command using the parser.
                        When parser_builder is a classmethod, this function passes
                        parent's class to it.
-        :param parser_builder: means used to build the parser
+        :param parser_builder: an existing Cmd2ArgumentParser instance or a factory
+                               (callable, staticmethod, or classmethod) that returns one.
         :param prog: prog value to set in new parser
         :return: new parser
-        :raises TypeError: if parser_builder is invalid type
+        :raises TypeError: if parser_builder is an invalid type or if the factory fails
+                           to return a Cmd2ArgumentParser
         """
-        if isinstance(parser_builder, staticmethod):
-            parser = parser_builder.__func__()
-        elif isinstance(parser_builder, classmethod):
-            parser = parser_builder.__func__(parent.__class__)
-        elif callable(parser_builder):
-            parser = parser_builder()
-        elif isinstance(parser_builder, Cmd2ArgumentParser):
+        if isinstance(parser_builder, Cmd2ArgumentParser):
             parser = copy.deepcopy(parser_builder)
         else:
-            raise TypeError(f"Invalid type for parser_builder: {type(parser_builder)}")
+            # Try to build the parser with a factory
+            if isinstance(parser_builder, staticmethod):
+                parser = parser_builder.__func__()
+            elif isinstance(parser_builder, classmethod):
+                parser = parser_builder.__func__(parent.__class__)
+            elif callable(parser_builder):
+                parser = parser_builder()
+            else:
+                raise TypeError(f"Invalid type for parser_builder: {type(parser_builder)}")
+
+            # Verify the factory returned the required type
+            if not isinstance(parser, Cmd2ArgumentParser):
+                builder_name = getattr(parser_builder, "__name__", str(parser_builder))  # type: ignore[unreachable]
+                raise TypeError(f"The parser returned by '{builder_name}' must be a Cmd2ArgumentParser or a subclass of it")
 
         argparse_custom.set_parser_prog(parser, prog)
 
