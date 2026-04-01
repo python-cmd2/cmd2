@@ -247,8 +247,54 @@ def test_preservelist(argparse_app) -> None:
 
 def test_invalid_parser_builder(argparse_app):
     parser_builder = None
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="Invalid type for parser_builder"):
         argparse_app._build_parser(argparse_app, parser_builder, "fake_prog")
+
+
+def test_invalid_parser_return_type(argparse_app):
+    def bad_builder():
+        return argparse.ArgumentParser()
+
+    with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
+        argparse_app._build_parser(argparse_app, bad_builder, "fake_prog")
+
+
+def test_invalid_parser_return_type_staticmethod(argparse_app):
+    def bad_builder():
+        return argparse.ArgumentParser()
+
+    sm = staticmethod(bad_builder)
+
+    with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
+        argparse_app._build_parser(argparse_app, sm, "fake_prog")
+
+
+def test_invalid_parser_return_type_classmethod(argparse_app):
+    def bad_builder(cls):
+        return argparse.ArgumentParser()
+
+    cm = classmethod(bad_builder)
+
+    with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
+        argparse_app._build_parser(argparse_app, cm, "fake_prog")
+
+
+def test_invalid_parser_return_type_nameless_object(argparse_app):
+    # A class that is callable but has no __name__ attribute
+    class NamelessBuilder:
+        def __call__(self):
+            return argparse.ArgumentParser()
+
+    builder = NamelessBuilder()
+
+    # Verify __name__ is actually missing
+    assert not hasattr(builder, '__name__')
+
+    # The error message should now contain the string representation of the object
+    expected_msg = f"The parser returned by '{builder}' must be a Cmd2ArgumentParser"
+
+    with pytest.raises(TypeError, match=expected_msg):
+        argparse_app._build_parser(argparse_app, builder, "fake_prog")
 
 
 def _build_has_subcmd_parser() -> cmd2.Cmd2ArgumentParser:

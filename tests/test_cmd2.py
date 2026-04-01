@@ -2151,7 +2151,7 @@ def test_resolve_completer_with_choices_provider(base_app: cmd2.Cmd) -> None:
     assert settings is not None
 
     action = settings.parser._actions[-1]
-    assert action.get_choices_callable().choices_provider == mock_provider
+    assert action.get_choices_provider() == mock_provider
     assert not settings.preserve_quotes
 
 
@@ -2168,7 +2168,7 @@ def test_resolve_completer_with_completer(base_app: cmd2.Cmd) -> None:
     assert settings is not None
 
     action = settings.parser._actions[-1]
-    assert action.get_choices_callable().completer == mock_completer
+    assert action.get_completer() == mock_completer
     assert not settings.preserve_quotes
 
 

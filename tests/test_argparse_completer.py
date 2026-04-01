@@ -1266,20 +1266,20 @@ def test_validate_table_data_valid() -> None:
 
 # Custom ArgparseCompleter-based class
 class CustomCompleter(argparse_completer.ArgparseCompleter):
-    def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, matched_flags: list[str]) -> list[str]:
+    def _complete_flags(self, text: str, line: str, begidx: int, endidx: int, used_flags: set[str]) -> Completions:
         """Override so flags with 'complete_when_ready' set to True will complete only when app is ready"""
-        # Find flags which should not be completed and place them in matched_flags
+        # Find flags which should not be completed and place them in used_flags
         for flag in self._flags:
             action = self._flag_to_action[flag]
             app: CustomCompleterApp = cast(CustomCompleterApp, self._cmd2_app)
-            if action.get_complete_when_ready() is True and not app.is_ready:
-                matched_flags.append(flag)
+            if action.get_complete_when_ready() and not app.is_ready:
+                used_flags.append(flag)
 
-        return super()._complete_flags(text, line, begidx, endidx, matched_flags)
+        return super()._complete_flags(text, line, begidx, endidx, used_flags)
 
 
 # Add a custom argparse action attribute
-argparse_custom.register_argparse_argument_parameter('complete_when_ready', bool)
+argparse_custom.register_argparse_argument_parameter('complete_when_ready')
 
 
 # App used to test custom ArgparseCompleter types and custom argparse attributes
@@ -1421,8 +1421,10 @@ def test_add_parser_custom_completer() -> None:
     parser = Cmd2ArgumentParser()
     subparsers = parser.add_subparsers()
 
-    no_custom_completer_parser = subparsers.add_parser(name="no_custom_completer")
-    assert no_custom_completer_parser.get_ap_completer_type() is None  # type: ignore[attr-defined]
+    no_custom_completer_parser: Cmd2ArgumentParser = subparsers.add_parser(name="no_custom_completer")
+    assert no_custom_completer_parser.ap_completer_type is None
 
-    custom_completer_parser = subparsers.add_parser(name="custom_completer", ap_completer_type=CustomCompleter)
-    assert custom_completer_parser.get_ap_completer_type() is CustomCompleter  # type: ignore[attr-defined]
+    custom_completer_parser: Cmd2ArgumentParser = subparsers.add_parser(
+        name="custom_completer", ap_completer_type=CustomCompleter
+    )
+    assert custom_completer_parser.ap_completer_type is CustomCompleter

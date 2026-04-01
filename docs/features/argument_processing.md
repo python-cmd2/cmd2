@@ -6,7 +6,7 @@ following for you:
 
 1. Parsing input and quoted strings in a manner similar to how POSIX shells do it
 1. Parse the resulting argument list using an instance of
-   [argparse.ArgumentParser](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser)
+   [Cmd2ArgumentParser](https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser)
    that you provide
 1. Passes the resulting
    [argparse.Namespace](https://docs.python.org/3/library/argparse.html#argparse.Namespace) object
@@ -39,9 +39,9 @@ command which might have its own argument parsing.
 The [@with_argparser][cmd2.with_argparser] decorator can accept the following for its first
 argument:
 
-1. An existing instance of `argparse.ArgumentParser`
-2. A function or static method which returns an instance of `argparse.ArgumentParser`
-3. Cmd or CommandSet class method which returns an instance of `argparse.ArgumentParser`
+1. An existing instance of `Cmd2ArgumentParser`
+2. A function or static method which returns an instance of `Cmd2ArgumentParser`
+3. Cmd or CommandSet class method which returns an instance of `Cmd2ArgumentParser`
 
 In all cases the `@with_argparser` decorator creates a deep copy of the parser instance which it
 stores internally. A consequence is that parsers don't need to be unique across commands.
@@ -55,11 +55,11 @@ stores internally. A consequence is that parsers don't need to be unique across 
 ## Argument Parsing
 
 For each command in the `cmd2.Cmd` subclass which requires argument parsing, create an instance of
-`argparse.ArgumentParser()` which can parse the input appropriately for the command (or provide a
+`Cmd2ArgumentParser` which can parse the input appropriately for the command (or provide a
 function/method that returns such a parser). Then decorate the command method with the
 `@with_argparser` decorator, passing the argument parser as the first parameter to the decorator.
 This changes the second argument of the command method, which will contain the results of
-`ArgumentParser.parse_args()`.
+`Cmd2ArgumentParser.parse_args()`.
 
 Here's what it looks like:
 
@@ -97,7 +97,7 @@ def do_speak(self, opts):
 
 By default, `cmd2` uses the docstring of the command method when a user asks for help on the
 command. When you use the `@with_argparser` decorator, the docstring for the `do_*` method is used
-to set the description for the `argparse.ArgumentParser`.
+to set the description for the `Cmd2ArgumentParser`.
 
 !!! tip "description and epilog fields are rich objects"
 
@@ -135,8 +135,8 @@ optional arguments:
   -h, --help  show this help message and exit
 ```
 
-If you would prefer, you can set the `description` while instantiating the `argparse.ArgumentParser`
-and leave the docstring on your method blank:
+If you would prefer, you can set the `description` while instantiating the `Cmd2ArgumentParser` and
+leave the docstring on your method blank:
 
 ```py
 from cmd2 import Cmd2ArgumentParser, with_argparser

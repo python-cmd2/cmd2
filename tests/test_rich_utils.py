@@ -115,10 +115,10 @@ def test_set_theme() -> None:
     assert ru.APP_THEME.styles[rich_style_key] == theme[rich_style_key]
 
 
-def test_from_ansi_wrapper() -> None:
+def test_from_ansi_patch() -> None:
     # Check if we are still patching Text.from_ansi(). If this check fails, then Rich
-    # has fixed the bug. Therefore, we can remove this test function and ru._from_ansi_wrapper.
-    assert Text.from_ansi.__func__ is ru._from_ansi_wrapper.__func__  # type: ignore[attr-defined]
+    # has fixed the bug. Therefore, we can remove this test function and ru._Text_from_ansi.
+    assert Text.from_ansi.__func__ is ru._Text_from_ansi.__func__  # type: ignore[attr-defined]
 
     # Line breaks recognized by str.splitlines().
     # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines

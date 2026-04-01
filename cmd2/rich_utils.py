@@ -494,12 +494,12 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
 # Text.from_ansi() monkey patch
 ###################################################################################
 
-# Save original Text.from_ansi() so we can call it in our wrapper
+# Save original Text.from_ansi() so we can call it in our patch
 _orig_text_from_ansi = Text.from_ansi
 
 
 @classmethod  # type: ignore[misc]
-def _from_ansi_wrapper(cls: type[Text], text: str, *args: Any, **kwargs: Any) -> Text:  # noqa: ARG001
+def _Text_from_ansi(cls: type[Text], text: str, *args: Any, **kwargs: Any) -> Text:  # noqa: N802, ARG001
     r"""Wrap Text.from_ansi() to fix its trailing newline bug.
 
     This wrapper handles an issue where Text.from_ansi() removes the
@@ -539,4 +539,4 @@ def _from_ansi_has_newline_bug() -> bool:
 
 # Only apply the monkey patch if the bug is present
 if _from_ansi_has_newline_bug():
-    Text.from_ansi = _from_ansi_wrapper  # type: ignore[assignment]
+    Text.from_ansi = _Text_from_ansi  # type: ignore[assignment]

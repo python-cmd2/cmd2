@@ -9,13 +9,14 @@ import cmd2
 from cmd2 import (
     Choices,
     Cmd2ArgumentParser,
+    argparse_custom,
     constants,
 )
 from cmd2.argparse_custom import (
-    ChoicesCallable,
     Cmd2HelpFormatter,
     Cmd2RichArgparseConsole,
     generate_range_error,
+    register_argparse_argument_parameter,
 )
 
 from .conftest import run_cmd
@@ -55,7 +56,7 @@ def fake_func() -> None:
         ({'choices_provider': fake_func, 'completer': fake_func}, False),
     ],
 )
-def test_apcustom_choices_callable_count(kwargs, is_valid) -> None:
+def test_apcustom_completion_callable_count(kwargs, is_valid) -> None:
     parser = Cmd2ArgumentParser()
     if is_valid:
         parser.add_argument('name', **kwargs)
@@ -66,32 +67,21 @@ def test_apcustom_choices_callable_count(kwargs, is_valid) -> None:
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
-def test_apcustom_no_choices_callables_alongside_choices(kwargs) -> None:
+def test_apcustom_no_completion_callable_alongside_choices(kwargs) -> None:
     parser = Cmd2ArgumentParser()
-    with pytest.raises(TypeError) as excinfo:
+
+    expected_err = "None of the following parameters can be used alongside a choices parameter"
+    with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('name', choices=['my', 'choices', 'list'], **kwargs)
-    assert 'None of the following parameters can be used alongside a choices parameter' in str(excinfo.value)
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
-def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs) -> None:
+def test_apcustom_no_completion_callable_when_nargs_is_0(kwargs) -> None:
     parser = Cmd2ArgumentParser()
-    with pytest.raises(TypeError) as excinfo:
+
+    expected_err = "None of the following parameters can be used on an action that takes no arguments"
+    with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('--name', action='store_true', **kwargs)
-    assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
-
-
-def test_apcustom_choices_callables_wrong_property() -> None:
-    """Test using the wrong property when retrieving the to_call value from a ChoicesCallable."""
-    choices_callable = ChoicesCallable(is_completer=True, to_call=fake_func)
-    with pytest.raises(AttributeError) as excinfo:
-        _ = choices_callable.choices_provider
-    assert 'This instance is configured as a completer' in str(excinfo.value)
-
-    choices_callable = ChoicesCallable(is_completer=False, to_call=fake_func)
-    with pytest.raises(AttributeError) as excinfo:
-        _ = choices_callable.completer
-    assert 'This instance is configured as a choices_provider' in str(excinfo.value)
 
 
 def test_apcustom_usage() -> None:
@@ -206,19 +196,19 @@ def test_apcustom_narg_tuple_zero_base() -> None:
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0,))
     assert arg.nargs == argparse.ZERO_OR_MORE
-    assert arg.nargs_range is None
+    assert arg.get_nargs_range() is None
     assert "[arg ...]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0, 1))
     assert arg.nargs == argparse.OPTIONAL
-    assert arg.nargs_range is None
+    assert arg.get_nargs_range() is None
     assert "[arg]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0, 3))
     assert arg.nargs == argparse.ZERO_OR_MORE
-    assert arg.nargs_range == (0, 3)
+    assert arg.get_nargs_range() == (0, 3)
     assert "arg{0..3}" in parser.format_help()
 
 
@@ -226,13 +216,13 @@ def test_apcustom_narg_tuple_one_base() -> None:
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1,))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range is None
+    assert arg.get_nargs_range() is None
     assert "arg [arg ...]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range == (1, 5)
+    assert arg.get_nargs_range() == (1, 5)
     assert "arg{1..5}" in parser.format_help()
 
 
@@ -241,13 +231,13 @@ def test_apcustom_narg_tuple_other_ranges() -> None:
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2,))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range == (2, constants.INFINITY)
+    assert arg.get_nargs_range() == (2, constants.INFINITY)
 
     # Test finite range
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range == (2, 5)
+    assert arg.get_nargs_range() == (2, 5)
 
 
 def test_apcustom_print_message(capsys) -> None:
@@ -306,6 +296,50 @@ def test_cmd2_attribute_wrapper() -> None:
     new_val = 22
     wrapper.set(new_val)
     assert wrapper.get() == new_val
+
+
+def test_register_argparse_argument_parameter() -> None:
+    # Test successful registration
+    param_name = "test_unique_param"
+    register_argparse_argument_parameter(param_name)
+
+    assert param_name in argparse_custom._CUSTOM_ACTION_ATTRIBS
+    assert hasattr(argparse.Action, f'get_{param_name}')
+    assert hasattr(argparse.Action, f'set_{param_name}')
+
+    # Test duplicate registration
+    expected_err = "already registered"
+    with pytest.raises(KeyError, match=expected_err):
+        register_argparse_argument_parameter(param_name)
+
+    # Test invalid identifier
+    expected_err = "must be a valid Python identifier"
+    with pytest.raises(ValueError, match=expected_err):
+        register_argparse_argument_parameter("invalid name")
+
+    # Test collision with standard argparse.Action attribute
+    expected_err = "conflicts with an existing attribute on argparse.Action"
+    with pytest.raises(KeyError, match=expected_err):
+        register_argparse_argument_parameter("format_usage")
+
+    # Test collision with existing accessor methods
+    try:
+        argparse.Action.get_colliding_param = lambda self: None
+        expected_err = "Accessor methods for 'colliding_param' already exist on argparse.Action"
+        with pytest.raises(KeyError, match=expected_err):
+            register_argparse_argument_parameter("colliding_param")
+    finally:
+        delattr(argparse.Action, 'get_colliding_param')
+
+    # Test collision with internal attribute
+    try:
+        attr_name = constants.cmd2_attr_name("internal_collision")
+        setattr(argparse.Action, attr_name, None)
+        expected_err = f"The internal attribute '{attr_name}' already exists on argparse.Action"
+        with pytest.raises(KeyError, match=expected_err):
+            register_argparse_argument_parameter("internal_collision")
+    finally:
+        delattr(argparse.Action, attr_name)
 
 
 def test_parser_attachment() -> None:
