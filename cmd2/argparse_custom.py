@@ -213,7 +213,7 @@ exceeds this number, then a completion table won't be displayed.
 ``argparse._ActionsContainer.add_argument`` has been patched to support several
 custom parameters used for tab completion and nargs range parsing. These
 parameters are registered using ``register_argparse_argument_parameter()``.
-See ``__ActionsContainer_add_argument`` for more details on these parameters.
+See ``_ActionsContainer_add_argument`` for more details on these parameters.
 
 Registering a parameter whitelists it for use in ``add_argument()`` and
 automatically adds getter and setter accessor methods to the ``argparse.Action``
@@ -413,7 +413,7 @@ def _choices_callable_validator(self: argparse.Action, value: Any) -> Any:
 
 
 # Add new attributes to argparse.Action.
-# See __ActionsContainer_add_argument() for details on these attributes.
+# See _ActionsContainer_add_argument() for details on these attributes.
 register_argparse_argument_parameter('choices_provider', validator=_choices_callable_validator)
 register_argparse_argument_parameter('completer', validator=_choices_callable_validator)
 register_argparse_argument_parameter('table_columns')
@@ -429,7 +429,7 @@ register_argparse_argument_parameter('suppress_tab_hint')
 orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
-def __ActionsContainer_add_argument(  # noqa: N802
+def _ActionsContainer_add_argument(  # noqa: N802
     self: argparse._ActionsContainer,
     *args: Any,
     nargs: int | str | tuple[int] | tuple[int, int] | tuple[int, float] | None = None,
@@ -555,7 +555,7 @@ def __ActionsContainer_add_argument(  # noqa: N802
 
 
 # Overwrite _ActionsContainer.add_argument with our patch
-setattr(argparse._ActionsContainer, 'add_argument', __ActionsContainer_add_argument)
+setattr(argparse._ActionsContainer, 'add_argument', _ActionsContainer_add_argument)
 
 
 ############################################################################################################
