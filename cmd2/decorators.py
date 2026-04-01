@@ -226,7 +226,7 @@ def with_argparser(
 ) -> Callable[[ArgparseCommandFunc[CmdOrSet]], RawCommandFuncOptionalBoolReturn[CmdOrSet]]:
     """Decorate a ``do_*`` method to populate its ``args`` argument with the given instance of Cmd2ArgumentParser.
 
-    :param parser: instance of Cmd2ArgumentParser or a callable that returns an Cmd2ArgumentParser for this command
+    :param parser: instance of Cmd2ArgumentParser or a callable that returns a Cmd2ArgumentParser for this command
     :param ns_provider: An optional function that accepts a cmd2.Cmd or cmd2.CommandSet object as an argument and returns an
                         argparse.Namespace. This is useful if the Namespace needs to be prepopulated with state data that
                         affects parsing.
@@ -362,7 +362,7 @@ def as_subcommand_to(
 
     :param command: Command Name. Space-delimited subcommands may optionally be specified
     :param subcommand: Subcommand name
-    :param parser: instance of Cmd2ArgumentParser or a callable that returns an Cmd2ArgumentParser for this subcommand
+    :param parser: instance of Cmd2ArgumentParser or a callable that returns a Cmd2ArgumentParser for this subcommand
     :param help: Help message for this subcommand which displays in the list of subcommands of the command we are adding to.
                  This is passed as the help argument to subparsers.add_parser().
     :param aliases: Alternative names for this subcommand. This is passed as the alias argument to

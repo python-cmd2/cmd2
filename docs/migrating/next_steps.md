@@ -9,7 +9,7 @@ leveraging other `cmd2` features. The three ideas here will get you started. Bro
 For all but the simplest of commands, it's probably easier to use
 [argparse](https://docs.python.org/3/library/argparse.html) to parse user input than to do it
 manually yourself for each command. `cmd2` provides a `@with_argparser()` decorator which associates
-an `Cmd2ArgumentParser` object with one of your commands. Using this method will:
+a `Cmd2ArgumentParser` object with one of your commands. Using this method will:
 
 1.  Pass your command a
     [Namespace](https://docs.python.org/3/library/argparse.html#argparse.Namespace) containing the
