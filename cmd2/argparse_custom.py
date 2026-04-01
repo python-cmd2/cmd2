@@ -356,7 +356,9 @@ def set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
 # Allow developers to add custom action attributes
 ############################################################################################################
 
-CUSTOM_ACTION_ATTRIBS: set[str] = set()
+# This set should only be edited by calling register_argparse_argument_parameter().
+# Do not manually add or remove items.
+_CUSTOM_ACTION_ATTRIBS: set[str] = set()
 
 
 def register_argparse_argument_parameter(
@@ -369,19 +371,35 @@ def register_argparse_argument_parameter(
     :param param_name: Name of the parameter. This must be a valid Python identifier.
     :param validator: Optional function to validate and/or transform the parameter value.
                       It accepts the Action instance and the value as arguments.
+    :raises ValueError: if the parameter name is invalid
+    :raises KeyError: if the new parameter collides with any existing attributes
     """
     if not param_name.isidentifier():
-        raise KeyError(f"Invalid parameter name '{param_name}' - cannot be used as a python identifier")
+        raise ValueError(f"Invalid parameter name '{param_name}': must be a valid Python identifier")
 
+    if param_name in _CUSTOM_ACTION_ATTRIBS:
+        raise KeyError(f"Custom parameter '{param_name}' is already registered")
+
+    # Ensure we don't hijack standard argparse.Action attributes or existing methods
+    if hasattr(argparse.Action, param_name):
+        raise KeyError(f"'{param_name}' conflicts with an existing attribute on argparse.Action")
+
+    # Check if accessors already exist (e.g., from manual patching or previous registration)
+    getter_name = f'get_{param_name}'
+    setter_name = f'set_{param_name}'
+    if hasattr(argparse.Action, getter_name) or hasattr(argparse.Action, setter_name):
+        raise KeyError(f"Accessor methods for '{param_name}' already exist on argparse.Action")
+
+    # Check for the prefixed internal attribute name collision (e.g., _cmd2_<param_name>)
     attr_name = constants.cmd2_attr_name(param_name)
-    if param_name in CUSTOM_ACTION_ATTRIBS or hasattr(argparse.Action, attr_name):
-        raise KeyError(f"Custom parameter '{param_name}' already exists")
+    if hasattr(argparse.Action, attr_name):
+        raise KeyError(f"The internal attribute '{attr_name}' already exists on argparse.Action")
 
     def _action_get_custom_parameter(self: argparse.Action) -> Any:
         """Get the custom attribute of an argparse Action."""
         return getattr(self, attr_name, None)
 
-    setattr(argparse.Action, f'get_{param_name}', _action_get_custom_parameter)
+    setattr(argparse.Action, getter_name, _action_get_custom_parameter)
 
     def _action_set_custom_parameter(self: argparse.Action, value: Any) -> None:
         """Set the custom attribute of an argparse Action."""
@@ -390,9 +408,9 @@ def register_argparse_argument_parameter(
 
         setattr(self, attr_name, value)
 
-    setattr(argparse.Action, f'set_{param_name}', _action_set_custom_parameter)
+    setattr(argparse.Action, setter_name, _action_set_custom_parameter)
 
-    CUSTOM_ACTION_ATTRIBS.add(param_name)
+    _CUSTOM_ACTION_ATTRIBS.add(param_name)
 
 
 def _validate_completion_callable(self: argparse.Action, value: Any) -> Any:
@@ -526,7 +544,7 @@ def _ActionsContainer_add_argument(  # noqa: N802
         kwargs['nargs'] = nargs_adjusted
 
     # Extract registered custom keyword arguments
-    custom_attribs = {keyword: value for keyword, value in kwargs.items() if keyword in CUSTOM_ACTION_ATTRIBS}
+    custom_attribs = {keyword: value for keyword, value in kwargs.items() if keyword in _CUSTOM_ACTION_ATTRIBS}
     for keyword in custom_attribs:
         del kwargs[keyword]
 

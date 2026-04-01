@@ -299,16 +299,47 @@ def test_cmd2_attribute_wrapper() -> None:
 
 
 def test_register_argparse_argument_parameter() -> None:
-    register_argparse_argument_parameter("test")
-    assert "test" in argparse_custom.CUSTOM_ACTION_ATTRIBS
+    # Test successful registration
+    param_name = "test_unique_param"
+    register_argparse_argument_parameter(param_name)
 
-    expected_err = "already exists"
-    with pytest.raises(KeyError, match=expected_err):
-        register_argparse_argument_parameter("test")
+    assert param_name in argparse_custom._CUSTOM_ACTION_ATTRIBS
+    assert hasattr(argparse.Action, f'get_{param_name}')
+    assert hasattr(argparse.Action, f'set_{param_name}')
 
-    expected_err = "Invalid parameter name"
+    # Test duplicate registration
+    expected_err = "already registered"
     with pytest.raises(KeyError, match=expected_err):
+        register_argparse_argument_parameter(param_name)
+
+    # Test invalid identifier
+    expected_err = "must be a valid Python identifier"
+    with pytest.raises(ValueError, match=expected_err):
         register_argparse_argument_parameter("invalid name")
+
+    # Test collision with standard argparse.Action attribute
+    expected_err = "conflicts with an existing attribute on argparse.Action"
+    with pytest.raises(KeyError, match=expected_err):
+        register_argparse_argument_parameter("format_usage")
+
+    # Test collision with existing accessor methods
+    try:
+        argparse.Action.get_colliding_param = lambda self: None
+        expected_err = "Accessor methods for 'colliding_param' already exist on argparse.Action"
+        with pytest.raises(KeyError, match=expected_err):
+            register_argparse_argument_parameter("colliding_param")
+    finally:
+        delattr(argparse.Action, 'get_colliding_param')
+
+    # Test collision with internal attribute
+    try:
+        attr_name = constants.cmd2_attr_name("internal_collision")
+        setattr(argparse.Action, attr_name, None)
+        expected_err = f"The internal attribute '{attr_name}' already exists on argparse.Action"
+        with pytest.raises(KeyError, match=expected_err):
+            register_argparse_argument_parameter("internal_collision")
+    finally:
+        delattr(argparse.Action, attr_name)
 
 
 def test_parser_attachment() -> None:
