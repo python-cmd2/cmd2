@@ -12,7 +12,6 @@ from cmd2 import (
     constants,
 )
 from cmd2.argparse_custom import (
-    ChoicesCallable,
     Cmd2HelpFormatter,
     Cmd2RichArgparseConsole,
     generate_range_error,
@@ -79,19 +78,6 @@ def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs) -> None:
     with pytest.raises(TypeError) as excinfo:
         parser.add_argument('--name', action='store_true', **kwargs)
     assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
-
-
-def test_apcustom_choices_callables_wrong_property() -> None:
-    """Test using the wrong property when retrieving the to_call value from a ChoicesCallable."""
-    choices_callable = ChoicesCallable(is_completer=True, to_call=fake_func)
-    with pytest.raises(AttributeError) as excinfo:
-        _ = choices_callable.choices_provider
-    assert 'This instance is configured as a completer' in str(excinfo.value)
-
-    choices_callable = ChoicesCallable(is_completer=False, to_call=fake_func)
-    with pytest.raises(AttributeError) as excinfo:
-        _ = choices_callable.completer
-    assert 'This instance is configured as a choices_provider' in str(excinfo.value)
 
 
 def test_apcustom_usage() -> None:
@@ -206,19 +192,19 @@ def test_apcustom_narg_tuple_zero_base() -> None:
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0,))
     assert arg.nargs == argparse.ZERO_OR_MORE
-    assert arg.nargs_range is None
+    assert arg.get_nargs_range() is None
     assert "[arg ...]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0, 1))
     assert arg.nargs == argparse.OPTIONAL
-    assert arg.nargs_range is None
+    assert arg.get_nargs_range() is None
     assert "[arg]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0, 3))
     assert arg.nargs == argparse.ZERO_OR_MORE
-    assert arg.nargs_range == (0, 3)
+    assert arg.get_nargs_range() == (0, 3)
     assert "arg{0..3}" in parser.format_help()
 
 
@@ -226,13 +212,13 @@ def test_apcustom_narg_tuple_one_base() -> None:
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1,))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range is None
+    assert arg.get_nargs_range() is None
     assert "arg [arg ...]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range == (1, 5)
+    assert arg.get_nargs_range() == (1, 5)
     assert "arg{1..5}" in parser.format_help()
 
 
@@ -241,13 +227,13 @@ def test_apcustom_narg_tuple_other_ranges() -> None:
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2,))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range == (2, constants.INFINITY)
+    assert arg.get_nargs_range() == (2, constants.INFINITY)
 
     # Test finite range
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range == (2, 5)
+    assert arg.get_nargs_range() == (2, 5)
 
 
 def test_apcustom_print_message(capsys) -> None:
