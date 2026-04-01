@@ -932,6 +932,25 @@ def test_plain_fields() -> None:
     assert completion_item.display_meta_plain == "A tasty apple"
 
 
+def test_sanitization() -> None:
+    """Test display string sanitization in CompletionItem."""
+    # Test all problematic characters being replaced by a single space.
+    # Also verify that \r\n is replaced by a single space.
+    display = "str1\r\nstr2\nstr3\rstr4\tstr5\fstr6\vstr7"
+    expected = "str1 str2 str3 str4 str5 str6 str7"
+
+    # Since display defaults to text if not provided, we test both text and display fields
+    completion_item = CompletionItem("item", display=display, display_meta=display)
+    assert completion_item.display == expected
+    assert completion_item.display_meta == expected
+
+    # Verify that text derived display is also sanitized
+    text = "item\nwith\nnewlines"
+    expected_text_display = "item with newlines"
+    completion_item = CompletionItem(text)
+    assert completion_item.display == expected_text_display
+
+
 def test_styled_completion_sort() -> None:
     """Test that sorting is done with the display_plain field."""
 

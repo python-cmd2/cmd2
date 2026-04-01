@@ -76,6 +76,15 @@ class CompletionItem:
     display_plain: str = field(init=False)
     display_meta_plain: str = field(init=False)
 
+    @staticmethod
+    def _sanitize_display_string(val: str) -> str:
+        """Sanitize a string for display in the completion menu.
+
+        This replaces whitespace characters that are rendered as
+        control sequences (like ^J or ^I) with spaces.
+        """
+        return re.sub(r'\r\n|[\n\r\t\f\v]', ' ', val)
+
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
         # Derive text from value if it wasn't explicitly provided
@@ -86,7 +95,11 @@ class CompletionItem:
         if not self.display:
             object.__setattr__(self, "display", self.text)
 
-        # Pre-calculate plain text versions by stripping ANSI sequences.
+        # Sanitize display and display_meta
+        object.__setattr__(self, "display", self._sanitize_display_string(self.display))
+        object.__setattr__(self, "display_meta", self._sanitize_display_string(self.display_meta))
+
+        # Create plain text versions by stripping ANSI sequences.
         # These are stored as attributes for fast access during sorting/filtering.
         object.__setattr__(self, "display_plain", su.strip_style(self.display))
         object.__setattr__(self, "display_meta_plain", su.strip_style(self.display_meta))
