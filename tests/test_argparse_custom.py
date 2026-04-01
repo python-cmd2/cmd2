@@ -67,17 +67,19 @@ def test_apcustom_completion_callable_count(kwargs, is_valid) -> None:
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
 def test_apcustom_no_completion_callable_alongside_choices(kwargs) -> None:
     parser = Cmd2ArgumentParser()
-    with pytest.raises(ValueError) as excinfo:
+
+    expected_err = "None of the following parameters can be used alongside a choices parameter"
+    with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('name', choices=['my', 'choices', 'list'], **kwargs)
-    assert 'None of the following parameters can be used alongside a choices parameter' in str(excinfo.value)
 
 
 @pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
 def test_apcustom_no_completion_callable_when_nargs_is_0(kwargs) -> None:
     parser = Cmd2ArgumentParser()
-    with pytest.raises(ValueError) as excinfo:
+
+    expected_err = "None of the following parameters can be used on an action that takes no arguments"
+    with pytest.raises(ValueError, match=expected_err):
         parser.add_argument('--name', action='store_true', **kwargs)
-    assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
 
 
 def test_apcustom_usage() -> None:
