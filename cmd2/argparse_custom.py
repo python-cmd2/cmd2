@@ -357,7 +357,6 @@ def set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
 ############################################################################################################
 
 CUSTOM_ACTION_ATTRIBS: set[str] = set()
-_CUSTOM_ATTRIB_PREFIX = '_cmd2_'
 
 
 def register_argparse_argument_parameter(
@@ -374,7 +373,7 @@ def register_argparse_argument_parameter(
     if not param_name.isidentifier():
         raise KeyError(f'Invalid parameter name {param_name} - cannot be used as a python identifier')
 
-    attr_name = f'{_CUSTOM_ATTRIB_PREFIX}{param_name}'
+    attr_name = constants.cmd2_attr_name(param_name)
     if param_name in CUSTOM_ACTION_ATTRIBS or hasattr(argparse.Action, attr_name):
         raise KeyError(f'Custom parameter {param_name} already exists')
 
