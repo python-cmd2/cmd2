@@ -371,11 +371,11 @@ def register_argparse_argument_parameter(
                       It accepts the Action instance and the value as arguments.
     """
     if not param_name.isidentifier():
-        raise KeyError(f'Invalid parameter name {param_name} - cannot be used as a python identifier')
+        raise KeyError(f"Invalid parameter name '{param_name}' - cannot be used as a python identifier")
 
     attr_name = constants.cmd2_attr_name(param_name)
     if param_name in CUSTOM_ACTION_ATTRIBS or hasattr(argparse.Action, attr_name):
-        raise KeyError(f'Custom parameter {param_name} already exists')
+        raise KeyError(f"Custom parameter '{param_name}' already exists")
 
     def _action_get_custom_parameter(self: argparse.Action) -> Any:
         """Get the custom attribute of an argparse Action."""

@@ -9,12 +9,14 @@ import cmd2
 from cmd2 import (
     Choices,
     Cmd2ArgumentParser,
+    argparse_custom,
     constants,
 )
 from cmd2.argparse_custom import (
     Cmd2HelpFormatter,
     Cmd2RichArgparseConsole,
     generate_range_error,
+    register_argparse_argument_parameter,
 )
 
 from .conftest import run_cmd
@@ -294,6 +296,19 @@ def test_cmd2_attribute_wrapper() -> None:
     new_val = 22
     wrapper.set(new_val)
     assert wrapper.get() == new_val
+
+
+def test_register_argparse_argument_parameter() -> None:
+    register_argparse_argument_parameter("test")
+    assert "test" in argparse_custom.CUSTOM_ACTION_ATTRIBS
+
+    expected_err = "already exists"
+    with pytest.raises(KeyError, match=expected_err):
+        register_argparse_argument_parameter("test")
+
+    expected_err = "Invalid parameter name"
+    with pytest.raises(KeyError, match=expected_err):
+        register_argparse_argument_parameter("invalid name")
 
 
 def test_parser_attachment() -> None:
