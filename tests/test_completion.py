@@ -942,7 +942,7 @@ def test_clean_display() -> None:
     assert completion_item.display == expected
     assert completion_item.display_meta == expected
 
-    # Verify that text derived display is also sanitized
+    # Verify that text-derived display is also sanitized
     text = "item\nwith\nnewlines"
     expected_text_display = "item with newlines"
     completion_item = CompletionItem(text)

@@ -243,6 +243,7 @@ import sys
 from argparse import ArgumentError
 from collections.abc import (
     Callable,
+    Iterable,
     Iterator,
     Sequence,
 )
@@ -926,6 +927,68 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             kwargs['title'] = 'subcommands'
 
         return super().add_subparsers(**kwargs)
+
+    def _find_subparsers_action(self) -> argparse._SubParsersAction:  # type: ignore[type-arg]
+        """Find the _SubParsersAction for this parser.
+
+        :return: the _SubParsersAction for this parser
+        :raises ValueError: if this parser does not support subcommands
+        """
+        for action in self._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                return action
+        raise ValueError(f"Command '{self.prog}' does not support subcommands")
+
+    def _find_parser(self, subcommand_path: Iterable[str]) -> 'Cmd2ArgumentParser':
+        """Find a parser in the hierarchy based on a sequence of subcommand names.
+
+        :param subcommand_path: sequence of subcommand names leading to the target parser
+        :return: the discovered Cmd2ArgumentParser
+        :raises ValueError: if any subcommand in the path is not found or a level doesn't support subcommands
+        """
+        parser = self
+        for name in subcommand_path:
+            subparsers_action = parser._find_subparsers_action()
+            if name not in subparsers_action.choices:
+                raise ValueError(f"Subcommand '{name}' not found in '{parser.prog}'")
+            parser = cast(Cmd2ArgumentParser, subparsers_action.choices[name])
+        return parser
+
+    def attach_subcommand(
+        self,
+        subcommand_path: Iterable[str],
+        subcommand: str,
+        parser: 'Cmd2ArgumentParser',
+        **add_parser_kwargs: Any,
+    ) -> None:
+        """Attach a parser as a subcommand to a command at the specified path.
+
+        :param subcommand_path: sequence of subcommand names leading to the parser that will
+                                host the new subcommand. An empty sequence indicates this parser.
+        :param subcommand: name of the new subcommand
+        :param parser: the parser to attach
+        :param add_parser_kwargs: additional arguments for the subparser registration (e.g. help, aliases)
+        :raises ValueError: if the command path is invalid or doesn't support subcommands
+        """
+        target_parser = self._find_parser(subcommand_path)
+        subparsers_action = target_parser._find_subparsers_action()
+        subparsers_action.attach_parser(subcommand, parser, **add_parser_kwargs)  # type: ignore[attr-defined]
+
+    def detach_subcommand(self, subcommand_path: Iterable[str], subcommand: str) -> 'Cmd2ArgumentParser':
+        """Detach a subcommand from a command at the specified path.
+
+        :param subcommand_path: sequence of subcommand names leading to the parser hosting the
+                                subcommand to be detached. An empty sequence indicates this parser.
+        :param subcommand: name of the subcommand to detach
+        :return: the detached parser
+        :raises ValueError: if the command path is invalid or the subcommand doesn't exist
+        """
+        target_parser = self._find_parser(subcommand_path)
+        subparsers_action = target_parser._find_subparsers_action()
+        detached = subparsers_action.detach_parser(subcommand)  # type: ignore[attr-defined]
+        if detached is None:
+            raise ValueError(f"Subcommand '{subcommand}' not found in '{target_parser.prog}'")
+        return cast(Cmd2ArgumentParser, detached)
 
     def error(self, message: str) -> NoReturn:
         """Override that applies custom formatting to the error message."""
