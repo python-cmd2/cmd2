@@ -117,6 +117,9 @@ def _func_grouped(
 ) -> None: ...
 
 
+def _func_positional_only(self, name: str, /) -> None: ...
+
+
 def _provider(cmd: cmd2.Cmd):
     return []
 
@@ -314,6 +317,10 @@ class TestBuildParser:
 
         with pytest.raises(ValueError, match="subcommand"):
             build_parser_from_function(func)
+
+    def test_with_annotated_positional_only_param_raises(self) -> None:
+        with pytest.raises(TypeError, match="positional-only"):
+            build_parser_from_function(_func_positional_only)
 
     def test_optional_annotated_outside_raises(self) -> None:
         with pytest.raises(TypeError, match="Annotated"):

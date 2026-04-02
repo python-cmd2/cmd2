@@ -635,6 +635,12 @@ def _resolve_parameters(
         if name in skip_params:
             continue
 
+        if param.kind == inspect.Parameter.POSITIONAL_ONLY:
+            raise TypeError(
+                f"Parameter {name!r} in {func.__qualname__} is positional-only, "
+                "which is not supported by @with_annotated because parameters are passed as keyword arguments."
+            )
+
         if name in _RESERVED_PARAM_NAMES:
             raise ValueError(
                 f"Parameter name {name!r} in {func.__qualname__} is reserved by argparse "
