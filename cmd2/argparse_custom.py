@@ -903,20 +903,18 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             return
 
         # argparse includes positional arguments that appear before the subcommand in its
-        # subparser prog strings. We must track these while iterating through actions.
-        positionals: list[str] = []
-
-        # Use a formatter to get the same argument strings that argparse uses.
-        formatter = self._get_formatter()
+        # subparser prog strings. Track these while iterating through actions.
+        positionals: list[argparse.Action] = []
 
         # Set the prog value for the parser's subcommands
         for action in self._actions:
             if isinstance(action, argparse._SubParsersAction):
-                # Set the _SubParsersAction's _prog_prefix value. This ensures that any subcommands
-                # added later via add_parser() will have the correct prog value.
-                action._prog_prefix = self.prog
-                if positionals:
-                    action._prog_prefix += " " + " ".join(positionals)
+                # Use a formatter to generate _prog_prefix exactly as argparse does in
+                # add_subparsers(). This ensures that any subcommands added later via
+                # add_parser() will have the correct prog value.
+                formatter = self._get_formatter()
+                formatter.add_usage(self.usage, positionals, self._mutually_exclusive_groups, '')
+                action._prog_prefix = formatter.format_help().strip()
 
                 # The keys of action.choices are subcommand names as well as subcommand aliases.
                 # The aliases point to the same parser as the actual subcommand. We want to avoid
@@ -944,7 +942,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
             # Save positional argument
             if not action.option_strings:
-                positionals.append(formatter._format_args(action, action.dest))
+                positionals.append(action)
 
     def _find_parser(self, subcommand_path: Iterable[str]) -> 'Cmd2ArgumentParser':
         """Find a parser in the hierarchy based on a sequence of subcommand names.
