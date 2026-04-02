@@ -3,7 +3,6 @@
 import re
 import sys
 from collections.abc import (
-    Collection,
     Iterable,
     Iterator,
     Sequence,
@@ -31,25 +30,14 @@ from rich.protocol import is_renderable
 
 from . import rich_utils as ru
 
-# Regular expression to identify strings which we should sort numerically
-NUMERIC_RE = re.compile(
-    r"""
-    ^              # Start of string
-    [-+]?          # Optional sign
-    (?:            # Start of non-capturing group
-        \d+\.?\d*  # Matches 123 or 123. or 123.45
-        |          # OR
-        \.\d+      # Matches .45
-    )              # End of group
-    $              # End of string
-""",
-    re.VERBOSE,
-)
-
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CompletionItem:
     """A single completion result."""
+
+    # Regular expression to identify whitespace characters that are rendered as
+    # control sequences (like ^J or ^I) in the completion menu.
+    _CONTROL_WHITESPACE_RE = re.compile(r'\r\n|[\n\r\t\f\v]')
 
     # The underlying object this completion represents (e.g., str, int, Path).
     # This is used to support argparse choices validation.
@@ -76,6 +64,18 @@ class CompletionItem:
     display_plain: str = field(init=False)
     display_meta_plain: str = field(init=False)
 
+    @classmethod
+    def _clean_display(cls, val: str) -> str:
+        """Clean a string for display in the completion menu.
+
+        This replaces whitespace characters that are rendered as
+        control sequences (like ^J or ^I) with spaces.
+
+        :param val: string to be cleaned
+        :return: the cleaned string
+        """
+        return cls._CONTROL_WHITESPACE_RE.sub(' ', val)
+
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
         # Derive text from value if it wasn't explicitly provided
@@ -86,7 +86,11 @@ class CompletionItem:
         if not self.display:
             object.__setattr__(self, "display", self.text)
 
-        # Pre-calculate plain text versions by stripping ANSI sequences.
+        # Clean display and display_meta
+        object.__setattr__(self, "display", self._clean_display(self.display))
+        object.__setattr__(self, "display_meta", self._clean_display(self.display_meta))
+
+        # Create plain text versions by stripping ANSI sequences.
         # These are stored as attributes for fast access during sorting/filtering.
         object.__setattr__(self, "display_plain", su.strip_style(self.display))
         object.__setattr__(self, "display_meta_plain", su.strip_style(self.display_meta))
@@ -135,6 +139,21 @@ class CompletionItem:
 class CompletionResultsBase:
     """Base class for results containing a collection of CompletionItems."""
 
+    # Regular expression to identify strings that we should sort numerically
+    _NUMERIC_RE = re.compile(
+        r"""
+        ^              # Start of string
+        [-+]?          # Optional sign
+        (?:            # Start of non-capturing group
+            \d+\.?\d*  # Matches 123 or 123. or 123.45
+            |          # OR
+            \.\d+      # Matches .45
+        )              # End of group
+        $              # End of string
+    """,
+        re.VERBOSE,
+    )
+
     # The collection of CompletionItems. This is stored internally as a tuple.
     items: Sequence[CompletionItem] = field(default_factory=tuple, kw_only=False)
 
@@ -142,13 +161,22 @@ class CompletionResultsBase:
     # If False, items will be sorted by their display value during initialization.
     is_sorted: bool = False
 
+    # True if every item in this collection has a numeric display string.
+    # Used for sorting and alignment.
+    numeric_display: bool = field(init=False)
+
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
         from . import utils
 
         unique_items = utils.remove_duplicates(self.items)
+
+        # Determine if all items have numeric display strings
+        numeric_display = bool(unique_items) and all(self._NUMERIC_RE.match(i.display_plain) for i in unique_items)
+        object.__setattr__(self, "numeric_display", numeric_display)
+
         if not self.is_sorted:
-            if all_display_numeric(unique_items):
+            if self.numeric_display:
                 # Sort numerically
                 unique_items.sort(key=lambda item: float(item.display_plain))
             else:
@@ -249,8 +277,3 @@ class Completions(CompletionResultsBase):
 
     # The quote character to use if adding an opening or closing quote to the matches.
     _quote_char: str = ""
-
-
-def all_display_numeric(items: Collection[CompletionItem]) -> bool:
-    """Return True if items is non-empty and every item.display_plain value is a numeric string."""
-    return bool(items) and all(NUMERIC_RE.match(item.display_plain) for item in items)

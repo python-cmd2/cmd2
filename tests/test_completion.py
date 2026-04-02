@@ -19,7 +19,6 @@ from cmd2 import (
     Completions,
     utils,
 )
-from cmd2.completion import all_display_numeric
 
 from .conftest import (
     normalize,
@@ -877,7 +876,7 @@ def test_is_sorted() -> None:
 
 
 @pytest.mark.parametrize(
-    ('values', 'all_nums'),
+    ('values', 'numeric_display'),
     [
         ([2, 3], True),
         ([2, 3.7], True),
@@ -889,11 +888,10 @@ def test_is_sorted() -> None:
         (["\x1b[31mNOT_STRING\x1b[0m", "\x1b[32m9.2\x1b[0m"], False),
     ],
 )
-def test_all_display_numeric(values: list[int | float | str], all_nums: bool) -> None:
-    """Test that all_display_numeric() evaluates the display_plain field."""
-
-    items = [CompletionItem(v) for v in values]
-    assert all_display_numeric(items) == all_nums
+def test_numeric_display(values: list[int | float | str], numeric_display: bool) -> None:
+    """Test setting of the Completions.numeric_display field."""
+    completions = Completions.from_values(values)
+    assert completions.numeric_display == numeric_display
 
 
 def test_remove_duplicates() -> None:
@@ -930,6 +928,25 @@ def test_plain_fields() -> None:
     assert completion_item.display_plain == "Apple"
     assert completion_item.display_meta == display_meta
     assert completion_item.display_meta_plain == "A tasty apple"
+
+
+def test_clean_display() -> None:
+    """Test display string cleaning in CompletionItem."""
+    # Test all problematic characters being replaced by a single space.
+    # Also verify that \r\n is replaced by a single space.
+    display = "str1\r\nstr2\nstr3\rstr4\tstr5\fstr6\vstr7"
+    expected = "str1 str2 str3 str4 str5 str6 str7"
+
+    # Since display defaults to text if not provided, we test both text and display fields
+    completion_item = CompletionItem("item", display=display, display_meta=display)
+    assert completion_item.display == expected
+    assert completion_item.display_meta == expected
+
+    # Verify that text derived display is also sanitized
+    text = "item\nwith\nnewlines"
+    expected_text_display = "item with newlines"
+    completion_item = CompletionItem(text)
+    assert completion_item.display == expected_text_display
 
 
 def test_styled_completion_sort() -> None:
