@@ -303,56 +303,6 @@ def generate_range_error(range_min: int, range_max: float) -> str:
     return err_msg
 
 
-def set_parser_prog(parser: argparse.ArgumentParser, prog: str) -> None:
-    """Recursively set prog attribute of a parser and all of its subparsers.
-
-    Does so that the root command is a command name and not sys.argv[0].
-
-    :param parser: the parser being edited
-    :param prog: new value for the parser's prog attribute
-    """
-    # Set the prog value for this parser
-    parser.prog = prog
-    req_args: list[str] = []
-
-    # Set the prog value for the parser's subcommands
-    for action in parser._actions:
-        if isinstance(action, argparse._SubParsersAction):
-            # Set the _SubParsersAction's _prog_prefix value. That way if its add_parser() method is called later,
-            # the correct prog value will be set on the parser being added.
-            action._prog_prefix = parser.prog
-
-            # The keys of action.choices are subcommand names as well as subcommand aliases. The aliases point to the
-            # same parser as the actual subcommand. We want to avoid placing an alias into a parser's prog value.
-            # Unfortunately there is nothing about an action.choices entry which tells us it's an alias. In most cases
-            # we can filter out the aliases by checking the contents of action._choices_actions. This list only contains
-            # help information and names for the subcommands and not aliases. However, subcommands without help text
-            # won't show up in that list. Since dictionaries are ordered in Python 3.6 and above and argparse inserts the
-            # subcommand name into choices dictionary before aliases, we should be OK assuming the first time we see a
-            # parser, the dictionary key is a subcommand and not alias.
-            processed_parsers = []
-
-            # Set the prog value for each subcommand's parser
-            for subcmd_name, subcmd_parser in action.choices.items():
-                # Check if we've already edited this parser
-                if subcmd_parser in processed_parsers:
-                    continue
-
-                subcmd_prog = parser.prog
-                if req_args:
-                    subcmd_prog += " " + " ".join(req_args)
-                subcmd_prog += " " + subcmd_name
-                set_parser_prog(subcmd_parser, subcmd_prog)
-                processed_parsers.append(subcmd_parser)
-
-            # We can break since argparse only allows 1 group of subcommands per level
-            break
-
-        # Need to save required args so they can be prepended to the subcommand usage
-        if action.required:
-            req_args.append(action.dest)
-
-
 ############################################################################################################
 # Allow developers to add custom action attributes
 ############################################################################################################
@@ -928,16 +878,70 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         return super().add_subparsers(**kwargs)
 
-    def _find_subparsers_action(self) -> argparse._SubParsersAction:  # type: ignore[type-arg]
-        """Find the _SubParsersAction for this parser.
+    def _get_subparsers_action(self) -> argparse._SubParsersAction:  # type: ignore[type-arg]
+        """Get the _SubParsersAction for this parser if it exists.
 
         :return: the _SubParsersAction for this parser
         :raises ValueError: if this parser does not support subcommands
         """
+        if self._subparsers is not None:
+            for action in self._subparsers._group_actions:
+                if isinstance(action, argparse._SubParsersAction):
+                    return action
+        raise ValueError(f"Command '{self.prog}' does not support subcommands")
+
+    def update_prog(self, prog: str) -> None:
+        """Recursively update the prog attribute of this parser and all of its subparsers.
+
+        :param prog: new value for the parser's prog attribute
+        """
+        # Set the prog value for this parser
+        self.prog = prog
+
+        if self._subparsers is None:
+            # This parser has no subcommands
+            return
+
+        # Required args which come before the subcommand
+        req_args: list[str] = []
+
+        # Set the prog value for the parser's subcommands
         for action in self._actions:
             if isinstance(action, argparse._SubParsersAction):
-                return action
-        raise ValueError(f"Command '{self.prog}' does not support subcommands")
+                # Set the _SubParsersAction's _prog_prefix value. That way if its add_parser()
+                # method is called later, the correct prog value will be set on the parser being added.
+                action._prog_prefix = self.prog
+
+                # The keys of action.choices are subcommand names as well as subcommand aliases.
+                # The aliases point to the same parser as the actual subcommand. We want to avoid
+                # placing an alias into a parser's prog value. Unfortunately there is nothing about
+                # an action.choices entry which tells us it's an alias. In most cases we can filter out
+                # the aliases by checking the contents of action._choices_actions. This list only contains
+                # help information and names for the subcommands and not aliases. However, subcommands
+                # without help text won't show up in that list. Since dictionaries are ordered and
+                # argparse inserts the subcommand name into choices dictionary before aliases, we should
+                # be OK assuming the first time we see a parser, the dictionary key is a subcommand and
+                # not an alias.
+                processed_parsers = []
+
+                # Set the prog value for each subcommand's parser
+                for subcmd_name, subcmd_parser in action.choices.items():
+                    if subcmd_parser in processed_parsers:
+                        continue
+
+                    subcmd_prog = self.prog
+                    if req_args:
+                        subcmd_prog += " " + " ".join(req_args)
+                    subcmd_prog += " " + subcmd_name
+                    subcmd_parser.update_prog(subcmd_prog)
+                    processed_parsers.append(subcmd_parser)
+
+                # We can break since argparse only allows 1 group of subcommands per level
+                break
+
+            # Need to save required args so they can be prepended to the subcommand usage
+            if action.required:
+                req_args.append(action.dest)
 
     def _find_parser(self, subcommand_path: Iterable[str]) -> 'Cmd2ArgumentParser':
         """Find a parser in the hierarchy based on a sequence of subcommand names.
@@ -948,7 +952,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         """
         parser = self
         for name in subcommand_path:
-            subparsers_action = parser._find_subparsers_action()
+            subparsers_action = parser._get_subparsers_action()
             if name not in subparsers_action.choices:
                 raise ValueError(f"Subcommand '{name}' not found in '{parser.prog}'")
             parser = cast(Cmd2ArgumentParser, subparsers_action.choices[name])
@@ -971,7 +975,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :raises ValueError: if the command path is invalid or doesn't support subcommands
         """
         target_parser = self._find_parser(subcommand_path)
-        subparsers_action = target_parser._find_subparsers_action()
+        subparsers_action = target_parser._get_subparsers_action()
         subparsers_action.attach_parser(subcommand, parser, **add_parser_kwargs)  # type: ignore[attr-defined]
 
     def detach_subcommand(self, subcommand_path: Iterable[str], subcommand: str) -> 'Cmd2ArgumentParser':
@@ -984,7 +988,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :raises ValueError: if the command path is invalid or the subcommand doesn't exist
         """
         target_parser = self._find_parser(subcommand_path)
-        subparsers_action = target_parser._find_subparsers_action()
+        subparsers_action = target_parser._get_subparsers_action()
         detached = subparsers_action.detach_parser(subcommand)  # type: ignore[attr-defined]
         if detached is None:
             raise ValueError(f"Subcommand '{subcommand}' not found in '{target_parser.prog}'")

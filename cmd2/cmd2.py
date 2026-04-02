@@ -920,7 +920,7 @@ class Cmd:
                 builder_name = getattr(parser_builder, "__name__", str(parser_builder))  # type: ignore[unreachable]
                 raise TypeError(f"The parser returned by '{builder_name}' must be a Cmd2ArgumentParser or a subclass of it")
 
-        argparse_custom.set_parser_prog(parser, prog)
+        parser.update_prog(prog)
 
         return parser
 
@@ -1027,16 +1027,16 @@ class Cmd:
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
         def check_parser_uninstallable(parser: Cmd2ArgumentParser) -> None:
             cmdset_id = id(cmdset)
-            for action in parser._actions:
-                if isinstance(action, argparse._SubParsersAction):
-                    for subparser in action.choices.values():
-                        attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_COMMANDSET_ID, None)
-                        if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
-                            raise CommandSetRegistrationError(
-                                'Cannot uninstall CommandSet when another CommandSet depends on it'
-                            )
-                        check_parser_uninstallable(subparser)
-                    break
+            try:
+                subparsers_action = parser._get_subparsers_action()
+                for subparser in subparsers_action.choices.values():
+                    attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_COMMANDSET_ID, None)
+                    if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
+                        raise CommandSetRegistrationError('Cannot uninstall CommandSet when another CommandSet depends on it')
+                    check_parser_uninstallable(cast(Cmd2ArgumentParser, subparser))
+            except ValueError:
+                # No subcommands to check
+                pass
 
         methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
             cmdset,

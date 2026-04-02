@@ -68,6 +68,7 @@ prompt is displayed.
       class of it.
     - Removed `set_ap_completer_type()` and `get_ap_completer_type()` since `ap_completer_type` is
       now a public member of `Cmd2ArgumentParser`.
+    - Moved `set_parser_prog()` to `Cmd2ArgumentParser.update_prog()`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
