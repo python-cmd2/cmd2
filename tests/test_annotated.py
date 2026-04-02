@@ -11,6 +11,7 @@ import enum
 from pathlib import Path
 from typing import (
     Annotated,
+    ClassVar,
     Literal,
 )
 
@@ -297,17 +298,6 @@ class TestBuildParser:
         with pytest.raises(TypeError, match="Failed to resolve type hints"):
             _validate_base_command_params(do_broken)
 
-    def test_choices_provider_overrides_enum_choices(self) -> None:
-        action = _get_param_action(_func_choices_provider_on_enum)
-        assert action.choices is None
-        assert action.get_choices_provider() is not None  # type: ignore[attr-defined]
-        assert action.get_completer() is None  # type: ignore[attr-defined]
-
-    def test_completer_overrides_path_choices(self) -> None:
-        action = _get_param_action(_func_completer_on_path)
-        assert action.get_choices_provider() is None  # type: ignore[attr-defined]
-        assert action.get_completer() is cmd2.Cmd.path_complete  # type: ignore[attr-defined]
-
     def test_dest_param_raises(self) -> None:
         with pytest.raises(ValueError, match="dest"):
             build_parser_from_function(_func_dest_param)
@@ -331,13 +321,6 @@ class TestBuildParser:
         with pytest.raises(TypeError, match="ambiguous"):
             _resolve_annotation(Annotated[str | int, Option("--name")])
 
-    def test_enum_choices_match_converted_type(self) -> None:
-        """Enum choices must be convertible by the type converter."""
-        action = _get_param_action(_func_enum)
-        converter = action.type
-        for choice in action.choices:
-            assert isinstance(converter(str(choice)), _Color)
-
     def test_multi_param_order_and_presence(self) -> None:
         """Positional order preserved, options generated correctly."""
         parser = build_parser_from_function(_func_multi)
@@ -345,6 +328,28 @@ class TestBuildParser:
         assert positionals == ["a", "b"]
         dests = {a.dest for a in parser._actions}
         assert 'c' in dests
+
+
+class TestTypeInferenceBuildParser:
+    """Type-inference behavior and override precedence when building parser actions."""
+
+    def test_choices_provider_overrides_inferred_enum_choices(self) -> None:
+        action = _get_param_action(_func_choices_provider_on_enum)
+        assert action.choices is None
+        assert action.get_choices_provider() is not None  # type: ignore[attr-defined]
+        assert action.get_completer() is None  # type: ignore[attr-defined]
+
+    def test_completer_overrides_inferred_path_completion(self) -> None:
+        action = _get_param_action(_func_completer_on_path)
+        assert action.get_choices_provider() is None  # type: ignore[attr-defined]
+        assert action.get_completer() is cmd2.Cmd.path_complete  # type: ignore[attr-defined]
+
+    def test_inferred_enum_choices_match_type_converter(self) -> None:
+        """Enum choices must be convertible by the type converter."""
+        action = _get_param_action(_func_enum)
+        converter = action.type
+        for choice in action.choices:
+            assert isinstance(converter(str(choice)), _Color)
 
 
 # ---------------------------------------------------------------------------
@@ -954,11 +959,21 @@ class _InferColor(str, enum.Enum):
 
 
 class _RuntimeTypeInferenceApp(cmd2.Cmd):
+    enum_override_choices: ClassVar[list[str]] = ["amber", "violet"]
+    path_override_values: ClassVar[list[str]] = ["override-a", "override-b"]
+
     path_parser = Cmd2ArgumentParser()
     path_parser.add_argument("filepath", type=Path)
 
     @cmd2.with_argparser(path_parser)
     def do_read(self, args: argparse.Namespace) -> None:
+        self.poutput(str(args.filepath))
+
+    native_path_parser = Cmd2ArgumentParser()
+    native_path_parser.add_argument("filepath", type=type(Path(".")))
+
+    @cmd2.with_argparser(native_path_parser)
+    def do_read_native(self, args: argparse.Namespace) -> None:
         self.poutput(str(args.filepath))
 
     enum_parser = Cmd2ArgumentParser()
@@ -968,6 +983,40 @@ class _RuntimeTypeInferenceApp(cmd2.Cmd):
     def do_pick_color(self, args: argparse.Namespace) -> None:
         self.poutput(args.color.value)
 
+    def enum_choices_override(self) -> list[cmd2.CompletionItem]:
+        return [cmd2.CompletionItem(value) for value in self.enum_override_choices]
+
+    enum_override_parser = Cmd2ArgumentParser()
+    enum_override_parser.add_argument("color", type=_InferColor, choices_provider=enum_choices_override)
+
+    @cmd2.with_argparser(enum_override_parser)
+    def do_pick_color_override(self, args: argparse.Namespace) -> None:
+        self.poutput(str(args.color))
+
+    enum_converter_parser = Cmd2ArgumentParser()
+    enum_converter_parser.add_argument("color", type=_make_enum_type(_InferColor))
+
+    @cmd2.with_argparser(enum_converter_parser)
+    def do_pick_color_converter(self, args: argparse.Namespace) -> None:
+        self.poutput(args.color.value)
+
+    bool_parser = Cmd2ArgumentParser()
+    bool_parser.add_argument("enabled", type=_parse_bool)
+
+    @cmd2.with_argparser(bool_parser)
+    def do_set_flag(self, args: argparse.Namespace) -> None:
+        self.poutput(str(args.enabled))
+
+    def path_completer_override(self, text: str, line: str, begidx: int, endidx: int) -> cmd2.Completions:
+        return self.basic_complete(text, line, begidx, endidx, self.path_override_values)
+
+    path_override_parser = Cmd2ArgumentParser()
+    path_override_parser.add_argument("filepath", type=Path, completer=path_completer_override)
+
+    @cmd2.with_argparser(path_override_parser)
+    def do_read_override(self, args: argparse.Namespace) -> None:
+        self.poutput(str(args.filepath))
+
 
 @pytest.fixture
 def infer_app() -> _RuntimeTypeInferenceApp:
@@ -976,9 +1025,14 @@ def infer_app() -> _RuntimeTypeInferenceApp:
     return app
 
 
-class TestTypeInference:
+class TestTypeInferenceCompletion:
+    """Runtime completion tests for type-inferred argparse argument types."""
+
     def test_enum_type_inference(self, infer_app) -> None:
         assert sorted(_complete_cmd(infer_app, "pick_color ", "")) == ["green", "red"]
+
+    def test_enum_converter_type_inference(self, infer_app) -> None:
+        assert sorted(_complete_cmd(infer_app, "pick_color_converter ", "")) == ["green", "red"]
 
     def test_path_type_inference(self, infer_app, tmp_path) -> None:
         test_file = tmp_path / "testfile.txt"
@@ -987,6 +1041,27 @@ class TestTypeInference:
         result_strings = _complete_cmd(infer_app, f"read {text}", text)
         assert len(result_strings) > 0
         assert any("testfile.txt" in item for item in result_strings)
+
+    def test_native_path_subclass_type_inference(self, infer_app, tmp_path) -> None:
+        test_file = tmp_path / "native-test.txt"
+        test_file.touch()
+        text = str(tmp_path) + "/"
+        result_strings = _complete_cmd(infer_app, f"read_native {text}", text)
+        assert len(result_strings) > 0
+        assert any("native-test.txt" in item for item in result_strings)
+
+    def test_bool_parser_type_inference(self, infer_app) -> None:
+        assert sorted(_complete_cmd(infer_app, "set_flag ", "")) == sorted(
+            ["true", "false", "yes", "no", "on", "off", "1", "0"]
+        )
+
+    def test_choices_provider_takes_precedence_over_enum_inference(self, infer_app) -> None:
+        assert sorted(_complete_cmd(infer_app, "pick_color_override ", "")) == sorted(
+            _RuntimeTypeInferenceApp.enum_override_choices
+        )
+
+    def test_completer_takes_precedence_over_path_inference(self, infer_app) -> None:
+        assert sorted(_complete_cmd(infer_app, "read_override ", "")) == sorted(_RuntimeTypeInferenceApp.path_override_values)
 
 
 class _AnnotatedCommandSet(cmd2.CommandSet):
