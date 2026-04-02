@@ -902,15 +902,24 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             # This parser has no subcommands
             return
 
-        # Required args which come before the subcommand
-        req_args: list[str] = []
+        # argparse includes positional arguments that appear before the subcommand in its
+        # subparser prog strings. We must track these while iterating through actions.
+        positionals: list[str] = []
+
+        # Use a formatter to get the same argument strings that argparse uses.
+        formatter = self._get_formatter()
 
         # Set the prog value for the parser's subcommands
         for action in self._actions:
             if isinstance(action, argparse._SubParsersAction):
+                # Build the prefix that should be prepended to subcommand names
+                prefix = self.prog
+                if positionals:
+                    prefix += " " + " ".join(positionals)
+
                 # Set the _SubParsersAction's _prog_prefix value. That way if its add_parser()
                 # method is called later, the correct prog value will be set on the parser being added.
-                action._prog_prefix = self.prog
+                action._prog_prefix = prefix
 
                 # The keys of action.choices are subcommand names as well as subcommand aliases.
                 # The aliases point to the same parser as the actual subcommand. We want to avoid
@@ -922,26 +931,23 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 # argparse inserts the subcommand name into choices dictionary before aliases, we should
                 # be OK assuming the first time we see a parser, the dictionary key is a subcommand and
                 # not an alias.
-                processed_parsers = []
+                processed_parsers: list[argparse.ArgumentParser] = []
 
                 # Set the prog value for each subcommand's parser
                 for subcmd_name, subcmd_parser in action.choices.items():
                     if subcmd_parser in processed_parsers:
                         continue
 
-                    subcmd_prog = self.prog
-                    if req_args:
-                        subcmd_prog += " " + " ".join(req_args)
-                    subcmd_prog += " " + subcmd_name
-                    subcmd_parser.update_prog(subcmd_prog)
+                    subcmd_prog = f"{prefix} {subcmd_name}"
+                    subcmd_parser.update_prog(subcmd_prog)  # type: ignore[attr-defined]
                     processed_parsers.append(subcmd_parser)
 
                 # We can break since argparse only allows 1 group of subcommands per level
                 break
 
-            # Need to save required args so they can be prepended to the subcommand usage
-            if action.required:
-                req_args.append(action.dest)
+            # Save positional argument
+            if not action.option_strings:
+                positionals.append(formatter._format_args(action, action.dest))
 
     def _find_parser(self, subcommand_path: Iterable[str]) -> 'Cmd2ArgumentParser':
         """Find a parser in the hierarchy based on a sequence of subcommand names.
