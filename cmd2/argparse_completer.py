@@ -33,7 +33,6 @@ from .command_definition import CommandSet
 from .completion import (
     CompletionItem,
     Completions,
-    all_display_numeric,
 )
 from .constants import INFINITY
 from .exceptions import CompletionError
@@ -647,12 +646,15 @@ class ArgparseCompleter:
             # the 3rd or more argument here.
             destination = destination[min(len(destination) - 1, arg_state.count)]
 
-        # Determine if all display values are numeric so we can right-align them
-        all_nums = all_display_numeric(completions.items)
-
         # Build header row
         rich_columns: list[Column] = []
-        rich_columns.append(Column(destination.upper(), justify="right" if all_nums else "left", no_wrap=True))
+        rich_columns.append(
+            Column(
+                destination.upper(),
+                justify="right" if completions.numeric_display else "left",
+                no_wrap=True,
+            )
+        )
         rich_columns.extend(
             column if isinstance(column, Column) else Column(column, overflow="fold") for column in table_columns
         )

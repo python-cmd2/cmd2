@@ -19,7 +19,6 @@ from cmd2 import (
     Completions,
     utils,
 )
-from cmd2.completion import all_display_numeric
 
 from .conftest import (
     normalize,
@@ -877,7 +876,7 @@ def test_is_sorted() -> None:
 
 
 @pytest.mark.parametrize(
-    ('values', 'all_nums'),
+    ('values', 'numeric_display'),
     [
         ([2, 3], True),
         ([2, 3.7], True),
@@ -889,11 +888,10 @@ def test_is_sorted() -> None:
         (["\x1b[31mNOT_STRING\x1b[0m", "\x1b[32m9.2\x1b[0m"], False),
     ],
 )
-def test_all_display_numeric(values: list[int | float | str], all_nums: bool) -> None:
-    """Test that all_display_numeric() evaluates the display_plain field."""
-
-    items = [CompletionItem(v) for v in values]
-    assert all_display_numeric(items) == all_nums
+def test_numeric_display(values: list[int | float | str], numeric_display: bool) -> None:
+    """Test setting of the Completions.numeric_display field."""
+    completions = Completions.from_values(values)
+    assert completions.numeric_display == numeric_display
 
 
 def test_remove_duplicates() -> None:
