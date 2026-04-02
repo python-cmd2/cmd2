@@ -717,6 +717,16 @@ class ArgparseCompleter:
 
     def _choices_to_items(self, arg_state: _ArgumentState) -> list[CompletionItem]:
         """Convert choices from action to list of CompletionItems."""
+        action_type = arg_state.action.type
+        if action_type is not None and arg_state.action.choices is None:
+            if isinstance(action_type, type) and issubclass(action_type, enum.Enum):
+                return [CompletionItem(str(m.value), display_meta=m.name) for m in action_type]
+            enum_from_converter = getattr(action_type, '_cmd2_enum_class', None)
+            if isinstance(enum_from_converter, type) and issubclass(enum_from_converter, enum.Enum):
+                return [CompletionItem(str(m.value), display_meta=m.name) for m in enum_from_converter]
+            if getattr(action_type, '__name__', None) == '_parse_bool':
+                return [CompletionItem(v) for v in ['true', 'false', 'yes', 'no', 'on', 'off', '1', '0']]
+
         if arg_state.action.choices is None:
             return []
 
@@ -732,29 +742,6 @@ class ArgparseCompleter:
                 CompletionItem(name, display_meta=parser_help.get(subparser, ''))
                 for name, subparser in arg_state.action.choices.items()
             ]
-
-        choices_callable: ChoicesCallable | None = arg_state.action.get_choices_callable()  # type: ignore[attr-defined]
-        if choices_callable is not None:
-            return choices_callable
-
-        # Type inference: auto-complete from action.type when no explicit
-        # choices or choices_callable is configured.
-        action_type = arg_state.action.type
-        if action_type is not None:
-            if action_type is pathlib.Path or (isinstance(action_type, type) and issubclass(action_type, pathlib.Path)):
-                from .cmd2 import Cmd
-
-                return ChoicesCallable(is_completer=True, to_call=Cmd.path_complete)
-
-            if isinstance(action_type, type) and issubclass(action_type, enum.Enum):
-                return [CompletionItem(str(m.value), display_meta=m.name) for m in action_type]
-
-            enum_from_converter = getattr(action_type, '_cmd2_enum_class', None)
-            if isinstance(enum_from_converter, type) and issubclass(enum_from_converter, enum.Enum):
-                return [CompletionItem(str(m.value), display_meta=m.name) for m in enum_from_converter]
-
-            if getattr(action_type, '__name__', None) == '_parse_bool':
-                return [CompletionItem(v) for v in ['true', 'false', 'yes', 'no', 'on', 'off', '1', '0']]
 
         # Standard choices
         return [
@@ -817,6 +804,13 @@ class ArgparseCompleter:
             )
             args.extend([text, line, begidx, endidx])
             completions: Completions = completer(*args, **kwargs)
+        # if is a path type, then use cmd2's path completer
+        elif arg_state.action.type is pathlib.Path or (
+            isinstance(arg_state.action.type, type) and issubclass(arg_state.action.type, pathlib.Path)
+        ):
+            from .cmd2 import Cmd
+
+            completions = Cmd.path_complete(self._cmd2_app, text, line, begidx, endidx)
 
         # Otherwise it uses a choices provider or choices list
         else:

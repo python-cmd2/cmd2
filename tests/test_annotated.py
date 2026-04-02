@@ -297,13 +297,13 @@ class TestBuildParser:
     def test_choices_provider_overrides_enum_choices(self) -> None:
         action = _get_param_action(_func_choices_provider_on_enum)
         assert action.choices is None
-        assert action.get_choices_callable() is not None  # type: ignore[attr-defined]
+        assert action.get_choices_provider() is not None  # type: ignore[attr-defined]
+        assert action.get_completer() is None  # type: ignore[attr-defined]
 
     def test_completer_overrides_path_choices(self) -> None:
         action = _get_param_action(_func_completer_on_path)
-        cc = action.get_choices_callable()  # type: ignore[attr-defined]
-        assert cc is not None
-        assert cc.is_completer is True
+        assert action.get_choices_provider() is None  # type: ignore[attr-defined]
+        assert action.get_completer() is cmd2.Cmd.path_complete  # type: ignore[attr-defined]
 
     def test_dest_param_raises(self) -> None:
         with pytest.raises(ValueError, match="dest"):
@@ -851,8 +851,8 @@ class _RuntimeAnnotatedApp(cmd2.Cmd):
         super().__init__()
         self._items = ["apple", "banana", "cherry"]
 
-    def item_choices(self) -> list[str]:
-        return self._items
+    def item_choices(self) -> list[cmd2.CompletionItem]:
+        return [cmd2.CompletionItem(item) for item in self._items]
 
     @cmd2.with_annotated
     def do_greet(self, name: str, count: int = 1) -> None:
@@ -987,8 +987,8 @@ class _AnnotatedCommandSet(cmd2.CommandSet):
         super().__init__()
         self._sports = ["football", "baseball"]
 
-    def sport_choices(self) -> list[str]:
-        return self._sports
+    def sport_choices(self) -> list[cmd2.CompletionItem]:
+        return [cmd2.CompletionItem(sport) for sport in self._sports]
 
     @cmd2.with_annotated
     def do_play(self, sport: Annotated[str, Argument(choices_provider=sport_choices)]) -> None:
