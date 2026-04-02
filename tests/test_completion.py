@@ -930,8 +930,8 @@ def test_plain_fields() -> None:
     assert completion_item.display_meta_plain == "A tasty apple"
 
 
-def test_sanitization() -> None:
-    """Test display string sanitization in CompletionItem."""
+def test_clean_display() -> None:
+    """Test display string cleaning in CompletionItem."""
     # Test all problematic characters being replaced by a single space.
     # Also verify that \r\n is replaced by a single space.
     display = "str1\r\nstr2\nstr3\rstr4\tstr5\fstr6\vstr7"
