@@ -912,14 +912,11 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # Set the prog value for the parser's subcommands
         for action in self._actions:
             if isinstance(action, argparse._SubParsersAction):
-                # Build the prefix that should be prepended to subcommand names
-                prefix = self.prog
+                # Set the _SubParsersAction's _prog_prefix value. This ensures that any subcommands
+                # added later via add_parser() will have the correct prog value.
+                action._prog_prefix = self.prog
                 if positionals:
-                    prefix += " " + " ".join(positionals)
-
-                # Set the _SubParsersAction's _prog_prefix value. That way if its add_parser()
-                # method is called later, the correct prog value will be set on the parser being added.
-                action._prog_prefix = prefix
+                    action._prog_prefix += " " + " ".join(positionals)
 
                 # The keys of action.choices are subcommand names as well as subcommand aliases.
                 # The aliases point to the same parser as the actual subcommand. We want to avoid
@@ -938,7 +935,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                     if subcmd_parser in processed_parsers:
                         continue
 
-                    subcmd_prog = f"{prefix} {subcmd_name}"
+                    subcmd_prog = f"{action._prog_prefix} {subcmd_name}"
                     subcmd_parser.update_prog(subcmd_prog)  # type: ignore[attr-defined]
                     processed_parsers.append(subcmd_parser)
 
