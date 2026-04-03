@@ -343,11 +343,12 @@ def test_register_argparse_argument_parameter() -> None:
 
 
 def test_parser_attachment() -> None:
+    """Test the monkey-patched attach_parser and detach_parser methods on argparse._SubParsersAction."""
     # Attach a parser as a subcommand
-    root_parser = Cmd2ArgumentParser(description="root command")
+    root_parser = Cmd2ArgumentParser(prog="root", description="root command")
     root_subparsers = root_parser.add_subparsers()
 
-    child_parser = Cmd2ArgumentParser(description="child command")
+    child_parser = Cmd2ArgumentParser(prog="child", description="child command")
     root_subparsers.attach_parser(  # type: ignore[attr-defined]
         "child",
         child_parser,
@@ -385,11 +386,24 @@ def test_parser_attachment() -> None:
 
 
 def test_subcommand_attachment() -> None:
-    # Attach a subcommand
-    root_parser = Cmd2ArgumentParser(description="root command")
+    """Test Cmd2ArgumentParser convenience methods for attaching and detaching subcommands."""
+
+    ###############################
+    # Set up parsers
+    ###############################
+    root_parser = Cmd2ArgumentParser(prog="root", description="root command")
     root_subparsers = root_parser.add_subparsers()
 
-    child_parser = Cmd2ArgumentParser(description="child command")
+    child_parser = Cmd2ArgumentParser(prog="child", description="child command")
+    child_subparsers = child_parser.add_subparsers()  # Must have subparsers to host grandchild
+
+    grandchild_parser = Cmd2ArgumentParser(prog="grandchild", description="grandchild command")
+
+    ###############################
+    # Attach subcommands
+    ###############################
+
+    # Attach child to root
     root_parser.attach_subcommand(
         [],
         "child",
@@ -398,35 +412,59 @@ def test_subcommand_attachment() -> None:
         aliases=["child_alias"],
     )
 
-    # Verify the same parser instance was used
+    # Attach grandchild to child
+    root_parser.attach_subcommand(
+        ["child"],
+        "grandchild",
+        grandchild_parser,
+        help="a grandchild command",
+    )
+
+    ###############################
+    # Verify hierarchy navigation
+    ###############################
+
+    assert root_parser._find_parser(["child", "grandchild"]) is grandchild_parser
+    assert root_parser._find_parser(["child"]) is child_parser
+    assert root_parser._find_parser([]) is root_parser
+
+    ###############################
+    # Verify attachments
+    ###############################
+
+    # Verify child attachment and aliases
     assert root_subparsers._name_parser_map["child"] is child_parser
     assert root_subparsers._name_parser_map["child_alias"] is child_parser
 
-    # Verify an action with the help text exists
-    child_action = None
-    for action in root_subparsers._choices_actions:
-        if action.dest == "child":
-            child_action = action
-            break
-    assert child_action is not None
-    assert child_action.help == "a child command"
+    # Verify grandchild attachment
+    assert child_subparsers._name_parser_map["grandchild"] is grandchild_parser
 
-    # Detatch the subcommand
-    detached_parser = root_parser.detach_subcommand([], "child")
+    ###############################
+    # Detach subcommands
+    ###############################
 
-    # Verify subcommand and its aliases were removed
-    assert detached_parser is child_parser
+    # Detach grandchild from child
+    detached_grandchild = root_parser.detach_subcommand(["child"], "grandchild")
+    assert detached_grandchild is grandchild_parser
+    assert "grandchild" not in child_subparsers._name_parser_map
+
+    # Detach child from root
+    detached_child = root_parser.detach_subcommand([], "child")
+    assert detached_child is child_parser
     assert "child" not in root_subparsers._name_parser_map
     assert "child_alias" not in root_subparsers._name_parser_map
 
-    # Verify the help text action was removed
-    choices_actions = [action.dest for action in root_subparsers._choices_actions]
-    assert "child" not in choices_actions
+    ###############################
+    # Test error handling
+    ###############################
 
-    # Verify it raises a ValueError when subcommand does not exist
-    expected_err = "Subcommand 'fake' not found"
-    with pytest.raises(ValueError, match=expected_err):
-        assert root_parser.detach_subcommand([], "fake") is None
+    # Verify ValueError when path is invalid (find_parser fails)
+    with pytest.raises(ValueError, match="Subcommand 'nonexistent' not found"):
+        root_parser.detach_subcommand(["nonexistent"], "anything")
+
+    # Verify ValueError when path is valid but subcommand name is wrong
+    with pytest.raises(ValueError, match="Subcommand 'fake' not found in 'root'"):
+        root_parser.detach_subcommand([], "fake")
 
 
 def test_completion_items_as_choices(capsys) -> None:
