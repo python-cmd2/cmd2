@@ -893,7 +893,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     def update_prog(self, prog: str) -> None:
         """Recursively update the prog attribute of this parser and all of its subparsers.
 
-        :param prog: new value for the parser's prog attribute
+        :param prog: new value for this parser's prog attribute
         """
         # Set the prog value for this parser
         self.prog = prog
@@ -916,26 +916,21 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 formatter.add_usage(self.usage, positionals, self._mutually_exclusive_groups, '')
                 action._prog_prefix = formatter.format_help().strip()
 
-                # The keys of action.choices are subcommand names as well as subcommand aliases.
-                # The aliases point to the same parser as the actual subcommand. We want to avoid
-                # placing an alias into a parser's prog value. Unfortunately there is nothing about
-                # an action.choices entry which tells us it's an alias. In most cases we can filter out
-                # the aliases by checking the contents of action._choices_actions. This list only contains
-                # help information and names for the subcommands and not aliases. However, subcommands
-                # without help text won't show up in that list. Since dictionaries are ordered and
-                # argparse inserts the subcommand name into choices dictionary before aliases, we should
-                # be OK assuming the first time we see a parser, the dictionary key is a subcommand and
-                # not an alias.
-                processed_parsers: list[argparse.ArgumentParser] = []
+                # Note: action.choices contains both subcommand names and aliases.
+                # To ensure subcommands (and not aliases) are used in 'prog':
+                # 1. We can't use action._choices_actions because it excludes subcommands without help text.
+                # 2. Since dictionaries are ordered and argparse inserts the primary name before aliases,
+                #    we assume the first time we encounter a parser, the key is the true subcommand name.
+                updated_parsers: set[argparse.ArgumentParser] = set()
 
                 # Set the prog value for each subcommand's parser
                 for subcmd_name, subcmd_parser in action.choices.items():
-                    if subcmd_parser in processed_parsers:
+                    if subcmd_parser in updated_parsers:
                         continue
 
                     subcmd_prog = f"{action._prog_prefix} {subcmd_name}"
                     subcmd_parser.update_prog(subcmd_prog)  # type: ignore[attr-defined]
-                    processed_parsers.append(subcmd_parser)
+                    updated_parsers.add(subcmd_parser)
 
                 # We can break since argparse only allows 1 group of subcommands per level
                 break
