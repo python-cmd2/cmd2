@@ -4419,3 +4419,75 @@ def test_auto_suggest_default():
     """Test that auto_suggest defaults to True."""
     app = cmd2.Cmd()
     assert isinstance(app.main_session.auto_suggest, AutoSuggestFromHistory)
+
+
+def test_attach_subcommand() -> None:
+    import argparse
+
+    class SubcmdApp(cmd2.Cmd):
+        def __init__(self) -> None:
+            super().__init__()
+
+        root_parser = cmd2.Cmd2ArgumentParser()
+        root_parser.add_subparsers()
+
+        @cmd2.with_argparser(root_parser)
+        def do_root(self, _args: argparse.Namespace) -> None:
+            pass
+
+    app = SubcmdApp()
+
+    # Verify root exists and uses argparse
+    root_parser = app._command_parsers.get(app.do_root)
+    assert root_parser is not None
+
+    # Attach child to root
+    child_parser = cmd2.Cmd2ArgumentParser(prog="child")
+    child_parser.add_subparsers()
+    app.attach_subcommand("root", "child", child_parser, help="child help")
+
+    # Verify child was attached
+    root_subparsers_action = root_parser._get_subparsers_action()
+    assert "child" in root_subparsers_action._name_parser_map
+    assert root_subparsers_action._name_parser_map["child"] is child_parser
+
+    # Attach grandchild to child
+    grandchild_parser = cmd2.Cmd2ArgumentParser(prog="grandchild")
+    app.attach_subcommand("root child", "grandchild", grandchild_parser)
+
+    # Verify grandchild was attached
+    child_subparsers_action = child_parser._get_subparsers_action()
+    assert "grandchild" in child_subparsers_action._name_parser_map
+
+    # Detach grandchild
+    detached_grandchild = app.detach_subcommand("root child", "grandchild")
+    assert detached_grandchild is grandchild_parser
+    assert "grandchild" not in child_subparsers_action._name_parser_map
+
+    # Detach child
+    detached_child = app.detach_subcommand("root", "child")
+    assert detached_child is child_parser
+    assert "child" not in root_subparsers_action._name_parser_map
+
+
+def test_attach_subcommand_errors() -> None:
+    class SubcmdErrorApp(cmd2.Cmd):
+        def __init__(self) -> None:
+            super().__init__()
+
+        def do_no_argparse(self, _statement: cmd2.Statement) -> None:
+            pass
+
+    app = SubcmdErrorApp()
+
+    # Test empty command
+    with pytest.raises(ValueError, match="Command path cannot be empty"):
+        app.attach_subcommand("", "sub", cmd2.Cmd2ArgumentParser())
+
+    # Test non-existent command
+    with pytest.raises(ValueError, match="Root command 'fake' not found"):
+        app.attach_subcommand("fake", "sub", cmd2.Cmd2ArgumentParser())
+
+    # Test command that doesn't use argparse
+    with pytest.raises(ValueError, match="Command 'no_argparse' does not use argparse"):
+        app.attach_subcommand("no_argparse", "sub", cmd2.Cmd2ArgumentParser())
