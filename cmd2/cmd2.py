@@ -1025,18 +1025,22 @@ class Cmd:
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet) -> None:
+        cmdset_id = id(cmdset)
+
         def check_parser_uninstallable(parser: Cmd2ArgumentParser) -> None:
-            cmdset_id = id(cmdset)
             try:
                 subparsers_action = parser._get_subparsers_action()
-                for subparser in subparsers_action.choices.values():
-                    attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_COMMANDSET_ID, None)
-                    if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
-                        raise CommandSetRegistrationError('Cannot uninstall CommandSet when another CommandSet depends on it')
-                    check_parser_uninstallable(cast(Cmd2ArgumentParser, subparser))
             except ValueError:
                 # No subcommands to check
-                pass
+                return
+
+            for subparser in subparsers_action.choices.values():
+                attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_COMMANDSET_ID, None)
+                if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
+                    raise CommandSetRegistrationError(
+                        f"Cannot uninstall CommandSet: '{subparser.prog}' is required by another CommandSet"
+                    )
+                check_parser_uninstallable(cast(Cmd2ArgumentParser, subparser))
 
         methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
             cmdset,
