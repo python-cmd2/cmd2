@@ -533,7 +533,7 @@ def _SubParsersAction_attach_parser(  # noqa: N802
     subcmd_parser: argparse.ArgumentParser,
     **add_parser_kwargs: Any,
 ) -> None:
-    """Attach an existing ArgumentParser to a subparsers action.
+    """Attach an existing parser to a subparsers action.
 
     This is useful when a parser is pre-configured (e.g. by cmd2's subcommand decorator)
     and needs to be attached to a parent parser.
@@ -828,7 +828,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         *,
         ap_completer_type: type['ArgparseCompleter'] | None = None,
     ) -> None:
-        """Initialize the Cmd2ArgumentParser instance, a custom ArgumentParser added by cmd2.
+        """Initialize the Cmd2ArgumentParser instance.
 
         :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom completion
                                   behavior on this parser. If this is None or not present, then cmd2 will use
@@ -921,7 +921,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 # 1. We can't use action._choices_actions because it excludes subcommands without help text.
                 # 2. Since dictionaries are ordered and argparse inserts the primary name before aliases,
                 #    we assume the first time we encounter a parser, the key is the true subcommand name.
-                updated_parsers: set[argparse.ArgumentParser] = set()
+                updated_parsers: set[Cmd2ArgumentParser] = set()
 
                 # Set the prog value for each subcommand's parser
                 for subcmd_name, subcmd_parser in action.choices.items():
@@ -1055,7 +1055,6 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         When displaying choices, use CompletionItem.value instead of the CompletionItem instance.
 
-        :param self: ArgumentParser instance
         :param action: the action being populated
         :param value: value from command line already run through conversion function by argparse
         """
@@ -1098,7 +1097,7 @@ DEFAULT_ARGUMENT_PARSER: type[Cmd2ArgumentParser] = Cmd2ArgumentParser
 
 
 def set_default_argument_parser_type(parser_type: type[Cmd2ArgumentParser]) -> None:
-    """Set the default ArgumentParser class for cmd2's built-in commands.
+    """Set the default Cmd2ArgumentParser class for cmd2's built-in commands.
 
     Since built-in commands rely on customizations made in Cmd2ArgumentParser,
     your custom parser class should inherit from Cmd2ArgumentParser.
