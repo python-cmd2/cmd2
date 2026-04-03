@@ -45,9 +45,7 @@ class SubcommandSet(cmd2.CommandSet):
     parser_bar.set_defaults(func=base_bar)
 
     # create the parser for the "helpless" subcommand
-    # This subcommand has aliases and no help text. It exists to prevent changes to update_prog() which
-    # use an approach which relies on action._choices_actions list. See comment in that function for more
-    # details.
+    # This subcommand has aliases and no help text.
     parser_helpless = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
     parser_helpless.add_argument('z', help='string')
     parser_helpless.set_defaults(func=base_helpless)

@@ -14,10 +14,10 @@ from cmd2 import (
 )
 from cmd2.argparse_custom import (
     Cmd2HelpFormatter,
-    Cmd2RichArgparseConsole,
     generate_range_error,
     register_argparse_argument_parameter,
 )
+from cmd2.rich_utils import Cmd2RichArgparseConsole
 
 from .conftest import run_cmd
 
@@ -476,3 +476,59 @@ def test_formatter_set_color(mocker) -> None:
     assert mock_set_color.call_count == 2
     mock_set_color.assert_any_call(True, file=sys.stdout)
     mock_set_color.assert_any_call(True)
+
+
+def test_update_prog() -> None:
+    """Test Cmd2ArgumentParser.update_prog() across various scenarios."""
+
+    # Set up a complex parser hierarchy
+    old_root = 'old_app'
+    parser = Cmd2ArgumentParser(prog=old_root)
+
+    # Positionals before subcommand
+    parser.add_argument('pos1')
+
+    # Mutually exclusive group with positionals
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('posA', nargs='?')
+    group.add_argument('posB', nargs='?')
+
+    # Subparsers with aliases and no help text
+    subparsers = parser.add_subparsers(dest='cmd')
+
+    # Subcommand with aliases
+    sub1 = subparsers.add_parser('sub1', aliases=['s1', 'alias1'], help='help for sub1')
+
+    # Subcommand with no help text
+    sub2 = subparsers.add_parser('sub2')
+
+    # Nested subparser
+    sub2.add_argument('inner_pos')
+    sub2_subparsers = sub2.add_subparsers(dest='sub2_cmd')
+    leaf = sub2_subparsers.add_parser('leaf', help='leaf help')
+
+    # Verify initial progs look correct
+    assert parser.prog == 'old_app'
+    assert sub1.prog == 'old_app pos1 (posA | posB) sub1'
+    assert sub2.prog == 'old_app pos1 (posA | posB) sub2'
+    assert leaf.prog == 'old_app pos1 (posA | posB) sub2 inner_pos leaf'
+
+    # Perform update
+    new_root = 'new_app'
+    parser.update_prog(new_root)
+
+    # Verify new progs look correct
+    assert parser.prog == 'new_app'
+    assert sub1.prog == 'new_app pos1 (posA | posB) sub1'
+    assert sub2.prog == 'new_app pos1 (posA | posB) sub2'
+    assert leaf.prog == 'new_app pos1 (posA | posB) sub2 inner_pos leaf'
+
+    # Verify that action._prog_prefix was updated by adding a new subparser
+    sub3 = subparsers.add_parser('sub3')
+    assert sub3.prog == 'new_app pos1 (posA | posB) sub3'
+
+    # Verify aliases still point to the correct parser
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            assert action.choices['s1'].prog == sub1.prog
+            assert action.choices['alias1'].prog == sub1.prog
