@@ -2,29 +2,29 @@
 This is meant to be run within a cmd2 session using run_pyscript.
 """
 
-import argparse
 import os
 import sys
 from typing import TextIO
 
+from cmd2 import Cmd2ArgumentParser
+
 ASTERISKS = "********************************************************"
 
 
-def get_sub_commands(parser: argparse.ArgumentParser) -> list[str]:
-    """Get a list of subcommands for an ArgumentParser."""
+def get_sub_commands(parser: Cmd2ArgumentParser) -> list[str]:
+    """Get a list of subcommands for a Cmd2ArgumentParser."""
+    try:
+        subparsers_action = parser._get_subparsers_action()
+    except ValueError:
+        # No subcommands
+        return []
+
     sub_cmds = []
+    for subcmd, subcmd_parser in subparsers_action.choices.items():
+        sub_cmds.append(subcmd)
 
-    # Check if this is parser has subcommands
-    if parser is not None and parser._subparsers is not None:
-        # Find the _SubParsersAction for the subcommands of this parser
-        for action in parser._subparsers._actions:
-            if isinstance(action, argparse._SubParsersAction):
-                for sub_cmd, sub_cmd_parser in action.choices.items():
-                    sub_cmds.append(sub_cmd)
-
-                    # Look for nested subcommands
-                    sub_cmds.extend(f'{sub_cmd} {nested_sub_cmd}' for nested_sub_cmd in get_sub_commands(sub_cmd_parser))
-                break
+        # Look for nested subcommands
+        sub_cmds.extend(f'{subcmd} {nested_subcmd}' for nested_subcmd in get_sub_commands(subcmd_parser))
 
     sub_cmds.sort()
     return sub_cmds
@@ -60,8 +60,7 @@ def main() -> None:
     # Open the output file
     outfile_path = os.path.expanduser(sys.argv[1])
     try:
-        with open(outfile_path, 'w') as outfile:
-            pass
+        outfile = open(outfile_path, 'w')  # noqa: SIM115
     except OSError as e:
         print(f"Error opening {outfile_path} because: {e}")
         return
@@ -83,11 +82,18 @@ def main() -> None:
         is_command = item in all_commands
         add_help_to_file(item, outfile, is_command)
 
-        if is_command:
-            # Add any subcommands
-            for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
-                full_cmd = f'{item} {subcmd}'
-                add_help_to_file(full_cmd, outfile, is_command)
+        if not is_command:
+            continue
+
+        cmd_func = self.cmd_func(item)
+        parser = self._command_parsers.get(cmd_func)
+        if parser is None:
+            continue
+
+        # Add any subcommands
+        for subcmd in get_sub_commands(parser):
+            full_cmd = f'{item} {subcmd}'
+            add_help_to_file(full_cmd, outfile, is_command)
 
     outfile.close()
     print(f"Output written to {outfile_path}")
