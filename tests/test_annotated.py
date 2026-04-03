@@ -11,14 +11,15 @@ import enum
 from pathlib import Path
 from typing import (
     Annotated,
-    ClassVar,
     Literal,
 )
 
 import pytest
 
 import cmd2
-from cmd2 import Cmd2ArgumentParser
+from cmd2 import (
+    CompletionItem,
+)
 from cmd2.annotated import (
     Argument,
     Option,
@@ -58,6 +59,25 @@ class _PlainColor(enum.Enum):
     BLUE = "blue"
 
 
+_COLOR_CHOICE_ITEMS = [
+    CompletionItem(_Color.red, text="red", display_meta="red"),
+    CompletionItem(_Color.green, text="green", display_meta="green"),
+    CompletionItem(_Color.blue, text="blue", display_meta="blue"),
+]
+
+_INT_COLOR_CHOICE_ITEMS = [
+    CompletionItem(_IntColor.red, text="1", display_meta="red"),
+    CompletionItem(_IntColor.green, text="2", display_meta="green"),
+    CompletionItem(_IntColor.blue, text="3", display_meta="blue"),
+]
+
+_PLAIN_COLOR_CHOICE_ITEMS = [
+    CompletionItem(_PlainColor.RED, text="red", display_meta="RED"),
+    CompletionItem(_PlainColor.GREEN, text="green", display_meta="GREEN"),
+    CompletionItem(_PlainColor.BLUE, text="blue", display_meta="BLUE"),
+]
+
+
 # ---------------------------------------------------------------------------
 # Single-parameter test functions for build_parser_from_function.
 # Each has exactly one param (besides self) so dest is auto-derived.
@@ -91,6 +111,7 @@ def _func_annotated_option(self, color: Annotated[str, Option("--color", "-c", h
 def _func_annotated_metavar(self, name: Annotated[str, Argument(metavar="NAME")]) -> None: ...
 def _func_annotated_nargs(self, names: Annotated[str, Argument(nargs=2)]) -> None: ...
 def _func_annotated_action(self, verbose: Annotated[bool, Option("--verbose", "-v", action="count")] = False) -> None: ...
+def _func_annotated_action_non_bool(self, count: Annotated[int, Option("--count", action="count")] = 0) -> None: ...
 def _func_annotated_required(self, name: Annotated[str, Option("--name", required=True)]) -> None: ...
 def _func_annotated_required_auto_flag(self, name: Annotated[str, Option(required=True)]) -> None: ...
 def _func_annotated_choices(self, food: Annotated[str, Argument(choices=["a", "b"])]) -> None: ...
@@ -179,12 +200,12 @@ class TestBuildParser:
             pytest.param(_func_path, {"option_strings": [], "type": Path}, id="path_positional"),
             pytest.param(_func_decimal, {"option_strings": [], "type": decimal.Decimal}, id="decimal_positional"),
             pytest.param(_func_bool_positional, {"option_strings": [], "type": _parse_bool}, id="bool_positional"),
-            pytest.param(_func_enum, {"option_strings": [], "choices": ["red", "green", "blue"]}, id="enum_positional"),
+            pytest.param(_func_enum, {"option_strings": [], "choices": _COLOR_CHOICE_ITEMS}, id="enum_positional"),
             pytest.param(_func_literal, {"option_strings": [], "choices": ["fast", "slow"]}, id="literal_positional"),
             pytest.param(_func_literal_int, {"option_strings": [], "choices": [1, 2, 3]}, id="literal_int_positional"),
-            pytest.param(_func_int_enum, {"option_strings": [], "choices": [1, 2, 3]}, id="int_enum_positional"),
+            pytest.param(_func_int_enum, {"option_strings": [], "choices": _INT_COLOR_CHOICE_ITEMS}, id="int_enum_positional"),
             pytest.param(
-                _func_plain_enum, {"option_strings": [], "choices": ["red", "green", "blue"]}, id="plain_enum_positional"
+                _func_plain_enum, {"option_strings": [], "choices": _PLAIN_COLOR_CHOICE_ITEMS}, id="plain_enum_positional"
             ),
             pytest.param(_func_list_int, {"option_strings": [], "nargs": "+", "type": int}, id="list_int"),
             pytest.param(_func_set_int, {"option_strings": [], "nargs": "+", "type": int}, id="set_int"),
@@ -207,7 +228,7 @@ class TestBuildParser:
             pytest.param(_func_path_option, {"option_strings": ["--file"], "type": Path}, id="path_option"),
             pytest.param(
                 _func_enum_option,
-                {"option_strings": ["--color"], "choices": ["red", "green", "blue"], "default": _Color.blue},
+                {"option_strings": ["--color"], "choices": _COLOR_CHOICE_ITEMS, "default": _Color.blue},
                 id="enum_option",
             ),
             pytest.param(
@@ -255,6 +276,11 @@ class TestBuildParser:
     def test_annotated_action_count(self) -> None:
         action = _get_param_action(_func_annotated_action)
         assert isinstance(action, argparse._CountAction)
+
+    def test_annotated_action_count_non_bool(self) -> None:
+        action = _get_param_action(_func_annotated_action_non_bool)
+        assert isinstance(action, argparse._CountAction)
+        assert action.default == 0
 
     @pytest.mark.parametrize(
         "func",
@@ -736,10 +762,6 @@ class TestMetadata:
     def test_to_kwargs(self, meta_kwargs, expected) -> None:
         assert Argument(**meta_kwargs).to_kwargs() == expected
 
-    def test_nargs_not_in_to_kwargs(self) -> None:
-        """nargs is set directly by the resolver, not via to_kwargs."""
-        assert 'nargs' not in Argument(nargs=2).to_kwargs()
-
     def test_to_kwargs_preserves_empty_string(self) -> None:
         """Explicit empty string help_text should not be silently dropped."""
         assert Argument(help_text="").to_kwargs() == {'help': ''}
@@ -748,12 +770,13 @@ class TestMetadata:
         """Explicit empty choices list should not be silently dropped."""
         assert Argument(choices=[]).to_kwargs() == {'choices': []}
 
-    def test_option_excludes_names_action_required(self) -> None:
+    def test_option_to_kwargs_includes_action_and_required(self) -> None:
         opt = Option("--color", "-c", action="count", required=True, help_text="Pick")
         kwargs = opt.to_kwargs()
         assert 'names' not in kwargs
-        assert 'action' not in kwargs
-        assert 'required' not in kwargs
+        assert 'flags' not in kwargs
+        assert kwargs['action'] == 'count'
+        assert kwargs['required'] is True
         assert kwargs['help'] == "Pick"
 
     def test_choices_provider_in_kwargs(self) -> None:
@@ -899,6 +922,10 @@ class _RuntimeAnnotatedApp(cmd2.Cmd):
     def do_sport(self, sport: _Sport) -> None:
         self.poutput(f"Playing: {sport.value}")
 
+    @cmd2.with_annotated
+    def do_toggle(self, enabled: bool) -> None:
+        self.poutput(f"Enabled: {enabled}")
+
     @cmd2.with_annotated(preserve_quotes=True)
     def do_raw(self, text: str) -> None:
         self.poutput(f"raw: {text}")
@@ -952,116 +979,16 @@ class TestRuntimeCompletion:
     def test_positional_enum_completion(self, runtime_app) -> None:
         assert _complete_cmd(runtime_app, "sport foot", "foot") == ["football"]
 
-
-class _InferColor(str, enum.Enum):
-    red = "red"
-    green = "green"
-
-
-class _RuntimeTypeInferenceApp(cmd2.Cmd):
-    enum_override_choices: ClassVar[list[str]] = ["amber", "violet"]
-    path_override_values: ClassVar[list[str]] = ["override-a", "override-b"]
-
-    path_parser = Cmd2ArgumentParser()
-    path_parser.add_argument("filepath", type=Path)
-
-    @cmd2.with_argparser(path_parser)
-    def do_read(self, args: argparse.Namespace) -> None:
-        self.poutput(str(args.filepath))
-
-    native_path_parser = Cmd2ArgumentParser()
-    native_path_parser.add_argument("filepath", type=type(Path(".")))
-
-    @cmd2.with_argparser(native_path_parser)
-    def do_read_native(self, args: argparse.Namespace) -> None:
-        self.poutput(str(args.filepath))
-
-    enum_parser = Cmd2ArgumentParser()
-    enum_parser.add_argument("color", type=_InferColor)
-
-    @cmd2.with_argparser(enum_parser)
-    def do_pick_color(self, args: argparse.Namespace) -> None:
-        self.poutput(args.color.value)
-
-    def enum_choices_override(self) -> list[cmd2.CompletionItem]:
-        return [cmd2.CompletionItem(value) for value in self.enum_override_choices]
-
-    enum_override_parser = Cmd2ArgumentParser()
-    enum_override_parser.add_argument("color", type=_InferColor, choices_provider=enum_choices_override)
-
-    @cmd2.with_argparser(enum_override_parser)
-    def do_pick_color_override(self, args: argparse.Namespace) -> None:
-        self.poutput(str(args.color))
-
-    enum_converter_parser = Cmd2ArgumentParser()
-    enum_converter_parser.add_argument("color", type=_make_enum_type(_InferColor))
-
-    @cmd2.with_argparser(enum_converter_parser)
-    def do_pick_color_converter(self, args: argparse.Namespace) -> None:
-        self.poutput(args.color.value)
-
-    bool_parser = Cmd2ArgumentParser()
-    bool_parser.add_argument("enabled", type=_parse_bool)
-
-    @cmd2.with_argparser(bool_parser)
-    def do_set_flag(self, args: argparse.Namespace) -> None:
-        self.poutput(str(args.enabled))
-
-    def path_completer_override(self, text: str, line: str, begidx: int, endidx: int) -> cmd2.Completions:
-        return self.basic_complete(text, line, begidx, endidx, self.path_override_values)
-
-    path_override_parser = Cmd2ArgumentParser()
-    path_override_parser.add_argument("filepath", type=Path, completer=path_completer_override)
-
-    @cmd2.with_argparser(path_override_parser)
-    def do_read_override(self, args: argparse.Namespace) -> None:
-        self.poutput(str(args.filepath))
-
-
-@pytest.fixture
-def infer_app() -> _RuntimeTypeInferenceApp:
-    app = _RuntimeTypeInferenceApp()
-    app.stdout = cmd2.utils.StdSim(app.stdout)
-    return app
-
-
-class TestTypeInferenceCompletion:
-    """Runtime completion tests for type-inferred argparse argument types."""
-
-    def test_enum_type_inference(self, infer_app) -> None:
-        assert sorted(_complete_cmd(infer_app, "pick_color ", "")) == ["green", "red"]
-
-    def test_enum_converter_type_inference(self, infer_app) -> None:
-        assert sorted(_complete_cmd(infer_app, "pick_color_converter ", "")) == ["green", "red"]
-
-    def test_path_type_inference(self, infer_app, tmp_path) -> None:
-        test_file = tmp_path / "testfile.txt"
+    def test_path_completion_from_annotation(self, runtime_app, tmp_path) -> None:
+        test_file = tmp_path / "annotated-path.txt"
         test_file.touch()
         text = str(tmp_path) + "/"
-        result_strings = _complete_cmd(infer_app, f"read {text}", text)
-        assert len(result_strings) > 0
-        assert any("testfile.txt" in item for item in result_strings)
+        result_strings = _complete_cmd(runtime_app, f"open {text}", text)
+        assert any("annotated-path.txt" in item for item in result_strings)
 
-    def test_native_path_subclass_type_inference(self, infer_app, tmp_path) -> None:
-        test_file = tmp_path / "native-test.txt"
-        test_file.touch()
-        text = str(tmp_path) + "/"
-        result_strings = _complete_cmd(infer_app, f"read_native {text}", text)
-        assert len(result_strings) > 0
-        assert any("native-test.txt" in item for item in result_strings)
-
-    def test_bool_parser_type_inference(self, infer_app) -> None:
-        assert sorted(_complete_cmd(infer_app, "set_flag ", "")) == sorted(
-            ["true", "false", "yes", "no", "on", "off", "1", "0"]
-        )
-
-    def test_choices_provider_takes_precedence_over_enum_inference(self, infer_app) -> None:
-        assert sorted(_complete_cmd(infer_app, "pick_color_override ", "")) == sorted(
-            _RuntimeTypeInferenceApp.enum_override_choices
-        )
-
-    def test_completer_takes_precedence_over_path_inference(self, infer_app) -> None:
-        assert sorted(_complete_cmd(infer_app, "read_override ", "")) == sorted(_RuntimeTypeInferenceApp.path_override_values)
+    def test_positional_bool_completion_from_annotation(self, runtime_app) -> None:
+        completions = set(_complete_cmd(runtime_app, "toggle ", ""))
+        assert {"true", "false", "yes", "no", "on", "off", "1", "0"}.issubset(completions)
 
 
 class _AnnotatedCommandSet(cmd2.CommandSet):

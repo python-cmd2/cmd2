@@ -153,6 +153,11 @@ Both `Argument` and `Option` accept the same cmd2-specific fields as `add_argume
 `Option` additionally accepts `action`, `required`, and positional `*names` for custom flag strings
 (e.g. `Option("--color", "-c")`).
 
+When an `Option(action=...)` uses an argparse action that does not accept `type=` (`count`,
+`store_true`, `store_false`, `store_const`, `help`, `version`), `@with_annotated` removes any
+inferred `type` converter before calling `add_argument()`. This matches argparse behavior and avoids
+parser-construction errors such as combining `action='count'` with `type=int`.
+
 ### Comparison with @with_argparser
 
 The two decorators are interchangeable. Here is the same command written both ways:
@@ -254,29 +259,16 @@ def do_raw(self, text: str):
 
 ## Automatic Completion from Types
 
-When an argparse argument has `type=Path` or `type=MyEnum` set -- whether manually via
-`add_argument()` or automatically via `@with_annotated` -- the completer will provide tab completion
-without needing an explicit `choices_provider` or `completer`.
+With `@with_annotated`, arguments annotated as `Path` or `Enum` get automatic completion without
+needing an explicit `choices_provider` or `completer`.
 
-This applies to both `@with_argparser` and `@with_annotated`:
+Specifically:
 
-- `type=pathlib.Path` (or any `Path` subclass) triggers filesystem path completion
-- `type=MyEnum` (any `enum.Enum` subclass) triggers completion from enum member values
+- `Path` (or any `Path` subclass) triggers filesystem path completion
+- `MyEnum` (any `enum.Enum` subclass) triggers completion from enum member values
 
-For example, with `@with_argparser`:
-
-```py
-parser = Cmd2ArgumentParser()
-parser.add_argument('filepath', type=Path)
-parser.add_argument('color', type=MyColorEnum)
-
-@with_argparser(parser)
-def do_load(self, args):
-    ...  # filepath gets path completion, color gets enum completion
-```
-
-With `@with_annotated`, the same inference happens because `Path` and `Enum` annotations generate
-the equivalent parser configuration automatically.
+With `@with_argparser`, provide `choices`, `choices_provider`, or `completer` explicitly when you
+want completion behavior.
 
 ## Argument Parsing
 

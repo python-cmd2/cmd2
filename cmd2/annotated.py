@@ -56,6 +56,13 @@ How annotations map to argparse settings:
 - ``tuple[T, T]`` (fixed arity, same type) -- ``nargs=N`` with ``type=T``
 - ``T | None`` -- unwrapped to ``T``, treated as optional
 
+Action compatibility note:
+
+- Some argparse actions (``count``, ``store_true``, ``store_false``,
+  ``store_const``, ``help``, ``version``) do not accept ``type=``.
+  If one of these actions is selected via ``Option(action=...)``, any
+  inferred ``type`` converter is removed before calling ``add_argument()``.
+
 Unsupported patterns (raise ``TypeError``):
 
 - ``str | int`` -- union of multiple non-None types is ambiguous
@@ -66,9 +73,8 @@ When combining ``Annotated`` with ``Optional``, the union must go
 *inside*: ``Annotated[T | None, meta]``.  Writing
 ``Annotated[T, meta] | None`` is ambiguous and raises ``TypeError``.
 
-Note: ``Path`` and ``Enum`` types also get automatic tab completion via
-``ArgparseCompleter`` type inference. This works for both ``@with_annotated``
-and ``@with_argparser`` -- see the ``argparse_completer`` module.
+Note: ``Path`` and ``Enum`` annotations with ``@with_annotated`` also get
+automatic tab completion via generated parser metadata.
 If a user-supplied ``choices_provider`` or ``completer`` is set on an argument,
 it always takes priority over the type-inferred completion.
 """
@@ -78,9 +84,9 @@ import decimal
 import enum
 import functools
 import inspect
-import pathlib
 import types
 from collections.abc import Callable, Container
+from pathlib import Path
 from typing import (
     Annotated,
     Any,
@@ -92,6 +98,8 @@ from typing import (
     get_type_hints,
 )
 
+from .cmd2 import Cmd
+from .completion import CompletionItem
 from .types import ChoicesProviderUnbound, CmdOrSet, CompleterUnbound
 
 # ---------------------------------------------------------------------------
@@ -110,6 +118,7 @@ class _BaseArgMetadata:
         'completer': 'completer',
         'table_columns': 'table_columns',
         'suppress_tab_hint': 'suppress_tab_hint',
+        'nargs': 'nargs',
     }
 
     def __init__(
@@ -177,6 +186,15 @@ class Option(_BaseArgMetadata):
         self.action = action
         self.required = required
 
+    def to_kwargs(self) -> dict[str, Any]:
+        """Return non-None fields as an argparse kwargs dict."""
+        kwargs = super().to_kwargs()
+        if self.action:
+            kwargs['action'] = self.action
+        if self.required:
+            kwargs['required'] = self.required
+        return kwargs
+
 
 #: Metadata extracted from ``Annotated[T, meta]``, or ``None`` for plain types.
 ArgMetadata = Argument | Option | None
@@ -196,8 +214,12 @@ _ArgumentTarget = argparse.ArgumentParser | argparse._MutuallyExclusiveGroup | a
 # before passing to argparse.
 # ---------------------------------------------------------------------------
 
-_BOOL_TRUE_VALUES = {'1', 'true', 't', 'yes', 'y', 'on'}
-_BOOL_FALSE_VALUES = {'0', 'false', 'f', 'no', 'n', 'off'}
+_BOOL_TRUE_VALUES = ['1', 'true', 't', 'yes', 'y', 'on']
+_BOOL_FALSE_VALUES = ['0', 'false', 'f', 'no', 'n', 'off']
+_ACTIONS_DISALLOW_TYPE = frozenset({'count', 'store_true', 'store_false', 'store_const', 'help', 'version'})
+_BOOL_CHOICES = [CompletionItem(True, text=text) for text in _BOOL_TRUE_VALUES] + [
+    CompletionItem(False, text=text) for text in _BOOL_FALSE_VALUES
+]
 
 
 def _parse_bool(value: str) -> bool:
@@ -296,6 +318,11 @@ def _make_simple_resolver(converter: Callable[..., Any] | type) -> Callable[...,
     return _resolve
 
 
+def _resolve_path(_tp: Any, _args: tuple[Any, ...], **_ctx: Any) -> dict[str, Any]:
+    """Resolve Path and add completer."""
+    return {'type': Path, 'completer': Cmd.path_complete}
+
+
 def _resolve_bool(
     _tp: Any,
     _args: tuple[Any, ...],
@@ -310,7 +337,7 @@ def _resolve_bool(
         if action_str:
             return {'action': action_str, 'is_bool_flag': True}
         return {'action': argparse.BooleanOptionalAction, 'is_bool_flag': True}
-    return {'type': _parse_bool}
+    return {'type': _parse_bool, 'choices': list(_BOOL_CHOICES)}
 
 
 def _resolve_element(tp: Any) -> tuple[Any, dict[str, Any]]:
@@ -392,7 +419,10 @@ def _resolve_literal(_tp: Any, args: tuple[Any, ...], **_ctx: Any) -> dict[str, 
 
 def _resolve_enum(tp: Any, _args: tuple[Any, ...], **_ctx: Any) -> dict[str, Any]:
     """Resolve Enum subclasses into converter + choices."""
-    return {'type': _make_enum_type(tp), 'choices': [m.value for m in tp]}
+    return {
+        'type': _make_enum_type(tp),
+        'choices': [CompletionItem(m, text=str(m.value), display_meta=m.name) for m in tp],
+    }
 
 
 # -- Registry -----------------------------------------------------------------
@@ -401,7 +431,7 @@ _TYPE_RESOLVERS: dict[Any, Callable[..., dict[str, Any]]] = {
     # Subclass-matchable entries first -- iteration order matters for the
     # issubclass fallback. enum.Enum must precede int (IntEnum <: int).
     enum.Enum: _resolve_enum,
-    pathlib.Path: _make_simple_resolver(pathlib.Path),
+    Path: _resolve_path,
     # Exact-match entries (order among these doesn't affect subclass lookup).
     bool: _resolve_bool,
     int: _make_simple_resolver(int),
@@ -456,13 +486,16 @@ def _resolve_type(
 
     if metadata:
         kwargs.update(metadata.to_kwargs())
-        if metadata.nargs is not None:
-            kwargs['nargs'] = metadata.nargs
 
-    if (has_default and default is not None) or has_default:
+    # Some argparse actions (e.g. count/store_true) do not accept a type converter.
+    action_name = kwargs.get('action')
+    if isinstance(action_name, str) and action_name in _ACTIONS_DISALLOW_TYPE:
+        kwargs.pop('type', None)
+
+    if has_default:
         kwargs['default'] = default
 
-    if (is_kw_only and not has_default) or (isinstance(metadata, Option) and metadata.required):
+    if is_kw_only and not has_default:
         kwargs['required'] = True
 
     if kwargs.get('choices_provider') or kwargs.get('completer'):
