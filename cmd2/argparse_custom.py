@@ -271,8 +271,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import ArgparseCompleter
 
 
-def generate_range_error(range_min: int, range_max: float) -> str:
-    """Generate an error message when the the number of arguments provided is not within the expected range."""
+def build_range_error(range_min: int, range_max: float) -> str:
+    """Build an error message when the the number of arguments provided is not within the expected range."""
     err_msg = "expected "
 
     if range_max == constants.INFINITY:
@@ -577,7 +577,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
             super()._set_color(color)
 
     def _build_nargs_range_str(self, nargs_range: tuple[int, int | float]) -> str:
-        """Generate nargs range string for help text."""
+        """Build nargs range string for help text."""
         if nargs_range[1] == constants.INFINITY:
             # {min+}
             range_str = f"{{{nargs_range[0]}+}}"
@@ -761,15 +761,16 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             conflict_handler=conflict_handler,
             add_help=add_help,
             allow_abbrev=allow_abbrev,
-            exit_on_error=exit_on_error,  # added in Python 3.9
+            exit_on_error=exit_on_error,
             **kwargs,  # added in Python 3.14
         )
 
-        # Recast to assist type checkers since these can be Rich renderables in a Cmd2HelpFormatter.
+        self.ap_completer_type = ap_completer_type
+
+        # To assist type checkers, recast these to reflect our usage of rich-argparse.
+        self.formatter_class: type[Cmd2HelpFormatter]
         self.description: RenderableType | None  # type: ignore[assignment]
         self.epilog: RenderableType | None  # type: ignore[assignment]
-
-        self.ap_completer_type = ap_completer_type
 
     def add_subparsers(  # type: ignore[override]
         self,
@@ -802,6 +803,48 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                     return action
         raise ValueError(f"Command '{self.prog}' does not support subcommands")
 
+    def _build_subparsers_prog_prefix(self, positionals: list[argparse.Action]) -> str:
+        """Build the 'prog' prefix for a subparsers action.
+
+        This prefix is stored in the _SubParsersAction's '_prog_prefix' attribute and
+        is used to construct the 'prog' attribute for its child parsers. It
+        typically consists of the current parser's 'prog' name followed by any
+        positional arguments that appear before the _SubParsersAction.
+
+        This method uses a temporary Cmd2ArgumentParser to leverage argparse's
+        functionality for generating these strings. Subclasses can override this if
+        they need to change how subcommand 'prog' values are constructed (e.g., if
+        add_subparsers() was overridden with custom naming logic or if a different
+        formatting style is desired).
+
+        Note: This method explicitly instantiates Cmd2ArgumentParser rather than
+        type(self) to avoid potential side effects or mandatory constructor
+        arguments in user-defined subclasses.
+
+        :param positionals: positional arguments which appear before the _SubParsersAction
+        :return: the built 'prog' prefix
+        """
+        # 1. usage=None: In Python < 3.14, this prevents the default usage
+        #    string from affecting subparser prog strings. This was fixed in 3.14:
+        #    https://github.com/python/cpython/commit/0cb4d6c6549d2299f7518f083bbe7d10314ecd66
+        #
+        # 2. add_help=False: No need for a help action since we already know which
+        #    actions are needed to build the prefix and have passed them in
+        #    via the 'positionals' argument.
+        temp_parser = Cmd2ArgumentParser(
+            prog=self.prog,
+            usage=None,
+            formatter_class=self.formatter_class,
+            add_help=False,
+        )
+
+        # Inject the current positional state so add_subparsers() has the right context
+        temp_parser._actions = positionals
+        temp_parser._mutually_exclusive_groups = self._mutually_exclusive_groups
+
+        # Call add_subparsers() to build _prog_prefix
+        return temp_parser.add_subparsers()._prog_prefix
+
     def update_prog(self, prog: str) -> None:
         """Recursively update the prog attribute of this parser and all of its subparsers.
 
@@ -810,46 +853,38 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # Set the prog value for this parser
         self.prog = prog
 
-        if self._subparsers is None:
+        try:
+            subparsers_action = self._get_subparsers_action()
+        except ValueError:
             # This parser has no subcommands
             return
 
-        # argparse includes positional arguments that appear before the subcommand in its
-        # subparser prog strings. Track these while iterating through actions.
+        # Get all positional arguments which appear before the subcommand.
         positionals: list[argparse.Action] = []
-
-        # Set the prog value for the parser's subcommands
         for action in self._actions:
-            if isinstance(action, argparse._SubParsersAction):
-                # Use a formatter to generate _prog_prefix exactly as argparse does in
-                # add_subparsers(). This ensures that any subcommands added later via
-                # add_parser() will have the correct prog value.
-                formatter = self._get_formatter()
-                formatter.add_usage(self.usage, positionals, self._mutually_exclusive_groups, '')
-                action._prog_prefix = formatter.format_help().strip()
-
-                # Note: action.choices contains both subcommand names and aliases.
-                # To ensure subcommands (and not aliases) are used in 'prog':
-                # 1. We can't use action._choices_actions because it excludes subcommands without help text.
-                # 2. Since dictionaries are ordered and argparse inserts the primary name before aliases,
-                #    we assume the first time we encounter a parser, the key is the true subcommand name.
-                updated_parsers: set[Cmd2ArgumentParser] = set()
-
-                # Set the prog value for each subcommand's parser
-                for subcmd_name, subcmd_parser in action.choices.items():
-                    if subcmd_parser in updated_parsers:
-                        continue
-
-                    subcmd_prog = f"{action._prog_prefix} {subcmd_name}"
-                    subcmd_parser.update_prog(subcmd_prog)  # type: ignore[attr-defined]
-                    updated_parsers.add(subcmd_parser)
-
-                # We can break since argparse only allows 1 group of subcommands per level
+            if action is subparsers_action:
                 break
 
             # Save positional argument
             if not action.option_strings:
                 positionals.append(action)
+
+        # Update _prog_prefix. This ensures that any subcommands added later via
+        # add_parser() will have the correct prog value.
+        subparsers_action._prog_prefix = self._build_subparsers_prog_prefix(positionals)
+
+        # subparsers_action.choices includes aliases. Since primary names are inserted first,
+        # we skip already updated parsers to ensure primary names are used in 'prog'.
+        updated_parsers: set[Cmd2ArgumentParser] = set()
+
+        # Set the prog value for each subcommand's parser
+        for subcmd_name, subcmd_parser in subparsers_action.choices.items():
+            if subcmd_parser in updated_parsers:
+                continue
+
+            subcmd_prog = f"{subparsers_action._prog_prefix} {subcmd_name}"
+            subcmd_parser.update_prog(subcmd_prog)
+            updated_parsers.add(subcmd_parser)
 
     def _find_parser(self, subcommand_path: Iterable[str]) -> 'Cmd2ArgumentParser':
         """Find a parser in the hierarchy based on a sequence of subcommand names.
@@ -987,7 +1022,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         if match is None:
             nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
             if nargs_range is not None:
-                raise ArgumentError(action, generate_range_error(nargs_range[0], nargs_range[1]))
+                raise ArgumentError(action, build_range_error(nargs_range[0], nargs_range[1]))
 
         return super()._match_argument(action, arg_strings_pattern)
 

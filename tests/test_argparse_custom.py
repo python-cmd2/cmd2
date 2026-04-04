@@ -14,7 +14,7 @@ from cmd2 import (
 )
 from cmd2.argparse_custom import (
     Cmd2HelpFormatter,
-    generate_range_error,
+    build_range_error,
     register_argparse_argument_parameter,
 )
 from cmd2.rich_utils import Cmd2RichArgparseConsole
@@ -258,26 +258,26 @@ def test_apcustom_print_message(capsys) -> None:
     assert test_message in err
 
 
-def test_generate_range_error() -> None:
+def test_build_range_error() -> None:
     # max is INFINITY
-    err_msg = generate_range_error(1, constants.INFINITY)
+    err_msg = build_range_error(1, constants.INFINITY)
     assert err_msg == "expected at least 1 argument"
 
-    err_msg = generate_range_error(2, constants.INFINITY)
+    err_msg = build_range_error(2, constants.INFINITY)
     assert err_msg == "expected at least 2 arguments"
 
     # min and max are equal
-    err_msg = generate_range_error(1, 1)
+    err_msg = build_range_error(1, 1)
     assert err_msg == "expected 1 argument"
 
-    err_msg = generate_range_error(2, 2)
+    err_msg = build_range_error(2, 2)
     assert err_msg == "expected 2 arguments"
 
     # min and max are not equal
-    err_msg = generate_range_error(0, 1)
+    err_msg = build_range_error(0, 1)
     assert err_msg == "expected 0 to 1 argument"
 
-    err_msg = generate_range_error(0, 2)
+    err_msg = build_range_error(0, 2)
     assert err_msg == "expected 0 to 2 arguments"
 
 
