@@ -1034,7 +1034,14 @@ class Cmd:
                 # No subcommands to check
                 return
 
+            # Prevent redundant traversal of parser aliases
+            checked_parsers: set[Cmd2ArgumentParser] = set()
+
             for subparser in subparsers_action.choices.values():
+                if subparser in checked_parsers:
+                    continue
+                checked_parsers.add(subparser)
+
                 attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_COMMANDSET_ID, None)
                 if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
                     raise CommandSetRegistrationError(

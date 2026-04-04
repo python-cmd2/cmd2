@@ -19,8 +19,15 @@ def get_sub_commands(parser: Cmd2ArgumentParser) -> list[str]:
         # No subcommands
         return []
 
+    # Prevent redundant traversal of parser aliases
+    checked_parsers: set[Cmd2ArgumentParser] = set()
+
     sub_cmds = []
     for subcmd, subcmd_parser in subparsers_action.choices.items():
+        if subcmd_parser in checked_parsers:
+            continue
+        checked_parsers.add(subcmd_parser)
+
         sub_cmds.append(subcmd)
 
         # Look for nested subcommands
