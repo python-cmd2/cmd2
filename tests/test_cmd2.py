@@ -4421,7 +4421,7 @@ def test_auto_suggest_default():
     assert isinstance(app.main_session.auto_suggest, AutoSuggestFromHistory)
 
 
-def test_attach_subcommand() -> None:
+def test_subcommand_attachment() -> None:
     import argparse
 
     class SubcmdApp(cmd2.Cmd):
@@ -4470,7 +4470,7 @@ def test_attach_subcommand() -> None:
     assert "child" not in root_subparsers_action._name_parser_map
 
 
-def test_attach_subcommand_errors() -> None:
+def test_subcommand_attachment_errors() -> None:
     class SubcmdErrorApp(cmd2.Cmd):
         def __init__(self) -> None:
             super().__init__()

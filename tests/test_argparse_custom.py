@@ -411,11 +411,23 @@ def test_subcommand_attachment() -> None:
     assert "child" not in root_subparsers._name_parser_map
     assert "child_alias" not in root_subparsers._name_parser_map
 
-    ###############################
-    # Test error handling
-    ###############################
 
-    # Verify ValueError when path is invalid (find_parser fails)
+def test_subcommand_attachment_errors() -> None:
+    root_parser = Cmd2ArgumentParser(prog="root", description="root command")
+    child_parser = Cmd2ArgumentParser(prog="child", description="child command")
+
+    # Verify ValueError when subcommands are not supported
+    with pytest.raises(ValueError, match="Command 'root' does not support subcommands"):
+        root_parser.attach_subcommand([], "anything", child_parser)
+    with pytest.raises(ValueError, match="Command 'root' does not support subcommands"):
+        root_parser.detach_subcommand([], "anything")
+
+    # Allow subcommands for the next tests
+    root_parser.add_subparsers()
+
+    # Verify ValueError when path is invalid (_find_parser() fails)
+    with pytest.raises(ValueError, match="Subcommand 'nonexistent' not found"):
+        root_parser.attach_subcommand(["nonexistent"], "anything", child_parser)
     with pytest.raises(ValueError, match="Subcommand 'nonexistent' not found"):
         root_parser.detach_subcommand(["nonexistent"], "anything")
 
