@@ -14,10 +14,10 @@ from cmd2 import (
 )
 from cmd2.argparse_custom import (
     Cmd2HelpFormatter,
-    Cmd2RichArgparseConsole,
-    generate_range_error,
+    build_range_error,
     register_argparse_argument_parameter,
 )
+from cmd2.rich_utils import Cmd2RichArgparseConsole
 
 from .conftest import run_cmd
 
@@ -258,26 +258,26 @@ def test_apcustom_print_message(capsys) -> None:
     assert test_message in err
 
 
-def test_generate_range_error() -> None:
+def test_build_range_error() -> None:
     # max is INFINITY
-    err_msg = generate_range_error(1, constants.INFINITY)
+    err_msg = build_range_error(1, constants.INFINITY)
     assert err_msg == "expected at least 1 argument"
 
-    err_msg = generate_range_error(2, constants.INFINITY)
+    err_msg = build_range_error(2, constants.INFINITY)
     assert err_msg == "expected at least 2 arguments"
 
     # min and max are equal
-    err_msg = generate_range_error(1, 1)
+    err_msg = build_range_error(1, 1)
     assert err_msg == "expected 1 argument"
 
-    err_msg = generate_range_error(2, 2)
+    err_msg = build_range_error(2, 2)
     assert err_msg == "expected 2 arguments"
 
     # min and max are not equal
-    err_msg = generate_range_error(0, 1)
+    err_msg = build_range_error(0, 1)
     assert err_msg == "expected 0 to 1 argument"
 
-    err_msg = generate_range_error(0, 2)
+    err_msg = build_range_error(0, 2)
     assert err_msg == "expected 0 to 2 arguments"
 
 
@@ -342,46 +342,98 @@ def test_register_argparse_argument_parameter() -> None:
         delattr(argparse.Action, attr_name)
 
 
-def test_parser_attachment() -> None:
-    # Attach a parser as a subcommand
-    root_parser = Cmd2ArgumentParser(description="root command")
+def test_subcommand_attachment() -> None:
+    """Test Cmd2ArgumentParser convenience methods for attaching and detaching subcommands."""
+
+    ###############################
+    # Set up parsers
+    ###############################
+    root_parser = Cmd2ArgumentParser(prog="root", description="root command")
     root_subparsers = root_parser.add_subparsers()
 
-    child_parser = Cmd2ArgumentParser(description="child command")
-    root_subparsers.attach_parser(  # type: ignore[attr-defined]
+    child_parser = Cmd2ArgumentParser(prog="child", description="child command")
+    child_subparsers = child_parser.add_subparsers()  # Must have subparsers to host grandchild
+
+    grandchild_parser = Cmd2ArgumentParser(prog="grandchild", description="grandchild command")
+
+    ###############################
+    # Attach subcommands
+    ###############################
+
+    # Attach child to root
+    root_parser.attach_subcommand(
+        [],
         "child",
         child_parser,
         help="a child command",
         aliases=["child_alias"],
     )
 
-    # Verify the same parser instance was used
+    # Attach grandchild to child
+    root_parser.attach_subcommand(
+        ["child"],
+        "grandchild",
+        grandchild_parser,
+        help="a grandchild command",
+    )
+
+    ###############################
+    # Verify hierarchy navigation
+    ###############################
+
+    assert root_parser._find_parser(["child", "grandchild"]) is grandchild_parser
+    assert root_parser._find_parser(["child"]) is child_parser
+    assert root_parser._find_parser([]) is root_parser
+
+    ###############################
+    # Verify attachments
+    ###############################
+
+    # Verify child attachment and aliases
     assert root_subparsers._name_parser_map["child"] is child_parser
     assert root_subparsers._name_parser_map["child_alias"] is child_parser
 
-    # Verify an action with the help text exists
-    child_action = None
-    for action in root_subparsers._choices_actions:
-        if action.dest == "child":
-            child_action = action
-            break
-    assert child_action is not None
-    assert child_action.help == "a child command"
+    # Verify grandchild attachment
+    assert child_subparsers._name_parser_map["grandchild"] is grandchild_parser
 
-    # Detatch the subcommand
-    detached_parser = root_subparsers.detach_parser("child")  # type: ignore[attr-defined]
+    ###############################
+    # Detach subcommands
+    ###############################
 
-    # Verify subcommand and its aliases were removed
-    assert detached_parser is child_parser
+    # Detach grandchild from child
+    detached_grandchild = root_parser.detach_subcommand(["child"], "grandchild")
+    assert detached_grandchild is grandchild_parser
+    assert "grandchild" not in child_subparsers._name_parser_map
+
+    # Detach child from root
+    detached_child = root_parser.detach_subcommand([], "child")
+    assert detached_child is child_parser
     assert "child" not in root_subparsers._name_parser_map
     assert "child_alias" not in root_subparsers._name_parser_map
 
-    # Verify the help text action was removed
-    choices_actions = [action.dest for action in root_subparsers._choices_actions]
-    assert "child" not in choices_actions
 
-    # Verify it returns None when subcommand does not exist
-    assert root_subparsers.detach_parser("fake") is None  # type: ignore[attr-defined]
+def test_subcommand_attachment_errors() -> None:
+    root_parser = Cmd2ArgumentParser(prog="root", description="root command")
+    child_parser = Cmd2ArgumentParser(prog="child", description="child command")
+
+    # Verify ValueError when subcommands are not supported
+    with pytest.raises(ValueError, match="Command 'root' does not support subcommands"):
+        root_parser.attach_subcommand([], "anything", child_parser)
+    with pytest.raises(ValueError, match="Command 'root' does not support subcommands"):
+        root_parser.detach_subcommand([], "anything")
+
+    # Allow subcommands for the next tests
+    root_parser.add_subparsers()
+
+    # Verify ValueError when path is invalid (_find_parser() fails)
+    with pytest.raises(ValueError, match="Subcommand 'nonexistent' not found"):
+        root_parser.attach_subcommand(["nonexistent"], "anything", child_parser)
+    with pytest.raises(ValueError, match="Subcommand 'nonexistent' not found"):
+        root_parser.detach_subcommand(["nonexistent"], "anything")
+
+    # Verify ValueError when path is valid but subcommand name is wrong
+    with pytest.raises(ValueError, match="Subcommand 'fake' not found in 'root'"):
+        root_parser.detach_subcommand([], "fake")
 
 
 def test_completion_items_as_choices(capsys) -> None:
@@ -476,3 +528,67 @@ def test_formatter_set_color(mocker) -> None:
     assert mock_set_color.call_count == 2
     mock_set_color.assert_any_call(True, file=sys.stdout)
     mock_set_color.assert_any_call(True)
+
+
+def test_update_prog() -> None:
+    """Test Cmd2ArgumentParser.update_prog() across various scenarios."""
+
+    # Set up a complex parser hierarchy
+    old_app = 'old_app'
+    root = Cmd2ArgumentParser(prog=old_app)
+
+    # Positionals before subcommand
+    root.add_argument('pos1')
+
+    # Mutually exclusive group with positionals
+    group = root.add_mutually_exclusive_group(required=True)
+    group.add_argument('posA', nargs='?')
+    group.add_argument('posB', nargs='?')
+
+    # Subparsers with aliases and no help text
+    root_subparsers = root.add_subparsers(dest='cmd')
+
+    # Subcommand with aliases
+    sub1 = root_subparsers.add_parser('sub1', aliases=['s1', 'alias1'], help='help for sub1')
+
+    # Subcommand with no help text
+    sub2 = root_subparsers.add_parser('sub2')
+
+    # Nested subparser
+    sub2.add_argument('inner_pos')
+    sub2_subparsers = sub2.add_subparsers(dest='sub2_cmd')
+    leaf = sub2_subparsers.add_parser('leaf', help='leaf help')
+
+    # Save initial prog values
+    orig_root_prog = root.prog
+    orig_sub1_prog = sub1.prog
+    orig_sub2_prog = sub2.prog
+    orig_leaf_prog = leaf.prog
+
+    # Perform update
+    new_app = 'new_app'
+    root.update_prog(new_app)
+
+    # Verify updated prog values
+    assert root.prog.startswith(new_app)
+    assert root.prog == orig_root_prog.replace(old_app, new_app, 1)
+
+    assert sub1.prog.startswith(new_app)
+    assert sub1.prog == orig_sub1_prog.replace(old_app, new_app, 1)
+
+    assert sub2.prog.startswith(new_app)
+    assert sub2.prog == orig_sub2_prog.replace(old_app, new_app, 1)
+
+    assert leaf.prog.startswith(new_app)
+    assert leaf.prog == orig_leaf_prog.replace(old_app, new_app, 1)
+
+    # Verify that action._prog_prefix was updated by adding a new subparser
+    sub3 = root_subparsers.add_parser('sub3')
+    assert sub3.prog.startswith(new_app)
+    assert sub3.prog == root_subparsers._prog_prefix + ' sub3'
+
+    # Verify aliases still point to the correct parser
+    for action in root._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            assert action.choices['s1'].prog == sub1.prog
+            assert action.choices['alias1'].prog == sub1.prog

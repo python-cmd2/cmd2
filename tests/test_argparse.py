@@ -248,7 +248,7 @@ def test_preservelist(argparse_app) -> None:
 def test_invalid_parser_builder(argparse_app):
     parser_builder = None
     with pytest.raises(TypeError, match="Invalid type for parser_builder"):
-        argparse_app._build_parser(argparse_app, parser_builder, "fake_prog")
+        argparse_app._build_parser(argparse_app, parser_builder)
 
 
 def test_invalid_parser_return_type(argparse_app):
@@ -256,7 +256,7 @@ def test_invalid_parser_return_type(argparse_app):
         return argparse.ArgumentParser()
 
     with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
-        argparse_app._build_parser(argparse_app, bad_builder, "fake_prog")
+        argparse_app._build_parser(argparse_app, bad_builder)
 
 
 def test_invalid_parser_return_type_staticmethod(argparse_app):
@@ -266,7 +266,7 @@ def test_invalid_parser_return_type_staticmethod(argparse_app):
     sm = staticmethod(bad_builder)
 
     with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
-        argparse_app._build_parser(argparse_app, sm, "fake_prog")
+        argparse_app._build_parser(argparse_app, sm)
 
 
 def test_invalid_parser_return_type_classmethod(argparse_app):
@@ -276,7 +276,7 @@ def test_invalid_parser_return_type_classmethod(argparse_app):
     cm = classmethod(bad_builder)
 
     with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
-        argparse_app._build_parser(argparse_app, cm, "fake_prog")
+        argparse_app._build_parser(argparse_app, cm)
 
 
 def test_invalid_parser_return_type_nameless_object(argparse_app):
@@ -294,7 +294,7 @@ def test_invalid_parser_return_type_nameless_object(argparse_app):
     expected_msg = f"The parser returned by '{builder}' must be a Cmd2ArgumentParser"
 
     with pytest.raises(TypeError, match=expected_msg):
-        argparse_app._build_parser(argparse_app, builder, "fake_prog")
+        argparse_app._build_parser(argparse_app, builder)
 
 
 def _build_has_subcmd_parser() -> cmd2.Cmd2ArgumentParser:
@@ -335,9 +335,7 @@ class SubcommandApp(cmd2.Cmd):
     parser_bar.set_defaults(func=base_bar)
 
     # create the parser for the "helpless" subcommand
-    # This subcommand has aliases and no help text. It exists to prevent changes to set_parser_prog() which
-    # use an approach which relies on action._choices_actions list. See comment in that function for more
-    # details.
+    # This subcommand has aliases and no help text.
     parser_helpless = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
     parser_helpless.add_argument('z', help='string')
     parser_helpless.set_defaults(func=base_helpless)
@@ -443,19 +441,6 @@ def test_subcommand_help(subcommand_app) -> None:
 def test_subcommand_invalid_help(subcommand_app) -> None:
     out, _err = run_cmd(subcommand_app, 'help base baz')
     assert out[0].startswith('Usage: base')
-
-
-def test_add_another_subcommand(subcommand_app) -> None:
-    """This tests makes sure set_parser_prog() sets _prog_prefix on every _SubParsersAction so that all future calls
-    to add_parser() write the correct prog value to the parser being added.
-    """
-    base_parser = subcommand_app._command_parsers.get(subcommand_app.do_base)
-    for sub_action in base_parser._actions:
-        if isinstance(sub_action, argparse._SubParsersAction):
-            new_parser = sub_action.add_parser('new_sub', help='stuff')
-            break
-
-    assert new_parser.prog == "base new_sub"
 
 
 def test_subcmd_decorator(subcommand_app) -> None:
