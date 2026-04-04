@@ -98,7 +98,8 @@ class CommandSetA(CommandSetBase):
     # main -> sub
     subcmd_parser = cmd2.Cmd2ArgumentParser(description="Sub Command")
 
-    @cmd2.as_subcommand_to('main', 'sub', subcmd_parser, help="sub command")
+    # Include aliases to cover the alias check in cmd2's check_parser_uninstallable().
+    @cmd2.as_subcommand_to('main', 'sub', subcmd_parser, help="sub command", aliases="sub_alias")
     def subcmd_func(self, args: argparse.Namespace) -> None:
         self._cmd.poutput("Subcommand Ran")
 
