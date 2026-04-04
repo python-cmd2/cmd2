@@ -275,7 +275,8 @@ class _CommandParsers:
             parent = self._cmd.find_commandset_for_command(command) or self._cmd
             parser = self._cmd._build_parser(parent, parser_builder)
 
-            # Ensure the parser and any nested subparsers have the correct 'prog' value.
+            # To ensure accurate usage strings, recursively update 'prog' values
+            # within the parser to match the command name.
             parser.update_prog(command)
 
             # If the description has not been set, then use the method docstring if one exists

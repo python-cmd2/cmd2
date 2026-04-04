@@ -888,7 +888,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # Use add_parser to register the subcommand name and any aliases
         new_parser = subparsers_action.add_parser(subcommand, **add_parser_kwargs)
 
-        # Ensure the parser and any nested subparsers have the correct 'prog' value.
+        # To ensure accurate usage strings, recursively update 'prog' values
+        # within the injected parser to match its new location in the command hierarchy.
         parser.update_prog(new_parser.prog)
 
         # Replace the parser created by add_parser() with our pre-configured one
