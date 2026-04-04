@@ -273,7 +273,10 @@ class _CommandParsers:
                 return None
 
             parent = self._cmd.find_commandset_for_command(command) or self._cmd
-            parser = self._cmd._build_parser(parent, parser_builder, command)
+            parser = self._cmd._build_parser(parent, parser_builder)
+
+            # Ensure the parser and any nested subparsers have the correct 'prog' value.
+            parser.update_prog(command)
 
             # If the description has not been set, then use the method docstring if one exists
             if parser.description is None and command_method.__doc__:
@@ -888,7 +891,6 @@ class Cmd:
         self,
         parent: CmdOrSet,
         parser_builder: Cmd2ArgumentParser | Callable[[], Cmd2ArgumentParser] | StaticArgParseBuilder | ClassArgParseBuilder,
-        prog: str,
     ) -> Cmd2ArgumentParser:
         """Build argument parser for a command/subcommand.
 
@@ -897,7 +899,6 @@ class Cmd:
                        parent's class to it.
         :param parser_builder: an existing Cmd2ArgumentParser instance or a factory
                                (callable, staticmethod, or classmethod) that returns one.
-        :param prog: prog value to set in new parser
         :return: new parser
         :raises TypeError: if parser_builder is an invalid type or if the factory fails
                            to return a Cmd2ArgumentParser
@@ -919,8 +920,6 @@ class Cmd:
             if not isinstance(parser, Cmd2ArgumentParser):
                 builder_name = getattr(parser_builder, "__name__", str(parser_builder))  # type: ignore[unreachable]
                 raise TypeError(f"The parser returned by '{builder_name}' must be a Cmd2ArgumentParser or a subclass of it")
-
-        parser.update_prog(prog)
 
         return parser
 
@@ -1047,7 +1046,7 @@ class Cmd:
                     raise CommandSetRegistrationError(
                         f"Cannot uninstall CommandSet: '{subparser.prog}' is required by another CommandSet"
                     )
-                check_parser_uninstallable(cast(Cmd2ArgumentParser, subparser))
+                check_parser_uninstallable(subparser)
 
         methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
             cmdset,
@@ -1096,7 +1095,7 @@ class Cmd:
                 raise CommandSetRegistrationError(f'Subcommand {subcommand_name} is not valid: {errmsg}')
 
             # Create the subcommand parser and configure it
-            subcmd_parser = self._build_parser(cmdset, subcmd_parser_builder, f'{full_command_name} {subcommand_name}')
+            subcmd_parser = self._build_parser(cmdset, subcmd_parser_builder)
             if subcmd_parser.description is None and method.__doc__:
                 subcmd_parser.description = strip_doc_annotations(method.__doc__)
 

@@ -248,7 +248,7 @@ def test_preservelist(argparse_app) -> None:
 def test_invalid_parser_builder(argparse_app):
     parser_builder = None
     with pytest.raises(TypeError, match="Invalid type for parser_builder"):
-        argparse_app._build_parser(argparse_app, parser_builder, "fake_prog")
+        argparse_app._build_parser(argparse_app, parser_builder)
 
 
 def test_invalid_parser_return_type(argparse_app):
@@ -256,7 +256,7 @@ def test_invalid_parser_return_type(argparse_app):
         return argparse.ArgumentParser()
 
     with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
-        argparse_app._build_parser(argparse_app, bad_builder, "fake_prog")
+        argparse_app._build_parser(argparse_app, bad_builder)
 
 
 def test_invalid_parser_return_type_staticmethod(argparse_app):
@@ -266,7 +266,7 @@ def test_invalid_parser_return_type_staticmethod(argparse_app):
     sm = staticmethod(bad_builder)
 
     with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
-        argparse_app._build_parser(argparse_app, sm, "fake_prog")
+        argparse_app._build_parser(argparse_app, sm)
 
 
 def test_invalid_parser_return_type_classmethod(argparse_app):
@@ -276,7 +276,7 @@ def test_invalid_parser_return_type_classmethod(argparse_app):
     cm = classmethod(bad_builder)
 
     with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
-        argparse_app._build_parser(argparse_app, cm, "fake_prog")
+        argparse_app._build_parser(argparse_app, cm)
 
 
 def test_invalid_parser_return_type_nameless_object(argparse_app):
@@ -294,7 +294,7 @@ def test_invalid_parser_return_type_nameless_object(argparse_app):
     expected_msg = f"The parser returned by '{builder}' must be a Cmd2ArgumentParser"
 
     with pytest.raises(TypeError, match=expected_msg):
-        argparse_app._build_parser(argparse_app, builder, "fake_prog")
+        argparse_app._build_parser(argparse_app, builder)
 
 
 def _build_has_subcmd_parser() -> cmd2.Cmd2ArgumentParser:

@@ -222,19 +222,6 @@ available on the resulting ``Action`` object to access its underlying attribute:
 
 - ``action.get_<name>()``
 - ``action.set_<name>(value)``
-
-**Subcommand Manipulation**
-
-cmd2 has patched ``argparse._SubParsersAction`` with new functions to better facilitate the
-addition and removal of subcommand parsers.
-
-``argparse._SubParsersAction.attach_parser`` - new function to attach
-an existing ArgumentParser to a subparsers action. See ``_SubParsersAction_attach_parser``
-for more details.
-
-``argparse._SubParsersAction.detach_parser`` - new function to detach a
-parser from a subparsers action. See ``_SubParsersAction_detach_parser`` for
-more details.
 """
 
 import argparse
@@ -523,87 +510,6 @@ setattr(argparse._ActionsContainer, 'add_argument', _ActionsContainer_add_argume
 
 
 ############################################################################################################
-# Patch argparse._SubParsersAction to add attach_parser function
-############################################################################################################
-
-
-def _SubParsersAction_attach_parser(  # noqa: N802
-    self: argparse._SubParsersAction,  # type: ignore[type-arg]
-    name: str,
-    subcmd_parser: argparse.ArgumentParser,
-    **add_parser_kwargs: Any,
-) -> None:
-    """Attach an existing parser to a subparsers action.
-
-    This is useful when a parser is pre-configured (e.g. by cmd2's subcommand decorator)
-    and needs to be attached to a parent parser.
-
-    This function is added by cmd2 as a method called ``attach_parser()``
-    to ``argparse._SubParsersAction`` class.
-
-    To call: ``action.attach_parser(name, subcmd_parser, **add_parser_kwargs)``
-
-    :param self: instance of the _SubParsersAction being edited
-    :param name: name of the subcommand to add
-    :param subcmd_parser: the parser for this new subcommand
-    :param add_parser_kwargs: registration-specific kwargs for add_parser()
-                              (e.g. help, aliases, deprecated [Python 3.13+])
-    """
-    # Use add_parser to register the subcommand name and any aliases
-    self.add_parser(name, **add_parser_kwargs)
-
-    # Replace the parser created by add_parser() with our pre-configured one
-    self._name_parser_map[name] = subcmd_parser
-
-    # Remap any aliases to our pre-configured parser
-    for alias in add_parser_kwargs.get("aliases", ()):
-        self._name_parser_map[alias] = subcmd_parser
-
-
-setattr(argparse._SubParsersAction, 'attach_parser', _SubParsersAction_attach_parser)
-
-############################################################################################################
-# Patch argparse._SubParsersAction to add detach_parser function
-############################################################################################################
-
-
-def _SubParsersAction_detach_parser(  # noqa: N802
-    self: argparse._SubParsersAction,  # type: ignore[type-arg]
-    name: str,
-) -> argparse.ArgumentParser | None:
-    """Detach a parser from a subparsers action and return it.
-
-    This function is added by cmd2 as a method called ``detach_parser()`` to ``argparse._SubParsersAction`` class.
-
-    To call: ``action.detach_parser(name)``
-
-    :param self: instance of the _SubParsersAction being edited
-    :param name: name of the subcommand for the parser to detach
-    :return: the parser which was detached or None if the subcommand doesn't exist
-    """
-    subparser = self._name_parser_map.get(name)
-
-    if subparser is not None:
-        # Remove this subcommand and all its aliases from the base command
-        to_remove = []
-        for cur_name, cur_parser in self._name_parser_map.items():
-            if cur_parser is subparser:
-                to_remove.append(cur_name)
-        for cur_name in to_remove:
-            del self._name_parser_map[cur_name]
-
-        # Remove this subcommand from its base command's help text
-        for choice_action in self._choices_actions:
-            if choice_action.dest == name:
-                self._choices_actions.remove(choice_action)
-                break
-
-    return subparser
-
-
-setattr(argparse._SubParsersAction, 'detach_parser', _SubParsersAction_detach_parser)
-
-############################################################################################################
 # Unless otherwise noted, everything below this point are copied from Python's
 # argparse implementation with minor tweaks to adjust output.
 # Changes are noted if it's buried in a block of copied code. Otherwise the
@@ -865,20 +771,26 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.ap_completer_type = ap_completer_type
 
-    def add_subparsers(self, **kwargs: Any) -> argparse._SubParsersAction:  # type: ignore[type-arg]
-        """Add a subcommand parser.
+    def add_subparsers(  # type: ignore[override]
+        self,
+        **kwargs: Any,
+    ) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
+        """Override for improved defaults and type safety.
 
-        Set a default title if one was not given.
+        This override does two things.
+        1. Sets a default title if one was not given.
+        2. Narrows the return type to provide better IDE autocompletion
+           and type safety for `Cmd2ArgumentParser` instances.
 
         :param kwargs: additional keyword arguments
-        :return: argparse Subparser Action
+        :return: _SubParsersAction which stores Cmd2ArgumentParsers
         """
         if 'title' not in kwargs:
             kwargs['title'] = 'subcommands'
 
         return super().add_subparsers(**kwargs)
 
-    def _get_subparsers_action(self) -> argparse._SubParsersAction:  # type: ignore[type-arg]
+    def _get_subparsers_action(self) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
         """Get the _SubParsersAction for this parser if it exists.
 
         :return: the _SubParsersAction for this parser
@@ -951,7 +863,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             subparsers_action = parser._get_subparsers_action()
             if name not in subparsers_action.choices:
                 raise ValueError(f"Subcommand '{name}' not found in '{parser.prog}'")
-            parser = cast(Cmd2ArgumentParser, subparsers_action.choices[name])
+            parser = subparsers_action.choices[name]
         return parser
 
     def attach_subcommand(
@@ -972,7 +884,19 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         """
         target_parser = self._find_parser(subcommand_path)
         subparsers_action = target_parser._get_subparsers_action()
-        subparsers_action.attach_parser(subcommand, parser, **add_parser_kwargs)  # type: ignore[attr-defined]
+
+        # Use add_parser to register the subcommand name and any aliases
+        new_parser = subparsers_action.add_parser(subcommand, **add_parser_kwargs)
+
+        # Ensure the parser and any nested subparsers have the correct 'prog' value.
+        parser.update_prog(new_parser.prog)
+
+        # Replace the parser created by add_parser() with our pre-configured one
+        subparsers_action._name_parser_map[subcommand] = parser
+
+        # Remap any aliases to our pre-configured parser
+        for alias in add_parser_kwargs.get("aliases", ()):
+            subparsers_action._name_parser_map[alias] = parser
 
     def detach_subcommand(self, subcommand_path: Iterable[str], subcommand: str) -> 'Cmd2ArgumentParser':
         """Detach a subcommand from a command at the specified path.
@@ -985,10 +909,26 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         """
         target_parser = self._find_parser(subcommand_path)
         subparsers_action = target_parser._get_subparsers_action()
-        detached = subparsers_action.detach_parser(subcommand)  # type: ignore[attr-defined]
-        if detached is None:
+
+        subparser = subparsers_action._name_parser_map.get(subcommand)
+        if subparser is None:
             raise ValueError(f"Subcommand '{subcommand}' not found in '{target_parser.prog}'")
-        return cast(Cmd2ArgumentParser, detached)
+
+        # Remove this subcommand and all its aliases from the base command
+        to_remove = []
+        for cur_name, cur_parser in subparsers_action._name_parser_map.items():
+            if cur_parser is subparser:
+                to_remove.append(cur_name)
+        for cur_name in to_remove:
+            del subparsers_action._name_parser_map[cur_name]
+
+        # Remove this subcommand from its base command's help text
+        for choice_action in subparsers_action._choices_actions:
+            if choice_action.dest == subcommand:
+                subparsers_action._choices_actions.remove(choice_action)
+                break
+
+        return subparser
 
     def error(self, message: str) -> NoReturn:
         """Override that applies custom formatting to the error message."""
