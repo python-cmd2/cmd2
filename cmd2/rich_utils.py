@@ -160,8 +160,8 @@ class Cmd2BaseConsole(Console):
                 "Passing 'theme' is not allowed. Its behavior is controlled by the global APP_THEME and set_theme()."
             )
 
-        # Store the configuration used to create this console for caching purposes.
-        self._config_key = self._generate_config_key(file=file, **kwargs)
+        # Store the configuration key used by cmd2 to cache this console.
+        self._config_key = self._build_config_key(file=file, **kwargs)
 
         force_terminal: bool | None = None
         force_interactive: bool | None = None
@@ -169,7 +169,7 @@ class Cmd2BaseConsole(Console):
         if ALLOW_STYLE == AllowStyle.ALWAYS:
             force_terminal = True
 
-            # Turn off interactive mode if dest is not actually a terminal which supports it
+            # Turn off interactive mode if dest is not a terminal which supports it.
             tmp_console = Console(file=file)
             force_interactive = tmp_console.is_interactive
         elif ALLOW_STYLE == AllowStyle.NEVER:
@@ -184,12 +184,12 @@ class Cmd2BaseConsole(Console):
         )
 
     @staticmethod
-    def _generate_config_key(
+    def _build_config_key(
         *,
         file: IO[str] | None,
         **kwargs: Any,
     ) -> tuple[Any, ...]:
-        """Generate a key representing the settings used to initialize a console.
+        """Build a key representing the settings used to initialize a console.
 
         This key includes the file identity, global settings (ALLOW_STYLE, APP_THEME),
         and any other settings passed in via kwargs.
@@ -216,7 +216,7 @@ class Cmd2BaseConsole(Console):
         :param kwargs: other console settings being checked
         :return: True if the settings match this console's configuration
         """
-        return self._config_key == self._generate_config_key(file=file, **kwargs)
+        return self._config_key == self._build_config_key(file=file, **kwargs)
 
     def on_broken_pipe(self) -> None:
         """Override which raises BrokenPipeError instead of SystemExit."""
