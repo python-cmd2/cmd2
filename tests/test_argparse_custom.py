@@ -288,16 +288,6 @@ def test_apcustom_metavar_tuple() -> None:
     assert '[--aflag foo bar]' in parser.format_help()
 
 
-def test_cmd2_attribute_wrapper() -> None:
-    initial_val = 5
-    wrapper = cmd2.Cmd2AttributeWrapper(initial_val)
-    assert wrapper.get() == initial_val
-
-    new_val = 22
-    wrapper.set(new_val)
-    assert wrapper.get() == new_val
-
-
 def test_register_argparse_argument_parameter() -> None:
     # Test successful registration
     param_name = "test_unique_param"
@@ -333,7 +323,7 @@ def test_register_argparse_argument_parameter() -> None:
 
     # Test collision with internal attribute
     try:
-        attr_name = constants.cmd2_attr_name("internal_collision")
+        attr_name = constants.cmd2_private_attr_name("internal_collision")
         setattr(argparse.Action, attr_name, None)
         expected_err = f"The internal attribute '{attr_name}' already exists on argparse.Action"
         with pytest.raises(KeyError, match=expected_err):

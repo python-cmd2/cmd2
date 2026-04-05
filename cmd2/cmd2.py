@@ -3729,8 +3729,7 @@ class Cmd:
     def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases."""
         # Call handler for whatever subcommand was selected
-        handler = args.cmd2_handler.get()
-        handler(args)
+        args.cmd2_subcmd_handler(args)
 
     # alias -> create
     @classmethod
@@ -3946,8 +3945,7 @@ class Cmd:
     def do_macro(self, args: argparse.Namespace) -> None:
         """Manage macros."""
         # Call handler for whatever subcommand was selected
-        handler = args.cmd2_handler.get()
-        handler(args)
+        args.cmd2_subcmd_handler(args)
 
     # macro -> create
     @classmethod

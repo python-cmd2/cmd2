@@ -92,8 +92,7 @@ class CommandSetA(CommandSetBase):
     @cmd2.with_argparser(main_parser)
     def do_main(self, args: argparse.Namespace) -> None:
         # Call handler for whatever subcommand was selected
-        handler = args.cmd2_handler.get()
-        handler(args)
+        args.cmd2_subcmd_handler(args)
 
     # main -> sub
     subcmd_parser = cmd2.Cmd2ArgumentParser(description="Sub Command")
@@ -398,7 +397,7 @@ class LoadableBase(cmd2.CommandSet):
     @cmd2.with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace) -> None:
         """Cut something"""
-        handler = ns.cmd2_handler.get()
+        handler = ns.cmd2_subcmd_handler
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
@@ -418,7 +417,7 @@ class LoadableBase(cmd2.CommandSet):
             self._cmd.poutput('Need to cut before stirring')
             return
 
-        handler = ns.cmd2_handler.get()
+        handler = ns.cmd2_subcmd_handler
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
@@ -433,7 +432,7 @@ class LoadableBase(cmd2.CommandSet):
 
     @cmd2.as_subcommand_to('stir', 'pasta', stir_pasta_parser)
     def stir_pasta(self, ns: argparse.Namespace) -> None:
-        handler = ns.cmd2_handler.get()
+        handler = ns.cmd2_subcmd_handler
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
@@ -448,7 +447,7 @@ class LoadableBadBase(cmd2.CommandSet):
 
     def do_cut(self, ns: argparse.Namespace) -> None:
         """Cut something"""
-        handler = ns.cmd2_handler.get()
+        handler = ns.cmd2_subcmd_handler
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)
@@ -715,7 +714,7 @@ class AppWithSubCommands(cmd2.Cmd):
     @cmd2.with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace) -> None:
         """Cut something"""
-        handler = ns.cmd2_handler.get()
+        handler = ns.cmd2_subcmd_handler
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)

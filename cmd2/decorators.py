@@ -13,10 +13,7 @@ from typing import (
 )
 
 from . import constants
-from .argparse_custom import (
-    Cmd2ArgumentParser,
-    Cmd2AttributeWrapper,
-)
+from .argparse_custom import Cmd2ArgumentParser
 from .command_definition import (
     CommandFunc,
     CommandSet,
@@ -233,9 +230,9 @@ def with_argparser(
     :param preserve_quotes: if ``True``, then arguments passed to argparse maintain their quotes
     :param with_unknown_args: if true, then capture unknown args
     :return: function that gets passed argparse-parsed args in a ``Namespace``
-             A [cmd2.argparse_custom.Cmd2AttributeWrapper][] called ``cmd2_statement`` is included
-             in the ``Namespace`` to provide access to the [cmd2.Statement][] object that was created when
-             parsing the command line. This can be useful if the command function needs to know the command line.
+             A ``cmd2_statement`` attribute is included in the ``Namespace`` to provide access to the
+             [cmd2.Statement][] object that was created when parsing the command line. This can be useful
+             if the command function needs to know the command line.
 
     Example:
     ```py
@@ -320,20 +317,15 @@ def with_argparser(
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
 
-            # Add cmd2-specific metadata to the Namespace
+            # Add cmd2-specific attributes to the Namespace
             parsed_namespace = parsing_results[0]
 
-            # Add wrapped statement to Namespace as cmd2_statement
-            parsed_namespace.cmd2_statement = Cmd2AttributeWrapper(statement)
+            # Include the Statement object created from the command line
+            setattr(parsed_namespace, constants.NS_ATTR_STATEMENT, statement)
 
-            # Add wrapped subcmd handler (which can be None) to Namespace as cmd2_handler
-            handler = getattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER, None)
-            parsed_namespace.cmd2_handler = Cmd2AttributeWrapper(handler)
-
-            # Remove the subcmd handler attribute from the Namespace
-            # since cmd2_handler is how a developer accesses it.
-            if hasattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER):
-                delattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER)
+            # Ensure NS_ATTR_SUBCMD_HANDLER is always present.
+            if not hasattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER):
+                setattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER, None)
 
             func_arg_list = _arg_swap(args, statement_arg, *parsing_results)
             return func(*func_arg_list, **kwargs)
