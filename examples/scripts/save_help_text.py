@@ -39,6 +39,7 @@ def get_sub_commands(parser: Cmd2ArgumentParser) -> list[str]:
 
 def add_help_to_file(item: str, outfile: TextIO, is_command: bool) -> None:
     """Write help text for commands and topics to the output file
+
     :param item: what is having its help text saved
     :param outfile: file being written to
     :param is_command: tells if the item is a command and not just a help topic.
@@ -64,47 +65,43 @@ def main() -> None:
         print(f"Usage: {os.path.basename(sys.argv[0])} <output_file>")
         return
 
-    # Open the output file
     outfile_path = os.path.expanduser(sys.argv[1])
     try:
-        outfile = open(outfile_path, 'w')  # noqa: SIM115
-    except OSError as e:
-        print(f"Error opening {outfile_path} because: {e}")
-        return
+        with open(outfile_path, 'w') as outfile:
+            # Write the help summary
+            header = f'{ASTERISKS}\nSUMMARY\n{ASTERISKS}\n'
+            outfile.write(header)
 
-    # Write the help summary
-    header = f'{ASTERISKS}\nSUMMARY\n{ASTERISKS}\n'
-    outfile.write(header)
+            result = app('help -v')
+            outfile.write(result.stdout)
 
-    result = app('help -v')
-    outfile.write(result.stdout)
+            # Get a list of all commands and help topics and then filter out duplicates
+            all_commands = set(self.get_all_commands())
+            all_topics = set(self.get_help_topics())
+            to_save = sorted(all_commands | all_topics)
 
-    # Get a list of all commands and help topics and then filter out duplicates
-    all_commands = set(self.get_all_commands())
-    all_topics = set(self.get_help_topics())
-    to_save = list(all_commands | all_topics)
-    to_save.sort()
+            for item in to_save:
+                is_command = item in all_commands
+                add_help_to_file(item, outfile, is_command)
 
-    for item in to_save:
-        is_command = item in all_commands
-        add_help_to_file(item, outfile, is_command)
+                if not is_command:
+                    continue
 
-        if not is_command:
-            continue
+                cmd_func = self.cmd_func(item)
+                parser = self._command_parsers.get(cmd_func)
+                if parser is None:
+                    continue
 
-        cmd_func = self.cmd_func(item)
-        parser = self._command_parsers.get(cmd_func)
-        if parser is None:
-            continue
+                # Add any subcommands
+                for subcmd in get_sub_commands(parser):
+                    full_cmd = f'{item} {subcmd}'
+                    add_help_to_file(full_cmd, outfile, is_command)
 
-        # Add any subcommands
-        for subcmd in get_sub_commands(parser):
-            full_cmd = f'{item} {subcmd}'
-            add_help_to_file(full_cmd, outfile, is_command)
+            print(f"Output written to {outfile_path}")
 
-    outfile.close()
-    print(f"Output written to {outfile_path}")
+    except OSError as ex:
+        print(f"Error handling {outfile_path} because: {ex}")
 
 
-# Run main function
-main()
+if __name__ == "__main__":
+    main()
