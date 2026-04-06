@@ -79,31 +79,31 @@ def test_heritable_categories() -> None:
     app = ExampleApp()
 
     base_cs = MyBaseCommandSet(0)
-    assert getattr(base_cs, cmd2.constants.CLASS_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
+    assert getattr(base_cs, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
 
     child1 = ChildInheritsParentCategories(1)
-    assert getattr(child1, cmd2.constants.CLASS_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
+    assert getattr(child1, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
     app.register_command_set(child1)
     assert getattr(app.cmd_func('hello').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY, None) == 'Default Category'
     app.unregister_command_set(child1)
 
     child_nonheritable = ChildOverridesParentCategoriesNonHeritable(2)
-    assert getattr(child_nonheritable, cmd2.constants.CLASS_ATTR_DEFAULT_HELP_CATEGORY, None) != 'Non-Heritable Category'
+    assert getattr(child_nonheritable, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) != 'Non-Heritable Category'
     app.register_command_set(child_nonheritable)
     assert getattr(app.cmd_func('goodbye').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY, None) == 'Non-Heritable Category'
     app.unregister_command_set(child_nonheritable)
 
     grandchild1 = GrandchildInheritsGrandparentCategory(3)
-    assert getattr(grandchild1, cmd2.constants.CLASS_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
+    assert getattr(grandchild1, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
     app.register_command_set(grandchild1)
     assert getattr(app.cmd_func('aloha').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY, None) == 'Default Category'
     app.unregister_command_set(grandchild1)
 
     child_overrides = ChildOverridesParentCategories(4)
-    assert getattr(child_overrides, cmd2.constants.CLASS_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Heritable Category'
+    assert getattr(child_overrides, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Heritable Category'
     app.register_command_set(child_overrides)
     assert getattr(app.cmd_func('bonjour').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY, None) == 'Heritable Category'
     app.unregister_command_set(child_overrides)
 
     grandchild2 = GrandchildInheritsHeritable(5)
-    assert getattr(grandchild2, cmd2.constants.CLASS_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Heritable Category'
+    assert getattr(grandchild2, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Heritable Category'

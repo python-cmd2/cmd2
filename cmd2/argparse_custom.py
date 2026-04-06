@@ -329,7 +329,7 @@ def register_argparse_argument_parameter(
         raise KeyError(f"Accessor methods for '{param_name}' already exist on argparse.Action")
 
     # Check for the prefixed internal attribute name collision (e.g., _cmd2_<param_name>)
-    attr_name = constants.cmd2_attr_name(param_name)
+    attr_name = constants.cmd2_private_attr_name(param_name)
     if hasattr(argparse.Action, attr_name):
         raise KeyError(f"The internal attribute '{attr_name}' already exists on argparse.Action")
 
@@ -1045,26 +1045,6 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             args = {'value': value, 'choices': ', '.join(map(repr, choices))}
             msg = _('invalid choice: %(value)r (choose from %(choices)s)')
             raise ArgumentError(action, msg % args)
-
-
-class Cmd2AttributeWrapper:
-    """Wraps a cmd2-specific attribute added to an argparse Namespace.
-
-    This makes it easy to know which attributes in a Namespace are
-    arguments from a parser and which were added by cmd2.
-    """
-
-    def __init__(self, attribute: Any) -> None:
-        """Initialize Cmd2AttributeWrapper instances."""
-        self.__attribute = attribute
-
-    def get(self) -> Any:
-        """Get the value of the attribute."""
-        return self.__attribute
-
-    def set(self, new_val: Any) -> None:
-        """Set the value of the attribute."""
-        self.__attribute = new_val
 
 
 # Parser type used by cmd2's built-in commands.

@@ -69,6 +69,9 @@ prompt is displayed.
     - Removed `set_ap_completer_type()` and `get_ap_completer_type()` since `ap_completer_type` is
       now a public member of `Cmd2ArgumentParser`.
     - Moved `set_parser_prog()` to `Cmd2ArgumentParser.update_prog()`.
+    - Renamed `cmd2_handler` to `cmd2_subcmd_handler` in the `argparse.Namespace` for clarity.
+    - Removed `Cmd2AttributeWrapper` class. `argparse.Namespace` objects passed to command functions
+      now contain direct attributes for `cmd2_statement` and `cmd2_subcmd_handler`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These

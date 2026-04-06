@@ -18,7 +18,6 @@ from .annotated import (
 from .argparse_completer import set_default_ap_completer_type
 from .argparse_custom import (
     Cmd2ArgumentParser,
-    Cmd2AttributeWrapper,
     register_argparse_argument_parameter,
     set_default_argument_parser_type,
 )
@@ -68,7 +67,6 @@ __all__: list[str] = [  # noqa: RUF022
     'DEFAULT_SHORTCUTS',
     # Argparse Exports
     'Cmd2ArgumentParser',
-    'Cmd2AttributeWrapper',
     'register_argparse_argument_parameter',
     'set_default_ap_completer_type',
     'set_default_argument_parser_type',

@@ -11,8 +11,8 @@ following for you:
 1. Passes the resulting
    [argparse.Namespace](https://docs.python.org/3/library/argparse.html#argparse.Namespace) object
    to your command function. The `Namespace` includes the [Statement][cmd2.Statement] object that
-   was created when parsing the command line. It can be retrieved by calling `cmd2_statement.get()`
-   on the `Namespace`.
+   was created when parsing the command line. It is accessible via the `cmd2_statement` attribute on
+   the `Namespace`.
 1. Adds the usage message from the argument parser to your command's help.
 1. Checks if the `-h/--help` option is present, and if so, displays the help message for the command
 
@@ -615,11 +615,7 @@ example demonstrates both above cases in a concrete fashion.
 ## Reserved Argument Names
 
 `cmd2`'s `@with_argparser` decorator adds the following attributes to argparse Namespaces. To avoid
-naming collisions, do not use any of the names for your argparse arguments.
+naming collisions, do not use any of these names for your argparse arguments.
 
-- `cmd2_statement` - `cmd2.Cmd2AttributeWrapper` object containing the `cmd2.Statement` object that
-  was created when parsing the command line.
-- `cmd2_handler` - `cmd2.Cmd2AttributeWrapper` object containing a subcommand handler function or
-  `None` if one was not set.
-- `__subcmd_handler__` - used by cmd2 to identify the handler for a subcommand created with the
-  `@cmd2.as_subcommand_to` decorator.
+- `cmd2_statement` - [cmd2.Statement][] object that was created when parsing the command line.
+- `cmd2_subcmd_handler` - subcommand handler function or `None` if one was not set.
