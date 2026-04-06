@@ -50,12 +50,8 @@ def with_default_category(category: str, *, heritable: bool = True) -> Callable[
 
         import inspect
 
-        from .constants import (
-            CMD_ATTR_HELP_CATEGORY,
-        )
-        from .decorators import (
-            with_category,
-        )
+        from .constants import CMD_ATTR_HELP_CATEGORY
+        from .decorators import with_category
 
         # get members of the class that meet the following criteria:
         # 1. Must be a function
