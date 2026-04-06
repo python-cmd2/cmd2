@@ -123,7 +123,7 @@ from .completion import (
     Completions,
 )
 from .constants import (
-    CLASS_ATTR_DEFAULT_HELP_CATEGORY,
+    CMDSET_ATTR_DEFAULT_HELP_CATEGORY,
     COMMAND_FUNC_PREFIX,
     COMPLETER_FUNC_PREFIX,
     HELP_FUNC_PREFIX,
@@ -840,7 +840,7 @@ class Cmd:
             ),
         )
 
-        default_category = getattr(cmdset, CLASS_ATTR_DEFAULT_HELP_CATEGORY, None)
+        default_category = getattr(cmdset, CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None)
 
         installed_attributes = []
         try:

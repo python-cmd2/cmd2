@@ -57,31 +57,47 @@ def cmd2_public_attr_name(name: str) -> str:
 
 
 ##################################################################################################
-# Private cmd2-specific attributes for internal use
+# Attribute Injection Constants
+#
+# cmd2 attaches custom attributes to various objects (functions, classes, and parsers) to
+# track metadata and manage command state.
+#
+# Private attributes (_cmd2_ prefix) are for internal framework logic.
+# Public attributes (cmd2_ prefix) are available for developer use, typically within
+# argparse Namespaces.
 ##################################################################################################
-CMD_ATTR_HELP_CATEGORY = cmd2_private_attr_name('help_category')
-CLASS_ATTR_DEFAULT_HELP_CATEGORY = cmd2_private_attr_name('default_help_category')
 
-# The parser for a command
+# --- Private Internal Attributes ---
+
+# Attached to a command function; defines its argument parser
 CMD_ATTR_ARGPARSER = cmd2_private_attr_name('argparser')
 
-# Whether or not tokens are unquoted before sending to argparse
+# Attached to a command function; defines its help section category
+CMD_ATTR_HELP_CATEGORY = cmd2_private_attr_name('help_category')
+
+# Attached to a command function; defines whether tokens are unquoted before reaching argparse
 CMD_ATTR_PRESERVE_QUOTES = cmd2_private_attr_name('preserve_quotes')
 
-# Subcommand attributes for the base command name and the subcommand name
+# Attached to a CommandSet class; defines a default help category for its member functions
+CMDSET_ATTR_DEFAULT_HELP_CATEGORY = cmd2_private_attr_name('default_help_category')
+
+# Attached to a subcommand function; defines the full command path to the parent (e.g., "foo" or "foo bar")
 SUBCMD_ATTR_COMMAND = cmd2_private_attr_name('parent_command')
+
+# Attached to a subcommand function; defines the name of this specific subcommand (e.g., "bar")
 SUBCMD_ATTR_NAME = cmd2_private_attr_name('subcommand_name')
+
+# Attached to a subcommand function; specifies kwargs passed to add_parser()
 SUBCMD_ATTR_ADD_PARSER_KWARGS = cmd2_private_attr_name('subcommand_add_parser_kwargs')
 
-# Attribute added to a parser which uniquely identifies its command set instance
+# Attached to an argparse parser; identifies the CommandSet instance it belongs to
 PARSER_ATTR_COMMANDSET_ID = cmd2_private_attr_name('command_set_id')
 
-##################################################################################################
-# Public cmd2-specific attributes for use by developers
-##################################################################################################
 
-# Namespace attribute: Statement object that was created when parsing the command line
+# --- Public Developer Attributes ---
+
+# Attached to an argparse Namespace; contains the Statement object created during parsing
 NS_ATTR_STATEMENT = cmd2_public_attr_name('statement')
 
-# Namespace attribute: subcommand handler function or None if one was not set
+# Attached to an argparse Namespace; the function to handle the subcommand (or None)
 NS_ATTR_SUBCMD_HANDLER = cmd2_public_attr_name('subcmd_handler')
