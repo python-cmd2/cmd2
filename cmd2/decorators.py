@@ -176,9 +176,9 @@ def with_argument_list(
             :return: return value of command function
             """
             cmd2_app, statement = _parse_positionals(args)
-            _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name, statement, preserve_quotes)
-            args_list = _arg_swap(args, statement, parsed_arglist)
-            return func(*args_list, **kwargs)
+            _, command_arg_list = cmd2_app.statement_parser.get_command_arg_list(command_name, statement, preserve_quotes)
+            func_arg_list = _arg_swap(args, statement, command_arg_list)
+            return func(*func_arg_list, **kwargs)
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
         cmd_wrapper.__doc__ = func.__doc__
@@ -294,7 +294,7 @@ def with_argparser(
             :raises Cmd2ArgparseError: if argparse has error parsing command line
             """
             cmd2_app, statement_arg = _parse_positionals(args)
-            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(
+            statement, command_arg_list = cmd2_app.statement_parser.get_command_arg_list(
                 command_name, statement_arg, preserve_quotes
             )
 
@@ -305,38 +305,40 @@ def with_argparser(
                 raise ValueError(f'No argument parser found for {command_name}')  # pragma: no cover
 
             if ns_provider is None:
-                namespace = None
+                initial_namespace = None
             else:
                 # The namespace provider may or may not be defined in the same class as the command. Since provider
                 # functions are registered with the command argparser before anything is instantiated, we
                 # need to find an instance at runtime that matches the types during declaration
                 provider_self = cmd2_app._resolve_func_self(ns_provider, args[0])
-                namespace = ns_provider(provider_self if provider_self is not None else cmd2_app)
+                initial_namespace = ns_provider(provider_self if provider_self is not None else cmd2_app)
 
             try:
-                new_args: tuple[argparse.Namespace] | tuple[argparse.Namespace, list[str]]
+                parsing_results: tuple[argparse.Namespace] | tuple[argparse.Namespace, list[str]]
                 if with_unknown_args:
-                    new_args = arg_parser.parse_known_args(parsed_arglist, namespace)
+                    parsing_results = arg_parser.parse_known_args(command_arg_list, initial_namespace)
                 else:
-                    new_args = (arg_parser.parse_args(parsed_arglist, namespace),)
-                ns = new_args[0]
+                    parsing_results = (arg_parser.parse_args(command_arg_list, initial_namespace),)
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
-            else:
-                # Add wrapped statement to Namespace as cmd2_statement
-                ns.cmd2_statement = Cmd2AttributeWrapper(statement)
 
-                # Add wrapped subcmd handler (which can be None) to Namespace as cmd2_handler
-                handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
-                ns.cmd2_handler = Cmd2AttributeWrapper(handler)
+            # Add cmd2-specific metadata to the Namespace
+            parsed_namespace = parsing_results[0]
 
-                # Remove the subcmd handler attribute from the Namespace
-                # since cmd2_handler is how a developer accesses it.
-                if hasattr(ns, constants.NS_ATTR_SUBCMD_HANDLER):
-                    delattr(ns, constants.NS_ATTR_SUBCMD_HANDLER)
+            # Add wrapped statement to Namespace as cmd2_statement
+            parsed_namespace.cmd2_statement = Cmd2AttributeWrapper(statement)
 
-                args_list = _arg_swap(args, statement_arg, *new_args)
-                return func(*args_list, **kwargs)
+            # Add wrapped subcmd handler (which can be None) to Namespace as cmd2_handler
+            handler = getattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER, None)
+            parsed_namespace.cmd2_handler = Cmd2AttributeWrapper(handler)
+
+            # Remove the subcmd handler attribute from the Namespace
+            # since cmd2_handler is how a developer accesses it.
+            if hasattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER):
+                delattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER)
+
+            func_arg_list = _arg_swap(args, statement_arg, *parsing_results)
+            return func(*func_arg_list, **kwargs)
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 

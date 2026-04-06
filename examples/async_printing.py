@@ -103,7 +103,7 @@ class AlerterApp(cmd2.Cmd):
 
         return alerts
 
-    def _generate_alert_str(self) -> str:
+    def _build_alert_str(self) -> str:
         """Combines alerts into one string that can be printed to the terminal
         :return: the alert string.
         """
@@ -125,8 +125,8 @@ class AlerterApp(cmd2.Cmd):
 
         return alert_str
 
-    def _generate_colored_prompt(self) -> str:
-        """Randomly generates a colored prompt
+    def _build_colored_prompt(self) -> str:
+        """Randomly builds a colored prompt
         :return: the new prompt.
         """
         rand_num = random.randint(1, 6)
@@ -153,10 +153,10 @@ class AlerterApp(cmd2.Cmd):
 
         while not self._stop_event.is_set():
             # Get any alerts that need to be printed
-            alert_str = self._generate_alert_str()
+            alert_str = self._build_alert_str()
 
-            # Generate a new prompt
-            new_prompt = self._generate_colored_prompt()
+            # Build a new prompt
+            new_prompt = self._build_colored_prompt()
 
             # Check if we have alerts to print
             if alert_str:

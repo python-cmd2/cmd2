@@ -27,7 +27,7 @@ from rich.text import Text
 
 from .argparse_custom import (
     Cmd2ArgumentParser,
-    generate_range_error,
+    build_range_error,
 )
 from .command_definition import CommandSet
 from .completion import (
@@ -137,7 +137,7 @@ class _UnfinishedFlagError(CompletionError):
         :param flag_arg_state: information about the unfinished flag action.
         """
         arg = f'{argparse._get_action_name(flag_arg_state.action)}'
-        err = f'{generate_range_error(flag_arg_state.min, flag_arg_state.max)}'
+        err = f'{build_range_error(flag_arg_state.min, flag_arg_state.max)}'
         error = f"Error: argument {arg}: {err} ({flag_arg_state.count} entered)"
         super().__init__(error)
 
