@@ -281,7 +281,7 @@ class PluggedApp(Plugin, cmd2.Cmd):
     @with_argparser(parser)
     def do_argparse_cmd(self, namespace: argparse.Namespace) -> None:
         """Repeat back the arguments"""
-        self.poutput(namespace.cmd2_statement.get())
+        self.poutput(namespace.cmd2_statement)
 
 
 ###

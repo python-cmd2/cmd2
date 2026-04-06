@@ -337,7 +337,7 @@ class ExampleApp(cmd2.Cmd):
 
     @with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace):
-        handler = ns.cmd2_handler.get()
+        handler = ns.cmd2_subcmd_handler
         if handler is not None:
             # Call whatever subcommand function was selected
             handler(ns)

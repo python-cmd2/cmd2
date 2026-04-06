@@ -148,7 +148,7 @@ class CommandSetApp(cmd2.Cmd):
     @with_category(COMMANDSET_SUBCOMMAND)
     def do_cut(self, ns: argparse.Namespace) -> None:
         """Intended to be used with dynamically loaded subcommands specifically."""
-        handler = ns.cmd2_handler.get()
+        handler = ns.cmd2_subcmd_handler
         if handler is not None:
             handler(ns)
         else:

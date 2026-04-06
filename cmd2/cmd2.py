@@ -123,7 +123,7 @@ from .completion import (
     Completions,
 )
 from .constants import (
-    CLASS_ATTR_DEFAULT_HELP_CATEGORY,
+    CMDSET_ATTR_DEFAULT_HELP_CATEGORY,
     COMMAND_FUNC_PREFIX,
     COMPLETER_FUNC_PREFIX,
     HELP_FUNC_PREFIX,
@@ -840,7 +840,7 @@ class Cmd:
             ),
         )
 
-        default_category = getattr(cmdset, CLASS_ATTR_DEFAULT_HELP_CATEGORY, None)
+        default_category = getattr(cmdset, CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None)
 
         installed_attributes = []
         try:
@@ -3729,8 +3729,7 @@ class Cmd:
     def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases."""
         # Call handler for whatever subcommand was selected
-        handler = args.cmd2_handler.get()
-        handler(args)
+        args.cmd2_subcmd_handler(args)
 
     # alias -> create
     @classmethod
@@ -3946,8 +3945,7 @@ class Cmd:
     def do_macro(self, args: argparse.Namespace) -> None:
         """Manage macros."""
         # Call handler for whatever subcommand was selected
-        handler = args.cmd2_handler.get()
-        handler(args)
+        args.cmd2_subcmd_handler(args)
 
     # macro -> create
     @classmethod

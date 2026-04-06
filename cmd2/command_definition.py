@@ -11,7 +11,7 @@ from typing import (
 )
 
 from .constants import (
-    CLASS_ATTR_DEFAULT_HELP_CATEGORY,
+    CMDSET_ATTR_DEFAULT_HELP_CATEGORY,
     COMMAND_FUNC_PREFIX,
 )
 from .exceptions import CommandSetRegistrationError
@@ -46,16 +46,12 @@ def with_default_category(category: str, *, heritable: bool = True) -> Callable[
 
     def decorate_class(cls: CommandSetType) -> CommandSetType:
         if heritable:
-            setattr(cls, CLASS_ATTR_DEFAULT_HELP_CATEGORY, category)
+            setattr(cls, CMDSET_ATTR_DEFAULT_HELP_CATEGORY, category)
 
         import inspect
 
-        from .constants import (
-            CMD_ATTR_HELP_CATEGORY,
-        )
-        from .decorators import (
-            with_category,
-        )
+        from .constants import CMD_ATTR_HELP_CATEGORY
+        from .decorators import with_category
 
         # get members of the class that meet the following criteria:
         # 1. Must be a function
