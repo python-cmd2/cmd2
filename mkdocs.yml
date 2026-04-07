@@ -198,7 +198,7 @@ nav:
       - api/argparse_custom.md
       - api/clipboard.md
       - api/colors.md
-      - api/command_definition.md
+      - api/command_set.md
       - api/completion.md
       - api/constants.md
       - api/decorators.md

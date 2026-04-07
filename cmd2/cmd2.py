@@ -115,7 +115,7 @@ from .clipboard import (
     get_paste_buffer,
     write_to_paste_buffer,
 )
-from .command_definition import (
+from .command_set import (
     CommandFunc,
     CommandSet,
 )

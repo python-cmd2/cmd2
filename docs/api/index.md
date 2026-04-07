@@ -16,8 +16,8 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.argparse_custom](./argparse_custom.md) - classes and functions for extending `argparse`
 - [cmd2.clipboard](./clipboard.md) - functions to copy from and paste to the clipboard/pastebuffer
 - [cmd2.colors](./colors.md) - StrEnum of all color names supported by the Rich library
-- [cmd2.command_definition](./command_definition.md) - supports the definition of commands in
-  separate classes to be composed into cmd2.Cmd
+- [cmd2.command_set](./command_set.md) - supports the definition of commands in separate classes to
+  be composed into cmd2.Cmd
 - [cmd2.completion](./completion.md) - classes and functions related to command-line completion
 - [cmd2.constants](./constants.md) - constants used in `cmd2`
 - [cmd2.decorators](./decorators.md) - decorators for `cmd2` commands

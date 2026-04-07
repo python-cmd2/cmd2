@@ -31,7 +31,7 @@ cmd2/argparse_*.py         @kmvanbrunt
 cmd2/clipboard.py          @tleonhardt
 cmd2/cmd2.py               @tleonhardt @kmvanbrunt
 cmd2/colors.py             @tleonhardt @kmvanbrunt
-cmd2/command_definition.py @kmvanbrunt
+cmd2/command_set.py        @kmvanbrunt
 cmd2/completion.py         @kmvanbrunt
 cmd2/constants.py          @tleonhardt @kmvanbrunt
 cmd2/decorators.py         @kmvanbrunt

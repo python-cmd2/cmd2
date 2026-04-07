@@ -29,7 +29,7 @@ from .argparse_custom import (
     Cmd2ArgumentParser,
     build_range_error,
 )
-from .command_definition import CommandSet
+from .command_set import CommandSet
 from .completion import (
     CompletionItem,
     Completions,

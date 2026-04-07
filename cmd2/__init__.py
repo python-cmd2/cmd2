@@ -19,7 +19,7 @@ from .argparse_custom import (
 )
 from .cmd2 import Cmd
 from .colors import Color
-from .command_definition import CommandSet
+from .command_set import CommandSet
 from .completion import (
     Choices,
     CompletionItem,
