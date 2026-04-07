@@ -217,7 +217,7 @@ def do_rawish(self, name: str, _unknown: list[str] | None = None):
 ```py
 @with_annotated(base_command=True)
 def do_manage(self, *, cmd2_handler):
-    handler = cmd2_handler.get()
+    handler = cmd2_handler
     if handler:
         handler()
 
@@ -233,7 +233,7 @@ creates its own subparsers:
 ```py
 @with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
 def manage_project(self, *, cmd2_handler):
-    handler = cmd2_handler.get()
+    handler = cmd2_handler
     if handler:
         handler()
 

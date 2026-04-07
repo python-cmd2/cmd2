@@ -394,7 +394,6 @@ def with_annotated(
         build_parser_from_function,
         build_subcommand_handler,
     )
-    from .argparse_custom import Cmd2AttributeWrapper
 
     if (help is not None or aliases is not None) and subcommand_to is None:
         raise TypeError("'help' and 'aliases' are only valid with subcommand_to")
@@ -487,13 +486,11 @@ def with_annotated(
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
 
-            ns.cmd2_statement = Cmd2AttributeWrapper(statement)
+            setattr(ns, constants.NS_ATTR_STATEMENT, statement)
             handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
             if base_command and handler is not None:
                 handler = functools.partial(handler, ns)
-            ns.cmd2_handler = Cmd2AttributeWrapper(handler)
-            if hasattr(ns, constants.NS_ATTR_SUBCMD_HANDLER):
-                delattr(ns, constants.NS_ATTR_SUBCMD_HANDLER)
+            ns.cmd2_handler = handler
 
             func_kwargs = _filtered_namespace_kwargs(ns, accepted=accepted, exclude_subcommand=base_command)
 

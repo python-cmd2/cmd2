@@ -1204,7 +1204,7 @@ class _SubcommandApp(cmd2.Cmd):
         """Management command with subcommands."""
         if verbose:
             self.poutput("verbose mode")
-        handler = cmd2_handler.get()
+        handler = cmd2_handler
         if handler:
             handler()
 
@@ -1220,7 +1220,7 @@ class _SubcommandApp(cmd2.Cmd):
     # Level 2: intermediate subcommand (also a base for level 3)
     @cmd2.with_annotated(subcommand_to='manage', base_command=True, help='manage members')
     def manage_member(self, cmd2_handler) -> None:
-        handler = cmd2_handler.get()
+        handler = cmd2_handler
         if handler:
             handler()
 
@@ -1328,7 +1328,7 @@ class TestSubcommandValidation:
         class App(cmd2.Cmd):
             @cmd2.with_annotated(base_command=True)
             def do_fmt(self, cmd2_handler) -> None:
-                handler = cmd2_handler.get()
+                handler = cmd2_handler
                 if handler:
                     handler()
 
