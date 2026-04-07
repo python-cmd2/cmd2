@@ -347,7 +347,7 @@ class Cmd:
 
     def __init__(
         self,
-        completekey: str = DEFAULT_COMPLETEKEY,
+        completekey: str | None = None,
         stdin: TextIO | None = None,
         stdout: TextIO | None = None,
         *,
@@ -429,8 +429,11 @@ class Cmd:
         self._initialize_plugin_system()
 
         # Configure a few defaults
-        self.prompt: str = Cmd.DEFAULT_PROMPT
+        self.prompt: str = self.DEFAULT_PROMPT
         self.intro = intro
+
+        if completekey is None:
+            completekey = self.DEFAULT_COMPLETEKEY
 
         # What to use for standard input
         if stdin is not None:
@@ -459,7 +462,7 @@ class Cmd:
         self.always_show_hint = False
         self.debug = False
         self.echo = False
-        self.editor = Cmd.DEFAULT_EDITOR
+        self.editor = self.DEFAULT_EDITOR
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.quiet = False  # Do not suppress nonessential output
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
