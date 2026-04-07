@@ -104,17 +104,17 @@ def _arg_swap(args: Sequence[Any], search_arg: Any, *replace_arg: Any) -> list[A
     return args_list
 
 
-#: Function signature for a command function that accepts a pre-processed argument list from user input
-#: and optionally returns a boolean
+# Function signature for a command function that accepts a pre-processed argument list from user input
+# and optionally returns a boolean
 ArgListCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CmdOrSet, list[str]], bool | None]
-#: Function signature for a command function that accepts a pre-processed argument list from user input
-#: and returns a boolean
+# Function signature for a command function that accepts a pre-processed argument list from user input
+# and returns a boolean
 ArgListCommandFuncBoolReturn: TypeAlias = Callable[[CmdOrSet, list[str]], bool]
-#: Function signature for a command function that accepts a pre-processed argument list from user input
-#: and returns Nothing
+# Function signature for a command function that accepts a pre-processed argument list from user input
+# and returns Nothing
 ArgListCommandFuncNoneReturn: TypeAlias = Callable[[CmdOrSet, list[str]], None]
 
-#: Aggregate of all accepted function signatures for command functions that accept a pre-processed argument list
+# Aggregate of all accepted function signatures for command functions that accept a pre-processed argument list
 ArgListCommandFunc: TypeAlias = (
     ArgListCommandFuncOptionalBoolReturn[CmdOrSet]
     | ArgListCommandFuncBoolReturn[CmdOrSet]
@@ -184,24 +184,24 @@ def with_argument_list(
     return arg_decorator
 
 
-#: Function signatures for command functions that use a Cmd2ArgumentParser to process user input
-#: and optionally return a boolean
+# Function signatures for command functions that use a Cmd2ArgumentParser to process user input
+# and optionally return a boolean
 ArgparseCommandFuncOptionalBoolReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace], bool | None]
 ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn: TypeAlias = Callable[
     [CmdOrSet, argparse.Namespace, list[str]], bool | None
 ]
 
-#: Function signatures for command functions that use a Cmd2ArgumentParser to process user input
-#: and return a boolean
+# Function signatures for command functions that use a Cmd2ArgumentParser to process user input
+# and return a boolean
 ArgparseCommandFuncBoolReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace], bool]
 ArgparseCommandFuncWithUnknownArgsBoolReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace, list[str]], bool]
 
-#: Function signatures for command functions that use a Cmd2ArgumentParser to process user input
-#: and return nothing
+# Function signatures for command functions that use a Cmd2ArgumentParser to process user input
+# and return nothing
 ArgparseCommandFuncNoneReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace], None]
 ArgparseCommandFuncWithUnknownArgsNoneReturn: TypeAlias = Callable[[CmdOrSet, argparse.Namespace, list[str]], None]
 
-#: Aggregate of all accepted function signatures for an argparse command function
+# Aggregate of all accepted function signatures for an argparse command function
 ArgparseCommandFunc: TypeAlias = (
     ArgparseCommandFuncOptionalBoolReturn[CmdOrSet]
     | ArgparseCommandFuncWithUnknownArgsOptionalBoolReturn[CmdOrSet]

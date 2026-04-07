@@ -3,14 +3,15 @@
 from cmd2 import (
     CommandSet,
     CompletionError,
+    Completions,
     Statement,
     with_category,
-    with_default_category,
 )
 
 
-@with_default_category('Basic Completion')
 class BasicCompletionCommandSet(CommandSet):
+    DEFAULT_CATEGORY = 'Basic Completion'
+
     # This data is used to demonstrate delimiter_complete
     file_strs = (
         '/home/user/file.db',
@@ -24,14 +25,14 @@ class BasicCompletionCommandSet(CommandSet):
         """Tab completes files from a list using delimiter_complete."""
         self._cmd.poutput(f"Args: {statement.args}")
 
-    def complete_delimiter_complete(self, text: str, line: str, begidx: int, endidx: int) -> list[str]:
+    def complete_delimiter_complete(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
         return self._cmd.delimiter_complete(text, line, begidx, endidx, match_against=self.file_strs, delimiter='/')
 
     def do_raise_error(self, statement: Statement) -> None:
         """Demonstrates effect of raising CompletionError."""
         self._cmd.poutput(f"Args: {statement.args}")
 
-    def complete_raise_error(self, _text: str, _line: str, _begidx: int, _endidx: int) -> list[str]:
+    def complete_raise_error(self, _text: str, _line: str, _begidx: int, _endidx: int) -> Completions:
         """CompletionErrors can be raised if an error occurs while tab completing.
 
         Example use cases

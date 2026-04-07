@@ -1303,12 +1303,13 @@ def test_visible_prompt() -> None:
 class HelpApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
 
+    DEFAULT_CATEGORY = "My Default Category."
+    MISC_HEADER = "Various topics found here."
+    UNDOC_HEADER = "Why did no one document these?"
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.doc_leader = "I now present you with a list of help topics."
-        self.doc_header = "My very custom doc header."
-        self.misc_header = "Various topics found here."
-        self.undoc_header = "Why did no one document these?"
 
     def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
@@ -1352,9 +1353,9 @@ def test_help_headers(capsys) -> None:
     out, _err = capsys.readouterr()
 
     assert help_app.doc_leader in out
-    assert help_app.doc_header in out
-    assert help_app.misc_header in out
-    assert help_app.undoc_header in out
+    assert HelpApp.DEFAULT_CATEGORY in out
+    assert HelpApp.MISC_HEADER in out
+    assert HelpApp.UNDOC_HEADER in out
     assert help_app.last_result is True
 
 
@@ -1409,7 +1410,7 @@ def test_help_verbose_with_fake_command(capsys) -> None:
     help_app = HelpApp()
 
     cmds = ["alias", "fake_command"]
-    help_app._print_documented_command_topics(help_app.doc_header, cmds, verbose=True)
+    help_app._print_documented_command_topics(help_app.DEFAULT_CATEGORY, cmds, verbose=True)
     out, _err = capsys.readouterr()
     assert cmds[0] in out
     assert cmds[1] not in out
@@ -1464,7 +1465,7 @@ class HelpCategoriesApp(cmd2.Cmd):
     def do_cat_nodoc(self, arg) -> None:
         pass
 
-    # This command will show in the category labeled with self.default_category
+    # This command will show in the category labeled with DEFAULT_CATEGORY
     def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
 
@@ -1494,7 +1495,7 @@ def test_help_cat_base(helpcat_app) -> None:
     help_text = ''.join(out)
     assert helpcat_app.CUSTOM_CATEGORY in help_text
     assert helpcat_app.SOME_CATEGORY in help_text
-    assert helpcat_app.default_category in help_text
+    assert helpcat_app.DEFAULT_CATEGORY in help_text
 
 
 def test_help_cat_verbose(helpcat_app) -> None:
@@ -1505,7 +1506,7 @@ def test_help_cat_verbose(helpcat_app) -> None:
     help_text = ''.join(out)
     assert helpcat_app.CUSTOM_CATEGORY in help_text
     assert helpcat_app.SOME_CATEGORY in help_text
-    assert helpcat_app.default_category in help_text
+    assert helpcat_app.DEFAULT_CATEGORY in help_text
 
 
 class SelectApp(cmd2.Cmd):

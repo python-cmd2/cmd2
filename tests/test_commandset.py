@@ -25,8 +25,9 @@ class CommandSetBase(cmd2.CommandSet):
     pass
 
 
-@cmd2.with_default_category('Fruits')
 class CommandSetA(CommandSetBase):
+    DEFAULT_CATEGORY = 'Fruits'
+
     def on_register(self, cmd) -> None:
         super().on_register(cmd)
         print("in on_register now")
@@ -44,6 +45,7 @@ class CommandSetA(CommandSetBase):
         print("in on_unregistered now")
 
     def do_apple(self, statement: cmd2.Statement) -> None:
+        """Apple Command"""
         self._cmd.poutput('Apple!')
 
     def do_banana(self, statement: cmd2.Statement) -> None:
@@ -55,6 +57,7 @@ class CommandSetA(CommandSetBase):
 
     @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
     def do_cranberry(self, ns: argparse.Namespace, unknown: list[str]) -> None:
+        """Cranberry Command"""
         self._cmd.poutput(f'Cranberry {ns.arg1}!!')
         if unknown and len(unknown):
             self._cmd.poutput('Unknown: ' + ', '.join(['{}'] * len(unknown)).format(*unknown))
@@ -80,6 +83,7 @@ class CommandSetA(CommandSetBase):
     @cmd2.with_category('Alone')
     @cmd2.with_argparser(elderberry_parser)
     def do_elderberry(self, ns: argparse.Namespace) -> None:
+        """Elderberry Command"""
         self._cmd.poutput(f'Elderberry {ns.arg1}!!')
         self._cmd.last_result = {'arg1': ns.arg1}
 
@@ -103,27 +107,30 @@ class CommandSetA(CommandSetBase):
         self._cmd.poutput("Subcommand Ran")
 
 
-@cmd2.with_default_category('Command Set B')
 class CommandSetB(CommandSetBase):
+    DEFAULT_CATEGORY = 'Command Set B'
+
     def __init__(self, arg1) -> None:
         super().__init__()
         self._arg1 = arg1
 
     def do_aardvark(self, statement: cmd2.Statement) -> None:
+        """Aardvark Command"""
         self._cmd.poutput('Aardvark!')
 
     def do_bat(self, statement: cmd2.Statement) -> None:
-        """Banana Command"""
+        """Bat Command"""
         self._cmd.poutput('Bat!!')
 
     def do_crocodile(self, statement: cmd2.Statement) -> None:
+        """Crocodile Command"""
         self._cmd.poutput('Crocodile!!')
 
 
 def test_autoload_commands(autoload_command_sets_app) -> None:
     # verifies that, when autoload is enabled, CommandSets and registered functions all show up
 
-    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = autoload_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = autoload_command_sets_app._build_command_info()
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
@@ -152,7 +159,7 @@ def test_command_synonyms() -> None:
 
         @cmd2.with_argparser(cmd2.Cmd2ArgumentParser(description="Native Command"))
         def do_builtin(self, _) -> None:
-            pass
+            """Builtin Command"""
 
         # Create a synonym to a command inside of this CommandSet
         do_builtin_synonym = do_builtin
@@ -199,7 +206,7 @@ def test_custom_construct_commandsets() -> None:
     # Verifies that a custom initialized CommandSet loads correctly when passed into the constructor
     app = WithCommandSets(command_sets=[command_set_b])
 
-    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = app._build_command_info()
     assert 'Command Set B' in cmds_cats
 
     # Verifies that the same CommandSet cannot be loaded twice
@@ -250,7 +257,7 @@ def test_load_commands(manual_command_sets_app, capsys) -> None:
     assert "in on_register now" in out
     assert "in on_registered now" in out
 
-    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
@@ -266,7 +273,7 @@ def test_load_commands(manual_command_sets_app, capsys) -> None:
     # uninstall the command set and verify it is now also no longer accessible
     manual_command_sets_app.unregister_command_set(cmd_set)
 
-    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
 
     assert 'Alone' not in cmds_cats
     assert 'Fruits' not in cmds_cats
@@ -282,7 +289,7 @@ def test_load_commands(manual_command_sets_app, capsys) -> None:
     # reinstall the command set and verify it is accessible
     manual_command_sets_app.register_command_set(cmd_set)
 
-    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
 
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
@@ -335,7 +342,7 @@ def test_load_commandset_errors(manual_command_sets_app, capsys) -> None:
         manual_command_sets_app.register_command_set(cmd_set)
 
     # verify that the commands weren't installed
-    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
 
     assert 'Alone' not in cmds_cats
     assert 'Fruits' not in cmds_cats
@@ -457,13 +464,15 @@ class LoadableBadBase(cmd2.CommandSet):
             self._cmd.do_help('cut')
 
 
-@cmd2.with_default_category('Fruits')
 class LoadableFruits(cmd2.CommandSet):
+    DEFAULT_CATEGORY = 'Fruits'
+
     def __init__(self, dummy) -> None:
         super().__init__()
         self._dummy = dummy  # prevents autoload
 
     def do_apple(self, _: cmd2.Statement) -> None:
+        """Apple Command"""
         self._cmd.poutput('Apple')
 
     banana_parser = cmd2.Cmd2ArgumentParser()
@@ -488,13 +497,15 @@ class LoadablePastaStir(cmd2.CommandSet):
         self._cmd.poutput('stir the pasta vigorously')
 
 
-@cmd2.with_default_category('Vegetables')
 class LoadableVegetables(cmd2.CommandSet):
+    DEFAULT_CATEGORY = 'Vegetables'
+
     def __init__(self, dummy) -> None:
         super().__init__()
         self._dummy = dummy  # prevents autoload
 
     def do_arugula(self, _: cmd2.Statement) -> None:
+        """Arugula Command"""
         self._cmd.poutput('Arugula')
 
     def complete_style_arg(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
@@ -523,10 +534,10 @@ def test_subcommands(manual_command_sets_app) -> None:
     with pytest.raises(CommandSetRegistrationError):
         manual_command_sets_app.register_command_set(fruit_cmds)
 
-    # verify that the commands weren't installed
-    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
-    assert 'cut' in cmds_doc
+    # verify that the Fruit commands weren't installed
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
     assert 'Fruits' not in cmds_cats
+    assert 'cut' in manual_command_sets_app.get_all_commands()
 
     # Now install the good base commands
     manual_command_sets_app.unregister_command_set(badbase_cmds)
@@ -542,7 +553,7 @@ def test_subcommands(manual_command_sets_app) -> None:
     # verify that command set install without problems
     manual_command_sets_app.register_command_set(fruit_cmds)
     manual_command_sets_app.register_command_set(veg_cmds)
-    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
     assert 'Fruits' in cmds_cats
 
     text = ''
@@ -568,7 +579,7 @@ def test_subcommands(manual_command_sets_app) -> None:
 
     # verify that command set uninstalls without problems
     manual_command_sets_app.unregister_command_set(fruit_cmds)
-    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
     assert 'Fruits' not in cmds_cats
 
     # verify a double-unregister raises exception
@@ -585,7 +596,7 @@ def test_subcommands(manual_command_sets_app) -> None:
 
     manual_command_sets_app.enable_command('cut')
 
-    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
     assert 'Fruits' in cmds_cats
 
     text = ''
@@ -611,7 +622,7 @@ def test_subcommands(manual_command_sets_app) -> None:
 
     # verify that command set uninstalls without problems
     manual_command_sets_app.unregister_command_set(fruit_cmds)
-    cmds_cats, cmds_doc, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
     assert 'Fruits' not in cmds_cats
 
     # verify a double-unregister raises exception
@@ -630,6 +641,7 @@ def test_commandset_sigint(manual_command_sets_app) -> None:
     # returns True that we've handled interrupting the command.
     class SigintHandledCommandSet(cmd2.CommandSet):
         def do_foo(self, _) -> None:
+            """Foo Command"""
             self._cmd.poutput('in foo')
             self._cmd.sigint_handler(signal.SIGINT, None)
             self._cmd.poutput('end of foo')
@@ -646,6 +658,7 @@ def test_commandset_sigint(manual_command_sets_app) -> None:
     # shows that the command is interrupted if we don't report we've handled the sigint
     class SigintUnhandledCommandSet(cmd2.CommandSet):
         def do_bar(self, _) -> None:
+            """Bar Command"""
             self._cmd.poutput('in do bar')
             self._cmd.sigint_handler(signal.SIGINT, None)
             self._cmd.poutput('end of do bar')
@@ -748,7 +761,7 @@ def static_subcommands_app():
 
 
 def test_static_subcommands(static_subcommands_app) -> None:
-    cmds_cats, _cmds_doc, _cmds_undoc, _help_topics = static_subcommands_app._build_command_info()
+    cmds_cats, _cmds_undoc, _help_topics = static_subcommands_app._build_command_info()
     assert 'Fruits' in cmds_cats
 
     text = ''
@@ -773,10 +786,10 @@ def test_static_subcommands(static_subcommands_app) -> None:
 complete_states_expected_self = None
 
 
-@cmd2.with_default_category('With Completer')
 class SupportFuncProvider(cmd2.CommandSet):
     """CommandSet which provides a support function (complete_states) to other CommandSets"""
 
+    DEFAULT_CATEGORY = 'With Completer'
     states = ('alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware')
 
     def __init__(self, dummy) -> None:
@@ -796,6 +809,7 @@ class SupportFuncUserSubclass1(SupportFuncProvider):
 
     @cmd2.with_argparser(parser)
     def do_user_sub1(self, ns: argparse.Namespace) -> None:
+        """User Sub1 Command"""
         self._cmd.poutput(f'something {ns.state}')
 
 
@@ -807,6 +821,7 @@ class SupportFuncUserSubclass2(SupportFuncProvider):
 
     @cmd2.with_argparser(parser)
     def do_user_sub2(self, ns: argparse.Namespace) -> None:
+        """User sub2 Command"""
         self._cmd.poutput(f'something {ns.state}')
 
 
@@ -822,6 +837,7 @@ class SupportFuncUserUnrelated(cmd2.CommandSet):
 
     @cmd2.with_argparser(parser)
     def do_user_unrelated(self, ns: argparse.Namespace) -> None:
+        """User Unrelated Command"""
         self._cmd.poutput(f'something {ns.state}')
 
 
@@ -857,10 +873,8 @@ def test_cross_commandset_completer(manual_command_sets_app) -> None:
 
     assert completions.to_strings() == Completions.from_values(SupportFuncProvider.states).to_strings()
 
-    assert (
-        getattr(manual_command_sets_app.cmd_func('user_sub1').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY)
-        == 'With Completer'
-    )
+    cmds_cats, _cmds_undoc, _help_topics = manual_command_sets_app._build_command_info()
+    assert 'user_sub1' in cmds_cats['With Completer']
 
     manual_command_sets_app.unregister_command_set(user_sub2)
     manual_command_sets_app.unregister_command_set(user_sub1)
@@ -961,6 +975,7 @@ class CommandSetWithPathComplete(cmd2.CommandSet):
 
     @cmd2.with_argparser(parser)
     def do_path(self, app: cmd2.Cmd, args) -> None:
+        """Path Command"""
         app.poutput(args.path)
 
 

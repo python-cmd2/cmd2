@@ -50,48 +50,62 @@ not use an `argparse` decorator because we didn't want different output for `hel
 
 ## Categorizing Commands
 
-By default, the `help` command displays:
+In `cmd2`, the `help` command organizes its output into categories. Every command belongs to a
+category, and the display is driven by the `DEFAULT_CATEGORY` class variable.
 
-    Documented Commands
-    ───────────────────
-    alias  help     ipy    py    run_pyscript  set    shortcuts
-    edit   history  macro  quit  run_script    shell
+There are 3 methods of specifying command categories:
 
-If you have a large number of commands, you can optionally group your commands into categories.
-Here's the output from the example
-[help_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/help_categories.py):
+1. Using the `DEFAULT_CATEGORY` class variable (Automatic)
+1. Using the [@with_category][cmd2.with_category] decorator (Surgical)
+1. Using the [categorize()][cmd2.categorize] function (Manual)
 
-    Application Management
-    ──────────────────────
-    deploy  findleakers  redeploy  sessions  stop
-    expire  list         restart   start     undeploy
+### Automatic Categorization
 
-    Command Management
-    ──────────────────
-    disable_commands  enable_commands
+The most efficient way to categorize commands is by defining the `DEFAULT_CATEGORY` class variable
+in your `Cmd` or `CommandSet` class. Any command defined in that class that does not have an
+explicit category override will automatically be placed in this category.
 
-    Connecting
-    ──────────
-    connect  which
+By default, `cmd2.Cmd` defines its `DEFAULT_CATEGORY` as `"Cmd2 Commands"`.
 
-    Server Information
-    ──────────────────
-    resources  serverinfo  sslconnectorciphers  status  thread_dump  vminfo
+```py
+class MyApp(cmd2.Cmd):
+    # All commands defined in this class will be grouped here
+    DEFAULT_CATEGORY = 'Application Commands'
 
-    Other
-    ─────
-    alias   edit  history  quit          run_script  shell      version
-    config  help  macro    run_pyscript  set         shortcuts
+    def do_echo(self, arg):
+        """Echo command"""
+        self.poutput(arg)
+```
 
-There are 2 methods of specifying command categories, using the [@with_category][cmd2.with_category]
-decorator or with the [categorize()][cmd2.categorize] function. Once a single command category is
-detected, the help output switches to a categorized mode of display. All commands without an
-explicit category defined default to the category `Other`.
+This also works for [Command Sets](./modular_commands.md):
+
+```py
+class Plugin(cmd2.CommandSet):
+    DEFAULT_CATEGORY = 'Plugin Commands'
+
+    def do_plugin_cmd(self, _):
+        """Plugin command"""
+        self._cmd.poutput('Plugin')
+```
+
+When using inheritance, `cmd2` uses the `DEFAULT_CATEGORY` of the class where the command was
+actually defined. This means built-in commands (like `help`, `history`, and `quit`) stay in the
+`"cmd2 Commands"` category, while your commands move to your custom category.
+
+For a complete demonstration of this functionality, see the
+[default_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/default_categories.py)
+example.
+
+### Manual Categorization
+
+If you need to move an individual command to a different category than the class default, you can
+use the `@with_category` decorator or the `categorize()` function. These manual settings always take
+precedence over the `DEFAULT_CATEGORY`.
 
 Using the `@with_category` decorator:
 
 ```py
-@with_category(CMD_CAT_CONNECTING)
+@with_category('Connecting')
 def do_which(self, _):
     """Which command"""
     self.poutput('Which')

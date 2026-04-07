@@ -1,76 +1,69 @@
 #!/usr/bin/env python3
-"""Simple example demonstrating basic CommandSet usage."""
+"""Example demonstrating the DEFAULT_CATEGORY class variable for Cmd and CommandSet.
+
+In cmd2 4.0, command categorization is driven by the DEFAULT_CATEGORY class variable.
+This example shows:
+1. How a Cmd class defines its own default category.
+2. How a CommandSet defines its own default category.
+3. How overriding a framework command moves it to the child class's category.
+4. How to use @with_category to manually override the automatic categorization.
+"""
+
+import argparse
 
 import cmd2
 from cmd2 import (
+    Cmd2ArgumentParser,
     CommandSet,
-    with_default_category,
+    with_argparser,
+    with_category,
 )
 
 
-@with_default_category('Default Category')
-class MyBaseCommandSet(CommandSet):
-    """Defines a default category for all sub-class CommandSets."""
+class MyPlugin(CommandSet):
+    """A CommandSet that defines its own category."""
+
+    DEFAULT_CATEGORY = "Plugin Commands"
+
+    def do_plugin_action(self, _: cmd2.Statement) -> None:
+        """A command defined in a CommandSet."""
+        self._cmd.poutput("Plugin action executed")
 
 
-class ChildInheritsParentCategories(MyBaseCommandSet):
-    """This subclass doesn't declare any categories so all commands here are also categorized under 'Default Category'."""
+class CategoryApp(cmd2.Cmd):
+    """An application demonstrating various categorization scenarios."""
 
-    def do_hello(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Hello')
-
-    def do_world(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('World')
-
-
-@with_default_category('Non-Heritable Category', heritable=False)
-class ChildOverridesParentCategoriesNonHeritable(MyBaseCommandSet):
-    """This subclass overrides the 'Default Category' from the parent, but in a non-heritable fashion. Sub-classes of this
-    CommandSet will not inherit this category and will, instead, inherit 'Default Category'.
-    """
-
-    def do_goodbye(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Goodbye')
-
-
-class GrandchildInheritsGrandparentCategory(ChildOverridesParentCategoriesNonHeritable):
-    """This subclass's parent class declared its default category non-heritable. Instead, it inherits the category defined
-    by the grandparent class.
-    """
-
-    def do_aloha(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Aloha')
-
-
-@with_default_category('Heritable Category')
-class ChildOverridesParentCategories(MyBaseCommandSet):
-    """This subclass is decorated with a default category that is heritable. This overrides the parent class's default
-    category declaration.
-    """
-
-    def do_bonjour(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Bonjour')
-
-
-class GrandchildInheritsHeritable(ChildOverridesParentCategories):
-    """This subclass's parent declares a default category that overrides its parent. As a result, commands in this
-    CommandSet will be categorized under 'Heritable Category'.
-    """
-
-    def do_monde(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Monde')
-
-
-class ExampleApp(cmd2.Cmd):
-    """Example to demonstrate heritable default categories."""
+    # This sets the default category for all commands defined in this class
+    DEFAULT_CATEGORY = "Application Commands"
 
     def __init__(self) -> None:
         super().__init__()
+        # Register a command set to show how its categories integrate
+        self.register_command_set(MyPlugin())
 
-    def do_something(self, _arg) -> None:
-        self.poutput('this is the something command')
+    def do_app_command(self, _: cmd2.Statement) -> None:
+        """A standard command defined in the child class."""
+        self.poutput("Application command executed")
+
+    @with_argparser(Cmd2ArgumentParser(description="Overridden quit command"))
+    def do_quit(self, _: argparse.Namespace) -> bool | None:
+        """Overriding a built-in command without a decorator moves it to our category."""
+        return super().do_quit("")
+
+    @with_category(cmd2.Cmd.DEFAULT_CATEGORY)
+    @with_argparser(Cmd2ArgumentParser(description="Overridden shortcuts command"))
+    def do_shortcuts(self, _: argparse.Namespace) -> None:
+        """Overriding with @with_category(cmd2.Cmd.DEFAULT_CATEGORY) keeps it cmd2's category."""
+        super().do_shortcuts("")
+
+    def do_undocumented(self, _: cmd2.Statement) -> None:
+        # This has no docstring and no help function, so it stays in "Undocumented Commands"
+        pass
 
 
 if __name__ == '__main__':
-    app = ExampleApp()
-    app.cmdloop()
+    import sys
+
+    app = CategoryApp()
+    app.poutput("Type 'help' to see how the commands are categorized.\n")
+    sys.exit(app.cmdloop())

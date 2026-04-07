@@ -1,109 +1,138 @@
-"""Simple example demonstrating basic CommandSet usage."""
+"""Tests help categories for Cmd and CommandSet objects."""
 
-from typing import Any
+import argparse
 
 import cmd2
 from cmd2 import (
+    Cmd2ArgumentParser,
     CommandSet,
-    with_default_category,
+    with_argparser,
+    with_category,
 )
 
 
-@with_default_category('Default Category')
-class MyBaseCommandSet(CommandSet):
-    """Defines a default category for all sub-class CommandSets"""
+class NoCategoryCmd(cmd2.Cmd):
+    """Example to demonstrate a Cmd-based class which does not define its own DEFAULT_CATEGORY.
 
-    def __init__(self, _: Any) -> None:
-        super().__init__()
-
-
-class ChildInheritsParentCategories(MyBaseCommandSet):
-    """This subclass doesn't declare any categories so all commands here are also categorized under 'Default Category'"""
-
-    def do_hello(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Hello')
-
-    def do_world(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('World')
-
-
-@with_default_category('Non-Heritable Category', heritable=False)
-class ChildOverridesParentCategoriesNonHeritable(MyBaseCommandSet):
-    """This subclass overrides the 'Default Category' from the parent, but in a non-heritable fashion. Sub-classes of this
-    CommandSet will not inherit this category and will, instead, inherit 'Default Category'
+    Its commands will inherit the parent class's DEFAULT_CATEGORY.
     """
 
-    def do_goodbye(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Goodbye')
+    def do_inherit(self, _: cmd2.Statement) -> None:
+        """This function has a docstring.
+
+        Since this class does NOT define its own DEFAULT_CATEGORY,
+        this command will show in cmd2.Cmd.DEFAULT_CATEGORY
+        """
 
 
-class GrandchildInheritsGrandparentCategory(ChildOverridesParentCategoriesNonHeritable):
-    """This subclass's parent class declared its default category non-heritable. Instead, it inherits the category defined
-    by the grandparent class.
+class CategoryCmd(cmd2.Cmd):
+    """Example to demonstrate custom DEFAULT_CATEGORY in a Cmd-based class.
+
+    It also includes functions to fully exercise Cmd._build_command_info.
     """
 
-    def do_aloha(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Aloha')
+    DEFAULT_CATEGORY = "CategoryCmd Commands"
+
+    def do_documented(self, _: cmd2.Statement) -> None:
+        """This function has a docstring.
+
+        Since this class DOES define its own DEFAULT_CATEGORY,
+        this command will show in CategoryCmd.DEFAULT_CATEGORY
+        """
+
+    # This function has no docstring and does not use argparse.
+    # Therefore it will be uncategorized.
+    def do_undocumented(self, _: cmd2.Statement) -> None:
+        pass
+
+    @with_argparser(Cmd2ArgumentParser(description="Overridden quit command"))
+    def do_quit(self, _: argparse.Namespace) -> None:
+        """This function overrides the cmd2.Cmd quit command.
+
+        Since this override does not use the with_category decorator,
+        it will be in CategoryCmd.DEFAULT_CATEGORY and not cmd2.Cmd.DEFAULT_CATEGORY.
+        """
+
+    @with_category(cmd2.Cmd.DEFAULT_CATEGORY)
+    @with_argparser(Cmd2ArgumentParser(description="Overridden shortcuts command"))
+    def do_shortcuts(self, _: argparse.Namespace) -> None:
+        """This function overrides the cmd2.Cmd shortcut command.
+
+        It also uses the with_category decorator to keep shortcuts in
+        cmd2.Cmd.DEFAULT_CATEGORY for the parent class.
+        """
+
+    # This function has no docstring but it has a help function
+    # so it will be in CategoryCmd.DEFAULT_CATEGORY
+    def do_helpless(self, _: cmd2.Statement) -> None:
+        pass
+
+    def help_helpless(self) -> None:
+        """Help function for the helpless command."""
+        self.poutput("The function has help.")
+
+    def help_coding(self) -> None:
+        """This is help function not tied to a command.
+
+        It will be in help topics.
+        """
+        self.poutput("Read a book.")
 
 
-@with_default_category('Heritable Category')
-class ChildOverridesParentCategories(MyBaseCommandSet):
-    """This subclass is decorated with a default category that is heritable. This overrides the parent class's default
-    category declaration.
+def test_no_category_cmd() -> None:
+    app = NoCategoryCmd()
+    cmds_cats, _cmds_undoc, _help_topics = app._build_command_info()
+    assert "inherit" in cmds_cats[cmd2.Cmd.DEFAULT_CATEGORY]
+
+
+def test_category_cmd() -> None:
+    app = CategoryCmd()
+    cmds_cats, cmds_undoc, help_topics = app._build_command_info()
+
+    assert "documented" in cmds_cats[CategoryCmd.DEFAULT_CATEGORY]
+    assert "undocumented" in cmds_undoc
+    assert "quit" in cmds_cats[CategoryCmd.DEFAULT_CATEGORY]
+    assert "shortcuts" in cmds_cats[cmd2.Cmd.DEFAULT_CATEGORY]
+    assert "helpless" in cmds_cats[CategoryCmd.DEFAULT_CATEGORY]
+    assert "coding" in help_topics
+
+
+class NoCategoryCommandSet(CommandSet):
+    """Example to demonstrate a CommandSet which does not define its own DEFAULT_CATEGORY.
+
+    Its commands will inherit the parent class's DEFAULT_CATEGORY.
     """
 
-    def do_bonjour(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Bonjour')
+    def do_inherit(self, _: cmd2.Statement) -> None:
+        """This function has a docstring.
+
+        Since this class does NOT define its own DEFAULT_CATEGORY,
+        this command will show in CommandSet.DEFAULT_CATEGORY
+        """
 
 
-class GrandchildInheritsHeritable(ChildOverridesParentCategories):
-    """This subclass's parent declares a default category that overrides its parent. As a result, commands in this
-    CommandSet will be categorized under 'Heritable Category'
-    """
+class CategoryCommandSet(CommandSet):
+    """Example to demonstrate custom DEFAULT_CATEGORY in a CommandSet."""
 
-    def do_monde(self, _: cmd2.Statement) -> None:
-        self._cmd.poutput('Monde')
+    DEFAULT_CATEGORY = "CategoryCommandSet Commands"
 
+    def do_documented(self, _: cmd2.Statement) -> None:
+        """This function has a docstring.
 
-class ExampleApp(cmd2.Cmd):
-    """Example to demonstrate heritable default categories"""
-
-    def __init__(self) -> None:
-        super().__init__(auto_load_commands=False)
-
-    def do_something(self, arg) -> None:
-        self.poutput('this is the something command')
+        Since this class DOES define its own DEFAULT_CATEGORY,
+        this command will show in CategoryCommandSet.DEFAULT_CATEGORY
+        """
 
 
-def test_heritable_categories() -> None:
-    app = ExampleApp()
+def test_no_category_command_set() -> None:
+    app = cmd2.Cmd()
+    app.register_command_set(NoCategoryCommandSet())
+    cmds_cats, _cmds_undoc, _help_topics = app._build_command_info()
+    assert "inherit" in cmds_cats[CommandSet.DEFAULT_CATEGORY]
 
-    base_cs = MyBaseCommandSet(0)
-    assert getattr(base_cs, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
 
-    child1 = ChildInheritsParentCategories(1)
-    assert getattr(child1, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
-    app.register_command_set(child1)
-    assert getattr(app.cmd_func('hello').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY, None) == 'Default Category'
-    app.unregister_command_set(child1)
-
-    child_nonheritable = ChildOverridesParentCategoriesNonHeritable(2)
-    assert getattr(child_nonheritable, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) != 'Non-Heritable Category'
-    app.register_command_set(child_nonheritable)
-    assert getattr(app.cmd_func('goodbye').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY, None) == 'Non-Heritable Category'
-    app.unregister_command_set(child_nonheritable)
-
-    grandchild1 = GrandchildInheritsGrandparentCategory(3)
-    assert getattr(grandchild1, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Default Category'
-    app.register_command_set(grandchild1)
-    assert getattr(app.cmd_func('aloha').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY, None) == 'Default Category'
-    app.unregister_command_set(grandchild1)
-
-    child_overrides = ChildOverridesParentCategories(4)
-    assert getattr(child_overrides, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Heritable Category'
-    app.register_command_set(child_overrides)
-    assert getattr(app.cmd_func('bonjour').__func__, cmd2.constants.CMD_ATTR_HELP_CATEGORY, None) == 'Heritable Category'
-    app.unregister_command_set(child_overrides)
-
-    grandchild2 = GrandchildInheritsHeritable(5)
-    assert getattr(grandchild2, cmd2.constants.CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None) == 'Heritable Category'
+def test_category_command_set() -> None:
+    app = cmd2.Cmd()
+    app.register_command_set(CategoryCommandSet())
+    cmds_cats, _cmds_undoc, _help_topics = app._build_command_info()
+    assert "documented" in cmds_cats[CategoryCommandSet.DEFAULT_CATEGORY]
