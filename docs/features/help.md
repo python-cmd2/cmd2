@@ -56,7 +56,7 @@ category, and the display is driven by the `DEFAULT_CATEGORY` class variable.
 There are 3 methods of specifying command categories:
 
 1. Using the `DEFAULT_CATEGORY` class variable (Automatic)
-1. Using the [@with_category][cmd2.with_category] decorator (Surgical)
+1. Using the [@with_category][cmd2.with_category] decorator (Manual)
 1. Using the [categorize()][cmd2.categorize] function (Manual)
 
 ### Automatic Categorization

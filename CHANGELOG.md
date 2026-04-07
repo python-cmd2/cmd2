@@ -72,6 +72,9 @@ prompt is displayed.
     - Renamed `cmd2_handler` to `cmd2_subcmd_handler` in the `argparse.Namespace` for clarity.
     - Removed `Cmd2AttributeWrapper` class. `argparse.Namespace` objects passed to command functions
       now contain direct attributes for `cmd2_statement` and `cmd2_subcmd_handler`.
+    - Removed `Cmd.doc_header` and the `with_default_category` decorator. Help categorization is now
+      driven by the `DEFAULT_CATEGORY` class variable (see **Simplified command categorization** in
+      the Enhancements section below for details).
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
@@ -97,6 +100,11 @@ prompt is displayed.
     - Add support for Python 3.15 by fixing various bugs related to internal `argparse` changes
     - Added `common_prefix` method to `cmd2.string_utils` module as a replacement for
       `os.path.commonprefix` since that is now deprecated in Python 3.15
+    - Simplified command categorization:
+        - By default, all commands in a class are grouped under its `DEFAULT_CATEGORY`.
+        - Individual commands can still be manually moved using the `with_category()` decorator.
+        - For more details and examples, see the [Help](docs/features/help.md) documentation and the
+          `examples/default_categories.py` file.
 
 ## 3.4.0 (March 3, 2026)
 
