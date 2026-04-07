@@ -24,7 +24,6 @@ The `cmd2.Cmd` class provides several class-level variables that can be overridd
 - **DEFAULT_EDITOR**: The default editor program used by the `edit` command.
 - **DEFAULT_PROMPT**: The default prompt string. (Default: `"(Cmd) "`)
 - **MISC_HEADER**: Header for the help section listing miscellaneous help topics. (Default: `"Miscellaneous Help Topics"`)
-- **UNDOC_HEADER**: Header for the help section listing undocumented commands. (Default: `"Undocumented Commands"`)
 
 ## Cmd instance attributes
 

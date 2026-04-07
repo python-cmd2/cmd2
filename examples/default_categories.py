@@ -59,10 +59,6 @@ class CategoryApp(cmd2.Cmd):
         """Overriding with @with_category(cmd2.Cmd.DEFAULT_CATEGORY) keeps it cmd2's category."""
         super().do_shortcuts("")
 
-    def do_undocumented(self, _: cmd2.Statement) -> None:
-        # This has no docstring and no help function, so it stays in "Undocumented Commands"
-        pass
-
 
 if __name__ == '__main__':
     import sys

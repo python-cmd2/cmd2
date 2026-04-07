@@ -33,17 +33,12 @@ class CategoryCmd(cmd2.Cmd):
 
     DEFAULT_CATEGORY = "CategoryCmd Commands"
 
-    def do_documented(self, _: cmd2.Statement) -> None:
-        """This function has a docstring.
+    def do_cmd_command(self, _: cmd2.Statement) -> None:
+        """The cmd command.
 
         Since this class DOES define its own DEFAULT_CATEGORY,
         this command will show in CategoryCmd.DEFAULT_CATEGORY
         """
-
-    # This function has no docstring and does not use argparse.
-    # Therefore it will be uncategorized.
-    def do_undocumented(self, _: cmd2.Statement) -> None:
-        pass
 
     @with_argparser(Cmd2ArgumentParser(description="Overridden quit command"))
     def do_quit(self, _: argparse.Namespace) -> None:
@@ -62,17 +57,15 @@ class CategoryCmd(cmd2.Cmd):
         cmd2.Cmd.DEFAULT_CATEGORY for the parent class.
         """
 
-    # This function has no docstring but it has a help function
-    # so it will be in CategoryCmd.DEFAULT_CATEGORY
-    def do_helpless(self, _: cmd2.Statement) -> None:
-        pass
+    def do_has_help_func(self, _: cmd2.Statement) -> None:
+        """This command has a help function."""
 
-    def help_helpless(self) -> None:
-        """Help function for the helpless command."""
-        self.poutput("The function has help.")
+    def help_has_help_func(self) -> None:
+        """Help function for the has_help_func command."""
+        self.poutput("has_help_func help text.")
 
     def help_coding(self) -> None:
-        """This is help function not tied to a command.
+        """This help function not tied to a command.
 
         It will be in help topics.
         """
@@ -81,19 +74,18 @@ class CategoryCmd(cmd2.Cmd):
 
 def test_no_category_cmd() -> None:
     app = NoCategoryCmd()
-    cmds_cats, _cmds_undoc, _help_topics = app._build_command_info()
+    cmds_cats, _help_topics = app._build_command_info()
     assert "inherit" in cmds_cats[cmd2.Cmd.DEFAULT_CATEGORY]
 
 
 def test_category_cmd() -> None:
     app = CategoryCmd()
-    cmds_cats, cmds_undoc, help_topics = app._build_command_info()
+    cmds_cats, help_topics = app._build_command_info()
 
-    assert "documented" in cmds_cats[CategoryCmd.DEFAULT_CATEGORY]
-    assert "undocumented" in cmds_undoc
+    assert "cmd_command" in cmds_cats[CategoryCmd.DEFAULT_CATEGORY]
     assert "quit" in cmds_cats[CategoryCmd.DEFAULT_CATEGORY]
     assert "shortcuts" in cmds_cats[cmd2.Cmd.DEFAULT_CATEGORY]
-    assert "helpless" in cmds_cats[CategoryCmd.DEFAULT_CATEGORY]
+    assert "has_help_func" in cmds_cats[CategoryCmd.DEFAULT_CATEGORY]
     assert "coding" in help_topics
 
 
@@ -116,8 +108,8 @@ class CategoryCommandSet(CommandSet):
 
     DEFAULT_CATEGORY = "CategoryCommandSet Commands"
 
-    def do_documented(self, _: cmd2.Statement) -> None:
-        """This function has a docstring.
+    def do_cmdset_command(self, _: cmd2.Statement) -> None:
+        """The cmdset command.
 
         Since this class DOES define its own DEFAULT_CATEGORY,
         this command will show in CategoryCommandSet.DEFAULT_CATEGORY
@@ -127,12 +119,12 @@ class CategoryCommandSet(CommandSet):
 def test_no_category_command_set() -> None:
     app = cmd2.Cmd()
     app.register_command_set(NoCategoryCommandSet())
-    cmds_cats, _cmds_undoc, _help_topics = app._build_command_info()
+    cmds_cats, _help_topics = app._build_command_info()
     assert "inherit" in cmds_cats[CommandSet.DEFAULT_CATEGORY]
 
 
 def test_category_command_set() -> None:
     app = cmd2.Cmd()
     app.register_command_set(CategoryCommandSet())
-    cmds_cats, _cmds_undoc, _help_topics = app._build_command_info()
-    assert "documented" in cmds_cats[CategoryCommandSet.DEFAULT_CATEGORY]
+    cmds_cats, _help_topics = app._build_command_info()
+    assert "cmdset_command" in cmds_cats[CategoryCommandSet.DEFAULT_CATEGORY]

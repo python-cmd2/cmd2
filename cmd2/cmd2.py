@@ -344,9 +344,6 @@ class Cmd:
     # Header for table listing help topics not related to a command.
     MISC_HEADER: ClassVar[str] = "Miscellaneous Help Topics"
 
-    # Header for table listing commands that have no help info.
-    UNDOC_HEADER: ClassVar[str] = "Undocumented Commands"
-
     def __init__(
         self,
         completekey: str | None = None,
@@ -868,7 +865,7 @@ class Cmd:
                 self._cmd_to_command_sets[command] = cmdset
 
                 # If this command is in a disabled category, then disable it
-                command_category = getattr(command_method, constants.CMD_ATTR_HELP_CATEGORY, None)
+                command_category = self._get_command_category(command_method)
                 if command_category in self.disabled_categories:
                     message_to_print = self.disabled_categories[command_category]
                     self.disable_command(command, message_to_print)
@@ -3338,6 +3335,23 @@ class Cmd:
         func = getattr(self, func_name, None)
         return cast(CommandFunc, func) if callable(func) else None
 
+    def _get_command_category(self, func: CommandFunc) -> str:
+        """Determine the category for a command.
+
+        :param func: the do_* function implementing the command
+        :return: category name
+        """
+        # Check if the command function has a category.
+        if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
+            category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
+
+        # Otherwise get the category from its defining class.
+        else:
+            defining_cls = get_defining_class(func)
+            category = getattr(defining_cls, 'DEFAULT_CATEGORY', self.DEFAULT_CATEGORY)
+
+        return category
+
     def onecmd(self, statement: Statement | str, *, add_to_history: bool = True) -> bool:
         """Execute the actual do_* method for a command.
 
@@ -4214,12 +4228,11 @@ class Cmd:
         completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
 
-    def _build_command_info(self) -> tuple[dict[str, list[str]], list[str], list[str]]:
+    def _build_command_info(self) -> tuple[dict[str, list[str]], list[str]]:
         """Categorizes and sorts visible commands and help topics for display.
 
         :return: tuple containing:
                   - dictionary mapping category names to lists of command names
-                  - list of undocumented command names
                   - list of help topic names that are not also commands
         """
         # Get a sorted list of help topics
@@ -4228,36 +4241,18 @@ class Cmd:
         # Get a sorted list of visible command names
         visible_commands = sorted(self.get_visible_commands(), key=utils.DEFAULT_STR_SORT_KEY)
         cmds_cats: dict[str, list[str]] = {}
-        cmds_undoc: list[str] = []
 
         for command in visible_commands:
-            func = cast(CommandFunc, self.cmd_func(command))
-            has_help_func = False
-            has_parser = func in self._command_parsers
-
+            # Prevent the command from showing as both a command and help topic in the output
             if command in help_topics:
-                # Prevent the command from showing as both a command and help topic in the output
                 help_topics.remove(command)
 
-                # Non-argparse commands can have help_functions for their documentation
-                has_help_func = not has_parser
+            # Store the command within its category
+            func = cast(CommandFunc, self.cmd_func(command))
+            category = self._get_command_category(func)
+            cmds_cats.setdefault(category, []).append(command)
 
-            # Determine the category
-            category: str | None = None
-
-            if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
-                category = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
-            elif func.__doc__ or has_help_func or has_parser:
-                defining_cls = get_defining_class(func)
-                category = getattr(defining_cls, 'DEFAULT_CATEGORY', self.DEFAULT_CATEGORY)
-
-            # Store the command
-            if category is not None:
-                cmds_cats.setdefault(category, []).append(command)
-            else:
-                cmds_undoc.append(command)
-
-        return cmds_cats, cmds_undoc, help_topics
+        return cmds_cats, help_topics
 
     @classmethod
     def _build_help_parser(cls) -> Cmd2ArgumentParser:
@@ -4290,7 +4285,7 @@ class Cmd:
         self.last_result = True
 
         if not args.command or args.verbose:
-            cmds_cats, cmds_undoc, help_topics = self._build_command_info()
+            cmds_cats, help_topics = self._build_command_info()
 
             if self.doc_leader:
                 self.poutput()
@@ -4311,11 +4306,10 @@ class Cmd:
                 self._print_documented_command_topics(category, commands, args.verbose)
                 previous_table_printed = bool(commands) and args.verbose
 
-            if previous_table_printed and (help_topics or cmds_undoc):
+            if previous_table_printed and help_topics:
                 self.poutput()
 
             self.print_topics(self.MISC_HEADER, help_topics, 15, 80)
-            self.print_topics(self.UNDOC_HEADER, cmds_undoc, 15, 80)
 
         else:
             # Getting help for a specific command
@@ -5622,7 +5616,7 @@ class Cmd:
 
         for cmd_name in list(self.disabled_commands):
             func = self.disabled_commands[cmd_name].command_function
-            if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
+            if self._get_command_category(func) == category:
                 self.enable_command(cmd_name)
 
         del self.disabled_categories[category]
@@ -5683,8 +5677,8 @@ class Cmd:
         all_commands = self.get_all_commands()
 
         for cmd_name in all_commands:
-            func = self.cmd_func(cmd_name)
-            if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
+            func = cast(CommandFunc, self.cmd_func(cmd_name))
+            if self._get_command_category(func) == category:
                 self.disable_command(cmd_name, message_to_print)
 
         self.disabled_categories[category] = message_to_print

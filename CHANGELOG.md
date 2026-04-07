@@ -76,6 +76,7 @@ prompt is displayed.
     - Removed `Cmd.doc_header` and the `with_default_category` decorator. Help categorization is now
       driven by the `DEFAULT_CATEGORY` class variable (see **Simplified command categorization** in
       the Enhancements section below for details).
+    - Removed `Cmd.undoc_header` since all commands are now considered categorized.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
