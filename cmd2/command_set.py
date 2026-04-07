@@ -40,17 +40,17 @@ class CommandSet:
         This will be set when the CommandSet is registered and it should be
         accessed by child classes using the self._cmd property.
         """
-        self.__cmd_internal: Cmd | None = None
+        self._cmd_internal: Cmd | None = None
 
         self._settables: dict[str, Settable] = {}
         self._settable_prefix = self.__class__.__name__
 
     @property
     def _cmd(self) -> 'Cmd':
-        """Property for child classes to access self.__cmd_internal.
+        """Property for child classes to access self._cmd_internal.
 
-        Using this property ensures that self.__cmd_internal has been set
-        and it tells type checkers that it's no longer a None type.
+        Using this property ensures that the CommandSet has been registered
+        and tells type checkers that self._cmd_internal is not None.
 
         Override this property to specify a more specific return type for static
         type checking. The typing.cast function can be used to assert to the
@@ -66,9 +66,9 @@ class CommandSet:
 
         :raises CommandSetRegistrationError: if CommandSet is not registered.
         """
-        if self.__cmd_internal is None:
+        if self._cmd_internal is None:
             raise CommandSetRegistrationError('This CommandSet is not registered')
-        return self.__cmd_internal
+        return self._cmd_internal
 
     def on_register(self, cmd: 'Cmd') -> None:
         """First step to registering a CommandSet, called by cmd2.Cmd.
@@ -80,8 +80,8 @@ class CommandSet:
         :param cmd: The cmd2 main application
         :raises CommandSetRegistrationError: if CommandSet is already registered.
         """
-        if self.__cmd_internal is None:
-            self.__cmd_internal = cmd
+        if self._cmd_internal is None:
+            self._cmd_internal = cmd
         else:
             raise CommandSetRegistrationError('This CommandSet has already been registered')
 
@@ -103,7 +103,7 @@ class CommandSet:
 
         Subclasses can override this to perform remaining cleanup steps.
         """
-        self.__cmd_internal = None
+        self._cmd_internal = None
 
     @property
     def settable_prefix(self) -> str:
@@ -120,7 +120,7 @@ class CommandSet:
 
         :param settable: Settable object being added
         """
-        if self.__cmd_internal is not None:
+        if self._cmd_internal is not None:
             if not self._cmd.always_prefix_settables:
                 if settable.name in self._cmd.settables and settable.name not in self._settables:
                     raise KeyError(f'Duplicate settable: {settable.name}')
