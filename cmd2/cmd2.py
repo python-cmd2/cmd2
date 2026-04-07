@@ -337,6 +337,8 @@ class Cmd:
     # not been explicitly categorized with the @with_category decorator.
     # This value is inherited by subclasses but they can set their own
     # DEFAULT_CATEGORY to place their commands into a custom category.
+    # Subclasses can also reassign cmd2.Cmd.DEFAULT_CATEGORY to rename
+    # the category used for the framework's built-in commands.
     DEFAULT_CATEGORY: ClassVar[str] = "Cmd2 Commands"
 
     # Header for table listing help topics not related to a command.

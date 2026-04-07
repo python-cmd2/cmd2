@@ -90,7 +90,19 @@ class Plugin(cmd2.CommandSet):
 
 When using inheritance, `cmd2` uses the `DEFAULT_CATEGORY` of the class where the command was
 actually defined. This means built-in commands (like `help`, `history`, and `quit`) stay in the
-`"cmd2 Commands"` category, while your commands move to your custom category.
+`"Cmd2 Commands"` category, while your commands move to your custom category.
+
+If you want to rename the built-in category itself, you can do so by reassigning
+`cmd2.Cmd.DEFAULT_CATEGORY` at the class level within your `Cmd` subclass:
+
+```py
+class MyApp(cmd2.Cmd):
+    # Rename the framework's built-in category
+    cmd2.Cmd.DEFAULT_CATEGORY = 'Shell Commands'
+
+    # Set the category for your own commands
+    DEFAULT_CATEGORY = 'Application Commands'
+```
 
 For a complete demonstration of this functionality, see the
 [default_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/default_categories.py)

@@ -36,6 +36,9 @@ class CategoryApp(cmd2.Cmd):
     # This sets the default category for all commands defined in this class
     DEFAULT_CATEGORY = "Application Commands"
 
+    # This overrides the category for the cmd2 built-in commands
+    cmd2.Cmd.DEFAULT_CATEGORY = "Cmd2 Shell Commands"
+
     def __init__(self) -> None:
         super().__init__()
         # Register a command set to show how its categories integrate
