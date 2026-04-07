@@ -42,7 +42,6 @@ import threading
 import time
 from code import InteractiveConsole
 from collections import (
-    defaultdict,
     deque,
     namedtuple,
 )
@@ -4223,7 +4222,7 @@ class Cmd:
 
         # Get a sorted list of visible command names
         visible_commands = sorted(self.get_visible_commands(), key=utils.DEFAULT_STR_SORT_KEY)
-        cmds_cats: dict[str, list[str]] = defaultdict(list)
+        cmds_cats: dict[str, list[str]] = {}
         cmds_undoc: list[str] = []
 
         for command in visible_commands:
@@ -4238,16 +4237,21 @@ class Cmd:
                 # Non-argparse commands can have help_functions for their documentation
                 has_help_func = not has_parser
 
+            # Determine the category
+            category: str | None = None
+
             if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
-                category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
-                cmds_cats[category].append(command)
+                category = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
             elif func.__doc__ or has_help_func or has_parser:
-                # Determine the category based on the defining class
                 defining_cls = get_defining_class(func)
                 category = getattr(defining_cls, 'DEFAULT_CATEGORY', self.DEFAULT_CATEGORY)
-                cmds_cats[category].append(command)
+
+            # Store the command
+            if category is not None:
+                cmds_cats.setdefault(category, []).append(command)
             else:
                 cmds_undoc.append(command)
+
         return cmds_cats, cmds_undoc, help_topics
 
     @classmethod

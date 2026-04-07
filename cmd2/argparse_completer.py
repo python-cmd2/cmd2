@@ -6,10 +6,7 @@ See the header of argparse_custom.py for instructions on how to use these featur
 import argparse
 import dataclasses
 import inspect
-from collections import (
-    defaultdict,
-    deque,
-)
+from collections import deque
 from collections.abc import (
     Mapping,
     MutableSequence,
@@ -251,7 +248,7 @@ class ArgparseCompleter:
         used_flags: set[str] = set()
 
         # Keeps track of arguments we've seen and any tokens they consumed
-        consumed_arg_values: dict[str, list[str]] = defaultdict(list)
+        consumed_arg_values: dict[str, list[str]] = {}
 
         # Completed mutually exclusive groups
         completed_mutex_groups: dict[argparse._MutuallyExclusiveGroup, argparse.Action] = {}
@@ -259,7 +256,7 @@ class ArgparseCompleter:
         def consume_argument(arg_state: _ArgumentState, arg_token: str) -> None:
             """Consume token as an argument."""
             arg_state.count += 1
-            consumed_arg_values[arg_state.action.dest].append(arg_token)
+            consumed_arg_values.setdefault(arg_state.action.dest, []).append(arg_token)
 
         #############################################################################################
         # Parse all but the last token
@@ -336,7 +333,7 @@ class ArgparseCompleter:
                         # filter them from future completion results and clear any previously
                         # recorded values for this destination.
                         used_flags.update(action.option_strings)
-                        consumed_arg_values[action.dest].clear()
+                        consumed_arg_values[action.dest] = []
 
                     new_arg_state = _ArgumentState(action)
 
@@ -362,7 +359,6 @@ class ArgparseCompleter:
                     # Are we at a subcommand? If so, forward to the matching completer
                     if self._subcommand_action is not None and action == self._subcommand_action:
                         if token in self._subcommand_action.choices:
-                            # Merge self._parent_tokens and consumed_arg_values
                             parent_tokens = {**self._parent_tokens, **consumed_arg_values}
 
                             # Include the subcommand name if its destination was set
@@ -557,7 +553,7 @@ class ArgparseCompleter:
                     match_against.append(flag)
 
         # Build a dictionary linking actions with their matched flag names
-        matched_actions: dict[argparse.Action, list[str]] = defaultdict(list)
+        matched_actions: dict[argparse.Action, list[str]] = {}
 
         # Keep flags sorted in the order provided by argparse so our completion
         # suggestions display the same as argparse help text.
@@ -565,7 +561,7 @@ class ArgparseCompleter:
 
         for flag in matched_flags.to_strings():
             action = self._flag_to_action[flag]
-            matched_actions[action].append(flag)
+            matched_actions.setdefault(action, []).append(flag)
 
         # For completion suggestions, group matched flags by action
         items: list[CompletionItem] = []
