@@ -27,8 +27,7 @@ class CommandSet:
     ``do_``, ``help_``, and ``complete_`` functions differ only in that self is the CommandSet instead of the cmd2 app
     """
 
-    # Default category used for documented commands (those with a docstring,
-    # help function, or argparse decorator) defined in this CommandSet that have
+    # Default category for commands defined in this CommandSet which have
     # not been explicitly categorized with the @with_category decorator.
     # This value is inherited by subclasses but they can set their own
     # DEFAULT_CATEGORY to place their commands into a custom category.

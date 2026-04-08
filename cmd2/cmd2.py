@@ -332,8 +332,7 @@ class Cmd:
     DEFAULT_EDITOR: ClassVar[str | None] = utils.find_editor()
     DEFAULT_PROMPT: ClassVar[str] = "(Cmd) "
 
-    # Default category used for documented commands (those with a docstring,
-    # help function, or argparse decorator) defined in this class that have
+    # Default category for commands defined in this class which have
     # not been explicitly categorized with the @with_category decorator.
     # This value is inherited by subclasses but they can set their own
     # DEFAULT_CATEGORY to place their commands into a custom category.
@@ -4292,12 +4291,12 @@ class Cmd:
                 self.poutput(Text(self.doc_leader, style=Cmd2Style.HELP_LEADER))
             self.poutput()
 
-            # Print any categories first and then the remaining documented commands.
-            sorted_categories = sorted(cmds_cats.keys(), key=utils.DEFAULT_STR_SORT_KEY)
-            all_cmds = {category: cmds_cats[category] for category in sorted_categories}
-
             # Used to provide verbose table separation for better readability.
             previous_table_printed = False
+
+            # Print commands grouped by category
+            sorted_categories = sorted(cmds_cats.keys(), key=utils.DEFAULT_STR_SORT_KEY)
+            all_cmds = {category: cmds_cats[category] for category in sorted_categories}
 
             for category, commands in all_cmds.items():
                 if previous_table_printed:
@@ -4309,6 +4308,7 @@ class Cmd:
             if previous_table_printed and help_topics:
                 self.poutput()
 
+            # Print help topics table
             self.print_topics(self.MISC_HEADER, help_topics, 15, 80)
 
         else:

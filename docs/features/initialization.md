@@ -20,7 +20,7 @@ Certain things must be initialized within the `__init__()` method of your class 
 
 The `cmd2.Cmd` class provides several class-level variables that can be overridden in subclasses to change default behavior across all instances of that class.
 
-- **DEFAULT_CATEGORY**: The default help category for documented commands defined in the class that haven't been explicitly categorized. (Default: `"Cmd2 Commands"`)
+- **DEFAULT_CATEGORY**: The default help category for commands defined in the class which haven't been explicitly categorized. (Default: `"Cmd2 Commands"`)
 - **DEFAULT_EDITOR**: The default editor program used by the `edit` command.
 - **DEFAULT_PROMPT**: The default prompt string. (Default: `"(Cmd) "`)
 - **MISC_HEADER**: Header for the help section listing miscellaneous help topics. (Default: `"Miscellaneous Help Topics"`)
