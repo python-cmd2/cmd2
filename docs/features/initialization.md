@@ -16,6 +16,15 @@ Certain things must be initialized within the `__init__()` method of your class 
 
 ::: cmd2.Cmd.__init__
 
+## Cmd class variables
+
+The `cmd2.Cmd` class provides several class-level variables that can be overridden in subclasses to change default behavior across all instances of that class.
+
+- **DEFAULT_CATEGORY**: The default help category for commands defined in the class which haven't been explicitly categorized. (Default: `"Cmd2 Commands"`)
+- **DEFAULT_EDITOR**: The default editor program used by the `edit` command.
+- **DEFAULT_PROMPT**: The default prompt string. (Default: `"(Cmd) "`)
+- **MISC_HEADER**: Header for the help section listing miscellaneous help topics. (Default: `"Miscellaneous Help Topics"`)
+
 ## Cmd instance attributes
 
 The `cmd2.Cmd` class provides a large number of public instance attributes which allow developers to customize a `cmd2` application further beyond the options provided by the `__init__()` method.
@@ -29,10 +38,8 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **broken_pipe_warning**: if non-empty, this string will be displayed if a broken pipe error occurs
 - **continuation_prompt**: used for multiline commands on 2nd+ line of input
 - **debug**: if `True`, show full stack trace on error (Default: `False`)
-- **default_category**: if any command has been categorized, then all other commands that haven't been categorized will display under this section in the help output.
 - **default_error**: the error that prints when a non-existent command is run
 - **disabled_commands**: commands that have been disabled from use. This is to support commands that are only available during specific states of the application. This dictionary's keys are the command names and its values are DisabledCommand objects.
-- **doc_header**: Set the header used for the help function's listing of documented functions
 - **echo**: if `True`, each command the user issues will be repeated to the screen before it is executed. This is particularly useful when running scripts. This behavior does not occur when running a command at the prompt. (Default: `False`)
 - **editor**: text editor program to use with _edit_ command (e.g. `vim`)
 - **exclude_from_history**: commands to exclude from the _history_ command

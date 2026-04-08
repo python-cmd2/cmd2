@@ -33,7 +33,7 @@ from cmd2 import (
 class BasicApp(cmd2.Cmd):
     """Cmd2 application to demonstrate many common features."""
 
-    CUSTOM_CATEGORY = 'My Custom Commands'
+    DEFAULT_CATEGORY = 'My Custom Commands'
 
     def __init__(self) -> None:
         """Initialize the cmd2 application."""
@@ -78,9 +78,6 @@ class BasicApp(cmd2.Cmd):
         # Allow access to your application in py and ipy via self
         self.self_in_py = True
 
-        # Set the default category name
-        self.default_category = 'cmd2 Built-in Commands'
-
         # Color to output text in with echo command
         self.foreground_color = Color.CYAN.value
 
@@ -120,12 +117,10 @@ class BasicApp(cmd2.Cmd):
                     app.invalidate()
             time.sleep(0.5)
 
-    @cmd2.with_category(CUSTOM_CATEGORY)
     def do_intro(self, _: cmd2.Statement) -> None:
         """Display the intro banner."""
         self.poutput(self.intro)
 
-    @cmd2.with_category(CUSTOM_CATEGORY)
     def do_echo(self, arg: cmd2.Statement) -> None:
         """Multiline command."""
         self.poutput(

@@ -39,8 +39,7 @@ each:
 - [custom_types.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_types.py)
     - Some useful custom argument types
 - [default_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/default_categories.py)
-    - Demonstrates usage of `@with_default_category` decorator to group and categorize commands and
-      `CommandSet` use
+    - Demonstrates usage of the `DEFAULT_CATEGORY` class variable to group and categorize commands.
 - [dynamic_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/dynamic_commands.py)
     - Shows how `do_*` commands can be dynamically created programmatically at runtime
 - [environment.py](https://github.com/python-cmd2/cmd2/blob/main/examples/environment.py)

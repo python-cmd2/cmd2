@@ -19,10 +19,7 @@ from .argparse_custom import (
 )
 from .cmd2 import Cmd
 from .colors import Color
-from .command_definition import (
-    CommandSet,
-    with_default_category,
-)
+from .command_set import CommandSet
 from .completion import (
     Choices,
     CompletionItem,
@@ -80,7 +77,6 @@ __all__: list[str] = [  # noqa: RUF022
     'with_argument_list',
     'with_argparser',
     'with_category',
-    'with_default_category',
     'as_subcommand_to',
     # Exceptions
     'Cmd2ArgparseError',

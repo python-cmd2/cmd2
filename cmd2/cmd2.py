@@ -60,6 +60,7 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
+    ClassVar,
     TextIO,
     TypeVar,
     Union,
@@ -113,7 +114,7 @@ from .clipboard import (
     get_paste_buffer,
     write_to_paste_buffer,
 )
-from .command_definition import (
+from .command_set import (
     CommandFunc,
     CommandSet,
 )
@@ -123,7 +124,6 @@ from .completion import (
     Completions,
 )
 from .constants import (
-    CMDSET_ATTR_DEFAULT_HELP_CATEGORY,
     COMMAND_FUNC_PREFIX,
     COMPLETER_FUNC_PREFIX,
     HELP_FUNC_PREFIX,
@@ -328,13 +328,24 @@ class Cmd:
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
 
-    DEFAULT_COMPLETEKEY = 'tab'
-    DEFAULT_EDITOR = utils.find_editor()
-    DEFAULT_PROMPT = '(Cmd) '
+    DEFAULT_COMPLETEKEY: ClassVar[str] = "tab"
+    DEFAULT_EDITOR: ClassVar[str | None] = utils.find_editor()
+    DEFAULT_PROMPT: ClassVar[str] = "(Cmd) "
+
+    # Default category for commands defined in this class which have
+    # not been explicitly categorized with the @with_category decorator.
+    # This value is inherited by subclasses but they can set their own
+    # DEFAULT_CATEGORY to place their commands into a custom category.
+    # Subclasses can also reassign cmd2.Cmd.DEFAULT_CATEGORY to rename
+    # the category used for the framework's built-in commands.
+    DEFAULT_CATEGORY: ClassVar[str] = "Cmd2 Commands"
+
+    # Header for table listing help topics not related to a command.
+    MISC_HEADER: ClassVar[str] = "Miscellaneous Help Topics"
 
     def __init__(
         self,
-        completekey: str = DEFAULT_COMPLETEKEY,
+        completekey: str | None = None,
         stdin: TextIO | None = None,
         stdout: TextIO | None = None,
         *,
@@ -359,7 +370,7 @@ class Cmd:
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
-        :param completekey: name of a completion key, default to Tab
+        :param completekey: name of a completion key, default to 'tab'. (If None or an empty string, 'tab' is used)
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
         :param allow_cli_args: if ``True``, then [cmd2.Cmd.__init__][] will process command
@@ -416,8 +427,11 @@ class Cmd:
         self._initialize_plugin_system()
 
         # Configure a few defaults
-        self.prompt: str = Cmd.DEFAULT_PROMPT
+        self.prompt: str = self.DEFAULT_PROMPT
         self.intro = intro
+
+        if not completekey:
+            completekey = self.DEFAULT_COMPLETEKEY
 
         # What to use for standard input
         if stdin is not None:
@@ -446,7 +460,7 @@ class Cmd:
         self.always_show_hint = False
         self.debug = False
         self.echo = False
-        self.editor = Cmd.DEFAULT_EDITOR
+        self.editor = self.DEFAULT_EDITOR
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.quiet = False  # Do not suppress nonessential output
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
@@ -536,19 +550,6 @@ class Cmd:
 
         # Set text which prints right before all of the help tables are listed.
         self.doc_leader = ""
-
-        # Set header for table listing documented commands.
-        self.doc_header = "Documented Commands"
-
-        # Set header for table listing help topics not related to a command.
-        self.misc_header = "Miscellaneous Help Topics"
-
-        # Set header for table listing commands that have no help info.
-        self.undoc_header = "Undocumented Commands"
-
-        # If any command has been categorized, then all other documented commands that
-        # haven't been categorized will display under this section in the help output.
-        self.default_category = "Uncategorized Commands"
 
         # The error that prints when no help information can be found
         self.help_error = "No help on {}"
@@ -840,8 +841,6 @@ class Cmd:
             ),
         )
 
-        default_category = getattr(cmdset, CMDSET_ATTR_DEFAULT_HELP_CATEGORY, None)
-
         installed_attributes = []
         try:
             for cmd_func_name, command_method in methods:
@@ -864,11 +863,8 @@ class Cmd:
 
                 self._cmd_to_command_sets[command] = cmdset
 
-                if default_category and not hasattr(command_method, constants.CMD_ATTR_HELP_CATEGORY):
-                    utils.categorize(command_method, default_category)
-
                 # If this command is in a disabled category, then disable it
-                command_category = getattr(command_method, constants.CMD_ATTR_HELP_CATEGORY, None)
+                command_category = self._get_command_category(command_method)
                 if command_category in self.disabled_categories:
                     message_to_print = self.disabled_categories[command_category]
                     self.disable_command(command, message_to_print)
@@ -3338,6 +3334,23 @@ class Cmd:
         func = getattr(self, func_name, None)
         return cast(CommandFunc, func) if callable(func) else None
 
+    def _get_command_category(self, func: CommandFunc) -> str:
+        """Determine the category for a command.
+
+        :param func: the do_* function implementing the command
+        :return: category name
+        """
+        # Check if the command function has a category.
+        if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
+            category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
+
+        # Otherwise get the category from its defining class.
+        else:
+            defining_cls = get_defining_class(func)
+            category = getattr(defining_cls, 'DEFAULT_CATEGORY', self.DEFAULT_CATEGORY)
+
+        return category
+
     def onecmd(self, statement: Statement | str, *, add_to_history: bool = True) -> bool:
         """Execute the actual do_* method for a command.
 
@@ -4214,13 +4227,11 @@ class Cmd:
         completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens['subcommands'])
 
-    def _build_command_info(self) -> tuple[dict[str, list[str]], list[str], list[str], list[str]]:
+    def _build_command_info(self) -> tuple[dict[str, list[str]], list[str]]:
         """Categorizes and sorts visible commands and help topics for display.
 
         :return: tuple containing:
                   - dictionary mapping category names to lists of command names
-                  - list of documented command names
-                  - list of undocumented command names
                   - list of help topic names that are not also commands
         """
         # Get a sorted list of help topics
@@ -4228,30 +4239,19 @@ class Cmd:
 
         # Get a sorted list of visible command names
         visible_commands = sorted(self.get_visible_commands(), key=utils.DEFAULT_STR_SORT_KEY)
-        cmds_doc: list[str] = []
-        cmds_undoc: list[str] = []
         cmds_cats: dict[str, list[str]] = {}
-        for command in visible_commands:
-            func = cast(CommandFunc, self.cmd_func(command))
-            has_help_func = False
-            has_parser = func in self._command_parsers
 
+        for command in visible_commands:
+            # Prevent the command from showing as both a command and help topic in the output
             if command in help_topics:
-                # Prevent the command from showing as both a command and help topic in the output
                 help_topics.remove(command)
 
-                # Non-argparse commands can have help_functions for their documentation
-                has_help_func = not has_parser
+            # Store the command within its category
+            func = cast(CommandFunc, self.cmd_func(command))
+            category = self._get_command_category(func)
+            cmds_cats.setdefault(category, []).append(command)
 
-            if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
-                category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
-                cmds_cats.setdefault(category, [])
-                cmds_cats[category].append(command)
-            elif func.__doc__ or has_help_func or has_parser:
-                cmds_doc.append(command)
-            else:
-                cmds_undoc.append(command)
-        return cmds_cats, cmds_doc, cmds_undoc, help_topics
+        return cmds_cats, help_topics
 
     @classmethod
     def _build_help_parser(cls) -> Cmd2ArgumentParser:
@@ -4284,23 +4284,19 @@ class Cmd:
         self.last_result = True
 
         if not args.command or args.verbose:
-            cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
+            cmds_cats, help_topics = self._build_command_info()
 
             if self.doc_leader:
                 self.poutput()
                 self.poutput(Text(self.doc_leader, style=Cmd2Style.HELP_LEADER))
             self.poutput()
 
-            # Print any categories first and then the remaining documented commands.
-            sorted_categories = sorted(cmds_cats.keys(), key=utils.DEFAULT_STR_SORT_KEY)
-            all_cmds = {category: cmds_cats[category] for category in sorted_categories}
-            if all_cmds:
-                all_cmds[self.default_category] = cmds_doc
-            else:
-                all_cmds[self.doc_header] = cmds_doc
-
             # Used to provide verbose table separation for better readability.
             previous_table_printed = False
+
+            # Print commands grouped by category
+            sorted_categories = sorted(cmds_cats.keys(), key=utils.DEFAULT_STR_SORT_KEY)
+            all_cmds = {category: cmds_cats[category] for category in sorted_categories}
 
             for category, commands in all_cmds.items():
                 if previous_table_printed:
@@ -4309,11 +4305,11 @@ class Cmd:
                 self._print_documented_command_topics(category, commands, args.verbose)
                 previous_table_printed = bool(commands) and args.verbose
 
-            if previous_table_printed and (help_topics or cmds_undoc):
+            if previous_table_printed and help_topics:
                 self.poutput()
 
-            self.print_topics(self.misc_header, help_topics, 15, 80)
-            self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
+            # Print help topics table
+            self.print_topics(self.MISC_HEADER, help_topics, 15, 80)
 
         else:
             # Getting help for a specific command
@@ -5620,7 +5616,7 @@ class Cmd:
 
         for cmd_name in list(self.disabled_commands):
             func = self.disabled_commands[cmd_name].command_function
-            if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
+            if self._get_command_category(func) == category:
                 self.enable_command(cmd_name)
 
         del self.disabled_categories[category]
@@ -5681,8 +5677,8 @@ class Cmd:
         all_commands = self.get_all_commands()
 
         for cmd_name in all_commands:
-            func = self.cmd_func(cmd_name)
-            if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
+            func = cast(CommandFunc, self.cmd_func(cmd_name))
+            if self._get_command_category(func) == category:
                 self.disable_command(cmd_name, message_to_print)
 
         self.disabled_categories[category] = message_to_print

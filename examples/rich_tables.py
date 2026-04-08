@@ -64,7 +64,7 @@ COUNTRY_CAPTION = "Data from https://worldpopulationreview.com/ and Wikipedia"
 class TableApp(cmd2.Cmd):
     """Cmd2 application to demonstrate displaying tabular data using rich."""
 
-    TABLE_CATEGORY = 'Table Commands'
+    DEFAULT_CATEGORY = 'Table Commands'
 
     def __init__(self) -> None:
         """Initialize the cmd2 application."""
@@ -73,10 +73,6 @@ class TableApp(cmd2.Cmd):
         # Prints an intro banner once upon application startup
         self.intro = 'Are you curious which countries and cities on Earth have the largest populations?'
 
-        # Set the default category name
-        self.default_category = 'cmd2 Built-in Commands'
-
-    @cmd2.with_category(TABLE_CATEGORY)
     def do_cities(self, _: cmd2.Statement) -> None:
         """Display the cities with the largest population."""
         table = Table(title=CITY_TITLE, caption=CITY_CAPTION)
@@ -91,7 +87,6 @@ class TableApp(cmd2.Cmd):
 
         self.poutput(table)
 
-    @cmd2.with_category(TABLE_CATEGORY)
     def do_countries(self, _: cmd2.Statement) -> None:
         """Display the countries with the largest population."""
         table = Table(title=COUNTRY_TITLE, caption=COUNTRY_CAPTION)

@@ -14,7 +14,7 @@ from typing import (
 
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
-    from .command_definition import CommandSet
+    from .command_set import CommandSet
     from .completion import Choices, Completions
 
 # A Cmd or CommandSet
