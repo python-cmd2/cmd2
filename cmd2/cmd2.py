@@ -370,7 +370,7 @@ class Cmd:
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
-        :param completekey: name of a completion key, default to Tab
+        :param completekey: name of a completion key, default to 'tab'. (If None or an empty string, 'tab' is used)
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
         :param allow_cli_args: if ``True``, then [cmd2.Cmd.__init__][] will process command
@@ -430,7 +430,7 @@ class Cmd:
         self.prompt: str = self.DEFAULT_PROMPT
         self.intro = intro
 
-        if completekey is None:
+        if not completekey:
             completekey = self.DEFAULT_COMPLETEKEY
 
         # What to use for standard input

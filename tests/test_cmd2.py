@@ -4164,6 +4164,17 @@ def test_custom_completekey_ctrl_k():
     assert found, "Could not find binding for 'c-k' (Keys.ControlK) in session key bindings"
 
 
+def test_completekey_empty_string() -> None:
+    # Test that an empty string for completekey defaults to DEFAULT_COMPLETEKEY
+    with mock.patch('cmd2.Cmd._create_main_session', autospec=True) as create_session_mock:
+        create_session_mock.return_value = mock.MagicMock(spec=PromptSession)
+        app = cmd2.Cmd(completekey='')
+
+        # Verify it was called with DEFAULT_COMPLETEKEY
+        # auto_suggest is the second arg and it defaults to True
+        create_session_mock.assert_called_once_with(app, True, app.DEFAULT_COMPLETEKEY)
+
+
 def test_create_main_session_exception(monkeypatch):
 
     # Mock PromptSession to raise ValueError on first call, then succeed
