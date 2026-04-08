@@ -29,11 +29,11 @@ class HelpCategories(cmd2.Cmd):
     CMD_CAT_APP_MGMT = 'Application Management'
     CMD_CAT_SERVER_INFO = 'Server Information'
 
+    # Show all other commands in "Other" category
+    cmd2.Cmd.DEFAULT_CATEGORY = 'Other'
+
     def __init__(self) -> None:
         super().__init__()
-
-        # Set the default category for uncategorized commands
-        self.default_category = 'Other'
 
     def do_connect(self, _) -> None:
         """Connect command."""

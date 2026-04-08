@@ -1303,12 +1303,12 @@ def test_visible_prompt() -> None:
 class HelpApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
 
+    DEFAULT_CATEGORY = "My Default Category."
+    MISC_HEADER = "Various topics found here."
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.doc_leader = "I now present you with a list of help topics."
-        self.doc_header = "My very custom doc header."
-        self.misc_header = "Various topics found here."
-        self.undoc_header = "Why did no one document these?"
 
     def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
@@ -1319,8 +1319,8 @@ class HelpApp(cmd2.Cmd):
     def do_edit(self, arg) -> None:
         """This overrides the edit command and does nothing."""
 
-    # This command will be in the "undocumented" section of the help menu
-    def do_undoc(self, arg) -> None:
+    # This command has no help text
+    def do_no_help(self, arg) -> None:
         pass
 
     def do_multiline_docstr(self, arg) -> None:
@@ -1352,9 +1352,8 @@ def test_help_headers(capsys) -> None:
     out, _err = capsys.readouterr()
 
     assert help_app.doc_leader in out
-    assert help_app.doc_header in out
-    assert help_app.misc_header in out
-    assert help_app.undoc_header in out
+    assert HelpApp.DEFAULT_CATEGORY in out
+    assert HelpApp.MISC_HEADER in out
     assert help_app.last_result is True
 
 
@@ -1371,9 +1370,9 @@ def test_custom_help_menu(help_app) -> None:
     assert help_app.last_result is True
 
 
-def test_help_undocumented(help_app) -> None:
-    _out, err = run_cmd(help_app, 'help undoc')
-    assert err[0].startswith("No help on undoc")
+def test_help_no_help(help_app) -> None:
+    _out, err = run_cmd(help_app, 'help no_help')
+    assert err[0].startswith("No help on no_help")
     assert help_app.last_result is False
 
 
@@ -1409,7 +1408,7 @@ def test_help_verbose_with_fake_command(capsys) -> None:
     help_app = HelpApp()
 
     cmds = ["alias", "fake_command"]
-    help_app._print_documented_command_topics(help_app.doc_header, cmds, verbose=True)
+    help_app._print_documented_command_topics(help_app.DEFAULT_CATEGORY, cmds, verbose=True)
     out, _err = capsys.readouterr()
     assert cmds[0] in out
     assert cmds[1] not in out
@@ -1464,7 +1463,7 @@ class HelpCategoriesApp(cmd2.Cmd):
     def do_cat_nodoc(self, arg) -> None:
         pass
 
-    # This command will show in the category labeled with self.default_category
+    # This command will show in the category labeled with DEFAULT_CATEGORY
     def do_squat(self, arg) -> None:
         """This docstring help will never be shown because the help_squat method overrides it."""
 
@@ -1475,10 +1474,6 @@ class HelpCategoriesApp(cmd2.Cmd):
         """This overrides the edit command and does nothing."""
 
     cmd2.categorize((do_squat, do_edit), CUSTOM_CATEGORY)
-
-    # This command will be in the "undocumented" section of the help menu
-    def do_undoc(self, arg) -> None:
-        pass
 
 
 @pytest.fixture
@@ -1494,7 +1489,7 @@ def test_help_cat_base(helpcat_app) -> None:
     help_text = ''.join(out)
     assert helpcat_app.CUSTOM_CATEGORY in help_text
     assert helpcat_app.SOME_CATEGORY in help_text
-    assert helpcat_app.default_category in help_text
+    assert helpcat_app.DEFAULT_CATEGORY in help_text
 
 
 def test_help_cat_verbose(helpcat_app) -> None:
@@ -1505,7 +1500,7 @@ def test_help_cat_verbose(helpcat_app) -> None:
     help_text = ''.join(out)
     assert helpcat_app.CUSTOM_CATEGORY in help_text
     assert helpcat_app.SOME_CATEGORY in help_text
-    assert helpcat_app.default_category in help_text
+    assert helpcat_app.DEFAULT_CATEGORY in help_text
 
 
 class SelectApp(cmd2.Cmd):
@@ -3826,35 +3821,45 @@ def test_ansi_never_notty(mocker, capsys) -> None:
 class DisableCommandsApp(cmd2.Cmd):
     """Class for disabling commands"""
 
+    DEFAULT_CATEGORY = "DisabledApp Commands"
     category_name = "Test Category"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
     @cmd2.with_category(category_name)
-    def do_has_helper_funcs(self, arg) -> None:
-        self.poutput("The real has_helper_funcs")
+    def do_has_helper_func(self, arg) -> None:
+        self.poutput("The real has_helper_func")
 
-    def help_has_helper_funcs(self) -> None:
-        self.poutput('Help for has_helper_funcs')
+    def help_has_helper_func(self) -> None:
+        self.poutput('Help for has_helper_func')
 
-    def complete_has_helper_funcs(self, *args) -> Completions:
+    def complete_has_helper_func(self, *args) -> Completions:
         return Completions.from_values(['result'])
 
     @cmd2.with_category(category_name)
-    def do_has_no_helper_funcs(self, arg) -> None:
-        """Help for has_no_helper_funcs"""
-        self.poutput("The real has_no_helper_funcs")
+    def do_has_no_helper_func(self, arg) -> None:
+        """Help for has_no_helper_func"""
+        self.poutput("The real has_no_helper_func")
+
+    def do_is_not_decorated(self, arg) -> None:
+        """This will be in the DEFAULT_CATEGORY."""
+        self.poutput("The real is_not_decorated")
 
 
 class DisableCommandSet(CommandSet):
     """Test registering a command which is in a disabled category"""
 
     category_name = "CommandSet Test Category"
+    DEFAULT_CATEGORY = "DisableCommandSet Commands"
 
     @cmd2.with_category(category_name)
     def do_new_command(self, arg) -> None:
-        self._cmd.poutput("CommandSet function is enabled")
+        self._cmd.poutput("The real new_command")
+
+    def do_cs_is_not_decorated(self, arg) -> None:
+        """This will be in the DEFAULT_CATEGORY."""
+        self._cmd.poutput("The real cs_is_not_decorated")
 
 
 @pytest.fixture
@@ -3867,24 +3872,35 @@ def test_disable_and_enable_category(disable_commands_app: DisableCommandsApp) -
     # Disable the category
     ##########################################################################
     message_to_print = 'These commands are currently disabled'
+
+    # Disable commands which are decorated with a category
     disable_commands_app.disable_category(disable_commands_app.category_name, message_to_print)
 
+    # Disable commands in the default category
+    disable_commands_app.disable_category(disable_commands_app.DEFAULT_CATEGORY, message_to_print)
+
     # Make sure all the commands and help on those commands displays the message
-    out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
+    out, err = run_cmd(disable_commands_app, 'has_helper_func')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'help has_helper_funcs')
+    out, err = run_cmd(disable_commands_app, 'help has_helper_func')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'has_no_helper_funcs')
+    out, err = run_cmd(disable_commands_app, 'has_no_helper_func')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'help has_no_helper_funcs')
+    out, err = run_cmd(disable_commands_app, 'help has_no_helper_func')
+    assert err[0].startswith(message_to_print)
+
+    out, err = run_cmd(disable_commands_app, 'is_not_decorated')
+    assert err[0].startswith(message_to_print)
+
+    out, err = run_cmd(disable_commands_app, 'help is_not_decorated')
     assert err[0].startswith(message_to_print)
 
     # Make sure neither function completes
     text = ''
-    line = f'has_helper_funcs {text}'
+    line = f'has_helper_func {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -3892,7 +3908,7 @@ def test_disable_and_enable_category(disable_commands_app: DisableCommandsApp) -
     assert not completions
 
     text = ''
-    line = f'has_no_helper_funcs {text}'
+    line = f'has_no_helper_func {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -3901,63 +3917,71 @@ def test_disable_and_enable_category(disable_commands_app: DisableCommandsApp) -
 
     # Make sure both commands are invisible
     visible_commands = disable_commands_app.get_visible_commands()
-    assert 'has_helper_funcs' not in visible_commands
-    assert 'has_no_helper_funcs' not in visible_commands
+    assert 'has_helper_func' not in visible_commands
+    assert 'has_no_helper_func' not in visible_commands
 
     # Make sure get_help_topics() filters out disabled commands
     help_topics = disable_commands_app.get_help_topics()
-    assert 'has_helper_funcs' not in help_topics
+    assert 'has_helper_func' not in help_topics
 
     ##########################################################################
     # Enable the category
     ##########################################################################
+    # Enable commands which are decorated with a category
     disable_commands_app.enable_category(disable_commands_app.category_name)
 
+    # Enable commands in the default category
+    disable_commands_app.enable_category(disable_commands_app.DEFAULT_CATEGORY)
+
     # Make sure all the commands and help on those commands are restored
-    out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
-    assert out[0] == "The real has_helper_funcs"
+    out, err = run_cmd(disable_commands_app, 'has_helper_func')
+    assert out[0] == "The real has_helper_func"
 
-    out, err = run_cmd(disable_commands_app, 'help has_helper_funcs')
-    assert out[0] == "Help for has_helper_funcs"
+    out, err = run_cmd(disable_commands_app, 'help has_helper_func')
+    assert out[0] == "Help for has_helper_func"
 
-    out, err = run_cmd(disable_commands_app, 'has_no_helper_funcs')
-    assert out[0] == "The real has_no_helper_funcs"
+    out, err = run_cmd(disable_commands_app, 'has_no_helper_func')
+    assert out[0] == "The real has_no_helper_func"
 
-    out, err = run_cmd(disable_commands_app, 'help has_no_helper_funcs')
-    assert out[0] == "Help for has_no_helper_funcs"
+    out, err = run_cmd(disable_commands_app, 'help has_no_helper_func')
+    assert out[0] == "Help for has_no_helper_func"
 
-    # has_helper_funcs should complete now
+    out, err = run_cmd(disable_commands_app, 'is_not_decorated')
+    assert out[0] == "The real is_not_decorated"
+
+    # has_helper_func should complete now
     text = ''
-    line = f'has_helper_funcs {text}'
+    line = f'has_helper_func {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     completions = disable_commands_app.complete(text, line, begidx, endidx)
     assert completions[0].text == "result"
 
-    # has_no_helper_funcs had no completer originally, so there should be no results
+    # has_no_helper_func had no completer originally, so there should be no results
     text = ''
-    line = f'has_no_helper_funcs {text}'
+    line = f'has_no_helper_func {text}'
     endidx = len(line)
     begidx = endidx - len(text)
 
     completions = disable_commands_app.complete(text, line, begidx, endidx)
     assert not completions
 
-    # Make sure both commands are visible
+    # Make sure all commands are visible
     visible_commands = disable_commands_app.get_visible_commands()
-    assert 'has_helper_funcs' in visible_commands
-    assert 'has_no_helper_funcs' in visible_commands
+    assert 'has_helper_func' in visible_commands
+    assert 'has_no_helper_func' in visible_commands
+    assert 'is_not_decorated' in visible_commands
 
     # Make sure get_help_topics() contains our help function
     help_topics = disable_commands_app.get_help_topics()
-    assert 'has_helper_funcs' in help_topics
+    assert 'has_helper_func' in help_topics
 
 
 def test_enable_enabled_command(disable_commands_app) -> None:
     # Test enabling a command that is not disabled
     saved_len = len(disable_commands_app.disabled_commands)
-    disable_commands_app.enable_command('has_helper_funcs')
+    disable_commands_app.enable_command('has_helper_func')
 
     # The number of disabled commands should not have changed
     assert saved_len == len(disable_commands_app.disabled_commands)
@@ -3971,7 +3995,7 @@ def test_disable_fake_command(disable_commands_app) -> None:
 def test_disable_command_twice(disable_commands_app) -> None:
     saved_len = len(disable_commands_app.disabled_commands)
     message_to_print = 'These commands are currently disabled'
-    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
+    disable_commands_app.disable_command('has_helper_func', message_to_print)
 
     # The number of disabled commands should have increased one
     new_len = len(disable_commands_app.disabled_commands)
@@ -3979,44 +4003,61 @@ def test_disable_command_twice(disable_commands_app) -> None:
     saved_len = new_len
 
     # Disable again and the length should not change
-    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
+    disable_commands_app.disable_command('has_helper_func', message_to_print)
     new_len = len(disable_commands_app.disabled_commands)
     assert saved_len == new_len
 
 
 def test_disabled_command_not_in_history(disable_commands_app) -> None:
     message_to_print = 'These commands are currently disabled'
-    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
+    disable_commands_app.disable_command('has_helper_func', message_to_print)
 
     saved_len = len(disable_commands_app.history)
-    run_cmd(disable_commands_app, 'has_helper_funcs')
+    run_cmd(disable_commands_app, 'has_helper_func')
     assert saved_len == len(disable_commands_app.history)
 
 
 def test_disabled_message_command_name(disable_commands_app) -> None:
     message_to_print = f'{COMMAND_NAME} is currently disabled'
-    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
+    disable_commands_app.disable_command('has_helper_func', message_to_print)
 
-    _out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
-    assert err[0].startswith('has_helper_funcs is currently disabled')
+    _out, err = run_cmd(disable_commands_app, 'has_helper_func')
+    assert err[0].startswith('has_helper_func is currently disabled')
 
 
 def test_register_command_in_enabled_category(disable_commands_app) -> None:
+    # Enable commands which are decorated with a category
     disable_commands_app.enable_category(DisableCommandSet.category_name)
+
+    # Enable commands in the default category
+    disable_commands_app.enable_category(DisableCommandSet.DEFAULT_CATEGORY)
+
     cs = DisableCommandSet()
     disable_commands_app.register_command_set(cs)
 
     out, _err = run_cmd(disable_commands_app, 'new_command')
-    assert out[0] == "CommandSet function is enabled"
+    assert out[0] == "The real new_command"
+
+    out, _err = run_cmd(disable_commands_app, 'cs_is_not_decorated')
+    assert out[0] == "The real cs_is_not_decorated"
 
 
 def test_register_command_in_disabled_category(disable_commands_app) -> None:
     message_to_print = "CommandSet function is disabled"
+
+    # Disable commands which are decorated with a category
     disable_commands_app.disable_category(DisableCommandSet.category_name, message_to_print)
+
+    # Disable commands in the default category
+    disable_commands_app.disable_category(DisableCommandSet.DEFAULT_CATEGORY, message_to_print)
+
     cs = DisableCommandSet()
     disable_commands_app.register_command_set(cs)
 
     _out, err = run_cmd(disable_commands_app, 'new_command')
+    assert err[0] == message_to_print
+
+    _out, err = run_cmd(disable_commands_app, 'cs_is_not_decorated')
     assert err[0] == message_to_print
 
 
@@ -4121,6 +4162,17 @@ def test_custom_completekey_ctrl_k():
             break
 
     assert found, "Could not find binding for 'c-k' (Keys.ControlK) in session key bindings"
+
+
+def test_completekey_empty_string() -> None:
+    # Test that an empty string for completekey defaults to DEFAULT_COMPLETEKEY
+    with mock.patch('cmd2.Cmd._create_main_session', autospec=True) as create_session_mock:
+        create_session_mock.return_value = mock.MagicMock(spec=PromptSession)
+        app = cmd2.Cmd(completekey='')
+
+        # Verify it was called with DEFAULT_COMPLETEKEY
+        # auto_suggest is the second arg and it defaults to True
+        create_session_mock.assert_called_once_with(app, True, app.DEFAULT_COMPLETEKEY)
 
 
 def test_create_main_session_exception(monkeypatch):

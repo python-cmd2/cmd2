@@ -78,9 +78,6 @@ CMD_ATTR_HELP_CATEGORY = cmd2_private_attr_name('help_category')
 # Attached to a command function; defines whether tokens are unquoted before reaching argparse
 CMD_ATTR_PRESERVE_QUOTES = cmd2_private_attr_name('preserve_quotes')
 
-# Attached to a CommandSet class; defines a default help category for its member functions
-CMDSET_ATTR_DEFAULT_HELP_CATEGORY = cmd2_private_attr_name('default_help_category')
-
 # Attached to a subcommand function; defines the full command path to the parent (e.g., "foo" or "foo bar")
 SUBCMD_ATTR_COMMAND = cmd2_private_attr_name('parent_command')
 

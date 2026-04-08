@@ -20,7 +20,6 @@ from cmd2 import (
     CommandSet,
     with_argparser,
     with_category,
-    with_default_category,
 )
 
 COMMANDSET_BASIC = "Basic CommandSet"
@@ -29,8 +28,9 @@ COMMANDSET_LOAD_UNLOAD = "Loading and Unloading CommandSets"
 COMMANDSET_SUBCOMMAND = "Subcommands with CommandSet"
 
 
-@with_default_category(COMMANDSET_BASIC)
 class AutoLoadCommandSet(CommandSet):
+    DEFAULT_CATEGORY = COMMANDSET_BASIC
+
     def __init__(self) -> None:
         """CommandSet class for auto-loading commands at startup."""
         super().__init__()
@@ -44,8 +44,9 @@ class AutoLoadCommandSet(CommandSet):
         self._cmd.poutput('World')
 
 
-@with_default_category(COMMANDSET_DYNAMIC)
 class LoadableFruits(CommandSet):
+    DEFAULT_CATEGORY = COMMANDSET_DYNAMIC
+
     def __init__(self) -> None:
         """CommandSet class for dynamically loading commands related to fruits."""
         super().__init__()
@@ -68,8 +69,9 @@ class LoadableFruits(CommandSet):
         self._cmd.poutput('cutting banana: ' + ns.direction)
 
 
-@with_default_category(COMMANDSET_DYNAMIC)
 class LoadableVegetables(CommandSet):
+    DEFAULT_CATEGORY = COMMANDSET_DYNAMIC
+
     def __init__(self) -> None:
         """CommandSet class for dynamically loading commands related to vegetables."""
         super().__init__()

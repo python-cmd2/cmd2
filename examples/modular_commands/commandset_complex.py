@@ -5,9 +5,11 @@ import argparse
 import cmd2
 
 
-@cmd2.with_default_category('Fruits')
 class CommandSetA(cmd2.CommandSet):
+    DEFAULT_CATEGORY = 'Fruits'
+
     def do_apple(self, _statement: cmd2.Statement) -> None:
+        """Apple Command."""
         self._cmd.poutput('Apple!')
 
     def do_banana(self, _statement: cmd2.Statement) -> None:
