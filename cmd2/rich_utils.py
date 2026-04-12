@@ -166,8 +166,11 @@ class Cmd2BaseConsole(Console):
         force_terminal: bool | None = None
         force_interactive: bool | None = None
 
+        color_system: str | None = "auto"
+
         if ALLOW_STYLE == AllowStyle.ALWAYS:
             force_terminal = True
+            color_system = "truecolor"
 
             # Turn off interactive mode if dest is not a terminal which supports it.
             tmp_console = Console(file=file)
@@ -179,6 +182,7 @@ class Cmd2BaseConsole(Console):
             file=file,
             force_terminal=force_terminal,
             force_interactive=force_interactive,
+            color_system=color_system,
             theme=APP_THEME,
             **kwargs,
         )
@@ -414,6 +418,7 @@ def rich_text_to_string(text: Text) -> str:
 
     console = Console(
         force_terminal=True,
+        color_system="truecolor",
         soft_wrap=True,
         no_color=False,
         theme=APP_THEME,
