@@ -3019,6 +3019,9 @@ def test_ansi_terminal_tty(mocker, capsys) -> None:
     app = AnsiApp()
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
+    # Simulate a color-capable terminal: TERMINAL mode respects the TERM env var,
+    # so TERM=dumb would suppress colors even with isatty=True.
+    mocker.patch.dict('os.environ', {'TERM': 'xterm-256color'})
 
     app.onecmd_plus_hooks('echo_error oopsie')
     # if colors are on, the output should have some ANSI style sequences in it
