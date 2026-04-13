@@ -115,42 +115,6 @@ def test_set_theme() -> None:
     assert ru.APP_THEME.styles[rich_style_key] == theme[rich_style_key]
 
 
-def test_from_ansi_patch() -> None:
-    # Check if we are still patching Text.from_ansi(). If this check fails, then Rich
-    # has fixed the bug. Therefore, we can remove this test function and ru._Text_from_ansi.
-    assert Text.from_ansi.__func__ is ru._Text_from_ansi.__func__  # type: ignore[attr-defined]
-
-    # Line breaks recognized by str.splitlines().
-    # Source: https://docs.python.org/3/library/stdtypes.html#str.splitlines
-    line_breaks = {
-        "\n",  # Line Feed
-        "\r",  # Carriage Return
-        "\r\n",  # Carriage Return + Line Feed
-        "\v",  # Vertical Tab
-        "\f",  # Form Feed
-        "\x1c",  # File Separator
-        "\x1d",  # Group Separator
-        "\x1e",  # Record Separator
-        "\x85",  # Next Line (NEL)
-        "\u2028",  # Line Separator
-        "\u2029",  # Paragraph Separator
-    }
-
-    # Test all line breaks
-    for lb in line_breaks:
-        input_string = f"Text{lb}"
-        expected_output = input_string.replace(lb, "\n")
-        assert Text.from_ansi(input_string).plain == expected_output
-
-    # Test string without trailing line break
-    input_string = "No trailing\nline break"
-    assert Text.from_ansi(input_string).plain == input_string
-
-    # Test empty string
-    input_string = ""
-    assert Text.from_ansi(input_string).plain == input_string
-
-
 def test_cmd2_base_console_print(mocker: MockerFixture) -> None:
     """Test that Cmd2BaseConsole.print() calls prepare_objects_for_rendering()."""
     # Mock prepare_objects_for_rendering to return a specific value
