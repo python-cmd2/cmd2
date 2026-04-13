@@ -1,4 +1,4 @@
-## 3.5.0 (TBD)
+## 3.5.0 (April 13, 2026)
 
 - Bug Fixes
     - Fixed issue where Rich stripped colors from text in test environments where TERM=dumb.
