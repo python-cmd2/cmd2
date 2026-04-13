@@ -3701,7 +3701,6 @@ class AnsiApp(cmd2.Cmd):
 
     def do_echo_error(self, args) -> None:
         self.poutput(args, style=Cmd2Style.ERROR)
-        # perror uses colors by default
         self.perror(args)
 
 
@@ -3711,21 +3710,18 @@ def test_ansi_pouterr_always_tty(mocker, capsys) -> None:
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
+    expected_plain = 'oopsie\n'
+    expected_styled = su.stylize('oopsie\n', Cmd2Style.ERROR)
+
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    # if colors are on, the output should have some ANSI style sequences in it
-    assert len(out) > len('oopsie\n')
-    assert 'oopsie' in out
-    assert len(err) > len('oopsie\n')
-    assert 'oopsie' in err
+    assert out == expected_styled
+    assert err == expected_styled
 
-    # but this one shouldn't
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    # errors always have colors
-    assert len(err) > len('oopsie\n')
-    assert 'oopsie' in err
+    assert out == expected_plain
+    assert err == expected_styled
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
@@ -3734,21 +3730,18 @@ def test_ansi_pouterr_always_notty(mocker, capsys) -> None:
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
+    expected_plain = 'oopsie\n'
+    expected_styled = su.stylize('oopsie\n', Cmd2Style.ERROR)
+
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    # if colors are on, the output should have some ANSI style sequences in it
-    assert len(out) > len('oopsie\n')
-    assert 'oopsie' in out
-    assert len(err) > len('oopsie\n')
-    assert 'oopsie' in err
+    assert out == expected_styled
+    assert err == expected_styled
 
-    # but this one shouldn't
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    # errors always have colors
-    assert len(err) > len('oopsie\n')
-    assert 'oopsie' in err
+    assert out == expected_plain
+    assert err == expected_styled
 
 
 @with_ansi_style(ru.AllowStyle.TERMINAL)
@@ -3757,20 +3750,18 @@ def test_ansi_terminal_tty(mocker, capsys) -> None:
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
-    app.onecmd_plus_hooks('echo_error oopsie')
-    # if colors are on, the output should have some ANSI style sequences in it
-    out, err = capsys.readouterr()
-    assert len(out) > len('oopsie\n')
-    assert 'oopsie' in out
-    assert len(err) > len('oopsie\n')
-    assert 'oopsie' in err
+    expected_plain = 'oopsie\n'
+    expected_styled = su.stylize('oopsie\n', Cmd2Style.ERROR)
 
-    # but this one shouldn't
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    assert out == expected_styled
+    assert err == expected_styled
+
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    assert len(err) > len('oopsie\n')
-    assert 'oopsie' in err
+    assert out == expected_plain
+    assert err == expected_styled
 
 
 @with_ansi_style(ru.AllowStyle.TERMINAL)
