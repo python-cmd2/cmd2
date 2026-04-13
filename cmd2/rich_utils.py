@@ -141,8 +141,9 @@ class Cmd2BaseConsole(Console):
         :param kwargs: keyword arguments passed to the parent Console class.
         :raises TypeError: if disallowed keyword argument is passed in.
         """
-        # Don't allow force_terminal or force_interactive to be passed in, as their
-        # behavior is controlled by the ALLOW_STYLE setting.
+        # These settings are controlled by the ALLOW_STYLE setting and cannot be overridden.
+        if "color_system" in kwargs:
+            raise TypeError("Passing 'color_system' is not allowed. Its behavior is controlled by the 'ALLOW_STYLE' setting.")
         if "force_terminal" in kwargs:
             raise TypeError(
                 "Passing 'force_terminal' is not allowed. Its behavior is controlled by the 'ALLOW_STYLE' setting."
@@ -165,18 +166,24 @@ class Cmd2BaseConsole(Console):
 
         force_terminal: bool | None = None
         force_interactive: bool | None = None
+        allow_style = False
 
         if ALLOW_STYLE == AllowStyle.ALWAYS:
             force_terminal = True
+            allow_style = True
 
             # Turn off interactive mode if dest is not a terminal which supports it.
             tmp_console = Console(file=file)
             force_interactive = tmp_console.is_interactive
+        elif ALLOW_STYLE == AllowStyle.TERMINAL:
+            tmp_console = Console(file=file)
+            allow_style = tmp_console.is_terminal
         elif ALLOW_STYLE == AllowStyle.NEVER:
             force_terminal = False
 
         super().__init__(
             file=file,
+            color_system="truecolor" if allow_style else None,
             force_terminal=force_terminal,
             force_interactive=force_interactive,
             theme=APP_THEME,
@@ -414,6 +421,7 @@ def rich_text_to_string(text: Text) -> str:
 
     console = Console(
         force_terminal=True,
+        color_system="truecolor",
         soft_wrap=True,
         no_color=False,
         theme=APP_THEME,

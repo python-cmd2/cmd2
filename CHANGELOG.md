@@ -108,6 +108,11 @@ prompt is displayed.
         - For more details and examples, see the [Help](docs/features/help.md) documentation and the
           `examples/default_categories.py` file.
 
+## 3.5.0 (April 13, 2026)
+
+- Bug Fixes
+    - Fixed issue where Rich stripped colors from text in test environments where TERM=dumb.
+
 ## 3.4.0 (March 3, 2026)
 
 - Enhancements
