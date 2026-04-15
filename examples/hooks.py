@@ -79,7 +79,7 @@ class CmdLineApp(cmd2.Cmd):
 
     def abbrev_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """Accept unique abbreviated commands."""
-        func = self.cmd_func(data.statement.command)
+        func = self.get_command_func(data.statement.command)
         if func is None:
             # check if the entered command might be an abbreviation
             possible_cmds = [cmd for cmd in self.get_all_commands() if cmd.startswith(data.statement.command)]

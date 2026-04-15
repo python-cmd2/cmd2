@@ -77,6 +77,7 @@ prompt is displayed.
       driven by the `DEFAULT_CATEGORY` class variable (see **Simplified command categorization** in
       the Enhancements section below for details).
     - Removed `Cmd.undoc_header` since all commands are now considered categorized.
+    - Renamed `Cmd.cmd_func()` to `Cmd.get_command_func()`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
