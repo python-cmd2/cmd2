@@ -28,9 +28,9 @@ from typing import (
 from . import constants
 from . import string_utils as su
 from .types import (
-    ChoicesProviderUnbound,
     CmdOrSet,
-    CompleterUnbound,
+    UnboundChoicesProvider,
+    UnboundCompleter,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -76,8 +76,8 @@ class Settable:
         settable_attrib_name: str | None = None,
         onchange_cb: Callable[[str, Any, Any], Any] | None = None,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
-        completer: CompleterUnbound[CmdOrSet] | None = None,
+        choices_provider: UnboundChoicesProvider[Any] | None = None,
+        completer: UnboundCompleter[Any] | None = None,
     ) -> None:
         """Settable Initializer.
 

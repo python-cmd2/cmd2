@@ -89,7 +89,7 @@ def test_category_cmd() -> None:
     assert "coding" in help_topics
 
 
-class NoCategoryCommandSet(CommandSet):
+class NoCategoryCommandSet(CommandSet[cmd2.Cmd]):
     """Example to demonstrate a CommandSet which does not define its own DEFAULT_CATEGORY.
 
     Its commands will inherit the parent class's DEFAULT_CATEGORY.
@@ -103,7 +103,7 @@ class NoCategoryCommandSet(CommandSet):
         """
 
 
-class CategoryCommandSet(CommandSet):
+class CategoryCommandSet(CommandSet[cmd2.Cmd]):
     """Example to demonstrate custom DEFAULT_CATEGORY in a CommandSet."""
 
     DEFAULT_CATEGORY = "CategoryCommandSet Commands"

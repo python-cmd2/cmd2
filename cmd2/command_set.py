@@ -1,30 +1,27 @@
 """Supports the definition of commands in separate classes to be composed into cmd2.Cmd."""
 
-from collections.abc import (
-    Callable,
-    Mapping,
-)
+from collections.abc import Mapping
 from typing import (
-    TYPE_CHECKING,
     ClassVar,
-    TypeAlias,
+    Generic,
 )
 
 from .exceptions import CommandSetRegistrationError
+from .types import CmdT
 from .utils import Settable
 
-if TYPE_CHECKING:  # pragma: no cover
-    from .cmd2 import Cmd
 
-# Callable signature for a basic command  function
-# Further refinements are needed to define the input parameters
-CommandFunc: TypeAlias = Callable[..., bool | None]
-
-
-class CommandSet:
+class CommandSet(Generic[CmdT]):
     """Base class for defining sets of commands to load in cmd2.
 
-    ``do_``, ``help_``, and ``complete_`` functions differ only in that self is the CommandSet instead of the cmd2 app
+    ``do_``, ``help_``, and ``complete_`` functions differ only in that self is the
+    CommandSet instead of the cmd2 app.
+
+    This class is generic over the `Cmd` type it is expected to be loaded into.
+    By providing the specific `Cmd` subclass as a type argument
+    (e.g., `class MyCommandSet(CommandSet[MyApp]):`), type checkers will know the exact
+    type of `self._cmd`, allowing for autocompletion and type validation when accessing
+    custom attributes and methods on the main application instance.
     """
 
     # Default category for commands defined in this CommandSet which have
@@ -39,37 +36,30 @@ class CommandSet:
         This will be set when the CommandSet is registered and it should be
         accessed by child classes using the self._cmd property.
         """
-        self._cmd_internal: Cmd | None = None
+        self._cmd_internal: CmdT | None = None
 
         self._settables: dict[str, Settable] = {}
         self._settable_prefix = self.__class__.__name__
 
     @property
-    def _cmd(self) -> 'Cmd':
+    def _cmd(self) -> CmdT:
         """Property for child classes to access self._cmd_internal.
 
         Using this property ensures that the CommandSet has been registered
         and tells type checkers that self._cmd_internal is not None.
 
-        Override this property to specify a more specific return type for static
-        type checking. The typing.cast function can be used to assert to the
-        type checker that the parent cmd2.Cmd instance is of a more specific
-        subclass, enabling better autocompletion and type safety in the child class.
+        Subclasses can specify their specific Cmd type during inheritance:
 
-        For example:
-
-            @property
-            def _cmd(self) -> CustomCmdApp:
-                return cast(CustomCmdApp, super()._cmd)
-
+            class MyCommandSet(CommandSet[MyCustomApp]):
+                ...
 
         :raises CommandSetRegistrationError: if CommandSet is not registered.
         """
-        if self._cmd_internal is None:
-            raise CommandSetRegistrationError('This CommandSet is not registered')
-        return self._cmd_internal
+        if (cmd := self._cmd_internal) is not None:
+            return cmd
+        raise CommandSetRegistrationError('This CommandSet is not registered')
 
-    def on_register(self, cmd: 'Cmd') -> None:
+    def on_register(self, cmd: CmdT) -> None:
         """First step to registering a CommandSet, called by cmd2.Cmd.
 
         The commands defined in this class have not been added to the CLI object at this point.
@@ -119,13 +109,13 @@ class CommandSet:
 
         :param settable: Settable object being added
         """
-        if self._cmd_internal is not None:
-            if not self._cmd.always_prefix_settables:
-                if settable.name in self._cmd.settables and settable.name not in self._settables:
+        if (cmd := self._cmd_internal) is not None:
+            if not cmd.always_prefix_settables:
+                if settable.name in cmd.settables and settable.name not in self._settables:
                     raise KeyError(f'Duplicate settable: {settable.name}')
             else:
                 prefixed_name = f'{self._settable_prefix}.{settable.name}'
-                if prefixed_name in self._cmd.settables and settable.name not in self._settables:
+                if prefixed_name in cmd.settables and settable.name not in self._settables:
                     raise KeyError(f'Duplicate settable: {settable.name}')
         self._settables[settable.name] = settable
 

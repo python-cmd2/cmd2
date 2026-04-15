@@ -1,12 +1,13 @@
 """A simple example demonstrating a loadable command set."""
 
 from cmd2 import (
+    Cmd,
     CommandSet,
     Statement,
 )
 
 
-class CustomInitCommandSet(CommandSet):
+class CustomInitCommandSet(CommandSet[Cmd]):
     DEFAULT_CATEGORY = 'Custom Init'
 
     def __init__(self, arg1, arg2) -> None:
