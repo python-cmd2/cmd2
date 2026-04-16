@@ -9,8 +9,8 @@ from collections.abc import (
 from typing import (
     TYPE_CHECKING,
     Any,
-    ParamSpec,
     TypeAlias,
+    TypeVar,
     overload,
 )
 
@@ -28,13 +28,17 @@ from .types import (
 if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
 
-P = ParamSpec("P")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def with_category(
     category: str,
-) -> Callable[[UnboundCommandFunc[CmdOrSetT, P]], UnboundCommandFunc[CmdOrSetT, P]]:
+) -> Callable[[F], F]:
     """Decorate a ``do_*`` command function to apply a category.
+
+    This decorator has permissive type hints to allow for order-independent stacking
+    with other decorators that may modify the function signature or return type of the
+    command function.
 
     :param category: the name of the category in which this command should
                      be grouped when displaying the list of commands.
@@ -53,17 +57,13 @@ def with_category(
 
     """
 
-    def cat_decorator(func: UnboundCommandFunc[CmdOrSetT, P]) -> UnboundCommandFunc[CmdOrSetT, P]:
+    def cat_decorator(func: F) -> F:
         from .utils import categorize
 
         categorize(func, category)
         return func
 
     return cat_decorator
-
-
-# The standard cmd2 command function signature (e.g. do_command(self, statement))
-RawCommandFunc: TypeAlias = UnboundCommandFunc[CmdOrSetT, [Statement | str]]
 
 
 ##########################
@@ -106,6 +106,10 @@ def _arg_swap(args: Sequence[Any], search_arg: Any, *replace_arg: Any) -> list[A
     args_list = list(args)
     args_list[index : index + 1] = replace_arg
     return args_list
+
+
+# The standard cmd2 command function signature (e.g. do_command(self, statement))
+RawCommandFunc: TypeAlias = UnboundCommandFunc[CmdOrSetT, [Statement | str]]
 
 
 # Function signature for a command function that accepts a pre-processed argument list from user input
@@ -340,8 +344,12 @@ def as_subcommand_to(
     help: str | None = None,  # noqa: A002
     aliases: Sequence[str] | None = None,
     **add_parser_kwargs: Any,
-) -> Callable[[ArgparseCommandFunc[CmdOrSetT]], ArgparseCommandFunc[CmdOrSetT]]:
-    """Tag this function as a subcommand to an existing argparse decorated command.
+) -> Callable[[F], F]:
+    """Tag a function as a subcommand to an existing argparse decorated command.
+
+    This decorator has permissive type hints to allow for order-independent stacking
+    with other decorators that may modify the function signature or return type of the
+    subcommand function.
 
     :param command: Command Name. Space-delimited subcommands may optionally be specified
     :param subcommand: Subcommand name
@@ -355,7 +363,7 @@ def as_subcommand_to(
     :return: Wrapper function that can receive an argparse.Namespace
     """
 
-    def arg_decorator(func: ArgparseCommandFunc[CmdOrSetT]) -> ArgparseCommandFunc[CmdOrSetT]:
+    def arg_decorator(func: F) -> F:
         # Set some custom attributes for this command
         setattr(func, constants.SUBCMD_ATTR_COMMAND, command)
         setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
