@@ -20,7 +20,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from .command_set import CommandSet
     from .completion import Choices, Completions
 
-# TypeVar for function parameters
 P = ParamSpec("P")
 
 

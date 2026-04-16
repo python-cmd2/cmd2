@@ -40,7 +40,7 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     PopenTextIO = subprocess.Popen
 
-_T = TypeVar('_T')
+T = TypeVar('T')
 
 
 def to_bool(val: Any) -> bool:
@@ -186,7 +186,7 @@ def is_text_file(file_path: str) -> bool:
     return valid_text_file
 
 
-def remove_duplicates(items: Iterable[_T]) -> list[_T]:
+def remove_duplicates(items: Iterable[T]) -> list[T]:
     """Remove duplicates from an iterable while preserving order of the items.
 
     :param items: the items being pruned of duplicates

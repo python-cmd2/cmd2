@@ -1,6 +1,7 @@
 """Decorators for ``cmd2`` commands."""
 
 import argparse
+import functools
 from collections.abc import (
     Callable,
     Sequence,
@@ -33,7 +34,7 @@ P = ParamSpec("P")
 def with_category(
     category: str,
 ) -> Callable[[UnboundCommandFunc[CmdOrSetT, P]], UnboundCommandFunc[CmdOrSetT, P]]:
-    """Decorate a ``do_*`` command method to apply a category.
+    """Decorate a ``do_*`` command function to apply a category.
 
     :param category: the name of the category in which this command should
                      be grouped when displaying the list of commands.
@@ -159,7 +160,6 @@ def with_argument_list(
     ```
 
     """
-    import functools
 
     def arg_decorator(func: ArgListCommandFunc[CmdOrSetT]) -> RawCommandFunc[CmdOrSetT]:
         """Decorate function that ingests an Argument List function and returns a raw command function.
@@ -212,7 +212,7 @@ def with_argparser(
     preserve_quotes: bool = False,
     with_unknown_args: bool = False,
 ) -> Callable[[ArgparseCommandFunc[CmdOrSetT]], RawCommandFunc[CmdOrSetT]]:
-    """Decorate a ``do_*`` method to populate its ``args`` argument with the given instance of Cmd2ArgumentParser.
+    """Decorate a ``do_*`` command function to populate its ``args`` argument with a Cmd2ArgumentParser.
 
     :param parser: instance of Cmd2ArgumentParser or a callable that returns a Cmd2ArgumentParser for this command
     :param ns_provider: An optional function that accepts a cmd2.Cmd or cmd2.CommandSet object as an argument and returns an
@@ -257,7 +257,6 @@ def with_argparser(
     ```
 
     """
-    import functools
 
     def arg_decorator(func: ArgparseCommandFunc[CmdOrSetT]) -> RawCommandFunc[CmdOrSetT]:
         """Decorate function that ingests an Argparse Command Function and returns a raw command function.
@@ -343,7 +342,7 @@ def as_subcommand_to(
     aliases: Sequence[str] | None = None,
     **add_parser_kwargs: Any,
 ) -> Callable[[ArgparseCommandFunc[CmdOrSetT]], ArgparseCommandFunc[CmdOrSetT]]:
-    """Tag this method as a subcommand to an existing argparse decorated command.
+    """Tag this function as a subcommand to an existing argparse decorated command.
 
     :param command: Command Name. Space-delimited subcommands may optionally be specified
     :param subcommand: Subcommand name
