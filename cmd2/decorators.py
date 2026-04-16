@@ -36,9 +36,9 @@ def with_category(
 ) -> Callable[[F], F]:
     """Decorate a ``do_*`` command function to apply a category.
 
-    This decorator has permissive type hints to allow for order-independent stacking
-    with other decorators that may modify the function signature or return type of the
-    command function.
+    Permissive type hints allow this decorator to be stacked in any order, even
+    when other decorators in the chain transform the signature or return type of
+    the command function.
 
     :param category: the name of the category in which this command should
                      be grouped when displaying the list of commands.
@@ -347,9 +347,9 @@ def as_subcommand_to(
 ) -> Callable[[F], F]:
     """Tag a function as a subcommand to an existing argparse decorated command.
 
-    This decorator has permissive type hints to allow for order-independent stacking
-    with other decorators that may modify the function signature or return type of the
-    subcommand function.
+    Permissive type hints allow this decorator to be stacked in any order, even
+    when other decorators in the chain transform the signature or return type of
+    the subcommand function.
 
     While this decorator has permissive type hints, the subcommand function's signature
     must match the root command's signature. For example, if the root command uses
