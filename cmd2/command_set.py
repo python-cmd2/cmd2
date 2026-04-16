@@ -55,9 +55,9 @@ class CommandSet(Generic[CmdT]):
 
         :raises CommandSetRegistrationError: if CommandSet is not registered.
         """
-        if (cmd := self._cmd_internal) is not None:
-            return cmd
-        raise CommandSetRegistrationError('This CommandSet is not registered')
+        if self._cmd_internal is None:
+            raise CommandSetRegistrationError('This CommandSet is not registered')
+        return self._cmd_internal
 
     def on_register(self, cmd: CmdT) -> None:
         """First step to registering a CommandSet, called by cmd2.Cmd.
@@ -69,10 +69,9 @@ class CommandSet(Generic[CmdT]):
         :param cmd: The cmd2 main application
         :raises CommandSetRegistrationError: if CommandSet is already registered.
         """
-        if self._cmd_internal is None:
-            self._cmd_internal = cmd
-        else:
+        if self._cmd_internal is not None:
             raise CommandSetRegistrationError('This CommandSet has already been registered')
+        self._cmd_internal = cmd
 
     def on_registered(self) -> None:
         """2nd step to registering, called by cmd2.Cmd after a CommandSet is registered and all its commands have been added.
@@ -110,13 +109,12 @@ class CommandSet(Generic[CmdT]):
         :param settable: Settable object being added
         """
         if (cmd := self._cmd_internal) is not None:
-            if not cmd.always_prefix_settables:
-                if settable.name in cmd.settables and settable.name not in self._settables:
-                    raise KeyError(f'Duplicate settable: {settable.name}')
-            else:
-                prefixed_name = f'{self._settable_prefix}.{settable.name}'
-                if prefixed_name in cmd.settables and settable.name not in self._settables:
-                    raise KeyError(f'Duplicate settable: {settable.name}')
+            # Determine the name to check for collisions in the main app
+            check_name = settable.name if not cmd.always_prefix_settables else f'{self._settable_prefix}.{settable.name}'
+
+            if check_name in cmd.settables and settable.name not in self._settables:
+                raise KeyError(f'Duplicate settable: {settable.name}')
+
         self._settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
