@@ -109,9 +109,9 @@ prompt is displayed.
         - For more details and examples, see the [Help](docs/features/help.md) documentation and the
           `examples/default_categories.py` file.
     - `CommandSet` is now a generic class, which allows developers to parameterize it with their
-      specific`cmd2.Cmd`subclass (e.g.,`class MyCommandSet(CommandSet[MyApp]):`). This provides full
-      type hints and IDE autocompletion for `self._cmd` without needing to override and cast the
-      property.
+      specific `cmd2.Cmd`subclass (e.g.,`class MyCommandSet(CommandSet[MyApp]):`). This provides
+      full type hints and IDE autocompletion for `self._cmd` without needing to override and cast
+      the property.
 
 ## 3.5.0 (April 13, 2026)
 

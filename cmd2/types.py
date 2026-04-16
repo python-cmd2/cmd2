@@ -9,6 +9,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Concatenate,
+    ParamSpec,
     TypeAlias,
     TypeVar,
     Union,
@@ -18,6 +19,10 @@ if TYPE_CHECKING:  # pragma: no cover
     from .cmd2 import Cmd
     from .command_set import CommandSet
     from .completion import Choices, Completions
+
+# TypeVar for function parameters
+P = ParamSpec("P")
+
 
 ##################################################################################################
 # Cmd and CommandSet Aliases (For basic inputs)
@@ -67,11 +72,7 @@ BoundCommandFunc: TypeAlias = Callable[..., bool | None]
 
 # An unbound cmd2 command function (e.g. the class method do_command).
 # The 'self' argument can be either a Cmd or CommandSet instance.
-UnboundCommandFunc: TypeAlias = Callable[Concatenate[CmdOrSetT, ...], bool | None]
-
-# TypeVar for unbound command methods that preserves the specific signature.
-# This allows decorators to return a function with the same argument types as the original.
-UnboundCommandFuncT = TypeVar("UnboundCommandFuncT", bound=UnboundCommandFunc[Any])
+UnboundCommandFunc: TypeAlias = Callable[Concatenate[CmdOrSetT, P], bool | None]
 
 
 ##################################################################################################
