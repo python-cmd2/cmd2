@@ -79,9 +79,7 @@ def _parse_positionals(args: tuple[Any, ...]) -> tuple['Cmd', Statement | str]:
     :return: The cmd2.Cmd reference and the command line statement.
     """
     for pos, arg in enumerate(args):
-        from cmd2 import (
-            Cmd,
-        )
+        from .cmd2 import Cmd
 
         if isinstance(arg, (Cmd, CommandSet)) and len(args) > pos + 1:
             if isinstance(arg, CommandSet):
