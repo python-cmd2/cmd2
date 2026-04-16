@@ -38,6 +38,7 @@ def with_category(
 
     :param category: the name of the category in which this command should
                      be grouped when displaying the list of commands.
+    :return: a decorator that assigns the specified category to the command function
 
     Example:
     ```py
