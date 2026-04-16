@@ -10,6 +10,7 @@ from typing import (
     Any,
     ParamSpec,
     TypeAlias,
+    overload,
 )
 
 from . import constants
@@ -111,27 +112,50 @@ def _arg_swap(args: Sequence[Any], search_arg: Any, *replace_arg: Any) -> list[A
 ArgListCommandFunc: TypeAlias = UnboundCommandFunc[CmdOrSetT, [list[str]]]
 
 
+# Overload for: @with_argument_list
+@overload
 def with_argument_list(
-    func_arg: ArgListCommandFunc[CmdOrSetT] | None = None,
+    cmd_func: ArgListCommandFunc[CmdOrSetT],
+    *,
+    preserve_quotes: bool = False,
+) -> RawCommandFunc[CmdOrSetT]: ...
+
+
+# Overload for: @with_argument_list(preserve_quotes=True)
+@overload
+def with_argument_list(
+    cmd_func: None = None,
+    *,
+    preserve_quotes: bool = False,
+) -> Callable[[ArgListCommandFunc[CmdOrSetT]], RawCommandFunc[CmdOrSetT]]: ...
+
+
+def with_argument_list(
+    cmd_func: ArgListCommandFunc[CmdOrSetT] | None = None,
     *,
     preserve_quotes: bool = False,
 ) -> RawCommandFunc[CmdOrSetT] | Callable[[ArgListCommandFunc[CmdOrSetT]], RawCommandFunc[CmdOrSetT]]:
-    """Decorate a ``do_*`` method to alter the arguments passed to it so it is passed a list[str].
+    """Decorate a ``do_*`` command function to receive a list of parsed arguments.
 
-    Default passes a string of whatever the user typed. With this decorator, the
-    decorated method will receive a list of arguments parsed from user input.
+    This decorator can be used either directly (``@with_argument_list``) or as a
+    factory with arguments (``@with_argument_list(preserve_quotes=True)``).
 
-    :param func_arg: Single-element positional argument list containing ``do_*`` method
-                 this decorator is wrapping
-    :param preserve_quotes: if ``True``, then argument quotes will not be stripped
-    :return: function that gets passed a list of argument strings
+    :param cmd_func: The command function being decorated.
+    :param preserve_quotes: If ``True``, argument quotes will not be stripped from the input.
+    :return: A command function that accepts a list of strings instead of a raw string.
 
     Example:
     ```py
     class MyApp(cmd2.Cmd):
+        # Basic usage: receives a list of words with quotes stripped
         @cmd2.with_argument_list
-        def do_echo(self, arglist):
-            self.poutput(' '.join(arglist)
+        def do_echo(self, arglist: list[str]):
+            self.poutput(' '.join(arglist))
+
+        # Factory usage: preserves quotes in the argument list
+        @cmd2.with_argument_list(preserve_quotes=True)
+        def do_print_raw(self, arglist: list[str]):
+            self.poutput(' '.join(arglist))
     ```
 
     """
@@ -165,8 +189,8 @@ def with_argument_list(
         cmd_wrapper.__doc__ = func.__doc__
         return cmd_wrapper
 
-    if callable(func_arg):
-        return arg_decorator(func_arg)
+    if callable(cmd_func):
+        return arg_decorator(cmd_func)
     return arg_decorator
 
 
