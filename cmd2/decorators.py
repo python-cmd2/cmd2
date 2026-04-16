@@ -253,10 +253,10 @@ def with_argparser(
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_argparser(parser, with_unknown_args=True)
-        def do_argprint(self, args, unknown):
+        def do_argprint(self, args: argparse.Namespace, unknown_args: list[str]):
             "Print the options and argument list this options command was called with."
             self.poutput(f'args: {args!r}')
-            self.poutput(f'unknowns: {unknown}')
+            self.poutput(f'unknown_args: {unknown_args}')
     ```
 
     """
@@ -351,6 +351,11 @@ def as_subcommand_to(
     with other decorators that may modify the function signature or return type of the
     subcommand function.
 
+    While this decorator has permissive type hints, the subcommand function's signature
+    must match the root command's signature. For example, if the root command uses
+    `with_unknown_args=True`, then the subcommand function must also accept the
+    unknown arguments list.
+
     :param command: Command Name. Space-delimited subcommands may optionally be specified
     :param subcommand: Subcommand name
     :param parser: instance of Cmd2ArgumentParser or a callable that returns a Cmd2ArgumentParser for this subcommand
@@ -360,7 +365,24 @@ def as_subcommand_to(
                     subparsers.add_parser().
     :param add_parser_kwargs: other registration-specific kwargs for add_parser()
                               (e.g. deprecated [Python 3.13+])
-    :return: Wrapper function that can receive an argparse.Namespace
+    :return: a decorator which configures the target function to be a subcommand handler
+
+    Example:
+    ```py
+    base_parser = cmd2.Cmd2ArgumentParser()
+    base_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
+    sub_parser = cmd2.Cmd2ArgumentParser()
+
+    class MyApp(cmd2.Cmd):
+        @cmd2.with_argparser(base_parser)
+        def do_base(self, args: argparse.Namespace) -> None:
+            args.cmd2_subcmd_handler(args)
+
+        @cmd2.as_subcommand_to('base', 'sub', sub_parser, help="the subcommand") -> None:
+        def sub_handler(self, args: argparse.Namespace):
+            self.poutput('Subcommand executed')
+    ```
+
     """
 
     def arg_decorator(func: F) -> F:
