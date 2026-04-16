@@ -35,6 +35,7 @@ from .constants import INFINITY
 from .exceptions import CompletionError
 from .rich_utils import Cmd2SimpleTable
 from .types import (
+    CmdOrSetT,
     UnboundChoicesProvider,
     UnboundCompleter,
 )
@@ -733,7 +734,7 @@ class ArgparseCompleter:
 
     def _prepare_callable_params(
         self,
-        to_call: UnboundChoicesProvider[Any] | UnboundCompleter[Any],
+        to_call: UnboundChoicesProvider[CmdOrSetT] | UnboundCompleter[CmdOrSetT],
         arg_state: _ArgumentState,
         text: str,
         consumed_arg_values: dict[str, list[str]],

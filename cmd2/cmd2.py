@@ -163,6 +163,7 @@ from .types import (
     BoundCommandFunc,
     BoundCompleter,
     CmdOrSet,
+    CmdOrSetT,
     UnboundChoicesProvider,
     UnboundCompleter,
 )
@@ -3478,8 +3479,8 @@ class Cmd:
         self,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: UnboundChoicesProvider[Any] | None = None,
-        completer: UnboundCompleter[Any] | None = None,
+        choices_provider: UnboundChoicesProvider[CmdOrSetT] | None = None,
+        completer: UnboundCompleter[CmdOrSetT] | None = None,
         parser: Cmd2ArgumentParser | None = None,
     ) -> Completer:
         """Determine the appropriate completer based on provided arguments."""
@@ -3510,8 +3511,8 @@ class Cmd:
         history: Sequence[str] | None = None,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: UnboundChoicesProvider[Any] | None = None,
-        completer: UnboundCompleter[Any] | None = None,
+        choices_provider: UnboundChoicesProvider[CmdOrSetT] | None = None,
+        completer: UnboundCompleter[CmdOrSetT] | None = None,
         parser: Cmd2ArgumentParser | None = None,
     ) -> str:
         """Read a line of input with optional completion and history.
