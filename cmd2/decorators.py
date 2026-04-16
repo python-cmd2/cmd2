@@ -48,7 +48,7 @@ def with_category(
     ```py
     class MyApp(cmd2.Cmd):
         @cmd2.with_category('Text Functions')
-        def do_echo(self, args)
+        def do_echo(self, args: cmd2.Statement) -> None:
             self.poutput(args)
     ```
 
@@ -153,12 +153,12 @@ def with_argument_list(
     class MyApp(cmd2.Cmd):
         # Basic usage: receives a list of words with quotes stripped
         @cmd2.with_argument_list
-        def do_echo(self, arglist: list[str]):
+        def do_echo(self, arglist: list[str]) -> None:
             self.poutput(' '.join(arglist))
 
         # Factory usage: preserves quotes in the argument list
         @cmd2.with_argument_list(preserve_quotes=True)
-        def do_print_raw(self, arglist: list[str]):
+        def do_print_raw(self, arglist: list[str]) -> None:
             self.poutput(' '.join(arglist))
     ```
 
@@ -238,7 +238,7 @@ def with_argparser(
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_argparser(parser, preserve_quotes=True)
-        def do_argprint(self, args):
+        def do_argprint(self, args: argparse.Namespace) -> None:
             "Print the options and argument list this options command was called with."
             self.poutput(f'args: {args!r}')
     ```
@@ -378,8 +378,8 @@ def as_subcommand_to(
         def do_base(self, args: argparse.Namespace) -> None:
             args.cmd2_subcmd_handler(args)
 
-        @cmd2.as_subcommand_to('base', 'sub', sub_parser, help="the subcommand") -> None:
-        def sub_handler(self, args: argparse.Namespace):
+        @cmd2.as_subcommand_to('base', 'sub', sub_parser, help="the subcommand")
+        def sub_handler(self, args: argparse.Namespace) -> None:
             self.poutput('Subcommand executed')
     ```
 
