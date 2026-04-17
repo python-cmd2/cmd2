@@ -890,7 +890,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         """Find a parser in the hierarchy based on a sequence of subcommand names.
 
         :param subcommand_path: sequence of subcommand names leading to the target parser
-        :return: the discovered Cmd2ArgumentParser
+        :return: the discovered parser
         :raises ValueError: if any subcommand in the path is not found or a level doesn't support subcommands
         """
         parser = self
@@ -905,7 +905,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self,
         subcommand_path: Iterable[str],
         subcommand: str,
-        parser: 'Cmd2ArgumentParser',
+        subcommand_parser: 'Cmd2ArgumentParser',
         **add_parser_kwargs: Any,
     ) -> None:
         """Attach a parser as a subcommand to a command at the specified path.
@@ -913,26 +913,35 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :param subcommand_path: sequence of subcommand names leading to the parser that will
                                 host the new subcommand. An empty sequence indicates this parser.
         :param subcommand: name of the new subcommand
-        :param parser: the parser to attach
+        :param subcommand_parser: the parser to attach
         :param add_parser_kwargs: additional arguments for the subparser registration (e.g. help, aliases)
+        :raises TypeError: if the subcommand parser's type does not match the 'parser_class' configured
+                           for the target subcommand group.
         :raises ValueError: if the command path is invalid or doesn't support subcommands
         """
         target_parser = self._find_parser(subcommand_path)
         subparsers_action = target_parser._get_subparsers_action()
 
+        if type(subcommand_parser) is not subparsers_action._parser_class:
+            raise TypeError(
+                f"The attached parser must be of type '{subparsers_action._parser_class.__name__}' "
+                f"to match the 'parser_class' configured for this subparsers action. "
+                f"Received '{type(subcommand_parser).__name__}'."
+            )
+
         # Use add_parser to register the subcommand name and any aliases
-        new_parser = subparsers_action.add_parser(subcommand, **add_parser_kwargs)
+        placeholder_parser = subparsers_action.add_parser(subcommand, **add_parser_kwargs)
 
         # To ensure accurate usage strings, recursively update 'prog' values
         # within the injected parser to match its new location in the command hierarchy.
-        parser.update_prog(new_parser.prog)
+        subcommand_parser.update_prog(placeholder_parser.prog)
 
         # Replace the parser created by add_parser() with our pre-configured one
-        subparsers_action._name_parser_map[subcommand] = parser
+        subparsers_action._name_parser_map[subcommand] = subcommand_parser
 
         # Remap any aliases to our pre-configured parser
         for alias in add_parser_kwargs.get("aliases", ()):
-            subparsers_action._name_parser_map[alias] = parser
+            subparsers_action._name_parser_map[alias] = subcommand_parser
 
     def detach_subcommand(self, subcommand_path: Iterable[str], subcommand: str) -> 'Cmd2ArgumentParser':
         """Detach a subcommand from a command at the specified path.

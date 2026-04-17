@@ -425,6 +425,33 @@ def test_subcommand_attachment_errors() -> None:
     with pytest.raises(ValueError, match="Subcommand 'fake' not found in 'root'"):
         root_parser.detach_subcommand([], "fake")
 
+    # Verify TypeError when attaching a parser of a different type
+    class SubParser(Cmd2ArgumentParser):
+        pass
+
+    subclass_parser = SubParser(prog="sub")
+    with pytest.raises(TypeError, match="The attached parser must be of type 'Cmd2ArgumentParser'"):
+        root_parser.attach_subcommand([], "sub", subclass_parser)
+
+
+def test_subcommand_attachment_parser_class_override() -> None:
+    class MyParser(Cmd2ArgumentParser):
+        pass
+
+    root_parser = Cmd2ArgumentParser(prog="root")
+
+    # Explicitly override parser_class for this subparsers action
+    root_parser.add_subparsers(parser_class=MyParser)
+
+    # Attaching a MyParser instance should succeed
+    my_parser = MyParser(prog="sub")
+    root_parser.attach_subcommand([], "sub", my_parser)
+
+    # Attaching a standard Cmd2ArgumentParser instance should fail
+    standard_parser = Cmd2ArgumentParser(prog="standard")
+    with pytest.raises(TypeError, match="The attached parser must be of type 'MyParser'"):
+        root_parser.attach_subcommand([], "fail", standard_parser)
+
 
 def test_completion_items_as_choices(capsys) -> None:
     """Test cmd2's patch to Argparse._check_value() which supports CompletionItems as choices.
