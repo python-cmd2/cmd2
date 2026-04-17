@@ -370,7 +370,7 @@ def as_subcommand_to(
     Example:
     ```py
     base_parser = cmd2.Cmd2ArgumentParser()
-    base_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
+    base_parser.add_subparsers(title="subcommands", metavar="SUBCOMMAND", required=True)
     sub_parser = cmd2.Cmd2ArgumentParser()
 
     class MyApp(cmd2.Cmd):

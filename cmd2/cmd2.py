@@ -1179,7 +1179,7 @@ class Cmd:
         self,
         command: str,
         subcommand: str,
-        parser: Cmd2ArgumentParser,
+        subcommand_parser: Cmd2ArgumentParser,
         **add_parser_kwargs: Any,
     ) -> None:
         """Attach a parser as a subcommand to a command at the specified path.
@@ -1187,12 +1187,15 @@ class Cmd:
         :param command: full command path (space-delimited) leading to the parser that will
                         host the new subcommand (e.g. 'foo bar')
         :param subcommand: name of the new subcommand
-        :param parser: the parser to attach
+        :param subcommand_parser: the parser to attach
         :param add_parser_kwargs: additional arguments for the subparser registration (e.g. help, aliases)
+        :raises TypeError: if subcommand_parser is not an instance of the following or their subclasses:
+                           1. Cmd2ArgumentParser
+                           2. The parser_class configured for the target subcommand group
         :raises ValueError: if the command path is invalid or doesn't support subcommands
         """
         root_parser, subcommand_path = self._get_root_parser_and_subcmd_path(command)
-        root_parser.attach_subcommand(subcommand_path, subcommand, parser, **add_parser_kwargs)
+        root_parser.attach_subcommand(subcommand_path, subcommand, subcommand_parser, **add_parser_kwargs)
 
     def detach_subcommand(self, command: str, subcommand: str) -> Cmd2ArgumentParser:
         """Detach a subcommand from a command at the specified path.
@@ -3726,7 +3729,7 @@ class Cmd:
             "See Also",
             "macro",
         )
-        alias_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
+        alias_parser.add_subparsers(title="subcommands", metavar="SUBCOMMAND", required=True)
 
         return alias_parser
 
@@ -3942,7 +3945,7 @@ class Cmd:
             "See Also",
             "alias",
         )
-        macro_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
+        macro_parser.add_subparsers(title="subcommands", metavar="SUBCOMMAND", required=True)
 
         return macro_parser
 
