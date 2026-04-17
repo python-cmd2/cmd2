@@ -772,25 +772,6 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.description: RenderableType | None  # type: ignore[assignment]
         self.epilog: RenderableType | None  # type: ignore[assignment]
 
-    def add_subparsers(  # type: ignore[override]
-        self,
-        **kwargs: Any,
-    ) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
-        """Override for improved defaults and type safety.
-
-        This override does two things.
-        1. Sets a default title if one was not given.
-        2. Narrows the return type to provide better IDE autocompletion
-           and type safety for `Cmd2ArgumentParser` instances.
-
-        :param kwargs: additional keyword arguments
-        :return: _SubParsersAction which stores Cmd2ArgumentParsers
-        """
-        if 'title' not in kwargs:
-            kwargs['title'] = 'subcommands'
-
-        return super().add_subparsers(**kwargs)
-
     def _get_subparsers_action(self) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
         """Get the _SubParsersAction for this parser if it exists.
 

@@ -3728,7 +3728,7 @@ class Cmd:
             "See Also",
             "macro",
         )
-        alias_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
+        alias_parser.add_subparsers(title="subcommands", metavar="SUBCOMMAND", required=True)
 
         return alias_parser
 
@@ -3944,7 +3944,7 @@ class Cmd:
             "See Also",
             "alias",
         )
-        macro_parser.add_subparsers(metavar='SUBCOMMAND', required=True)
+        macro_parser.add_subparsers(title="subcommands", metavar="SUBCOMMAND", required=True)
 
         return macro_parser
 
