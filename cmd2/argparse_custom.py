@@ -896,13 +896,21 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :param subcommand: name of the new subcommand
         :param subcommand_parser: the parser to attach
         :param add_parser_kwargs: additional arguments for the subparser registration (e.g. help, aliases)
-        :raises TypeError: if the subcommand parser's type does not match the 'parser_class' configured
-                           for the target subcommand group.
+        :raises TypeError: if the subcommand parser is not an instance of 'Cmd2ArgumentParser'
+                           (or one of its subclasses), or if its type does not match the 'parser_class'
+                           configured for the target subcommand group.
         :raises ValueError: if the command path is invalid or doesn't support subcommands
         """
+        if not isinstance(subcommand_parser, Cmd2ArgumentParser):
+            raise TypeError(
+                f"The attached parser must be an instance of 'Cmd2ArgumentParser' (or a subclass). "
+                f"Received: '{type(subcommand_parser).__name__}'."
+            )
+
         target_parser = self._find_parser(subcommand_path)
         subparsers_action = target_parser._get_subparsers_action()
 
+        # Mirror argparse's add_parser() behavior by requiring an exact type match with _parser_class
         if type(subcommand_parser) is not subparsers_action._parser_class:
             raise TypeError(
                 f"The attached parser must be of type '{subparsers_action._parser_class.__name__}' "

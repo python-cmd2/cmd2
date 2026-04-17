@@ -425,12 +425,17 @@ def test_subcommand_attachment_errors() -> None:
     with pytest.raises(ValueError, match="Subcommand 'fake' not found in 'root'"):
         root_parser.detach_subcommand([], "fake")
 
+    # Verify TypeError when attaching a non-Cmd2ArgumentParser type
+    ap_parser = argparse.ArgumentParser(prog="non-cmd2-parser")
+    with pytest.raises(TypeError, match=r"must be an instance of 'Cmd2ArgumentParser' \(or a subclass\)"):
+        root_parser.attach_subcommand([], "sub", ap_parser)  # type: ignore[arg-type]
+
     # Verify TypeError when attaching a parser of a different type
     class SubParser(Cmd2ArgumentParser):
         pass
 
-    subclass_parser = SubParser(prog="sub")
-    with pytest.raises(TypeError, match="The attached parser must be of type 'Cmd2ArgumentParser'"):
+    subclass_parser = SubParser(prog="subclass")
+    with pytest.raises(TypeError, match="to match the 'parser_class' configured for this subparsers action"):
         root_parser.attach_subcommand([], "sub", subclass_parser)
 
 

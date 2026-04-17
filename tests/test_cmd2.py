@@ -4534,9 +4534,3 @@ def test_subcommand_attachment_errors() -> None:
     # Test command that doesn't use argparse
     with pytest.raises(ValueError, match="Command 'no_argparse' does not use argparse"):
         app.attach_subcommand("no_argparse", "sub", cmd2.Cmd2ArgumentParser())
-
-    # Test type mismatch
-    import argparse
-
-    with pytest.raises(TypeError, match="to match the 'parser_class' configured for this subparsers action"):
-        app.attach_subcommand("alias", "sub", argparse.ArgumentParser())  # type: ignore[arg-type]
