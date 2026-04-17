@@ -20,7 +20,7 @@ from cmd2 import (
 )
 
 
-class MyPlugin(CommandSet):
+class MyPlugin(CommandSet[cmd2.Cmd]):
     """A CommandSet that defines its own category."""
 
     DEFAULT_CATEGORY = "Plugin Commands"

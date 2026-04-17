@@ -28,7 +28,7 @@ COMMANDSET_LOAD_UNLOAD = "Loading and Unloading CommandSets"
 COMMANDSET_SUBCOMMAND = "Subcommands with CommandSet"
 
 
-class AutoLoadCommandSet(CommandSet):
+class AutoLoadCommandSet(CommandSet[cmd2.Cmd]):
     DEFAULT_CATEGORY = COMMANDSET_BASIC
 
     def __init__(self) -> None:
@@ -44,7 +44,7 @@ class AutoLoadCommandSet(CommandSet):
         self._cmd.poutput('World')
 
 
-class LoadableFruits(CommandSet):
+class LoadableFruits(CommandSet[cmd2.Cmd]):
     DEFAULT_CATEGORY = COMMANDSET_DYNAMIC
 
     def __init__(self) -> None:
@@ -69,7 +69,7 @@ class LoadableFruits(CommandSet):
         self._cmd.poutput('cutting banana: ' + ns.direction)
 
 
-class LoadableVegetables(CommandSet):
+class LoadableVegetables(CommandSet[cmd2.Cmd]):
     DEFAULT_CATEGORY = COMMANDSET_DYNAMIC
 
     def __init__(self) -> None:

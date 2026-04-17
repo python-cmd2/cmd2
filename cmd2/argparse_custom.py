@@ -262,9 +262,9 @@ from .completion import CompletionItem
 from .rich_utils import Cmd2RichArgparseConsole
 from .styles import Cmd2Style
 from .types import (
-    ChoicesProviderUnbound,
-    CmdOrSet,
-    CompleterUnbound,
+    CmdOrSetT,
+    UnboundChoicesProvider,
+    UnboundCompleter,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -388,8 +388,8 @@ def _ActionsContainer_add_argument(  # noqa: N802
     self: argparse._ActionsContainer,
     *args: Any,
     nargs: int | str | tuple[int] | tuple[int, int] | tuple[int, float] | None = None,
-    choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
-    completer: CompleterUnbound[CmdOrSet] | None = None,
+    choices_provider: UnboundChoicesProvider[CmdOrSetT] | None = None,
+    completer: UnboundCompleter[CmdOrSetT] | None = None,
     suppress_tab_hint: bool = False,
     table_columns: Sequence[str | Column] | None = None,
     **kwargs: Any,

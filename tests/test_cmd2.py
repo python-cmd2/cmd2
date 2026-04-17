@@ -3838,7 +3838,7 @@ class DisableCommandsApp(cmd2.Cmd):
         self.poutput("The real is_not_decorated")
 
 
-class DisableCommandSet(CommandSet):
+class DisableCommandSet(CommandSet[cmd2.Cmd]):
     """Test registering a command which is in a disabled category"""
 
     category_name = "CommandSet Test Category"

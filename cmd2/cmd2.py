@@ -63,7 +63,6 @@ from typing import (
     ClassVar,
     TextIO,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -114,10 +113,7 @@ from .clipboard import (
     get_paste_buffer,
     write_to_paste_buffer,
 )
-from .command_set import (
-    CommandFunc,
-    CommandSet,
-)
+from .command_set import CommandSet
 from .completion import (
     Choices,
     CompletionItem,
@@ -164,10 +160,12 @@ from .rich_utils import (
 )
 from .styles import Cmd2Style
 from .types import (
-    ChoicesProviderUnbound,
+    BoundCommandFunc,
+    BoundCompleter,
     CmdOrSet,
-    CompleterBound,
-    CompleterUnbound,
+    CmdOrSetT,
+    UnboundChoicesProvider,
+    UnboundCompleter,
 )
 
 with contextlib.suppress(ImportError):
@@ -205,7 +203,7 @@ from .utils import (
 
 if TYPE_CHECKING:  # pragma: no cover
     StaticArgParseBuilder = staticmethod[[], Cmd2ArgumentParser]
-    ClassArgParseBuilder = classmethod['Cmd' | CommandSet, [], Cmd2ArgumentParser]
+    ClassArgParseBuilder = classmethod[CmdOrSet, [], Cmd2ArgumentParser]
     from prompt_toolkit.buffer import Buffer
 else:
     StaticArgParseBuilder = staticmethod
@@ -238,14 +236,14 @@ class _CommandParsers:
         self._parsers: dict[str, Cmd2ArgumentParser] = {}
 
     @staticmethod
-    def _fully_qualified_name(command_method: CommandFunc) -> str:
+    def _fully_qualified_name(command_method: BoundCommandFunc) -> str:
         """Return the fully qualified name of a method or None if a method wasn't passed in."""
         try:
             return f"{command_method.__module__}.{command_method.__qualname__}"
         except AttributeError:
             return ""
 
-    def __contains__(self, command_method: CommandFunc) -> bool:
+    def __contains__(self, command_method: BoundCommandFunc) -> bool:
         """Return whether a given method's parser is in self.
 
         If the parser does not yet exist, it will be created if applicable.
@@ -254,7 +252,7 @@ class _CommandParsers:
         parser = self.get(command_method)
         return bool(parser)
 
-    def get(self, command_method: CommandFunc) -> Cmd2ArgumentParser | None:
+    def get(self, command_method: BoundCommandFunc) -> Cmd2ArgumentParser | None:
         """Return a given method's parser or None if the method is not argparse-based.
 
         If the parser does not yet exist, it will be created.
@@ -287,7 +285,7 @@ class _CommandParsers:
 
         return self._parsers.get(full_method_name)
 
-    def remove(self, command_method: CommandFunc) -> None:
+    def remove(self, command_method: BoundCommandFunc) -> None:
         """Remove a given method's parser if it exists."""
         full_method_name = self._fully_qualified_name(command_method)
         if full_method_name in self._parsers:
@@ -355,7 +353,7 @@ class Cmd:
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
         bottom_toolbar: bool = False,
-        command_sets: Iterable[CommandSet] | None = None,
+        command_sets: Iterable[CommandSet[Any]] | None = None,
         include_ipy: bool = False,
         include_py: bool = False,
         intro: RenderableType = '',
@@ -482,8 +480,8 @@ class Cmd:
         self._always_prefix_settables: bool = False
 
         # CommandSet containers
-        self._installed_command_sets: set[CommandSet] = set()
-        self._cmd_to_command_sets: dict[str, CommandSet] = {}
+        self._installed_command_sets: set[CommandSet[Any]] = set()
+        self._cmd_to_command_sets: dict[str, CommandSet[Any]] = {}
 
         self.build_settables()
 
@@ -758,7 +756,9 @@ class Cmd:
         )
         return PromptSession(**kwargs)
 
-    def find_commandsets(self, commandset_type: type[CommandSet], *, subclass_match: bool = False) -> list[CommandSet]:
+    def find_commandsets(
+        self, commandset_type: type[CommandSet[Any]], *, subclass_match: bool = False
+    ) -> list[CommandSet[Any]]:
         """Find all CommandSets that match the provided CommandSet type.
 
         By default, locates a CommandSet that is an exact type match but may optionally return all CommandSets that
@@ -773,7 +773,7 @@ class Cmd:
             if type(cmdset) == commandset_type or (subclass_match and isinstance(cmdset, commandset_type))  # noqa: E721
         ]
 
-    def find_commandset_for_command(self, command_name: str) -> CommandSet | None:
+    def find_commandset_for_command(self, command_name: str) -> CommandSet[Any] | None:
         """Find the CommandSet that registered the command name.
 
         :param command_name: command name to search
@@ -787,7 +787,7 @@ class Cmd:
         all_commandset_defs = CommandSet.__subclasses__()
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
 
-        def load_commandset_by_type(commandset_types: list[type[CommandSet]]) -> None:
+        def load_commandset_by_type(commandset_types: list[type[CommandSet[Any]]]) -> None:
             for cmdset_type in commandset_types:
                 # check if the type has sub-classes. We will only auto-load leaf class types.
                 subclasses = cmdset_type.__subclasses__()
@@ -805,7 +805,7 @@ class Cmd:
 
         load_commandset_by_type(all_commandset_defs)
 
-    def register_command_set(self, cmdset: CommandSet) -> None:
+    def register_command_set(self, cmdset: CommandSet[Any]) -> None:
         """Installs a CommandSet, loading all commands defined in the CommandSet.
 
         :param cmdset: CommandSet to load
@@ -920,7 +920,7 @@ class Cmd:
 
         return parser
 
-    def _install_command_function(self, command_func_name: str, command_method: CommandFunc, context: str = '') -> None:
+    def _install_command_function(self, command_func_name: str, command_method: BoundCommandFunc, context: str = '') -> None:
         """Install a new command function into the CLI.
 
         :param command_func_name: name of command function to add
@@ -961,7 +961,7 @@ class Cmd:
 
         setattr(self, command_func_name, command_method)
 
-    def _install_completer_function(self, cmd_name: str, cmd_completer: CompleterBound) -> None:
+    def _install_completer_function(self, cmd_name: str, cmd_completer: BoundCompleter) -> None:
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
 
         if hasattr(self, completer_func_name):
@@ -975,7 +975,7 @@ class Cmd:
             raise CommandSetRegistrationError(f'Attribute already exists: {help_func_name}')
         setattr(self, help_func_name, cmd_help)
 
-    def unregister_command_set(self, cmdset: CommandSet) -> None:
+    def unregister_command_set(self, cmdset: CommandSet[Any]) -> None:
         """Uninstalls a CommandSet and unloads all associated commands.
 
         :param cmdset: CommandSet to uninstall
@@ -1020,7 +1020,7 @@ class Cmd:
             cmdset.on_unregistered()
             self._installed_command_sets.remove(cmdset)
 
-    def _check_uninstallable(self, cmdset: CommandSet) -> None:
+    def _check_uninstallable(self, cmdset: CommandSet[Any]) -> None:
         cmdset_id = id(cmdset)
 
         def check_parser_uninstallable(parser: Cmd2ArgumentParser) -> None:
@@ -1062,7 +1062,7 @@ class Cmd:
                 if command_parser is not None:
                     check_parser_uninstallable(command_parser)
 
-    def _register_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
+    def _register_subcommands(self, cmdset: CmdOrSet) -> None:
         """Register subcommands with their base command.
 
         :param cmdset: CommandSet or cmd2.Cmd subclass containing subcommands
@@ -1112,7 +1112,7 @@ class Cmd:
             except ValueError as ex:
                 raise CommandSetRegistrationError(str(ex)) from ex
 
-    def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
+    def _unregister_subcommands(self, cmdset: CmdOrSet) -> None:
         """Unregister subcommands from their base command.
 
         :param cmdset: CommandSet containing subcommands
@@ -1164,7 +1164,7 @@ class Cmd:
         if root_command in self.disabled_commands:
             command_func = self.disabled_commands[root_command].command_function
         else:
-            command_func = self.cmd_func(root_command)
+            command_func = self.get_command_func(root_command)
 
         if command_func is None:
             raise ValueError(f"Root command '{root_command}' not found")
@@ -2286,7 +2286,7 @@ class Cmd:
             text, line, begidx, endidx, path_filter=lambda path: os.path.isdir(path) or os.access(path, os.X_OK)
         )
 
-    def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: CompleterBound) -> Completions:
+    def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: BoundCompleter) -> Completions:
         """First completion function for all commands, called by complete().
 
         It determines if it should complete for redirection (|, >, >>) or use the
@@ -2428,7 +2428,7 @@ class Cmd:
             return Completions()
 
         # Determine the completer function to use for the command's argument
-        completer_func: CompleterBound
+        completer_func: BoundCompleter
         if custom_settings is None:
             # Check if a macro was entered
             if command in self.macros:
@@ -2443,7 +2443,7 @@ class Cmd:
                     completer_func = func_attr
                 else:
                     # There's no completer function, next see if the command uses argparse
-                    func = self.cmd_func(command)
+                    func = self.get_command_func(command)
                     argparser = None if func is None else self._command_parsers.get(func)
 
                     if func is not None and argparser is not None:
@@ -3317,24 +3317,17 @@ class Cmd:
         self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
         self._redirecting = saved_redir_state.saved_redirecting
 
-    def cmd_func(self, command: str) -> CommandFunc | None:
-        """Get the function for a command.
+    def get_command_func(self, command: str) -> BoundCommandFunc | None:
+        """Get the bound command function for a command.
 
         :param command: the name of the command
-
-        Example:
-        ```py
-        helpfunc = self.cmd_func('help')
-        ```
-
-        helpfunc now contains a reference to the ``do_help`` method
-
+        :return: the bound function implementing the command, or None if not found
         """
         func_name = constants.COMMAND_FUNC_PREFIX + command
         func = getattr(self, func_name, None)
-        return cast(CommandFunc, func) if callable(func) else None
+        return cast(BoundCommandFunc, func) if callable(func) else None
 
-    def _get_command_category(self, func: CommandFunc) -> str:
+    def _get_command_category(self, func: BoundCommandFunc) -> str:
         """Determine the category for a command.
 
         :param func: the do_* function implementing the command
@@ -3365,7 +3358,7 @@ class Cmd:
         if not isinstance(statement, Statement):
             statement = self._input_line_to_statement(statement)
 
-        func = self.cmd_func(statement.command)
+        func = self.get_command_func(statement.command)
         if func:
             # Check to see if this command should be stored in history
             if (
@@ -3486,8 +3479,8 @@ class Cmd:
         self,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
-        completer: CompleterUnbound[CmdOrSet] | None = None,
+        choices_provider: UnboundChoicesProvider[CmdOrSetT] | None = None,
+        completer: UnboundCompleter[CmdOrSetT] | None = None,
         parser: Cmd2ArgumentParser | None = None,
     ) -> Completer:
         """Determine the appropriate completer based on provided arguments."""
@@ -3518,8 +3511,8 @@ class Cmd:
         history: Sequence[str] | None = None,
         preserve_quotes: bool = False,
         choices: Iterable[Any] | None = None,
-        choices_provider: ChoicesProviderUnbound[CmdOrSet] | None = None,
-        completer: CompleterUnbound[CmdOrSet] | None = None,
+        choices_provider: UnboundChoicesProvider[CmdOrSetT] | None = None,
+        completer: UnboundCompleter[CmdOrSetT] | None = None,
         parser: Cmd2ArgumentParser | None = None,
     ) -> str:
         """Read a line of input with optional completion and history.
@@ -4221,7 +4214,7 @@ class Cmd:
             return Completions()
 
         # Check if this command uses argparse
-        if (func := self.cmd_func(command)) is None or (argparser := self._command_parsers.get(func)) is None:
+        if (func := self.get_command_func(command)) is None or (argparser := self._command_parsers.get(func)) is None:
             return Completions()
 
         completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
@@ -4247,7 +4240,7 @@ class Cmd:
                 help_topics.remove(command)
 
             # Store the command within its category
-            func = cast(CommandFunc, self.cmd_func(command))
+            func = cast(BoundCommandFunc, self.get_command_func(command))
             category = self._get_command_category(func)
             cmds_cats.setdefault(category, []).append(command)
 
@@ -4313,7 +4306,7 @@ class Cmd:
 
         else:
             # Getting help for a specific command
-            func = self.cmd_func(args.command)
+            func = self.get_command_func(args.command)
             help_func = getattr(self, constants.HELP_FUNC_PREFIX + args.command, None)
             argparser = None if func is None else self._command_parsers.get(func)
 
@@ -4388,7 +4381,7 @@ class Cmd:
         # Try to get the documentation string for each command
         topics = self.get_help_topics()
         for command in cmds:
-            if (cmd_func := self.cmd_func(command)) is None:
+            if (cmd_func := self.get_command_func(command)) is None:
                 continue
 
             doc: str | None
@@ -5636,7 +5629,7 @@ class Cmd:
             return
 
         # Make sure this is an actual command
-        command_function = self.cmd_func(command)
+        command_function = self.get_command_func(command)
         if command_function is None:
             raise AttributeError(f"'{command}' does not refer to a command")
 
@@ -5677,7 +5670,7 @@ class Cmd:
         all_commands = self.get_all_commands()
 
         for cmd_name in all_commands:
-            func = cast(CommandFunc, self.cmd_func(cmd_name))
+            func = cast(BoundCommandFunc, self.get_command_func(cmd_name))
             if self._get_command_category(func) == category:
                 self.disable_command(cmd_name, message_to_print)
 
@@ -5871,7 +5864,7 @@ class Cmd:
     def _resolve_func_self(
         self,
         cmd_support_func: Callable[..., Any],
-        cmd_self: Union[CommandSet, 'Cmd', None],
+        cmd_self: CmdOrSet | None,
     ) -> object | None:
         """Attempt to resolve a candidate instance to pass as 'self'.
 
@@ -5895,7 +5888,7 @@ class Cmd:
             #   2. Do any of the registered CommandSets in the Cmd2 application exactly match the type?
             #   3. Is there a registered CommandSet that is is the only matching subclass?
 
-            func_self: CommandSet | Cmd | None
+            func_self: CmdOrSet | None
 
             # check if the command's CommandSet is a sub-class of the support function's defining class
             if isinstance(cmd_self, func_class):
@@ -5904,7 +5897,7 @@ class Cmd:
             else:
                 # Search all registered CommandSets
                 func_self = None
-                candidate_sets: list[CommandSet] = []
+                candidate_sets: list[CommandSet[Any]] = []
                 for installed_cmd_set in self._installed_command_sets:
                     if type(installed_cmd_set) == func_class:  # noqa: E721
                         # Case 2: CommandSet is an exact type match for the function's CommandSet

@@ -35,9 +35,9 @@ from .constants import INFINITY
 from .exceptions import CompletionError
 from .rich_utils import Cmd2SimpleTable
 from .types import (
-    ChoicesProviderUnbound,
-    CmdOrSet,
-    CompleterUnbound,
+    CmdOrSetT,
+    UnboundChoicesProvider,
+    UnboundCompleter,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -214,7 +214,7 @@ class ArgparseCompleter:
         endidx: int,
         tokens: Sequence[str],
         *,
-        cmd_set: CommandSet | None = None,
+        cmd_set: CommandSet[Any] | None = None,
     ) -> Completions:
         """Complete text using argparse metadata.
 
@@ -469,7 +469,7 @@ class ArgparseCompleter:
         consumed_arg_values: dict[str, list[str]],
         used_flags: set[str],
         skip_remaining_flags: bool,
-        cmd_set: CommandSet | None,
+        cmd_set: CommandSet[Any] | None,
     ) -> Completions:
         """Perform final completion step handling positionals and flags."""
         # Check if we are completing a flag name. This check ignores strings with a length of one, like '-'.
@@ -734,11 +734,11 @@ class ArgparseCompleter:
 
     def _prepare_callable_params(
         self,
-        to_call: ChoicesProviderUnbound[CmdOrSet] | CompleterUnbound[CmdOrSet],
+        to_call: UnboundChoicesProvider[CmdOrSetT] | UnboundCompleter[CmdOrSetT],
         arg_state: _ArgumentState,
         text: str,
         consumed_arg_values: dict[str, list[str]],
-        cmd_set: CommandSet | None,
+        cmd_set: CommandSet[Any] | None,
     ) -> tuple[list[Any], dict[str, Any]]:
         """Resolve the instance and arguments required to call a choices/completer function."""
         args: list[Any] = []
@@ -769,7 +769,7 @@ class ArgparseCompleter:
         arg_state: _ArgumentState,
         consumed_arg_values: dict[str, list[str]],
         *,
-        cmd_set: CommandSet | None = None,
+        cmd_set: CommandSet[Any] | None = None,
     ) -> Completions:
         """Completion routine for an argparse argument.
 

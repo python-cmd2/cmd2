@@ -87,7 +87,7 @@ def main() -> None:
                 if not is_command:
                     continue
 
-                cmd_func = self.cmd_func(item)
+                cmd_func = self.get_command_func(item)
                 parser = self._command_parsers.get(cmd_func)
                 if parser is None:
                     continue

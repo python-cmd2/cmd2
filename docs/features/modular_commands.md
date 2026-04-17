@@ -52,7 +52,18 @@ initializer arguments, see [Manual CommandSet Construction](#manual-commandset-c
 import cmd2
 from cmd2 import CommandSet
 
-class AutoLoadCommandSet(CommandSet):
+class ExampleApp(cmd2.Cmd):
+    """
+    CommandSets are automatically loaded. Nothing needs to be done.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, auto_load_commands=True, **kwargs)
+
+    def do_something(self, arg):
+        """Something Command."""
+        self.poutput('this is the something command')
+
+class AutoLoadCommandSet(CommandSet[ExampleApp]):
     DEFAULT_CATEGORY = 'My Category'
 
     def __init__(self):
@@ -65,17 +76,6 @@ class AutoLoadCommandSet(CommandSet):
     def do_world(self, _: cmd2.Statement):
         """World Command."""
         self._cmd.poutput('World')
-
-class ExampleApp(cmd2.Cmd):
-    """
-    CommandSets are automatically loaded. Nothing needs to be done.
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, auto_load_commands=True, **kwargs)
-
-    def do_something(self, arg):
-        """Something Command."""
-        self.poutput('this is the something command')
 ```
 
 ### Manual CommandSet Construction
@@ -87,7 +87,20 @@ construct CommandSets and pass in the initializer to Cmd2.
 import cmd2
 from cmd2 import CommandSet
 
-class CustomInitCommandSet(CommandSet):
+class ExampleApp(cmd2.Cmd):
+    """
+    CommandSets with initializer parameters are provided in the initializer
+    """
+    def __init__(self, *args, **kwargs):
+        # gotta have this or neither the plugin or cmd2 will initialize
+        super().__init__(*args, auto_load_commands=True, **kwargs)
+
+    def do_something(self, arg):
+        """Something Command."""
+        self.last_result = 5
+        self.poutput('this is the something command')
+
+class CustomInitCommandSet(CommandSet[ExampleApp]):
     DEFAULT_CATEGORY = 'My Category'
 
     def __init__(self, arg1, arg2):
@@ -104,24 +117,38 @@ class CustomInitCommandSet(CommandSet):
         """Show Arg 2."""
         self._cmd.poutput(f'Arg2: {self._arg2}')
 
-class ExampleApp(cmd2.Cmd):
-    """
-    CommandSets with initializer parameters are provided in the initializer
-    """
-    def __init__(self, *args, **kwargs):
-        # gotta have this or neither the plugin or cmd2 will initialize
-        super().__init__(*args, auto_load_commands=True, **kwargs)
-
-    def do_something(self, arg):
-        """Something Command."""
-        self.last_result = 5
-        self.poutput('this is the something command')
-
 
 def main():
     my_commands = CustomInitCommandSet(1, 2)
     app = ExampleApp(command_sets=[my_commands])
     app.cmdloop()
+```
+
+### Type Hinting and self.\_cmd
+
+When a `CommandSet` is registered, its `_cmd` property is populated with a reference to the
+`cmd2.Cmd` instance. `CommandSet` is a
+[generic](https://docs.python.org/3/library/typing.html#typing.Generic) class, allowing you to
+specify the specific `cmd2.Cmd` subclass it expects to be loaded into.
+
+By parameterizing the inheritance with your application class, your IDE and static analysis tools
+(like Mypy) will know the exact type of `self._cmd`. This provides full autocompletion and type
+validation when accessing custom attributes or methods on your main application instance.
+
+```py
+import cmd2
+from cmd2 import CommandSet
+
+class MyApp(cmd2.Cmd):
+    def __init__(self):
+        super().__init__()
+        self.custom_state = "Some important data"
+
+class MyCommands(CommandSet[MyApp]):
+    def do_check_state(self, _: cmd2.Statement):
+        # Type checkers know self._cmd is an instance of MyApp
+        # and can validate the 'custom_state' attribute exists.
+        self._cmd.poutput(f"State: {self._cmd.custom_state}")
 ```
 
 ### Dynamic Commands
@@ -137,7 +164,7 @@ import cmd2
 from cmd2 import CommandSet, with_argparser, with_category
 
 
-class LoadableFruits(CommandSet):
+class LoadableFruits(CommandSet["ExampleApp"]):
     DEFAULT_CATEGORY = 'Fruits'
 
     def __init__(self):
@@ -152,7 +179,7 @@ class LoadableFruits(CommandSet):
         self._cmd.poutput('Banana')
 
 
-class LoadableVegetables(CommandSet):
+class LoadableVegetables(CommandSet["ExampleApp"]):
     DEFAULT_CATEGORY = 'Vegetables'
 
     def __init__(self):
@@ -268,7 +295,7 @@ import cmd2
 from cmd2 import CommandSet, with_argparser, with_category
 
 
-class LoadableFruits(CommandSet):
+class LoadableFruits(CommandSet["ExampleApp"]):
     DEFAULT_CATEGORY = 'Fruits'
 
     def __init__(self):
@@ -287,7 +314,7 @@ class LoadableFruits(CommandSet):
         self._cmd.poutput('cutting banana: ' + ns.direction)
 
 
-class LoadableVegetables(CommandSet):
+class LoadableVegetables(CommandSet["ExampleApp"]):
     DEFAULT_CATEGORY = 'Vegetables'
 
     def __init__(self):

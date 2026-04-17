@@ -1,6 +1,7 @@
 """A simple example demonstrating a loadable command set."""
 
 from cmd2 import (
+    Cmd,
     CommandSet,
     CompletionError,
     Completions,
@@ -9,7 +10,7 @@ from cmd2 import (
 )
 
 
-class BasicCompletionCommandSet(CommandSet):
+class BasicCompletionCommandSet(CommandSet[Cmd]):
     DEFAULT_CATEGORY = 'Basic Completion'
 
     # This data is used to demonstrate delimiter_complete
