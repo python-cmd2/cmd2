@@ -1189,9 +1189,9 @@ class Cmd:
         :param subcommand: name of the new subcommand
         :param subcommand_parser: the parser to attach
         :param add_parser_kwargs: additional arguments for the subparser registration (e.g. help, aliases)
-        :raises TypeError: if the subcommand parser is not an instance of 'Cmd2ArgumentParser'
-                           (or one of its subclasses), or if its type does not match the 'parser_class'
-                           configured for the target subcommand group.
+        :raises TypeError: if subcommand_parser is not an instance of the following or their subclasses:
+                           1. Cmd2ArgumentParser
+                           2. The parser_class configured for the target subcommand group
         :raises ValueError: if the command path is invalid or doesn't support subcommands
         """
         root_parser, subcommand_path = self._get_root_parser_and_subcmd_path(command)

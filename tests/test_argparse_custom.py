@@ -430,17 +430,12 @@ def test_subcommand_attachment_errors() -> None:
     with pytest.raises(TypeError, match=r"must be an instance of 'Cmd2ArgumentParser' \(or a subclass\)"):
         root_parser.attach_subcommand([], "sub", ap_parser)  # type: ignore[arg-type]
 
-    # Verify TypeError when attaching a parser of a different type
-    class SubParser(Cmd2ArgumentParser):
-        pass
-
-    subclass_parser = SubParser(prog="subclass")
-    with pytest.raises(TypeError, match="to match the 'parser_class' configured for this subparsers action"):
-        root_parser.attach_subcommand([], "sub", subclass_parser)
-
 
 def test_subcommand_attachment_parser_class_override() -> None:
     class MyParser(Cmd2ArgumentParser):
+        pass
+
+    class MySubParser(MyParser):
         pass
 
     root_parser = Cmd2ArgumentParser(prog="root")
@@ -452,9 +447,13 @@ def test_subcommand_attachment_parser_class_override() -> None:
     my_parser = MyParser(prog="sub")
     root_parser.attach_subcommand([], "sub", my_parser)
 
+    # Attaching a MySubParser instance should also succeed (isinstance check)
+    my_sub_parser = MySubParser(prog="sub2")
+    root_parser.attach_subcommand([], "sub2", my_sub_parser)
+
     # Attaching a standard Cmd2ArgumentParser instance should fail
     standard_parser = Cmd2ArgumentParser(prog="standard")
-    with pytest.raises(TypeError, match="The attached parser must be of type 'MyParser'"):
+    with pytest.raises(TypeError, match=r"must be an instance of 'MyParser' \(or a subclass\)"):
         root_parser.attach_subcommand([], "fail", standard_parser)
 
 

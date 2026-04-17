@@ -896,9 +896,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :param subcommand: name of the new subcommand
         :param subcommand_parser: the parser to attach
         :param add_parser_kwargs: additional arguments for the subparser registration (e.g. help, aliases)
-        :raises TypeError: if the subcommand parser is not an instance of 'Cmd2ArgumentParser'
-                           (or one of its subclasses), or if its type does not match the 'parser_class'
-                           configured for the target subcommand group.
+        :raises TypeError: if subcommand_parser is not an instance of the following or their subclasses:
+                           1. Cmd2ArgumentParser
+                           2. The parser_class configured for the target subcommand group
         :raises ValueError: if the command path is invalid or doesn't support subcommands
         """
         if not isinstance(subcommand_parser, Cmd2ArgumentParser):
@@ -910,12 +910,15 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         target_parser = self._find_parser(subcommand_path)
         subparsers_action = target_parser._get_subparsers_action()
 
-        # Mirror argparse's add_parser() behavior by requiring an exact type match with _parser_class
-        if type(subcommand_parser) is not subparsers_action._parser_class:
+        # Verify the parser is compatible with the 'parser_class' configured for this
+        # subcommand group. We use isinstance() here to allow for subclasses, providing
+        # more flexibility than the standard add_parser() factory approach which enforces
+        # a specific class.
+        if not isinstance(subcommand_parser, subparsers_action._parser_class):
             raise TypeError(
-                f"The attached parser must be of type '{subparsers_action._parser_class.__name__}' "
-                f"to match the 'parser_class' configured for this subparsers action. "
-                f"Received '{type(subcommand_parser).__name__}'."
+                f"The attached parser must be an instance of '{subparsers_action._parser_class.__name__}' "
+                f"(or a subclass) to match the 'parser_class' configured for this subcommand group. "
+                f"Received: '{type(subcommand_parser).__name__}'."
             )
 
         # Use add_parser to register the subcommand name and any aliases
