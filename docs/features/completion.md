@@ -118,5 +118,5 @@ demonstration.
 
 ## For More Information
 
-See [cmd2's argparse_custom API](../api/argparse_custom.md) for a more detailed discussion of
-argparse completion.
+See [cmd2's argparse_utils API](../api/argparse_utils.md) for a more detailed discussion of argparse
+completion.

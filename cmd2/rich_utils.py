@@ -12,7 +12,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from .argparse_custom import Cmd2HelpFormatter
+    from .argparse_utils import Cmd2HelpFormatter
 
 from rich.box import SIMPLE_HEAD
 from rich.console import (

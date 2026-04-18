@@ -15,7 +15,7 @@ from typing import (
 )
 
 from . import constants
-from .argparse_custom import Cmd2ArgumentParser
+from .argparse_utils import Cmd2ArgumentParser
 from .command_set import CommandSet
 from .exceptions import Cmd2ArgparseError
 from .parsing import Statement

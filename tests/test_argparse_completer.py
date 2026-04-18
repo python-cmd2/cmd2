@@ -15,7 +15,7 @@ from cmd2 import (
     CompletionItem,
     Completions,
     argparse_completer,
-    argparse_custom,
+    argparse_utils,
     with_argparser,
 )
 from cmd2 import rich_utils as ru
@@ -1279,7 +1279,7 @@ class CustomCompleter(argparse_completer.ArgparseCompleter):
 
 
 # Add a custom argparse action attribute
-argparse_custom.register_argparse_argument_parameter('complete_when_ready')
+argparse_utils.register_argparse_argument_parameter('complete_when_ready')
 
 
 # App used to test custom ArgparseCompleter types and custom argparse attributes
