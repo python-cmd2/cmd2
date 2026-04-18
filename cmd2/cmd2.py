@@ -108,10 +108,7 @@ from . import (
 )
 from . import rich_utils as ru
 from . import string_utils as su
-from .argparse_utils import (
-    Cmd2ArgumentParser,
-    TextGroup,
-)
+from .argparse_utils import Cmd2ArgumentParser
 from .clipboard import (
     get_paste_buffer,
     write_to_paste_buffer,
@@ -160,6 +157,7 @@ from .rich_utils import (
     Cmd2GeneralConsole,
     Cmd2SimpleTable,
     RichPrintKwargs,
+    TextGroup,
 )
 from .styles import Cmd2Style
 from .types import (
@@ -5122,7 +5120,7 @@ class Cmd:
         history_description = "View, run, edit, save, or clear previously entered commands."
 
         history_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(
-            description=history_description, formatter_class=argparse_utils.RawTextCmd2HelpFormatter
+            description=history_description, formatter_class=ru.RawTextCmd2HelpFormatter
         )
         history_action_group = history_parser.add_mutually_exclusive_group()
         history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')

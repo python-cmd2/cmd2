@@ -4,7 +4,6 @@ import argparse
 import sys
 
 import pytest
-from rich.console import Console
 
 import cmd2
 from cmd2 import (
@@ -14,75 +13,11 @@ from cmd2 import (
     constants,
 )
 from cmd2.argparse_utils import (
-    Cmd2HelpFormatter,
     build_range_error,
     register_argparse_argument_parameter,
 )
-from cmd2.rich_utils import Cmd2RichArgparseConsole
 
 from .conftest import run_cmd
-
-
-def test_text_group_direct_cmd2() -> None:
-    """Print a TextGroup directly using a Cmd2RichArgparseConsole."""
-    title = "Notes"
-    content = "Some text"
-    text_group = argparse_utils.TextGroup(title, content)
-    console = Cmd2RichArgparseConsole()
-    with console.capture() as capture:
-        console.print(text_group)
-    output = capture.get()
-    assert "Notes:" in output
-    assert "  Some text" in output
-
-
-def test_text_group_direct_plain() -> None:
-    """Print a TextGroup directly not using a Cmd2RichArgparseConsole."""
-    title = "Notes"
-    content = "Some text"
-    text_group = argparse_utils.TextGroup(title, content)
-    console = Console()
-    with console.capture() as capture:
-        console.print(text_group)
-    output = capture.get()
-    assert "Notes:" in output
-    assert "  Some text" in output
-
-
-def test_text_group_in_parser_cmd2(capsys) -> None:
-    """Print a TextGroup with argparse using a Cmd2RichArgparseConsole."""
-    parser = Cmd2ArgumentParser(prog="test")
-    parser.epilog = argparse_utils.TextGroup("Notes", "Some text")
-
-    # Render help
-    parser.print_help()
-    out, _ = capsys.readouterr()
-
-    assert "Notes:" in out
-    assert "  Some text" in out
-
-
-def test_text_group_in_parser_plain(capsys) -> None:
-    """Print a TextGroup with argparse not using a Cmd2RichArgparseConsole."""
-
-    class CustomParser(Cmd2ArgumentParser):
-        from typing import Any
-
-        def _get_formatter(self, **kwargs: Any) -> Cmd2HelpFormatter:
-            """Overwrite the formatter's console with a plain one."""
-            formatter = super()._get_formatter(**kwargs)
-            formatter.console = Console()
-            return formatter
-
-    parser = CustomParser(prog="test")
-    parser.epilog = argparse_utils.TextGroup("Notes", "Some text")
-
-    # Render help
-    parser.print_help()
-    out, _ = capsys.readouterr()
-
-    assert "Notes:" in out
-    assert "  Some text" in out
 
 
 class ApCustomTestApp(cmd2.Cmd):
@@ -304,8 +239,6 @@ def test_apcustom_narg_tuple_other_ranges() -> None:
 
 
 def test_apcustom_print_message(capsys) -> None:
-    import sys
-
     test_message = 'The test message'
 
     # Specify the file
@@ -568,50 +501,6 @@ def test_completion_items_as_choices(capsys) -> None:
     # Confirm error text contains correct value type of int
     _out, err = capsys.readouterr()
     assert 'invalid choice: 3 (choose from 1, 2)' in err
-
-
-def test_formatter_console() -> None:
-    # self._console = console (inside console.setter)
-    formatter = Cmd2HelpFormatter(prog='test')
-    new_console = Cmd2RichArgparseConsole()
-    formatter.console = new_console
-    assert formatter._console is new_console
-
-
-@pytest.mark.skipif(
-    sys.version_info < (3, 14),
-    reason="Argparse didn't support color until Python 3.14",
-)
-def test_formatter_set_color(mocker) -> None:
-    formatter = Cmd2HelpFormatter(prog='test')
-
-    # return (inside _set_color if sys.version_info < (3, 14))
-    mocker.patch('cmd2.argparse_utils.sys.version_info', (3, 13, 0))
-    # This should return early without calling super()._set_color
-    mock_set_color = mocker.patch('rich_argparse.RichHelpFormatter._set_color')
-    formatter._set_color(True)
-    mock_set_color.assert_not_called()
-
-    # except TypeError and super()._set_color(color)
-    mocker.patch('cmd2.argparse_utils.sys.version_info', (3, 15, 0))
-
-    # Reset mock and make it raise TypeError when called with kwargs
-    mock_set_color.reset_mock()
-
-    def side_effect(color, **kwargs):
-        if kwargs:
-            raise TypeError("unexpected keyword argument 'file'")
-        return
-
-    mock_set_color.side_effect = side_effect
-
-    # This call should trigger the TypeError and then the fallback call
-    formatter._set_color(True, file=sys.stdout)
-
-    # It should have been called twice: once with kwargs (failed) and once without (fallback)
-    assert mock_set_color.call_count == 2
-    mock_set_color.assert_any_call(True, file=sys.stdout)
-    mock_set_color.assert_any_call(True)
 
 
 def test_update_prog() -> None:

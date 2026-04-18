@@ -2621,9 +2621,9 @@ def test_get_core_print_console_invalidation(base_app: cmd2.Cmd, stream: str) ->
     # Changing the theme should create a new console
     from rich.theme import Theme
 
-    old_theme = ru.APP_THEME
+    old_theme = ru.get_theme()
     try:
-        ru.APP_THEME = Theme()
+        ru._APP_THEME = Theme()
         console6 = base_app._get_core_print_console(
             file=file,
             emoji=False,
@@ -2633,7 +2633,7 @@ def test_get_core_print_console_invalidation(base_app: cmd2.Cmd, stream: str) ->
         assert console6 is not console5
         assert getattr(base_app._console_cache, stream) is console6
     finally:
-        ru.APP_THEME = old_theme
+        ru._APP_THEME = old_theme
 
 
 def test_get_core_print_console_non_cached(base_app: cmd2.Cmd) -> None:

@@ -231,38 +231,21 @@ from argparse import ArgumentError
 from collections.abc import (
     Callable,
     Iterable,
-    Iterator,
     Sequence,
 )
 from typing import (
     TYPE_CHECKING,
     Any,
-    ClassVar,
     NoReturn,
     cast,
 )
 
-from rich.console import (
-    Console,
-    ConsoleOptions,
-    Group,
-    RenderableType,
-    RenderResult,
-)
+from rich.console import RenderableType
 from rich.table import Column
-from rich.text import Text
-from rich_argparse import (
-    ArgumentDefaultsRichHelpFormatter,
-    MetavarTypeRichHelpFormatter,
-    RawDescriptionRichHelpFormatter,
-    RawTextRichHelpFormatter,
-    RichHelpFormatter,
-)
 
 from . import constants
-from . import rich_utils as ru
 from .completion import CompletionItem
-from .rich_utils import Cmd2RichArgparseConsole
+from .rich_utils import Cmd2HelpFormatter
 from .styles import Cmd2Style
 from .types import (
     CmdOrSetT,
@@ -510,230 +493,6 @@ def _ActionsContainer_add_argument(  # noqa: N802
 
 # Overwrite _ActionsContainer.add_argument with our patch
 argparse._ActionsContainer.add_argument = _ActionsContainer_add_argument  # type: ignore[method-assign]
-
-
-############################################################################################################
-# Unless otherwise noted, everything below this point are copied from Python's
-# argparse implementation with minor tweaks to adjust output.
-# Changes are noted if it's buried in a block of copied code. Otherwise the
-# function will check for a special case and fall back to the parent function
-############################################################################################################
-
-
-class Cmd2HelpFormatter(RichHelpFormatter):
-    """Custom help formatter to configure ordering of help text."""
-
-    # Disable automatic highlighting in the help text.
-    highlights: ClassVar[list[str]] = []
-
-    # Disable markup rendering in usage, help, description, and epilog text.
-    # cmd2's built-in commands do not escape opening brackets in their help text
-    # and therefore rely on these settings being False. If you desire to use
-    # markup in your help text, inherit from Cmd2HelpFormatter and override
-    # these settings in that child class.
-    usage_markup: ClassVar[bool] = False
-    help_markup: ClassVar[bool] = False
-    text_markup: ClassVar[bool] = False
-
-    def __init__(
-        self,
-        prog: str,
-        indent_increment: int = 2,
-        max_help_position: int = 24,
-        width: int | None = None,
-        *,
-        console: Cmd2RichArgparseConsole | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize Cmd2HelpFormatter."""
-        super().__init__(prog, indent_increment, max_help_position, width, console=console, **kwargs)
-
-        # Recast to assist type checkers
-        self._console: Cmd2RichArgparseConsole | None
-
-    @property  # type: ignore[override]
-    def console(self) -> Cmd2RichArgparseConsole:
-        """Return our console instance."""
-        if self._console is None:
-            self._console = Cmd2RichArgparseConsole()
-        return self._console
-
-    @console.setter
-    def console(self, console: Cmd2RichArgparseConsole) -> None:
-        """Set our console instance."""
-        self._console = console
-
-    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
-        """Provide this help formatter to renderables via the console."""
-        if isinstance(console, Cmd2RichArgparseConsole):
-            old_formatter = console.help_formatter
-            console.help_formatter = self
-            try:
-                yield from super().__rich_console__(console, options)
-            finally:
-                console.help_formatter = old_formatter
-        else:
-            # Handle rendering on a console type other than Cmd2RichArgparseConsole.
-            # In this case, we don't set the help_formatter on the console.
-            yield from super().__rich_console__(console, options)
-
-    def _set_color(self, color: bool, **kwargs: Any) -> None:
-        """Set the color for the help output.
-
-        This override is needed because Python 3.15 added a 'file' keyword argument
-        to _set_color() which some versions of RichHelpFormatter don't support.
-        """
-        # Argparse didn't add color support until 3.14
-        if sys.version_info < (3, 14):
-            return
-
-        try:  # type: ignore[unreachable]
-            super()._set_color(color, **kwargs)
-        except TypeError:
-            # Fallback for older versions of RichHelpFormatter that don't support keyword arguments
-            super()._set_color(color)
-
-    def _build_nargs_range_str(self, nargs_range: tuple[int, int | float]) -> str:
-        """Build nargs range string for help text."""
-        if nargs_range[1] == constants.INFINITY:
-            # {min+}
-            range_str = f"{{{nargs_range[0]}+}}"
-        else:
-            # {min..max}
-            range_str = f"{{{nargs_range[0]}..{nargs_range[1]}}}"
-
-        return range_str
-
-    def _format_args(self, action: argparse.Action, default_metavar: str) -> str:
-        """Override to handle cmd2's custom nargs formatting.
-
-        All formats in this function need to be handled by _rich_metavar_parts().
-        """
-        get_metavar = self._metavar_formatter(action, default_metavar)
-
-        # Handle nargs specified as a range
-        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
-        if nargs_range is not None:
-            arg_str = '%s' % get_metavar(1)  # noqa: UP031
-            range_str = self._build_nargs_range_str(nargs_range)
-            return f"{arg_str}{range_str}"
-
-        # When nargs is just a number, argparse repeats the arg in the help text.
-        # For instance, when nargs=5 the help text looks like: 'command arg arg arg arg arg'.
-        # To make this less verbose, format it like: 'command arg{5}'.
-        # Do not customize the output when metavar is a tuple of strings. Allow argparse's
-        # formatter to handle that instead.
-        if not isinstance(action.metavar, tuple) and isinstance(action.nargs, int) and action.nargs > 1:
-            arg_str = '%s' % get_metavar(1)  # noqa: UP031
-            return f"{arg_str}{{{action.nargs}}}"
-
-        # Fallback to parent for all other cases
-        return super()._format_args(action, default_metavar)
-
-    def _rich_metavar_parts(
-        self,
-        action: argparse.Action,
-        default_metavar: str,
-    ) -> Iterator[tuple[str, bool]]:
-        """Override to handle all cmd2-specific formatting in _format_args()."""
-        get_metavar = self._metavar_formatter(action, default_metavar)
-
-        # Handle nargs specified as a range
-        nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
-        if nargs_range is not None:
-            yield "%s" % get_metavar(1), True  # noqa: UP031
-            yield self._build_nargs_range_str(nargs_range), False
-            return
-
-        # Handle specific integer nargs (e.g., nargs=5 -> arg{5})
-        if not isinstance(action.metavar, tuple) and isinstance(action.nargs, int) and action.nargs > 1:
-            yield "%s" % get_metavar(1), True  # noqa: UP031
-            yield f"{{{action.nargs}}}", False
-            return
-
-        # Fallback to parent for all other cases
-        yield from super()._rich_metavar_parts(action, default_metavar)
-
-
-class RawDescriptionCmd2HelpFormatter(
-    RawDescriptionRichHelpFormatter,
-    Cmd2HelpFormatter,
-):
-    """Cmd2 help message formatter which retains any formatting in descriptions and epilogs."""
-
-
-class RawTextCmd2HelpFormatter(
-    RawTextRichHelpFormatter,
-    Cmd2HelpFormatter,
-):
-    """Cmd2 help message formatter which retains formatting of all help text."""
-
-
-class ArgumentDefaultsCmd2HelpFormatter(
-    ArgumentDefaultsRichHelpFormatter,
-    Cmd2HelpFormatter,
-):
-    """Cmd2 help message formatter which adds default values to argument help."""
-
-
-class MetavarTypeCmd2HelpFormatter(
-    MetavarTypeRichHelpFormatter,
-    Cmd2HelpFormatter,
-):
-    """Cmd2 help message formatter which uses the argument 'type' as the default
-    metavar value (instead of the argument 'dest').
-    """  # noqa: D205
-
-
-class TextGroup:
-    """A block of text which is formatted like an argparse argument group, including a title.
-
-    Title:
-      Here is the first row of text.
-      Here is yet another row of text.
-    """
-
-    def __init__(
-        self,
-        title: str,
-        text: RenderableType,
-    ) -> None:
-        """TextGroup initializer.
-
-        :param title: the group's title
-        :param text: the group's text (string or object that may be rendered by Rich)
-        """
-        self.title = title
-        self.text = text
-
-    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
-        """Return a renderable Rich Group object for the class instance.
-
-        This method formats the title and indents the text to match argparse
-        group styling, making the object displayable by a Rich console.
-        """
-        formatter: Cmd2HelpFormatter | None = None
-        if isinstance(console, Cmd2RichArgparseConsole):
-            formatter = console.help_formatter
-
-        # This occurs if the console is not a Cmd2RichArgparseConsole or if the
-        # TextGroup is printed directly instead of as part of an argparse help message.
-        if formatter is None:
-            # If console is the wrong type, then have Cmd2HelpFormatter create its own.
-            formatter = Cmd2HelpFormatter(
-                prog="",
-                console=console if isinstance(console, Cmd2RichArgparseConsole) else None,
-            )
-
-        styled_title = Text(
-            type(formatter).group_name_formatter(f"{self.title}:"),
-            style=formatter.styles["argparse.groups"],
-        )
-
-        # Indent text like an argparse argument group does
-        indented_text = ru.indent(self.text, formatter._indent_increment)
-
-        yield Group(styled_title, indented_text)
 
 
 class Cmd2ArgumentParser(argparse.ArgumentParser):

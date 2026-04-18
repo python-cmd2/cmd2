@@ -1,5 +1,7 @@
 """Unit testing for cmd2/rich_utils.py module"""
 
+import sys
+from typing import Any
 from unittest import mock
 
 import pytest
@@ -11,6 +13,7 @@ from rich.table import Table
 from rich.text import Text
 
 from cmd2 import (
+    Cmd2ArgumentParser,
     Cmd2Style,
     Color,
 )
@@ -105,27 +108,28 @@ def test_set_theme() -> None:
     argparse_style_key = "argparse.args"
     rich_style_key = "inspect.attr"
 
-    orig_cmd2_style = ru.APP_THEME.styles[cmd2_style_key]
-    orig_argparse_style = ru.APP_THEME.styles[argparse_style_key]
-    orig_rich_style = ru.APP_THEME.styles[rich_style_key]
+    theme = ru.get_theme()
+    orig_cmd2_style = theme.styles[cmd2_style_key]
+    orig_argparse_style = theme.styles[argparse_style_key]
+    orig_rich_style = theme.styles[rich_style_key]
 
     # Overwrite these styles by setting a new theme.
-    theme = {
+    new_styles = {
         cmd2_style_key: Style(color=Color.CYAN),
         argparse_style_key: Style(color=Color.AQUAMARINE3, underline=True),
         rich_style_key: Style(color=Color.DARK_GOLDENROD, bold=True),
     }
-    ru.set_theme(theme)
+    ru.set_theme(new_styles)
 
     # Verify theme styles have changed to our custom values.
-    assert ru.APP_THEME.styles[cmd2_style_key] != orig_cmd2_style
-    assert ru.APP_THEME.styles[cmd2_style_key] == theme[cmd2_style_key]
+    assert theme.styles[cmd2_style_key] != orig_cmd2_style
+    assert theme.styles[cmd2_style_key] == new_styles[cmd2_style_key]
 
-    assert ru.APP_THEME.styles[argparse_style_key] != orig_argparse_style
-    assert ru.APP_THEME.styles[argparse_style_key] == theme[argparse_style_key]
+    assert theme.styles[argparse_style_key] != orig_argparse_style
+    assert theme.styles[argparse_style_key] == new_styles[argparse_style_key]
 
-    assert ru.APP_THEME.styles[rich_style_key] != orig_rich_style
-    assert ru.APP_THEME.styles[rich_style_key] == theme[rich_style_key]
+    assert theme.styles[rich_style_key] != orig_rich_style
+    assert theme.styles[rich_style_key] == new_styles[rich_style_key]
 
 
 def test_cmd2_base_console_print(mocker: MockerFixture) -> None:
@@ -253,3 +257,107 @@ def test_cmd2_base_console_init_never() -> None:
         assert kwargs['color_system'] is None
         assert kwargs['force_terminal'] is False
         assert kwargs['force_interactive'] is None
+
+
+def test_text_group_direct_cmd2() -> None:
+    """Print a TextGroup directly using a Cmd2RichArgparseConsole."""
+    title = "Notes"
+    content = "Some text"
+    text_group = ru.TextGroup(title, content)
+    console = ru.Cmd2RichArgparseConsole()
+    with console.capture() as capture:
+        console.print(text_group)
+    output = capture.get()
+    assert "Notes:" in output
+    assert "  Some text" in output
+
+
+def test_text_group_direct_plain() -> None:
+    """Print a TextGroup directly not using a Cmd2RichArgparseConsole."""
+    title = "Notes"
+    content = "Some text"
+    text_group = ru.TextGroup(title, content)
+    console = Console()
+    with console.capture() as capture:
+        console.print(text_group)
+    output = capture.get()
+    assert "Notes:" in output
+    assert "  Some text" in output
+
+
+def test_text_group_in_parser_cmd2(capsys: pytest.CaptureFixture[str]) -> None:
+    """Print a TextGroup with argparse using a Cmd2RichArgparseConsole."""
+    parser = Cmd2ArgumentParser(prog="test")
+    parser.epilog = ru.TextGroup("Notes", "Some text")
+
+    # Render help
+    parser.print_help()
+    out, _ = capsys.readouterr()
+
+    assert "Notes:" in out
+    assert "  Some text" in out
+
+
+def test_text_group_in_parser_plain(capsys: pytest.CaptureFixture[str]) -> None:
+    """Print a TextGroup with argparse not using a Cmd2RichArgparseConsole."""
+
+    class CustomParser(Cmd2ArgumentParser):
+        def _get_formatter(self, **kwargs: Any) -> ru.Cmd2HelpFormatter:
+            """Overwrite the formatter's console with a plain one."""
+            formatter = super()._get_formatter(**kwargs)
+            formatter.console = Console()  # type: ignore[assignment]
+            return formatter
+
+    parser = CustomParser(prog="test")
+    parser.epilog = ru.TextGroup("Notes", "Some text")
+
+    # Render help
+    parser.print_help()
+    out, _ = capsys.readouterr()
+
+    assert "Notes:" in out
+    assert "  Some text" in out
+
+
+def test_formatter_console() -> None:
+    # self._console = console (inside console.setter)
+    formatter = ru.Cmd2HelpFormatter(prog='test')
+    new_console = ru.Cmd2RichArgparseConsole()
+    formatter.console = new_console
+    assert formatter._console is new_console
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="Argparse didn't support color until Python 3.14",
+)
+def test_formatter_set_color(mocker: MockerFixture) -> None:
+    formatter = ru.Cmd2HelpFormatter(prog='test')
+
+    # return (inside _set_color if sys.version_info < (3, 14))
+    mocker.patch('cmd2.argparse_utils.sys.version_info', (3, 13, 0))
+    # This should return early without calling super()._set_color
+    mock_set_color = mocker.patch('rich_argparse.RichHelpFormatter._set_color')
+    formatter._set_color(True)
+    mock_set_color.assert_not_called()
+
+    # except TypeError and super()._set_color(color)
+    mocker.patch('cmd2.argparse_utils.sys.version_info', (3, 15, 0))
+
+    # Reset mock and make it raise TypeError when called with kwargs
+    mock_set_color.reset_mock()
+
+    def side_effect(color: bool, **kwargs: Any) -> None:
+        if kwargs:
+            raise TypeError("unexpected keyword argument 'file'")
+        return
+
+    mock_set_color.side_effect = side_effect
+
+    # This call should trigger the TypeError and then the fallback call
+    formatter._set_color(True, file=sys.stdout)
+
+    # It should have been called twice: once with kwargs (failed) and once without (fallback)
+    assert mock_set_color.call_count == 2
+    mock_set_color.assert_any_call(True, file=sys.stdout)
+    mock_set_color.assert_any_call(True)
