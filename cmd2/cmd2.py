@@ -108,7 +108,10 @@ from . import (
 )
 from . import rich_utils as ru
 from . import string_utils as su
-from .argparse_custom import Cmd2ArgumentParser
+from .argparse_custom import (
+    Cmd2ArgumentParser,
+    TextGroup,
+)
 from .clipboard import (
     get_paste_buffer,
     write_to_paste_buffer,
@@ -3725,7 +3728,7 @@ class Cmd:
             "An alias is a command that enables replacement of a word by another string.",
         )
         alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description)
-        alias_parser.epilog = alias_parser.create_text_group(
+        alias_parser.epilog = TextGroup(
             "See Also",
             "macro",
         )
@@ -3757,7 +3760,7 @@ class Cmd:
                 "for the actual command the alias resolves to."
             ),
         )
-        alias_create_parser.epilog = alias_create_parser.create_text_group("Notes", alias_create_notes)
+        alias_create_parser.epilog = TextGroup("Notes", alias_create_notes)
 
         # Add arguments
         alias_create_parser.add_argument('name', help='name of this alias')
@@ -3941,7 +3944,7 @@ class Cmd:
             "A macro is similar to an alias, but it can contain argument placeholders.",
         )
         macro_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_description)
-        macro_parser.epilog = macro_parser.create_text_group(
+        macro_parser.epilog = TextGroup(
             "See Also",
             "alias",
         )
@@ -4004,7 +4007,7 @@ class Cmd:
                 "This default behavior changes if custom completion for macro arguments has been implemented."
             ),
         )
-        macro_create_parser.epilog = macro_create_parser.create_text_group("Notes", macro_create_notes)
+        macro_create_parser.epilog = TextGroup("Notes", macro_create_notes)
 
         # Add arguments
         macro_create_parser.add_argument('name', help='name of this macro')
@@ -4511,7 +4514,7 @@ class Cmd:
     @staticmethod
     def _build__eof_parser() -> Cmd2ArgumentParser:
         _eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
-        _eof_parser.epilog = _eof_parser.create_text_group(
+        _eof_parser.epilog = TextGroup(
             "Note",
             "This command is for internal use and is not intended to be called from the command line.",
         )
@@ -5388,7 +5391,7 @@ class Cmd:
     def _build_edit_parser(cls) -> Cmd2ArgumentParser:
         edit_description = "Run a text editor and optionally open a file with it."
         edit_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=edit_description)
-        edit_parser.epilog = edit_parser.create_text_group(
+        edit_parser.epilog = TextGroup(
             "Note",
             Text.assemble(
                 "To set a new editor, run: ",
@@ -5519,7 +5522,7 @@ class Cmd:
             ),
         )
 
-        _relative_run_script_parser.epilog = _relative_run_script_parser.create_text_group(
+        _relative_run_script_parser.epilog = TextGroup(
             "Note",
             "This command is intended to be used from within a text script.",
         )

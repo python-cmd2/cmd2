@@ -138,9 +138,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 mccabe.max-complexity = 49
 
 [lint.per-file-ignores]
-# Do not call setattr with constant attribute value
-"cmd2/argparse_custom.py" = ["B010"]
-
 # Ignore various warnings in examples/ directory
 "examples/*.py" = [
     "ANN",     # Ignore all type annotation rules in examples folder
