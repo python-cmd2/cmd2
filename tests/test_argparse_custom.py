@@ -4,6 +4,7 @@ import argparse
 import sys
 
 import pytest
+from rich.console import Console
 
 import cmd2
 from cmd2 import (
@@ -20,6 +21,68 @@ from cmd2.argparse_custom import (
 from cmd2.rich_utils import Cmd2RichArgparseConsole
 
 from .conftest import run_cmd
+
+
+def test_text_group_direct_cmd2() -> None:
+    """Print a TextGroup directly using a Cmd2RichArgparseConsole."""
+    title = "Notes"
+    content = "Some text"
+    text_group = argparse_custom.TextGroup(title, content)
+    console = Cmd2RichArgparseConsole()
+    with console.capture() as capture:
+        console.print(text_group)
+    output = capture.get()
+    assert "Notes:" in output
+    assert "  Some text" in output
+
+
+def test_text_group_direct_plain() -> None:
+    """Print a TextGroup directly not using a Cmd2RichArgparseConsole."""
+    title = "Notes"
+    content = "Some text"
+    text_group = argparse_custom.TextGroup(title, content)
+    console = Console()
+    with console.capture() as capture:
+        console.print(text_group)
+    output = capture.get()
+    assert "Notes:" in output
+    assert "  Some text" in output
+
+
+def test_text_group_in_parser_cmd2(capsys) -> None:
+    """Print a TextGroup with argparse using a Cmd2RichArgparseConsole."""
+    parser = Cmd2ArgumentParser(prog="test")
+    parser.epilog = argparse_custom.TextGroup("Notes", "Some text")
+
+    # Render help
+    parser.print_help()
+    out, _ = capsys.readouterr()
+
+    assert "Notes:" in out
+    assert "  Some text" in out
+
+
+def test_text_group_in_parser_plain(capsys) -> None:
+    """Print a TextGroup with argparse not using a Cmd2RichArgparseConsole."""
+
+    class CustomParser(Cmd2ArgumentParser):
+        from typing import Any
+
+        def _get_formatter(self, **kwargs: Any) -> Cmd2HelpFormatter:
+            """Overwrite the formatter's console with a plain one."""
+            formatter = super()._get_formatter(**kwargs)
+            formatter.console = Console()
+            return formatter
+
+    parser = CustomParser(prog="test")
+    parser.epilog = argparse_custom.TextGroup("Notes", "Some text")
+
+    # Render help
+    parser.print_help()
+    out, _ = capsys.readouterr()
+
+    assert "Notes:" in out
+    assert "  Some text" in out
 
 
 class ApCustomTestApp(cmd2.Cmd):

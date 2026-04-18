@@ -1,13 +1,18 @@
 """Provides common utilities to support Rich in cmd2-based applications."""
 
 import re
+import threading
 from collections.abc import Mapping
 from enum import Enum
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     TypedDict,
 )
+
+if TYPE_CHECKING:
+    from .argparse_custom import Cmd2HelpFormatter
 
 from rich.box import SIMPLE_HEAD
 from rich.console import (
@@ -345,6 +350,9 @@ class Cmd2RichArgparseConsole(Cmd2BaseConsole):
     and highlighting. Because rich-argparse does markup and highlighting without
     involving the console, disabling these settings does not affect the library's
     internal functionality.
+
+    Additionally, this console serves as a context carrier for the active help formatter,
+    allowing renderables to access formatting settings during help generation.
     """
 
     def __init__(self, *, file: IO[str] | None = None) -> None:
@@ -360,6 +368,17 @@ class Cmd2RichArgparseConsole(Cmd2BaseConsole):
             emoji=False,
             highlight=False,
         )
+        self._thread_local = threading.local()
+
+    @property
+    def help_formatter(self) -> 'Cmd2HelpFormatter | None':
+        """Return the active help formatter for this thread."""
+        return getattr(self._thread_local, 'help_formatter', None)
+
+    @help_formatter.setter
+    def help_formatter(self, value: 'Cmd2HelpFormatter | None') -> None:
+        """Set the active help formatter for this thread."""
+        self._thread_local.help_formatter = value
 
 
 class Cmd2ExceptionConsole(Cmd2BaseConsole):

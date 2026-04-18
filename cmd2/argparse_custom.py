@@ -243,8 +243,11 @@ from typing import (
 )
 
 from rich.console import (
+    Console,
+    ConsoleOptions,
     Group,
     RenderableType,
+    RenderResult,
 )
 from rich.table import Column
 from rich.text import Text
@@ -506,7 +509,7 @@ def _ActionsContainer_add_argument(  # noqa: N802
 
 
 # Overwrite _ActionsContainer.add_argument with our patch
-setattr(argparse._ActionsContainer, 'add_argument', _ActionsContainer_add_argument)
+argparse._ActionsContainer.add_argument = _ActionsContainer_add_argument  # type: ignore[method-assign]
 
 
 ############################################################################################################
@@ -559,6 +562,20 @@ class Cmd2HelpFormatter(RichHelpFormatter):
     def console(self, console: Cmd2RichArgparseConsole) -> None:
         """Set our console instance."""
         self._console = console
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        """Provide this help formatter to renderables via the console."""
+        if isinstance(console, Cmd2RichArgparseConsole):
+            old_formatter = console.help_formatter
+            console.help_formatter = self
+            try:
+                yield from super().__rich_console__(console, options)
+            finally:
+                console.help_formatter = old_formatter
+        else:
+            # Handle rendering on a console type other than Cmd2RichArgparseConsole.
+            # In this case, we don't set the help_formatter on the console.
+            yield from super().__rich_console__(console, options)
 
     def _set_color(self, color: bool, **kwargs: Any) -> None:
         """Set the color for the help output.
@@ -680,25 +697,33 @@ class TextGroup:
         self,
         title: str,
         text: RenderableType,
-        formatter_creator: Callable[..., Cmd2HelpFormatter],
     ) -> None:
         """TextGroup initializer.
 
         :param title: the group's title
         :param text: the group's text (string or object that may be rendered by Rich)
-        :param formatter_creator: callable which returns a Cmd2HelpFormatter instance
         """
         self.title = title
         self.text = text
-        self.formatter_creator = formatter_creator
 
-    def __rich__(self) -> Group:
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
         """Return a renderable Rich Group object for the class instance.
 
         This method formats the title and indents the text to match argparse
         group styling, making the object displayable by a Rich console.
         """
-        formatter = self.formatter_creator()
+        formatter: Cmd2HelpFormatter | None = None
+        if isinstance(console, Cmd2RichArgparseConsole):
+            formatter = console.help_formatter
+
+        # This occurs if the console is not a Cmd2RichArgparseConsole or if the
+        # TextGroup is printed directly instead of as part of an argparse help message.
+        if formatter is None:
+            # If console is the wrong type, then have Cmd2HelpFormatter create its own.
+            formatter = Cmd2HelpFormatter(
+                prog="",
+                console=console if isinstance(console, Cmd2RichArgparseConsole) else None,
+            )
 
         styled_title = Text(
             type(formatter).group_name_formatter(f"{self.title}:"),
@@ -708,7 +733,7 @@ class TextGroup:
         # Indent text like an argparse argument group does
         indented_text = ru.indent(self.text, formatter._indent_increment)
 
-        return Group(styled_title, indented_text)
+        yield Group(styled_title, indented_text)
 
 
 class Cmd2ArgumentParser(argparse.ArgumentParser):
@@ -762,7 +787,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             add_help=add_help,
             allow_abbrev=allow_abbrev,
             exit_on_error=exit_on_error,
-            **kwargs,  # added in Python 3.14
+            **kwargs,
         )
 
         self.ap_completer_type = ap_completer_type
@@ -994,10 +1019,6 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     def format_help(self) -> str:
         """Override to add a newline."""
         return super().format_help() + '\n'
-
-    def create_text_group(self, title: str, text: RenderableType) -> TextGroup:
-        """Create a TextGroup using this parser's formatter creator."""
-        return TextGroup(title, text, self._get_formatter)
 
     def _get_nargs_pattern(self, action: argparse.Action) -> str:
         """Override to support nargs ranges."""
