@@ -101,14 +101,14 @@ from rich.traceback import Traceback
 
 from . import (
     argparse_completer,
-    argparse_custom,
+    argparse_utils,
     constants,
     plugin,
     utils,
 )
 from . import rich_utils as ru
 from . import string_utils as su
-from .argparse_custom import (
+from .argparse_utils import (
     Cmd2ArgumentParser,
     TextGroup,
 )
@@ -588,7 +588,7 @@ class Cmd:
 
         # Check for command line args
         if allow_cli_args:
-            parser = argparse_custom.DEFAULT_ARGUMENT_PARSER()
+            parser = argparse_utils.DEFAULT_ARGUMENT_PARSER()
             _callopts, callargs = parser.parse_known_args()
 
             # If commands were supplied at invocation, then add them to the command queue
@@ -2587,7 +2587,7 @@ class Cmd:
                         break
                 else:
                     # No shortcut was found. Complete the command token.
-                    parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
+                    parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(add_help=False)
                     parser.add_argument(
                         'command',
                         metavar="COMMAND",
@@ -3498,7 +3498,7 @@ class Cmd:
             raise ValueError(err_msg)
 
         if parser is None:
-            parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(add_help=False)
+            parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(add_help=False)
             parser.add_argument(
                 'arg',
                 suppress_tab_hint=True,
@@ -3727,7 +3727,7 @@ class Cmd:
             "\n\n",
             "An alias is a command that enables replacement of a word by another string.",
         )
-        alias_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_description)
+        alias_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=alias_description)
         alias_parser.epilog = TextGroup(
             "See Also",
             "macro",
@@ -3747,7 +3747,7 @@ class Cmd:
     @classmethod
     def _build_alias_create_parser(cls) -> Cmd2ArgumentParser:
         alias_create_description = "Create or overwrite an alias."
-        alias_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_create_description)
+        alias_create_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=alias_create_description)
 
         # Add Notes epilog
         alias_create_notes = Text.assemble(
@@ -3819,7 +3819,7 @@ class Cmd:
     def _build_alias_delete_parser(cls) -> Cmd2ArgumentParser:
         alias_delete_description = "Delete specified aliases or all aliases if --all is used."
 
-        alias_delete_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_delete_description)
+        alias_delete_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=alias_delete_description)
         alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
         alias_delete_parser.add_argument(
             'names',
@@ -3862,7 +3862,7 @@ class Cmd:
             "Without arguments, all aliases will be listed.",
         )
 
-        alias_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=alias_list_description)
+        alias_list_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=alias_list_description)
         alias_list_parser.add_argument(
             'names',
             nargs=argparse.ZERO_OR_MORE,
@@ -3943,7 +3943,7 @@ class Cmd:
             "\n\n",
             "A macro is similar to an alias, but it can contain argument placeholders.",
         )
-        macro_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_description)
+        macro_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=macro_description)
         macro_parser.epilog = TextGroup(
             "See Also",
             "alias",
@@ -3979,7 +3979,7 @@ class Cmd:
             (" ───> ", Style(bold=True)),
             ("make_dinner --meat beef --veggie broccoli", Cmd2Style.COMMAND_LINE),
         )
-        macro_create_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
+        macro_create_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
 
         # Add Notes epilog
         macro_create_notes = Text.assemble(
@@ -4109,7 +4109,7 @@ class Cmd:
     def _build_macro_delete_parser(cls) -> Cmd2ArgumentParser:
         macro_delete_description = "Delete specified macros or all macros if --all is used."
 
-        macro_delete_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_delete_description)
+        macro_delete_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=macro_delete_description)
         macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
         macro_delete_parser.add_argument(
             'names',
@@ -4152,7 +4152,7 @@ class Cmd:
             "Without arguments, all macros will be listed.",
         )
 
-        macro_list_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
+        macro_list_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=macro_list_description)
         macro_list_parser.add_argument(
             'names',
             nargs=argparse.ZERO_OR_MORE,
@@ -4254,7 +4254,7 @@ class Cmd:
 
     @classmethod
     def _build_help_parser(cls) -> Cmd2ArgumentParser:
-        help_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
+        help_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(
             description="List available commands or provide detailed help for a specific command."
         )
         help_parser.add_argument(
@@ -4500,7 +4500,7 @@ class Cmd:
 
     @staticmethod
     def _build_shortcuts_parser() -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="List available shortcuts.")
+        return argparse_utils.DEFAULT_ARGUMENT_PARSER(description="List available shortcuts.")
 
     @with_argparser(_build_shortcuts_parser)
     def do_shortcuts(self, _: argparse.Namespace) -> None:
@@ -4513,7 +4513,7 @@ class Cmd:
 
     @staticmethod
     def _build__eof_parser() -> Cmd2ArgumentParser:
-        _eof_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
+        _eof_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Called when Ctrl-D is pressed.")
         _eof_parser.epilog = TextGroup(
             "Note",
             "This command is for internal use and is not intended to be called from the command line.",
@@ -4534,7 +4534,7 @@ class Cmd:
 
     @staticmethod
     def _build_quit_parser() -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Exit this application.")
+        return argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Exit this application.")
 
     @with_argparser(_build_quit_parser)
     def do_quit(self, _: argparse.Namespace) -> bool | None:
@@ -4621,7 +4621,7 @@ class Cmd:
                 "Call with just param to view that parameter's value."
             ),
         )
-        base_set_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=set_description)
+        base_set_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=set_description)
         base_set_parser.add_argument(
             'param',
             nargs=argparse.OPTIONAL,
@@ -4736,7 +4736,7 @@ class Cmd:
 
     @classmethod
     def _build_shell_parser(cls) -> Cmd2ArgumentParser:
-        shell_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt.")
+        shell_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Execute a command as if at the OS prompt.")
         shell_parser.add_argument('command', help='the command to run', completer=cls.shell_cmd_complete)
         shell_parser.add_argument(
             'command_args', nargs=argparse.REMAINDER, help='arguments to pass to command', completer=cls.path_complete
@@ -4984,7 +4984,7 @@ class Cmd:
 
     @staticmethod
     def _build_py_parser() -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive Python shell.")
+        return argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Run an interactive Python shell.")
 
     @with_argparser(_build_py_parser)
     def do_py(self, _: argparse.Namespace) -> bool | None:
@@ -4997,7 +4997,7 @@ class Cmd:
 
     @classmethod
     def _build_run_pyscript_parser(cls) -> Cmd2ArgumentParser:
-        run_pyscript_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
+        run_pyscript_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(
             description="Run Python script within this application's environment."
         )
         run_pyscript_parser.add_argument('script_path', help='path to the script file', completer=cls.path_complete)
@@ -5043,7 +5043,7 @@ class Cmd:
 
     @staticmethod
     def _build_ipython_parser() -> Cmd2ArgumentParser:
-        return argparse_custom.DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell.")
+        return argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell.")
 
     @with_argparser(_build_ipython_parser)
     def do_ipy(self, _: argparse.Namespace) -> bool | None:  # pragma: no cover
@@ -5121,8 +5121,8 @@ class Cmd:
     def _build_history_parser(cls) -> Cmd2ArgumentParser:
         history_description = "View, run, edit, save, or clear previously entered commands."
 
-        history_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(
-            description=history_description, formatter_class=argparse_custom.RawTextCmd2HelpFormatter
+        history_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(
+            description=history_description, formatter_class=argparse_utils.RawTextCmd2HelpFormatter
         )
         history_action_group = history_parser.add_mutually_exclusive_group()
         history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
@@ -5390,7 +5390,7 @@ class Cmd:
     @classmethod
     def _build_edit_parser(cls) -> Cmd2ArgumentParser:
         edit_description = "Run a text editor and optionally open a file with it."
-        edit_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=edit_description)
+        edit_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=edit_description)
         edit_parser.epilog = TextGroup(
             "Note",
             Text.assemble(
@@ -5443,7 +5443,7 @@ class Cmd:
             "Scripts should contain one command per line, entered as you would in the console.",
         )
 
-        run_script_parser = argparse_custom.DEFAULT_ARGUMENT_PARSER(description=run_script_description)
+        run_script_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=run_script_description)
         run_script_parser.add_argument(
             'script_path',
             help="path to the script file",

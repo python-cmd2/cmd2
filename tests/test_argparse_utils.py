@@ -10,10 +10,10 @@ import cmd2
 from cmd2 import (
     Choices,
     Cmd2ArgumentParser,
-    argparse_custom,
+    argparse_utils,
     constants,
 )
-from cmd2.argparse_custom import (
+from cmd2.argparse_utils import (
     Cmd2HelpFormatter,
     build_range_error,
     register_argparse_argument_parameter,
@@ -27,7 +27,7 @@ def test_text_group_direct_cmd2() -> None:
     """Print a TextGroup directly using a Cmd2RichArgparseConsole."""
     title = "Notes"
     content = "Some text"
-    text_group = argparse_custom.TextGroup(title, content)
+    text_group = argparse_utils.TextGroup(title, content)
     console = Cmd2RichArgparseConsole()
     with console.capture() as capture:
         console.print(text_group)
@@ -40,7 +40,7 @@ def test_text_group_direct_plain() -> None:
     """Print a TextGroup directly not using a Cmd2RichArgparseConsole."""
     title = "Notes"
     content = "Some text"
-    text_group = argparse_custom.TextGroup(title, content)
+    text_group = argparse_utils.TextGroup(title, content)
     console = Console()
     with console.capture() as capture:
         console.print(text_group)
@@ -52,7 +52,7 @@ def test_text_group_direct_plain() -> None:
 def test_text_group_in_parser_cmd2(capsys) -> None:
     """Print a TextGroup with argparse using a Cmd2RichArgparseConsole."""
     parser = Cmd2ArgumentParser(prog="test")
-    parser.epilog = argparse_custom.TextGroup("Notes", "Some text")
+    parser.epilog = argparse_utils.TextGroup("Notes", "Some text")
 
     # Render help
     parser.print_help()
@@ -75,7 +75,7 @@ def test_text_group_in_parser_plain(capsys) -> None:
             return formatter
 
     parser = CustomParser(prog="test")
-    parser.epilog = argparse_custom.TextGroup("Notes", "Some text")
+    parser.epilog = argparse_utils.TextGroup("Notes", "Some text")
 
     # Render help
     parser.print_help()
@@ -356,7 +356,7 @@ def test_register_argparse_argument_parameter() -> None:
     param_name = "test_unique_param"
     register_argparse_argument_parameter(param_name)
 
-    assert param_name in argparse_custom._CUSTOM_ACTION_ATTRIBS
+    assert param_name in argparse_utils._CUSTOM_ACTION_ATTRIBS
     assert hasattr(argparse.Action, f'get_{param_name}')
     assert hasattr(argparse.Action, f'set_{param_name}')
 
@@ -586,14 +586,14 @@ def test_formatter_set_color(mocker) -> None:
     formatter = Cmd2HelpFormatter(prog='test')
 
     # return (inside _set_color if sys.version_info < (3, 14))
-    mocker.patch('cmd2.argparse_custom.sys.version_info', (3, 13, 0))
+    mocker.patch('cmd2.argparse_utils.sys.version_info', (3, 13, 0))
     # This should return early without calling super()._set_color
     mock_set_color = mocker.patch('rich_argparse.RichHelpFormatter._set_color')
     formatter._set_color(True)
     mock_set_color.assert_not_called()
 
     # except TypeError and super()._set_color(color)
-    mocker.patch('cmd2.argparse_custom.sys.version_info', (3, 15, 0))
+    mocker.patch('cmd2.argparse_utils.sys.version_info', (3, 15, 0))
 
     # Reset mock and make it raise TypeError when called with kwargs
     mock_set_color.reset_mock()

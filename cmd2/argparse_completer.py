@@ -1,6 +1,6 @@
 """Module defines the ArgparseCompleter class which provides argparse-based completion to cmd2 apps.
 
-See the header of argparse_custom.py for instructions on how to use these features.
+See the header of argparse_utils.py for instructions on how to use these features.
 """
 
 import argparse
@@ -22,7 +22,7 @@ from typing import (
 from rich.table import Column
 from rich.text import Text
 
-from .argparse_custom import (
+from .argparse_utils import (
     Cmd2ArgumentParser,
     build_range_error,
 )

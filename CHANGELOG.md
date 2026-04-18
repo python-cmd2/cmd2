@@ -84,6 +84,7 @@ prompt is displayed.
     - `TextGroup` is now a standalone Rich renderable.
         - Removed `formatter_creator` parameter from `TextGroup.__init__()`.
         - Removed `Cmd2ArgumentParser.create_text_group()` method.
+    - Renamed `argparse_custom.py` to `argparse_utils.py`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These

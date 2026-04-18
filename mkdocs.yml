@@ -195,7 +195,7 @@ nav:
       - api/index.md
       - api/cmd.md
       - api/argparse_completer.md
-      - api/argparse_custom.md
+      - api/argparse_utils.md
       - api/clipboard.md
       - api/colors.md
       - api/command_set.md

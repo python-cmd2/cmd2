@@ -36,7 +36,7 @@ from .types import (
 
 if TYPE_CHECKING:  # pragma: no cover
     PopenTextIO = subprocess.Popen[str]
-    from .argparse_custom import Cmd2ArgumentParser
+    from .argparse_utils import Cmd2ArgumentParser
 else:
     PopenTextIO = subprocess.Popen
 
