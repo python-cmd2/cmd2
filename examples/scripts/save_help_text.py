@@ -31,7 +31,7 @@ def get_sub_commands(parser: Cmd2ArgumentParser) -> list[str]:
         sub_cmds.append(subcmd)
 
         # Look for nested subcommands
-        sub_cmds.extend(f'{subcmd} {nested_subcmd}' for nested_subcmd in get_sub_commands(subcmd_parser))
+        sub_cmds.extend(f"{subcmd} {nested_subcmd}" for nested_subcmd in get_sub_commands(subcmd_parser))
 
     sub_cmds.sort()
     return sub_cmds
@@ -46,17 +46,17 @@ def add_help_to_file(item: str, outfile: TextIO, is_command: bool) -> None:
     """
     label = "COMMAND" if is_command else "TOPIC"
 
-    header = f'{ASTERISKS}\n{label}: {item}\n{ASTERISKS}\n'
+    header = f"{ASTERISKS}\n{label}: {item}\n{ASTERISKS}\n"
     outfile.write(header)
 
-    result = app(f'help {item}')
+    result = app(f"help {item}")
     outfile.write(result.stdout)
 
 
 def main() -> None:
     """Main function of this script."""
     # Make sure we have access to self
-    if 'self' not in globals():
+    if "self" not in globals():
         print("Re-run this script from a cmd2 application where self_in_py is True")
         return
 
@@ -67,12 +67,12 @@ def main() -> None:
 
     outfile_path = os.path.expanduser(sys.argv[1])
     try:
-        with open(outfile_path, 'w') as outfile:
+        with open(outfile_path, "w") as outfile:
             # Write the help summary
-            header = f'{ASTERISKS}\nSUMMARY\n{ASTERISKS}\n'
+            header = f"{ASTERISKS}\nSUMMARY\n{ASTERISKS}\n"
             outfile.write(header)
 
-            result = app('help -v')
+            result = app("help -v")
             outfile.write(result.stdout)
 
             # Get a list of all commands and help topics and then filter out duplicates
@@ -94,7 +94,7 @@ def main() -> None:
 
                 # Add any subcommands
                 for subcmd in get_sub_commands(parser):
-                    full_cmd = f'{item} {subcmd}'
+                    full_cmd = f"{item} {subcmd}"
                     add_help_to_file(full_cmd, outfile, is_command)
 
             print(f"Output written to {outfile_path}")

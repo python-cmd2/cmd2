@@ -46,7 +46,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 # Name of the choice/completer function argument that, if present, will be passed a dictionary of
 # command line tokens up through the token being completed mapped to their argparse destination name.
-ARG_TOKENS = 'arg_tokens'
+ARG_TOKENS = "arg_tokens"
 
 
 def _build_hint(parser: Cmd2ArgumentParser, arg_action: argparse.Action) -> str:
@@ -54,7 +54,7 @@ def _build_hint(parser: Cmd2ArgumentParser, arg_action: argparse.Action) -> str:
     # Check if hinting is disabled for this argument
     suppress_hint = arg_action.get_suppress_tab_hint()  # type: ignore[attr-defined]
     if suppress_hint or arg_action.help == argparse.SUPPRESS:
-        return ''
+        return ""
 
     # Use the parser's help formatter to display just this action's help text
     formatter = parser._get_formatter()
@@ -90,7 +90,7 @@ def _looks_like_flag(token: str, parser: Cmd2ArgumentParser) -> bool:
         return False
 
     # Flags can't have a space
-    return ' ' not in token
+    return " " not in token
 
 
 class _ArgumentState:
@@ -133,8 +133,8 @@ class _UnfinishedFlagError(CompletionError):
 
         :param flag_arg_state: information about the unfinished flag action.
         """
-        arg = f'{argparse._get_action_name(flag_arg_state.action)}'
-        err = f'{build_range_error(flag_arg_state.min, flag_arg_state.max)}'
+        arg = f"{argparse._get_action_name(flag_arg_state.action)}"
+        err = f"{build_range_error(flag_arg_state.min, flag_arg_state.max)}"
         error = f"Error: argument {arg}: {err} ({flag_arg_state.count} entered)"
         super().__init__(error)
 
@@ -158,7 +158,7 @@ class ArgparseCompleter:
     def __init__(
         self,
         parser: Cmd2ArgumentParser,
-        cmd2_app: 'Cmd',
+        cmd2_app: "Cmd",
         *,
         parent_tokens: Mapping[str, MutableSequence[str]] | None = None,
     ) -> None:
@@ -269,14 +269,14 @@ class ArgparseCompleter:
 
             # If we're in a flag REMAINDER arg, force all future tokens to go to that until a double dash is hit
             if flag_arg_state is not None and flag_arg_state.is_remainder:
-                if token == '--':  # noqa: S105
+                if token == "--":  # noqa: S105
                     flag_arg_state = None
                 else:
                     consume_argument(flag_arg_state, token)
                 continue
 
             # Handle '--' which tells argparse all remaining arguments are non-flags
-            if token == '--' and not skip_remaining_flags:  # noqa: S105
+            if token == "--" and not skip_remaining_flags:  # noqa: S105
                 # Check if there is an unfinished flag
                 if (
                     flag_arg_state is not None
@@ -437,8 +437,8 @@ class ArgparseCompleter:
                     if arg_action == completer_action:
                         return
 
-                    arg_str = f'{argparse._get_action_name(arg_action)}'
-                    completer_str = f'{argparse._get_action_name(completer_action)}'
+                    arg_str = f"{argparse._get_action_name(arg_action)}"
+                    completer_str = f"{argparse._get_action_name(completer_action)}"
                     error = f"Error: argument {arg_str}: not allowed with argument {completer_str}"
                     raise CompletionError(error)
 
@@ -566,18 +566,18 @@ class ArgparseCompleter:
         # For completion suggestions, group matched flags by action
         items: list[CompletionItem] = []
         for action, option_strings in matched_actions.items():
-            flag_text = ', '.join(option_strings)
+            flag_text = ", ".join(option_strings)
 
             # Mark optional flags with brackets
             if not action.required:
-                flag_text = '[' + flag_text + ']'
+                flag_text = "[" + flag_text + "]"
 
             # Use the first option string as the completion result for this action
             items.append(
                 CompletionItem(
                     option_strings[0],
                     display=flag_text,
-                    display_meta=action.help or '',
+                    display_meta=action.help or "",
                 )
             )
 
@@ -720,10 +720,10 @@ class ArgparseCompleter:
             for action in arg_state.action._choices_actions:
                 if action.dest in arg_state.action.choices:
                     subparser = arg_state.action.choices[action.dest]
-                    parser_help[subparser] = action.help or ''
+                    parser_help[subparser] = action.help or ""
 
             return [
-                CompletionItem(name, display_meta=parser_help.get(subparser, ''))
+                CompletionItem(name, display_meta=parser_help.get(subparser, ""))
                 for name, subparser in arg_state.action.choices.items()
             ]
 

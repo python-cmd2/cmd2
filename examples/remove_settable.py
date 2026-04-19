@@ -7,10 +7,10 @@ import cmd2
 class MyApp(cmd2.Cmd):
     def __init__(self) -> None:
         super().__init__()
-        self.remove_settable('debug')
+        self.remove_settable("debug")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     c = MyApp()

@@ -16,11 +16,11 @@ import cmd2
 
 # This data is used to demonstrate delimiter_complete
 file_strs = [
-    '/home/user/file.db',
-    '/home/user/file space.db',
-    '/home/user/another.db',
-    '/home/other user/maps.db',
-    '/home/other user/tests.db',
+    "/home/user/file.db",
+    "/home/user/file space.db",
+    "/home/user/another.db",
+    "/home/other user/maps.db",
+    "/home/other user/tests.db",
 ]
 
 
@@ -33,7 +33,7 @@ class BasicCompletion(cmd2.Cmd):
         self.poutput(f"Args: {statement.args}")
 
     # Use a partialmethod to set arguments to delimiter_complete
-    complete_delimiter_complete = functools.partialmethod(cmd2.Cmd.delimiter_complete, match_against=file_strs, delimiter='/')
+    complete_delimiter_complete = functools.partialmethod(cmd2.Cmd.delimiter_complete, match_against=file_strs, delimiter="/")
 
     def do_raise_error(self, statement: cmd2.Statement) -> None:
         """Demonstrates effect of raising CompletionError."""
@@ -49,7 +49,7 @@ class BasicCompletion(cmd2.Cmd):
         raise cmd2.CompletionError("This is how a CompletionError behaves")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = BasicCompletion()

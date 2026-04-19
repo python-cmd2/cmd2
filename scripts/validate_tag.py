@@ -4,7 +4,7 @@
 import re
 import subprocess
 
-SEMVER_SIMPLE = re.compile(r'(\d+)\.(\d+)\.(\d+)((a|b|rc)(\d+))?')
+SEMVER_SIMPLE = re.compile(r"(\d+)\.(\d+)\.(\d+)((a|b|rc)(\d+))?")
 SEMVER_PATTERN = re.compile(
     r"""
         ^                                           # Start of the string
@@ -31,12 +31,12 @@ def get_current_tag() -> str:
     try:
         # Gets the name of the latest tag reachable from the current commit
         result = subprocess.run(
-            ['git', 'describe', '--exact-match', '--tags', '--abbrev=0'], capture_output=True, text=True, check=True
+            ["git", "describe", "--exact-match", "--tags", "--abbrev=0"], capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         print("Could not find a reachable tag.")
-        return ''
+        return ""
 
 
 def is_semantic_version(tag_name: str) -> bool:
@@ -73,12 +73,12 @@ def is_semantic_version(tag_name: str) -> bool:
     return bool(semver_pattern.match(tag_name))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     git_tag = get_current_tag()
     if not git_tag:
-        print('Git tag does not exist for current commit.')
+        print("Git tag does not exist for current commit.")
         sys.exit(-1)
 
     if not is_semantic_version(git_tag):

@@ -17,15 +17,15 @@ class Cmd2PersistentHistory(cmd2.Cmd):
         :param hist_file: file to load history from at start and write it to at end
         """
         super().__init__(persistent_history_file=hist_file, persistent_history_length=500, allow_cli_args=False)
-        self.prompt = 'ph> '
+        self.prompt = "ph> "
 
     # ... your class code here ...
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
-    history_file = '~/.persistent_history.cmd2'
+    history_file = "~/.persistent_history.cmd2"
     if len(sys.argv) > 1:
         history_file = sys.argv[1]
 

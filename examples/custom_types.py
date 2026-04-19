@@ -112,13 +112,13 @@ class IntSet:
 
     def __call__(self, arg: str) -> Iterable[int]:
         """Parse a string into an iterable returning ints."""
-        if arg == 'all':
+        if arg == "all":
             return range(self.bottom, self.top)
 
         out = []
-        for piece in arg.split(','):
-            if '-' in piece:
-                a, b = [int(x) for x in piece.split('-', 2)]
+        for piece in arg.split(","):
+            if "-" in piece:
+                a, b = [int(x) for x in piece.split("-", 2)]
                 if a < self.bottom:
                     raise ValueError(f"Value '{a}' not within {self.range_str}")
                 if b >= self.top:
@@ -132,19 +132,19 @@ class IntSet:
         return out
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
     import sys
 
     class CustomTypesExample(cmd2.Cmd):
         example_parser = cmd2.Cmd2ArgumentParser()
         example_parser.add_argument(
-            '--value', '-v', type=integer, help='Integer value, with optional K/M/G/Ki/Mi/Gi/... suffix'
+            "--value", "-v", type=integer, help="Integer value, with optional K/M/G/Ki/Mi/Gi/... suffix"
         )
-        example_parser.add_argument('--memory-address', '-m', type=hexadecimal, help='Memory address in hex')
-        example_parser.add_argument('--year', type=Range(1900, 2000), help='Year between 1900-1999')
+        example_parser.add_argument("--memory-address", "-m", type=hexadecimal, help="Memory address in hex")
+        example_parser.add_argument("--year", type=Range(1900, 2000), help="Year between 1900-1999")
         example_parser.add_argument(
-            '--index', dest='index_list', type=IntSet(100), help='One or more indexes 0-99. e.g. "1,3,5", "10,30-50", "all"'
+            "--index", dest="index_list", type=IntSet(100), help='One or more indexes 0-99. e.g. "1,3,5", "10,30-50", "all"'
         )
 
         @cmd2.with_argparser(example_parser)

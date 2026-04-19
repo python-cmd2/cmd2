@@ -11,7 +11,7 @@ class UnicodeApp(cmd2.Cmd):
 
     def __init__(self) -> None:
         super().__init__()
-        self.intro = 'Welcome the Unicode example app. Note the full Unicode support:  😇 💩'
+        self.intro = "Welcome the Unicode example app. Note the full Unicode support:  😇 💩"
 
     def do_𝛑print(self, _) -> None:  # noqa: PLC2401
         """This command prints 𝛑 to 5 decimal places."""
@@ -22,6 +22,6 @@ class UnicodeApp(cmd2.Cmd):
         self.poutput("你好 " + arg)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = UnicodeApp()
     app.cmdloop()

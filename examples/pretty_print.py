@@ -23,6 +23,6 @@ class Cmd2App(cmd2.Cmd):
         self.ppretty(EXAMPLE_DATA)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = Cmd2App()
     app.cmdloop()

@@ -143,7 +143,7 @@ def quote(val: str) -> str:
 
 def quote_if_needed(val: str) -> str:
     """Quote a string if it contains spaces and isn't already quoted."""
-    if is_quoted(val) or ' ' not in val:
+    if is_quoted(val) or " " not in val:
         return val
 
     return quote(val)

@@ -16,7 +16,7 @@ class ReadInputApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.prompt = "\n" + self.prompt
-        self.custom_history = ['history 1', 'history 2']
+        self.custom_history = ["history 1", "history 2"]
 
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_basic(self, _) -> None:
@@ -44,7 +44,7 @@ class ReadInputApp(cmd2.Cmd):
             input_str = self.read_input(
                 "> ",
                 history=self.custom_history,
-                choices=['choice_1', 'choice_2', 'choice_3'],
+                choices=["choice_1", "choice_2", "choice_3"],
             )
         except EOFError:
             pass
@@ -83,10 +83,10 @@ class ReadInputApp(cmd2.Cmd):
     @cmd2.with_category(EXAMPLE_COMMANDS)
     def do_custom_parser(self, _) -> None:
         """Call read_input to use a custom history and an argument parser."""
-        parser = cmd2.Cmd2ArgumentParser(prog='', description="An example parser")
-        parser.add_argument('-o', '--option', help="an optional arg")
-        parser.add_argument('arg_1', help="a choice for this arg", metavar='arg_1', choices=['my_choice', 'your_choice'])
-        parser.add_argument('arg_2', help="path of something", completer=cmd2.Cmd.path_complete)
+        parser = cmd2.Cmd2ArgumentParser(prog="", description="An example parser")
+        parser.add_argument("-o", "--option", help="an optional arg")
+        parser.add_argument("arg_1", help="a choice for this arg", metavar="arg_1", choices=["my_choice", "your_choice"])
+        parser.add_argument("arg_2", help="path of something", completer=cmd2.Cmd.path_complete)
 
         self.poutput("Tab completing with argument parser and using custom history")
         self.poutput(parser.format_usage())
@@ -116,13 +116,13 @@ class ReadInputApp(cmd2.Cmd):
 
         Usage: eat wheatties
         """
-        sauce = self.select('sweet salty', 'Sauce? ')
-        result = '{food} with {sauce} sauce, yum!'
+        sauce = self.select("sweet salty", "Sauce? ")
+        result = "{food} with {sauce} sauce, yum!"
         result = result.format(food=arg, sauce=sauce)
-        self.stdout.write(result + '\n')
+        self.stdout.write(result + "\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = ReadInputApp()

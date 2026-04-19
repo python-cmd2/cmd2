@@ -37,12 +37,12 @@ class CmdLineApp(cmd2.Cmd):
         # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell
         super().__init__(include_ipy=True)
         self._set_prompt()
-        self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇 💩'
+        self.intro = "Happy 𝛑 Day.  Note the full Unicode support:  😇 💩"
 
     def _set_prompt(self) -> None:
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.prompt = stylize(f'{self.cwd} $ ', style=Color.CYAN)
+        self.prompt = stylize(f"{self.cwd} $ ", style=Color.CYAN)
 
     def postcmd(self, stop: bool, _line: str) -> bool:
         """Hook method executed just after a command dispatch is finished.
@@ -64,8 +64,8 @@ class CmdLineApp(cmd2.Cmd):
         # Expect 1 argument, the directory to change to
         if not arglist or len(arglist) != 1:
             self.perror("cd requires exactly 1 argument:")
-            self.do_help('cd')
-            self.last_result = 'Bad arguments'
+            self.do_help("cd")
+            self.last_result = "Bad arguments"
             return
 
         # Convert relative paths to absolute paths
@@ -75,16 +75,16 @@ class CmdLineApp(cmd2.Cmd):
         err = None
         data = None
         if not os.path.isdir(path):
-            err = f'{path} is not a directory'
+            err = f"{path} is not a directory"
         elif not os.access(path, os.R_OK):
-            err = f'You do not have read access to {path}'
+            err = f"You do not have read access to {path}"
         else:
             try:
                 os.chdir(path)
             except Exception as ex:  # noqa: BLE001
-                err = f'{ex}'
+                err = f"{ex}"
             else:
-                self.poutput(f'Successfully changed directory to {path}')
+                self.poutput(f"Successfully changed directory to {path}")
                 data = path
 
         if err:
@@ -97,7 +97,7 @@ class CmdLineApp(cmd2.Cmd):
         return self.path_complete(text, line, begidx, endidx, path_filter=os.path.isdir)
 
     dir_parser = cmd2.Cmd2ArgumentParser()
-    dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
+    dir_parser.add_argument("-l", "--long", action="store_true", help="display in long format with one item per line")
 
     @cmd2.with_argparser(dir_parser, with_unknown_args=True)
     def do_dir(self, _args: argparse.Namespace, unknown: list[str]) -> None:
@@ -105,21 +105,21 @@ class CmdLineApp(cmd2.Cmd):
         # No arguments for this command
         if unknown:
             self.perror("dir does not take any positional arguments:")
-            self.do_help('dir')
-            self.last_result = 'Bad arguments'
+            self.do_help("dir")
+            self.last_result = "Bad arguments"
             return
 
         # Get the contents as a list
         contents = os.listdir(self.cwd)
 
         for f in contents:
-            self.poutput(f'{f}')
-        self.poutput('')
+            self.poutput(f"{f}")
+        self.poutput("")
 
         self.last_result = contents
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     c = CmdLineApp()

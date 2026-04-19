@@ -18,13 +18,13 @@ class RemoveBuiltinCommands(cmd2.Cmd):
         super().__init__()
 
         # To hide commands from displaying in the help menu, add them to the hidden_commands list
-        self.hidden_commands.append('history')
+        self.hidden_commands.append("history")
 
         # To remove built-in commands entirely, delete their "do_*" function from the cmd2.Cmd class
         del cmd2.Cmd.do_edit
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = RemoveBuiltinCommands()

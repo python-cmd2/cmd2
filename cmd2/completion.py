@@ -37,7 +37,7 @@ class CompletionItem:
 
     # Regular expression to identify whitespace characters that are rendered as
     # control sequences (like ^J or ^I) in the completion menu.
-    _CONTROL_WHITESPACE_RE = re.compile(r'\r\n|[\n\r\t\f\v]')
+    _CONTROL_WHITESPACE_RE = re.compile(r"\r\n|[\n\r\t\f\v]")
 
     # The underlying object this completion represents (e.g., str, int, Path).
     # This is used to support argparse choices validation.
@@ -74,7 +74,7 @@ class CompletionItem:
         :param val: string to be cleaned
         :return: the cleaned string
         """
-        return cls._CONTROL_WHITESPACE_RE.sub(' ', val)
+        return cls._CONTROL_WHITESPACE_RE.sub(" ", val)
 
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
@@ -101,7 +101,7 @@ class CompletionItem:
         # Convert strings containing ANSI style sequences to Rich Text objects for correct display width.
         object.__setattr__(
             self,
-            'table_data',
+            "table_data",
             ru.prepare_objects_for_rendering(*renderable_data),
         )
 

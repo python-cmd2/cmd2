@@ -20,7 +20,7 @@ class PagedOutput(cmd2.Cmd):
                 text = f.read()
             self.ppaged(text, chop=chop)
         except OSError as ex:
-            self.pexcept(f'Error reading {filename!r}: {ex}')
+            self.pexcept(f"Error reading {filename!r}: {ex}")
 
     @cmd2.with_argument_list
     def do_page_wrap(self, args: list[str]) -> None:
@@ -29,7 +29,7 @@ class PagedOutput(cmd2.Cmd):
         Usage: page_wrap <file_path>
         """
         if not args:
-            self.perror('page_wrap requires a path to a file as an argument')
+            self.perror("page_wrap requires a path to a file as an argument")
             return
         self.page_file(args[0], chop=False)
 
@@ -44,14 +44,14 @@ class PagedOutput(cmd2.Cmd):
         Usage: page_chop <file_path>
         """
         if not args:
-            self.perror('page_truncate requires a path to a file as an argument')
+            self.perror("page_truncate requires a path to a file as an argument")
             return
         self.page_file(args[0], chop=True)
 
     complete_page_truncate = cmd2.Cmd.path_complete
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = PagedOutput()

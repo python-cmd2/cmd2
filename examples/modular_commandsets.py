@@ -29,7 +29,7 @@ class WithCommandSets(Cmd):
     def __init__(self, command_sets: Iterable[CommandSet] | None = None) -> None:
         """Cmd2 application to demonstrate a variety of methods for loading CommandSets."""
         super().__init__(command_sets=command_sets)
-        self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
+        self.sport_item_strs = ["Bat", "Basket", "Basketball", "Football", "Space Ball"]
 
     def choices_provider(self) -> list[str]:
         """A choices provider is useful when the choice list is based on instance data of your application."""
@@ -43,16 +43,16 @@ class WithCommandSets(Cmd):
     # Tab complete from a list using argparse choices. Set metavar if you don't
     # want the entire choices list showing in the usage text for this command.
     example_parser.add_argument(
-        '--choices', choices=['some', 'choices', 'here'], metavar="CHOICE", help="tab complete using choices"
+        "--choices", choices=["some", "choices", "here"], metavar="CHOICE", help="tab complete using choices"
     )
 
     # Tab complete from choices provided by a choices provider
     example_parser.add_argument(
-        '--choices_provider', choices_provider=choices_provider, help="tab complete using a choices_provider"
+        "--choices_provider", choices_provider=choices_provider, help="tab complete using a choices_provider"
     )
 
     # Tab complete using a completer
-    example_parser.add_argument('--completer', completer=Cmd.path_complete, help="tab complete using a completer")
+    example_parser.add_argument("--completer", completer=Cmd.path_complete, help="tab complete using a completer")
 
     @with_argparser(example_parser)
     def do_example(self, _: argparse.Namespace) -> None:
@@ -60,10 +60,10 @@ class WithCommandSets(Cmd):
         self.poutput("I do nothing")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     print("Starting")
-    my_sets = [BasicCompletionCommandSet(), CommandSetA(), CustomInitCommandSet('First argument', 'Second argument')]
+    my_sets = [BasicCompletionCommandSet(), CommandSetA(), CustomInitCommandSet("First argument", "Second argument")]
     app = WithCommandSets(command_sets=my_sets)
     sys.exit(app.cmdloop())

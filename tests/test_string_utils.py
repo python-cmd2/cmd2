@@ -6,28 +6,28 @@ from cmd2 import Color
 from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
 
-HELLO_WORLD = 'Hello, world!'
+HELLO_WORLD = "Hello, world!"
 
 
 def test_align_blank() -> None:
-    text = ''
-    character = '-'
+    text = ""
+    character = "-"
     width = 5
     aligned = su.align(text, "left", width=width, character=character)
     assert aligned == character * width
 
 
 def test_align_wider_than_width() -> None:
-    text = 'long text field'
-    character = '-'
+    text = "long text field"
+    character = "-"
     width = 8
     aligned = su.align(text, "left", width=width, character=character)
     assert aligned == text[:width]
 
 
 def test_align_term_width() -> None:
-    text = 'foo'
-    character = ' '
+    text = "foo"
+    character = " "
 
     term_width = ru.console_width()
     expected_padding = (term_width - su.str_width(text)) * character
@@ -37,25 +37,25 @@ def test_align_term_width() -> None:
 
 
 def test_align_left() -> None:
-    text = 'foo'
-    character = '-'
+    text = "foo"
+    character = "-"
     width = 5
     aligned = su.align_left(text, width=width, character=character)
     assert aligned == text + character * 2
 
 
 def test_align_left_wide_text() -> None:
-    text = '苹'
-    character = '-'
+    text = "苹"
+    character = "-"
     width = 4
     aligned = su.align_left(text, width=width, character=character)
     assert aligned == text + character * 2
 
 
 def test_align_left_with_style() -> None:
-    character = '-'
+    character = "-"
 
-    styled_text = su.stylize('table', style=Color.BRIGHT_BLUE)
+    styled_text = su.stylize("table", style=Color.BRIGHT_BLUE)
     width = 8
 
     aligned = su.align_left(styled_text, width=width, character=character)
@@ -63,25 +63,25 @@ def test_align_left_with_style() -> None:
 
 
 def test_align_center() -> None:
-    text = 'foo'
-    character = '-'
+    text = "foo"
+    character = "-"
     width = 5
     aligned = su.align_center(text, width=width, character=character)
     assert aligned == character + text + character
 
 
 def test_align_center_wide_text() -> None:
-    text = '苹'
-    character = '-'
+    text = "苹"
+    character = "-"
     width = 4
     aligned = su.align_center(text, width=width, character=character)
     assert aligned == character + text + character
 
 
 def test_align_center_with_style() -> None:
-    character = '-'
+    character = "-"
 
-    styled_text = su.stylize('table', style=Color.BRIGHT_BLUE)
+    styled_text = su.stylize("table", style=Color.BRIGHT_BLUE)
     width = 8
 
     aligned = su.align_center(styled_text, width=width, character=character)
@@ -89,25 +89,25 @@ def test_align_center_with_style() -> None:
 
 
 def test_align_right() -> None:
-    text = 'foo'
-    character = '-'
+    text = "foo"
+    character = "-"
     width = 5
     aligned = su.align_right(text, width=width, character=character)
     assert aligned == character * 2 + text
 
 
 def test_align_right_wide_text() -> None:
-    text = '苹'
-    character = '-'
+    text = "苹"
+    character = "-"
     width = 4
     aligned = su.align_right(text, width=width, character=character)
     assert aligned == character * 2 + text
 
 
 def test_align_right_with_style() -> None:
-    character = '-'
+    character = "-"
 
-    styled_text = su.stylize('table', style=Color.BRIGHT_BLUE)
+    styled_text = su.stylize("table", style=Color.BRIGHT_BLUE)
     width = 8
 
     aligned = su.align_right(styled_text, width=width, character=character)
@@ -175,7 +175,7 @@ def test_str_width() -> None:
 
 
 def test_is_quoted_short() -> None:
-    my_str = ''
+    my_str = ""
     assert not su.is_quoted(my_str)
     your_str = '"'
     assert not su.is_quoted(your_str)
@@ -235,14 +235,14 @@ def test_strip_quotes_with_quotes() -> None:
 
 
 def test_unicode_normalization() -> None:
-    s1 = 'café'
-    s2 = 'cafe\u0301'
+    s1 = "café"
+    s2 = "cafe\u0301"
     assert s1 != s2
     assert su.norm_fold(s1) == su.norm_fold(s2)
 
 
 def test_unicode_casefold() -> None:
-    micro = 'µ'
+    micro = "µ"
     micro_cf = micro.casefold()
     assert micro != micro_cf
     assert su.norm_fold(micro) == su.norm_fold(micro_cf)

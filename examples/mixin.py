@@ -62,7 +62,7 @@ class MyMixin(_Base):
 
     def cmd2_mymixin_postparsing_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """Method to be called after parsing user input, but before running the command."""
-        self.poutput('in postparsing hook')
+        self.poutput("in postparsing hook")
         return data
 
 
@@ -75,9 +75,9 @@ class Example(MyMixin, cmd2.Cmd):
 
     @empty_decorator
     def do_something(self, _arg) -> None:
-        self.poutput('this is the something command')
+        self.poutput("this is the something command")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = Example()
     app.cmdloop()

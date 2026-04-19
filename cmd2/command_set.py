@@ -56,7 +56,7 @@ class CommandSet(Generic[CmdT]):
         :raises CommandSetRegistrationError: if CommandSet is not registered.
         """
         if self._cmd_internal is None:
-            raise CommandSetRegistrationError('This CommandSet is not registered')
+            raise CommandSetRegistrationError("This CommandSet is not registered")
         return self._cmd_internal
 
     def on_register(self, cmd: CmdT) -> None:
@@ -70,7 +70,7 @@ class CommandSet(Generic[CmdT]):
         :raises CommandSetRegistrationError: if CommandSet is already registered.
         """
         if self._cmd_internal is not None:
-            raise CommandSetRegistrationError('This CommandSet has already been registered')
+            raise CommandSetRegistrationError("This CommandSet has already been registered")
         self._cmd_internal = cmd
 
     def on_registered(self) -> None:
@@ -110,10 +110,10 @@ class CommandSet(Generic[CmdT]):
         """
         if (cmd := self._cmd_internal) is not None:
             # Determine the name to check for collisions in the main app
-            check_name = settable.name if not cmd.always_prefix_settables else f'{self._settable_prefix}.{settable.name}'
+            check_name = settable.name if not cmd.always_prefix_settables else f"{self._settable_prefix}.{settable.name}"
 
             if check_name in cmd.settables and settable.name not in self._settables:
-                raise KeyError(f'Duplicate settable: {settable.name}')
+                raise KeyError(f"Duplicate settable: {settable.name}")
 
         self._settables[settable.name] = settable
 

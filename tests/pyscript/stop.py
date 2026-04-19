@@ -1,8 +1,8 @@
 app.cmd_echo = True
-app('help')
+app("help")
 
 # This will set stop to True in the PyBridge
-app('quit')
+app("quit")
 
 # Exercise py_quit() in unit test
 quit()

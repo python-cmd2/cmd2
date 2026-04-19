@@ -13,7 +13,7 @@ from cmd2 import COMMAND_NAME
 def my_decorator(f):
     @functools.wraps(f)
     def wrapper(*args, **kwds):
-        print('Calling decorated function')
+        print("Calling decorated function")
         return f(*args, **kwds)
 
     return wrapper
@@ -22,22 +22,22 @@ def my_decorator(f):
 class HelpCategories(cmd2.Cmd):
     """Example cmd2 application."""
 
-    START_TIMES = ('now', 'later', 'sometime', 'whenever')
+    START_TIMES = ("now", "later", "sometime", "whenever")
 
     # Command categories
-    CMD_CAT_CONNECTING = 'Connecting'
-    CMD_CAT_APP_MGMT = 'Application Management'
-    CMD_CAT_SERVER_INFO = 'Server Information'
+    CMD_CAT_CONNECTING = "Connecting"
+    CMD_CAT_APP_MGMT = "Application Management"
+    CMD_CAT_SERVER_INFO = "Server Information"
 
     # Show all other commands in "Other" category
-    cmd2.Cmd.DEFAULT_CATEGORY = 'Other'
+    cmd2.Cmd.DEFAULT_CATEGORY = "Other"
 
     def __init__(self) -> None:
         super().__init__()
 
     def do_connect(self, _) -> None:
         """Connect command."""
-        self.poutput('Connect')
+        self.poutput("Connect")
 
     # Tag the above command functions under the category Connecting
     cmd2.categorize(do_connect, CMD_CAT_CONNECTING)
@@ -45,64 +45,64 @@ class HelpCategories(cmd2.Cmd):
     @cmd2.with_category(CMD_CAT_CONNECTING)
     def do_which(self, _) -> None:
         """Which command."""
-        self.poutput('Which')
+        self.poutput("Which")
 
     def do_list(self, _) -> None:
         """List command."""
-        self.poutput('List')
+        self.poutput("List")
 
     def do_deploy(self, _) -> None:
         """Deploy command."""
-        self.poutput('Deploy')
+        self.poutput("Deploy")
 
     start_parser = cmd2.Cmd2ArgumentParser(
-        description='Start',
-        epilog='my_decorator runs even with argparse errors',
+        description="Start",
+        epilog="my_decorator runs even with argparse errors",
     )
-    start_parser.add_argument('when', choices=START_TIMES, help='Specify when to start')
+    start_parser.add_argument("when", choices=START_TIMES, help="Specify when to start")
 
     @my_decorator
     @cmd2.with_argparser(start_parser)
     def do_start(self, _) -> None:
         """Start command."""
-        self.poutput('Start')
+        self.poutput("Start")
 
     def do_sessions(self, _) -> None:
         """Sessions command."""
-        self.poutput('Sessions')
+        self.poutput("Sessions")
 
     def do_redeploy(self, _) -> None:
         """Redeploy command."""
-        self.poutput('Redeploy')
+        self.poutput("Redeploy")
 
     restart_parser = cmd2.Cmd2ArgumentParser(
-        description='Restart',
-        epilog='my_decorator does not run when argparse errors',
+        description="Restart",
+        epilog="my_decorator does not run when argparse errors",
     )
-    restart_parser.add_argument('when', choices=START_TIMES, help='Specify when to restart')
+    restart_parser.add_argument("when", choices=START_TIMES, help="Specify when to restart")
 
     @cmd2.with_argparser(restart_parser)
     @cmd2.with_category(CMD_CAT_APP_MGMT)
     @my_decorator
     def do_restart(self, _) -> None:
         """Restart command."""
-        self.poutput('Restart')
+        self.poutput("Restart")
 
     def do_expire(self, _) -> None:
         """Expire command."""
-        self.poutput('Expire')
+        self.poutput("Expire")
 
     def do_undeploy(self, _) -> None:
         """Undeploy command."""
-        self.poutput('Undeploy')
+        self.poutput("Undeploy")
 
     def do_stop(self, _) -> None:
         """Stop command."""
-        self.poutput('Stop')
+        self.poutput("Stop")
 
     def do_findleakers(self, _) -> None:
         """Find Leakers command."""
-        self.poutput('Find Leakers')
+        self.poutput("Find Leakers")
 
     # Tag the above command functions under the category Application Management
     cmd2.categorize(
@@ -112,19 +112,19 @@ class HelpCategories(cmd2.Cmd):
 
     def do_resources(self, _) -> None:
         """Resources command."""
-        self.poutput('Resources')
+        self.poutput("Resources")
 
     def do_status(self, _) -> None:
         """Status command."""
-        self.poutput('Status')
+        self.poutput("Status")
 
     def do_serverinfo(self, _) -> None:
         """Server Info command."""
-        self.poutput('Server Info')
+        self.poutput("Server Info")
 
     def do_thread_dump(self, _) -> None:
         """Thread Dump command."""
-        self.poutput('Thread Dump')
+        self.poutput("Thread Dump")
 
     def do_sslconnectorciphers(self, _) -> None:
         """SSL Connector Ciphers command is an example of a command that contains
@@ -134,11 +134,11 @@ class HelpCategories(cmd2.Cmd):
 
         This is after a blank line and won't de displayed in the verbose help
         """
-        self.poutput('SSL Connector Ciphers')
+        self.poutput("SSL Connector Ciphers")
 
     def do_vminfo(self, _) -> None:
         """VM Info command."""
-        self.poutput('VM Info')
+        self.poutput("VM Info")
 
     # Tag the above command functions under the category Server Information
     cmd2.categorize(do_resources, CMD_CAT_SERVER_INFO)
@@ -152,7 +152,7 @@ class HelpCategories(cmd2.Cmd):
     # and show up in the 'Other' group
     def do_config(self, _) -> None:
         """Config command."""
-        self.poutput('Config')
+        self.poutput("Config")
 
     def do_version(self, _) -> None:
         """Version command."""
@@ -172,7 +172,7 @@ class HelpCategories(cmd2.Cmd):
         self.poutput("The Application Management commands have been enabled")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     c = HelpCategories()

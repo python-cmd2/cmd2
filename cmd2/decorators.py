@@ -71,7 +71,7 @@ def with_category(
 # in cmd2 command functions/callables. As long as the 2-ple of arguments we expect to be there can be
 # found we can swap out the statement with each decorator's specific parameters
 ##########################
-def _parse_positionals(args: tuple[Any, ...]) -> tuple['Cmd', Statement | str]:
+def _parse_positionals(args: tuple[Any, ...]) -> tuple["Cmd", Statement | str]:
     """Inspect the positional arguments until the cmd2.Cmd argument is found.
 
     Assumes that we will find cmd2.Cmd followed by the command statement object or string.
@@ -91,7 +91,7 @@ def _parse_positionals(args: tuple[Any, ...]) -> tuple['Cmd', Statement | str]:
 
     # This shouldn't happen unless we forget to pass statement in `Cmd.onecmd` or
     # somehow call the unbound class method.
-    raise TypeError('Expected arguments: cmd: cmd2.Cmd, statement: Union[Statement, str] Not found')
+    raise TypeError("Expected arguments: cmd: cmd2.Cmd, statement: Union[Statement, str] Not found")
 
 
 def _arg_swap(args: Sequence[Any], search_arg: Any, *replace_arg: Any) -> list[Any]:
@@ -290,7 +290,7 @@ def with_argparser(
             arg_parser = cmd2_app._command_parsers.get(cmd_wrapper)
             if arg_parser is None:
                 # This shouldn't be possible to reach
-                raise ValueError(f'No argument parser found for {command_name}')  # pragma: no cover
+                raise ValueError(f"No argument parser found for {command_name}")  # pragma: no cover
 
             if ns_provider is None:
                 initial_namespace = None
@@ -394,9 +394,9 @@ def as_subcommand_to(
         # Keyword arguments for subparsers.add_parser()
         final_kwargs: dict[str, Any] = dict(add_parser_kwargs)
         if help is not None:
-            final_kwargs['help'] = help
+            final_kwargs["help"] = help
         if aliases:
-            final_kwargs['aliases'] = tuple(aliases)
+            final_kwargs["aliases"] = tuple(aliases)
 
         setattr(func, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, final_kwargs)
 

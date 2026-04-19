@@ -25,13 +25,13 @@ class CustomParser(Cmd2ArgumentParser):
 
     def error(self, message: str) -> NoReturn:
         """Custom override that applies custom formatting to the error message."""
-        lines = message.split('\n')
-        formatted_message = ''
+        lines = message.split("\n")
+        formatted_message = ""
         for linum, line in enumerate(lines):
             if linum == 0:
-                formatted_message = 'Error: ' + line
+                formatted_message = "Error: " + line
             else:
-                formatted_message += '\n       ' + line
+                formatted_message += "\n       " + line
 
         self.print_usage(sys.stderr)
 
@@ -40,16 +40,16 @@ class CustomParser(Cmd2ArgumentParser):
             formatted_message,
             style=styles.WARNING,
         )
-        self.exit(2, f'{formatted_message}\n\n')
+        self.exit(2, f"{formatted_message}\n\n")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     # Set the default parser type before instantiating app.
     set_default_argument_parser_type(CustomParser)
 
-    app = cmd2.Cmd(include_ipy=True, persistent_history_file='cmd2_history.dat')
+    app = cmd2.Cmd(include_ipy=True, persistent_history_file="cmd2_history.dat")
     app.self_in_py = True  # Enable access to "self" within the py command
     app.debug = True  # Show traceback if/when an exception occurs
     sys.exit(app.cmdloop())
