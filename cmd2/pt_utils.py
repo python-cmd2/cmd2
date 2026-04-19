@@ -55,7 +55,7 @@ class Cmd2Completer(Completer):
 
     def __init__(
         self,
-        cmd_app: 'Cmd',
+        cmd_app: "Cmd",
         custom_settings: utils.CustomCompletionSettings | None = None,
     ) -> None:
         """Initialize prompt_toolkit based completer class."""
@@ -196,12 +196,12 @@ class Cmd2Lexer(Lexer):
 
     def __init__(
         self,
-        cmd_app: 'Cmd',
-        command_color: str = 'ansigreen',
-        alias_color: str = 'ansicyan',
-        macro_color: str = 'ansimagenta',
-        flag_color: str = 'ansired',
-        argument_color: str = 'ansiyellow',
+        cmd_app: "Cmd",
+        command_color: str = "ansigreen",
+        alias_color: str = "ansicyan",
+        macro_color: str = "ansimagenta",
+        flag_color: str = "ansired",
+        argument_color: str = "ansiyellow",
     ) -> None:
         """Initialize the Lexer.
 
@@ -234,13 +234,13 @@ class Cmd2Lexer(Lexer):
                 match_text = m.group(0)
 
                 if space:
-                    tokens.append(('', match_text))
+                    tokens.append(("", match_text))
                 elif flag:
                     tokens.append((self.flag_color, match_text))
                 elif (quoted or word) and match_text not in exclude_tokens:
                     tokens.append((self.argument_color, match_text))
                 else:
-                    tokens.append(('', match_text))
+                    tokens.append(("", match_text))
 
         def get_line(lineno: int) -> list[tuple[str, str]]:
             """Return the tokens for the given line number."""
@@ -249,7 +249,7 @@ class Cmd2Lexer(Lexer):
 
             # No syntax highlighting if styles are disallowed
             if ru.ALLOW_STYLE == ru.AllowStyle.NEVER:
-                tokens.append(('', line))
+                tokens.append(("", line))
                 return tokens
 
             # Only attempt to match a command on the first line
@@ -264,7 +264,7 @@ class Cmd2Lexer(Lexer):
 
                     # Add any leading whitespace
                     if cmd_start > 0:
-                        tokens.append(('', line[:cmd_start]))
+                        tokens.append(("", line[:cmd_start]))
 
                     if command:
                         # Determine the style for the command
@@ -282,7 +282,7 @@ class Cmd2Lexer(Lexer):
                                 break
 
                         if not shortcut_found:
-                            style = ''
+                            style = ""
                             if command in self.cmd_app.get_all_commands():
                                 style = self.command_color
                             elif command in self.cmd_app.aliases:
@@ -298,7 +298,7 @@ class Cmd2Lexer(Lexer):
                         highlight_args(line[cmd_end:], tokens)
                 else:
                     # No command match found on the first line
-                    tokens.append(('', line))
+                    tokens.append(("", line))
             else:
                 # All other lines are treated as arguments
                 highlight_args(line, tokens)

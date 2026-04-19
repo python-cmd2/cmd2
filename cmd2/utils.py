@@ -40,7 +40,7 @@ if TYPE_CHECKING:  # pragma: no cover
 else:
     PopenTextIO = subprocess.Popen
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def to_bool(val: Any) -> bool:
@@ -118,7 +118,7 @@ class Settable:
 
             def get_bool_choices(_cmd2_self: CmdOrSet) -> Choices:
                 """Tab complete lowercase boolean values."""
-                return Choices.from_values(['true', 'false'])
+                return Choices.from_values(["true", "false"])
 
             val_type = to_bool
             choices_provider = get_bool_choices
@@ -149,7 +149,7 @@ class Settable:
 
         # Make sure new_value is a valid choice
         if self.choices is not None and new_value not in self.choices:
-            choices_str = ', '.join(map(repr, self.choices))
+            choices_str = ", ".join(map(repr, self.choices))
             raise ValueError(f"invalid choice: {new_value!r} (choose from {choices_str})")
 
         # Try to update the settable's value
@@ -173,7 +173,7 @@ def is_text_file(file_path: str) -> bool:
 
     # Only need to check for utf-8 compliance since that covers ASCII, too
     try:
-        with open(expanded_path, encoding='utf-8', errors='strict') as f:
+        with open(expanded_path, encoding="utf-8", errors="strict") as f:
             # Make sure the file has only utf-8 text and is not empty
             if sum(1 for _ in f) > 0:
                 valid_text_file = True
@@ -229,7 +229,7 @@ def natural_keys(input_str: str) -> list[int | str]:
     :param input_str: string to convert
     :return: list of strings and integers
     """
-    return [try_int_or_force_to_lower_case(substr) for substr in re.split(r'(\d+)', input_str)]
+    return [try_int_or_force_to_lower_case(substr) for substr in re.split(r"(\d+)", input_str)]
 
 
 def natural_sort(list_to_sort: Iterable[str]) -> list[str]:
@@ -280,7 +280,7 @@ def expand_user(token: str) -> str:
             quote_char = token[0]
             token = su.strip_quotes(token)
         else:
-            quote_char = ''
+            quote_char = ""
 
         token = os.path.expanduser(token)
 
@@ -306,21 +306,21 @@ def find_editor() -> str | None:
     Otherwise the function will look for a known editor in directories specified by PATH env variable.
     :return: Default editor or None.
     """
-    editor = os.environ.get('EDITOR')
+    editor = os.environ.get("EDITOR")
     if not editor:
-        if sys.platform[:3] == 'win':
-            editors = ['edit', 'code.cmd', 'notepad++.exe', 'notepad.exe']
+        if sys.platform[:3] == "win":
+            editors = ["edit", "code.cmd", "notepad++.exe", "notepad.exe"]
         else:
-            editors = ['vim', 'vi', 'emacs', 'nano', 'pico', 'joe', 'code', 'subl', 'gedit', 'kate']
+            editors = ["vim", "vi", "emacs", "nano", "pico", "joe", "code", "subl", "gedit", "kate"]
 
         # Get a list of every directory in the PATH environment variable and ignore symbolic links
-        env_path = os.getenv('PATH')
+        env_path = os.getenv("PATH")
         paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
 
         for possible_editor, path in itertools.product(editors, paths):
             editor_path = os.path.join(path, possible_editor)
             if os.path.isfile(editor_path) and os.access(editor_path, os.X_OK):
-                if sys.platform[:3] == 'win':
+                if sys.platform[:3] == "win":
                     # Remove extension from Windows file names
                     editor = os.path.splitext(possible_editor)[0]
                 else:
@@ -367,13 +367,13 @@ def get_exes_in_path(starts_with: str) -> list[str]:
     :return: a list of matching exe names
     """
     # Purposely don't match any executable containing wildcards
-    wildcards = ['*', '?']
+    wildcards = ["*", "?"]
     for wildcard in wildcards:
         if wildcard in starts_with:
             return []
 
     # Get a list of every directory in the PATH environment variable and ignore symbolic links
-    env_path = os.getenv('PATH')
+    env_path = os.getenv("PATH")
     paths = [] if env_path is None else [p for p in env_path.split(os.path.pathsep) if not os.path.islink(p)]
 
     # Use a set to store exe names since there can be duplicates
@@ -382,7 +382,7 @@ def get_exes_in_path(starts_with: str) -> list[str]:
     # Find every executable file in the user's path that matches the pattern
     for path in paths:
         full_path = os.path.join(path, starts_with)
-        matches = files_from_glob_pattern(full_path + '*', access=os.X_OK)
+        matches = files_from_glob_pattern(full_path + "*", access=os.X_OK)
 
         for match in matches:
             exes_set.add(os.path.basename(match))
@@ -398,11 +398,11 @@ class StdSim:
 
     def __init__(
         self,
-        inner_stream: Union[TextIO, 'StdSim'],
+        inner_stream: Union[TextIO, "StdSim"],
         *,
         echo: bool = False,
-        encoding: str = 'utf-8',
-        errors: str = 'replace',
+        encoding: str = "utf-8",
+        errors: str = "replace",
     ) -> None:
         """StdSim Initializer.
 
@@ -424,7 +424,7 @@ class StdSim:
         :param s: String to write to the stream
         """
         if not isinstance(s, str):
-            raise TypeError(f'write() argument must be str, not {type(s)}')
+            raise TypeError(f"write() argument must be str, not {type(s)}")
 
         if not self.pause_storage:
             self.buffer.byte_buf += s.encode(encoding=self.encoding, errors=self.errors)
@@ -491,7 +491,7 @@ class ByteBuf:
     """Used by StdSim to write binary data and stores the actual bytes written."""
 
     # Used to know when to flush the StdSim
-    NEWLINES = (b'\n', b'\r')
+    NEWLINES = (b"\n", b"\r")
 
     def __init__(self, std_sim_instance: StdSim) -> None:
         """Initialize the ByteBuf instance."""
@@ -501,7 +501,7 @@ class ByteBuf:
     def write(self, b: bytes) -> None:
         """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
         if not isinstance(b, bytes):
-            raise TypeError(f'a bytes-like object is required, not {type(b)}')
+            raise TypeError(f"a bytes-like object is required, not {type(b)}")
         if not self.std_sim_instance.pause_storage:
             self.byte_buf += b
         if self.std_sim_instance.echo:
@@ -532,9 +532,9 @@ class ProcReader:
         self._stdout = stdout
         self._stderr = stderr
 
-        self._out_thread = threading.Thread(name='out_thread', target=self._reader_thread_func, kwargs={'read_stdout': True})
+        self._out_thread = threading.Thread(name="out_thread", target=self._reader_thread_func, kwargs={"read_stdout": True})
 
-        self._err_thread = threading.Thread(name='err_thread', target=self._reader_thread_func, kwargs={'read_stdout': False})
+        self._err_thread = threading.Thread(name="err_thread", target=self._reader_thread_func, kwargs={"read_stdout": False})
 
         # Start the reader threads for pipes only
         if self._proc.stdout is not None:
@@ -546,7 +546,7 @@ class ProcReader:
         """Send a SIGINT to the process similar to if <Ctrl>+C were pressed."""
         import signal
 
-        if sys.platform.startswith('win'):
+        if sys.platform.startswith("win"):
             # cmd2 started the Windows process in a new process group. Therefore we must send
             # a CTRL_BREAK_EVENT since CTRL_C_EVENT signals cannot be generated for process groups.
             self._proc.send_signal(signal.CTRL_BREAK_EVENT)
@@ -719,23 +719,23 @@ def get_defining_class(meth: Callable[..., Any]) -> type[Any] | None:
     if isinstance(meth, functools.partial):
         return get_defining_class(meth.func)
     if inspect.ismethod(meth) or (
-        inspect.isbuiltin(meth) and hasattr(meth, '__self__') and hasattr(meth.__self__, '__class__')
+        inspect.isbuiltin(meth) and hasattr(meth, "__self__") and hasattr(meth.__self__, "__class__")
     ):
         for cls in inspect.getmro(meth.__self__.__class__):
             if meth.__name__ in cls.__dict__:
                 return cls
-        meth = getattr(meth, '__func__', meth)  # fallback to __qualname__ parsing
+        meth = getattr(meth, "__func__", meth)  # fallback to __qualname__ parsing
     if inspect.isfunction(meth):
-        cls = getattr(inspect.getmodule(meth), meth.__qualname__.split('.<locals>', 1)[0].rsplit('.', 1)[0])
+        cls = getattr(inspect.getmodule(meth), meth.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0])
         if isinstance(cls, type):
             return cls
-    return cast(type, getattr(meth, '__objclass__', None))  # handle special descriptor objects
+    return cast(type, getattr(meth, "__objclass__", None))  # handle special descriptor objects
 
 
 class CustomCompletionSettings:
     """Used by cmd2.Cmd.complete() to complete strings other than command arguments."""
 
-    def __init__(self, parser: 'Cmd2ArgumentParser', *, preserve_quotes: bool = False) -> None:
+    def __init__(self, parser: "Cmd2ArgumentParser", *, preserve_quotes: bool = False) -> None:
         """CustomCompletionSettings initializer.
 
         :param parser: arg parser defining format of string being completed
@@ -755,13 +755,13 @@ def strip_doc_annotations(doc: str) -> str:
     :param doc: documentation string
     """
     # Attempt to locate the first documentation block
-    cmd_desc = ''
+    cmd_desc = ""
     found_first = False
     for doc_line in doc.splitlines():
         stripped_line = doc_line.strip()
 
         # Don't include :param type lines
-        if stripped_line.startswith(':'):
+        if stripped_line.startswith(":"):
             if found_first:
                 break
         elif stripped_line:
@@ -822,9 +822,9 @@ def get_types(func_or_method: Callable[..., Any]) -> tuple[dict[str, Any], Any]:
         type_hints = inspect.get_annotations(func_or_method, eval_str=True)  # Get dictionary of type hints
     except TypeError as exc:
         raise ValueError("Argument passed to get_types should be a function or method") from exc
-    ret_ann = type_hints.pop('return', None)  # Pop off the return annotation if it exists
+    ret_ann = type_hints.pop("return", None)  # Pop off the return annotation if it exists
     if inspect.ismethod(func_or_method):
-        type_hints.pop('self', None)  # Pop off `self` hint for methods
+        type_hints.pop("self", None)  # Pop off `self` hint for methods
     return type_hints, ret_ann
 
 

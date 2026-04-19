@@ -165,7 +165,7 @@ mccabe.max-complexity = 49
 
 [format]
 # Like Black, use double quotes for strings.
-quote-style = "preserve"
+quote-style = "double"
 
 # Like Black, indent with spaces, rather than tabs.
 indent-style = "space"

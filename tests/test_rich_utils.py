@@ -26,19 +26,19 @@ def test_cmd2_base_console() -> None:
     # Test the keyword arguments which are not allowed.
     with pytest.raises(TypeError) as excinfo:
         ru.Cmd2BaseConsole(color_system="auto")
-    assert 'color_system' in str(excinfo.value)
+    assert "color_system" in str(excinfo.value)
 
     with pytest.raises(TypeError) as excinfo:
         ru.Cmd2BaseConsole(force_terminal=True)
-    assert 'force_terminal' in str(excinfo.value)
+    assert "force_terminal" in str(excinfo.value)
 
     with pytest.raises(TypeError) as excinfo:
         ru.Cmd2BaseConsole(force_interactive=True)
-    assert 'force_interactive' in str(excinfo.value)
+    assert "force_interactive" in str(excinfo.value)
 
     with pytest.raises(TypeError) as excinfo:
         ru.Cmd2BaseConsole(theme=None)
-    assert 'theme' in str(excinfo.value)
+    assert "theme" in str(excinfo.value)
 
 
 def test_indented_text() -> None:
@@ -80,7 +80,7 @@ def test_indented_table() -> None:
 
 
 @pytest.mark.parametrize(
-    ('rich_text', 'string'),
+    ("rich_text", "string"),
     [
         (Text("Hello"), "Hello"),
         (Text("Hello\n"), "Hello\n"),
@@ -178,8 +178,8 @@ def test_cmd2_base_console_log(mocker: MockerFixture) -> None:
 def test_cmd2_base_console_init_always_interactive_true() -> None:
     """Test Cmd2BaseConsole initialization when ALLOW_STYLE is ALWAYS and is_interactive is True."""
     with (
-        mock.patch('rich.console.Console.__init__', return_value=None) as mock_base_init,
-        mock.patch('cmd2.rich_utils.Console', autospec=True) as mock_detect_console_class,
+        mock.patch("rich.console.Console.__init__", return_value=None) as mock_base_init,
+        mock.patch("cmd2.rich_utils.Console", autospec=True) as mock_detect_console_class,
     ):
         mock_detect_console = mock_detect_console_class.return_value
         mock_detect_console.is_interactive = True
@@ -188,17 +188,17 @@ def test_cmd2_base_console_init_always_interactive_true() -> None:
 
         # Verify arguments passed to super().__init__
         _, kwargs = mock_base_init.call_args
-        assert kwargs['color_system'] == "truecolor"
-        assert kwargs['force_terminal'] is True
-        assert kwargs['force_interactive'] is True
+        assert kwargs["color_system"] == "truecolor"
+        assert kwargs["force_terminal"] is True
+        assert kwargs["force_interactive"] is True
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_cmd2_base_console_init_always_interactive_false() -> None:
     """Test Cmd2BaseConsole initialization when ALLOW_STYLE is ALWAYS and is_interactive is False."""
     with (
-        mock.patch('rich.console.Console.__init__', return_value=None) as mock_base_init,
-        mock.patch('cmd2.rich_utils.Console', autospec=True) as mock_detect_console_class,
+        mock.patch("rich.console.Console.__init__", return_value=None) as mock_base_init,
+        mock.patch("cmd2.rich_utils.Console", autospec=True) as mock_detect_console_class,
     ):
         mock_detect_console = mock_detect_console_class.return_value
         mock_detect_console.is_interactive = False
@@ -206,17 +206,17 @@ def test_cmd2_base_console_init_always_interactive_false() -> None:
         ru.Cmd2BaseConsole()
 
         _, kwargs = mock_base_init.call_args
-        assert kwargs['color_system'] == "truecolor"
-        assert kwargs['force_terminal'] is True
-        assert kwargs['force_interactive'] is False
+        assert kwargs["color_system"] == "truecolor"
+        assert kwargs["force_terminal"] is True
+        assert kwargs["force_interactive"] is False
 
 
 @with_ansi_style(ru.AllowStyle.TERMINAL)
 def test_cmd2_base_console_init_terminal_true() -> None:
     """Test Cmd2BaseConsole initialization when ALLOW_STYLE is TERMINAL and it is a terminal."""
     with (
-        mock.patch('rich.console.Console.__init__', return_value=None) as mock_base_init,
-        mock.patch('cmd2.rich_utils.Console', autospec=True) as mock_detect_console_class,
+        mock.patch("rich.console.Console.__init__", return_value=None) as mock_base_init,
+        mock.patch("cmd2.rich_utils.Console", autospec=True) as mock_detect_console_class,
     ):
         mock_detect_console = mock_detect_console_class.return_value
         mock_detect_console.is_terminal = True
@@ -224,17 +224,17 @@ def test_cmd2_base_console_init_terminal_true() -> None:
         ru.Cmd2BaseConsole()
 
         _, kwargs = mock_base_init.call_args
-        assert kwargs['color_system'] == "truecolor"
-        assert kwargs['force_terminal'] is None
-        assert kwargs['force_interactive'] is None
+        assert kwargs["color_system"] == "truecolor"
+        assert kwargs["force_terminal"] is None
+        assert kwargs["force_interactive"] is None
 
 
 @with_ansi_style(ru.AllowStyle.TERMINAL)
 def test_cmd2_base_console_init_terminal_false() -> None:
     """Test Cmd2BaseConsole initialization when ALLOW_STYLE is TERMINAL and it is not a terminal."""
     with (
-        mock.patch('rich.console.Console.__init__', return_value=None) as mock_base_init,
-        mock.patch('cmd2.rich_utils.Console', autospec=True) as mock_detect_console_class,
+        mock.patch("rich.console.Console.__init__", return_value=None) as mock_base_init,
+        mock.patch("cmd2.rich_utils.Console", autospec=True) as mock_detect_console_class,
     ):
         mock_detect_console = mock_detect_console_class.return_value
         mock_detect_console.is_terminal = False
@@ -242,21 +242,21 @@ def test_cmd2_base_console_init_terminal_false() -> None:
         ru.Cmd2BaseConsole()
 
         _, kwargs = mock_base_init.call_args
-        assert kwargs['color_system'] is None
-        assert kwargs['force_terminal'] is None
-        assert kwargs['force_interactive'] is None
+        assert kwargs["color_system"] is None
+        assert kwargs["force_terminal"] is None
+        assert kwargs["force_interactive"] is None
 
 
 @with_ansi_style(ru.AllowStyle.NEVER)
 def test_cmd2_base_console_init_never() -> None:
     """Test Cmd2BaseConsole initialization when ALLOW_STYLE is NEVER."""
-    with mock.patch('rich.console.Console.__init__', return_value=None) as mock_base_init:
+    with mock.patch("rich.console.Console.__init__", return_value=None) as mock_base_init:
         ru.Cmd2BaseConsole()
 
         _, kwargs = mock_base_init.call_args
-        assert kwargs['color_system'] is None
-        assert kwargs['force_terminal'] is False
-        assert kwargs['force_interactive'] is None
+        assert kwargs["color_system"] is None
+        assert kwargs["force_terminal"] is False
+        assert kwargs["force_interactive"] is None
 
 
 def test_text_group_direct_cmd2() -> None:
@@ -321,7 +321,7 @@ def test_text_group_in_parser_plain(capsys: pytest.CaptureFixture[str]) -> None:
 
 def test_formatter_console() -> None:
     # self._console = console (inside console.setter)
-    formatter = ru.Cmd2HelpFormatter(prog='test')
+    formatter = ru.Cmd2HelpFormatter(prog="test")
     new_console = ru.Cmd2RichArgparseConsole()
     formatter.console = new_console
     assert formatter._console is new_console
@@ -332,17 +332,17 @@ def test_formatter_console() -> None:
     reason="Argparse didn't support color until Python 3.14",
 )
 def test_formatter_set_color(mocker: MockerFixture) -> None:
-    formatter = ru.Cmd2HelpFormatter(prog='test')
+    formatter = ru.Cmd2HelpFormatter(prog="test")
 
     # return (inside _set_color if sys.version_info < (3, 14))
-    mocker.patch('cmd2.argparse_utils.sys.version_info', (3, 13, 0))
+    mocker.patch("cmd2.argparse_utils.sys.version_info", (3, 13, 0))
     # This should return early without calling super()._set_color
-    mock_set_color = mocker.patch('rich_argparse.RichHelpFormatter._set_color')
+    mock_set_color = mocker.patch("rich_argparse.RichHelpFormatter._set_color")
     formatter._set_color(True)
     mock_set_color.assert_not_called()
 
     # except TypeError and super()._set_color(color)
-    mocker.patch('cmd2.argparse_utils.sys.version_info', (3, 15, 0))
+    mocker.patch("cmd2.argparse_utils.sys.version_info", (3, 15, 0))
 
     # Reset mock and make it raise TypeError when called with kwargs
     mock_set_color.reset_mock()

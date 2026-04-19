@@ -16,26 +16,26 @@ import cmd2
 class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application."""
 
-    MUMBLES = ('like', '...', 'um', 'er', 'hmmm', 'ahh')
-    MUMBLE_FIRST = ('so', 'like', 'well')
-    MUMBLE_LAST = ('right?',)
+    MUMBLES = ("like", "...", "um", "er", "hmmm", "ahh")
+    MUMBLE_FIRST = ("so", "like", "well")
+    MUMBLE_LAST = ("right?",)
 
     def __init__(self) -> None:
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
-        shortcuts.update({'&': 'speak'})
+        shortcuts.update({"&": "speak"})
         # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell
-        super().__init__(allow_cli_args=False, include_ipy=True, multiline_commands=['orate'], shortcuts=shortcuts)
+        super().__init__(allow_cli_args=False, include_ipy=True, multiline_commands=["orate"], shortcuts=shortcuts)
 
         self.self_in_py = True
         self.maxrepeats = 3
         # Make maxrepeats settable at runtime
-        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
+        self.add_settable(cmd2.Settable("maxrepeats", int, "max repetitions for speak command", self))
 
     speak_parser = cmd2.Cmd2ArgumentParser()
-    speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    speak_parser.add_argument('words', nargs='+', help='words to say')
+    speak_parser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
+    speak_parser.add_argument("-s", "--shout", action="store_true", help="N00B EMULATION MODE")
+    speak_parser.add_argument("-r", "--repeat", type=int, help="output [n] times")
+    speak_parser.add_argument("words", nargs="+", help="words to say")
 
     @cmd2.with_argparser(speak_parser)
     def do_speak(self, args) -> None:
@@ -43,21 +43,21 @@ class CmdLineApp(cmd2.Cmd):
         words = []
         for word in args.words:
             if args.piglatin:
-                word = f'{word[1:]}{word[0]}ay'
+                word = f"{word[1:]}{word[0]}ay"
             if args.shout:
                 word = word.upper()
             words.append(word)
         repetitions = args.repeat or 1
         for _ in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
-            self.poutput(' '.join(words))
+            self.poutput(" ".join(words))
 
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
     mumble_parser = cmd2.Cmd2ArgumentParser()
-    mumble_parser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
-    mumble_parser.add_argument('words', nargs='+', help='words to say')
+    mumble_parser.add_argument("-r", "--repeat", type=int, help="how many times to repeat")
+    mumble_parser.add_argument("words", nargs="+", help="words to say")
 
     @cmd2.with_argparser(mumble_parser)
     def do_mumble(self, args) -> None:
@@ -73,16 +73,16 @@ class CmdLineApp(cmd2.Cmd):
                 output.append(word)
             if random.random() < 0.25:
                 output.append(random.choice(self.MUMBLE_LAST))
-            self.poutput(' '.join(output))
+            self.poutput(" ".join(output))
 
 
 def main(argv=None):
     """Run when invoked from the operating system shell."""
-    parser = cmd2.Cmd2ArgumentParser(description='Commands as arguments')
-    command_help = 'optional command to run, if no command given, enter an interactive shell'
-    parser.add_argument('command', nargs='?', help=command_help)
-    arg_help = 'optional arguments for command'
-    parser.add_argument('command_args', nargs=argparse.REMAINDER, help=arg_help)
+    parser = cmd2.Cmd2ArgumentParser(description="Commands as arguments")
+    command_help = "optional command to run, if no command given, enter an interactive shell"
+    parser.add_argument("command", nargs="?", help=command_help)
+    arg_help = "optional arguments for command"
+    parser.add_argument("command_args", nargs=argparse.REMAINDER, help=arg_help)
 
     args = parser.parse_args(argv)
 
@@ -91,7 +91,7 @@ def main(argv=None):
     sys_exit_code = 0
     if args.command:
         # we have a command, run it and then exit
-        c.onecmd_plus_hooks('{} {}'.format(args.command, ' '.join(args.command_args)))
+        c.onecmd_plus_hooks("{} {}".format(args.command, " ".join(args.command_args)))
     else:
         # we have no command, drop into interactive mode
         sys_exit_code = c.cmdloop()
@@ -99,7 +99,7 @@ def main(argv=None):
     return sys_exit_code
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     sys.exit(main())

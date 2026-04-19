@@ -33,22 +33,22 @@ from cmd2 import (
 class BasicApp(cmd2.Cmd):
     """Cmd2 application to demonstrate many common features."""
 
-    DEFAULT_CATEGORY = 'My Custom Commands'
+    DEFAULT_CATEGORY = "My Custom Commands"
 
     def __init__(self) -> None:
         """Initialize the cmd2 application."""
         # Startup script that defines a couple aliases for running shell commands
-        alias_script = pathlib.Path(__file__).absolute().parent / '.cmd2rc'
+        alias_script = pathlib.Path(__file__).absolute().parent / ".cmd2rc"
 
         # Create a shortcut for one of our commands
         shortcuts = cmd2.DEFAULT_SHORTCUTS
-        shortcuts.update({'&': 'intro'})
+        shortcuts.update({"&": "intro"})
         super().__init__(
             auto_suggest=True,
             bottom_toolbar=True,
             include_ipy=True,
-            multiline_commands=['echo'],
-            persistent_history_file='cmd2_history.dat',
+            multiline_commands=["echo"],
+            persistent_history_file="cmd2_history.dat",
             shortcuts=shortcuts,
             startup_script=str(alias_script),
         )
@@ -62,18 +62,18 @@ class BasicApp(cmd2.Cmd):
         # Prints an intro banner once upon application startup
         self.intro = (
             stylize(
-                'Welcome to cmd2!',
+                "Welcome to cmd2!",
                 style=Style(color=Color.GREEN1, bgcolor=Color.GRAY0, bold=True),
             )
-            + ' Note the full Unicode support:  😇 💩'
-            + ' and the persistent bottom bar with realtime status updates!'
+            + " Note the full Unicode support:  😇 💩"
+            + " and the persistent bottom bar with realtime status updates!"
         )
 
         # Show this as the prompt when asking for input
-        self.prompt = 'myapp> '
+        self.prompt = "myapp> "
 
         # Used as prompt for multiline commands after the first line
-        self.continuation_prompt = '... '
+        self.continuation_prompt = "... "
 
         # Allow access to your application in py and ipy via self
         self.self_in_py = True
@@ -85,9 +85,9 @@ class BasicApp(cmd2.Cmd):
         fg_colors = [c.value for c in Color]
         self.add_settable(
             cmd2.Settable(
-                'foreground_color',
+                "foreground_color",
                 str,
-                'Foreground color to use with echo command',
+                "Foreground color to use with echo command",
                 self,
                 choices=fg_colors,
             )
@@ -95,7 +95,7 @@ class BasicApp(cmd2.Cmd):
 
     def get_rprompt(self) -> str | FormattedText | None:
         current_working_directory = pathlib.Path.cwd()
-        style = 'bg:ansired fg:ansiwhite'
+        style = "bg:ansired fg:ansiwhite"
         text = f"cwd={current_working_directory}"
         return FormattedText([(style, text)])
 
@@ -131,7 +131,7 @@ class BasicApp(cmd2.Cmd):
         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = BasicApp()

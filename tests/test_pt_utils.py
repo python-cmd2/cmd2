@@ -36,9 +36,9 @@ class MockCmd:
         self.stdout = io.StringIO()
         self.always_show_hint = False
         self.statement_parser = Mock()
-        self.statement_parser.terminators = [';']
+        self.statement_parser.terminators = [";"]
         self.statement_parser.shortcuts = []
-        self.statement_parser._command_pattern = re.compile(r'\A\s*(\S*?)(\s|\Z)')
+        self.statement_parser._command_pattern = re.compile(r"\A\s*(\S*?)(\s|\Z)")
         self.aliases = {}
         self.macros = {}
         self.all_commands = []
@@ -105,7 +105,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('', line)]
+        assert tokens == [("", line)]
 
     def test_lex_document_command(self, mock_cmd_app):
         """Test lexing a command name."""
@@ -117,7 +117,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('ansigreen', 'help'), ('', ' '), ('ansiyellow', 'something')]
+        assert tokens == [("ansigreen", "help"), ("", " "), ("ansiyellow", "something")]
 
     def test_lex_document_alias(self, mock_cmd_app):
         """Test lexing an alias."""
@@ -129,7 +129,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('ansicyan', 'ls'), ('', ' '), ('ansired', '-l')]
+        assert tokens == [("ansicyan", "ls"), ("", " "), ("ansired", "-l")]
 
     def test_lex_document_macro(self, mock_cmd_app):
         """Test lexing a macro."""
@@ -141,7 +141,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('ansimagenta', 'my_macro'), ('', ' '), ('ansiyellow', 'arg1')]
+        assert tokens == [("ansimagenta", "my_macro"), ("", " "), ("ansiyellow", "arg1")]
 
     def test_lex_document_leading_whitespace(self, mock_cmd_app):
         """Test lexing with leading whitespace."""
@@ -153,7 +153,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('', '   '), ('ansigreen', 'help'), ('', ' '), ('ansiyellow', 'something')]
+        assert tokens == [("", "   "), ("ansigreen", "help"), ("", " "), ("ansiyellow", "something")]
 
     def test_lex_document_unknown_command(self, mock_cmd_app):
         """Test lexing an unknown command."""
@@ -164,7 +164,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('', 'unknown'), ('', ' '), ('ansiyellow', 'command')]
+        assert tokens == [("", "unknown"), ("", " "), ("ansiyellow", "command")]
 
     def test_lex_document_no_command(self, mock_cmd_app):
         """Test lexing an empty line or line with only whitespace."""
@@ -175,12 +175,12 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('', '   ')]
+        assert tokens == [("", "   ")]
 
     def test_lex_document_no_match(self, mock_cmd_app):
         """Test lexing when command pattern fails to match."""
         # Force the pattern to not match anything
-        mock_cmd_app.statement_parser._command_pattern = re.compile(r'something_impossible')
+        mock_cmd_app.statement_parser._command_pattern = re.compile(r"something_impossible")
         lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
 
         line = "test command"
@@ -188,30 +188,30 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('', line)]
+        assert tokens == [("", line)]
 
     def test_lex_document_arguments(self, mock_cmd_app):
         """Test lexing a command with flags and values."""
         mock_cmd_app.all_commands = ["help"]
         lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
 
-        line = "help -v --name \"John Doe\" > out.txt"
+        line = 'help -v --name "John Doe" > out.txt'
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
         assert tokens == [
-            ('ansigreen', 'help'),
-            ('', ' '),
-            ('ansired', '-v'),
-            ('', ' '),
-            ('ansired', '--name'),
-            ('', ' '),
-            ('ansiyellow', '"John Doe"'),
-            ('', ' '),
-            ('', '>'),
-            ('', ' '),
-            ('ansiyellow', 'out.txt'),
+            ("ansigreen", "help"),
+            ("", " "),
+            ("ansired", "-v"),
+            ("", " "),
+            ("ansired", "--name"),
+            ("", " "),
+            ("ansiyellow", '"John Doe"'),
+            ("", " "),
+            ("", ">"),
+            ("", " "),
+            ("ansiyellow", "out.txt"),
         ]
 
     def test_lex_document_unclosed_quote(self, mock_cmd_app):
@@ -219,16 +219,16 @@ class TestCmd2Lexer:
         mock_cmd_app.all_commands = ["echo"]
         lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
 
-        line = "echo \"hello"
+        line = 'echo "hello'
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [('ansigreen', 'echo'), ('', ' '), ('ansiyellow', '"hello')]
+        assert tokens == [("ansigreen", "echo"), ("", " "), ("ansiyellow", '"hello')]
 
     def test_lex_document_shortcut(self, mock_cmd_app):
         """Test lexing a shortcut."""
-        mock_cmd_app.statement_parser.shortcuts = [('!', 'shell')]
+        mock_cmd_app.statement_parser.shortcuts = [("!", "shell")]
         lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
 
         # Case 1: Shortcut glued to argument
@@ -236,13 +236,13 @@ class TestCmd2Lexer:
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
-        assert tokens == [('ansigreen', '!'), ('ansiyellow', 'ls')]
+        assert tokens == [("ansigreen", "!"), ("ansiyellow", "ls")]
 
         line = "! ls"
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
-        assert tokens == [('ansigreen', '!'), ('', ' '), ('ansiyellow', 'ls')]
+        assert tokens == [("ansigreen", "!"), ("", " "), ("ansiyellow", "ls")]
 
     def test_lex_document_multiline(self, mock_cmd_app):
         """Test lexing a multiline command."""
@@ -256,11 +256,11 @@ class TestCmd2Lexer:
 
         # First line should have command
         tokens0 = get_line(0)
-        assert tokens0 == [('ansigreen', 'orate')]
+        assert tokens0 == [("ansigreen", "orate")]
 
         # Second line should have argument (not command)
         tokens1 = get_line(1)
-        assert tokens1 == [('ansiyellow', 'help')]
+        assert tokens1 == [("ansiyellow", "help")]
 
 
 class TestCmd2Completer:
@@ -382,10 +382,10 @@ class TestCmd2Completer:
     @pytest.mark.parametrize(
         # search_text_offset is the starting index of the user-provided search text within a full match.
         # This accounts for leading shortcuts (e.g., in '@has', the offset is 1).
-        ('line', 'match', 'search_text_offset'),
+        ("line", "match", "search_text_offset"),
         [
-            ('has', 'has space', 0),
-            ('@has', '@has space', 1),
+            ("has", "has space", 0),
+            ("@has", "@has space", 1),
         ],
     )
     def test_get_completions_add_opening_quote_and_abort(self, line, match, search_text_offset, mock_cmd_app) -> None:
@@ -417,14 +417,14 @@ class TestCmd2Completer:
     @pytest.mark.parametrize(
         # search_text_offset is the starting index of the user-provided search text within a full match.
         # This accounts for leading shortcuts (e.g., in '@has', the offset is 1).
-        ('line', 'matches', 'search_text_offset', 'quote_char', 'expected'),
+        ("line", "matches", "search_text_offset", "quote_char", "expected"),
         [
             # Single matches need opening quote, closing quote, and trailing space
-            ('', ['has space'], 0, '"', ['"has space" ']),
-            ('@', ['@has space'], 1, "'", ["@'has space' "]),
+            ("", ["has space"], 0, '"', ['"has space" ']),
+            ("@", ["@has space"], 1, "'", ["@'has space' "]),
             # Multiple matches only need opening quote
-            ('', ['has space', 'more space'], 0, '"', ['"has space', '"more space']),
-            ('@', ['@has space', '@more space'], 1, "'", ["@'has space", "@'more space"]),
+            ("", ["has space", "more space"], 0, '"', ['"has space', '"more space']),
+            ("@", ["@has space", "@more space"], 1, "'", ["@'has space", "@'more space"]),
         ],
     )
     def test_get_completions_add_opening_quote_and_return_results(
@@ -458,12 +458,12 @@ class TestCmd2Completer:
         assert completion_texts == expected
 
     @pytest.mark.parametrize(
-        ('line', 'match', 'quote_char', 'end_of_line', 'expected'),
+        ("line", "match", "quote_char", "end_of_line", "expected"),
         [
             # --- Unquoted search text ---
             # Append a trailing space when end_of_line is True
-            ('ma', 'match', '', True, 'match '),
-            ('ma', 'match', '', False, 'match'),
+            ("ma", "match", "", True, "match "),
+            ("ma", "match", "", False, "match"),
             # --- Quoted search text ---
             # Ensure closing quotes are added
             # Append a trailing space when end_of_line is True
@@ -491,11 +491,11 @@ class TestCmd2Completer:
         assert completions[0].text == expected
 
     @pytest.mark.parametrize(
-        ('line', 'match', 'quote_char', 'end_of_line', 'expected'),
+        ("line", "match", "quote_char", "end_of_line", "expected"),
         [
             # Do not add a trailing space or closing quote to any of the matches
-            ('ma', 'match', '', True, 'match'),
-            ('ma', 'match', '', False, 'match'),
+            ("ma", "match", "", True, "match"),
+            ("ma", "match", "", False, "match"),
             ('"ma', '"match', '"', True, '"match'),
             ("'ma", "'match", "'", False, "'match"),
         ],
@@ -536,11 +536,11 @@ class TestCmd2Completer:
         list(completer.get_completions(document, None))
 
         mock_cmd_app.complete.assert_called_once()
-        assert mock_cmd_app.complete.call_args[1]['custom_settings'] == custom_settings
+        assert mock_cmd_app.complete.call_args[1]["custom_settings"] == custom_settings
 
     def test_get_completions_custom_delimiters(self, mock_cmd_app: MockCmd) -> None:
         """Test that custom delimiters (terminators) are respected."""
-        mock_cmd_app.statement_parser.terminators = ['#']
+        mock_cmd_app.statement_parser.terminators = ["#"]
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
         # '#' should act as a word boundary

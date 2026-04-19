@@ -262,10 +262,10 @@ def build_range_error(range_min: int, range_max: float) -> str:
     err_msg = "expected "
 
     if range_max == constants.INFINITY:
-        plural = '' if range_min == 1 else 's'
+        plural = "" if range_min == 1 else "s"
         err_msg += f"at least {range_min}"
     else:
-        plural = '' if range_max == 1 else 's'
+        plural = "" if range_max == 1 else "s"
         if range_min == range_max:
             err_msg += f"{range_min}"
         else:
@@ -309,8 +309,8 @@ def register_argparse_argument_parameter(
         raise KeyError(f"'{param_name}' conflicts with an existing attribute on argparse.Action")
 
     # Check if accessors already exist (e.g., from manual patching or previous registration)
-    getter_name = f'get_{param_name}'
-    setter_name = f'set_{param_name}'
+    getter_name = f"get_{param_name}"
+    setter_name = f"set_{param_name}"
     if hasattr(argparse.Action, getter_name) or hasattr(argparse.Action, setter_name):
         raise KeyError(f"Accessor methods for '{param_name}' already exist on argparse.Action")
 
@@ -355,11 +355,11 @@ def _validate_completion_callable(self: argparse.Action, value: Any) -> Any:
 
 # Add new attributes to argparse.Action.
 # See _ActionsContainer_add_argument() for details on these attributes.
-register_argparse_argument_parameter('choices_provider', validator=_validate_completion_callable)
-register_argparse_argument_parameter('completer', validator=_validate_completion_callable)
-register_argparse_argument_parameter('table_columns')
-register_argparse_argument_parameter('nargs_range')
-register_argparse_argument_parameter('suppress_tab_hint')
+register_argparse_argument_parameter("choices_provider", validator=_validate_completion_callable)
+register_argparse_argument_parameter("completer", validator=_validate_completion_callable)
+register_argparse_argument_parameter("table_columns")
+register_argparse_argument_parameter("nargs_range")
+register_argparse_argument_parameter("suppress_tab_hint")
 
 
 ############################################################################################################
@@ -431,11 +431,11 @@ def _ActionsContainer_add_argument(  # noqa: N802
                 or not isinstance(nargs[0], int)
                 or not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY)
             ):
-                raise ValueError('Ranged values for nargs must be a tuple of 1 or 2 integers')
+                raise ValueError("Ranged values for nargs must be a tuple of 1 or 2 integers")
             if nargs[0] >= nargs[1]:
-                raise ValueError('Invalid nargs range. The first value must be less than the second')
+                raise ValueError("Invalid nargs range. The first value must be less than the second")
             if nargs[0] < 0:
-                raise ValueError('Negative numbers are invalid for nargs range')
+                raise ValueError("Negative numbers are invalid for nargs range")
 
             # Save the nargs tuple as our range setting
             nargs_range = nargs
@@ -465,7 +465,7 @@ def _ActionsContainer_add_argument(  # noqa: N802
             nargs_adjusted = nargs
 
         # Add the argparse-recognized version of nargs to kwargs
-        kwargs['nargs'] = nargs_adjusted
+        kwargs["nargs"] = nargs_adjusted
 
     # Extract registered custom keyword arguments
     custom_attribs = {keyword: value for keyword, value in kwargs.items() if keyword in _CUSTOM_ACTION_ATTRIBS}
@@ -484,7 +484,7 @@ def _ActionsContainer_add_argument(  # noqa: N802
 
     # Set other registered custom attributes
     for keyword, value in custom_attribs.items():
-        attr_setter = getattr(new_arg, f'set_{keyword}', None)
+        attr_setter = getattr(new_arg, f"set_{keyword}", None)
         if attr_setter is not None:
             attr_setter(value)
 
@@ -506,17 +506,17 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         epilog: RenderableType | None = None,
         parents: Sequence[argparse.ArgumentParser] = (),
         formatter_class: type[Cmd2HelpFormatter] = Cmd2HelpFormatter,
-        prefix_chars: str = '-',
+        prefix_chars: str = "-",
         fromfile_prefix_chars: str | None = None,
         argument_default: str | None = None,
-        conflict_handler: str = 'error',
+        conflict_handler: str = "error",
         add_help: bool = True,
         allow_abbrev: bool = True,
         exit_on_error: bool = True,
         suggest_on_error: bool = False,
         color: bool = False,
         *,
-        ap_completer_type: type['ArgparseCompleter'] | None = None,
+        ap_completer_type: type["ArgparseCompleter"] | None = None,
     ) -> None:
         """Initialize the Cmd2ArgumentParser instance.
 
@@ -651,7 +651,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             subcmd_parser.update_prog(subcmd_prog)
             updated_parsers.add(subcmd_parser)
 
-    def _find_parser(self, subcommand_path: Iterable[str]) -> 'Cmd2ArgumentParser':
+    def _find_parser(self, subcommand_path: Iterable[str]) -> "Cmd2ArgumentParser":
         """Find a parser in the hierarchy based on a sequence of subcommand names.
 
         :param subcommand_path: sequence of subcommand names leading to the target parser
@@ -670,7 +670,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self,
         subcommand_path: Iterable[str],
         subcommand: str,
-        subcommand_parser: 'Cmd2ArgumentParser',
+        subcommand_parser: "Cmd2ArgumentParser",
         **add_parser_kwargs: Any,
     ) -> None:
         """Attach a parser as a subcommand to a command at the specified path.
@@ -719,7 +719,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         for alias in add_parser_kwargs.get("aliases", ()):
             subparsers_action._name_parser_map[alias] = subcommand_parser
 
-    def detach_subcommand(self, subcommand_path: Iterable[str], subcommand: str) -> 'Cmd2ArgumentParser':
+    def detach_subcommand(self, subcommand_path: Iterable[str], subcommand: str) -> "Cmd2ArgumentParser":
         """Detach a subcommand from a command at the specified path.
 
         :param subcommand_path: sequence of subcommand names leading to the parser hosting the
@@ -753,13 +753,13 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
     def error(self, message: str) -> NoReturn:
         """Override that applies custom formatting to the error message."""
-        lines = message.split('\n')
-        formatted_message = ''
+        lines = message.split("\n")
+        formatted_message = ""
         for linum, line in enumerate(lines):
             if linum == 0:
-                formatted_message = 'Error: ' + line
+                formatted_message = "Error: " + line
             else:
-                formatted_message += '\n       ' + line
+                formatted_message += "\n       " + line
 
         self.print_usage(sys.stderr)
 
@@ -769,7 +769,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             console.print(formatted_message, style=Cmd2Style.ERROR)
         formatted_message = f"{capture.get()}"
 
-        self.exit(2, f'{formatted_message}\n')
+        self.exit(2, f"{formatted_message}\n")
 
     def _get_formatter(self, **kwargs: Any) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
@@ -777,19 +777,19 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
     def format_help(self) -> str:
         """Override to add a newline."""
-        return super().format_help() + '\n'
+        return super().format_help() + "\n"
 
     def _get_nargs_pattern(self, action: argparse.Action) -> str:
         """Override to support nargs ranges."""
         nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range:
-            range_max = '' if nargs_range[1] == constants.INFINITY else nargs_range[1]
-            nargs_pattern = f'(-*A{{{nargs_range[0]},{range_max}}}-*)'
+            range_max = "" if nargs_range[1] == constants.INFINITY else nargs_range[1]
+            nargs_pattern = f"(-*A{{{nargs_range[0]},{range_max}}}-*)"
 
             # if this is an optional action, -- is not allowed
             if action.option_strings:
-                nargs_pattern = nargs_pattern.replace('-*', '')
-                nargs_pattern = nargs_pattern.replace('-', '')
+                nargs_pattern = nargs_pattern.replace("-*", "")
+                nargs_pattern = nargs_pattern.replace("-", "")
             return nargs_pattern
 
         return super()._get_nargs_pattern(action)
@@ -823,8 +823,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         if action.choices is not None and value not in action.choices:
             # If any choice is a CompletionItem, then display its value property.
             choices = [c.value if isinstance(c, CompletionItem) else c for c in action.choices]
-            args = {'value': value, 'choices': ', '.join(map(repr, choices))}
-            msg = _('invalid choice: %(value)r (choose from %(choices)s)')
+            args = {"value": value, "choices": ", ".join(map(repr, choices))}
+            msg = _("invalid choice: %(value)r (choose from %(choices)s)")
             raise ArgumentError(action, msg % args)
 
 

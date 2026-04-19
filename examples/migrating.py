@@ -9,9 +9,9 @@ import random
 class CmdLineApp(cmd.Cmd):
     """Example cmd application."""
 
-    MUMBLES = ('like', '...', 'um', 'er', 'hmmm', 'ahh')
-    MUMBLE_FIRST = ('so', 'like', 'well')
-    MUMBLE_LAST = ('right?',)
+    MUMBLES = ("like", "...", "um", "er", "hmmm", "ahh")
+    MUMBLE_FIRST = ("so", "like", "well")
+    MUMBLE_LAST = ("right?",)
 
     def do_exit(self, _line) -> bool:
         """Exit the application."""
@@ -28,7 +28,7 @@ class CmdLineApp(cmd.Cmd):
 
     def do_mumble(self, line) -> None:
         """Mumbles what you tell me to."""
-        words = line.split(' ')
+        words = line.split(" ")
         output = []
         if random.random() < 0.33:
             output.append(random.choice(self.MUMBLE_FIRST))
@@ -38,10 +38,10 @@ class CmdLineApp(cmd.Cmd):
             output.append(word)
         if random.random() < 0.25:
             output.append(random.choice(self.MUMBLE_LAST))
-        print(' '.join(output), file=self.stdout)
+        print(" ".join(output), file=self.stdout)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     c = CmdLineApp()

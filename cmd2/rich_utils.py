@@ -177,7 +177,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         # Handle nargs specified as a range
         nargs_range = action.get_nargs_range()  # type: ignore[attr-defined]
         if nargs_range is not None:
-            arg_str = '%s' % get_metavar(1)  # noqa: UP031
+            arg_str = "%s" % get_metavar(1)  # noqa: UP031
             range_str = self._build_nargs_range_str(nargs_range)
             return f"{arg_str}{range_str}"
 
@@ -187,7 +187,7 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         # Do not customize the output when metavar is a tuple of strings. Allow argparse's
         # formatter to handle that instead.
         if not isinstance(action.metavar, tuple) and isinstance(action.nargs, int) and action.nargs > 1:
-            arg_str = '%s' % get_metavar(1)  # noqa: UP031
+            arg_str = "%s" % get_metavar(1)  # noqa: UP031
             return f"{arg_str}{{{action.nargs}}}"
 
         # Fallback to parent for all other cases
@@ -598,12 +598,12 @@ class Cmd2RichArgparseConsole(Cmd2BaseConsole):
         self._thread_local = threading.local()
 
     @property
-    def help_formatter(self) -> 'Cmd2HelpFormatter | None':
+    def help_formatter(self) -> "Cmd2HelpFormatter | None":
         """Return the active help formatter for this thread."""
-        return getattr(self._thread_local, 'help_formatter', None)
+        return getattr(self._thread_local, "help_formatter", None)
 
     @help_formatter.setter
-    def help_formatter(self, value: 'Cmd2HelpFormatter | None') -> None:
+    def help_formatter(self, value: "Cmd2HelpFormatter | None") -> None:
         """Set the active help formatter for this thread."""
         self._thread_local.help_formatter = value
 

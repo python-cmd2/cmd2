@@ -22,7 +22,7 @@ def run_async(coro) -> concurrent.futures.Future:
                 _event_loop = asyncio.new_event_loop()
                 thread = threading.Thread(
                     target=_event_loop.run_forever,
-                    name='Async Runner',
+                    name="Async Runner",
                     daemon=True,
                 )
                 thread.start()
@@ -49,10 +49,10 @@ class AsyncCallExample(cmd2.Cmd):
         """
 
         waitable = run_async(async_wait(0.1))
-        self.poutput('Begin waiting...')
+        self.poutput("Begin waiting...")
         # Wait for coroutine to complete and get its return value:
         res = waitable.result()
-        self.poutput(f'Done waiting: {res}')
+        self.poutput(f"Done waiting: {res}")
         return
 
     def do_hello_world(self, _: str) -> None:
@@ -60,7 +60,7 @@ class AsyncCallExample(cmd2.Cmd):
 
         Just a typical (synchronous) cmd2 command
         """
-        self.poutput('Hello World')
+        self.poutput("Hello World")
 
 
 def main() -> int:
@@ -70,7 +70,7 @@ def main() -> int:
     return app.cmdloop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     sys.exit(main())

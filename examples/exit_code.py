@@ -29,10 +29,10 @@ class ReplWithExitCode(cmd2.Cmd):
         return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = ReplWithExitCode()
     sys_exit_code = app.cmdloop()
-    app.poutput(f'{sys.argv[0]!r} exiting with code: {sys_exit_code}')
+    app.poutput(f"{sys.argv[0]!r} exiting with code: {sys_exit_code}")
     sys.exit(sys_exit_code)

@@ -11,15 +11,15 @@ from cmd2 import (
 
 
 class BasicCompletionCommandSet(CommandSet[Cmd]):
-    DEFAULT_CATEGORY = 'Basic Completion'
+    DEFAULT_CATEGORY = "Basic Completion"
 
     # This data is used to demonstrate delimiter_complete
     file_strs = (
-        '/home/user/file.db',
-        '/home/user/file space.db',
-        '/home/user/another.db',
-        '/home/other user/maps.db',
-        '/home/other user/tests.db',
+        "/home/user/file.db",
+        "/home/user/file space.db",
+        "/home/user/another.db",
+        "/home/other user/maps.db",
+        "/home/other user/tests.db",
     )
 
     def do_delimiter_complete(self, statement: Statement) -> None:
@@ -27,7 +27,7 @@ class BasicCompletionCommandSet(CommandSet[Cmd]):
         self._cmd.poutput(f"Args: {statement.args}")
 
     def complete_delimiter_complete(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
-        return self._cmd.delimiter_complete(text, line, begidx, endidx, match_against=self.file_strs, delimiter='/')
+        return self._cmd.delimiter_complete(text, line, begidx, endidx, match_against=self.file_strs, delimiter="/")
 
     def do_raise_error(self, statement: Statement) -> None:
         """Demonstrates effect of raising CompletionError."""
@@ -42,6 +42,6 @@ class BasicCompletionCommandSet(CommandSet[Cmd]):
         """
         raise CompletionError("This is how a CompletionError behaves")
 
-    @with_category('Not Basic Completion')
+    @with_category("Not Basic Completion")
     def do_custom_category(self, _statement: Statement) -> None:
-        self._cmd.poutput('Demonstrates a command that bypasses the default category')
+        self._cmd.poutput("Demonstrates a command that bypasses the default category")

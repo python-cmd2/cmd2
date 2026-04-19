@@ -19,11 +19,11 @@ class CmdLineApp(cmd2.Cmd):
     def __init__(self) -> None:
         # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell
         super().__init__(include_ipy=True)
-        self.intro = 'Run the taste_the_rainbow command to see all of the colors available to you in cmd2.'
+        self.intro = "Run the taste_the_rainbow command to see all of the colors available to you in cmd2."
 
     rainbow_parser = cmd2.Cmd2ArgumentParser()
-    rainbow_parser.add_argument('-b', '--background', action='store_true', help='show background colors as well')
-    rainbow_parser.add_argument('-p', '--paged', action='store_true', help='display output using a pager')
+    rainbow_parser.add_argument("-b", "--background", action="store_true", help="show background colors as well")
+    rainbow_parser.add_argument("-p", "--paged", action="store_true", help="display output using a pager")
 
     @cmd2.with_argparser(rainbow_parser)
     def do_taste_the_rainbow(self, args: argparse.Namespace) -> None:
@@ -44,7 +44,7 @@ class CmdLineApp(cmd2.Cmd):
             self.poutput(output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     c = CmdLineApp()

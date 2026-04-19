@@ -148,7 +148,7 @@ class Plugin:
         return data
 
     def precmd_hook_wrong_return_annotation(self, data: plugin.PrecommandData) -> cmd2.Statement:
-        return self.statement_parser.parse('hi there')
+        return self.statement_parser.parse("hi there")
 
     ###
     #
@@ -190,7 +190,7 @@ class Plugin:
         return data
 
     def postcmd_hook_wrong_return_annotation(self, data: plugin.PostcommandData) -> cmd2.Statement:
-        return self.statement_parser.parse('hi there')
+        return self.statement_parser.parse("hi there")
 
     ###
     #
@@ -258,7 +258,7 @@ class Plugin:
 
     def cmdfinalization_hook_wrong_return_annotation(self, data: plugin.CommandFinalizationData) -> cmd2.Statement:
         """A command finalization hook with the wrong return type annotation."""
-        return self.statement_parser.parse('hi there')
+        return self.statement_parser.parse("hi there")
 
 
 class PluggedApp(Plugin, cmd2.Cmd):
@@ -303,30 +303,30 @@ def test_register_preloop_hook_with_return_annotation() -> None:
 
 def test_preloop_hook(capsys) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog", "say hello", 'quit']
+    testargs = ["prog", "say hello", "quit"]
 
-    with mock.patch.object(sys, 'argv', testargs):
+    with mock.patch.object(sys, "argv", testargs):
         app = PluggedApp()
 
     app.register_preloop_hook(app.prepost_hook_one)
     app.cmdloop()
     out, err = capsys.readouterr()
-    assert out == 'one\nhello\n'
+    assert out == "one\nhello\n"
     assert not err
 
 
 def test_preloop_hooks(capsys) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog", "say hello", 'quit']
+    testargs = ["prog", "say hello", "quit"]
 
-    with mock.patch.object(sys, 'argv', testargs):
+    with mock.patch.object(sys, "argv", testargs):
         app = PluggedApp()
 
     app.register_preloop_hook(app.prepost_hook_one)
     app.register_preloop_hook(app.prepost_hook_two)
     app.cmdloop()
     out, err = capsys.readouterr()
-    assert out == 'one\ntwo\nhello\n'
+    assert out == "one\ntwo\nhello\n"
     assert not err
 
 
@@ -344,30 +344,30 @@ def test_register_postloop_hook_with_wrong_return_annotation() -> None:
 
 def test_postloop_hook(capsys) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog", "say hello", 'quit']
+    testargs = ["prog", "say hello", "quit"]
 
-    with mock.patch.object(sys, 'argv', testargs):
+    with mock.patch.object(sys, "argv", testargs):
         app = PluggedApp()
 
     app.register_postloop_hook(app.prepost_hook_one)
     app.cmdloop()
     out, err = capsys.readouterr()
-    assert out == 'hello\none\n'
+    assert out == "hello\none\n"
     assert not err
 
 
 def test_postloop_hooks(capsys) -> None:
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog", "say hello", 'quit']
+    testargs = ["prog", "say hello", "quit"]
 
-    with mock.patch.object(sys, 'argv', testargs):
+    with mock.patch.object(sys, "argv", testargs):
         app = PluggedApp()
 
     app.register_postloop_hook(app.prepost_hook_one)
     app.register_postloop_hook(app.prepost_hook_two)
     app.cmdloop()
     out, err = capsys.readouterr()
-    assert out == 'hello\none\ntwo\n'
+    assert out == "hello\none\ntwo\n"
     assert not err
 
 
@@ -379,9 +379,9 @@ def test_postloop_hooks(capsys) -> None:
 def test_preparse(capsys) -> None:
     app = PluggedApp()
     app.register_postparsing_hook(app.preparse)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_preparse == 1
 
@@ -423,26 +423,26 @@ def test_postparsing_hook_wrong_return_annotation() -> None:
 
 def test_postparsing_hook(capsys) -> None:
     app = PluggedApp()
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert not app.called_postparsing
 
     app.reset_counters()
     app.register_postparsing_hook(app.postparse_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_postparsing == 1
 
     # register the function again, so it should be called twice
     app.reset_counters()
     app.register_postparsing_hook(app.postparse_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_postparsing == 2
 
@@ -450,14 +450,14 @@ def test_postparsing_hook(capsys) -> None:
 def test_postparsing_hook_stop_first(capsys) -> None:
     app = PluggedApp()
     app.register_postparsing_hook(app.postparse_hook_stop)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     assert app.called_postparsing == 1
     assert stop
 
     # register another function but it shouldn't be called
     app.reset_counters()
     app.register_postparsing_hook(app.postparse_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     assert app.called_postparsing == 1
     assert stop
 
@@ -465,21 +465,21 @@ def test_postparsing_hook_stop_first(capsys) -> None:
 def test_postparsing_hook_stop_second(capsys) -> None:
     app = PluggedApp()
     app.register_postparsing_hook(app.postparse_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     assert app.called_postparsing == 1
     assert not stop
 
     # register another function and make sure it gets called
     app.reset_counters()
     app.register_postparsing_hook(app.postparse_hook_stop)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     assert app.called_postparsing == 2
     assert stop
 
     # register a third function which shouldn't be called
     app.reset_counters()
     app.register_postparsing_hook(app.postparse_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     assert app.called_postparsing == 2
     assert stop
 
@@ -487,7 +487,7 @@ def test_postparsing_hook_stop_second(capsys) -> None:
 def test_postparsing_hook_emptystatement_first(capsys) -> None:
     app = PluggedApp()
     app.register_postparsing_hook(app.postparse_hook_emptystatement)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -497,7 +497,7 @@ def test_postparsing_hook_emptystatement_first(capsys) -> None:
     # register another function but it shouldn't be called
     app.reset_counters()
     stop = app.register_postparsing_hook(app.postparse_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -508,17 +508,17 @@ def test_postparsing_hook_emptystatement_first(capsys) -> None:
 def test_postparsing_hook_emptystatement_second(capsys) -> None:
     app = PluggedApp()
     app.register_postparsing_hook(app.postparse_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_postparsing == 1
 
     # register another function and make sure it gets called
     app.reset_counters()
     app.register_postparsing_hook(app.postparse_hook_emptystatement)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -528,7 +528,7 @@ def test_postparsing_hook_emptystatement_second(capsys) -> None:
     # register a third function which shouldn't be called
     app.reset_counters()
     app.register_postparsing_hook(app.postparse_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -539,7 +539,7 @@ def test_postparsing_hook_emptystatement_second(capsys) -> None:
 def test_postparsing_hook_exception(capsys) -> None:
     app = PluggedApp()
     app.register_postparsing_hook(app.postparse_hook_exception)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -549,7 +549,7 @@ def test_postparsing_hook_exception(capsys) -> None:
     # register another function, but it shouldn't be called
     app.reset_counters()
     app.register_postparsing_hook(app.postparse_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -596,18 +596,18 @@ def test_register_precmd_hook_wrong_return_annotation() -> None:
 
 def test_precmd_hook(capsys) -> None:
     app = PluggedApp()
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     # without registering any hooks, precmd() should be called
     assert app.called_precmd == 1
 
     app.reset_counters()
     app.register_precmd_hook(app.precmd_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     # with one hook registered, we should get precmd() and the hook
     assert app.called_precmd == 2
@@ -615,9 +615,9 @@ def test_precmd_hook(capsys) -> None:
     # register the function again, so it should be called twice
     app.reset_counters()
     app.register_precmd_hook(app.precmd_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     # with two hooks registered, we should get precmd() and both hooks
     assert app.called_precmd == 3
@@ -626,7 +626,7 @@ def test_precmd_hook(capsys) -> None:
 def test_precmd_hook_emptystatement_first(capsys) -> None:
     app = PluggedApp()
     app.register_precmd_hook(app.precmd_hook_emptystatement)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -638,7 +638,7 @@ def test_precmd_hook_emptystatement_first(capsys) -> None:
     # register another function but it shouldn't be called
     app.reset_counters()
     stop = app.register_precmd_hook(app.precmd_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -652,10 +652,10 @@ def test_precmd_hook_emptystatement_first(capsys) -> None:
 def test_precmd_hook_emptystatement_second(capsys) -> None:
     app = PluggedApp()
     app.register_precmd_hook(app.precmd_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     # with one hook registered, we should get precmd() and the hook
     assert app.called_precmd == 2
@@ -663,7 +663,7 @@ def test_precmd_hook_emptystatement_second(capsys) -> None:
     # register another function and make sure it gets called
     app.reset_counters()
     app.register_precmd_hook(app.precmd_hook_emptystatement)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -675,7 +675,7 @@ def test_precmd_hook_emptystatement_second(capsys) -> None:
     # register a third function which shouldn't be called
     app.reset_counters()
     app.register_precmd_hook(app.precmd_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -725,18 +725,18 @@ def test_register_postcmd_hook_wrong_return_annotation() -> None:
 
 def test_postcmd(capsys) -> None:
     app = PluggedApp()
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     # without registering any hooks, postcmd() should be called
     assert app.called_postcmd == 1
 
     app.reset_counters()
     app.register_postcmd_hook(app.postcmd_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     # with one hook registered, we should get precmd() and the hook
     assert app.called_postcmd == 2
@@ -744,9 +744,9 @@ def test_postcmd(capsys) -> None:
     # register the function again, so it should be called twice
     app.reset_counters()
     app.register_postcmd_hook(app.postcmd_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     # with two hooks registered, we should get precmd() and both hooks
     assert app.called_postcmd == 3
@@ -755,10 +755,10 @@ def test_postcmd(capsys) -> None:
 def test_postcmd_exception_first(capsys) -> None:
     app = PluggedApp()
     app.register_postcmd_hook(app.postcmd_hook_exception)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert err
     # since the registered hooks are called before postcmd(), if a registered
     # hook throws an exception, postcmd() is never called. So we should have
@@ -768,10 +768,10 @@ def test_postcmd_exception_first(capsys) -> None:
     # register another function but it shouldn't be called
     app.reset_counters()
     stop = app.register_postcmd_hook(app.postcmd_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert err
     # the exception raised by the first hook should prevent the second
     # hook from being called, and it also prevents postcmd() from being
@@ -782,10 +782,10 @@ def test_postcmd_exception_first(capsys) -> None:
 def test_postcmd_exception_second(capsys) -> None:
     app = PluggedApp()
     app.register_postcmd_hook(app.postcmd_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     # with one hook registered, we should get the hook and postcmd()
     assert app.called_postcmd == 2
@@ -793,10 +793,10 @@ def test_postcmd_exception_second(capsys) -> None:
     # register another function which should be called
     app.reset_counters()
     stop = app.register_postcmd_hook(app.postcmd_hook_exception)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert err
     # the exception raised by the first hook should prevent the second
     # hook from being called, and it also prevents postcmd() from being
@@ -844,25 +844,25 @@ def test_register_cmdfinalization_hook_wrong_return_annotation() -> None:
 
 def test_cmdfinalization(capsys) -> None:
     app = PluggedApp()
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_cmdfinalization == 0
 
     app.register_cmdfinalization_hook(app.cmdfinalization_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_cmdfinalization == 1
 
     # register the function again, so it should be called twice
     app.reset_counters()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_cmdfinalization == 2
 
@@ -871,9 +871,9 @@ def test_cmdfinalization_stop_first(capsys) -> None:
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_stop)
     app.register_cmdfinalization_hook(app.cmdfinalization_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_cmdfinalization == 2
     assert stop
@@ -883,9 +883,9 @@ def test_cmdfinalization_stop_second(capsys) -> None:
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook)
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_stop)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert not err
     assert app.called_cmdfinalization == 2
     assert stop
@@ -894,20 +894,20 @@ def test_cmdfinalization_stop_second(capsys) -> None:
 def test_cmdfinalization_hook_exception(capsys) -> None:
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_exception)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert err
     assert app.called_cmdfinalization == 1
 
     # register another function, but it shouldn't be called
     app.reset_counters()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     out, err = capsys.readouterr()
     assert not stop
-    assert out == 'hello\n'
+    assert out == "hello\n"
     assert err
     assert app.called_cmdfinalization == 1
 
@@ -915,7 +915,7 @@ def test_cmdfinalization_hook_exception(capsys) -> None:
 def test_cmdfinalization_hook_system_exit() -> None:
     app = PluggedApp()
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_system_exit)
-    stop = app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks("say hello")
     assert stop
     assert app.called_cmdfinalization == 1
     assert app.exit_code == 5
@@ -926,20 +926,20 @@ def test_cmdfinalization_hook_keyboard_interrupt() -> None:
     app.register_cmdfinalization_hook(app.cmdfinalization_hook_keyboard_interrupt)
 
     # First make sure KeyboardInterrupt isn't raised unless told to
-    stop = app.onecmd_plus_hooks('say hello', raise_keyboard_interrupt=False)
+    stop = app.onecmd_plus_hooks("say hello", raise_keyboard_interrupt=False)
     assert not stop
     assert app.called_cmdfinalization == 1
 
     # Now enable raising the KeyboardInterrupt
     app.reset_counters()
     with pytest.raises(KeyboardInterrupt):
-        stop = app.onecmd_plus_hooks('say hello', raise_keyboard_interrupt=True)
+        stop = app.onecmd_plus_hooks("say hello", raise_keyboard_interrupt=True)
     assert not stop
     assert app.called_cmdfinalization == 1
 
     # Now make sure KeyboardInterrupt isn't raised if stop is already True
     app.reset_counters()
-    stop = app.onecmd_plus_hooks('quit', raise_keyboard_interrupt=True)
+    stop = app.onecmd_plus_hooks("quit", raise_keyboard_interrupt=True)
     assert stop
     assert app.called_cmdfinalization == 1
 
@@ -950,7 +950,7 @@ def test_cmdfinalization_hook_passthrough_exception() -> None:
 
     expected_err = "Pass me up"
     with pytest.raises(OSError, match=expected_err):
-        app.onecmd_plus_hooks('say hello')
+        app.onecmd_plus_hooks("say hello")
     assert app.called_cmdfinalization == 1
 
 
@@ -960,7 +960,7 @@ def test_skip_postcmd_hooks(capsys) -> None:
     app.register_cmdfinalization_hook(app.cmdfinalization_hook)
 
     # Cause a SkipPostcommandHooks exception and verify no postcmd stuff runs but cmdfinalization_hook still does
-    app.onecmd_plus_hooks('skip_postcmd_hooks')
+    app.onecmd_plus_hooks("skip_postcmd_hooks")
     out, _err = capsys.readouterr()
     assert "In do_skip_postcmd_hooks" in out
     assert app.called_postcmd == 0
@@ -976,9 +976,9 @@ def test_cmd2_argparse_exception(capsys) -> None:
     app.register_cmdfinalization_hook(app.cmdfinalization_hook)
 
     # First generate no exception and make sure postcmd_hook, postcmd, and cmdfinalization_hook run
-    app.onecmd_plus_hooks('argparse_cmd arg_val')
+    app.onecmd_plus_hooks("argparse_cmd arg_val")
     out, err = capsys.readouterr()
-    assert out == 'arg_val\n'
+    assert out == "arg_val\n"
     assert not err
     assert app.called_postcmd == 2
     assert app.called_cmdfinalization == 1
@@ -986,7 +986,7 @@ def test_cmd2_argparse_exception(capsys) -> None:
     app.reset_counters()
 
     # Next cause an argparse exception and verify no postcmd stuff runs but cmdfinalization_hook still does
-    app.onecmd_plus_hooks('argparse_cmd')
+    app.onecmd_plus_hooks("argparse_cmd")
     out, err = capsys.readouterr()
     assert not out
     assert "Error: the following arguments are required: my_arg" in err

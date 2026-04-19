@@ -27,10 +27,10 @@ class ApCustomTestApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     range_parser = Cmd2ArgumentParser()
-    range_parser.add_argument('--arg0', nargs=1)
-    range_parser.add_argument('--arg1', nargs=2)
-    range_parser.add_argument('--arg2', nargs=(3,))
-    range_parser.add_argument('--arg3', nargs=(2, 3))
+    range_parser.add_argument("--arg0", nargs=1)
+    range_parser.add_argument("--arg1", nargs=2)
+    range_parser.add_argument("--arg2", nargs=(3,))
+    range_parser.add_argument("--arg3", nargs=(2, 3))
 
     @cmd2.with_argparser(range_parser)
     def do_range(self, _) -> None:
@@ -47,39 +47,39 @@ def fake_func() -> None:
 
 
 @pytest.mark.parametrize(
-    ('kwargs', 'is_valid'),
+    ("kwargs", "is_valid"),
     [
-        ({'choices_provider': fake_func}, True),
-        ({'completer': fake_func}, True),
-        ({'choices_provider': fake_func, 'completer': fake_func}, False),
+        ({"choices_provider": fake_func}, True),
+        ({"completer": fake_func}, True),
+        ({"choices_provider": fake_func, "completer": fake_func}, False),
     ],
 )
 def test_apcustom_completion_callable_count(kwargs, is_valid) -> None:
     parser = Cmd2ArgumentParser()
     if is_valid:
-        parser.add_argument('name', **kwargs)
+        parser.add_argument("name", **kwargs)
     else:
-        expected_err = 'Only one of the following parameters'
+        expected_err = "Only one of the following parameters"
         with pytest.raises(ValueError, match=expected_err):
-            parser.add_argument('name', **kwargs)
+            parser.add_argument("name", **kwargs)
 
 
-@pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
+@pytest.mark.parametrize("kwargs", [({"choices_provider": fake_func}), ({"completer": fake_func})])
 def test_apcustom_no_completion_callable_alongside_choices(kwargs) -> None:
     parser = Cmd2ArgumentParser()
 
     expected_err = "None of the following parameters can be used alongside a choices parameter"
     with pytest.raises(ValueError, match=expected_err):
-        parser.add_argument('name', choices=['my', 'choices', 'list'], **kwargs)
+        parser.add_argument("name", choices=["my", "choices", "list"], **kwargs)
 
 
-@pytest.mark.parametrize('kwargs', [({'choices_provider': fake_func}), ({'completer': fake_func})])
+@pytest.mark.parametrize("kwargs", [({"choices_provider": fake_func}), ({"completer": fake_func})])
 def test_apcustom_no_completion_callable_when_nargs_is_0(kwargs) -> None:
     parser = Cmd2ArgumentParser()
 
     expected_err = "None of the following parameters can be used on an action that takes no arguments"
     with pytest.raises(ValueError, match=expected_err):
-        parser.add_argument('--name', action='store_true', **kwargs)
+        parser.add_argument("--name", action="store_true", **kwargs)
 
 
 def test_apcustom_usage() -> None:
@@ -89,35 +89,35 @@ def test_apcustom_usage() -> None:
 
 
 def test_apcustom_nargs_help_format(cust_app) -> None:
-    out, _err = run_cmd(cust_app, 'help range')
-    assert 'Usage: range [-h] [--arg0 ARG0] [--arg1 ARG1{2}] [--arg2 ARG2{3+}]' in out[0]
-    assert '             [--arg3 ARG3{2..3}]' in out[1]
+    out, _err = run_cmd(cust_app, "help range")
+    assert "Usage: range [-h] [--arg0 ARG0] [--arg1 ARG1{2}] [--arg2 ARG2{3+}]" in out[0]
+    assert "             [--arg3 ARG3{2..3}]" in out[1]
 
 
 def test_apcustom_nargs_range_validation(cust_app) -> None:
     # nargs = (3,)  # noqa: ERA001
-    _out, err = run_cmd(cust_app, 'range --arg2 one two')
-    assert 'Error: argument --arg2: expected at least 3 arguments' in err[2]
+    _out, err = run_cmd(cust_app, "range --arg2 one two")
+    assert "Error: argument --arg2: expected at least 3 arguments" in err[2]
 
-    _out, err = run_cmd(cust_app, 'range --arg2 one two three')
+    _out, err = run_cmd(cust_app, "range --arg2 one two three")
     assert not err
 
-    _out, err = run_cmd(cust_app, 'range --arg2 one two three four')
+    _out, err = run_cmd(cust_app, "range --arg2 one two three four")
     assert not err
 
     # nargs = (2,3)  # noqa: ERA001
-    _out, err = run_cmd(cust_app, 'range --arg3 one')
-    assert 'Error: argument --arg3: expected 2 to 3 arguments' in err[2]
+    _out, err = run_cmd(cust_app, "range --arg3 one")
+    assert "Error: argument --arg3: expected 2 to 3 arguments" in err[2]
 
-    _out, err = run_cmd(cust_app, 'range --arg3 one two')
+    _out, err = run_cmd(cust_app, "range --arg3 one two")
     assert not err
 
-    _out, err = run_cmd(cust_app, 'range --arg2 one two three')
+    _out, err = run_cmd(cust_app, "range --arg2 one two three")
     assert not err
 
 
 @pytest.mark.parametrize(
-    ('nargs', 'expected_parts'),
+    ("nargs", "expected_parts"),
     [
         # arg{2}
         (
@@ -161,50 +161,50 @@ def test_rich_metavar_parts(
 
 
 @pytest.mark.parametrize(
-    'nargs_tuple',
+    "nargs_tuple",
     [
         (),
-        ('f', 5),
-        (5, 'f'),
+        ("f", 5),
+        (5, "f"),
         (1, 2, 3),
     ],
 )
 def test_apcustom_narg_invalid_tuples(nargs_tuple) -> None:
     parser = Cmd2ArgumentParser()
-    expected_err = 'Ranged values for nargs must be a tuple of 1 or 2 integers'
+    expected_err = "Ranged values for nargs must be a tuple of 1 or 2 integers"
     with pytest.raises(ValueError, match=expected_err):
-        parser.add_argument('invalid_tuple', nargs=nargs_tuple)
+        parser.add_argument("invalid_tuple", nargs=nargs_tuple)
 
 
 def test_apcustom_narg_tuple_order() -> None:
     parser = Cmd2ArgumentParser()
-    expected_err = 'Invalid nargs range. The first value must be less than the second'
+    expected_err = "Invalid nargs range. The first value must be less than the second"
     with pytest.raises(ValueError, match=expected_err):
-        parser.add_argument('invalid_tuple', nargs=(2, 1))
+        parser.add_argument("invalid_tuple", nargs=(2, 1))
 
 
 def test_apcustom_narg_tuple_negative() -> None:
     parser = Cmd2ArgumentParser()
-    expected_err = 'Negative numbers are invalid for nargs range'
+    expected_err = "Negative numbers are invalid for nargs range"
     with pytest.raises(ValueError, match=expected_err):
-        parser.add_argument('invalid_tuple', nargs=(-1, 1))
+        parser.add_argument("invalid_tuple", nargs=(-1, 1))
 
 
 def test_apcustom_narg_tuple_zero_base() -> None:
     parser = Cmd2ArgumentParser()
-    arg = parser.add_argument('arg', nargs=(0,))
+    arg = parser.add_argument("arg", nargs=(0,))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.get_nargs_range() is None
     assert "[arg ...]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
-    arg = parser.add_argument('arg', nargs=(0, 1))
+    arg = parser.add_argument("arg", nargs=(0, 1))
     assert arg.nargs == argparse.OPTIONAL
     assert arg.get_nargs_range() is None
     assert "[arg]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
-    arg = parser.add_argument('arg', nargs=(0, 3))
+    arg = parser.add_argument("arg", nargs=(0, 3))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.get_nargs_range() == (0, 3)
     assert "arg{0..3}" in parser.format_help()
@@ -212,13 +212,13 @@ def test_apcustom_narg_tuple_zero_base() -> None:
 
 def test_apcustom_narg_tuple_one_base() -> None:
     parser = Cmd2ArgumentParser()
-    arg = parser.add_argument('arg', nargs=(1,))
+    arg = parser.add_argument("arg", nargs=(1,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.get_nargs_range() is None
     assert "arg [arg ...]" in parser.format_help()
 
     parser = Cmd2ArgumentParser()
-    arg = parser.add_argument('arg', nargs=(1, 5))
+    arg = parser.add_argument("arg", nargs=(1, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.get_nargs_range() == (1, 5)
     assert "arg{1..5}" in parser.format_help()
@@ -227,19 +227,19 @@ def test_apcustom_narg_tuple_one_base() -> None:
 def test_apcustom_narg_tuple_other_ranges() -> None:
     # Test range with no upper bound on max
     parser = Cmd2ArgumentParser()
-    arg = parser.add_argument('arg', nargs=(2,))
+    arg = parser.add_argument("arg", nargs=(2,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.get_nargs_range() == (2, constants.INFINITY)
 
     # Test finite range
     parser = Cmd2ArgumentParser()
-    arg = parser.add_argument('arg', nargs=(2, 5))
+    arg = parser.add_argument("arg", nargs=(2, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.get_nargs_range() == (2, 5)
 
 
 def test_apcustom_print_message(capsys) -> None:
-    test_message = 'The test message'
+    test_message = "The test message"
 
     # Specify the file
     parser = Cmd2ArgumentParser()
@@ -280,8 +280,8 @@ def test_build_range_error() -> None:
 def test_apcustom_metavar_tuple() -> None:
     # Test the case when a tuple metavar is used with nargs an integer > 1
     parser = Cmd2ArgumentParser()
-    parser.add_argument('--aflag', nargs=2, metavar=('foo', 'bar'), help='This is a test')
-    assert '[--aflag foo bar]' in parser.format_help()
+    parser.add_argument("--aflag", nargs=2, metavar=("foo", "bar"), help="This is a test")
+    assert "[--aflag foo bar]" in parser.format_help()
 
 
 def test_register_argparse_argument_parameter() -> None:
@@ -290,8 +290,8 @@ def test_register_argparse_argument_parameter() -> None:
     register_argparse_argument_parameter(param_name)
 
     assert param_name in argparse_utils._CUSTOM_ACTION_ATTRIBS
-    assert hasattr(argparse.Action, f'get_{param_name}')
-    assert hasattr(argparse.Action, f'set_{param_name}')
+    assert hasattr(argparse.Action, f"get_{param_name}")
+    assert hasattr(argparse.Action, f"set_{param_name}")
 
     # Test duplicate registration
     expected_err = "already registered"
@@ -315,7 +315,7 @@ def test_register_argparse_argument_parameter() -> None:
         with pytest.raises(KeyError, match=expected_err):
             register_argparse_argument_parameter("colliding_param")
     finally:
-        delattr(argparse.Action, 'get_colliding_param')
+        delattr(argparse.Action, "get_colliding_param")
 
     # Test collision with internal attribute
     try:
@@ -466,15 +466,15 @@ def test_completion_items_as_choices(capsys) -> None:
     parser.add_argument("choices_arg", type=str, choices=choices)
 
     # First test valid choices. Confirm the parsed data matches the correct type of str.
-    args = parser.parse_args(['1'])
-    assert args.choices_arg == '1'
+    args = parser.parse_args(["1"])
+    assert args.choices_arg == "1"
 
-    args = parser.parse_args(['2'])
-    assert args.choices_arg == '2'
+    args = parser.parse_args(["2"])
+    assert args.choices_arg == "2"
 
     # Next test invalid choice
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['3'])
+        args = parser.parse_args(["3"])
 
     # Confirm error text contains correct value type of str
     _out, err = capsys.readouterr()
@@ -488,49 +488,49 @@ def test_completion_items_as_choices(capsys) -> None:
     parser.add_argument("choices_arg", type=int, choices=choices)
 
     # First test valid choices. Confirm the parsed data matches the correct type of int.
-    args = parser.parse_args(['1'])
+    args = parser.parse_args(["1"])
     assert args.choices_arg == 1
 
-    args = parser.parse_args(['2'])
+    args = parser.parse_args(["2"])
     assert args.choices_arg == 2
 
     # Next test invalid choice
     with pytest.raises(SystemExit):
-        args = parser.parse_args(['3'])
+        args = parser.parse_args(["3"])
 
     # Confirm error text contains correct value type of int
     _out, err = capsys.readouterr()
-    assert 'invalid choice: 3 (choose from 1, 2)' in err
+    assert "invalid choice: 3 (choose from 1, 2)" in err
 
 
 def test_update_prog() -> None:
     """Test Cmd2ArgumentParser.update_prog() across various scenarios."""
 
     # Set up a complex parser hierarchy
-    old_app = 'old_app'
+    old_app = "old_app"
     root = Cmd2ArgumentParser(prog=old_app)
 
     # Positionals before subcommand
-    root.add_argument('pos1')
+    root.add_argument("pos1")
 
     # Mutually exclusive group with positionals
     group = root.add_mutually_exclusive_group(required=True)
-    group.add_argument('posA', nargs='?')
-    group.add_argument('posB', nargs='?')
+    group.add_argument("posA", nargs="?")
+    group.add_argument("posB", nargs="?")
 
     # Subparsers with aliases and no help text
-    root_subparsers = root.add_subparsers(dest='cmd')
+    root_subparsers = root.add_subparsers(dest="cmd")
 
     # Subcommand with aliases
-    sub1 = root_subparsers.add_parser('sub1', aliases=['s1', 'alias1'], help='help for sub1')
+    sub1 = root_subparsers.add_parser("sub1", aliases=["s1", "alias1"], help="help for sub1")
 
     # Subcommand with no help text
-    sub2 = root_subparsers.add_parser('sub2')
+    sub2 = root_subparsers.add_parser("sub2")
 
     # Nested subparser
-    sub2.add_argument('inner_pos')
-    sub2_subparsers = sub2.add_subparsers(dest='sub2_cmd')
-    leaf = sub2_subparsers.add_parser('leaf', help='leaf help')
+    sub2.add_argument("inner_pos")
+    sub2_subparsers = sub2.add_subparsers(dest="sub2_cmd")
+    leaf = sub2_subparsers.add_parser("leaf", help="leaf help")
 
     # Save initial prog values
     orig_root_prog = root.prog
@@ -539,7 +539,7 @@ def test_update_prog() -> None:
     orig_leaf_prog = leaf.prog
 
     # Perform update
-    new_app = 'new_app'
+    new_app = "new_app"
     root.update_prog(new_app)
 
     # Verify updated prog values
@@ -556,12 +556,12 @@ def test_update_prog() -> None:
     assert leaf.prog == orig_leaf_prog.replace(old_app, new_app, 1)
 
     # Verify that action._prog_prefix was updated by adding a new subparser
-    sub3 = root_subparsers.add_parser('sub3')
+    sub3 = root_subparsers.add_parser("sub3")
     assert sub3.prog.startswith(new_app)
-    assert sub3.prog == root_subparsers._prog_prefix + ' sub3'
+    assert sub3.prog == root_subparsers._prog_prefix + " sub3"
 
     # Verify aliases still point to the correct parser
     for action in root._actions:
         if isinstance(action, argparse._SubParsersAction):
-            assert action.choices['s1'].prog == sub1.prog
-            assert action.choices['alias1'].prog == sub1.prog
+            assert action.choices["s1"].prog == sub1.prog
+            assert action.choices["alias1"].prog == sub1.prog

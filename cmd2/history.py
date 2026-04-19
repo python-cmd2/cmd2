@@ -60,11 +60,11 @@ def single_line_format(statement: Statement) -> str:
 class HistoryItem:
     """Class used to represent one command in the history list."""
 
-    _listformat = ' {:>4}  {}'
-    _ex_listformat = ' {:>4}x {}'
+    _listformat = " {:>4}  {}"
+    _ex_listformat = " {:>4}x {}"
 
     # Used in JSON dictionaries
-    _statement_field = 'statement'
+    _statement_field = "statement"
 
     statement: Statement
 
@@ -105,7 +105,7 @@ class HistoryItem:
 
             ret_str = self._listformat.format(idx, raw)
             if raw != expanded_command:
-                ret_str += '\n' + self._ex_listformat.format(idx, expanded_command)
+                ret_str += "\n" + self._ex_listformat.format(idx, expanded_command)
         else:
             ret_str = self.expanded if expanded else single_line_format(self.statement).rstrip()
 
@@ -120,7 +120,7 @@ class HistoryItem:
         return {HistoryItem._statement_field: self.statement.to_dict()}
 
     @staticmethod
-    def from_dict(source_dict: dict[str, Any]) -> 'HistoryItem':
+    def from_dict(source_dict: dict[str, Any]) -> "HistoryItem":
         """Restore a HistoryItem from a dictionary.
 
         :param source_dict: source data dictionary (generated using to_dict())
@@ -145,9 +145,9 @@ class History(list[HistoryItem]):
     """
 
     # Used in JSON dictionaries
-    _history_version = '4.0.0'
-    _history_version_field = 'history_version'
-    _history_items_field = 'history_items'
+    _history_version = "4.0.0"
+    _history_version_field = "history_version"
+    _history_items_field = "history_items"
 
     def __init__(self, seq: Iterable[HistoryItem] = ()) -> None:
         """Initialize History instances."""
@@ -192,7 +192,7 @@ class History(list[HistoryItem]):
         :return: a single [cmd2.history.HistoryItem][]
         """
         if index == 0:
-            raise IndexError('The first command in history is command 1.')
+            raise IndexError("The first command in history is command 1.")
         if index < 0:
             return self[index]
         return self[index - 1]
@@ -221,9 +221,9 @@ class History(list[HistoryItem]):
     #    \s*$                          match any whitespace at the end of the input. This is here so
     #                                  you don't have to trim the input
     #
-    spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$')
+    spanpattern = re.compile(r"^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))(?P<end>-?[1-9]\d*)?\s*$")
 
-    def span(self, span: str, include_persisted: bool = False) -> dict[int, 'HistoryItem']:
+    def span(self, span: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Return a slice of the History list.
 
         :param span: string containing an index or a slice
@@ -252,9 +252,9 @@ class History(list[HistoryItem]):
         results = self.spanpattern.search(span)
         if not results:
             # our regex doesn't match the input, bail out
-            raise ValueError('History indices must be positive or negative integers, and may not be zero.')
+            raise ValueError("History indices must be positive or negative integers, and may not be zero.")
 
-        start_token = results.group('start')
+        start_token = results.group("start")
         if start_token:
             start = min(self._zero_based_index(start_token), len(self) - 1)
             if start < 0:
@@ -262,7 +262,7 @@ class History(list[HistoryItem]):
         else:
             start = 0 if include_persisted else self.session_start_index
 
-        end_token = results.group('end')
+        end_token = results.group("end")
         if end_token:
             end = min(int(end_token), len(self))
             if end < 0:
@@ -272,7 +272,7 @@ class History(list[HistoryItem]):
 
         return self._build_result_dictionary(start, end)
 
-    def str_search(self, search: str, include_persisted: bool = False) -> dict[int, 'HistoryItem']:
+    def str_search(self, search: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Find history items which contain a given string.
 
         :param search: the string to search for
@@ -291,7 +291,7 @@ class History(list[HistoryItem]):
         start = 0 if include_persisted else self.session_start_index
         return self._build_result_dictionary(start, len(self), isin)
 
-    def regex_search(self, regex: str, include_persisted: bool = False) -> dict[int, 'HistoryItem']:
+    def regex_search(self, regex: str, include_persisted: bool = False) -> dict[int, "HistoryItem"]:
         """Find history items which match a given regular expression.
 
         :param regex: the regular expression to search for.
@@ -300,7 +300,7 @@ class History(list[HistoryItem]):
                  or an empty dictionary if the regex was not matched
         """
         regex = regex.strip()
-        if regex.startswith(r'/') and regex.endswith(r'/'):
+        if regex.startswith(r"/") and regex.endswith(r"/"):
             regex = regex[1:-1]
         finder = re.compile(regex, re.DOTALL | re.MULTILINE)
 
@@ -327,7 +327,7 @@ class History(list[HistoryItem]):
 
     def _build_result_dictionary(
         self, start: int, end: int, filter_func: Callable[[HistoryItem], bool] | None = None
-    ) -> dict[int, 'HistoryItem']:
+    ) -> dict[int, "HistoryItem"]:
         """Build history search results.
 
         :param start: start index to search from
@@ -348,7 +348,7 @@ class History(list[HistoryItem]):
         return json.dumps(json_dict, ensure_ascii=False, indent=2)
 
     @staticmethod
-    def from_json(history_json: str) -> 'History':
+    def from_json(history_json: str) -> "History":
         """Restore History from a JSON string.
 
         :param history_json: history data as JSON string (generated using to_json())

@@ -49,7 +49,7 @@ class AlerterApp(cmd2.Cmd):
     def _preloop_hook(self) -> None:
         """Start the alerter thread."""
         self._stop_event.clear()
-        self._add_alert_thread = threading.Thread(name='alerter', target=self._add_alerts_func)
+        self._add_alert_thread = threading.Thread(name="alerter", target=self._add_alerts_func)
         self._add_alert_thread.start()
 
     def _postloop_hook(self) -> None:
@@ -64,7 +64,7 @@ class AlerterApp(cmd2.Cmd):
             print("The alert thread is already started")
         else:
             self._stop_event.clear()
-            self._add_alert_thread = threading.Thread(name='alerter', target=self._add_alerts_func)
+            self._add_alert_thread = threading.Thread(name="alerter", target=self._add_alerts_func)
             self._add_alert_thread.start()
 
     def do_stop_alerts(self, _: cmd2.Statement) -> None:
@@ -107,7 +107,7 @@ class AlerterApp(cmd2.Cmd):
         """Combines alerts into one string that can be printed to the terminal
         :return: the alert string.
         """
-        alert_str = ''
+        alert_str = ""
         alerts = self._get_alerts()
 
         longest_alert = max(ALERTS, key=len)
@@ -115,13 +115,13 @@ class AlerterApp(cmd2.Cmd):
 
         for i, cur_alert in enumerate(alerts):
             # Use padding to center the alert
-            padding = ' ' * int((num_asterisks - len(cur_alert)) / 2)
+            padding = " " * int((num_asterisks - len(cur_alert)) / 2)
 
             if i > 0:
-                alert_str += '\n'
-            alert_str += '*' * num_asterisks + '\n'
-            alert_str += padding + cur_alert + padding + '\n'
-            alert_str += '*' * num_asterisks + '\n'
+                alert_str += "\n"
+            alert_str += "*" * num_asterisks + "\n"
+            alert_str += padding + cur_alert + padding + "\n"
+            alert_str += "*" * num_asterisks + "\n"
 
         return alert_str
 
@@ -171,7 +171,7 @@ class AlerterApp(cmd2.Cmd):
             self._stop_event.wait(0.5)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = AlerterApp()

@@ -12,18 +12,18 @@ class EnvironmentApp(cmd2.Cmd):
         self.degrees_c = 22
         self.sunny = False
         self.add_settable(
-            cmd2.Settable('degrees_c', int, 'Temperature in Celsius', self, onchange_cb=self._onchange_degrees_c)
+            cmd2.Settable("degrees_c", int, "Temperature in Celsius", self, onchange_cb=self._onchange_degrees_c)
         )
-        self.add_settable(cmd2.Settable('sunny', bool, 'Is it sunny outside?', self))
+        self.add_settable(cmd2.Settable("sunny", bool, "Is it sunny outside?", self))
 
     def do_sunbathe(self, _arg) -> None:
         """Attempt to sunbathe."""
         if self.degrees_c < 20:
             result = f"It's {self.degrees_c} C - are you a penguin?"
         elif not self.sunny:
-            result = 'Too dim.'
+            result = "Too dim."
         else:
-            result = 'UV is bad for your skin.'
+            result = "UV is bad for your skin."
         self.poutput(result)
 
     def _onchange_degrees_c(self, _param_name, _old, new) -> None:
@@ -32,7 +32,7 @@ class EnvironmentApp(cmd2.Cmd):
             self.sunny = True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     c = EnvironmentApp()

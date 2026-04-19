@@ -60,7 +60,7 @@ class CategoryApp(cmd2.Cmd):
         super().do_shortcuts("")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = CategoryApp()

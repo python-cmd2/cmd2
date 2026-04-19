@@ -20,7 +20,7 @@ from rich.table import Table
 import cmd2
 from cmd2.colors import Color
 
-CITY_HEADERS = ['Flag', 'City', 'Country', '2025 Population']
+CITY_HEADERS = ["Flag", "City", "Country", "2025 Population"]
 CITY_DATA = [
     ["🇯🇵", "Tokyo (東京)", "Japan", 37_036_200],
     ["🇮🇳", "Delhi", "India", 34_665_600],
@@ -37,13 +37,13 @@ CITY_TITLE = "10 Largest Cities by Population 2025"
 CITY_CAPTION = "Data from https://worldpopulationreview.com/"
 
 COUNTRY_HEADERS = [
-    'Flag',
-    'Country',
-    '2025 Population',
-    'Area (M km^2)',
-    'Population Density (/km^2)',
-    'GDP (million US$)',
-    'GDP per capita (US$)',
+    "Flag",
+    "Country",
+    "2025 Population",
+    "Area (M km^2)",
+    "Population Density (/km^2)",
+    "GDP (million US$)",
+    "GDP per capita (US$)",
 ]
 COUNTRY_DATA = [
     ["🇮🇳", "India", 1_463_870_000, 3.3, 492, 4_187_017, 2_878],
@@ -64,14 +64,14 @@ COUNTRY_CAPTION = "Data from https://worldpopulationreview.com/ and Wikipedia"
 class TableApp(cmd2.Cmd):
     """Cmd2 application to demonstrate displaying tabular data using rich."""
 
-    DEFAULT_CATEGORY = 'Table Commands'
+    DEFAULT_CATEGORY = "Table Commands"
 
     def __init__(self) -> None:
         """Initialize the cmd2 application."""
         super().__init__()
 
         # Prints an intro banner once upon application startup
-        self.intro = 'Are you curious which countries and cities on Earth have the largest populations?'
+        self.intro = "Are you curious which countries and cities on Earth have the largest populations?"
 
     def do_cities(self, _: cmd2.Statement) -> None:
         """Display the cities with the largest population."""
@@ -105,9 +105,9 @@ class TableApp(cmd2.Cmd):
                 case percap if "per capita" in percap:
                     header_style = Color.BRIGHT_GREEN
                     style = Color.GREEN
-                case flag if 'Flag' in flag:
+                case flag if "Flag" in flag:
                     justify = "center"
-                case country if 'Country' in country:
+                case country if "Country" in country:
                     justify = "left"
 
             table.add_column(header, justify=justify, header_style=header_style, style=style)
@@ -120,6 +120,6 @@ class TableApp(cmd2.Cmd):
         self.poutput(table)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = TableApp()
     app.cmdloop()

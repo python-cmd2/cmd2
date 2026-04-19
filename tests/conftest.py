@@ -18,8 +18,8 @@ from cmd2 import rich_utils as ru
 from cmd2.utils import StdSim
 
 # For type hinting decorators
-P = ParamSpec('P')
-T = TypeVar('T')
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_strings: list[str] | None = None) -> None:
@@ -29,7 +29,7 @@ def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_s
     :param help_output: output of help, either as a string or list of strings
     :param verbose_strings: optional list of verbose strings to search for
     """
-    help_text = help_output if isinstance(help_output, str) else ''.join(help_output)
+    help_text = help_output if isinstance(help_output, str) else "".join(help_output)
     commands = cmd2_app.get_visible_commands()
     for command in commands:
         assert command in help_text
@@ -55,7 +55,7 @@ def normalize(block: str) -> list[str]:
     from each line.
     """
     assert isinstance(block, str)
-    block = block.strip('\n')
+    block = block.strip("\n")
     return [line.rstrip() for line in block.splitlines()]
 
 
@@ -114,7 +114,7 @@ def with_ansi_style(style: ru.AllowStyle) -> Callable[[Callable[P, T]], Callable
 
 
 # These are odd file names for testing quoting of them
-odd_file_names = ['nothingweird', 'has   spaces', '"is_double_quoted"', "'is_single_quoted'"]
+odd_file_names = ["nothingweird", "has   spaces", '"is_double_quoted"', "'is_single_quoted'"]
 
 
 if TYPE_CHECKING:
@@ -139,7 +139,7 @@ class ExternalTestMixin(_Base):
         # code placed here runs before cmd2 initializes
         super().__init__(*args, **kwargs)
         if not isinstance(self, cmd2.Cmd):
-            raise TypeError('The ExternalTestMixin class is intended to be used in multiple inheritance with cmd2.Cmd')
+            raise TypeError("The ExternalTestMixin class is intended to be used in multiple inheritance with cmd2.Cmd")
         # code placed here runs after cmd2 initializes
         self._pybridge = cmd2.py_bridge.PyBridge(self)
 

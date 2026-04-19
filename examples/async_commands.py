@@ -36,7 +36,7 @@ def _get_event_loop() -> asyncio.AbstractEventLoop:
                 _event_loop = asyncio.new_event_loop()
                 thread = threading.Thread(
                     target=_event_loop.run_forever,
-                    name='Async Runner',
+                    name="Async Runner",
                     daemon=True,
                 )
                 thread.start()
@@ -83,7 +83,7 @@ class AsyncCommandsApp(cmd2.Cmd):
             self.main_session.key_bindings = KeyBindings()
 
         # Add a custom key binding for <CTRL>+T that calls a method so it has access to self
-        @self.main_session.key_bindings.add('c-t')
+        @self.main_session.key_bindings.add("c-t")
         def _(_event: Any) -> None:
             self.handle_control_t(_event)
 
@@ -115,7 +115,7 @@ class AsyncCommandsApp(cmd2.Cmd):
 
         Prints 'fnord' above the prompt in a random color and random position.
         """
-        word = 'fnord'
+        word = "fnord"
 
         # Generate a random RGB color tuple
         r = random.randint(0, 255)
@@ -126,17 +126,17 @@ class AsyncCommandsApp(cmd2.Cmd):
         cols, _ = shutil.get_terminal_size()
         extra_width = cols - len(word) - 1
         padding_size = random.randint(0, extra_width)
-        padding = ' ' * padding_size
+        padding = " " * padding_size
 
         # Use rich to generate the the overall text to print out
         text = Text()
         text.append(padding)
-        text.append(word, style=f'rgb({r},{g},{b})')
+        text.append(word, style=f"rgb({r},{g},{b})")
 
         print_formatted_text(ANSI(cmd2.rich_utils.rich_text_to_string(text)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = AsyncCommandsApp()

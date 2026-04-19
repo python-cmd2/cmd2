@@ -14,7 +14,7 @@ class AutoStyleApp(cmd2.Cmd):
 
     def complete_foo(self, text, line, begidx, endidx) -> Completions:
         # Return 10 items
-        items = [f'item{i}' for i in range(10) if f'item{i}'.startswith(text)]
+        items = [f"item{i}" for i in range(10) if f"item{i}".startswith(text)]
         return Completions.from_values(items)
 
     def do_bar(self, args):
@@ -22,7 +22,7 @@ class AutoStyleApp(cmd2.Cmd):
 
     def complete_bar(self, text, line, begidx, endidx) -> Completions:
         # Return 5 items
-        items = [f'item{i}' for i in range(5) if f'item{i}'.startswith(text)]
+        items = [f"item{i}" for i in range(5) if f"item{i}".startswith(text)]
         return Completions.from_values(items)
 
 
@@ -44,11 +44,11 @@ def test_dynamic_complete_style(app):
 
     # Complete 'foo' which has 10 items (> 7)
     # text='item', state=0, line='foo item', begidx=4, endidx=8
-    app.complete('item', 'foo item', 4, 8)
+    app.complete("item", "foo item", 4, 8)
     assert app.active_session.complete_style == CompleteStyle.MULTI_COLUMN
 
     # Complete 'bar' which has 5 items (<= 7)
-    app.complete('item', 'bar item', 4, 8)
+    app.complete("item", "bar item", 4, 8)
     assert app.active_session.complete_style == CompleteStyle.COLUMN
 
 
@@ -64,12 +64,12 @@ def test_dynamic_complete_style_custom_limit(app):
     app.max_column_completion_results = 3
 
     # Complete 'bar' which has 5 items (> 3)
-    app.complete('item', 'bar item', 4, 8)
+    app.complete("item", "bar item", 4, 8)
     assert app.active_session.complete_style == CompleteStyle.MULTI_COLUMN
 
     # Change limit to 15
     app.max_column_completion_results = 15
 
     # Complete 'foo' which has 10 items (<= 15)
-    app.complete('item', 'foo item', 4, 8)
+    app.complete("item", "foo item", 4, 8)
     assert app.active_session.complete_style == CompleteStyle.COLUMN

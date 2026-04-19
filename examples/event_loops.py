@@ -18,7 +18,7 @@ class Cmd2EventBased(cmd2.Cmd):
     # ... your class code here ...
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = Cmd2EventBased()
     app.preloop()
 

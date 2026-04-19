@@ -56,8 +56,8 @@ class CommandResult(NamedTuple):
        not for modification.
     """
 
-    stdout: str = ''
-    stderr: str = ''
+    stdout: str = ""
+    stderr: str = ""
     stop: bool = False
     data: Any = None
 
@@ -79,7 +79,7 @@ class PyBridge:
                            Defaults to True.
     """
 
-    def __init__(self, cmd2_app: 'Cmd', *, add_to_history: bool = True) -> None:
+    def __init__(self, cmd2_app: "Cmd", *, add_to_history: bool = True) -> None:
         """Initialize PyBridge instances."""
         self._cmd2_app = cmd2_app
         self._add_to_history = add_to_history
@@ -91,7 +91,7 @@ class PyBridge:
     def __dir__(self) -> list[str]:
         """Return a custom set of attribute names."""
         attributes: list[str] = []
-        attributes.insert(0, 'cmd_echo')
+        attributes.insert(0, "cmd_echo")
         return attributes
 
     def __call__(self, command: str, *, echo: bool | None = None) -> CommandResult:

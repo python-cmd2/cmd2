@@ -9,8 +9,8 @@ from cmd2.constants import (
     HELP_FUNC_PREFIX,
 )
 
-COMMAND_LIST = ['foo', 'bar']
-CATEGORY = 'Dynamic Commands'
+COMMAND_LIST = ["foo", "bar"]
+CATEGORY = "Dynamic Commands"
 
 
 class CommandsInLoop(cmd2.Cmd):
@@ -43,6 +43,6 @@ class CommandsInLoop(cmd2.Cmd):
         self.poutput(f"Simulate sending {text!r} to a server and printing the response")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = CommandsInLoop()
     app.cmdloop()
