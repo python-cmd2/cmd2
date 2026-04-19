@@ -14,7 +14,6 @@ from . import (
 from .argparse_completer import set_default_ap_completer_type
 from .argparse_utils import (
     Cmd2ArgumentParser,
-    TextGroup,
     register_argparse_argument_parameter,
     set_default_argument_parser_type,
 )
@@ -45,7 +44,17 @@ from .exceptions import (
 )
 from .parsing import Statement
 from .py_bridge import CommandResult
-from .rich_utils import RichPrintKwargs
+from .rich_utils import (
+    ArgumentDefaultsCmd2HelpFormatter,
+    Cmd2HelpFormatter,
+    MetavarTypeCmd2HelpFormatter,
+    RawDescriptionCmd2HelpFormatter,
+    RawTextCmd2HelpFormatter,
+    RichPrintKwargs,
+    TextGroup,
+    get_theme,
+    set_theme,
+)
 from .string_utils import stylize
 from .styles import Cmd2Style
 from .utils import (
@@ -60,7 +69,6 @@ __all__: list[str] = [  # noqa: RUF022
     'DEFAULT_SHORTCUTS',
     # Argparse Exports
     'Cmd2ArgumentParser',
-    'TextGroup',
     'register_argparse_argument_parameter',
     'set_default_ap_completer_type',
     'set_default_argument_parser_type',
@@ -91,7 +99,15 @@ __all__: list[str] = [  # noqa: RUF022
     'rich_utils',
     'string_utils',
     # Rich Utils
+    'ArgumentDefaultsCmd2HelpFormatter',
+    'Cmd2HelpFormatter',
+    'get_theme',
+    'MetavarTypeCmd2HelpFormatter',
+    'RawDescriptionCmd2HelpFormatter',
+    'RawTextCmd2HelpFormatter',
     'RichPrintKwargs',
+    'set_theme',
+    'TextGroup',
     # String Utils
     'stylize',
     # Styles,

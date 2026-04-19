@@ -30,6 +30,7 @@ from rich.style import (
     Style,
     StyleType,
 )
+from rich_argparse import RichHelpFormatter
 
 if sys.version_info >= (3, 11):
     from enum import StrEnum
@@ -58,7 +59,8 @@ class Cmd2Style(StrEnum):
     WARNING = "cmd2.warning"  # Warning text (used by pwarning())
 
 
-# Default styles used by cmd2. Tightly coupled with the Cmd2Style enum.
+# Default styles used by cmd2. Used to perform theme resets.
+# Tightly coupled with the Cmd2Style enum.
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.COMMAND_LINE: Style(color=Color.CYAN, bold=True),
     Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
@@ -68,3 +70,7 @@ DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.TABLE_BORDER: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.WARNING: Style(color=Color.BRIGHT_YELLOW),
 }
+
+# Default styles for argparse output. Used to perform theme resets.
+# Any cmd2-specific settings or overrides should be added to this dictionary.
+DEFAULT_ARGPARSE_STYLES = RichHelpFormatter.styles.copy()
