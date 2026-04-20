@@ -4,6 +4,7 @@ These are primarily tests related to prompt-toolkit completer functions which ha
 file system paths, and shell commands.
 """
 
+import argparse
 import dataclasses
 import enum
 import os
@@ -15,6 +16,7 @@ import pytest
 
 import cmd2
 from cmd2 import (
+    Choices,
     CompletionItem,
     Completions,
     utils,
@@ -1300,3 +1302,123 @@ def test_subcommand_tab_completion_with_no_completer_scu(scu_app) -> None:
 
     completions = scu_app.complete(text, line, begidx, endidx)
     assert not completions
+
+
+def test_set_completion_item_text() -> None:
+    """Test setting CompletionItem.text and how it affects CompletionItem.display."""
+    value = 5
+
+    # Don't provide text
+    item = CompletionItem(value=value)
+    assert item.text == str(value)
+
+    # Provide text
+    item = CompletionItem(value=value, text="my_text")
+    assert item.text == "my_text"
+
+    # Provide blank text
+    item = CompletionItem(value=value, text="")
+    assert item.text == ""
+
+
+def test_replace_completion_item_text() -> None:
+    """Test replacing the value of CompletionItem.text"""
+    value = 5
+
+    # Replace text value
+    item = CompletionItem(value=value, text="my_text")
+    updated_item = dataclasses.replace(item, text="new_text")
+    assert item.text == "my_text"
+    assert item.display == "my_text"
+
+    # Text should be updated and display should be the same
+    assert updated_item.text == "new_text"
+    assert updated_item.display == "my_text"
+
+    # Replace text value with blank
+    item = CompletionItem(value=value, text="my_text")
+    updated_item = dataclasses.replace(item, text="")
+    assert item.text == "my_text"
+    assert item.display == "my_text"
+
+    # Text should be updated and display should be the same
+    assert updated_item.text == ""
+    assert updated_item.display == "my_text"
+
+
+def test_set_completion_item_display() -> None:
+    """Test setting CompletionItem.display and how it is affected by CompletionItem.text."""
+    value = 5
+
+    # Don't provide text or display
+    value = 5
+    item = CompletionItem(value=value)
+    assert item.text == str(value)
+    assert item.display == item.text
+
+    # Don't provide display but provide text
+    item = CompletionItem(value=value, text="my_text")
+    assert item.text == "my_text"
+    assert item.display == item.text
+
+    # Provide display
+    item = CompletionItem(value=value, text="my_text", display="my_display")
+    assert item.text == "my_text"
+    assert item.display == "my_display"
+
+    # Provide blank display
+    item = CompletionItem(value=value, text="my_text", display="")
+    assert item.text == "my_text"
+    assert item.display == ""
+
+
+def test_replace_completion_item_display() -> None:
+    """Test replacing the value of CompletionItem.display"""
+    value = 5
+
+    # Replace display value
+    item = CompletionItem(value=value, display="my_display")
+    updated_item = dataclasses.replace(item, display="new_display")
+
+    assert item.display == "my_display"
+    assert updated_item.display == "new_display"
+
+    # Replace display value with blank
+    item = CompletionItem(value=value, display="my_display")
+    updated_item = dataclasses.replace(item, display="")
+
+    assert item.display == "my_display"
+    assert updated_item.display == ""
+
+
+def test_full_prefix_removal() -> None:
+    """Verify that Cmd._perform_completion() can clear item.text when
+    text_to_remove matches item.text exactly. This occurs when completing
+    a nested quoted string where the command line already contains the
+    full unquoted content of the completion match.
+    """
+
+    class TestApp(cmd2.Cmd):
+        def get_choices(self) -> Choices:
+            """Return choices."""
+            choices = ["'This is a quoted item'"]
+            return cmd2.Choices.from_values(choices)
+
+        parser = cmd2.Cmd2ArgumentParser()
+        parser.add_argument("arg", choices_provider=get_choices)
+
+        @cmd2.with_argparser(parser)
+        def do_command(self, args: argparse.Namespace) -> None:
+            """Test stuff."""
+
+    text = ""
+    line = "command \"'This is a quoted item'"
+    endidx = len(line)
+    begidx = endidx
+
+    app = TestApp()
+    completions = app.complete(text, line, begidx, endidx)
+    assert len(completions) == 1
+
+    item = completions[0]
+    assert item.text == ""
