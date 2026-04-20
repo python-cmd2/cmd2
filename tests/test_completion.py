@@ -1401,7 +1401,10 @@ def test_full_prefix_removal() -> None:
     class TestApp(cmd2.Cmd):
         def get_choices(self) -> Choices:
             """Return choices."""
-            choices = ["'This is a quoted item'"]
+            choices = [
+                "'This is a single-quoted item'",
+                '"This is a double-quoted item"',
+            ]
             return cmd2.Choices.from_values(choices)
 
         parser = cmd2.Cmd2ArgumentParser()
@@ -1411,8 +1414,22 @@ def test_full_prefix_removal() -> None:
         def do_command(self, args: argparse.Namespace) -> None:
             """Test stuff."""
 
+    # Test single-quoted item
     text = ""
-    line = "command \"'This is a quoted item'"
+    line = "command \"'This is a single-quoted item'"
+    endidx = len(line)
+    begidx = endidx
+
+    app = TestApp()
+    completions = app.complete(text, line, begidx, endidx)
+    assert len(completions) == 1
+
+    item = completions[0]
+    assert item.text == ""
+
+    # Test double-quoted item
+    text = ""
+    line = 'command \'"This is a double-quoted item"'
     endidx = len(line)
     begidx = endidx
 
