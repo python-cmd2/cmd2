@@ -31,6 +31,15 @@ from rich.protocol import is_renderable
 from . import rich_utils as ru
 
 
+class _UnsetStr(str):
+    """Internal sentinel to distinguish between an unset and an explicit empty string."""
+
+    __slots__ = ()
+
+
+_UNSET_STR = _UnsetStr("")
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class CompletionItem:
     """A single completion result."""
@@ -39,17 +48,20 @@ class CompletionItem:
     # control sequences (like ^J or ^I) in the completion menu.
     _CONTROL_WHITESPACE_RE = re.compile(r"\r\n|[\n\r\t\f\v]")
 
-    # The underlying object this completion represents (e.g., str, int, Path).
-    # This is used to support argparse choices validation.
+    # The core object this completion represents (e.g., str, int, Path).
+    # This serves as the default source for the completion string and is used
+    # to support object-based validation when used in argparse choices.
     value: Any = field(kw_only=False)
 
-    # The actual string that will be inserted into the command line.
-    # If not provided, it defaults to str(value).
-    text: str = ""
+    # The actual completion string. If not provided, defaults to str(value).
+    # This can be used to provide a human-friendly alias for complex objects in
+    # an argparse choices list (requires a matching 'type' converter for validation).
+    text: str = _UNSET_STR
 
     # Optional string for displaying the completion differently in the completion menu.
     # This can contain ANSI style sequences. A plain version is stored in display_plain.
-    display: str = ""
+    # If not provided, defaults to the (possibly computed) value of 'text'.
+    display: str = _UNSET_STR
 
     # Optional meta information about completion which displays in the completion menu.
     # This can contain ANSI style sequences. A plain version is stored in display_meta_plain.
@@ -60,9 +72,8 @@ class CompletionItem:
     table_data: Sequence[Any] = field(default_factory=tuple)
 
     # Plain text versions of display fields (stripped of ANSI) for sorting/filtering.
-    # These are set in __post_init__().
-    display_plain: str = field(init=False)
-    display_meta_plain: str = field(init=False)
+    display_plain: str = field(default="", init=False)
+    display_meta_plain: str = field(default="", init=False)
 
     @classmethod
     def _clean_display(cls, val: str) -> str:
@@ -77,13 +88,21 @@ class CompletionItem:
         return cls._CONTROL_WHITESPACE_RE.sub(" ", val)
 
     def __post_init__(self) -> None:
-        """Finalize the object after initialization."""
-        # Derive text from value if it wasn't explicitly provided
-        if not self.text:
+        """Finalize the object after initialization.
+
+        By using the sentinel pattern to distinguish between a field that was never
+        set and one explicitly blanked out, this handles the two-stage lifecycle:
+
+        1. Initial creation (usually by a developer-provided choices_provider or completer).
+        2. Post-processing by cmd2 via dataclasses.replace(), which may modify fields or
+           explicitly set them to empty strings.
+        """
+        # If the completion string was not provided, derive it from value.
+        if isinstance(self.text, _UnsetStr):
             object.__setattr__(self, "text", str(self.value))
 
-        # Ensure display is never blank.
-        if not self.display:
+        # If the display string was not provided, use text.
+        if isinstance(self.display, _UnsetStr):
             object.__setattr__(self, "display", self.text)
 
         # Clean display and display_meta
@@ -163,7 +182,7 @@ class CompletionResultsBase:
 
     # True if every item in this collection has a numeric display string.
     # Used for sorting and alignment.
-    numeric_display: bool = field(init=False)
+    numeric_display: bool = field(default=False, init=False)
 
     def __post_init__(self) -> None:
         """Finalize the object after initialization."""
