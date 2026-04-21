@@ -3837,6 +3837,10 @@ class DisableCommandsApp(cmd2.Cmd):
         """This will be in the DEFAULT_CATEGORY."""
         self.poutput("The real is_not_decorated")
 
+    @cmd2.with_argparser(cmd2.Cmd2ArgumentParser())
+    def do_argparse_command(self, args) -> None:
+        """Help for argparse_command"""
+
 
 class DisableCommandSet(CommandSet[cmd2.Cmd]):
     """Test registering a command which is in a disabled category"""
@@ -4008,12 +4012,83 @@ def test_disabled_command_not_in_history(disable_commands_app) -> None:
     assert saved_len == len(disable_commands_app.history)
 
 
-def test_disabled_message_command_name(disable_commands_app) -> None:
+def test_get_parser_while_disabled(disable_commands_app: DisableCommandsApp) -> None:
+    # Get parser before disabling
+    parser_before = disable_commands_app.command_parsers.get(disable_commands_app.do_argparse_command)
+    assert parser_before is not None
+
+    # Disable command
+    disable_commands_app.disable_command("argparse_command", "Disabled")
+
+    # Get parser after disabling - this is what was failing (returning None)
+    parser_after = disable_commands_app.command_parsers.get(disable_commands_app.do_argparse_command)
+    assert parser_after is not None
+    assert parser_after is parser_before
+
+
+def test_metadata_preservation_while_disabled(disable_commands_app: DisableCommandsApp) -> None:
+    orig_cmd_func = disable_commands_app.do_has_helper_func
+    orig_help = disable_commands_app.help_has_helper_func
+    orig_complete = disable_commands_app.complete_has_helper_func
+
+    disable_commands_app.disable_command("has_helper_func", "Disabled")
+
+    # Names and qualnames should be preserved
+    assert disable_commands_app.do_has_helper_func.__name__ == orig_cmd_func.__name__
+    assert disable_commands_app.do_has_helper_func.__qualname__ == orig_cmd_func.__qualname__
+
+    assert disable_commands_app.help_has_helper_func.__name__ == orig_help.__name__
+    assert disable_commands_app.help_has_helper_func.__qualname__ == orig_help.__qualname__
+
+    assert disable_commands_app.complete_has_helper_func.__name__ == orig_complete.__name__
+    assert disable_commands_app.complete_has_helper_func.__qualname__ == orig_complete.__qualname__
+
+    # Docstrings should be preserved
+    assert disable_commands_app.do_has_helper_func.__doc__ == orig_cmd_func.__doc__
+    assert disable_commands_app.help_has_helper_func.__doc__ == orig_help.__doc__
+    assert disable_commands_app.complete_has_helper_func.__doc__ == orig_complete.__doc__
+
+
+def test_disabled_completer_returns_empty(disable_commands_app: DisableCommandsApp) -> None:
+    disable_commands_app.disable_command("has_helper_func", "Disabled")
+    completions = disable_commands_app.complete_has_helper_func("", "has_helper_func ", 16, 16)
+    assert len(completions) == 0
+
+
+def test_disabled_message_command_name(disable_commands_app: DisableCommandsApp) -> None:
     message_to_print = f"{COMMAND_NAME} is currently disabled"
     disable_commands_app.disable_command("has_helper_func", message_to_print)
 
     _out, err = run_cmd(disable_commands_app, "has_helper_func")
     assert err[0].startswith("has_helper_func is currently disabled")
+
+
+def test_help_argparse_command_while_disabled(disable_commands_app: DisableCommandsApp) -> None:
+    message_to_print = "This command is disabled"
+    disable_commands_app.disable_command("argparse_command", message_to_print)
+
+    # help <command> should show the disabled message
+    _out, err = run_cmd(disable_commands_app, "help argparse_command")
+    assert err[0].startswith(message_to_print)
+
+    # Re-enabling should restore the real help
+    disable_commands_app.enable_command("argparse_command")
+    out, _err = run_cmd(disable_commands_app, "help argparse_command")
+    assert "Usage: argparse_command" in out[0]
+
+
+def test_help_disabled_no_help_func(base_app: cmd2.Cmd) -> None:
+    from cmd2.cmd2 import DisabledCommand
+
+    # Manually disable a command without a help function to trigger the defensive fallback
+    command = "quit"
+    command_func = base_app.get_command_func(command)
+    base_app.disabled_commands[command] = DisabledCommand(
+        command_function=command_func, help_function=None, completer_function=None
+    )
+
+    _out, err = run_cmd(base_app, f"help {command}")
+    assert err[0].startswith(f"{command} is currently disabled.")
 
 
 def test_register_command_in_enabled_category(disable_commands_app) -> None:

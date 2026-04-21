@@ -617,10 +617,12 @@ class Cmd:
 
         # Commands disabled during specific application states
         # Key: Command name | Value: DisabledCommand object
+        # NOTE: Use disable_command() and enable_command() to modify this dictionary.
         self.disabled_commands: dict[str, DisabledCommand] = {}
 
         # Categories of commands to be disabled
         # Key: Category name | Value: Message to display
+        # NOTE: Use disable_category() and enable_category() to modify this dictionary.
         self.disabled_categories: dict[str, str] = {}
 
         # Command parsers for this Cmd instance.
@@ -1148,9 +1150,8 @@ class Cmd:
         """Tokenize a command string and resolve the associated root parser and relative subcommand path.
 
         This helper handles the initial resolution of a command string (e.g., 'foo bar baz') by
-        identifying 'foo' as the root command (even if disabled), retrieving its associated
-        parser, and returning any remaining tokens (['bar', 'baz']) as a path relative
-        to that parser for further traversal.
+        identifying 'foo' as the root command, retrieving its associated parser, and returning
+        any remaining tokens (['bar', 'baz']) as a path relative to that parser for further traversal.
 
         :param command: full space-delimited command path leading to a parser (e.g. 'foo' or 'foo bar')
         :return: a tuple containing the Cmd2ArgumentParser for the root command and a list of
@@ -1166,11 +1167,7 @@ class Cmd:
         subcommand_path = tokens[1:]
 
         # Search for the base command function and verify it has an argparser defined
-        if root_command in self.disabled_commands:
-            command_func = self.disabled_commands[root_command].command_function
-        else:
-            command_func = self.get_command_func(root_command)
-
+        command_func = self.get_command_func(root_command)
         if command_func is None:
             raise ValueError(f"Root command '{root_command}' not found")
 
@@ -4314,8 +4311,21 @@ class Cmd:
 
         else:
             # Getting help for a specific command
-            func = self.get_command_func(args.command)
+            disabled = args.command in self.disabled_commands
             help_func = getattr(self, constants.HELP_FUNC_PREFIX + args.command, None)
+
+            # If the command is disabled, then call the help function which was
+            # overwritten by disable_command() to print the disabled message.
+            if disabled:
+                if help_func is not None:
+                    help_func()
+                else:
+                    # This is a defensive fallback in case someone disabled a command
+                    # without using disable_command() resulting in no help function.
+                    self._report_disabled_command_usage(message_to_print=f"{args.command} is currently disabled.")
+                return
+
+            func = self.get_command_func(args.command)
             argparser = None if func is None else self.command_parsers.get(func)
 
             # If the command function uses argparse, then use argparse's help
@@ -5652,15 +5662,27 @@ class Cmd:
             completer_function=getattr(self, completer_func_name, None),
         )
 
-        # Overwrite the command and help functions to print the message
-        new_func = functools.partial(
-            self._report_disabled_command_usage, message_to_print=message_to_print.replace(constants.COMMAND_NAME, command)
-        )
-        setattr(self, cmd_func_name, new_func)
-        setattr(self, help_func_name, new_func)
+        # Overwrite command function to print the message
+        message_to_print = message_to_print.replace(constants.COMMAND_NAME, command)
+        new_cmd_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
 
-        # Set the completer to a function that returns a blank list
-        setattr(self, completer_func_name, lambda *_args, **_kwargs: [])
+        # Preserve the metadata of the original command function
+        functools.update_wrapper(new_cmd_func, command_function)
+        setattr(self, cmd_func_name, new_cmd_func)
+
+        # Overwrite the help function to print the message
+        new_help_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
+        if (help_function := self.disabled_commands[command].help_function) is not None:
+            # Preserve the metadata of the original help function
+            functools.update_wrapper(new_help_func, help_function)
+        setattr(self, help_func_name, new_help_func)
+
+        # Set the completer to a function that returns a nothing
+        new_completer_func = functools.partial(self._disabled_completer)
+        if (completer_function := self.disabled_commands[command].completer_function) is not None:
+            # Preserve the metadata of the original completer function
+            functools.update_wrapper(new_completer_func, completer_function)
+        setattr(self, completer_func_name, new_completer_func)
 
     def disable_category(self, category: str, message_to_print: str) -> None:
         """Disable an entire category of commands.
@@ -5685,13 +5707,22 @@ class Cmd:
         self.disabled_categories[category] = message_to_print
 
     def _report_disabled_command_usage(self, *_args: Any, message_to_print: str, **_kwargs: Any) -> None:
-        """Report when a disabled command has been run or had help called on it.
+        """Report when a disabled command or its help function is run.
 
         :param _args: not used
         :param message_to_print: the message reporting that the command is disabled
         :param _kwargs: not used
         """
         self.perror(message_to_print, style=None)
+
+    def _disabled_completer(self, *_args: Any, **_kwargs: Any) -> Completions:
+        """Completer function for a disabled command.
+
+        :param _args: not used
+        :param _kwargs: not used
+        :return: an empty Completions object
+        """
+        return Completions()
 
     def cmdloop(self, intro: RenderableType = "") -> int:
         """Deal with extra features provided by cmd2, this is an outer wrapper around _cmdloop().
