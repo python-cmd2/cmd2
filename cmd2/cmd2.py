@@ -1026,7 +1026,7 @@ class Cmd:
 
         def check_parser_uninstallable(parser: Cmd2ArgumentParser) -> None:
             try:
-                subparsers_action = parser._get_subparsers_action()
+                subparsers_action = parser.get_subparsers_action()
             except ValueError:
                 # No subcommands to check
                 return

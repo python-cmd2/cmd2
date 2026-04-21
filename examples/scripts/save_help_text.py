@@ -14,7 +14,7 @@ ASTERISKS = "********************************************************"
 def get_sub_commands(parser: Cmd2ArgumentParser) -> list[str]:
     """Get a list of subcommands for a Cmd2ArgumentParser."""
     try:
-        subparsers_action = parser._get_subparsers_action()
+        subparsers_action = parser.get_subparsers_action()
     except ValueError:
         # No subcommands
         return []

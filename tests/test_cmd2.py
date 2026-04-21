@@ -4490,7 +4490,7 @@ def test_subcommand_attachment() -> None:
     app.attach_subcommand("root", "child", child_parser, help="child help")
 
     # Verify child was attached
-    root_subparsers_action = root_parser._get_subparsers_action()
+    root_subparsers_action = root_parser.get_subparsers_action()
     assert "child" in root_subparsers_action._name_parser_map
     assert root_subparsers_action._name_parser_map["child"] is child_parser
 
@@ -4499,7 +4499,7 @@ def test_subcommand_attachment() -> None:
     app.attach_subcommand("root child", "grandchild", grandchild_parser)
 
     # Verify grandchild was attached
-    child_subparsers_action = child_parser._get_subparsers_action()
+    child_subparsers_action = child_parser.get_subparsers_action()
     assert "grandchild" in child_subparsers_action._name_parser_map
 
     # Detach grandchild
