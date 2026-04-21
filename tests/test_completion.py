@@ -5,6 +5,7 @@ file system paths, and shell commands.
 """
 
 import argparse
+import copy
 import dataclasses
 import enum
 import os
@@ -917,6 +918,36 @@ def test_remove_duplicates() -> None:
     assert new_text in completions
     assert new_display in completions
     assert new_meta in completions
+
+
+def test_completion_item_deepcopy() -> None:
+    """Test that deepcopy of a CompletionItem preserves identity of its members."""
+
+    class ComplexValue:
+        pass
+
+    value = ComplexValue()
+    table_data = (ComplexValue(),)
+    orig_item = CompletionItem(
+        value=value,
+        text="my_text",
+        display="my_display",
+        display_meta="my_meta",
+        table_data=table_data,
+    )
+
+    # Perform deepcopy
+    copied_item = copy.deepcopy(orig_item)
+
+    # We should have a new object
+    assert copied_item is not orig_item
+
+    # But its member should be the same objects
+    assert copied_item.value is orig_item.value
+    assert copied_item.text is orig_item.text
+    assert copied_item.display is orig_item.display
+    assert copied_item.display_meta is orig_item.display_meta
+    assert copied_item.table_data is orig_item.table_data
 
 
 def test_plain_fields() -> None:

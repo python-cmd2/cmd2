@@ -1,5 +1,6 @@
 """Provides classes and functions related to command-line completion."""
 
+import copy
 import re
 import sys
 from collections.abc import (
@@ -123,6 +124,19 @@ class CompletionItem:
             "table_data",
             ru.prepare_objects_for_rendering(*renderable_data),
         )
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> "CompletionItem":
+        """Return a shallow copy of this CompletionItem during a deepcopy operation.
+
+        This is necessary because cmd2 deepcopies argument parsers to keep them unique
+        across command instances. This override prevents the deepcopying of
+        CompletionItems stored within a parser's 'choices' list.
+
+        Since the 'value' and 'table_data' fields may contain complex objects which
+        should not be deep copied, a shallow copy ensures the original object
+        references are preserved.
+        """
+        return copy.copy(self)
 
     def __str__(self) -> str:
         """Return the completion text."""
