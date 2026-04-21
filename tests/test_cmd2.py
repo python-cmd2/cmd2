@@ -4115,10 +4115,10 @@ def test_startup_script_with_odd_file_names(startup_script) -> None:
 def test_command_parser_retrieval(outsim_app: cmd2.Cmd) -> None:
     # Pass something that isn't a method
     not_a_method = "just a string"
-    assert outsim_app._command_parsers.get(not_a_method) is None
+    assert outsim_app.command_parsers.get(not_a_method) is None
 
     # Pass a non-command method
-    assert outsim_app._command_parsers.get(outsim_app.__init__) is None
+    assert outsim_app.command_parsers.get(outsim_app.__init__) is None
 
 
 def test_command_synonym_parser() -> None:
@@ -4128,8 +4128,8 @@ def test_command_synonym_parser() -> None:
 
     app = SynonymApp()
 
-    synonym_parser = app._command_parsers.get(app.do_synonym)
-    help_parser = app._command_parsers.get(app.do_help)
+    synonym_parser = app.command_parsers.get(app.do_synonym)
+    help_parser = app.command_parsers.get(app.do_help)
 
     assert synonym_parser is not None
     assert synonym_parser is help_parser
@@ -4481,7 +4481,7 @@ def test_subcommand_attachment() -> None:
     app = SubcmdApp()
 
     # Verify root exists and uses argparse
-    root_parser = app._command_parsers.get(app.do_root)
+    root_parser = app.command_parsers.get(app.do_root)
     assert root_parser is not None
 
     # Attach child to root

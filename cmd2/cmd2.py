@@ -223,13 +223,17 @@ class _SavedCmd2Env:
 DisabledCommand = namedtuple("DisabledCommand", ["command_function", "help_function", "completer_function"])  # noqa: PYI024
 
 
-class _CommandParsers:
+class CommandParsers:
     """Create and store all command method argument parsers for a given Cmd instance.
 
     Parser creation and retrieval are accomplished through the get() method.
     """
 
     def __init__(self, cmd: "Cmd") -> None:
+        """Initialize CommandParsers.
+
+        :param cmd: the Cmd instance whose parsers are being managed
+        """
         self._cmd = cmd
 
         # Keyed by the fully qualified method names. This is more reliable than
@@ -620,7 +624,7 @@ class Cmd:
         self.disabled_categories: dict[str, str] = {}
 
         # Command parsers for this Cmd instance.
-        self._command_parsers: _CommandParsers = _CommandParsers(self)
+        self.command_parsers: CommandParsers = CommandParsers(self)
 
         # Members related to printing asynchronous alerts
         self._alert_queue: deque[AsyncAlert] = deque()
@@ -935,7 +939,7 @@ class Cmd:
         if not command_func_name.startswith(COMMAND_FUNC_PREFIX):
             raise CommandSetRegistrationError(f"{command_func_name} does not begin with '{COMMAND_FUNC_PREFIX}'")
 
-        # command_method must start with COMMAND_FUNC_PREFIX for use in self._command_parsers.
+        # command_method must start with COMMAND_FUNC_PREFIX for use in self.command_parsers.
         if not command_method.__name__.startswith(COMMAND_FUNC_PREFIX):
             raise CommandSetRegistrationError(f"{command_method.__name__} does not begin with '{COMMAND_FUNC_PREFIX}'")
 
@@ -1009,7 +1013,7 @@ class Cmd:
                 # Only remove the parser if this is the actual
                 # command since command synonyms don't own it.
                 if cmd_func_name == command_method.__name__:
-                    self._command_parsers.remove(command_method)
+                    self.command_parsers.remove(command_method)
 
                 if hasattr(self, COMPLETER_FUNC_PREFIX + command):
                     delattr(self, COMPLETER_FUNC_PREFIX + command)
@@ -1059,7 +1063,7 @@ class Cmd:
             # We only need to check if it's safe to remove the parser if this
             # is the actual command since command synonyms don't own it.
             if cmd_func_name == command_method.__name__:
-                command_parser = self._command_parsers.get(command_method)
+                command_parser = self.command_parsers.get(command_method)
                 if command_parser is not None:
                     check_parser_uninstallable(command_parser)
 
@@ -1140,7 +1144,7 @@ class Cmd:
             with contextlib.suppress(ValueError):
                 self.detach_subcommand(full_command_name, subcommand_name)
 
-    def _get_root_parser_and_subcmd_path(self, command: str) -> tuple[Cmd2ArgumentParser, list[str]]:
+    def get_root_parser_and_subcmd_path(self, command: str) -> tuple[Cmd2ArgumentParser, list[str]]:
         """Tokenize a command string and resolve the associated root parser and relative subcommand path.
 
         This helper handles the initial resolution of a command string (e.g., 'foo bar baz') by
@@ -1170,7 +1174,7 @@ class Cmd:
         if command_func is None:
             raise ValueError(f"Root command '{root_command}' not found")
 
-        root_parser = self._command_parsers.get(command_func)
+        root_parser = self.command_parsers.get(command_func)
         if root_parser is None:
             raise ValueError(f"Command '{root_command}' does not use argparse")
 
@@ -1195,7 +1199,7 @@ class Cmd:
                            2. The parser_class configured for the target subcommand group
         :raises ValueError: if the command path is invalid or doesn't support subcommands
         """
-        root_parser, subcommand_path = self._get_root_parser_and_subcmd_path(command)
+        root_parser, subcommand_path = self.get_root_parser_and_subcmd_path(command)
         root_parser.attach_subcommand(subcommand_path, subcommand, subcommand_parser, **add_parser_kwargs)
 
     def detach_subcommand(self, command: str, subcommand: str) -> Cmd2ArgumentParser:
@@ -1207,7 +1211,7 @@ class Cmd:
         :return: the detached parser
         :raises ValueError: if the command path is invalid or the subcommand doesn't exist
         """
-        root_parser, subcommand_path = self._get_root_parser_and_subcmd_path(command)
+        root_parser, subcommand_path = self.get_root_parser_and_subcmd_path(command)
         return root_parser.detach_subcommand(subcommand_path, subcommand)
 
     @property
@@ -2448,7 +2452,7 @@ class Cmd:
                 else:
                     # There's no completer function, next see if the command uses argparse
                     func = self.get_command_func(command)
-                    argparser = None if func is None else self._command_parsers.get(func)
+                    argparser = None if func is None else self.command_parsers.get(func)
 
                     if func is not None and argparser is not None:
                         # Get arguments for complete()
@@ -4218,7 +4222,7 @@ class Cmd:
             return Completions()
 
         # Check if this command uses argparse
-        if (func := self.get_command_func(command)) is None or (argparser := self._command_parsers.get(func)) is None:
+        if (func := self.get_command_func(command)) is None or (argparser := self.command_parsers.get(func)) is None:
             return Completions()
 
         completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
@@ -4312,7 +4316,7 @@ class Cmd:
             # Getting help for a specific command
             func = self.get_command_func(args.command)
             help_func = getattr(self, constants.HELP_FUNC_PREFIX + args.command, None)
-            argparser = None if func is None else self._command_parsers.get(func)
+            argparser = None if func is None else self.command_parsers.get(func)
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:

@@ -287,7 +287,7 @@ def with_argparser(
             )
 
             # Pass cmd_wrapper instead of func, since it contains the parser info.
-            arg_parser = cmd2_app._command_parsers.get(cmd_wrapper)
+            arg_parser = cmd2_app.command_parsers.get(cmd_wrapper)
             if arg_parser is None:
                 # This shouldn't be possible to reach
                 raise ValueError(f"No argument parser found for {command_name}")  # pragma: no cover
