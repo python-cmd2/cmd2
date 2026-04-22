@@ -6,7 +6,10 @@ import signal
 import sys
 import tempfile
 from code import InteractiveConsole
-from typing import NoReturn
+from typing import (
+    NoReturn,
+    cast,
+)
 from unittest import mock
 
 import pytest
@@ -34,6 +37,7 @@ from cmd2 import (
 )
 from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
+from cmd2.types import BoundCommandFunc
 
 from .conftest import (
     SHORTCUTS_TXT,
@@ -4080,12 +4084,10 @@ def test_help_argparse_command_while_disabled(disable_commands_app: DisableComma
 def test_help_disabled_no_help_func(base_app: cmd2.Cmd) -> None:
     from cmd2.cmd2 import DisabledCommand
 
-    # Manually disable a command without a help function to trigger the defensive fallback
+    # Intentionally bypass disable_command() to test the fallback in do_help()
     command = "quit"
-    command_func = base_app.get_command_func(command)
-    base_app.disabled_commands[command] = DisabledCommand(
-        command_function=command_func, help_function=None, completer_function=None
-    )
+    command_func = cast(BoundCommandFunc, base_app.get_command_func(command))
+    base_app.disabled_commands[command] = DisabledCommand(command_func=command_func, help_func=None, completer_func=None)
 
     _out, err = run_cmd(base_app, f"help {command}")
     assert err[0].startswith(f"{command} is currently disabled.")

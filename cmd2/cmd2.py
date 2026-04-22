@@ -41,10 +41,7 @@ import tempfile
 import threading
 import time
 from code import InteractiveConsole
-from collections import (
-    deque,
-    namedtuple,
-)
+from collections import deque
 from collections.abc import (
     Callable,
     Iterable,
@@ -61,6 +58,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    NamedTuple,
     TextIO,
     TypeVar,
     cast,
@@ -219,8 +217,15 @@ class _SavedCmd2Env:
         self.completer: Callable[[str, int], str | None] | None = None
 
 
-# Contains data about a disabled command which is used to restore its original functions when the command is enabled
-DisabledCommand = namedtuple("DisabledCommand", ["command_function", "help_function", "completer_function"])  # noqa: PYI024
+class DisabledCommand(NamedTuple):
+    """Stores data about a disabled command.
+
+    This data is used to restore its functions when the command is enabled.
+    """
+
+    command_func: BoundCommandFunc
+    help_func: Callable[[], Any] | None
+    completer_func: BoundCompleter | None
 
 
 class CommandParsers:
@@ -2448,12 +2453,12 @@ class Cmd:
                     completer_func = func_attr
                 else:
                     # There's no completer function, next see if the command uses argparse
-                    func = self.get_command_func(command)
-                    argparser = None if func is None else self.command_parsers.get(func)
+                    command_func = self.get_command_func(command)
+                    argparser = None if command_func is None else self.command_parsers.get(command_func)
 
-                    if func is not None and argparser is not None:
+                    if command_func is not None and argparser is not None:
                         # Get arguments for complete()
-                        preserve_quotes = getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES)
+                        preserve_quotes = getattr(command_func, constants.CMD_ATTR_PRESERVE_QUOTES)
                         cmd_set = self.find_commandset_for_command(command)
 
                         # Create the argparse completer
@@ -2718,9 +2723,8 @@ class Cmd:
 
         # Add commands
         for command in self.get_visible_commands():
-            # Get the command method
-            func = getattr(self, constants.COMMAND_FUNC_PREFIX + command)
-            description = strip_doc_annotations(func.__doc__).splitlines()[0] if func.__doc__ else ""
+            command_func = cast(BoundCommandFunc, self.get_command_func(command))
+            description = strip_doc_annotations(command_func.__doc__).splitlines()[0] if command_func.__doc__ else ""
             items.append(CompletionItem(command, display_meta=description))
 
         # Add aliases
@@ -3328,9 +3332,9 @@ class Cmd:
         :param command: the name of the command
         :return: the bound function implementing the command, or None if not found
         """
-        func_name = constants.COMMAND_FUNC_PREFIX + command
-        func = getattr(self, func_name, None)
-        return cast(BoundCommandFunc, func) if callable(func) else None
+        command_func_name = constants.COMMAND_FUNC_PREFIX + command
+        command_func = getattr(self, command_func_name, None)
+        return cast(BoundCommandFunc, command_func) if callable(command_func) else None
 
     def _get_command_category(self, func: BoundCommandFunc) -> str:
         """Determine the category for a command.
@@ -3363,8 +3367,8 @@ class Cmd:
         if not isinstance(statement, Statement):
             statement = self._input_line_to_statement(statement)
 
-        func = self.get_command_func(statement.command)
-        if func:
+        command_func = self.get_command_func(statement.command)
+        if command_func:
             # Check to see if this command should be stored in history
             if (
                 statement.command not in self.exclude_from_history
@@ -3375,7 +3379,7 @@ class Cmd:
 
             try:
                 self.current_command = statement
-                stop = func(statement)
+                stop = command_func(statement)
             finally:
                 self.current_command = None
 
@@ -4219,7 +4223,9 @@ class Cmd:
             return Completions()
 
         # Check if this command uses argparse
-        if (func := self.get_command_func(command)) is None or (argparser := self.command_parsers.get(func)) is None:
+        if (command_func := self.get_command_func(command)) is None or (
+            argparser := self.command_parsers.get(command_func)
+        ) is None:
             return Completions()
 
         completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
@@ -4245,8 +4251,8 @@ class Cmd:
                 help_topics.remove(command)
 
             # Store the command within its category
-            func = cast(BoundCommandFunc, self.get_command_func(command))
-            category = self._get_command_category(func)
+            command_func = cast(BoundCommandFunc, self.get_command_func(command))
+            category = self._get_command_category(command_func)
             cmds_cats.setdefault(category, []).append(command)
 
         return cmds_cats, help_topics
@@ -4320,16 +4326,16 @@ class Cmd:
                 if help_func is not None:
                     help_func()
                 else:
-                    # This is a defensive fallback in case someone disabled a command
-                    # without using disable_command() resulting in no help function.
+                    # Handle potential case where command is disabled by manually editing
+                    # self.disabled_commands instead of using disable_command().
                     self._report_disabled_command_usage(message_to_print=f"{args.command} is currently disabled.")
                 return
 
-            func = self.get_command_func(args.command)
-            argparser = None if func is None else self.command_parsers.get(func)
+            command_func = self.get_command_func(args.command)
+            argparser = None if command_func is None else self.command_parsers.get(command_func)
 
             # If the command function uses argparse, then use argparse's help
-            if func is not None and argparser is not None:
+            if command_func is not None and argparser is not None:
                 completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
                 completer.print_help(args.subcommands, self.stdout)
 
@@ -4338,8 +4344,8 @@ class Cmd:
                 help_func()
 
             # If the command function has a docstring, then print it
-            elif func is not None and func.__doc__ is not None:
-                self.poutput(pydoc.getdoc(func))
+            elif command_func is not None and command_func.__doc__ is not None:
+                self.poutput(pydoc.getdoc(command_func))
 
             # If there is no help information then print an error
             else:
@@ -4380,15 +4386,15 @@ class Cmd:
         self.columnize(cmds, maxcol)
         self.poutput()
 
-    def _print_documented_command_topics(self, header: str, cmds: Sequence[str], verbose: bool) -> None:
+    def _print_documented_command_topics(self, header: str, commands: Sequence[str], verbose: bool) -> None:
         """Print topics which are documented commands, switching between verbose or traditional output."""
         import io
 
-        if not cmds:
+        if not commands:
             return
 
         if not verbose:
-            self.print_topics(header, cmds, 15, 80)
+            self.print_topics(header, commands, 15, 80)
             return
 
         topic_table = Cmd2SimpleTable(
@@ -4398,8 +4404,8 @@ class Cmd:
 
         # Try to get the documentation string for each command
         topics = self.get_help_topics()
-        for command in cmds:
-            if (cmd_func := self.get_command_func(command)) is None:
+        for command in commands:
+            if (command_func := self.get_command_func(command)) is None:
                 continue
 
             doc: str | None
@@ -4424,7 +4430,7 @@ class Cmd:
                 doc = result.getvalue()
 
             else:
-                doc = cmd_func.__doc__
+                doc = command_func.__doc__
 
             # Attempt to locate the first documentation block
             cmd_desc = strip_doc_annotations(doc) if doc else ""
@@ -5593,25 +5599,25 @@ class Cmd:
         if command not in self.disabled_commands:
             return
 
-        cmd_func_name = constants.COMMAND_FUNC_PREFIX + command
+        command_func_name = constants.COMMAND_FUNC_PREFIX + command
         help_func_name = constants.HELP_FUNC_PREFIX + command
         completer_func_name = constants.COMPLETER_FUNC_PREFIX + command
 
         # Restore the command function to its original value
         dc = self.disabled_commands[command]
-        setattr(self, cmd_func_name, dc.command_function)
+        setattr(self, command_func_name, dc.command_func)
 
         # Restore the help function to its original value
-        if dc.help_function is None:
+        if dc.help_func is None:
             delattr(self, help_func_name)
         else:
-            setattr(self, help_func_name, dc.help_function)
+            setattr(self, help_func_name, dc.help_func)
 
         # Restore the completer function to its original value
-        if dc.completer_function is None:
+        if dc.completer_func is None:
             delattr(self, completer_func_name)
         else:
-            setattr(self, completer_func_name, dc.completer_function)
+            setattr(self, completer_func_name, dc.completer_func)
 
         # Remove the disabled command entry
         del self.disabled_commands[command]
@@ -5625,15 +5631,15 @@ class Cmd:
         if category not in self.disabled_categories:
             return
 
-        for cmd_name in list(self.disabled_commands):
-            func = self.disabled_commands[cmd_name].command_function
-            if self._get_command_category(func) == category:
-                self.enable_command(cmd_name)
+        for command in list(self.disabled_commands):
+            command_func = self.disabled_commands[command].command_func
+            if self._get_command_category(command_func) == category:
+                self.enable_command(command)
 
         del self.disabled_categories[category]
 
     def disable_command(self, command: str, message_to_print: str) -> None:
-        """Disable a command and overwrite its functions.
+        """Disable a command and replace its functions with disabled versions.
 
         :param command: the command being disabled
         :param message_to_print: what to print when this command is run or help is called on it while disabled
@@ -5647,41 +5653,48 @@ class Cmd:
             return
 
         # Make sure this is an actual command
-        command_function = self.get_command_func(command)
-        if command_function is None:
+        command_func = self.get_command_func(command)
+        if command_func is None:
             raise AttributeError(f"'{command}' does not refer to a command")
 
-        cmd_func_name = constants.COMMAND_FUNC_PREFIX + command
+        command_func_name = constants.COMMAND_FUNC_PREFIX + command
+
         help_func_name = constants.HELP_FUNC_PREFIX + command
+        help_func = getattr(self, help_func_name, None)
+
         completer_func_name = constants.COMPLETER_FUNC_PREFIX + command
+        completer_func = getattr(self, completer_func_name, None)
 
         # Add the disabled command record
         self.disabled_commands[command] = DisabledCommand(
-            command_function=command_function,
-            help_function=getattr(self, help_func_name, None),
-            completer_function=getattr(self, completer_func_name, None),
+            command_func=command_func,
+            help_func=help_func,
+            completer_func=completer_func,
         )
 
-        # Overwrite command function to print the message
+        # Replace command and help functions to report the disabled message
         message_to_print = message_to_print.replace(constants.COMMAND_NAME, command)
-        new_cmd_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
+        new_cmd_func = functools.partial(
+            self._report_disabled_command_usage,
+            message_to_print=message_to_print,
+        )
 
-        # Preserve the metadata of the original command function
-        functools.update_wrapper(new_cmd_func, command_function)
-        setattr(self, cmd_func_name, new_cmd_func)
+        # Ensure the replacement function identifies as the original for introspection
+        functools.update_wrapper(new_cmd_func, command_func)
+        setattr(self, command_func_name, new_cmd_func)
 
-        # Overwrite the help function to print the message
-        new_help_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
-        if (help_function := self.disabled_commands[command].help_function) is not None:
-            # Preserve the metadata of the original help function
-            functools.update_wrapper(new_help_func, help_function)
+        new_help_func = functools.partial(
+            self._report_disabled_command_usage,
+            message_to_print=message_to_print,
+        )
+        if help_func is not None:
+            functools.update_wrapper(new_help_func, help_func)
         setattr(self, help_func_name, new_help_func)
 
-        # Set the completer to a function that returns a nothing
+        # Replace completer with a function that returns nothing
         new_completer_func = functools.partial(self._disabled_completer)
-        if (completer_function := self.disabled_commands[command].completer_function) is not None:
-            # Preserve the metadata of the original completer function
-            functools.update_wrapper(new_completer_func, completer_function)
+        if completer_func is not None:
+            functools.update_wrapper(new_completer_func, completer_func)
         setattr(self, completer_func_name, new_completer_func)
 
     def disable_category(self, category: str, message_to_print: str) -> None:
@@ -5699,10 +5712,10 @@ class Cmd:
 
         all_commands = self.get_all_commands()
 
-        for cmd_name in all_commands:
-            func = cast(BoundCommandFunc, self.get_command_func(cmd_name))
-            if self._get_command_category(func) == category:
-                self.disable_command(cmd_name, message_to_print)
+        for command in all_commands:
+            command_func = cast(BoundCommandFunc, self.get_command_func(command))
+            if self._get_command_category(command_func) == category:
+                self.disable_command(command, message_to_print)
 
         self.disabled_categories[category] = message_to_print
 
