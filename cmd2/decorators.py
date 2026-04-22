@@ -360,9 +360,9 @@ def as_subcommand_to(
     :param subcommand: Subcommand name
     :param parser: instance of Cmd2ArgumentParser or a callable that returns a Cmd2ArgumentParser for this subcommand
     :param help: Help message for this subcommand which displays in the list of subcommands of the command we are adding to.
-                 This is passed as the help argument to subparsers.add_parser().
-    :param aliases: Alternative names for this subcommand. This is passed as the alias argument to
-                    subparsers.add_parser().
+                 If not None, this is passed as the 'help' argument to subparsers.add_parser().
+    :param aliases: Alternative names for this subcommand. If a non-empty sequence is provided, it is passed
+                    as the 'aliases' argument to subparsers.add_parser().
     :param add_parser_kwargs: other registration-specific kwargs for add_parser()
                               (e.g. deprecated [Python 3.13+])
     :return: a decorator which configures the target function to be a subcommand handler
