@@ -49,14 +49,14 @@ class CompletionItem:
     # control sequences (like ^J or ^I) in the completion menu.
     _CONTROL_WHITESPACE_RE = re.compile(r"\r\n|[\n\r\t\f\v]")
 
-    # The core object this completion represents (e.g., str, int, Path).
-    # This serves as the default source for the completion string and is used
-    # to support object-based validation when used in argparse choices.
+    # The underlying object this completion represents (e.g., str, int, Path).
+    # This serves as the default source for 'text' and is used to support
+    # object-based validation when this item is used as an argparse choice.
     value: Any = field(kw_only=False)
 
-    # The actual completion string. If not provided, defaults to str(value).
-    # This can be used to provide a human-friendly alias for complex objects in
-    # an argparse choices list (requires a matching 'type' converter for validation).
+    # The actual completion string. Defaults to str(value). This should only be
+    # set manually if this item is used as an argparse choice and you want the
+    # choice string to differ from str(value).
     text: str = _UNSET_STR
 
     # Optional string for displaying the completion differently in the completion menu.
