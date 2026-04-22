@@ -34,6 +34,8 @@ each:
     - Example that demonstrates the `CommandSet` features for modularizing commands and demonstrates
       all main capabilities including basic CommandSets, dynamic loading an unloading, using
       subcommands, etc.
+- [completion_item_choices.py](https://github.com/python-cmd2/cmd2/blob/main/examples/completion_item_choices.py)
+    - Demonstrates using CompletionItem instances as elements in an argparse choices list.
 - [custom_parser.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_parser.py)
     - Demonstrates how to create your own custom `Cmd2ArgumentParser`
 - [custom_types.py](https://github.com/python-cmd2/cmd2/blob/main/examples/custom_types.py)
