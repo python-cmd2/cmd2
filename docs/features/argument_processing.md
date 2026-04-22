@@ -50,7 +50,7 @@ stores internally. A consequence is that parsers don't need to be unique across 
 
     Since the `@with_argparser` decorator is making a deep-copy of the parser provided, if you wish
     to dynamically modify this parser at a later time, you need to retrieve this deep copy. This can
-    be done using `self._command_parsers.get(self.do_commandname)`.
+    be done using `self.command_parsers.get(self.do_commandname)`.
 
 ## Argument Parsing
 

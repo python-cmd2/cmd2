@@ -96,6 +96,7 @@ prompt is displayed.
         - Replaced the global `APP_THEME` constant in `rich_utils.py` with `get_theme()` and
           `set_theme()` functions to support lazy initialization and safer in-place updates of the
           theme.
+    - Renamed `Cmd._command_parsers` to `Cmd.command_parsers`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These

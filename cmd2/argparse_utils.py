@@ -494,6 +494,52 @@ def _ActionsContainer_add_argument(  # noqa: N802
 # Overwrite _ActionsContainer.add_argument with our patch
 argparse._ActionsContainer.add_argument = _ActionsContainer_add_argument  # type: ignore[method-assign]
 
+############################################################################################################
+# Patch argparse._SubParsersAction by adding remove_parser() function
+############################################################################################################
+
+
+def _SubParsersAction_remove_parser(  # noqa: N802
+    self: argparse._SubParsersAction,  # type: ignore[type-arg]
+    name: str,
+) -> argparse.ArgumentParser:
+    """Remove a subparser from a subparsers group.
+
+    This function is added by cmd2 as a method called ``remove_parser()``
+    to ``argparse._SubParsersAction`` class.
+
+    To call: ``action.remove_parser(name)``
+
+    :param self: instance of the _SubParsersAction being edited
+    :param name: name of the subcommand for the subparser to remove
+    :return: the removed parser
+    :raises ValueError: if the subcommand doesn't exist
+    """
+    if name not in self._name_parser_map:
+        raise ValueError(f"Subcommand '{name}' not found")
+
+    subparser = self._name_parser_map[name]
+
+    # Find all names (primary and aliases) that map to this subparser
+    all_names = [cur_name for cur_name, cur_parser in self._name_parser_map.items() if cur_parser is subparser]
+
+    # Remove the help entry for this subparser. To handle the case where
+    # name is an alias, we remove the action whose 'dest' matches any of
+    # the names mapped to this subparser.
+    for choice_action in self._choices_actions:
+        if choice_action.dest in all_names:
+            self._choices_actions.remove(choice_action)
+            break
+
+    # Remove all references to this subparser, including aliases.
+    for cur_name in all_names:
+        del self._name_parser_map[cur_name]
+
+    return cast(argparse.ArgumentParser, subparser)
+
+
+argparse._SubParsersAction.remove_parser = _SubParsersAction_remove_parser  # type: ignore[attr-defined]
+
 
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output."""
@@ -556,7 +602,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.description: RenderableType | None  # type: ignore[assignment]
         self.epilog: RenderableType | None  # type: ignore[assignment]
 
-    def _get_subparsers_action(self) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
+    def get_subparsers_action(self) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
         """Get the _SubParsersAction for this parser if it exists.
 
         :return: the _SubParsersAction for this parser
@@ -619,7 +665,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.prog = prog
 
         try:
-            subparsers_action = self._get_subparsers_action()
+            subparsers_action = self.get_subparsers_action()
         except ValueError:
             # This parser has no subcommands
             return
@@ -651,7 +697,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             subcmd_parser.update_prog(subcmd_prog)
             updated_parsers.add(subcmd_parser)
 
-    def _find_parser(self, subcommand_path: Iterable[str]) -> "Cmd2ArgumentParser":
+    def find_parser(self, subcommand_path: Iterable[str]) -> "Cmd2ArgumentParser":
         """Find a parser in the hierarchy based on a sequence of subcommand names.
 
         :param subcommand_path: sequence of subcommand names leading to the target parser
@@ -660,7 +706,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         """
         parser = self
         for name in subcommand_path:
-            subparsers_action = parser._get_subparsers_action()
+            subparsers_action = parser.get_subparsers_action()
             if name not in subparsers_action.choices:
                 raise ValueError(f"Subcommand '{name}' not found in '{parser.prog}'")
             parser = subparsers_action.choices[name]
@@ -691,8 +737,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 f"Received: '{type(subcommand_parser).__name__}'."
             )
 
-        target_parser = self._find_parser(subcommand_path)
-        subparsers_action = target_parser._get_subparsers_action()
+        target_parser = self.find_parser(subcommand_path)
+        subparsers_action = target_parser.get_subparsers_action()
 
         # Verify the parser is compatible with the 'parser_class' configured for this
         # subcommand group. We use isinstance() here to allow for subclasses, providing
@@ -728,28 +774,16 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :return: the detached parser
         :raises ValueError: if the command path is invalid or the subcommand doesn't exist
         """
-        target_parser = self._find_parser(subcommand_path)
-        subparsers_action = target_parser._get_subparsers_action()
+        target_parser = self.find_parser(subcommand_path)
+        subparsers_action = target_parser.get_subparsers_action()
 
-        subparser = subparsers_action._name_parser_map.get(subcommand)
-        if subparser is None:
-            raise ValueError(f"Subcommand '{subcommand}' not found in '{target_parser.prog}'")
-
-        # Remove this subcommand and all its aliases from the base command
-        to_remove = []
-        for cur_name, cur_parser in subparsers_action._name_parser_map.items():
-            if cur_parser is subparser:
-                to_remove.append(cur_name)
-        for cur_name in to_remove:
-            del subparsers_action._name_parser_map[cur_name]
-
-        # Remove this subcommand from its base command's help text
-        for choice_action in subparsers_action._choices_actions:
-            if choice_action.dest == subcommand:
-                subparsers_action._choices_actions.remove(choice_action)
-                break
-
-        return subparser
+        try:
+            return cast(
+                Cmd2ArgumentParser,
+                subparsers_action.remove_parser(subcommand),  # type: ignore[attr-defined]
+            )
+        except ValueError:
+            raise ValueError(f"Subcommand '{subcommand}' not found in '{target_parser.prog}'") from None
 
     def error(self, message: str) -> NoReturn:
         """Override that applies custom formatting to the error message."""

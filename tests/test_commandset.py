@@ -173,13 +173,13 @@ def test_command_synonyms() -> None:
     app = WithCommandSets(command_sets=[cs])
 
     # Make sure the synonyms have the same parser as what they alias
-    builtin_parser = app._command_parsers.get(app.do_builtin)
-    builtin_synonym_parser = app._command_parsers.get(app.do_builtin_synonym)
+    builtin_parser = app.command_parsers.get(app.do_builtin)
+    builtin_synonym_parser = app.command_parsers.get(app.do_builtin_synonym)
     assert builtin_parser is not None
     assert builtin_parser is builtin_synonym_parser
 
-    alias_parser = app._command_parsers.get(cmd2.Cmd.do_alias)
-    alias_synonym_parser = app._command_parsers.get(app.do_alias_synonym)
+    alias_parser = app.command_parsers.get(cmd2.Cmd.do_alias)
+    alias_synonym_parser = app.command_parsers.get(app.do_alias_synonym)
     assert alias_parser is not None
     assert alias_parser is alias_synonym_parser
 
@@ -190,7 +190,7 @@ def test_command_synonyms() -> None:
     assert not hasattr(app, "do_alias_synonym")
 
     # Make sure the alias command still exists, has the same parser, and works.
-    assert alias_parser is app._command_parsers.get(cmd2.Cmd.do_alias)
+    assert alias_parser is app.command_parsers.get(cmd2.Cmd.do_alias)
     out, _err = run_cmd(app, "alias --help")
     assert normalize(alias_parser.format_help())[0] in out
 

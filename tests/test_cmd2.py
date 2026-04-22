@@ -6,7 +6,10 @@ import signal
 import sys
 import tempfile
 from code import InteractiveConsole
-from typing import NoReturn
+from typing import (
+    NoReturn,
+    cast,
+)
 from unittest import mock
 
 import pytest
@@ -34,6 +37,7 @@ from cmd2 import (
 )
 from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
+from cmd2.types import BoundCommandFunc
 
 from .conftest import (
     SHORTCUTS_TXT,
@@ -3837,6 +3841,10 @@ class DisableCommandsApp(cmd2.Cmd):
         """This will be in the DEFAULT_CATEGORY."""
         self.poutput("The real is_not_decorated")
 
+    @cmd2.with_argparser(cmd2.Cmd2ArgumentParser())
+    def do_argparse_command(self, args) -> None:
+        """Help for argparse_command"""
+
 
 class DisableCommandSet(CommandSet[cmd2.Cmd]):
     """Test registering a command which is in a disabled category"""
@@ -4008,12 +4016,82 @@ def test_disabled_command_not_in_history(disable_commands_app) -> None:
     assert saved_len == len(disable_commands_app.history)
 
 
-def test_disabled_message_command_name(disable_commands_app) -> None:
+def test_get_parser_while_disabled(disable_commands_app: DisableCommandsApp) -> None:
+    """Test that command_parsers can find a disabled command's parser."""
+    # Get parser before disabling
+    parser_before = disable_commands_app.command_parsers.get(disable_commands_app.do_argparse_command)
+    assert parser_before is not None
+
+    # Disable command
+    disable_commands_app.disable_command("argparse_command", "Disabled")
+
+    # Get parser after disabling
+    parser_after = disable_commands_app.command_parsers.get(disable_commands_app.do_argparse_command)
+    assert parser_after is not None
+    assert parser_after is parser_before
+
+
+def test_metadata_preservation_while_disabled(disable_commands_app: DisableCommandsApp) -> None:
+    orig_cmd_func = disable_commands_app.do_has_helper_func
+    orig_help = disable_commands_app.help_has_helper_func
+    orig_complete = disable_commands_app.complete_has_helper_func
+
+    disable_commands_app.disable_command("has_helper_func", "Disabled")
+
+    # Names and qualnames should be preserved
+    assert disable_commands_app.do_has_helper_func.__name__ == orig_cmd_func.__name__
+    assert disable_commands_app.do_has_helper_func.__qualname__ == orig_cmd_func.__qualname__
+
+    assert disable_commands_app.help_has_helper_func.__name__ == orig_help.__name__
+    assert disable_commands_app.help_has_helper_func.__qualname__ == orig_help.__qualname__
+
+    assert disable_commands_app.complete_has_helper_func.__name__ == orig_complete.__name__
+    assert disable_commands_app.complete_has_helper_func.__qualname__ == orig_complete.__qualname__
+
+    # Docstrings should be preserved
+    assert disable_commands_app.do_has_helper_func.__doc__ == orig_cmd_func.__doc__
+    assert disable_commands_app.help_has_helper_func.__doc__ == orig_help.__doc__
+    assert disable_commands_app.complete_has_helper_func.__doc__ == orig_complete.__doc__
+
+
+def test_disabled_completer_returns_empty(disable_commands_app: DisableCommandsApp) -> None:
+    disable_commands_app.disable_command("has_helper_func", "Disabled")
+    completions = disable_commands_app.complete_has_helper_func("", "has_helper_func ", 16, 16)
+    assert len(completions) == 0
+
+
+def test_disabled_message_command_name(disable_commands_app: DisableCommandsApp) -> None:
     message_to_print = f"{COMMAND_NAME} is currently disabled"
     disable_commands_app.disable_command("has_helper_func", message_to_print)
 
     _out, err = run_cmd(disable_commands_app, "has_helper_func")
     assert err[0].startswith("has_helper_func is currently disabled")
+
+
+def test_help_argparse_command_while_disabled(disable_commands_app: DisableCommandsApp) -> None:
+    message_to_print = "This command is disabled"
+    disable_commands_app.disable_command("argparse_command", message_to_print)
+
+    # help <command> should show the disabled message
+    _out, err = run_cmd(disable_commands_app, "help argparse_command")
+    assert err[0].startswith(message_to_print)
+
+    # Re-enabling should restore the real help
+    disable_commands_app.enable_command("argparse_command")
+    out, _err = run_cmd(disable_commands_app, "help argparse_command")
+    assert "Usage: argparse_command" in out[0]
+
+
+def test_help_disabled_no_help_func(base_app: cmd2.Cmd) -> None:
+    from cmd2.cmd2 import DisabledCommand
+
+    # Intentionally bypass disable_command() to test the fallback in do_help()
+    command = "quit"
+    command_func = cast(BoundCommandFunc, base_app.get_command_func(command))
+    base_app.disabled_commands[command] = DisabledCommand(command_func=command_func, help_func=None, completer_func=None)
+
+    _out, err = run_cmd(base_app, f"help {command}")
+    assert err[0].startswith(f"{command} is currently disabled.")
 
 
 def test_register_command_in_enabled_category(disable_commands_app) -> None:
@@ -4115,10 +4193,10 @@ def test_startup_script_with_odd_file_names(startup_script) -> None:
 def test_command_parser_retrieval(outsim_app: cmd2.Cmd) -> None:
     # Pass something that isn't a method
     not_a_method = "just a string"
-    assert outsim_app._command_parsers.get(not_a_method) is None
+    assert outsim_app.command_parsers.get(not_a_method) is None
 
     # Pass a non-command method
-    assert outsim_app._command_parsers.get(outsim_app.__init__) is None
+    assert outsim_app.command_parsers.get(outsim_app.__init__) is None
 
 
 def test_command_synonym_parser() -> None:
@@ -4128,8 +4206,8 @@ def test_command_synonym_parser() -> None:
 
     app = SynonymApp()
 
-    synonym_parser = app._command_parsers.get(app.do_synonym)
-    help_parser = app._command_parsers.get(app.do_help)
+    synonym_parser = app.command_parsers.get(app.do_synonym)
+    help_parser = app.command_parsers.get(app.do_help)
 
     assert synonym_parser is not None
     assert synonym_parser is help_parser
@@ -4481,7 +4559,7 @@ def test_subcommand_attachment() -> None:
     app = SubcmdApp()
 
     # Verify root exists and uses argparse
-    root_parser = app._command_parsers.get(app.do_root)
+    root_parser = app.command_parsers.get(app.do_root)
     assert root_parser is not None
 
     # Attach child to root
@@ -4490,7 +4568,7 @@ def test_subcommand_attachment() -> None:
     app.attach_subcommand("root", "child", child_parser, help="child help")
 
     # Verify child was attached
-    root_subparsers_action = root_parser._get_subparsers_action()
+    root_subparsers_action = root_parser.get_subparsers_action()
     assert "child" in root_subparsers_action._name_parser_map
     assert root_subparsers_action._name_parser_map["child"] is child_parser
 
@@ -4499,7 +4577,7 @@ def test_subcommand_attachment() -> None:
     app.attach_subcommand("root child", "grandchild", grandchild_parser)
 
     # Verify grandchild was attached
-    child_subparsers_action = child_parser._get_subparsers_action()
+    child_subparsers_action = child_parser.get_subparsers_action()
     assert "grandchild" in child_subparsers_action._name_parser_map
 
     # Detach grandchild
