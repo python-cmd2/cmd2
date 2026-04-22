@@ -729,7 +729,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :raises TypeError: if subcommand_parser is not an instance of the following or their subclasses:
                            1. Cmd2ArgumentParser
                            2. The parser_class configured for the target subcommand group
-        :raises ValueError: if the command path is invalid or doesn't support subcommands
+        :raises ValueError: if the command path is invalid, doesn't support subcommands, or the
+                            subcommand already exists
         """
         if not isinstance(subcommand_parser, Cmd2ArgumentParser):
             raise TypeError(
@@ -752,7 +753,11 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             )
 
         # Use add_parser to register the subcommand name and any aliases
-        placeholder_parser = subparsers_action.add_parser(subcommand, **add_parser_kwargs)
+        try:
+            placeholder_parser = subparsers_action.add_parser(subcommand, **add_parser_kwargs)
+        except ArgumentError as ex:
+            # The subcommand already exists
+            raise ValueError(str(ex)) from None
 
         # To ensure accurate usage strings, recursively update 'prog' values
         # within the injected parser to match its new location in the command hierarchy.

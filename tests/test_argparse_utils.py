@@ -467,6 +467,12 @@ def test_subcommand_attachment_errors() -> None:
     with pytest.raises(TypeError, match=r"must be an instance of 'Cmd2ArgumentParser' \(or a subclass\)"):
         root_parser.attach_subcommand([], "sub", ap_parser)  # type: ignore[arg-type]
 
+    # Verify ValueError when subcommand name already exists
+    sub_parser = Cmd2ArgumentParser(prog="sub")
+    root_parser.attach_subcommand([], "sub", sub_parser)
+    with pytest.raises(ValueError, match="conflicting subparser: sub"):
+        root_parser.attach_subcommand([], "sub", sub_parser)
+
 
 def test_subcommand_attachment_parser_class_override() -> None:
     class MyParser(Cmd2ArgumentParser):
