@@ -1174,7 +1174,7 @@ class Cmd:
         # Search for the base command function and verify it has an argparser defined
         command_func = self.get_command_func(root_command)
         if command_func is None:
-            raise ValueError(f"Root command '{root_command}' not found")
+            raise ValueError(f"Root command '{root_command}' does not exist")
 
         root_parser = self.command_parsers.get(command_func)
         if root_parser is None:
