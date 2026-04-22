@@ -54,6 +54,14 @@ class Account:
         self.account_id = account_id
         self.owner = owner
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Account):
+            return self.account_id == other.account_id
+        return False
+
+    def __hash__(self) -> int:
+        return hash(self.account_id)
+
     def __repr__(self) -> str:
         return f"Account(id={self.account_id}, owner='{self.owner}')"
 
