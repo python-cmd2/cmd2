@@ -4686,6 +4686,12 @@ class Cmd:
         # Create the parser for the set command
         set_parser = cls._build_base_set_parser()
         set_parser.add_argument(
+            "-v",
+            "--verbose",
+            action="store_true",
+            help="show the change",
+        )
+        set_parser.add_argument(
             "value",
             nargs=argparse.OPTIONAL,
             help="new value for settable",
@@ -4720,7 +4726,16 @@ class Cmd:
                 except ValueError as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
-                    self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {settable.value!r}")
+                    if args.verbose:
+                        feedback_msg = Text.assemble(
+                            args.param,
+                            ": ",
+                            (f"{orig_value!r}", "red"),
+                            " -> ",
+                            (f"{settable.value!r}", "green"),
+                        )
+                        self.poutput(feedback_msg)
+
                     self.last_result = True
                 return
 

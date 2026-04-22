@@ -121,7 +121,7 @@ def test_base_argparse_help(base_app) -> None:
 
 def test_base_invalid_option(base_app) -> None:
     _out, err = run_cmd(base_app, "set -z")
-    assert err[0] == "Usage: set [-h] [param] [value]"
+    assert err[0] == "Usage: set [-h] [-v] [param] [value]"
     assert "Error: unrecognized arguments: -z" in err[1]
 
 
@@ -161,26 +161,27 @@ def test_base_set(base_app) -> None:
 
 
 def test_set(base_app) -> None:
+    # Test silent by default
     out, _err = run_cmd(base_app, "set quiet True")
-    expected = normalize(
-        """
-quiet - was: False
-now: True
-"""
-    )
+    assert not out
+    assert base_app.last_result is True
+
+    # Test verbose
+    out, _err = run_cmd(base_app, "set -v quiet False")
+    expected = ["quiet: True -> False"]
     assert out == expected
     assert base_app.last_result is True
 
     line_found = False
     out, _err = run_cmd(base_app, "set quiet")
     for line in out:
-        if "quiet" in line and "True" in line and "False" not in line:
+        if "quiet" in line and "False" in line and "True" not in line:
             line_found = True
             break
 
     assert line_found
     assert len(base_app.last_result) == 1
-    assert base_app.last_result["quiet"] is True
+    assert base_app.last_result["quiet"] is False
 
 
 def test_set_val_empty(base_app) -> None:
@@ -231,7 +232,7 @@ def test_set_no_settables(base_app) -> None:
 @with_ansi_style(ru.AllowStyle.TERMINAL)
 def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     # Use the set command to alter allow_style
-    out, err = run_cmd(base_app, f"set allow_style {new_val}")
+    out, err = run_cmd(base_app, f"set -v allow_style {new_val}")
     assert base_app.last_result is is_valid
 
     # Verify the results
@@ -276,12 +277,11 @@ def onchange_app():
 
 
 def test_set_onchange_hook(onchange_app) -> None:
-    out, _err = run_cmd(onchange_app, "set quiet True")
+    out, _err = run_cmd(onchange_app, "set -v quiet True")
     expected = normalize(
         """
 You changed quiet
-quiet - was: False
-now: True
+quiet: False -> True
 """
     )
     assert out == expected
@@ -874,12 +874,8 @@ def test_allow_clipboard(base_app) -> None:
 
 def test_base_timing(base_app) -> None:
     base_app.feedback_to_output = False
-    out, err = run_cmd(base_app, "set timing True")
-    expected = normalize(
-        """timing - was: False
-now: True
-"""
-    )
+    out, err = run_cmd(base_app, "set -v timing True")
+    expected = ["timing: False -> True"]
     assert out == expected
 
     if sys.platform == "win32":
@@ -898,13 +894,8 @@ def test_base_debug(base_app) -> None:
     assert "To enable full traceback" in err[3]
 
     # Set debug true
-    out, err = run_cmd(base_app, "set debug True")
-    expected = normalize(
-        """
-debug - was: False
-now: True
-"""
-    )
+    out, err = run_cmd(base_app, "set -v debug True")
+    expected = ["debug: False -> True"]
     assert out == expected
 
     # Verify that we now see the exception traceback
