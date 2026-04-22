@@ -4017,6 +4017,7 @@ def test_disabled_command_not_in_history(disable_commands_app) -> None:
 
 
 def test_get_parser_while_disabled(disable_commands_app: DisableCommandsApp) -> None:
+    """Test that command_parsers can find a disabled command's parser."""
     # Get parser before disabling
     parser_before = disable_commands_app.command_parsers.get(disable_commands_app.do_argparse_command)
     assert parser_before is not None
@@ -4024,7 +4025,7 @@ def test_get_parser_while_disabled(disable_commands_app: DisableCommandsApp) -> 
     # Disable command
     disable_commands_app.disable_command("argparse_command", "Disabled")
 
-    # Get parser after disabling - this is what was failing (returning None)
+    # Get parser after disabling
     parser_after = disable_commands_app.command_parsers.get(disable_commands_app.do_argparse_command)
     assert parser_after is not None
     assert parser_after is parser_before
