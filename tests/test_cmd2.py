@@ -4596,6 +4596,13 @@ def test_subcommand_attachment_errors() -> None:
         def __init__(self) -> None:
             super().__init__()
 
+        test_parser = cmd2.Cmd2ArgumentParser()
+        test_parser.add_subparsers(required=True)
+
+        @cmd2.with_argparser(test_parser)
+        def do_test(self, _statement: cmd2.Statement) -> None:
+            pass
+
         def do_no_argparse(self, _statement: cmd2.Statement) -> None:
             pass
 
@@ -4606,9 +4613,14 @@ def test_subcommand_attachment_errors() -> None:
         app.attach_subcommand("", "sub", cmd2.Cmd2ArgumentParser())
 
     # Test non-existent command
-    with pytest.raises(ValueError, match="Root command 'fake' not found"):
+    with pytest.raises(ValueError, match="Root command 'fake' does not exist"):
         app.attach_subcommand("fake", "sub", cmd2.Cmd2ArgumentParser())
 
     # Test command that doesn't use argparse
     with pytest.raises(ValueError, match="Command 'no_argparse' does not use argparse"):
         app.attach_subcommand("no_argparse", "sub", cmd2.Cmd2ArgumentParser())
+
+    # Test duplicate subcommand
+    app.attach_subcommand("test", "sub", cmd2.Cmd2ArgumentParser())
+    with pytest.raises(ValueError, match="Subcommand 'sub' already exists for 'test'"):
+        app.attach_subcommand("test", "sub", cmd2.Cmd2ArgumentParser())

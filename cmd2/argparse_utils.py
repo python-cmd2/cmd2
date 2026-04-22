@@ -516,7 +516,7 @@ def _SubParsersAction_remove_parser(  # noqa: N802
     :raises ValueError: if the subcommand doesn't exist
     """
     if name not in self._name_parser_map:
-        raise ValueError(f"Subcommand '{name}' not found")
+        raise ValueError(f"Subcommand '{name}' does not exist")
 
     subparser = self._name_parser_map[name]
 
@@ -684,12 +684,12 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # add_parser() will have the correct prog value.
         subparsers_action._prog_prefix = self._build_subparsers_prog_prefix(positionals)
 
-        # subparsers_action.choices includes aliases. Since primary names are inserted first,
-        # we skip already updated parsers to ensure primary names are used in 'prog'.
+        # subparsers_action._name_parser_map includes aliases. Since primary names are inserted
+        # first, we skip already updated parsers to ensure primary names are used in 'prog'.
         updated_parsers: set[Cmd2ArgumentParser] = set()
 
         # Set the prog value for each subcommand's parser
-        for subcmd_name, subcmd_parser in subparsers_action.choices.items():
+        for subcmd_name, subcmd_parser in subparsers_action._name_parser_map.items():
             if subcmd_parser in updated_parsers:
                 continue
 
@@ -707,9 +707,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         parser = self
         for name in subcommand_path:
             subparsers_action = parser.get_subparsers_action()
-            if name not in subparsers_action.choices:
-                raise ValueError(f"Subcommand '{name}' not found in '{parser.prog}'")
-            parser = subparsers_action.choices[name]
+            if name not in subparsers_action._name_parser_map:
+                raise ValueError(f"Subcommand '{name}' does not exist for '{parser.prog}'")
+            parser = subparsers_action._name_parser_map[name]
         return parser
 
     def attach_subcommand(
@@ -729,7 +729,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :raises TypeError: if subcommand_parser is not an instance of the following or their subclasses:
                            1. Cmd2ArgumentParser
                            2. The parser_class configured for the target subcommand group
-        :raises ValueError: if the command path is invalid or doesn't support subcommands
+        :raises ValueError: if the command path is invalid, doesn't support subcommands, or the
+                            subcommand already exists
         """
         if not isinstance(subcommand_parser, Cmd2ArgumentParser):
             raise TypeError(
@@ -750,6 +751,12 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 f"(or a subclass) to match the 'parser_class' configured for this subcommand group. "
                 f"Received: '{type(subcommand_parser).__name__}'."
             )
+
+        # Do not overwrite existing subcommands or aliases
+        all_names = (subcommand, *add_parser_kwargs.get("aliases", ()))
+        for name in all_names:
+            if name in subparsers_action._name_parser_map:
+                raise ValueError(f"Subcommand '{name}' already exists for '{target_parser.prog}'")
 
         # Use add_parser to register the subcommand name and any aliases
         placeholder_parser = subparsers_action.add_parser(subcommand, **add_parser_kwargs)
@@ -783,7 +790,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
                 subparsers_action.remove_parser(subcommand),  # type: ignore[attr-defined]
             )
         except ValueError:
-            raise ValueError(f"Subcommand '{subcommand}' not found in '{target_parser.prog}'") from None
+            raise ValueError(f"Subcommand '{subcommand}' does not exist for '{target_parser.prog}'") from None
 
     def error(self, message: str) -> NoReturn:
         """Override that applies custom formatting to the error message."""

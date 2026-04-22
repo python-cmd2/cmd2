@@ -453,19 +453,25 @@ def test_subcommand_attachment_errors() -> None:
     root_parser.add_subparsers()
 
     # Verify ValueError when path is invalid (find_parser() fails)
-    with pytest.raises(ValueError, match="Subcommand 'nonexistent' not found"):
+    with pytest.raises(ValueError, match="Subcommand 'nonexistent' does not exist for 'root'"):
         root_parser.attach_subcommand(["nonexistent"], "anything", child_parser)
-    with pytest.raises(ValueError, match="Subcommand 'nonexistent' not found"):
+    with pytest.raises(ValueError, match="Subcommand 'nonexistent' does not exist for 'root'"):
         root_parser.detach_subcommand(["nonexistent"], "anything")
 
     # Verify ValueError when path is valid but subcommand name is wrong
-    with pytest.raises(ValueError, match="Subcommand 'fake' not found in 'root'"):
+    with pytest.raises(ValueError, match="Subcommand 'fake' does not exist for 'root'"):
         root_parser.detach_subcommand([], "fake")
 
     # Verify TypeError when attaching a non-Cmd2ArgumentParser type
     ap_parser = argparse.ArgumentParser(prog="non-cmd2-parser")
     with pytest.raises(TypeError, match=r"must be an instance of 'Cmd2ArgumentParser' \(or a subclass\)"):
         root_parser.attach_subcommand([], "sub", ap_parser)  # type: ignore[arg-type]
+
+    # Verify ValueError when subcommand name already exists
+    sub_parser = Cmd2ArgumentParser(prog="sub")
+    root_parser.attach_subcommand([], "sub", sub_parser)
+    with pytest.raises(ValueError, match="Subcommand 'sub' already exists for 'root'"):
+        root_parser.attach_subcommand([], "sub", sub_parser)
 
 
 def test_subcommand_attachment_parser_class_override() -> None:
