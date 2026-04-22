@@ -24,7 +24,10 @@ This demo showcases two distinct approaches:
 
 import argparse
 import sys
-from typing import cast
+from typing import (
+    ClassVar,
+    cast,
+)
 
 from cmd2 import (
     Cmd,
@@ -95,6 +98,8 @@ def account_lookup(name: str) -> Account:
 # -----------------------------------------------------------------------------
 class ChoicesDemo(Cmd):
     """Demo cmd2 application."""
+
+    DEFAULT_CATEGORY: ClassVar[str] = "Demo Commands"
 
     def __init__(self) -> None:
         super().__init__()
