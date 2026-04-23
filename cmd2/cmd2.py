@@ -1174,7 +1174,7 @@ class Cmd:
         # Search for the base command function and verify it has an argparser defined
         command_func = self.get_command_func(root_command)
         if command_func is None:
-            raise ValueError(f"Root command '{root_command}' not found")
+            raise ValueError(f"Root command '{root_command}' does not exist")
 
         root_parser = self.command_parsers.get(command_func)
         if root_parser is None:
@@ -1199,7 +1199,8 @@ class Cmd:
         :raises TypeError: if subcommand_parser is not an instance of the following or their subclasses:
                            1. Cmd2ArgumentParser
                            2. The parser_class configured for the target subcommand group
-        :raises ValueError: if the command path is invalid or doesn't support subcommands
+        :raises ValueError: if the command path is invalid, doesn't support subcommands, or the
+                            subcommand already exists
         """
         root_parser, subcommand_path = self.get_root_parser_and_subcmd_path(command)
         root_parser.attach_subcommand(subcommand_path, subcommand, subcommand_parser, **add_parser_kwargs)
