@@ -121,7 +121,7 @@ def test_base_argparse_help(base_app) -> None:
 
 def test_base_invalid_option(base_app) -> None:
     _out, err = run_cmd(base_app, "set -z")
-    assert err[0] == "Usage: set [-h] [-v] [param] [value]"
+    assert err[0] == "Usage: set [-h] [param] [value]"
     assert "Error: unrecognized arguments: -z" in err[1]
 
 
@@ -161,27 +161,28 @@ def test_base_set(base_app) -> None:
 
 
 def test_set(base_app) -> None:
-    # Test silent by default
-    out, _err = run_cmd(base_app, "set quiet True")
+    out, err = run_cmd(base_app, "set quiet True")
     assert not out
     assert base_app.last_result is True
 
-    # Test verbose
-    out, _err = run_cmd(base_app, "set -v quiet False")
-    expected = ["quiet: True -> False"]
-    assert out == expected
+    # Test quiet respect
+    out, err = run_cmd(base_app, "set timing False")
+    assert not out
+    assert not err
     assert base_app.last_result is True
 
+    # Show one settable (this always goes to out)
     line_found = False
     out, _err = run_cmd(base_app, "set quiet")
     for line in out:
-        if "quiet" in line and "False" in line and "True" not in line:
+        if "quiet" in line and "True" in line and "False" not in line:
             line_found = True
             break
 
     assert line_found
     assert len(base_app.last_result) == 1
-    assert base_app.last_result["quiet"] is False
+    assert base_app.last_result["quiet"] is True
+    base_app.quiet = False
 
 
 def test_set_val_empty(base_app) -> None:
@@ -232,14 +233,14 @@ def test_set_no_settables(base_app) -> None:
 @with_ansi_style(ru.AllowStyle.TERMINAL)
 def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     # Use the set command to alter allow_style
-    out, err = run_cmd(base_app, f"set -v allow_style {new_val}")
+    out, err = run_cmd(base_app, f"set allow_style {new_val}")
     assert base_app.last_result is is_valid
 
     # Verify the results
     assert expected == ru.ALLOW_STYLE
     if is_valid:
-        assert not err
-        assert out
+        assert err
+        assert not out
 
 
 def test_set_with_choices(base_app) -> None:
@@ -251,9 +252,10 @@ def test_set_with_choices(base_app) -> None:
     base_app.add_settable(fake_settable)
 
     # Try a valid choice
-    _out, err = run_cmd(base_app, f"set fake {fake_choices[1]}")
+    out, err = run_cmd(base_app, f"set fake {fake_choices[1]}")
     assert base_app.last_result is True
-    assert not err
+    assert not out
+    assert err == [f"fake: {fake_choices[0]!r} -> {fake_choices[1]!r}"]
 
     # Try an invalid choice
     _out, err = run_cmd(base_app, "set fake bad_value")
@@ -277,14 +279,10 @@ def onchange_app():
 
 
 def test_set_onchange_hook(onchange_app) -> None:
-    out, _err = run_cmd(onchange_app, "set -v quiet True")
-    expected = normalize(
-        """
-You changed quiet
-quiet: False -> True
-"""
-    )
-    assert out == expected
+    out, err = run_cmd(onchange_app, "set quiet True")
+    assert out == ["You changed quiet"]
+    # quiet: False -> True is not shown because quiet is now True
+    assert not err
     assert onchange_app.last_result is True
 
 
@@ -874,14 +872,14 @@ def test_allow_clipboard(base_app) -> None:
 
 def test_base_timing(base_app) -> None:
     base_app.feedback_to_output = False
-    out, err = run_cmd(base_app, "set -v timing True")
-    expected = ["timing: False -> True"]
-    assert out == expected
+    out, err = run_cmd(base_app, "set timing True")
+    assert not out
+    assert err[0] == "timing: False -> True"
 
     if sys.platform == "win32":
-        assert err[0].startswith("Elapsed: 0:00:00")
+        assert err[1].startswith("Elapsed: 0:00:00")
     else:
-        assert err[0].startswith("Elapsed: 0:00:00.0")
+        assert err[1].startswith("Elapsed: 0:00:00.0")
 
 
 def test_base_debug(base_app) -> None:
@@ -894,9 +892,9 @@ def test_base_debug(base_app) -> None:
     assert "To enable full traceback" in err[3]
 
     # Set debug true
-    out, err = run_cmd(base_app, "set -v debug True")
-    expected = ["debug: False -> True"]
-    assert out == expected
+    out, err = run_cmd(base_app, "set debug True")
+    assert not out
+    assert err == ["debug: False -> True"]
 
     # Verify that we now see the exception traceback
     out, err = run_cmd(base_app, "edit")

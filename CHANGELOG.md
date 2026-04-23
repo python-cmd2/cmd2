@@ -131,6 +131,9 @@ prompt is displayed.
       specific `cmd2.Cmd` subclass (e.g.,`class MyCommandSet(CommandSet[MyApp]):`). This provides
       full type hints and IDE autocompletion for `self._cmd` without needing to override and cast
       the property.
+    - Updated `set` command to consolidate its confirmation output into a single, colorized line.
+      The confirmation now uses `pfeedback()`, allowing it to be silenced when the `quiet` settable
+      is enabled.
 
 ## 3.5.0 (April 13, 2026)
 
