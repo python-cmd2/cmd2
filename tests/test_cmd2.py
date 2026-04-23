@@ -240,6 +240,25 @@ def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
         assert out
 
 
+def test_set_traceback_show_locals(base_app: cmd2.Cmd) -> None:
+    # Use the set command to alter traceback_show_locals
+
+    # Clear any existing value
+    base_app.traceback_kwargs.pop("show_locals", None)
+    assert "show_locals" not in base_app.traceback_kwargs
+
+    # Test that we receive a default value of False if not present
+    orig_val = base_app.traceback_show_locals
+    assert orig_val is False
+    assert "show_locals" not in base_app.traceback_kwargs
+
+    # Test setting it
+    new_val = not orig_val
+    run_cmd(base_app, f"set traceback_show_locals {new_val}")
+    assert base_app.traceback_show_locals is new_val
+    assert base_app.traceback_kwargs["show_locals"] is new_val
+
+
 def test_set_with_choices(base_app) -> None:
     """Test choices validation of Settables"""
     fake_choices = ["valid", "choices"]
