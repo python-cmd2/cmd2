@@ -27,7 +27,6 @@ from cmd2 import (
     Color,
     CommandSet,
     Completions,
-    RichPrintKwargs,
     clipboard,
     constants,
     exceptions,
@@ -239,6 +238,25 @@ def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     if is_valid:
         assert not err
         assert out
+
+
+def test_set_traceback_show_locals(base_app: cmd2.Cmd) -> None:
+    # Use the set command to alter traceback_show_locals
+
+    # Clear any existing value
+    base_app.traceback_kwargs.pop("show_locals", None)
+    assert "show_locals" not in base_app.traceback_kwargs
+
+    # Test that we receive a default value of False if not present
+    orig_val = base_app.traceback_show_locals
+    assert orig_val is False
+    assert "show_locals" not in base_app.traceback_kwargs
+
+    # Test setting it
+    new_val = not orig_val
+    run_cmd(base_app, f"set traceback_show_locals {new_val}")
+    assert base_app.traceback_show_locals is new_val
+    assert base_app.traceback_kwargs["show_locals"] is new_val
 
 
 def test_set_with_choices(base_app) -> None:
@@ -2465,7 +2483,7 @@ def test_poutput_emoji(outsim_app):
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_justify_and_width(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(width=10)
+    rich_print_kwargs = {"width": 10}
 
     # Use a styled-string when justifying to check if its display width is correct.
     outsim_app.poutput(
@@ -2477,9 +2495,8 @@ def test_poutput_justify_and_width(outsim_app):
     assert out == "     \x1b[34mHello\x1b[0m\n"
 
 
-@with_ansi_style(ru.AllowStyle.ALWAYS)
-def test_poutput_no_wrap_and_overflow(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(no_wrap=True, overflow="ellipsis", width=10)
+def test_rich_print_kwargs(outsim_app):
+    rich_print_kwargs = {"no_wrap": True, "overflow": "ellipsis", "width": 10}
 
     outsim_app.poutput(
         "This is longer than width.",
@@ -2498,29 +2515,6 @@ def test_poutput_pretty_print(outsim_app):
     outsim_app.poutput(dictionary, highlight=True)
     out = outsim_app.stdout.getvalue()
     assert out.startswith("\x1b[1m{\x1b[0m\x1b[1;36m1\x1b[0m: \x1b[32m'hello'\x1b[0m")
-
-
-@with_ansi_style(ru.AllowStyle.ALWAYS)
-def test_poutput_all_keyword_args(outsim_app):
-    """Test that all fields in RichPrintKwargs are recognized by Rich's Console.print()."""
-    rich_print_kwargs = RichPrintKwargs(
-        overflow="ellipsis",
-        no_wrap=True,
-        width=40,
-        height=50,
-        crop=False,
-        new_line_start=True,
-    )
-
-    outsim_app.poutput(
-        "My string",
-        rich_print_kwargs=rich_print_kwargs,
-    )
-
-    # Verify that something printed which means Console.print() didn't
-    # raise a TypeError for an unexpected keyword argument.
-    out = outsim_app.stdout.getvalue()
-    assert "My string" in out
 
 
 @pytest.mark.parametrize(
