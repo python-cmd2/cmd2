@@ -27,7 +27,6 @@ from cmd2 import (
     Color,
     CommandSet,
     Completions,
-    RichPrintKwargs,
     clipboard,
     constants,
     exceptions,
@@ -2465,7 +2464,7 @@ def test_poutput_emoji(outsim_app):
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_poutput_justify_and_width(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(width=10)
+    rich_print_kwargs = {"width": 10}
 
     # Use a styled-string when justifying to check if its display width is correct.
     outsim_app.poutput(
@@ -2477,9 +2476,8 @@ def test_poutput_justify_and_width(outsim_app):
     assert out == "     \x1b[34mHello\x1b[0m\n"
 
 
-@with_ansi_style(ru.AllowStyle.ALWAYS)
-def test_poutput_no_wrap_and_overflow(outsim_app):
-    rich_print_kwargs = RichPrintKwargs(no_wrap=True, overflow="ellipsis", width=10)
+def test_rich_print_kwargs(outsim_app):
+    rich_print_kwargs = {"no_wrap": True, "overflow": "ellipsis", "width": 10}
 
     outsim_app.poutput(
         "This is longer than width.",
@@ -2498,29 +2496,6 @@ def test_poutput_pretty_print(outsim_app):
     outsim_app.poutput(dictionary, highlight=True)
     out = outsim_app.stdout.getvalue()
     assert out.startswith("\x1b[1m{\x1b[0m\x1b[1;36m1\x1b[0m: \x1b[32m'hello'\x1b[0m")
-
-
-@with_ansi_style(ru.AllowStyle.ALWAYS)
-def test_poutput_all_keyword_args(outsim_app):
-    """Test that all fields in RichPrintKwargs are recognized by Rich's Console.print()."""
-    rich_print_kwargs = RichPrintKwargs(
-        overflow="ellipsis",
-        no_wrap=True,
-        width=40,
-        height=50,
-        crop=False,
-        new_line_start=True,
-    )
-
-    outsim_app.poutput(
-        "My string",
-        rich_print_kwargs=rich_print_kwargs,
-    )
-
-    # Verify that something printed which means Console.print() didn't
-    # raise a TypeError for an unexpected keyword argument.
-    out = outsim_app.stdout.getvalue()
-    assert "My string" in out
 
 
 @pytest.mark.parametrize(

@@ -90,6 +90,7 @@ application:
  quiet                           False      Don't print nonessential feedback
  scripts_add_to_history          True       Scripts and pyscripts add commands to history
  timing                          False      Report execution times
+ traceback_show_locals           False      Display local variables in tracebacks
 ```
 
 Any of these user-settable parameters can be set while running your app with the `set` command like
