@@ -686,6 +686,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         # subparsers_action._name_parser_map includes aliases. Since primary names are inserted
         # first, we skip already updated parsers to ensure primary names are used in 'prog'.
+        # We can't rely on subparsers_action._choices_actions to filter out aliases because while
+        # it contains only primary names, it omits any subcommands that lack help text.
         updated_parsers: set[Cmd2ArgumentParser] = set()
 
         # Set the prog value for each subcommand's parser
