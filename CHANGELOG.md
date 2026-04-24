@@ -136,6 +136,12 @@ prompt is displayed.
       the property.
     - Added `traceback_kwargs` attribute to allow customization of Rich-based tracebacks.
 
+## 3.5.1 (April 24, 2026)
+
+- Bug Fixes
+    - Fixed `ArgparseCompleter.print_help()` not passing file stream to recursive call.
+    - Fixed issue where `constants.REDIRECTION_TOKENS` was being mutated.
+
 ## 3.5.0 (April 13, 2026)
 
 - Bug Fixes
