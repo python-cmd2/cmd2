@@ -2,6 +2,7 @@
 
 - Bug Fixes
     - Fixed `ArgparseCompleter.print_help()` not passing file stream to recursive call.
+    - Fixed issue where `constants.REDIRECTION_TOKENS` was being mutated.
 
 ## 3.5.0 (April 13, 2026)
 
