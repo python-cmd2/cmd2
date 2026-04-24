@@ -1,3 +1,8 @@
+## 3.5.1 (April 24, 2026)
+
+- Bug Fixes
+    - Fixed `ArgparseCompleter.print_help()` not passing file stream to recursive call.
+
 ## 3.5.0 (April 13, 2026)
 
 - Bug Fixes
