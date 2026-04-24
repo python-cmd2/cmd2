@@ -298,10 +298,12 @@ class StatementParser:
         #       the string (\Z matches the end of the string even if it
         #       contains multiple lines)
         #
-        invalid_command_chars = []
-        invalid_command_chars.extend(constants.QUOTES)
-        invalid_command_chars.extend(constants.REDIRECTION_CHARS)
-        invalid_command_chars.extend(self.terminators)
+        invalid_command_chars = (
+            *constants.QUOTES,
+            *constants.REDIRECTION_CHARS,
+            *self.terminators,
+        )
+
         # escape each item so it will for sure get treated as a literal
         second_group_items = [re.escape(x) for x in invalid_command_chars]
         # add the whitespace and end of string, not escaped because they
@@ -352,9 +354,8 @@ class StatementParser:
                     return False, errmsg
 
         errmsg = 'cannot contain: whitespace, quotes, '
-        errchars = []
-        errchars.extend(constants.REDIRECTION_CHARS)
-        errchars.extend(self.terminators)
+
+        errchars = (*constants.REDIRECTION_CHARS, *self.terminators)
         errmsg += ', '.join([shlex.quote(x) for x in errchars])
 
         match = self._command_pattern.search(word)
@@ -677,9 +678,8 @@ class StatementParser:
         :param tokens: the tokens as parsed by shlex
         :return: a new list of tokens, further split using punctuation
         """
-        punctuation: list[str] = []
-        punctuation.extend(self.terminators)
-        punctuation.extend(constants.REDIRECTION_CHARS)
+        # Using a set for faster lookups
+        punctuation = {*self.terminators, *constants.REDIRECTION_CHARS}
 
         punctuated_tokens = []
 

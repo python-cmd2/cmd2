@@ -1666,10 +1666,8 @@ class Cmd:
                  **On Failure**
                  - Two empty lists
         """
-        import copy
-
         unclosed_quote = ''
-        quotes_to_try = copy.copy(constants.QUOTES)
+        quotes_to_try = [*constants.QUOTES]
 
         tmp_line = line[:endidx]
         tmp_endidx = endidx
@@ -3721,8 +3719,7 @@ class Cmd:
             return
 
         # Unquote redirection and terminator tokens
-        tokens_to_unquote = constants.REDIRECTION_TOKENS
-        tokens_to_unquote.extend(self.statement_parser.terminators)
+        tokens_to_unquote = [*constants.REDIRECTION_TOKENS, *self.statement_parser.terminators]
         utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
 
         # Build the alias value string
@@ -3801,8 +3798,7 @@ class Cmd:
         """List some or all aliases as 'alias create' commands."""
         self.last_result = {}  # dict[alias_name, alias_value]
 
-        tokens_to_quote = constants.REDIRECTION_TOKENS
-        tokens_to_quote.extend(self.statement_parser.terminators)
+        tokens_to_quote = [*constants.REDIRECTION_TOKENS, *self.statement_parser.terminators]
 
         to_list = utils.remove_duplicates(args.names) if args.names else sorted(self.aliases, key=self.default_sort_key)
 
@@ -3964,8 +3960,7 @@ class Cmd:
             return
 
         # Unquote redirection and terminator tokens
-        tokens_to_unquote = constants.REDIRECTION_TOKENS
-        tokens_to_unquote.extend(self.statement_parser.terminators)
+        tokens_to_unquote = [*constants.REDIRECTION_TOKENS, *self.statement_parser.terminators]
         utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
 
         # Build the macro value string
@@ -4087,8 +4082,7 @@ class Cmd:
         """List macros."""
         self.last_result = {}  # dict[macro_name, macro_value]
 
-        tokens_to_quote = constants.REDIRECTION_TOKENS
-        tokens_to_quote.extend(self.statement_parser.terminators)
+        tokens_to_quote = [*constants.REDIRECTION_TOKENS, *self.statement_parser.terminators]
 
         to_list = utils.remove_duplicates(args.names) if args.names else sorted(self.macros, key=self.default_sort_key)
 
