@@ -395,7 +395,8 @@ class Cmd:
                                    instantiate and register all commands. If False, CommandSets
                                    must be manually installed with `register_command_set`.
         :param auto_suggest: If True, cmd2 will provide fish shell style auto-suggestions
-                            based on history. If False, these will not be provided.
+                            based on history. User can press right-arrow key to accept the
+                            provided suggestion.
         :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
