@@ -637,7 +637,7 @@ class ArgparseCompleter:
             if parser:
                 completer_type = self._cmd2_app._determine_ap_completer_type(parser)
                 completer = completer_type(parser, self._cmd2_app)
-                completer.print_help(tokens[1:])
+                completer.print_help(tokens[1:], file=file)
                 return
 
         self._parser.print_help(file=file)
