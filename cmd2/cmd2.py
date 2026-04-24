@@ -464,7 +464,6 @@ class Cmd:
         self.interactive_pipe = False
 
         # Attributes which ARE dynamically settable via the set command at runtime
-        self.always_show_hint = False
         self.debug = False
         self.echo = False
         self.editor = self.DEFAULT_EDITOR
@@ -1323,10 +1322,6 @@ class Cmd:
                 self,
                 choices_provider=get_allow_style_choices,
             )
-        )
-
-        self.add_settable(
-            Settable("always_show_hint", bool, "Display completion hint even when completion suggestions print", self)
         )
         self.add_settable(Settable("debug", bool, "Show full traceback on exception", self))
         self.add_settable(Settable("echo", bool, "Echo command issued into output", self))

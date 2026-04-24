@@ -1,1 +1,1 @@
-set always_show_hint False
+set allow_style Terminal

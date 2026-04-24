@@ -98,7 +98,7 @@ class Cmd2Completer(Completer):
             print_formatted_text(pt_filter_style("\n" + capture.get()))
 
         # Print hint if present and settings say we should
-        if completions.hint and (self.cmd_app.always_show_hint or not completions):
+        if completions.hint and not completions:
             print_formatted_text(pt_filter_style(completions.hint))
 
         if not completions:

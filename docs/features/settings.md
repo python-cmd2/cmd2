@@ -37,11 +37,6 @@ This setting can be one of three values:
   stripped.
 - `Always` - ANSI escape sequences are always passed through to the output
 
-### always_show_hint
-
-If `True`, display tab completion hint even when completion suggestions print. The default value of
-this setting is `False`.
-
 ### debug
 
 The default value of this setting is `False`, which causes the `cmd2.Cmd.pexcept` method to only
