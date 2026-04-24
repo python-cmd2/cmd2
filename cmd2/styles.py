@@ -51,6 +51,8 @@ class Cmd2Style(StrEnum):
     """
 
     COMMAND_LINE = "cmd2.example"  # Command line examples in help text
+    COMPLETION_MENU_ITEM = "cmd2.completion_menu.item"  # Selected completion item
+    COMPLETION_MENU_META = "cmd2.completion_menu.meta"  # Selected completion help/meta text
     ERROR = "cmd2.error"  # Error text (used by perror())
     HELP_HEADER = "cmd2.help.header"  # Help table header text
     HELP_LEADER = "cmd2.help.leader"  # Text right before the help tables are listed
@@ -63,6 +65,8 @@ class Cmd2Style(StrEnum):
 # Tightly coupled with the Cmd2Style enum.
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.COMMAND_LINE: Style(color=Color.CYAN, bold=True),
+    Cmd2Style.COMPLETION_MENU_ITEM: Style(color=Color.BLACK, bgcolor=Color.GREEN),
+    Cmd2Style.COMPLETION_MENU_META: Style(color=Color.BLACK, bgcolor=Color.LIGHT_GREEN),
     Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
     Cmd2Style.HELP_HEADER: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.HELP_LEADER: Style(color=Color.CYAN),

@@ -135,6 +135,8 @@ prompt is displayed.
       full type hints and IDE autocompletion for `self._cmd` without needing to override and cast
       the property.
     - Added `traceback_kwargs` attribute to allow customization of Rich-based tracebacks.
+    - Added ability to customize `prompt-toolkit` completion menu colors by overriding
+      `Cmd2Style.COMPLETION_MENU_ITEM` and `Cmd2Style.COMPLETION_MENU_META` in the `cmd2` theme.
 
 ## 3.5.1 (April 24, 2026)
 

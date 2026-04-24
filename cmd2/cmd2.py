@@ -78,6 +78,8 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.output import DummyOutput, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
+from prompt_toolkit.styles import DynamicStyle
+from prompt_toolkit.styles import Style as PtStyle
 from rich.console import (
     Group,
     JustifyMethod,
@@ -714,6 +716,46 @@ class Cmd:
                 # No macro found or already processed. The statement is complete.
                 return False
 
+    def _get_pt_style(self) -> "PtStyle":
+        """Return the prompt_toolkit style for the completion menu."""
+
+        def to_pt_style(rich_style: Style | None) -> str:
+            """Convert a rich Style object to a prompt_toolkit style string."""
+            if not rich_style:
+                return ""
+            parts = ["noreverse"]
+            if rich_style.color:
+                c = rich_style.color.get_truecolor()
+                parts.append(f"fg:#{c.red:02x}{c.green:02x}{c.blue:02x}")
+            else:
+                parts.append("fg:default")
+
+            if rich_style.bgcolor:
+                c = rich_style.bgcolor.get_truecolor()
+                parts.append(f"bg:#{c.red:02x}{c.green:02x}{c.blue:02x}")
+            else:
+                parts.append("bg:default")
+
+            if rich_style.bold is not None:
+                parts.append("bold" if rich_style.bold else "nobold")
+            if rich_style.italic is not None:
+                parts.append("italic" if rich_style.italic else "noitalic")
+            if rich_style.underline is not None:
+                parts.append("underline" if rich_style.underline else "nounderline")
+            return " ".join(parts)
+
+        theme = ru.get_theme()
+        item_style = to_pt_style(theme.styles.get(Cmd2Style.COMPLETION_MENU_ITEM))
+        meta_style = to_pt_style(theme.styles.get(Cmd2Style.COMPLETION_MENU_META))
+
+        return PtStyle.from_dict(
+            {
+                "completion-menu.completion.current": item_style,
+                "completion-menu.meta.completion.current": meta_style,
+                "completion-menu.multi-column-meta": meta_style,
+            }
+        )
+
     def _create_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
         """Create and return the main PromptSession for the application.
 
@@ -755,6 +797,7 @@ class Cmd:
             "multiline": filters.Condition(self._should_continue_multiline),
             "prompt_continuation": self.continuation_prompt,
             "rprompt": self.get_rprompt,
+            "style": DynamicStyle(self._get_pt_style),
         }
 
         if self.stdin.isatty() and self.stdout.isatty():
@@ -3578,6 +3621,7 @@ class Cmd:
             key_bindings=self.main_session.key_bindings,
             input=self.main_session.input,
             output=self.main_session.output,
+            style=DynamicStyle(self._get_pt_style),
         )
 
         return self._read_raw_input(prompt, temp_session)
@@ -3596,6 +3640,7 @@ class Cmd:
         temp_session: PromptSession[str] = PromptSession(
             input=self.main_session.input,
             output=self.main_session.output,
+            style=DynamicStyle(self._get_pt_style),
         )
 
         return self._read_raw_input(prompt, temp_session, is_password=True)
