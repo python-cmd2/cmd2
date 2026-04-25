@@ -20,6 +20,7 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
+from rich.style import Style
 
 from . import (
     constants,
@@ -48,6 +49,32 @@ def pt_filter_style(text: str | ANSI) -> str | ANSI:
 
     # String must be an ANSI object for prompt-toolkit to render ANSI style sequences.
     return text if isinstance(text, ANSI) else ANSI(text)
+
+
+def to_pt_style(rich_style: Style | None) -> str:
+    """Convert a rich Style object to a prompt_toolkit style string."""
+    if not rich_style:
+        return ""
+    parts = ["noreverse"]
+    if rich_style.color and not rich_style.color.is_default:
+        c = rich_style.color.get_truecolor()
+        parts.append(f"fg:#{c.red:02x}{c.green:02x}{c.blue:02x}")
+    else:
+        parts.append("fg:default")
+
+    if rich_style.bgcolor and not rich_style.bgcolor.is_default:
+        c = rich_style.bgcolor.get_truecolor()
+        parts.append(f"bg:#{c.red:02x}{c.green:02x}{c.blue:02x}")
+    else:
+        parts.append("bg:default")
+
+    if rich_style.bold is not None:
+        parts.append("bold" if rich_style.bold else "nobold")
+    if rich_style.italic is not None:
+        parts.append("italic" if rich_style.italic else "noitalic")
+    if rich_style.underline is not None:
+        parts.append("underline" if rich_style.underline else "nounderline")
+    return " ".join(parts)
 
 
 class Cmd2Completer(Completer):

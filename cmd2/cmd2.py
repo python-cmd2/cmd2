@@ -192,6 +192,7 @@ from .pt_utils import (
     Cmd2History,
     Cmd2Lexer,
     pt_filter_style,
+    to_pt_style,
 )
 from .utils import (
     Settable,
@@ -523,6 +524,10 @@ class Cmd:
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
 
+        # Cache for prompt_toolkit completion menu styles
+        self._cached_pt_style: PtStyle | None = None
+        self._cached_pt_style_params: tuple[Style | None, Style | None] | None = None
+
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
         self.main_session = self._create_main_session(auto_suggest, completekey)
@@ -718,43 +723,27 @@ class Cmd:
 
     def _get_pt_style(self) -> "PtStyle":
         """Return the prompt_toolkit style for the completion menu."""
-
-        def to_pt_style(rich_style: Style | None) -> str:
-            """Convert a rich Style object to a prompt_toolkit style string."""
-            if not rich_style:
-                return ""
-            parts = ["noreverse"]
-            if rich_style.color:
-                c = rich_style.color.get_truecolor()
-                parts.append(f"fg:#{c.red:02x}{c.green:02x}{c.blue:02x}")
-            else:
-                parts.append("fg:default")
-
-            if rich_style.bgcolor:
-                c = rich_style.bgcolor.get_truecolor()
-                parts.append(f"bg:#{c.red:02x}{c.green:02x}{c.blue:02x}")
-            else:
-                parts.append("bg:default")
-
-            if rich_style.bold is not None:
-                parts.append("bold" if rich_style.bold else "nobold")
-            if rich_style.italic is not None:
-                parts.append("italic" if rich_style.italic else "noitalic")
-            if rich_style.underline is not None:
-                parts.append("underline" if rich_style.underline else "nounderline")
-            return " ".join(parts)
-
         theme = ru.get_theme()
-        item_style = to_pt_style(theme.styles.get(Cmd2Style.COMPLETION_MENU_ITEM))
-        meta_style = to_pt_style(theme.styles.get(Cmd2Style.COMPLETION_MENU_META))
+        rich_item_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_ITEM)
+        rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META)
 
-        return PtStyle.from_dict(
+        current_params = (rich_item_style, rich_meta_style)
+        if self._cached_pt_style is not None and self._cached_pt_style_params == current_params:
+            return self._cached_pt_style
+
+        item_style = to_pt_style(rich_item_style)
+        meta_style = to_pt_style(rich_meta_style)
+
+        self._cached_pt_style_params = current_params
+        self._cached_pt_style = PtStyle.from_dict(
             {
                 "completion-menu.completion.current": item_style,
                 "completion-menu.meta.completion.current": meta_style,
                 "completion-menu.multi-column-meta": meta_style,
             }
         )
+
+        return self._cached_pt_style
 
     def _create_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
         """Create and return the main PromptSession for the application.

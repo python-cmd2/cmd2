@@ -624,3 +624,76 @@ class TestCmd2History:
 
         history.clear()
         assert not history.get_strings()
+
+
+class TestToPtStyle:
+    def test_to_pt_style_none(self):
+        assert pt_utils.to_pt_style(None) == ""
+
+    def test_to_pt_style_color(self):
+        from rich.style import Style
+
+        style = Style(color="#123456")
+        pt_style = pt_utils.to_pt_style(style)
+        assert "fg:#123456" in pt_style
+        assert "bg:default" in pt_style
+        assert "noreverse" in pt_style
+
+    def test_to_pt_style_bgcolor(self):
+        from rich.style import Style
+
+        style = Style(bgcolor="#654321")
+        pt_style = pt_utils.to_pt_style(style)
+        assert "fg:default" in pt_style
+        assert "bg:#654321" in pt_style
+
+    def test_to_pt_style_default_color(self):
+        from rich.style import Style
+
+        style = Style(color="default", bgcolor="default")
+        pt_style = pt_utils.to_pt_style(style)
+        assert "fg:default" in pt_style
+        assert "bg:default" in pt_style
+
+    def test_to_pt_style_bold(self):
+        from rich.style import Style
+
+        style = Style(bold=True)
+        pt_style = pt_utils.to_pt_style(style)
+        assert "bold" in pt_style
+        assert "nobold" not in pt_style
+
+    def test_to_pt_style_nobold(self):
+        from rich.style import Style
+
+        style = Style(bold=False)
+        pt_style = pt_utils.to_pt_style(style)
+        assert "nobold" in pt_style
+
+    def test_to_pt_style_italic(self):
+        from rich.style import Style
+
+        style = Style(italic=True)
+        pt_style = pt_utils.to_pt_style(style)
+        assert "italic" in pt_style
+
+    def test_to_pt_style_noitalic(self):
+        from rich.style import Style
+
+        style = Style(italic=False)
+        pt_style = pt_utils.to_pt_style(style)
+        assert "noitalic" in pt_style
+
+    def test_to_pt_style_underline(self):
+        from rich.style import Style
+
+        style = Style(underline=True)
+        pt_style = pt_utils.to_pt_style(style)
+        assert "underline" in pt_style
+
+    def test_to_pt_style_nounderline(self):
+        from rich.style import Style
+
+        style = Style(underline=False)
+        pt_style = pt_utils.to_pt_style(style)
+        assert "nounderline" in pt_style
