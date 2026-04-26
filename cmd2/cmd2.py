@@ -154,7 +154,6 @@ from .rich_utils import (
     Cmd2ExceptionConsole,
     Cmd2GeneralConsole,
     Cmd2SimpleTable,
-    RichPrintKwargs,
     TextGroup,
 )
 from .styles import Cmd2Style
@@ -396,7 +395,8 @@ class Cmd:
                                    instantiate and register all commands. If False, CommandSets
                                    must be manually installed with `register_command_set`.
         :param auto_suggest: If True, cmd2 will provide fish shell style auto-suggestions
-                            based on history. If False, these will not be provided.
+                            based on history. User can press right-arrow key to accept the
+                            provided suggestion.
         :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
@@ -465,7 +465,6 @@ class Cmd:
         self.interactive_pipe = False
 
         # Attributes which ARE dynamically settable via the set command at runtime
-        self.always_show_hint = False
         self.debug = False
         self.echo = False
         self.editor = self.DEFAULT_EDITOR
@@ -473,6 +472,19 @@ class Cmd:
         self.quiet = False  # Do not suppress nonessential output
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
         self.timing = False  # Prints elapsed time for each command
+
+        # Default settings for Rich tracebacks created by format_exception().
+        # This dictionary can contain any parameter accepted by the
+        # rich.traceback.Traceback class. You can modify it to adjust
+        # the detail and layout of tracebacks.
+        self.traceback_kwargs: dict[str, Any] = {
+            "width": 100,
+            "code_width": None,  # Show all code characters
+            "show_locals": False,
+            "max_frames": 100,
+            "word_wrap": True,  # Wrap long lines of code instead of truncate
+            "indent_guides": True,
+        }
 
         # Cached Rich consoles used by core print methods.
         self._console_cache = _ConsoleCache()
@@ -1312,10 +1324,6 @@ class Cmd:
                 choices_provider=get_allow_style_choices,
             )
         )
-
-        self.add_settable(
-            Settable("always_show_hint", bool, "Display completion hint even when completion suggestions print", self)
-        )
         self.add_settable(Settable("debug", bool, "Show full traceback on exception", self))
         self.add_settable(Settable("echo", bool, "Echo command issued into output", self))
         self.add_settable(Settable("editor", str, "Program used by 'edit'", self))
@@ -1339,18 +1347,27 @@ class Cmd:
         self.add_settable(Settable("quiet", bool, "Don't print nonessential feedback", self))
         self.add_settable(Settable("scripts_add_to_history", bool, "Scripts and pyscripts add commands to history", self))
         self.add_settable(Settable("timing", bool, "Report execution times", self))
-
-    # -----  Methods related to presenting output to the user -----
+        self.add_settable(Settable("traceback_show_locals", bool, "Display local variables in tracebacks", self))
 
     @property
     def allow_style(self) -> ru.AllowStyle:
-        """Read-only property needed to support do_set when it reads allow_style."""
+        """Property needed to support do_set when it reads allow_style."""
         return ru.ALLOW_STYLE
 
     @allow_style.setter
     def allow_style(self, new_val: ru.AllowStyle) -> None:
         """Setter property needed to support do_set when it updates allow_style."""
         ru.ALLOW_STYLE = new_val
+
+    @property
+    def traceback_show_locals(self) -> bool:
+        """Property needed to support do_set when it reads traceback_show_locals."""
+        return cast(bool, self.traceback_kwargs.get("show_locals", False))
+
+    @traceback_show_locals.setter
+    def traceback_show_locals(self, value: bool) -> None:
+        """Setter property needed to support do_set when it updates traceback_show_locals."""
+        self.traceback_kwargs["show_locals"] = value
 
     @property
     def visible_prompt(self) -> str:
@@ -1426,7 +1443,7 @@ class Cmd:
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
-        rich_print_kwargs: RichPrintKwargs | None = None,
+        rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print objects to a given file stream.
@@ -1442,7 +1459,8 @@ class Cmd:
         :param style: optional style to apply to output
         :param soft_wrap: Enable soft wrap mode. Defaults to True.
                           If True, text that doesn't fit will run on to the following line,
-                          just like with print(). This is useful for raw text and logs.
+                          just like the built-in print() function. This is useful for raw text
+                          and logs.
                           If False, Rich wraps text to fit the terminal width.
                           Set this to False when printing structured Renderables like
                           Tables, Panels, or Columns to ensure they render as expected.
@@ -1457,10 +1475,10 @@ class Cmd:
                           strings, such as common Python data types like numbers, booleans, or None.
                           This is particularly useful when pretty printing objects like lists and
                           dictionaries to display them in color. Defaults to False.
-        :param rich_print_kwargs: optional additional keyword arguments to pass to Rich's Console.print().
+        :param rich_print_kwargs: optional additional keyword arguments to pass to console.print().
         :param kwargs: Arbitrary keyword arguments. This allows subclasses to extend the signature of this
                        method and still call `super()` without encountering unexpected keyword argument errors.
-                       These arguments are not passed to Rich's Console.print().
+                       These arguments are not passed to console.print().
 
         See the Rich documentation for more details on emoji codes, markup tags, and highlighting.
         """
@@ -1499,7 +1517,7 @@ class Cmd:
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
-        rich_print_kwargs: RichPrintKwargs | None = None,
+        rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print objects to self.stdout.
@@ -1531,7 +1549,7 @@ class Cmd:
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
-        rich_print_kwargs: RichPrintKwargs | None = None,
+        rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print objects to sys.stderr.
@@ -1564,7 +1582,7 @@ class Cmd:
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
-        rich_print_kwargs: RichPrintKwargs | None = None,
+        rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Wrap poutput, but apply Cmd2Style.SUCCESS.
@@ -1594,7 +1612,7 @@ class Cmd:
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
-        rich_print_kwargs: RichPrintKwargs | None = None,
+        rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Wrap perror, but apply Cmd2Style.WARNING.
@@ -1626,13 +1644,7 @@ class Cmd:
         with console.capture() as capture:
             # Only print a traceback if we're in debug mode and one exists.
             if self.debug and sys.exc_info() != (None, None, None):
-                traceback = Traceback(
-                    width=None,  # Use all available width
-                    code_width=None,  # Use all available width
-                    show_locals=True,
-                    max_frames=0,  # 0 means full traceback.
-                    word_wrap=True,  # Wrap long lines of code instead of truncate
-                )
+                traceback = Traceback(**self.traceback_kwargs)
                 console.print(traceback, end="")
 
             else:
@@ -1690,7 +1702,7 @@ class Cmd:
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
-        rich_print_kwargs: RichPrintKwargs | None = None,
+        rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print nonessential feedback.
@@ -1740,7 +1752,7 @@ class Cmd:
         emoji: bool = False,
         markup: bool = False,
         highlight: bool = False,
-        rich_print_kwargs: RichPrintKwargs | None = None,
+        rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
         """Print output using a pager.
@@ -1960,10 +1972,8 @@ class Cmd:
                  **On Failure**
                  - Two empty lists
         """
-        import copy
-
         unclosed_quote = ""
-        quotes_to_try = copy.copy(constants.QUOTES)
+        quotes_to_try = [*constants.QUOTES]
 
         tmp_line = line[:endidx]
         tmp_endidx = endidx
@@ -3802,8 +3812,7 @@ class Cmd:
             return
 
         # Unquote redirection and terminator tokens
-        tokens_to_unquote = constants.REDIRECTION_TOKENS
-        tokens_to_unquote.extend(self.statement_parser.terminators)
+        tokens_to_unquote = (*constants.REDIRECTION_TOKENS, *self.statement_parser.terminators)
         utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
 
         # Build the alias value string
@@ -3882,8 +3891,7 @@ class Cmd:
         """List some or all aliases as 'alias create' commands."""
         self.last_result = {}  # dict[alias_name, alias_value]
 
-        tokens_to_quote = constants.REDIRECTION_TOKENS
-        tokens_to_quote.extend(self.statement_parser.terminators)
+        tokens_to_quote = (*constants.REDIRECTION_TOKENS, *self.statement_parser.terminators)
 
         to_list = (
             utils.remove_duplicates(args.names)
@@ -4049,8 +4057,7 @@ class Cmd:
             return
 
         # Unquote redirection and terminator tokens
-        tokens_to_unquote = constants.REDIRECTION_TOKENS
-        tokens_to_unquote.extend(self.statement_parser.terminators)
+        tokens_to_unquote = (*constants.REDIRECTION_TOKENS, *self.statement_parser.terminators)
         utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
 
         # Build the macro value string
@@ -4172,8 +4179,7 @@ class Cmd:
         """List macros."""
         self.last_result = {}  # dict[macro_name, macro_value]
 
-        tokens_to_quote = constants.REDIRECTION_TOKENS
-        tokens_to_quote.extend(self.statement_parser.terminators)
+        tokens_to_quote = (*constants.REDIRECTION_TOKENS, *self.statement_parser.terminators)
 
         to_list = (
             utils.remove_duplicates(args.names)
@@ -4910,9 +4916,7 @@ class Cmd:
             """Exit an interactive Python environment, callable from the interactive Python console."""
             raise EmbeddedConsoleExit
 
-        from .py_bridge import (
-            PyBridge,
-        )
+        from .py_bridge import PyBridge
 
         add_to_history = self.scripts_add_to_history if pyscript else True
         py_bridge = PyBridge(self, add_to_history=add_to_history)

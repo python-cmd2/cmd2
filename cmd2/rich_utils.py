@@ -13,7 +13,6 @@ from typing import (
     IO,
     Any,
     ClassVar,
-    TypedDict,
 )
 
 from rich.box import SIMPLE_HEAD
@@ -629,27 +628,6 @@ class Cmd2ExceptionConsole(Cmd2BaseConsole):
             emoji=False,
             highlight=False,
         )
-
-
-class RichPrintKwargs(TypedDict, total=False):
-    """Infrequently used Rich Console.print() keyword arguments.
-
-    These arguments are supported by cmd2's print methods (e.g., poutput())
-    via their ``rich_print_kwargs`` parameter.
-
-    See Rich's Console.print() documentation for full details:
-    https://rich.readthedocs.io/en/stable/reference/console.html#rich.console.Console.print
-
-    Note: All fields are optional (total=False). If a key is not present,
-    Rich's default behavior for that argument will apply.
-    """
-
-    overflow: OverflowMethod | None
-    no_wrap: bool | None
-    width: int | None
-    height: int | None
-    crop: bool
-    new_line_start: bool
 
 
 class Cmd2SimpleTable(Table):

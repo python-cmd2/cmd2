@@ -40,10 +40,12 @@ complex output:
       - `end`: string to write at end of printed text. Defaults to a newline
       - `style`: optional style to apply to output
       - `soft_wrap`: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to fit the terminal width. Defaults to True
+      - `justify`: justify method ("left", "center", "right", "full"). Defaults to None.
       - `emoji`: If True, Rich will replace emoji codes (e.g., 😃) with their corresponding Unicode characters. Defaults to False
       - `markup`: If True, Rich will interpret strings with tags (e.g., [bold]hello[/bold]) as styled output. Defaults to False
       - `highlight`: If True, Rich will automatically apply highlighting to elements within strings, such as common Python data types like numbers, booleans, or None.
-      - `rich_print_kwargs`: optional additional keyword arguments to pass to Rich's `Console.print()`
+      - `rich_print_kwargs`: optional additional keyword arguments to pass to `console.print()`
+      - `kwargs`: arbitrary keyword arguments to support extending the print methods. These are not passed to `console.print()`.
 
 ## Ordinary Output
 

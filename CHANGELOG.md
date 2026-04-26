@@ -97,6 +97,10 @@ prompt is displayed.
           `set_theme()` functions to support lazy initialization and safer in-place updates of the
           theme.
     - Renamed `Cmd._command_parsers` to `Cmd.command_parsers`.
+    - Removed `RichPrintKwargs` `TypedDict` in favor of using `Mapping[str, Any]`, allowing for
+      greater flexibility in passing keyword arguments to `console.print()` calls.
+    - Removed `always_show_hint` settable as it provided a poor user experience with
+      `prompt-toolkit`
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
@@ -114,8 +118,9 @@ prompt is displayed.
         - **read_secret**: read secrets like passwords without displaying them to the terminal
         - **ppretty**: a cmd2-compatible replacement for `rich.pretty.pprint()`
     - New settables:
-        - **max_column_completion_results**: (int) the maximum number of completion results to
-          display in a single column
+        - **max_column_completion_results**: (int) Maximum number of completion results to display
+          in a single column
+        - **traceback_show_locals**: (bool) Display local variables in tracebacks
     - `cmd2.Cmd.select` has been revamped to use the
       [choice](https://python-prompt-toolkit.readthedocs.io/en/3.0.52/pages/asking_for_a_choice.html)
       function from `prompt-toolkit` when both **stdin** and **stdout** are TTYs
@@ -131,9 +136,16 @@ prompt is displayed.
       specific `cmd2.Cmd` subclass (e.g.,`class MyCommandSet(CommandSet[MyApp]):`). This provides
       full type hints and IDE autocompletion for `self._cmd` without needing to override and cast
       the property.
+    - Added `traceback_kwargs` attribute to allow customization of Rich-based tracebacks
     - Updated `set` command to consolidate its confirmation output into a single, colorized line.
       The confirmation now uses `pfeedback()`, allowing it to be silenced when the `quiet` settable
       is enabled.
+
+## 3.5.1 (April 24, 2026)
+
+- Bug Fixes
+    - Fixed `ArgparseCompleter.print_help()` not passing file stream to recursive call.
+    - Fixed issue where `constants.REDIRECTION_TOKENS` was being mutated.
 
 ## 3.5.0 (April 13, 2026)
 

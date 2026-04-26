@@ -50,7 +50,6 @@ from .rich_utils import (
     MetavarTypeCmd2HelpFormatter,
     RawDescriptionCmd2HelpFormatter,
     RawTextCmd2HelpFormatter,
-    RichPrintKwargs,
     TextGroup,
     get_theme,
     set_theme,
@@ -105,7 +104,6 @@ __all__: list[str] = [  # noqa: RUF022
     "MetavarTypeCmd2HelpFormatter",
     "RawDescriptionCmd2HelpFormatter",
     "RawTextCmd2HelpFormatter",
-    "RichPrintKwargs",
     "set_theme",
     "TextGroup",
     # String Utils

@@ -5,9 +5,7 @@ These utilities are designed to correctly handle strings with ANSI style sequenc
 full-width characters (like those used in CJK languages).
 """
 
-from collections.abc import (
-    Sequence,
-)
+from collections.abc import Sequence
 
 from rich.align import AlignMethod
 from rich.style import StyleType
