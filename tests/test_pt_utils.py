@@ -34,7 +34,6 @@ class MockCmd:
         self.complete = Mock(return_value=cmd2.Completions())
 
         self.stdout = io.StringIO()
-        self.always_show_hint = False
         self.statement_parser = Mock()
         self.statement_parser.terminators = [";"]
         self.statement_parser.shortcuts = []
@@ -322,29 +321,6 @@ class TestCmd2Completer:
         completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
 
         document = Document("", cursor_position=0)
-
-        # Set up matches
-        cmd2_completions = cmd2.Completions(hint="Completion Hint")
-        mock_cmd_app.complete.return_value = cmd2_completions
-
-        completions = list(completer.get_completions(document, None))
-        assert not completions
-
-        # Verify that only the completion hint printed
-        assert mock_print.call_count == 1
-        args, _ = mock_print.call_args
-        assert cmd2_completions.hint in str(args[0])
-
-    def test_get_completions_always_show_hints(self, mock_cmd_app: MockCmd, monkeypatch) -> None:
-        """Test that get_completions respects 'always_show_hint' and prints a hint even with no matches."""
-        mock_print = Mock()
-        monkeypatch.setattr(pt_utils, "print_formatted_text", mock_print)
-
-        completer = pt_utils.Cmd2Completer(cast(Any, mock_cmd_app))
-        document = Document("test", cursor_position=4)
-
-        # Enable hint printing when there are no matches.
-        mock_cmd_app.always_show_hint = True
 
         # Set up matches
         cmd2_completions = cmd2.Completions(hint="Completion Hint")

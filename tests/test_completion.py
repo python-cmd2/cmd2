@@ -1100,7 +1100,7 @@ def test_complete_set_value(cmd2_app) -> None:
     expected = ["SUCCESS"]
     completions = cmd2_app.complete(text, line, begidx, endidx)
     assert completions.to_strings() == Completions.from_values(expected).to_strings()
-    assert completions.hint.strip() == "Hint:\n  value  a test settable param"
+    assert completions.hint.strip() == ""
 
 
 def test_complete_set_value_invalid_settable(cmd2_app) -> None:

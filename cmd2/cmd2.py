@@ -398,7 +398,8 @@ class Cmd:
                                    instantiate and register all commands. If False, CommandSets
                                    must be manually installed with `register_command_set`.
         :param auto_suggest: If True, cmd2 will provide fish shell style auto-suggestions
-                            based on history. If False, these will not be provided.
+                            based on history. User can press right-arrow key to accept the
+                            provided suggestion.
         :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
@@ -467,7 +468,6 @@ class Cmd:
         self.interactive_pipe = False
 
         # Attributes which ARE dynamically settable via the set command at runtime
-        self.always_show_hint = False
         self.debug = False
         self.echo = False
         self.editor = self.DEFAULT_EDITOR
@@ -1355,10 +1355,6 @@ class Cmd:
                 self,
                 choices_provider=get_allow_style_choices,
             )
-        )
-
-        self.add_settable(
-            Settable("always_show_hint", bool, "Display completion hint even when completion suggestions print", self)
         )
         self.add_settable(Settable("debug", bool, "Show full traceback on exception", self))
         self.add_settable(Settable("echo", bool, "Echo command issued into output", self))

@@ -99,6 +99,8 @@ prompt is displayed.
     - Renamed `Cmd._command_parsers` to `Cmd.command_parsers`.
     - Removed `RichPrintKwargs` `TypedDict` in favor of using `Mapping[str, Any]`, allowing for
       greater flexibility in passing keyword arguments to `console.print()` calls.
+    - Removed `always_show_hint` settable as it provided a poor user experience with
+      `prompt-toolkit`
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
