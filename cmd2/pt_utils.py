@@ -20,7 +20,7 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
-from rich.style import Style
+from rich.style import Style, StyleType
 
 from . import (
     constants,
@@ -88,10 +88,14 @@ def rich_to_pt_color(color: "Color | None") -> str:
     return f"#{c.red:02x}{c.green:02x}{c.blue:02x}"
 
 
-def rich_to_pt_style(rich_style: Style | None) -> str:
+def rich_to_pt_style(rich_style: StyleType) -> str:
     """Convert a rich Style object to a prompt_toolkit style string."""
     if not rich_style:
         return ""
+
+    if isinstance(rich_style, str):
+        rich_style = Style.parse(rich_style)
+
     parts = ["noreverse"]
 
     fg_color = rich_to_pt_color(rich_style.color)

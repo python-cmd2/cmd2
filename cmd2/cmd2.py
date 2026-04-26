@@ -526,7 +526,7 @@ class Cmd:
 
         # Cache for prompt_toolkit completion menu styles
         self._cached_pt_style: PtStyle | None = None
-        self._cached_pt_style_params: tuple[Style | None, Style | None] | None = None
+        self._cached_pt_style_params: tuple[StyleType, StyleType] | None = None
 
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
@@ -724,8 +724,8 @@ class Cmd:
     def _get_pt_style(self) -> "PtStyle":
         """Return the prompt_toolkit style for the completion menu."""
         theme = ru.get_theme()
-        rich_item_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_ITEM)
-        rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META)
+        rich_item_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_ITEM, "")
+        rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META, "")
 
         current_params = (rich_item_style, rich_meta_style)
         if self._cached_pt_style is not None and self._cached_pt_style_params == current_params:
