@@ -80,7 +80,6 @@ application:
   Name                            Value      Description
 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
  allow_style                     Terminal   Allow ANSI text style sequences in output (valid values: Always, Never, Terminal)
- always_show_hint                False      Display completion hint even when completion suggestions print
  debug                           False      Show full traceback on exception
  echo                            False      Echo command issued into output
  editor                          vim        Program used by 'edit'

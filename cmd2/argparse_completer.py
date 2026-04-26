@@ -491,13 +491,6 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completions:
-                if not completions.hint:
-                    # Add a hint even though there are results in case Cmd.always_show_hint is True.
-                    completions = dataclasses.replace(
-                        completions,
-                        hint=_build_hint(self._parser, flag_arg_state.action),
-                    )
-
                 return completions
 
             # Otherwise, print a hint if the flag isn't finished or text isn't possibly the start of a flag
@@ -519,12 +512,6 @@ class ArgparseCompleter:
 
             # If we have results, then return them
             if completions:
-                if not completions.hint:
-                    # Add a hint even though there are results in case Cmd.always_show_hint is True.
-                    completions = dataclasses.replace(
-                        completions,
-                        hint=_build_hint(self._parser, pos_arg_state.action),
-                    )
                 return completions
 
             # Otherwise, print a hint if text isn't possibly the start of a flag

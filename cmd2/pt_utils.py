@@ -97,11 +97,10 @@ class Cmd2Completer(Completer):
                 console.print(completions.table, end="", soft_wrap=False)
             print_formatted_text(pt_filter_style("\n" + capture.get()))
 
-        # Print hint if present and settings say we should
-        if completions.hint and (self.cmd_app.always_show_hint or not completions):
-            print_formatted_text(pt_filter_style(completions.hint))
-
         if not completions:
+            # # Print hint if present
+            if completions.hint:
+                print_formatted_text(pt_filter_style(completions.hint))
             return
 
         # The length of the user's input minus any shortcut.
