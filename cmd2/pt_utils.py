@@ -37,6 +37,26 @@ if TYPE_CHECKING:  # pragma: no cover
 
 BASE_DELIMITERS = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRECTION_CHARS)
 
+# prompt_toolkit accepts these standard ANSI color names directly
+ANSI_NAMES = (
+    "ansiblack",
+    "ansired",
+    "ansigreen",
+    "ansiyellow",
+    "ansiblue",
+    "ansimagenta",
+    "ansicyan",
+    "ansiwhite",
+    "ansibrightblack",
+    "ansibrightred",
+    "ansibrightgreen",
+    "ansibrightyellow",
+    "ansibrightblue",
+    "ansibrightmagenta",
+    "ansibrightcyan",
+    "ansibrightwhite",
+)
+
 
 def pt_filter_style(text: str | ANSI) -> str | ANSI:
     """Strip styles if disallowed by ru.ALLOW_STYLE. Otherwise return an ANSI object.
@@ -61,26 +81,7 @@ def rich_to_pt_color(color: "Color | None") -> str:
     # Use prompt_toolkit's 16 standard ansi color names if applicable.
     # This prevents overriding terminal themes with absolute RGB values.
     if color.number is not None and 0 <= color.number <= 15:
-        # prompt_toolkit accepts these standard names directly
-        ansi_names = [
-            "ansiblack",
-            "ansired",
-            "ansigreen",
-            "ansiyellow",
-            "ansiblue",
-            "ansimagenta",
-            "ansicyan",
-            "ansiwhite",
-            "ansibrightblack",
-            "ansibrightred",
-            "ansibrightgreen",
-            "ansibrightyellow",
-            "ansibrightblue",
-            "ansibrightmagenta",
-            "ansibrightcyan",
-            "ansibrightwhite",
-        ]
-        return ansi_names[color.number]
+        return ANSI_NAMES[color.number]
 
     # For 8-bit and truecolor, we fallback to hex RGB strings which prompt-toolkit supports natively
     c = color.get_truecolor()
