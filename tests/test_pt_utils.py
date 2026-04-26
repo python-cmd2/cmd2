@@ -642,6 +642,13 @@ class TestRichToPtStyle:
     def test_rich_to_pt_style_none(self):
         assert pt_utils.rich_to_pt_style(None) == ""
 
+    def test_rich_to_pt_style_string(self):
+        pt_style = pt_utils.rich_to_pt_style("bold red on blue")
+        assert "fg:ansired" in pt_style
+        assert "bg:ansiblue" in pt_style
+        assert "bold" in pt_style
+        assert "nobold" not in pt_style
+
     def test_rich_to_pt_style_color(self):
         from rich.style import Style
 
