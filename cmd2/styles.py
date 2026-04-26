@@ -66,7 +66,7 @@ class Cmd2Style(StrEnum):
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.COMMAND_LINE: Style(color=Color.CYAN, bold=True),
     Cmd2Style.COMPLETION_MENU_ITEM: Style(color=Color.BLACK, bgcolor=Color.GREEN),
-    Cmd2Style.COMPLETION_MENU_META: Style(color=Color.BLACK, bgcolor=Color.LIGHT_GREEN),
+    Cmd2Style.COMPLETION_MENU_META: Style(color=Color.BLACK, bgcolor=Color.BRIGHT_GREEN),
     Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
     Cmd2Style.HELP_HEADER: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.HELP_LEADER: Style(color=Color.CYAN),
