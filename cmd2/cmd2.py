@@ -192,7 +192,7 @@ from .pt_utils import (
     Cmd2History,
     Cmd2Lexer,
     pt_filter_style,
-    to_pt_style,
+    rich_to_pt_style,
 )
 from .utils import (
     Settable,
@@ -731,8 +731,8 @@ class Cmd:
         if self._cached_pt_style is not None and self._cached_pt_style_params == current_params:
             return self._cached_pt_style
 
-        item_style = to_pt_style(rich_item_style)
-        meta_style = to_pt_style(rich_meta_style)
+        item_style = rich_to_pt_style(rich_item_style)
+        meta_style = rich_to_pt_style(rich_meta_style)
 
         self._cached_pt_style_params = current_params
         self._cached_pt_style = PtStyle.from_dict(

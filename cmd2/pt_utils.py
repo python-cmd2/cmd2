@@ -30,6 +30,8 @@ from . import rich_utils as ru
 from . import string_utils as su
 
 if TYPE_CHECKING:  # pragma: no cover
+    from rich.color import Color
+
     from .cmd2 import Cmd
 
 
@@ -51,22 +53,51 @@ def pt_filter_style(text: str | ANSI) -> str | ANSI:
     return text if isinstance(text, ANSI) else ANSI(text)
 
 
-def to_pt_style(rich_style: Style | None) -> str:
+def rich_to_pt_color(color: "Color | None") -> str:
+    """Convert a rich Color object to a prompt_toolkit color string."""
+    if not color or color.is_default:
+        return "default"
+
+    # Use prompt_toolkit's 16 standard ansi color names if applicable.
+    # This prevents overriding terminal themes with absolute RGB values.
+    if color.number is not None and 0 <= color.number <= 15:
+        # prompt_toolkit accepts these standard names directly
+        ansi_names = [
+            "ansiblack",
+            "ansired",
+            "ansigreen",
+            "ansiyellow",
+            "ansiblue",
+            "ansimagenta",
+            "ansicyan",
+            "ansiwhite",
+            "ansibrightblack",
+            "ansibrightred",
+            "ansibrightgreen",
+            "ansibrightyellow",
+            "ansibrightblue",
+            "ansibrightmagenta",
+            "ansibrightcyan",
+            "ansibrightwhite",
+        ]
+        return ansi_names[color.number]
+
+    # For 8-bit and truecolor, we fallback to hex RGB strings which prompt-toolkit supports natively
+    c = color.get_truecolor()
+    return f"#{c.red:02x}{c.green:02x}{c.blue:02x}"
+
+
+def rich_to_pt_style(rich_style: Style | None) -> str:
     """Convert a rich Style object to a prompt_toolkit style string."""
     if not rich_style:
         return ""
     parts = ["noreverse"]
-    if rich_style.color and not rich_style.color.is_default:
-        c = rich_style.color.get_truecolor()
-        parts.append(f"fg:#{c.red:02x}{c.green:02x}{c.blue:02x}")
-    else:
-        parts.append("fg:default")
 
-    if rich_style.bgcolor and not rich_style.bgcolor.is_default:
-        c = rich_style.bgcolor.get_truecolor()
-        parts.append(f"bg:#{c.red:02x}{c.green:02x}{c.blue:02x}")
-    else:
-        parts.append("bg:default")
+    fg_color = rich_to_pt_color(rich_style.color)
+    parts.append(f"fg:{fg_color}")
+
+    bg_color = rich_to_pt_color(rich_style.bgcolor)
+    parts.append(f"bg:{bg_color}")
 
     if rich_style.bold is not None:
         parts.append("bold" if rich_style.bold else "nobold")

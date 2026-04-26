@@ -1922,7 +1922,13 @@ def test_get_pt_style_caching(base_app) -> None:
         attrs = style3.class_names_and_attrs
         found = False
         for classes, attr in attrs:
-            if "completion-menu.completion.current" in classes and attr.color in ("800000", "darkred", "ff0000", "#800000"):
+            if "completion-menu.completion.current" in classes and attr.color in (
+                "800000",
+                "darkred",
+                "ff0000",
+                "#800000",
+                "ansired",
+            ):
                 found = True
                 break
         assert found, "Color change not found in cached style"
