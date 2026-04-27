@@ -227,15 +227,19 @@ available on the resulting ``Action`` object to access its underlying attribute:
 import argparse
 import re
 import sys
+import threading
 from argparse import ArgumentError
 from collections.abc import (
     Callable,
     Iterable,
     Sequence,
 )
+from dataclasses import dataclass
 from typing import (
+    IO,
     TYPE_CHECKING,
     Any,
+    ClassVar,
     NoReturn,
     cast,
 )
@@ -541,8 +545,20 @@ def _SubParsersAction_remove_parser(  # noqa: N802
 argparse._SubParsersAction.remove_parser = _SubParsersAction_remove_parser  # type: ignore[attr-defined]
 
 
+@dataclass
+class _ParserThreadLocals(threading.local):
+    """Thread-local storage used by Cmd2ArgumentParser to manage execution context."""
+
+    # If set, this stream will be used by print_help() and print_usage()
+    # instead of defaulting to sys.stdout.
+    custom_stdout: IO[str] | None = None
+
+
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output."""
+
+    # Thread-local storage shared by all parser instances (including subparsers)
+    _thread_locals: ClassVar[_ParserThreadLocals] = _ParserThreadLocals()
 
     def __init__(
         self,
@@ -601,6 +617,64 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.formatter_class: type[Cmd2HelpFormatter]
         self.description: RenderableType | None  # type: ignore[assignment]
         self.epilog: RenderableType | None  # type: ignore[assignment]
+
+    def parse_args_custom_stdout(
+        self,
+        stdout: IO[str],
+        args: list[str] | None = None,
+        namespace: argparse.Namespace | None = None,
+    ) -> argparse.Namespace:
+        """Parse arguments while directing help and usage output to a custom stdout stream.
+
+        This method is particularly useful when you need to capture help output without
+        globally redirecting sys.stdout.
+
+        :param stdout: the stream to use for help and usage output
+        :param args: optional list of arguments to parse. If None, uses sys.argv[1:].
+        :param namespace: optional namespace to populate. If None, a new Namespace is created.
+        :return: the parsed namespace
+        """
+        previous = self._thread_locals.custom_stdout
+        try:
+            self._thread_locals.custom_stdout = stdout
+            return self.parse_args(args, namespace)
+        finally:
+            self._thread_locals.custom_stdout = previous
+
+    def parse_known_args_custom_stdout(
+        self,
+        stdout: IO[str],
+        args: list[str] | None = None,
+        namespace: argparse.Namespace | None = None,
+    ) -> tuple[argparse.Namespace, list[str]]:
+        """Parse known arguments while directing help and usage output to a custom stdout stream.
+
+        This method is particularly useful when you need to capture help output without
+        globally redirecting sys.stdout.
+
+        :param stdout: the stream to use for help and usage output
+        :param args: optional list of arguments to parse. If None, uses sys.argv[1:].
+        :param namespace: optional namespace to populate. If None, a new Namespace is created.
+        :return: a tuple containing the parsed namespace and a list of unknown arguments
+        """
+        previous = self._thread_locals.custom_stdout
+        try:
+            self._thread_locals.custom_stdout = stdout
+            return self.parse_known_args(args, namespace)
+        finally:
+            self._thread_locals.custom_stdout = previous
+
+    def print_usage(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
+        """Override to support writing to a custom stream."""
+        if file is None:
+            file = self._thread_locals.custom_stdout
+        super().print_usage(file)
+
+    def print_help(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
+        """Override to support writing to a custom stream."""
+        if file is None:
+            file = self._thread_locals.custom_stdout
+        super().print_help(file)
 
     def get_subparsers_action(self) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
         """Get the _SubParsersAction for this parser if it exists.

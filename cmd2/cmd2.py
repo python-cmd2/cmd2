@@ -318,12 +318,12 @@ class AsyncAlert:
     timestamp: float = field(default_factory=time.monotonic, init=False)
 
 
+@dataclass
 class _ConsoleCache(threading.local):
     """Thread-local storage for cached Rich consoles used by core print methods."""
 
-    def __init__(self) -> None:
-        self.stdout: Cmd2BaseConsole | None = None
-        self.stderr: Cmd2BaseConsole | None = None
+    stdout: Cmd2BaseConsole | None = None
+    stderr: Cmd2BaseConsole | None = None
 
 
 class Cmd:
