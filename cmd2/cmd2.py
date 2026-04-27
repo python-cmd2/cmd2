@@ -4732,7 +4732,9 @@ class Cmd:
                         args.param,
                         ": ",
                         (f"{orig_value!r}", "red"),
-                        " -> ",
+                        "\n",
+                        " " * max(0, len(args.param) - 1),
+                        "-> ",
                         (f"{settable.value!r}", "green"),
                     )
                     self.pfeedback(feedback_msg)

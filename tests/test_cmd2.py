@@ -273,7 +273,8 @@ def test_set_with_choices(base_app) -> None:
     out, err = run_cmd(base_app, f"set fake {fake_choices[1]}")
     assert base_app.last_result is True
     assert not out
-    assert err == [f"fake: {fake_choices[0]!r} -> {fake_choices[1]!r}"]
+    assert err[0].startswith(f"fake: {fake_choices[0]!r}")
+    assert err[1].endswith(f"-> {fake_choices[1]!r}")
 
     # Try an invalid choice
     _out, err = run_cmd(base_app, "set fake bad_value")
@@ -892,12 +893,13 @@ def test_base_timing(base_app) -> None:
     base_app.feedback_to_output = False
     out, err = run_cmd(base_app, "set timing True")
     assert not out
-    assert err[0] == "timing: False -> True"
+    assert err[0].startswith("timing: False")
+    assert err[1].endswith("-> True")
 
     if sys.platform == "win32":
-        assert err[1].startswith("Elapsed: 0:00:00")
+        assert err[2].startswith("Elapsed: 0:00:00")
     else:
-        assert err[1].startswith("Elapsed: 0:00:00.0")
+        assert err[2].startswith("Elapsed: 0:00:00.0")
 
 
 def test_base_debug(base_app) -> None:
@@ -912,7 +914,8 @@ def test_base_debug(base_app) -> None:
     # Set debug true
     out, err = run_cmd(base_app, "set debug True")
     assert not out
-    assert err == ["debug: False -> True"]
+    assert err[0].startswith("debug: False")
+    assert err[1].endswith("-> True")
 
     # Verify that we now see the exception traceback
     out, err = run_cmd(base_app, "edit")

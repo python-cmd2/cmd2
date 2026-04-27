@@ -1104,7 +1104,8 @@ def test_commandset_settables() -> None:
     # change the value and verify the value changed
     out, err = run_cmd(app, "set arbitrary_value 10")
     assert not out
-    assert err == ["arbitrary_value: 5 -> 10"]
+    assert err[0].startswith("arbitrary_value: 5")
+    assert err[1].endswith("-> 10")
     out, err = run_cmd(app, "set arbitrary_value")
     any("arbitrary_value" in line and "10" in line for line in out)
 
