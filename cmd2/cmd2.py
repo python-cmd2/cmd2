@@ -15,8 +15,8 @@ Extra features include:
 - Redirection to file or paste buffer (clipboard) with > or >>
 - Bash-style ``select`` available
 
-Note, if self.stdout is different than sys.stdout, then redirection with > and |
-will only work if `self.poutput()` is used in place of `print`.
+Note: cmd2 redirection only captures output directed to self.stdout (e.g., via self.poutput()).
+print() calls write directly to sys.stdout and are not intercepted.
 
 GitHub: https://github.com/python-cmd2/cmd2
 Documentation: https://cmd2.readthedocs.io/
@@ -3191,13 +3191,8 @@ class Cmd:
         """
         import subprocess
 
-        # Only redirect sys.stdout if it's the same as self.stdout
-        stdouts_match = self.stdout == sys.stdout
-
         # Initialize the redirection saved state
-        redir_saved_state = utils.RedirectionSavedState(
-            self.stdout, stdouts_match, self._cur_pipe_proc_reader, self._redirecting
-        )
+        redir_saved_state = utils.RedirectionSavedState(self.stdout, self._cur_pipe_proc_reader, self._redirecting)
 
         # The ProcReader for this command
         cmd_pipe_proc_reader: utils.ProcReader | None = None
@@ -3254,8 +3249,6 @@ class Cmd:
             cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
 
             self.stdout = new_stdout
-            if stdouts_match:
-                sys.stdout = self.stdout
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
             if statement.redirect_to:
@@ -3271,8 +3264,6 @@ class Cmd:
                 redir_saved_state.redirecting = True
 
                 self.stdout = new_stdout
-                if stdouts_match:
-                    sys.stdout = self.stdout
 
             else:
                 # Redirecting to a paste buffer
@@ -3292,8 +3283,6 @@ class Cmd:
                 redir_saved_state.redirecting = True
 
                 self.stdout = new_stdout
-                if stdouts_match:
-                    sys.stdout = self.stdout
 
                 if statement.redirector == constants.REDIRECTION_APPEND:
                     self.stdout.write(current_paste_buffer)
@@ -3324,10 +3313,8 @@ class Cmd:
                 # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
 
-            # Restore the stdout values
+            # Restore self.stdout
             self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
-            if saved_redir_state.stdouts_match:
-                sys.stdout = self.stdout
 
             # Check if we need to wait for the process being piped to
             if self._cur_pipe_proc_reader is not None:
@@ -4878,6 +4865,12 @@ class Cmd:
         """
         self.last_result = False
 
+        def py_print(*args: Any, file: IO[str] | None = None, **kwargs: Any) -> None:
+            """Print objects to a stream, defaulting to self.stdout."""
+            if file is None:
+                file = self.stdout
+            self.print_to(file, *args, **kwargs)
+
         def py_quit() -> None:
             """Exit an interactive Python environment, callable from the interactive Python console."""
             raise EmbeddedConsoleExit
@@ -4902,6 +4895,7 @@ class Cmd:
             # it's OK for py_locals to contain objects which are editable in a pyscript.
             local_vars = self.py_locals.copy()
             local_vars[self.py_bridge_name] = py_bridge
+            local_vars["print"] = py_print
             local_vars["quit"] = py_quit
             local_vars["exit"] = py_quit
 

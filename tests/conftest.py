@@ -60,12 +60,9 @@ def normalize(block: str) -> list[str]:
 
 
 def run_cmd(app: cmd2.Cmd, cmd: str) -> tuple[list[str], list[str]]:
-    """Clear out and err StdSim buffers, run the command, and return out and err"""
+    """Run the command in app and return what it writes to app.stdout and sys.stderr."""
 
-    # Only capture sys.stdout if it's the same stream as self.stdout
-    stdouts_match = app.stdout == sys.stdout
-
-    # This will be used to capture app.stdout and sys.stdout
+    # This will be used to capture app.stdout
     copy_cmd_stdout = StdSim(cast(TextIO, app.stdout))
 
     # This will be used to capture sys.stderr
@@ -73,14 +70,10 @@ def run_cmd(app: cmd2.Cmd, cmd: str) -> tuple[list[str], list[str]]:
 
     try:
         app.stdout = cast(TextIO, copy_cmd_stdout)
-        if stdouts_match:
-            sys.stdout = app.stdout
         with redirect_stderr(cast(TextIO, copy_stderr)):
             app.onecmd_plus_hooks(cmd)
     finally:
         app.stdout = cast(TextIO, copy_cmd_stdout.inner_stream)
-        if stdouts_match:
-            sys.stdout = app.stdout
 
     out = copy_cmd_stdout.getvalue()
     err = copy_stderr.getvalue()
