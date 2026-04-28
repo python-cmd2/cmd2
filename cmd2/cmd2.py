@@ -4865,14 +4865,34 @@ class Cmd:
         """
         self.last_result = False
 
-        def py_print(*args: Any, file: IO[str] | None = None, **kwargs: Any) -> None:
-            """Print objects to a stream, defaulting to self.stdout."""
+        def py_print(
+            *objects: Any,
+            sep: str = " ",
+            end: str = "\n",
+            file: IO[str] | None = None,
+            flush: bool = False,  # noqa: ARG001
+        ) -> None:
+            """Print objects to a stream, defaulting to self.stdout.
+
+            This is used as the print() function within interactive Python shells and pyscripts.
+            It wraps cmd2's print_to() method to honor output redirection and style settings.
+
+            :param objects: objects to print
+            :param sep: string to write between printed text. Defaults to " ".
+            :param end: string to write at end of printed text. Defaults to a newline.
+            :param file: file stream being written to. Defaults to self.stdout.
+            :param flush: ignored as Rich-based output is flushed automatically. Defaults to False.
+            """
             if file is None:
                 file = self.stdout
-            self.print_to(file, *args, **kwargs)
+
+            self.print_to(file, *objects, sep=sep, end=end)
 
         def py_quit() -> None:
-            """Exit an interactive Python environment, callable from the interactive Python console."""
+            """Exit an interactive Python shell or pyscript.
+
+            This is used as the quit() and exit() functions within the Python environment.
+            """
             raise EmbeddedConsoleExit
 
         from .py_bridge import PyBridge
@@ -5055,19 +5075,13 @@ class Cmd:
             except NameError:
                 from IPython import start_ipython
 
-            from IPython.terminal.interactiveshell import (
-                TerminalInteractiveShell,
-            )
-            from IPython.terminal.ipapp import (
-                TerminalIPythonApp,
-            )
+            from IPython.terminal.interactiveshell import TerminalInteractiveShell
+            from IPython.terminal.ipapp import TerminalIPythonApp
         except ImportError:
             self.perror("IPython package is not installed")
             return None
 
-        from .py_bridge import (
-            PyBridge,
-        )
+        from .py_bridge import PyBridge
 
         if self.in_pyscript():
             self.perror("Recursively entering interactive Python shells is not allowed")
