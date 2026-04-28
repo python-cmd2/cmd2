@@ -122,29 +122,23 @@ def test_run_pyscript_dir(base_app, request) -> None:
     assert out[0] == "['cmd_echo']"
 
 
-def test_run_pyscript_capture(base_app, request) -> None:
-    base_app.self_in_py = True
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, "pyscript", "stdout_capture.py")
-    out, _err = run_cmd(base_app, f"run_pyscript {python_script}")
+def test_py_bridge_capture_isolation() -> None:
+    """Verify that PyBridge captures poutput but not raw print from within a command."""
+    import cmd2
+    from cmd2.py_bridge import PyBridge
 
-    assert out[0] == "print"
-    assert out[1] == "poutput"
+    class App(cmd2.Cmd):
+        def do_test_capture(self, _):
+            print("process_stdout")
+            self.poutput("app_stdout")
 
+    app = App()
+    bridge = PyBridge(app)
+    result = bridge("test_capture")
 
-def test_run_pyscript_capture_custom_stdout(base_app, request) -> None:
-    """sys.stdout will not be captured if it's different than self.stdout."""
-    import io
-
-    base_app.stdout = io.StringIO()
-
-    base_app.self_in_py = True
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, "pyscript", "stdout_capture.py")
-    out, _err = run_cmd(base_app, f"run_pyscript {python_script}")
-
-    assert "print" not in out
-    assert out[0] == "poutput"
+    # Verify isolation: only the application stream should be in the result
+    assert result.stdout == "app_stdout\n"
+    assert "process_stdout" not in result.stdout
 
 
 def test_run_pyscript_stop(base_app, request) -> None:
