@@ -127,10 +127,15 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         max_help_position: int = 24,
         width: int | None = None,
         *,
+        file: IO[str] | None = None,
         console: "Cmd2RichArgparseConsole | None" = None,
         **kwargs: Any,
     ) -> None:
         """Initialize Cmd2HelpFormatter."""
+        if file is not None and console is not None:
+            raise TypeError("cannot provide both 'file' and 'console' arguments")
+
+        self._file = file
         super().__init__(prog, indent_increment, max_help_position, width, console=console, **kwargs)
 
         # Recast to assist type checkers
@@ -140,12 +145,13 @@ class Cmd2HelpFormatter(RichHelpFormatter):
     def console(self) -> "Cmd2RichArgparseConsole":
         """Return our console instance."""
         if self._console is None:
-            self._console = Cmd2RichArgparseConsole()
+            self._console = Cmd2RichArgparseConsole(file=self._file)
         return self._console
 
     @console.setter
     def console(self, console: "Cmd2RichArgparseConsole") -> None:
         """Set our console instance."""
+        self._file = None
         self._console = console
 
     def add_text(self, text: Any) -> None:

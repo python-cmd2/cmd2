@@ -225,6 +225,7 @@ available on the resulting ``Action`` object to access its underlying attribute:
 """
 
 import argparse
+import contextlib
 import re
 import sys
 import threading
@@ -232,6 +233,7 @@ from argparse import ArgumentError
 from collections.abc import (
     Callable,
     Iterable,
+    Iterator,
     Sequence,
 )
 from dataclasses import dataclass
@@ -551,8 +553,12 @@ argparse._SubParsersAction.remove_parser = _SubParsersAction_remove_parser  # ty
 class _ParserThreadLocals(threading.local):
     """Thread-local storage used by Cmd2ArgumentParser to manage execution context."""
 
-    # If set, print_help() and print_usage() will default to use this instead of sys.stdout.
-    custom_stdout: IO[str] | None = None
+    # The active output stream for help, usage, and errors. Since argparse does not
+    # pass the destination stream to the formatter factory, this transient value
+    # provides the context needed to synchronize Rich's rendering with the specific
+    # capabilities of the destination file descriptor. It is managed via the
+    # _set_output_file() context manager.
+    current_output_file: IO[str] | None = None
 
 
 class Cmd2ArgumentParser(argparse.ArgumentParser):
@@ -560,6 +566,16 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
     # Thread-local storage shared by all parser instances (including subparsers)
     _thread_locals: ClassVar[_ParserThreadLocals] = _ParserThreadLocals()
+
+    @contextlib.contextmanager
+    def _set_output_file(self, file: IO[str] | None) -> Iterator[None]:
+        """Context manager to temporarily set the current output file."""
+        previous = self._thread_locals.current_output_file
+        self._thread_locals.current_output_file = file
+        try:
+            yield
+        finally:
+            self._thread_locals.current_output_file = previous
 
     def __init__(
         self,
@@ -635,12 +651,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :param namespace: optional namespace to populate. If None, a new Namespace is created.
         :return: the parsed namespace
         """
-        previous = self._thread_locals.custom_stdout
-        try:
-            self._thread_locals.custom_stdout = stdout
+        with self._set_output_file(stdout):
             return self.parse_args(args, namespace)
-        finally:
-            self._thread_locals.custom_stdout = previous
 
     def parse_known_args_custom_stdout(
         self,
@@ -658,24 +670,24 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :param namespace: optional namespace to populate. If None, a new Namespace is created.
         :return: a tuple containing the parsed namespace and a list of unknown arguments
         """
-        previous = self._thread_locals.custom_stdout
-        try:
-            self._thread_locals.custom_stdout = stdout
+        with self._set_output_file(stdout):
             return self.parse_known_args(args, namespace)
-        finally:
-            self._thread_locals.custom_stdout = previous
 
     def print_usage(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
-        """Override to support writing to a custom stream."""
+        """Override to ensure the formatter is aware of the target file."""
         if file is None:
-            file = self._thread_locals.custom_stdout
-        super().print_usage(file)
+            file = self._thread_locals.current_output_file
+
+        with self._set_output_file(file):
+            super().print_usage(file)
 
     def print_help(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
-        """Override to support writing to a custom stream."""
+        """Override to ensure the formatter is aware of the target file."""
         if file is None:
-            file = self._thread_locals.custom_stdout
-        super().print_help(file)
+            file = self._thread_locals.current_output_file
+
+        with self._set_output_file(file):
+            super().print_help(file)
 
     def get_subparsers_action(self) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
         """Get the _SubParsersAction for this parser if it exists.
@@ -879,19 +891,21 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             else:
                 formatted_message += "\n       " + line
 
-        self.print_usage(sys.stderr)
+        with self._set_output_file(sys.stderr):
+            self.print_usage(sys.stderr)
 
-        # Use console to add style since it will respect ALLOW_STYLE's value
-        console = self._get_formatter().console
-        with console.capture() as capture:
-            console.print(formatted_message, style=Cmd2Style.ERROR)
-        formatted_message = f"{capture.get()}"
+            # Use console to add style since it will respect ALLOW_STYLE's value.
+            # Now _get_formatter() will return a formatter bound to stderr.
+            console = self._get_formatter().console
+            with console.capture() as capture:
+                console.print(formatted_message, style=Cmd2Style.ERROR)
+            formatted_message = f"{capture.get()}"
 
         self.exit(2, f"{formatted_message}\n")
 
     def _get_formatter(self) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
-        return cast(Cmd2HelpFormatter, super()._get_formatter())
+        return self.formatter_class(prog=self.prog, file=self._thread_locals.current_output_file)
 
     def format_help(self) -> str:
         """Override to add a newline."""
