@@ -2,8 +2,6 @@
 import os
 import sys
 
-app.cmd_echo = True
-
 if __name__ != "__main__":
     print(f"Error: __name__ is: {__name__}")
     quit()
