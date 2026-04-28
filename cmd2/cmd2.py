@@ -16,7 +16,9 @@ Extra features include:
 - Bash-style ``select`` available
 
 Note: cmd2 redirection only captures output directed to self.stdout (e.g., via self.poutput()).
-print() calls write directly to sys.stdout and are not intercepted.
+Standard print() calls write directly to sys.stdout and are not captured. However, print() calls
+within pyscripts and the interactive Python shell are treated as command output and sent to
+self.stdout, allowing them to be captured.
 
 GitHub: https://github.com/python-cmd2/cmd2
 Documentation: https://cmd2.readthedocs.io/
@@ -4865,6 +4867,10 @@ class Cmd:
         """
         self.last_result = False
 
+        # Replace print() in the the embedded Python environment. Standard print() writes to
+        # sys.stdout, which bypasses cmd2 redirection (e.g., run_pyscript script.py > out.txt).
+        # Using self.print_to(self.stdout) ensures output is capturable and respects 'allow_style'
+        # without requiring the user to have access to 'self'.
         def py_print(
             *objects: Any,
             sep: str = " ",
@@ -4888,11 +4894,11 @@ class Cmd:
 
             self.print_to(file, *objects, sep=sep, end=end)
 
+        # Replace quit/exit in the embedded Python environment. Standard sys.exit()
+        # would kill the entire application process; raising EmbeddedConsoleExit
+        # allows the interpreter to return gracefully to the cmd2 prompt.
         def py_quit() -> None:
-            """Exit an interactive Python shell or pyscript.
-
-            This is used as the quit() and exit() functions within the Python environment.
-            """
+            """Exit an interactive Python shell or pyscript."""
             raise EmbeddedConsoleExit
 
         from .py_bridge import PyBridge
