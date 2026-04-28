@@ -244,12 +244,14 @@ from typing import (
     cast,
 )
 
-from rich.console import RenderableType
 from rich.table import Column
 
 from . import constants
 from .completion import CompletionItem
-from .rich_utils import Cmd2HelpFormatter
+from .rich_utils import (
+    Cmd2HelpFormatter,
+    HelpContent,
+)
 from .styles import Cmd2Style
 from .types import (
     CmdOrSetT,
@@ -549,8 +551,7 @@ argparse._SubParsersAction.remove_parser = _SubParsersAction_remove_parser  # ty
 class _ParserThreadLocals(threading.local):
     """Thread-local storage used by Cmd2ArgumentParser to manage execution context."""
 
-    # If set, this stream will be used by print_help() and print_usage()
-    # instead of defaulting to sys.stdout.
+    # If set, print_help() and print_usage() will default to use this instead of sys.stdout.
     custom_stdout: IO[str] | None = None
 
 
@@ -564,8 +565,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self,
         prog: str | None = None,
         usage: str | None = None,
-        description: RenderableType | None = None,
-        epilog: RenderableType | None = None,
+        description: HelpContent | None = None,
+        epilog: HelpContent | None = None,
         parents: Sequence[argparse.ArgumentParser] = (),
         formatter_class: type[Cmd2HelpFormatter] = Cmd2HelpFormatter,
         prefix_chars: str = "-",
@@ -615,8 +616,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         # To assist type checkers, recast these to reflect our usage of rich-argparse.
         self.formatter_class: type[Cmd2HelpFormatter]
-        self.description: RenderableType | None  # type: ignore[assignment]
-        self.epilog: RenderableType | None  # type: ignore[assignment]
+        self.description: HelpContent | None  # type: ignore[assignment]
+        self.epilog: HelpContent | None  # type: ignore[assignment]
 
     def parse_args_custom_stdout(
         self,
@@ -888,9 +889,9 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.exit(2, f"{formatted_message}\n")
 
-    def _get_formatter(self, **kwargs: Any) -> Cmd2HelpFormatter:
+    def _get_formatter(self) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
-        return cast(Cmd2HelpFormatter, super()._get_formatter(**kwargs))
+        return cast(Cmd2HelpFormatter, super()._get_formatter())
 
     def format_help(self) -> str:
         """Override to add a newline."""

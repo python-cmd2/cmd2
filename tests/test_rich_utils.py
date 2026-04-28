@@ -259,56 +259,9 @@ def test_cmd2_base_console_init_never() -> None:
         assert kwargs["force_interactive"] is None
 
 
-def test_text_group_direct_cmd2() -> None:
-    """Print a TextGroup directly using a Cmd2RichArgparseConsole."""
-    title = "Notes"
-    content = "Some text"
-    text_group = ru.TextGroup(title, content)
-    console = ru.Cmd2RichArgparseConsole()
-    with console.capture() as capture:
-        console.print(text_group)
-    output = capture.get()
-    assert "Notes:" in output
-    assert "  Some text" in output
-
-
-def test_text_group_direct_plain() -> None:
-    """Print a TextGroup directly not using a Cmd2RichArgparseConsole."""
-    title = "Notes"
-    content = "Some text"
-    text_group = ru.TextGroup(title, content)
-    console = Console()
-    with console.capture() as capture:
-        console.print(text_group)
-    output = capture.get()
-    assert "Notes:" in output
-    assert "  Some text" in output
-
-
-def test_text_group_in_parser_cmd2(capsys: pytest.CaptureFixture[str]) -> None:
-    """Print a TextGroup with argparse using a Cmd2RichArgparseConsole."""
+def test_text_group_in_parser(capsys: pytest.CaptureFixture[str]) -> None:
+    """Print a TextGroup with argparse."""
     parser = Cmd2ArgumentParser(prog="test")
-    parser.epilog = ru.TextGroup("Notes", "Some text")
-
-    # Render help
-    parser.print_help()
-    out, _ = capsys.readouterr()
-
-    assert "Notes:" in out
-    assert "  Some text" in out
-
-
-def test_text_group_in_parser_plain(capsys: pytest.CaptureFixture[str]) -> None:
-    """Print a TextGroup with argparse not using a Cmd2RichArgparseConsole."""
-
-    class CustomParser(Cmd2ArgumentParser):
-        def _get_formatter(self, **kwargs: Any) -> ru.Cmd2HelpFormatter:
-            """Overwrite the formatter's console with a plain one."""
-            formatter = super()._get_formatter(**kwargs)
-            formatter.console = Console()  # type: ignore[assignment]
-            return formatter
-
-    parser = CustomParser(prog="test")
     parser.epilog = ru.TextGroup("Notes", "Some text")
 
     # Render help

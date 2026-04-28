@@ -81,7 +81,9 @@ prompt is displayed.
     - `cmd2` no longer sets a default title for a subparsers group. If you desire a title, you will
       need to pass one in like this `parser.add_subparsers(title="subcommands")`. This is standard
       `argparse` behavior.
-    - `TextGroup` is now a standalone Rich renderable.
+    - Added `HelpFormatterRenderable` protocol and `HelpContent` type alias to support context-aware
+      help content in `argparse`.
+    - `TextGroup` now implements `HelpFormatterRenderable`.
         - Removed `formatter_creator` parameter from `TextGroup.__init__()`.
         - Removed `Cmd2ArgumentParser.create_text_group()` method.
     - `argparse` and `Rich` integration refactoring:

@@ -4867,7 +4867,7 @@ class Cmd:
         """
         self.last_result = False
 
-        # Replace print() in the the embedded Python environment. Standard print() writes to
+        # Replace print() in the embedded Python environment. Standard print() writes to
         # sys.stdout, which bypasses cmd2 redirection (e.g., run_pyscript script.py > out.txt).
         # Using self.print_to(self.stdout) ensures output is capturable and respects 'allow_style'
         # without requiring the user to have access to 'self'.
