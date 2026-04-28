@@ -4395,8 +4395,6 @@ class Cmd:
 
     def _print_documented_command_topics(self, header: str, commands: Sequence[str], verbose: bool) -> None:
         """Print topics which are documented commands, switching between verbose or traditional output."""
-        import io
-
         if not commands:
             return
 
@@ -4410,34 +4408,11 @@ class Cmd:
         )
 
         # Try to get the documentation string for each command
-        topics = self.get_help_topics()
         for command in commands:
             if (command_func := self.get_command_func(command)) is None:
                 continue
 
-            doc: str | None
-
-            # Non-argparse commands can have help_functions for their documentation
-            if command in topics:
-                help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
-                result = io.StringIO()
-
-                # try to redirect system stdout
-                with contextlib.redirect_stdout(result):
-                    # save our internal stdout
-                    stdout_orig = self.stdout
-                    try:
-                        # redirect our internal stdout
-                        self.stdout = cast(TextIO, result)
-                        help_func()
-                    finally:
-                        with self.sigint_protection:
-                            # restore internal stdout
-                            self.stdout = stdout_orig
-                doc = result.getvalue()
-
-            else:
-                doc = command_func.__doc__
+            doc = command_func.__doc__
 
             # Attempt to locate the first documentation block
             cmd_desc = strip_doc_annotations(doc) if doc else ""

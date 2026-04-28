@@ -1419,7 +1419,7 @@ def test_miscellaneous_help_topic(help_app) -> None:
     assert help_app.last_result is True
 
 
-def test_help_verbose_uses_parser_description(help_app: HelpApp) -> None:
+def test_help_verbose(help_app: HelpApp) -> None:
     out, _err = run_cmd(help_app, "help --verbose")
     expected_verbose = utils.strip_doc_annotations(help_app.do_parser_cmd.__doc__)
     verify_help_text(help_app, out, verbose_strings=[expected_verbose])
