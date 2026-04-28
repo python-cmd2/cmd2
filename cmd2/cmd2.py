@@ -4883,7 +4883,7 @@ class Cmd:
             This is used as the print() function within interactive Python shells and pyscripts.
             It wraps cmd2's print_to() method to honor output redirection and style settings.
 
-            :param objects: objects to print
+            :param objects: objects to print (including Rich objects)
             :param sep: string to write between printed text. Defaults to " ".
             :param end: string to write at end of printed text. Defaults to a newline.
             :param file: file stream being written to. Defaults to self.stdout.
