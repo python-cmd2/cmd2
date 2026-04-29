@@ -7,11 +7,13 @@ from unittest import (
 
 import pytest
 
+from cmd2 import rich_utils as ru
 from cmd2.string_utils import quote
 
 from .conftest import (
     odd_file_names,
     run_cmd,
+    with_ansi_style,
 )
 
 
@@ -209,6 +211,7 @@ def test_run_pyscript_app_echo(base_app, request) -> None:
     assert out[0] == "Usage: edit [-h] [file_path]"
 
 
+@with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_run_pyscript_print(base_app, request, capsys) -> None:
     """Verify that py_print() (the print() replacement in pyscripts) works correctly."""
     test_dir = os.path.dirname(request.module.__file__)
@@ -216,10 +219,11 @@ def test_run_pyscript_print(base_app, request, capsys) -> None:
     out, err = run_cmd(base_app, f"run_pyscript {python_script}")
 
     # Verify contents of self.stdout
-    assert len(out) == 3
+    assert len(out) == 4
     assert out[0] == "hello-world"
     assert out[1] == "no newline here"
     assert out[2] == "1:2:3."
+    assert out[3] == "\x1b[34mI am Rich Text\x1b[0m"
 
     # Verify contents of sys.stderr
     assert len(err) == 1
@@ -245,9 +249,11 @@ def test_run_pyscript_print_redirection(base_app, request, tmp_path, capsys) -> 
         content = f.read()
 
     # Look for everything written to self.stdout
+    assert len(content.splitlines()) == 4
     assert "hello-world\n" in content
     assert "no newline here\n" in content
     assert "1:2:3.\n" in content
+    assert "I am Rich Text\n" in content
 
     # Nothing else should have been redirected
     assert "this goes to sys.stdout" not in content

@@ -5,6 +5,8 @@ for the built-in print() function in the embedded Python environment.
 
 import sys
 
+from rich.text import Text
+
 # Test multiple objects and sep
 print("hello", "world", sep="-")
 
@@ -16,6 +18,9 @@ print("here")
 print(1, 2, 3, sep=":", end=".")
 print()  # to get a newline
 
+# Test printing a Rich object
+text = Text("I am Rich Text", style="blue")
+print(text)
 
 # Test file=sys.stdout
 print("this goes to sys.stdout", file=sys.stdout)
