@@ -107,6 +107,8 @@ prompt is displayed.
       `self.poutput()`). Standard `print()` calls write directly to `sys.stdout` and are not
       captured. However, `print()` calls within `pyscripts` and the interactive Python shell are
       treated as command output and sent to `self.stdout`, allowing them to be captured.
+    - Verbose help table descriptions are no longer generated from help function output. The system
+      now relies exclusively on command function docstrings.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
