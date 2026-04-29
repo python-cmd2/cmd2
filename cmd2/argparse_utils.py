@@ -225,27 +225,35 @@ available on the resulting ``Action`` object to access its underlying attribute:
 """
 
 import argparse
+import contextlib
 import re
 import sys
+import threading
 from argparse import ArgumentError
 from collections.abc import (
     Callable,
     Iterable,
+    Iterator,
     Sequence,
 )
+from dataclasses import dataclass
 from typing import (
+    IO,
     TYPE_CHECKING,
     Any,
+    ClassVar,
     NoReturn,
     cast,
 )
 
-from rich.console import RenderableType
 from rich.table import Column
 
 from . import constants
 from .completion import CompletionItem
-from .rich_utils import Cmd2HelpFormatter
+from .rich_utils import (
+    Cmd2HelpFormatter,
+    HelpContent,
+)
 from .styles import Cmd2Style
 from .types import (
     CmdOrSetT,
@@ -541,15 +549,46 @@ def _SubParsersAction_remove_parser(  # noqa: N802
 argparse._SubParsersAction.remove_parser = _SubParsersAction_remove_parser  # type: ignore[attr-defined]
 
 
+@dataclass
+class _ParserThreadLocals(threading.local):
+    """Thread-local storage used by Cmd2ArgumentParser to manage execution context."""
+
+    # The active output stream for help, usage, and errors. Since argparse does not
+    # pass the destination stream to the formatter factory, this transient value
+    # provides the context needed to synchronize Rich's rendering with the specific
+    # capabilities of the destination file descriptor. It is managed via the
+    # output_to() context manager.
+    current_output_file: IO[str] | None = None
+
+
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output."""
+
+    # Thread-local storage shared by all parser instances (including subparsers)
+    _thread_locals: ClassVar[_ParserThreadLocals] = _ParserThreadLocals()
+
+    @contextlib.contextmanager
+    def output_to(self, file: IO[str] | None) -> Iterator[None]:
+        """Context manager to temporarily set the output stream during argparse operations.
+
+        This is helpful for directing output for functions like `parse_args()`, which
+        default to `sys.stdout` and lack a `file` argument.
+
+        :param file: the file stream to use for output
+        """
+        previous = self._thread_locals.current_output_file
+        self._thread_locals.current_output_file = file
+        try:
+            yield
+        finally:
+            self._thread_locals.current_output_file = previous
 
     def __init__(
         self,
         prog: str | None = None,
         usage: str | None = None,
-        description: RenderableType | None = None,
-        epilog: RenderableType | None = None,
+        description: HelpContent | None = None,
+        epilog: HelpContent | None = None,
         parents: Sequence[argparse.ArgumentParser] = (),
         formatter_class: type[Cmd2HelpFormatter] = Cmd2HelpFormatter,
         prefix_chars: str = "-",
@@ -599,8 +638,24 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         # To assist type checkers, recast these to reflect our usage of rich-argparse.
         self.formatter_class: type[Cmd2HelpFormatter]
-        self.description: RenderableType | None  # type: ignore[assignment]
-        self.epilog: RenderableType | None  # type: ignore[assignment]
+        self.description: HelpContent | None  # type: ignore[assignment]
+        self.epilog: HelpContent | None  # type: ignore[assignment]
+
+    def print_usage(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
+        """Override to ensure the formatter is aware of the target file."""
+        if file is None:
+            file = self._thread_locals.current_output_file
+
+        with self.output_to(file):
+            super().print_usage(file)
+
+    def print_help(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
+        """Override to ensure the formatter is aware of the target file."""
+        if file is None:
+            file = self._thread_locals.current_output_file
+
+        with self.output_to(file):
+            super().print_help(file)
 
     def get_subparsers_action(self) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
         """Get the _SubParsersAction for this parser if it exists.
@@ -804,19 +859,21 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             else:
                 formatted_message += "\n       " + line
 
-        self.print_usage(sys.stderr)
+        with self.output_to(sys.stderr):
+            self.print_usage(sys.stderr)
 
-        # Use console to add style since it will respect ALLOW_STYLE's value
-        console = self._get_formatter().console
-        with console.capture() as capture:
-            console.print(formatted_message, style=Cmd2Style.ERROR)
-        formatted_message = f"{capture.get()}"
+            # Use console to add style since it will respect ALLOW_STYLE's value.
+            # Now _get_formatter() will return a formatter bound to stderr.
+            console = self._get_formatter().console
+            with console.capture() as capture:
+                console.print(formatted_message, style=Cmd2Style.ERROR)
+            formatted_message = f"{capture.get()}"
 
         self.exit(2, f"{formatted_message}\n")
 
-    def _get_formatter(self, **kwargs: Any) -> Cmd2HelpFormatter:
+    def _get_formatter(self, **_kwargs: Any) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
-        return cast(Cmd2HelpFormatter, super()._get_formatter(**kwargs))
+        return self.formatter_class(prog=self.prog, file=self._thread_locals.current_output_file)
 
     def format_help(self) -> str:
         """Override to add a newline."""

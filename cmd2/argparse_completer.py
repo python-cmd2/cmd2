@@ -692,9 +692,9 @@ class ArgparseCompleter:
             if parser is not None:
                 completer_type = self._cmd2_app._determine_ap_completer_type(parser)
                 completer = completer_type(parser, self._cmd2_app)
-                completer.print_help(tokens[1:], file=file)
+                completer.print_help(tokens[1:], file)
                 return
-        self._parser.print_help(file=file)
+        self._parser.print_help(file)
 
     def _choices_to_items(self, arg_state: _ArgumentState) -> list[CompletionItem]:
         """Convert choices from action to list of CompletionItems."""

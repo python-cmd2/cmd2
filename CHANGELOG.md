@@ -81,7 +81,9 @@ prompt is displayed.
     - `cmd2` no longer sets a default title for a subparsers group. If you desire a title, you will
       need to pass one in like this `parser.add_subparsers(title="subcommands")`. This is standard
       `argparse` behavior.
-    - `TextGroup` is now a standalone Rich renderable.
+    - Added `HelpFormatterRenderable` protocol and `HelpContent` type alias to support context-aware
+      help content in `argparse`.
+    - `TextGroup` now implements `HelpFormatterRenderable`.
         - Removed `formatter_creator` parameter from `TextGroup.__init__()`.
         - Removed `Cmd2ArgumentParser.create_text_group()` method.
     - `argparse` and `Rich` integration refactoring:
@@ -101,6 +103,12 @@ prompt is displayed.
       greater flexibility in passing keyword arguments to `console.print()` calls.
     - Removed `always_show_hint` settable as it provided a poor user experience with
       `prompt-toolkit`
+    - `cmd2` redirection only captures output directed to `self.stdout` (e.g., via
+      `self.poutput()`). Standard `print()` calls write directly to `sys.stdout` and are not
+      captured. However, `print()` calls within `pyscripts` and the interactive Python shell are
+      treated as command output and sent to `self.stdout`, allowing them to be captured.
+    - Verbose help table descriptions are no longer generated from help function output. The system
+      now relies exclusively on command function docstrings.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
@@ -137,6 +145,11 @@ prompt is displayed.
       full type hints and IDE autocompletion for `self._cmd` without needing to override and cast
       the property.
     - Added `traceback_kwargs` attribute to allow customization of Rich-based tracebacks.
+    - The `print()` function available in a `pyscript` writes to `self.stdout` and respects the
+      `allow_style` setting. It also supports printing `Rich` objects.
+    - Added `Cmd2ArgumentParser.output_to()` context manager to temporarily set the output stream
+      during `argparse` operations. This is helpful for directing output for functions like
+      `parse_args()`, which default to `sys.stdout` and lack a `file` argument.
 
 ## 3.5.1 (April 24, 2026)
 

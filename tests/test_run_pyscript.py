@@ -7,11 +7,13 @@ from unittest import (
 
 import pytest
 
+from cmd2 import rich_utils as ru
 from cmd2.string_utils import quote
 
 from .conftest import (
     odd_file_names,
     run_cmd,
+    with_ansi_style,
 )
 
 
@@ -122,29 +124,23 @@ def test_run_pyscript_dir(base_app, request) -> None:
     assert out[0] == "['cmd_echo']"
 
 
-def test_run_pyscript_capture(base_app, request) -> None:
-    base_app.self_in_py = True
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, "pyscript", "stdout_capture.py")
-    out, _err = run_cmd(base_app, f"run_pyscript {python_script}")
+def test_py_bridge_capture_isolation() -> None:
+    """Verify that PyBridge captures poutput but not raw print from within a command."""
+    import cmd2
+    from cmd2.py_bridge import PyBridge
 
-    assert out[0] == "print"
-    assert out[1] == "poutput"
+    class App(cmd2.Cmd):
+        def do_test_capture(self, _):
+            print("process_stdout")
+            self.poutput("app_stdout")
 
+    app = App()
+    bridge = PyBridge(app)
+    result = bridge("test_capture")
 
-def test_run_pyscript_capture_custom_stdout(base_app, request) -> None:
-    """sys.stdout will not be captured if it's different than self.stdout."""
-    import io
-
-    base_app.stdout = io.StringIO()
-
-    base_app.self_in_py = True
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, "pyscript", "stdout_capture.py")
-    out, _err = run_cmd(base_app, f"run_pyscript {python_script}")
-
-    assert "print" not in out
-    assert out[0] == "poutput"
+    # Verify isolation: only the application stream should be in the result
+    assert result.stdout == "app_stdout\n"
+    assert "process_stdout" not in result.stdout
 
 
 def test_run_pyscript_stop(base_app, request) -> None:
@@ -213,3 +209,56 @@ def test_run_pyscript_app_echo(base_app, request) -> None:
 
     # Only the edit help text should have been echoed to pytest's stdout
     assert out[0] == "Usage: edit [-h] [file_path]"
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_run_pyscript_print(base_app, request, capsys) -> None:
+    """Verify that py_print() (the print() replacement in pyscripts) works correctly."""
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, "pyscript", "test_print.py")
+    out, err = run_cmd(base_app, f"run_pyscript {python_script}")
+
+    # Verify contents of self.stdout
+    assert len(out) == 4
+    assert out[0] == "hello-world"
+    assert out[1] == "no newline here"
+    assert out[2] == "1:2:3."
+    assert out[3] == "\x1b[34mI am Rich Text\x1b[0m"
+
+    # Verify contents of sys.stderr
+    assert len(err) == 1
+    assert err[0] == "this goes to sys.stderr"
+
+    # Verify contents of sys.stdout
+    stdout, _ = capsys.readouterr()
+    assert "this goes to sys.stdout" in stdout
+
+
+def test_run_pyscript_print_redirection(base_app, request, tmp_path, capsys) -> None:
+    """Verify that py_print() (the print() replacement in pyscripts) respects cmd2 redirection."""
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, "pyscript", "test_print.py")
+    out_file = tmp_path / "out.txt"
+
+    # Run the pyscript with redirection
+    base_app.onecmd_plus_hooks(f"run_pyscript {python_script} > {out_file}")
+    out, err = capsys.readouterr()
+
+    # Verify the output file contains what we expect from print()
+    with open(out_file) as f:
+        content = f.read()
+
+    # Look for everything written to self.stdout
+    assert len(content.splitlines()) == 4
+    assert "hello-world\n" in content
+    assert "no newline here\n" in content
+    assert "1:2:3.\n" in content
+    assert "I am Rich Text\n" in content
+
+    # Nothing else should have been redirected
+    assert "this goes to sys.stdout" not in content
+    assert "this goes to sys.stderr" not in content
+
+    # Verify the remaining output when to the correct stream
+    assert "this goes to sys.stdout" in out
+    assert "this goes to sys.stderr" in err
