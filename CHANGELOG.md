@@ -103,6 +103,10 @@ prompt is displayed.
       greater flexibility in passing keyword arguments to `console.print()` calls.
     - Removed `always_show_hint` settable as it provided a poor user experience with
       `prompt-toolkit`
+    - `cmd2` redirection only captures output directed to `self.stdout` (e.g., via
+      `self.poutput()`). Standard `print()` calls write directly to `sys.stdout` and are not
+      captured. However, `print()` calls within `pyscripts` and the interactive Python shell are
+      treated as command output and sent to `self.stdout`, allowing them to be captured.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
@@ -139,6 +143,8 @@ prompt is displayed.
       full type hints and IDE autocompletion for `self._cmd` without needing to override and cast
       the property.
     - Added `traceback_kwargs` attribute to allow customization of Rich-based tracebacks.
+    - The `print()` function available in a `pyscript` writes to `self.stdout` and respects the
+      `allow_style` setting. It also supports printing `Rich` objects.
 
 ## 3.5.1 (April 24, 2026)
 
