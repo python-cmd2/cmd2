@@ -652,24 +652,21 @@ class RedirectionSavedState:
 
     def __init__(
         self,
-        self_stdout: StdSim | TextIO,
-        stdouts_match: bool,
-        pipe_proc_reader: ProcReader | None,
+        self_stdout: "StdSim | TextIO",
+        pipe_proc_reader: "ProcReader | None",
         saved_redirecting: bool,
     ) -> None:
         """RedirectionSavedState initializer.
 
         :param self_stdout: saved value of Cmd.stdout
-        :param stdouts_match: True if Cmd.stdout is equal to sys.stdout
         :param pipe_proc_reader: saved value of Cmd._cur_pipe_proc_reader
         :param saved_redirecting: saved value of Cmd._redirecting.
         """
         # Tells if command is redirecting
         self.redirecting = False
 
-        # Used to restore stdout values after redirection ends
+        # Used to restore Cmd.stdout after redirection ends
         self.saved_self_stdout = self_stdout
-        self.stdouts_match = stdouts_match
 
         # Used to restore values after command ends regardless of whether the command redirected
         self.saved_pipe_proc_reader = pipe_proc_reader

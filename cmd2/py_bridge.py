@@ -99,17 +99,14 @@ class PyBridge:
 
         ex: app('help')
         :param command: command line being run
-        :param echo: If provided, this temporarily overrides the value of self.cmd_echo while the
-                     command runs. If True, output will be echoed to stdout/stderr. (Defaults to None)
-
+        :param echo: If provided, this temporarily overrides the value of self.cmd_echo
+                     while the command runs. If True, output will be echoed to _cmd2_app.stdout
+                     and sys.stderr. (Defaults to None)
         """
         if echo is None:
             echo = self.cmd_echo
 
-        # Only capture sys.stdout if it's the same stream as self.stdout
-        stdouts_match = self._cmd2_app.stdout == sys.stdout
-
-        # This will be used to capture _cmd2_app.stdout and sys.stdout
+        # This will be used to capture _cmd2_app.stdout
         copy_cmd_stdout = StdSim(cast(TextIO | StdSim, self._cmd2_app.stdout), echo=echo)
 
         # Pause the storing of stdout until onecmd_plus_hooks enables it
@@ -122,10 +119,7 @@ class PyBridge:
 
         stop = False
         try:
-            with self._cmd2_app.sigint_protection:
-                self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
-                if stdouts_match:
-                    sys.stdout = self._cmd2_app.stdout
+            self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
 
             with redirect_stderr(cast(IO[str], copy_stderr)):
                 stop = self._cmd2_app.onecmd_plus_hooks(
@@ -136,9 +130,6 @@ class PyBridge:
         finally:
             with self._cmd2_app.sigint_protection:
                 self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout.inner_stream)
-                if stdouts_match:
-                    sys.stdout = self._cmd2_app.stdout
-
                 self.stop = stop or self.stop
 
         # Save the result

@@ -3,7 +3,6 @@
 import argparse
 import re
 import sys
-import threading
 from collections.abc import (
     Iterator,
     Mapping,
@@ -13,18 +12,19 @@ from typing import (
     IO,
     Any,
     ClassVar,
+    Protocol,
+    TypeAlias,
+    runtime_checkable,
 )
 
 from rich.box import SIMPLE_HEAD
 from rich.console import (
     Console,
-    ConsoleOptions,
     ConsoleRenderable,
     Group,
     JustifyMethod,
     OverflowMethod,
     RenderableType,
-    RenderResult,
 )
 from rich.padding import Padding
 from rich.pretty import is_expandable
@@ -56,6 +56,29 @@ from .styles import (
 # [0-9;]* - zero or more digits or semicolons (parameters for the style)
 # m       - the SGR final character
 ANSI_STYLE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+@runtime_checkable
+class HelpFormatterRenderable(Protocol):
+    """Protocol for objects that require a Cmd2HelpFormatter to render."""
+
+    def __cmd2_argparse_help__(self, formatter: "Cmd2HelpFormatter") -> RenderableType | None:
+        """Provide a representation of this object for a Cmd2HelpFormatter.
+
+        Return a Rich renderable for this object.
+
+        This method is called by Cmd2HelpFormatter during the argparse help
+        generation process.
+
+        :param formatter: the active Cmd2HelpFormatter instance
+        :return: a Rich renderable or None to suppress output
+        """
+        ...
+
+
+# Union of types supported by Cmd2HelpFormatter, including custom cmd2
+# protocols and standard Rich types supported by rich-argparse.
+HelpContent: TypeAlias = RenderableType | HelpFormatterRenderable
 
 
 class AllowStyle(Enum):
@@ -104,10 +127,15 @@ class Cmd2HelpFormatter(RichHelpFormatter):
         max_help_position: int = 24,
         width: int | None = None,
         *,
+        file: IO[str] | None = None,
         console: "Cmd2RichArgparseConsole | None" = None,
         **kwargs: Any,
     ) -> None:
         """Initialize Cmd2HelpFormatter."""
+        if file is not None and console is not None:
+            raise TypeError("cannot provide both 'file' and 'console' arguments")
+
+        self._file = file
         super().__init__(prog, indent_increment, max_help_position, width, console=console, **kwargs)
 
         # Recast to assist type checkers
@@ -117,27 +145,20 @@ class Cmd2HelpFormatter(RichHelpFormatter):
     def console(self) -> "Cmd2RichArgparseConsole":
         """Return our console instance."""
         if self._console is None:
-            self._console = Cmd2RichArgparseConsole()
+            self._console = Cmd2RichArgparseConsole(file=self._file)
         return self._console
 
     @console.setter
     def console(self, console: "Cmd2RichArgparseConsole") -> None:
         """Set our console instance."""
+        self._file = None
         self._console = console
 
-    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
-        """Provide this help formatter to renderables via the console."""
-        if isinstance(console, Cmd2RichArgparseConsole):
-            old_formatter = console.help_formatter
-            console.help_formatter = self
-            try:
-                yield from super().__rich_console__(console, options)
-            finally:
-                console.help_formatter = old_formatter
-        else:
-            # Handle rendering on a console type other than Cmd2RichArgparseConsole.
-            # In this case, we don't set the help_formatter on the console.
-            yield from super().__rich_console__(console, options)
+    def add_text(self, text: Any) -> None:
+        """Override to support HelpFormatterRenderable objects."""
+        if isinstance(text, HelpFormatterRenderable):
+            text = text.__cmd2_argparse_help__(self)
+        super().add_text(text)
 
     def _set_color(self, color: bool, **kwargs: Any) -> None:
         """Set the color for the help output.
@@ -268,25 +289,12 @@ class TextGroup:
         self.title = title
         self.text = text
 
-    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
-        """Return a renderable Rich Group object for the class instance.
+    def __cmd2_argparse_help__(self, formatter: Cmd2HelpFormatter) -> Group:
+        """Provide a representation of this object for a Cmd2HelpFormatter.
 
-        This method formats the title and indents the text to match argparse
-        group styling, making the object displayable by a Rich console.
+        :param formatter: the active Cmd2HelpFormatter instance
+        :return: a Rich Group containing the formatted title and indented text
         """
-        formatter: Cmd2HelpFormatter | None = None
-        if isinstance(console, Cmd2RichArgparseConsole):
-            formatter = console.help_formatter
-
-        # This occurs if the console is not a Cmd2RichArgparseConsole or if the
-        # TextGroup is printed directly instead of as part of an argparse help message.
-        if formatter is None:
-            # If console is the wrong type, then have Cmd2HelpFormatter create its own.
-            formatter = Cmd2HelpFormatter(
-                prog="",
-                console=console if isinstance(console, Cmd2RichArgparseConsole) else None,
-            )
-
         styled_title = Text(
             type(formatter).group_name_formatter(f"{self.title}:"),
             style=formatter.styles["argparse.groups"],
@@ -295,7 +303,7 @@ class TextGroup:
         # Indent text like an argparse argument group does
         indented_text = indent(self.text, formatter._indent_increment)
 
-        yield Group(styled_title, indented_text)
+        return Group(styled_title, indented_text)
 
 
 # The application-wide theme. Use get_theme() and set_theme() to access it.
@@ -576,9 +584,6 @@ class Cmd2RichArgparseConsole(Cmd2BaseConsole):
     and highlighting. Because rich-argparse does markup and highlighting without
     involving the console, disabling these settings does not affect the library's
     internal functionality.
-
-    Additionally, this console serves as a context carrier for the active help formatter,
-    allowing renderables to access formatting settings during help generation.
     """
 
     def __init__(self, *, file: IO[str] | None = None) -> None:
@@ -594,17 +599,6 @@ class Cmd2RichArgparseConsole(Cmd2BaseConsole):
             emoji=False,
             highlight=False,
         )
-        self._thread_local = threading.local()
-
-    @property
-    def help_formatter(self) -> "Cmd2HelpFormatter | None":
-        """Return the active help formatter for this thread."""
-        return getattr(self._thread_local, "help_formatter", None)
-
-    @help_formatter.setter
-    def help_formatter(self, value: "Cmd2HelpFormatter | None") -> None:
-        """Set the active help formatter for this thread."""
-        self._thread_local.help_formatter = value
 
 
 class Cmd2ExceptionConsole(Cmd2BaseConsole):

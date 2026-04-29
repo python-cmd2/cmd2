@@ -4,6 +4,7 @@ import argparse
 import sys
 
 import pytest
+from pytest_mock import MockerFixture
 
 import cmd2
 from cmd2 import (
@@ -12,12 +13,17 @@ from cmd2 import (
     argparse_utils,
     constants,
 )
+from cmd2 import rich_utils as ru
+from cmd2 import string_utils as su
 from cmd2.argparse_utils import (
     build_range_error,
     register_argparse_argument_parameter,
 )
 
-from .conftest import run_cmd
+from .conftest import (
+    run_cmd,
+    with_ansi_style,
+)
 
 
 class ApCustomTestApp(cmd2.Cmd):
@@ -612,3 +618,133 @@ def test_update_prog() -> None:
         if isinstance(action, argparse._SubParsersAction):
             assert action.choices["s1"].prog == sub1.prog
             assert action.choices["alias1"].prog == sub1.prog
+
+
+def test_parser_output_to_context_manager() -> None:
+    """Test that output_to() correctly shadows and restores current_output_file."""
+    import io
+
+    parser = Cmd2ArgumentParser()
+    buf1 = io.StringIO()
+    buf2 = io.StringIO()
+
+    assert parser._thread_locals.current_output_file is None
+
+    with parser.output_to(buf1):
+        assert parser._thread_locals.current_output_file is buf1
+        with parser.output_to(buf2):  # type: ignore[unreachable]
+            assert parser._thread_locals.current_output_file is buf2
+        assert parser._thread_locals.current_output_file is buf1
+
+    assert parser._thread_locals.current_output_file is None  # type: ignore[unreachable]
+
+
+def test_parser_print_help_output_to(mocker: MockerFixture) -> None:
+    """Test that print_help(file=my_file) correctly sets the context for the formatter."""
+    import io
+
+    parser = Cmd2ArgumentParser(prog="test")
+    buf = io.StringIO()
+
+    # We want to verify that when print_help(buf) is called,
+    # _get_formatter() is called and its result is initialized with buf.
+    # We can mock Cmd2HelpFormatter to see what it's initialized with.
+    mock_formatter_class = mocker.patch("cmd2.argparse_utils.Cmd2HelpFormatter", autospec=True)
+    parser.formatter_class = mock_formatter_class
+
+    # argparse print_help() calls format_help() which calls formatter.format_help()
+    # It expects a string return value.
+    mock_formatter_class.return_value.format_help.return_value = "Help Text"
+
+    parser.print_help(buf)
+
+    # Verify Cmd2HelpFormatter was instantiated with file=buf
+    mock_formatter_class.assert_called_with(prog="test", file=buf)
+
+
+def test_parser_error_output_to(mocker: MockerFixture) -> None:
+    """Test that error() shadows to sys.stderr and uses it for styling."""
+    from cmd2 import rich_utils
+
+    parser = Cmd2ArgumentParser(prog="test")
+
+    # Mock exit to prevent actual exit
+    mocker.patch.object(parser, "exit")
+
+    # Mock print_usage to prevent actual printing
+    mocker.patch.object(parser, "print_usage")
+
+    # Mock _get_formatter to return a formatter with a mocked console
+    mock_formatter = mocker.Mock(spec=rich_utils.Cmd2HelpFormatter)
+    mock_console = mocker.MagicMock(spec=rich_utils.Cmd2RichArgparseConsole)
+    mock_formatter.console = mock_console
+
+    mocker.patch.object(parser, "_get_formatter", return_value=mock_formatter)
+
+    # Mock capture context manager
+    mock_capture = mocker.MagicMock()
+    mock_console.capture.return_value.__enter__.return_value = mock_capture
+    mock_capture.get.return_value = "Styled Error"
+
+    parser.error("some message")
+
+    # Verify that during error processing, current_output_file was shadowed to sys.stderr
+    # Check that print_usage was called with sys.stderr
+    parser.print_usage.assert_called_once_with(sys.stderr)  # type: ignore[unreachable]
+
+    # Check that formatter's console was used to print the error
+    mock_console.print.assert_called_once()
+    args, kwargs = mock_console.print.call_args
+    assert "Error: some message" in args[0]
+    assert kwargs["style"] == argparse_utils.Cmd2Style.ERROR
+
+
+def test_parser_implicit_output_to(mocker: MockerFixture) -> None:
+    """Test that print_help() and print_usage() use thread-local context when no file is provided."""
+    import io
+
+    parser = Cmd2ArgumentParser(prog="test")
+    buf = io.StringIO()
+
+    mock_formatter_class = mocker.patch("cmd2.argparse_utils.Cmd2HelpFormatter", autospec=True)
+    parser.formatter_class = mock_formatter_class
+    mock_formatter_class.return_value.format_help.return_value = "Help/Usage Text"
+
+    # Shadow the output file
+    with parser.output_to(buf):
+        # Call print_help without a file argument
+        parser.print_help()
+        # Verify Cmd2HelpFormatter was instantiated with file=buf (from thread-local)
+        mock_formatter_class.assert_called_with(prog="test", file=buf)
+
+        mock_formatter_class.reset_mock()
+
+        # Call print_usage without a file argument
+        parser.print_usage()
+        # Verify Cmd2HelpFormatter was instantiated with file=buf (from thread-local)
+        mock_formatter_class.assert_called_with(prog="test", file=buf)
+
+
+@with_ansi_style(ru.AllowStyle.NEVER)
+def test_argparse_output_capture(base_app: cmd2.Cmd) -> None:
+    """Test that both help code paths capture the same output."""
+
+    # First generate unstyled output
+    unstyled_help_out, help_err = run_cmd(base_app, "help alias")
+    unstyled_flag_out, flag_err = run_cmd(base_app, "alias -h")
+    assert unstyled_help_out == unstyled_flag_out
+    assert not help_err
+    assert not flag_err
+
+    # Now generate styled output
+    ru.ALLOW_STYLE = ru.AllowStyle.ALWAYS
+
+    styled_help_out, help_err = run_cmd(base_app, "help alias")
+    styled_flag_out, flag_err = run_cmd(base_app, "alias -h")
+    assert styled_help_out == styled_flag_out
+    assert not help_err
+    assert not flag_err
+
+    # Prove that the console style settings were used
+    assert styled_help_out != unstyled_help_out
+    assert su.strip_style("\n".join(styled_help_out)) == "\n".join(unstyled_help_out)
