@@ -259,34 +259,8 @@ def test_cmd2_base_console_init_never() -> None:
         assert kwargs["force_interactive"] is None
 
 
-def test_text_group_direct_cmd2() -> None:
-    """Print a TextGroup directly using a Cmd2RichArgparseConsole."""
-    title = "Notes"
-    content = "Some text"
-    text_group = ru.TextGroup(title, content)
-    console = ru.Cmd2RichArgparseConsole()
-    with console.capture() as capture:
-        console.print(text_group)
-    output = capture.get()
-    assert "Notes:" in output
-    assert "  Some text" in output
-
-
-def test_text_group_direct_plain() -> None:
-    """Print a TextGroup directly not using a Cmd2RichArgparseConsole."""
-    title = "Notes"
-    content = "Some text"
-    text_group = ru.TextGroup(title, content)
-    console = Console()
-    with console.capture() as capture:
-        console.print(text_group)
-    output = capture.get()
-    assert "Notes:" in output
-    assert "  Some text" in output
-
-
-def test_text_group_in_parser_cmd2(capsys: pytest.CaptureFixture[str]) -> None:
-    """Print a TextGroup with argparse using a Cmd2RichArgparseConsole."""
+def test_text_group_in_parser(capsys: pytest.CaptureFixture[str]) -> None:
+    """Print a TextGroup with argparse."""
     parser = Cmd2ArgumentParser(prog="test")
     parser.epilog = ru.TextGroup("Notes", "Some text")
 
@@ -298,33 +272,47 @@ def test_text_group_in_parser_cmd2(capsys: pytest.CaptureFixture[str]) -> None:
     assert "  Some text" in out
 
 
-def test_text_group_in_parser_plain(capsys: pytest.CaptureFixture[str]) -> None:
-    """Print a TextGroup with argparse not using a Cmd2RichArgparseConsole."""
-
-    class CustomParser(Cmd2ArgumentParser):
-        def _get_formatter(self, **kwargs: Any) -> ru.Cmd2HelpFormatter:
-            """Overwrite the formatter's console with a plain one."""
-            formatter = super()._get_formatter(**kwargs)
-            formatter.console = Console()  # type: ignore[assignment]
-            return formatter
-
-    parser = CustomParser(prog="test")
-    parser.epilog = ru.TextGroup("Notes", "Some text")
-
-    # Render help
-    parser.print_help()
-    out, _ = capsys.readouterr()
-
-    assert "Notes:" in out
-    assert "  Some text" in out
+def test_formatter_init_mutually_exclusive() -> None:
+    """Test that providing both file and console to Cmd2HelpFormatter raises TypeError."""
+    with pytest.raises(TypeError, match="cannot provide both 'file' and 'console' arguments"):
+        ru.Cmd2HelpFormatter(prog="test", file=sys.stdout, console=ru.Cmd2RichArgparseConsole())
 
 
-def test_formatter_console() -> None:
-    # self._console = console (inside console.setter)
+def test_formatter_lazy_console_with_file() -> None:
+    """Test that Cmd2HelpFormatter lazily creates a console bound to the provided file."""
+    import io
+
+    buf = io.StringIO()
+    formatter = ru.Cmd2HelpFormatter(prog="test", file=buf)
+
+    # Console should not be created yet
+    assert formatter._console is None
+
+    # Accessing console should create it bound to buf
+    console = formatter.console
+    assert isinstance(console, ru.Cmd2RichArgparseConsole)
+    assert console.file is buf
+
+
+def test_formatter_console_setter() -> None:
     formatter = ru.Cmd2HelpFormatter(prog="test")
     new_console = ru.Cmd2RichArgparseConsole()
     formatter.console = new_console
     assert formatter._console is new_console
+
+
+def test_formatter_console_setter_clears_file() -> None:
+    """Test that setting console explicitly clears the internal file stream."""
+    import io
+
+    buf = io.StringIO()
+    formatter = ru.Cmd2HelpFormatter(prog="test", file=buf)
+
+    new_console = ru.Cmd2RichArgparseConsole()
+    formatter.console = new_console
+
+    assert formatter._console is new_console
+    assert formatter._file is None
 
 
 @pytest.mark.skipif(

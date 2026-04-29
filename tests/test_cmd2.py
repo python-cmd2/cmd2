@@ -640,7 +640,10 @@ class RedirectionApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     def do_print_output(self, _: str) -> None:
-        """Print output to sys.stdout and self.stdout.."""
+        """Print output to sys.stdout and self.stdout."""
+
+        # Only data written to self.stdout is redirected.
+        # Therefore the print() call will not be.
         print("print")
         self.poutput("poutput")
 
@@ -650,53 +653,40 @@ class RedirectionApp(cmd2.Cmd):
 
 
 @pytest.fixture
-def redirection_app():
+def redirection_app() -> RedirectionApp:
     return RedirectionApp()
 
 
-def test_output_redirection(redirection_app) -> None:
+def test_output_redirection(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str]) -> None:
+    """Verify that redirection captures data written to self.stdout and not sys.stdout."""
     fd, filename = tempfile.mkstemp(prefix="cmd2_test", suffix=".txt")
     os.close(fd)
 
     try:
         # Verify that writing to a file works
         run_cmd(redirection_app, f"print_output > {filename}")
+
+        # Verify print() went to sys.stdout
+        out, _err = capsys.readouterr()
+        assert out == "print\n"
+
         with open(filename) as f:
             lines = f.read().splitlines()
-        assert lines[0] == "print"
-        assert lines[1] == "poutput"
 
-        # Verify that appending to a file also works
-        run_cmd(redirection_app, f"print_output >> {filename}")
-        with open(filename) as f:
-            lines = f.read().splitlines()
-        assert lines[0] == "print"
-        assert lines[1] == "poutput"
-        assert lines[2] == "print"
-        assert lines[3] == "poutput"
-    finally:
-        os.remove(filename)
-
-
-def test_output_redirection_custom_stdout(redirection_app) -> None:
-    """sys.stdout should not redirect if it's different than self.stdout."""
-    fd, filename = tempfile.mkstemp(prefix="cmd2_test", suffix=".txt")
-    os.close(fd)
-
-    redirection_app.stdout = io.StringIO()
-    try:
-        # Verify that we only see output written to self.stdout
-        run_cmd(redirection_app, f"print_output > {filename}")
-        with open(filename) as f:
-            lines = f.read().splitlines()
-        assert "print" not in lines
+        # Only data written to self.stdout should be in the file
+        assert len(lines) == 1
         assert lines[0] == "poutput"
 
         # Verify that appending to a file also works
         run_cmd(redirection_app, f"print_output >> {filename}")
+
+        out, _err = capsys.readouterr()
+        assert out == "print\n"
+
         with open(filename) as f:
             lines = f.read().splitlines()
-        assert "print" not in lines
+
+        assert len(lines) == 2
         assert lines[0] == "poutput"
         assert lines[1] == "poutput"
     finally:
@@ -759,7 +749,7 @@ def test_feedback_to_output_false(redirection_app) -> None:
         os.remove(filename)
 
 
-def test_disallow_redirection(redirection_app) -> None:
+def test_disallow_redirection(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str]) -> None:
     # Set allow_redirection to False
     redirection_app.allow_redirection = False
 
@@ -767,24 +757,20 @@ def test_disallow_redirection(redirection_app) -> None:
 
     # Verify output wasn't redirected
     out, _err = run_cmd(redirection_app, f"print_output > {filename}")
-    assert "print" in out
     assert "poutput" in out
 
-    # Verify that no file got created
+    # Verify that no file was created
     assert not os.path.exists(filename)
 
 
-def test_pipe_to_shell(redirection_app) -> None:
+def test_pipe_to_shell(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str]) -> None:
     out, err = run_cmd(redirection_app, "print_output | sort")
-    assert "print" in out
-    assert "poutput" in out
-    assert not err
 
+    # Verify print() went to sys.stdout
+    captured = capsys.readouterr()
+    assert captured.out == "print\n"
 
-def test_pipe_to_shell_custom_stdout(redirection_app) -> None:
-    """sys.stdout should not redirect if it's different than self.stdout."""
-    redirection_app.stdout = io.StringIO()
-    out, err = run_cmd(redirection_app, "print_output | sort")
+    # Verify only data written to self.stdout was piped
     assert "print" not in out
     assert "poutput" in out
     assert not err
@@ -821,37 +807,26 @@ else:
 
 
 @pytest.mark.skipif(not can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
-def test_send_to_paste_buffer(redirection_app) -> None:
+def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str]) -> None:
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(redirection_app, "print_output >")
-    lines = cmd2.cmd2.get_paste_buffer().splitlines()
-    assert lines[0] == "print"
-    assert lines[1] == "poutput"
 
-    # Test appending to the PasteBuffer/Clipboard
-    run_cmd(redirection_app, "print_output >>")
-    lines = cmd2.cmd2.get_paste_buffer().splitlines()
-    assert lines[0] == "print"
-    assert lines[1] == "poutput"
-    assert lines[2] == "print"
-    assert lines[3] == "poutput"
+    # Verify print() went to sys.stdout
+    out, _err = capsys.readouterr()
+    assert out == "print\n"
 
-
-@pytest.mark.skipif(not can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
-def test_send_to_paste_buffer_custom_stdout(redirection_app) -> None:
-    """sys.stdout should not redirect if it's different than self.stdout."""
-    redirection_app.stdout = io.StringIO()
-
-    # Verify that we only see output written to self.stdout
-    run_cmd(redirection_app, "print_output >")
-    lines = cmd2.cmd2.get_paste_buffer().splitlines()
-    assert "print" not in lines
+    lines = cmd2.clipboard.get_paste_buffer().splitlines()
+    assert len(lines) == 1
     assert lines[0] == "poutput"
 
     # Test appending to the PasteBuffer/Clipboard
     run_cmd(redirection_app, "print_output >>")
-    lines = cmd2.cmd2.get_paste_buffer().splitlines()
-    assert "print" not in lines
+
+    out, _err = capsys.readouterr()
+    assert out == "print\n"
+
+    lines = cmd2.clipboard.get_paste_buffer().splitlines()
+    assert len(lines) == 2
     assert lines[0] == "poutput"
     assert lines[1] == "poutput"
 
@@ -1411,7 +1386,7 @@ def test_miscellaneous_help_topic(help_app) -> None:
     assert help_app.last_result is True
 
 
-def test_help_verbose_uses_parser_description(help_app: HelpApp) -> None:
+def test_help_verbose(help_app: HelpApp) -> None:
     out, _err = run_cmd(help_app, "help --verbose")
     expected_verbose = utils.strip_doc_annotations(help_app.do_parser_cmd.__doc__)
     verify_help_text(help_app, out, verbose_strings=[expected_verbose])

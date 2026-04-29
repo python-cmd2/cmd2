@@ -15,8 +15,10 @@ Extra features include:
 - Redirection to file or paste buffer (clipboard) with > or >>
 - Bash-style ``select`` available
 
-Note, if self.stdout is different than sys.stdout, then redirection with > and |
-will only work if `self.poutput()` is used in place of `print`.
+Note: cmd2 redirection only captures output directed to self.stdout (e.g., via self.poutput()).
+Standard print() calls write directly to sys.stdout and are not captured. However, print() calls
+within pyscripts and the interactive Python shell are treated as command output and sent to
+self.stdout, allowing them to be captured.
 
 GitHub: https://github.com/python-cmd2/cmd2
 Documentation: https://cmd2.readthedocs.io/
@@ -318,12 +320,12 @@ class AsyncAlert:
     timestamp: float = field(default_factory=time.monotonic, init=False)
 
 
+@dataclass
 class _ConsoleCache(threading.local):
     """Thread-local storage for cached Rich consoles used by core print methods."""
 
-    def __init__(self) -> None:
-        self.stdout: Cmd2BaseConsole | None = None
-        self.stderr: Cmd2BaseConsole | None = None
+    stdout: Cmd2BaseConsole | None = None
+    stderr: Cmd2BaseConsole | None = None
 
 
 class Cmd:
@@ -3191,13 +3193,8 @@ class Cmd:
         """
         import subprocess
 
-        # Only redirect sys.stdout if it's the same as self.stdout
-        stdouts_match = self.stdout == sys.stdout
-
         # Initialize the redirection saved state
-        redir_saved_state = utils.RedirectionSavedState(
-            self.stdout, stdouts_match, self._cur_pipe_proc_reader, self._redirecting
-        )
+        redir_saved_state = utils.RedirectionSavedState(self.stdout, self._cur_pipe_proc_reader, self._redirecting)
 
         # The ProcReader for this command
         cmd_pipe_proc_reader: utils.ProcReader | None = None
@@ -3254,8 +3251,6 @@ class Cmd:
             cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
 
             self.stdout = new_stdout
-            if stdouts_match:
-                sys.stdout = self.stdout
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
             if statement.redirect_to:
@@ -3271,8 +3266,6 @@ class Cmd:
                 redir_saved_state.redirecting = True
 
                 self.stdout = new_stdout
-                if stdouts_match:
-                    sys.stdout = self.stdout
 
             else:
                 # Redirecting to a paste buffer
@@ -3292,8 +3285,6 @@ class Cmd:
                 redir_saved_state.redirecting = True
 
                 self.stdout = new_stdout
-                if stdouts_match:
-                    sys.stdout = self.stdout
 
                 if statement.redirector == constants.REDIRECTION_APPEND:
                     self.stdout.write(current_paste_buffer)
@@ -3324,10 +3315,8 @@ class Cmd:
                 # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
 
-            # Restore the stdout values
+            # Restore self.stdout
             self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
-            if saved_redir_state.stdouts_match:
-                sys.stdout = self.stdout
 
             # Check if we need to wait for the process being piped to
             if self._cur_pipe_proc_reader is not None:
@@ -4395,8 +4384,6 @@ class Cmd:
 
     def _print_documented_command_topics(self, header: str, commands: Sequence[str], verbose: bool) -> None:
         """Print topics which are documented commands, switching between verbose or traditional output."""
-        import io
-
         if not commands:
             return
 
@@ -4410,34 +4397,11 @@ class Cmd:
         )
 
         # Try to get the documentation string for each command
-        topics = self.get_help_topics()
         for command in commands:
             if (command_func := self.get_command_func(command)) is None:
                 continue
 
-            doc: str | None
-
-            # Non-argparse commands can have help_functions for their documentation
-            if command in topics:
-                help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
-                result = io.StringIO()
-
-                # try to redirect system stdout
-                with contextlib.redirect_stdout(result):
-                    # save our internal stdout
-                    stdout_orig = self.stdout
-                    try:
-                        # redirect our internal stdout
-                        self.stdout = cast(TextIO, result)
-                        help_func()
-                    finally:
-                        with self.sigint_protection:
-                            # restore internal stdout
-                            self.stdout = stdout_orig
-                doc = result.getvalue()
-
-            else:
-                doc = command_func.__doc__
+            doc = command_func.__doc__
 
             # Attempt to locate the first documentation block
             cmd_desc = strip_doc_annotations(doc) if doc else ""
@@ -4914,8 +4878,38 @@ class Cmd:
         """
         self.last_result = False
 
+        # Replace print() in the embedded Python environment. Standard print() writes to
+        # sys.stdout, which bypasses cmd2 redirection (e.g., run_pyscript script.py > out.txt).
+        # Using self.print_to(self.stdout) ensures output is capturable and respects 'allow_style'
+        # without requiring the user to have access to 'self'.
+        def py_print(
+            *objects: Any,
+            sep: str = " ",
+            end: str = "\n",
+            file: IO[str] | None = None,
+            flush: bool = False,  # noqa: ARG001
+        ) -> None:
+            """Print objects to a stream, defaulting to self.stdout.
+
+            This is used as the print() function within interactive Python shells and pyscripts.
+            It wraps cmd2's print_to() method to honor output redirection and style settings.
+
+            :param objects: objects to print (including Rich objects)
+            :param sep: string to write between printed text. Defaults to " ".
+            :param end: string to write at end of printed text. Defaults to a newline.
+            :param file: file stream being written to. Defaults to self.stdout.
+            :param flush: ignored as Rich-based output is flushed automatically. Defaults to False.
+            """
+            if file is None:
+                file = self.stdout
+
+            self.print_to(file, *objects, sep=sep, end=end)
+
+        # Replace quit/exit in the embedded Python environment. Standard sys.exit()
+        # would kill the entire application process; raising EmbeddedConsoleExit
+        # allows the interpreter to return gracefully to the cmd2 prompt.
         def py_quit() -> None:
-            """Exit an interactive Python environment, callable from the interactive Python console."""
+            """Exit an interactive Python shell or pyscript."""
             raise EmbeddedConsoleExit
 
         from .py_bridge import PyBridge
@@ -4938,6 +4932,7 @@ class Cmd:
             # it's OK for py_locals to contain objects which are editable in a pyscript.
             local_vars = self.py_locals.copy()
             local_vars[self.py_bridge_name] = py_bridge
+            local_vars["print"] = py_print
             local_vars["quit"] = py_quit
             local_vars["exit"] = py_quit
 
@@ -5097,19 +5092,13 @@ class Cmd:
             except NameError:
                 from IPython import start_ipython
 
-            from IPython.terminal.interactiveshell import (
-                TerminalInteractiveShell,
-            )
-            from IPython.terminal.ipapp import (
-                TerminalIPythonApp,
-            )
+            from IPython.terminal.interactiveshell import TerminalInteractiveShell
+            from IPython.terminal.ipapp import TerminalIPythonApp
         except ImportError:
             self.perror("IPython package is not installed")
             return None
 
-        from .py_bridge import (
-            PyBridge,
-        )
+        from .py_bridge import PyBridge
 
         if self.in_pyscript():
             self.perror("Recursively entering interactive Python shells is not allowed")
