@@ -571,7 +571,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     def output_to(self, file: IO[str] | None) -> Iterator[None]:
         """Context manager to temporarily set the output stream during argparse operations.
 
-        This is helpful for redirecting output from functions like `parse_args()`, which
+        This is helpful for directing output for functions like `parse_args()`, which
         default to `sys.stdout` and lack a `file` argument.
 
         :param file: the file stream to use for output

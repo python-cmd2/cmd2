@@ -639,7 +639,7 @@ def test_parser_output_to_context_manager() -> None:
     assert parser._thread_locals.current_output_file is None  # type: ignore[unreachable]
 
 
-def test_parser_print_help_redirection(mocker: MockerFixture) -> None:
+def test_parser_print_help_output_to(mocker: MockerFixture) -> None:
     """Test that print_help(file=my_file) correctly sets the context for the formatter."""
     import io
 
@@ -662,7 +662,7 @@ def test_parser_print_help_redirection(mocker: MockerFixture) -> None:
     mock_formatter_class.assert_called_with(prog="test", file=buf)
 
 
-def test_parser_error_redirection(mocker: MockerFixture) -> None:
+def test_parser_error_output_to(mocker: MockerFixture) -> None:
     """Test that error() shadows to sys.stderr and uses it for styling."""
     from cmd2 import rich_utils
 
@@ -699,7 +699,7 @@ def test_parser_error_redirection(mocker: MockerFixture) -> None:
     assert kwargs["style"] == argparse_utils.Cmd2Style.ERROR
 
 
-def test_parser_implicit_output_redirection(mocker: MockerFixture) -> None:
+def test_parser_implicit_output_to(mocker: MockerFixture) -> None:
     """Test that print_help() and print_usage() use thread-local context when no file is provided."""
     import io
 

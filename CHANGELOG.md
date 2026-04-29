@@ -146,7 +146,7 @@ prompt is displayed.
     - The `print()` function available in a `pyscript` writes to `self.stdout` and respects the
       `allow_style` setting. It also supports printing `Rich` objects.
     - Added `Cmd2ArgumentParser.output_to()` context manager to temporarily set the output stream.
-      This is helpful for redirecting output from functions like `parse_args()`, which default to
+      This is helpful for directing output for functions like `parse_args()`, which default to
       `sys.stdout` and lack a `file` argument.
 
 ## 3.5.1 (April 24, 2026)
