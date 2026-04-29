@@ -272,12 +272,47 @@ def test_text_group_in_parser(capsys: pytest.CaptureFixture[str]) -> None:
     assert "  Some text" in out
 
 
-def test_formatter_console() -> None:
-    # self._console = console (inside console.setter)
+def test_formatter_init_mutually_exclusive() -> None:
+    """Test that providing both file and console to Cmd2HelpFormatter raises TypeError."""
+    with pytest.raises(TypeError, match="cannot provide both 'file' and 'console' arguments"):
+        ru.Cmd2HelpFormatter(prog="test", file=sys.stdout, console=ru.Cmd2RichArgparseConsole())
+
+
+def test_formatter_lazy_console_with_file() -> None:
+    """Test that Cmd2HelpFormatter lazily creates a console bound to the provided file."""
+    import io
+
+    buf = io.StringIO()
+    formatter = ru.Cmd2HelpFormatter(prog="test", file=buf)
+
+    # Console should not be created yet
+    assert formatter._console is None
+
+    # Accessing console should create it bound to buf
+    console = formatter.console
+    assert isinstance(console, ru.Cmd2RichArgparseConsole)
+    assert console.file is buf
+
+
+def test_formatter_console_setter() -> None:
     formatter = ru.Cmd2HelpFormatter(prog="test")
     new_console = ru.Cmd2RichArgparseConsole()
     formatter.console = new_console
     assert formatter._console is new_console
+
+
+def test_formatter_console_setter_clears_file() -> None:
+    """Test that setting console explicitly clears the internal file stream."""
+    import io
+
+    buf = io.StringIO()
+    formatter = ru.Cmd2HelpFormatter(prog="test", file=buf)
+
+    new_console = ru.Cmd2RichArgparseConsole()
+    formatter.console = new_console
+
+    assert formatter._console is new_console
+    assert formatter._file is None
 
 
 @pytest.mark.skipif(
