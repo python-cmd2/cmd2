@@ -557,7 +557,7 @@ class _ParserThreadLocals(threading.local):
     # pass the destination stream to the formatter factory, this transient value
     # provides the context needed to synchronize Rich's rendering with the specific
     # capabilities of the destination file descriptor. It is managed via the
-    # _set_output_file() context manager.
+    # output_to() context manager.
     current_output_file: IO[str] | None = None
 
 
@@ -568,8 +568,14 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     _thread_locals: ClassVar[_ParserThreadLocals] = _ParserThreadLocals()
 
     @contextlib.contextmanager
-    def _set_output_file(self, file: IO[str] | None) -> Iterator[None]:
-        """Context manager to temporarily set the current output file."""
+    def output_to(self, file: IO[str] | None) -> Iterator[None]:
+        """Context manager to temporarily set the output stream during argparse operations.
+
+        This is helpful for redirecting output from functions like `parse_args()`, which
+        default to `sys.stdout` and lack a `file` argument.
+
+        :param file: the file stream to use for output
+        """
         previous = self._thread_locals.current_output_file
         self._thread_locals.current_output_file = file
         try:
@@ -635,50 +641,12 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.description: HelpContent | None  # type: ignore[assignment]
         self.epilog: HelpContent | None  # type: ignore[assignment]
 
-    def parse_args_custom_stdout(
-        self,
-        stdout: IO[str],
-        args: list[str] | None = None,
-        namespace: argparse.Namespace | None = None,
-    ) -> argparse.Namespace:
-        """Parse arguments while directing help and usage output to a custom stdout stream.
-
-        This method is particularly useful when you need to capture help output without
-        globally redirecting sys.stdout.
-
-        :param stdout: the stream to use for help and usage output
-        :param args: optional list of arguments to parse. If None, uses sys.argv[1:].
-        :param namespace: optional namespace to populate. If None, a new Namespace is created.
-        :return: the parsed namespace
-        """
-        with self._set_output_file(stdout):
-            return self.parse_args(args, namespace)
-
-    def parse_known_args_custom_stdout(
-        self,
-        stdout: IO[str],
-        args: list[str] | None = None,
-        namespace: argparse.Namespace | None = None,
-    ) -> tuple[argparse.Namespace, list[str]]:
-        """Parse known arguments while directing help and usage output to a custom stdout stream.
-
-        This method is particularly useful when you need to capture help output without
-        globally redirecting sys.stdout.
-
-        :param stdout: the stream to use for help and usage output
-        :param args: optional list of arguments to parse. If None, uses sys.argv[1:].
-        :param namespace: optional namespace to populate. If None, a new Namespace is created.
-        :return: a tuple containing the parsed namespace and a list of unknown arguments
-        """
-        with self._set_output_file(stdout):
-            return self.parse_known_args(args, namespace)
-
     def print_usage(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
         """Override to ensure the formatter is aware of the target file."""
         if file is None:
             file = self._thread_locals.current_output_file
 
-        with self._set_output_file(file):
+        with self.output_to(file):
             super().print_usage(file)
 
     def print_help(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
@@ -686,7 +654,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         if file is None:
             file = self._thread_locals.current_output_file
 
-        with self._set_output_file(file):
+        with self.output_to(file):
             super().print_help(file)
 
     def get_subparsers_action(self) -> "argparse._SubParsersAction[Cmd2ArgumentParser]":
@@ -891,7 +859,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             else:
                 formatted_message += "\n       " + line
 
-        with self._set_output_file(sys.stderr):
+        with self.output_to(sys.stderr):
             self.print_usage(sys.stderr)
 
             # Use console to add style since it will respect ALLOW_STYLE's value.

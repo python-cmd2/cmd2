@@ -620,8 +620,8 @@ def test_update_prog() -> None:
             assert action.choices["alias1"].prog == sub1.prog
 
 
-def test_parser_set_output_file_context_manager() -> None:
-    """Test that _set_output_file correctly shadows and restores current_output_file."""
+def test_parser_output_to_context_manager() -> None:
+    """Test that output_to() correctly shadows and restores current_output_file."""
     import io
 
     parser = Cmd2ArgumentParser()
@@ -630,9 +630,9 @@ def test_parser_set_output_file_context_manager() -> None:
 
     assert parser._thread_locals.current_output_file is None
 
-    with parser._set_output_file(buf1):
+    with parser.output_to(buf1):
         assert parser._thread_locals.current_output_file is buf1
-        with parser._set_output_file(buf2):  # type: ignore[unreachable]
+        with parser.output_to(buf2):  # type: ignore[unreachable]
             assert parser._thread_locals.current_output_file is buf2
         assert parser._thread_locals.current_output_file is buf1
 
@@ -699,26 +699,6 @@ def test_parser_error_redirection(mocker: MockerFixture) -> None:
     assert kwargs["style"] == argparse_utils.Cmd2Style.ERROR
 
 
-def test_parser_custom_stdout_methods(mocker: MockerFixture) -> None:
-    """Test parse_args_custom_stdout() and parse_known_args_custom_stdout()."""
-    import io
-
-    parser = Cmd2ArgumentParser()
-    buf = io.StringIO()
-
-    # Mock parse_args and parse_known_args
-    mock_parse = mocker.patch.object(parser, "parse_args")
-    mock_parse_known = mocker.patch.object(parser, "parse_known_args")
-
-    parser.parse_args_custom_stdout(buf, ["arg"])
-    assert parser._thread_locals.current_output_file is None
-    mock_parse.assert_called_once_with(["arg"], None)
-
-    parser.parse_known_args_custom_stdout(buf, ["arg"])
-    assert parser._thread_locals.current_output_file is None
-    mock_parse_known.assert_called_once_with(["arg"], None)
-
-
 def test_parser_implicit_output_redirection(mocker: MockerFixture) -> None:
     """Test that print_help() and print_usage() use thread-local context when no file is provided."""
     import io
@@ -731,7 +711,7 @@ def test_parser_implicit_output_redirection(mocker: MockerFixture) -> None:
     mock_formatter_class.return_value.format_help.return_value = "Help/Usage Text"
 
     # Shadow the output file
-    with parser._set_output_file(buf):
+    with parser.output_to(buf):
         # Call print_help without a file argument
         parser.print_help()
         # Verify Cmd2HelpFormatter was instantiated with file=buf (from thread-local)

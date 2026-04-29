@@ -303,20 +303,11 @@ def with_argparser(
 
             try:
                 parsing_results: tuple[argparse.Namespace] | tuple[argparse.Namespace, list[str]]
-                if with_unknown_args:
-                    parsing_results = arg_parser.parse_known_args_custom_stdout(
-                        cmd2_app.stdout,
-                        command_arg_list,
-                        initial_namespace,
-                    )
-                else:
-                    parsing_results = (
-                        arg_parser.parse_args_custom_stdout(
-                            cmd2_app.stdout,
-                            command_arg_list,
-                            initial_namespace,
-                        ),
-                    )
+                with arg_parser.output_to(cmd2_app.stdout):
+                    if with_unknown_args:
+                        parsing_results = arg_parser.parse_known_args(command_arg_list, initial_namespace)
+                    else:
+                        parsing_results = (arg_parser.parse_args(command_arg_list, initial_namespace),)
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
 
