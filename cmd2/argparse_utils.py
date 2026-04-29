@@ -903,7 +903,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.exit(2, f"{formatted_message}\n")
 
-    def _get_formatter(self) -> Cmd2HelpFormatter:
+    def _get_formatter(self, **_kwargs: Any) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
         return self.formatter_class(prog=self.prog, file=self._thread_locals.current_output_file)
 
