@@ -20,6 +20,7 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
+from rich.style import Style, StyleType
 
 from . import (
     constants,
@@ -27,12 +28,35 @@ from . import (
 )
 from . import rich_utils as ru
 from . import string_utils as su
+from .styles import Cmd2Style
 
 if TYPE_CHECKING:  # pragma: no cover
+    from rich.color import Color
+
     from .cmd2 import Cmd
 
 
 BASE_DELIMITERS = " \t\n" + "".join(constants.QUOTES) + "".join(constants.REDIRECTION_CHARS)
+
+# prompt_toolkit accepts these standard ANSI color names directly
+ANSI_NAMES = (
+    "ansiblack",
+    "ansired",
+    "ansigreen",
+    "ansiyellow",
+    "ansiblue",
+    "ansimagenta",
+    "ansicyan",
+    "ansiwhite",
+    "ansibrightblack",
+    "ansibrightred",
+    "ansibrightgreen",
+    "ansibrightyellow",
+    "ansibrightblue",
+    "ansibrightmagenta",
+    "ansibrightcyan",
+    "ansibrightwhite",
+)
 
 
 def pt_filter_style(text: str | ANSI) -> str | ANSI:
@@ -48,6 +72,46 @@ def pt_filter_style(text: str | ANSI) -> str | ANSI:
 
     # String must be an ANSI object for prompt-toolkit to render ANSI style sequences.
     return text if isinstance(text, ANSI) else ANSI(text)
+
+
+def rich_to_pt_color(color: "Color | None") -> str:
+    """Convert a rich Color object to a prompt_toolkit color string."""
+    if not color or color.is_default:
+        return "default"
+
+    # Use prompt_toolkit's 16 standard ansi color names if applicable.
+    # This prevents overriding terminal themes with absolute RGB values.
+    if color.number is not None and 0 <= color.number <= 15:
+        return ANSI_NAMES[color.number]
+
+    # For 8-bit and truecolor, we fallback to hex RGB strings which prompt-toolkit supports natively
+    c = color.get_truecolor()
+    return f"#{c.red:02x}{c.green:02x}{c.blue:02x}"
+
+
+def rich_to_pt_style(rich_style: StyleType) -> str:
+    """Convert a rich Style object to a prompt_toolkit style string."""
+    if not rich_style:
+        return ""
+
+    if isinstance(rich_style, str):
+        rich_style = Style.parse(rich_style)
+
+    parts = ["noreverse"]
+
+    fg_color = rich_to_pt_color(rich_style.color)
+    parts.append(f"fg:{fg_color}")
+
+    bg_color = rich_to_pt_color(rich_style.bgcolor)
+    parts.append(f"bg:{bg_color}")
+
+    if rich_style.bold is not None:
+        parts.append("bold" if rich_style.bold else "nobold")
+    if rich_style.italic is not None:
+        parts.append("italic" if rich_style.italic else "noitalic")
+    if rich_style.underline is not None:
+        parts.append("underline" if rich_style.underline else "nounderline")
+    return " ".join(parts)
 
 
 class Cmd2Completer(Completer):
@@ -196,28 +260,21 @@ class Cmd2Lexer(Lexer):
     def __init__(
         self,
         cmd_app: "Cmd",
-        command_color: str = "ansigreen",
-        alias_color: str = "ansicyan",
-        macro_color: str = "ansimagenta",
-        flag_color: str = "ansired",
-        argument_color: str = "ansiyellow",
     ) -> None:
         """Initialize the Lexer.
 
         :param cmd_app: cmd2.Cmd instance
-        :param command_color: color to use for commands, defaults to 'ansigreen'
-        :param alias_color: color to use for aliases, defaults to 'ansicyan'
-        :param macro_color: color to use for macros, defaults to 'ansimagenta'
-        :param flag_color: color to use for flags, defaults to 'ansired'
-        :param argument_color: color to use for arguments, defaults to 'ansiyellow'
         """
         super().__init__()
         self.cmd_app = cmd_app
-        self.command_color = command_color
-        self.alias_color = alias_color
-        self.macro_color = macro_color
-        self.flag_color = flag_color
-        self.argument_color = argument_color
+
+        # Retrieve styles dynamically from the current theme
+        theme = ru.get_theme()
+        self.command_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_COMMAND, ""))
+        self.alias_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ALIAS, ""))
+        self.macro_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_MACRO, ""))
+        self.flag_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_FLAG, ""))
+        self.argument_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ARGUMENT, ""))
 
     def lex_document(self, document: Document) -> Callable[[int], Any]:
         """Lex the document."""

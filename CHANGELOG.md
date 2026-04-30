@@ -151,6 +151,8 @@ prompt is displayed.
     - Added `Cmd2ArgumentParser.output_to()` context manager to temporarily set the output stream
       during `argparse` operations. This is helpful for directing output for functions like
       `parse_args()`, which default to `sys.stdout` and lack a `file` argument.
+    - Added ability to customize `prompt-toolkit` completion menu colors by overriding
+      `Cmd2Style.COMPLETION_MENU_ITEM` and `Cmd2Style.COMPLETION_MENU_META` in the `cmd2` theme.
 
 ## 3.5.1 (April 24, 2026)
 

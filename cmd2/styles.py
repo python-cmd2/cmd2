@@ -51,9 +51,16 @@ class Cmd2Style(StrEnum):
     """
 
     COMMAND_LINE = "cmd2.example"  # Command line examples in help text
+    COMPLETION_MENU_ITEM = "cmd2.completion_menu.item"  # Selected completion item
+    COMPLETION_MENU_META = "cmd2.completion_menu.meta"  # Selected completion help/meta text
     ERROR = "cmd2.error"  # Error text (used by perror())
     HELP_HEADER = "cmd2.help.header"  # Help table header text
     HELP_LEADER = "cmd2.help.leader"  # Text right before the help tables are listed
+    LEXER_COMMAND = "cmd2.lexer.command"  # Lexer color for commands
+    LEXER_ALIAS = "cmd2.lexer.alias"  # Lexer color for aliases
+    LEXER_MACRO = "cmd2.lexer.macro"  # Lexer color for macros
+    LEXER_FLAG = "cmd2.lexer.flag"  # Lexer color for flags
+    LEXER_ARGUMENT = "cmd2.lexer.argument"  # Lexer color for arguments
     SUCCESS = "cmd2.success"  # Success text (used by psuccess())
     TABLE_BORDER = "cmd2.table_border"  # Applied to cmd2's table borders
     WARNING = "cmd2.warning"  # Warning text (used by pwarning())
@@ -63,9 +70,16 @@ class Cmd2Style(StrEnum):
 # Tightly coupled with the Cmd2Style enum.
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.COMMAND_LINE: Style(color=Color.CYAN, bold=True),
+    Cmd2Style.COMPLETION_MENU_ITEM: Style(color=Color.BLACK, bgcolor=Color.GREEN),
+    Cmd2Style.COMPLETION_MENU_META: Style(color=Color.BLACK, bgcolor=Color.BRIGHT_GREEN),
     Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
     Cmd2Style.HELP_HEADER: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.HELP_LEADER: Style(color=Color.CYAN),
+    Cmd2Style.LEXER_COMMAND: Style(color=Color.GREEN),
+    Cmd2Style.LEXER_ALIAS: Style(color=Color.CYAN),
+    Cmd2Style.LEXER_MACRO: Style(color=Color.MAGENTA),
+    Cmd2Style.LEXER_FLAG: Style(color=Color.RED),
+    Cmd2Style.LEXER_ARGUMENT: Style(color=Color.YELLOW),
     Cmd2Style.SUCCESS: Style(color=Color.GREEN),
     Cmd2Style.TABLE_BORDER: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.WARNING: Style(color=Color.BRIGHT_YELLOW),

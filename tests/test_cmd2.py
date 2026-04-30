@@ -1871,6 +1871,54 @@ class MultilineApp(cmd2.Cmd):
         self.stdout.write(arg + "\n")
 
 
+def test_get_pt_style_caching(base_app) -> None:
+    # Get the initial style (populates the cache)
+    style1 = base_app._get_pt_style()
+
+    # Getting it again should return the exact same object from the cache
+    style2 = base_app._get_pt_style()
+    assert style1 is style2
+
+    # Change the theme which should invalidate the cache
+    from rich.style import Style
+
+    import cmd2.rich_utils as ru
+    from cmd2.styles import Cmd2Style
+
+    # Save the original theme to restore later
+    orig_theme = ru.get_theme()
+
+    try:
+        ru.set_theme({Cmd2Style.COMPLETION_MENU_ITEM: Style(color="red")})
+
+        # Getting the style now should return a new object
+        style3 = base_app._get_pt_style()
+        assert style3 is not style1
+
+        # Getting it again should return the new cached object
+        style4 = base_app._get_pt_style()
+        assert style4 is style3
+
+        # Verify the style reflects the change
+        # In prompt_toolkit 3, styles are accessed differently
+        attrs = style3.class_names_and_attrs
+        found = False
+        for classes, attr in attrs:
+            if "completion-menu.completion.current" in classes and attr.color in (
+                "800000",
+                "darkred",
+                "ff0000",
+                "#800000",
+                "ansired",
+            ):
+                found = True
+                break
+        assert found, "Color change not found in cached style"
+
+    finally:
+        ru._APP_THEME = orig_theme
+
+
 @pytest.fixture
 def multiline_app():
     return MultilineApp()
