@@ -151,6 +151,9 @@ prompt is displayed.
     - Added `Cmd2ArgumentParser.output_to()` context manager to temporarily set the output stream
       during `argparse` operations. This is helpful for directing output for functions like
       `parse_args()`, which default to `sys.stdout` and lack a `file` argument.
+    - Updated `set` command to consolidate its confirmation output into a single, colorized line.
+      The confirmation now uses `pfeedback()`, allowing it to be silenced when the `quiet` settable
+      is enabled.
 
 ## 3.5.1 (April 24, 2026)
 
