@@ -29,6 +29,13 @@ class ThemedApp(cmd2.Cmd):
             Cmd2Style.HELP_HEADER: Style(color=Color.CYAN, bgcolor="#44475a"),
             Cmd2Style.HELP_LEADER: Style(color="#f8f8f2", bgcolor="#282a36"),  # use RGB hex colors
             Cmd2Style.TABLE_BORDER: Style(color="turquoise2"),  # use a rich standard color
+            Cmd2Style.LEXER_COMMAND: Style(color=Color.LIGHT_GREEN),
+            Cmd2Style.LEXER_ALIAS: Style(color=Color.LIGHT_CYAN1),
+            Cmd2Style.LEXER_MACRO: Style(color=Color.LIGHT_CORAL),
+            Cmd2Style.LEXER_FLAG: Style(color=Color.LIGHT_PINK3),
+            Cmd2Style.LEXER_ARGUMENT: Style(color=Color.LIGHT_GOLDENROD1),
+            Cmd2Style.COMPLETION_MENU_ITEM: Style(color=Color.WHITE, bgcolor=Color.NAVY_BLUE),
+            Cmd2Style.COMPLETION_MENU_META: Style(color=Color.WHITE, bgcolor=Color.DARK_SLATE_GRAY2),
             "traceback.exc_type": Style(color=Color.RED, bgcolor=Color.LIGHT_YELLOW3, bold=True),
             "argparse.args": Style(color=Color.AQUAMARINE3, underline=True),
         }

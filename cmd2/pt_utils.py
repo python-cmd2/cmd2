@@ -28,6 +28,7 @@ from . import (
 )
 from . import rich_utils as ru
 from . import string_utils as su
+from .styles import Cmd2Style
 
 if TYPE_CHECKING:  # pragma: no cover
     from rich.color import Color
@@ -259,28 +260,21 @@ class Cmd2Lexer(Lexer):
     def __init__(
         self,
         cmd_app: "Cmd",
-        command_color: str = "ansigreen",
-        alias_color: str = "ansicyan",
-        macro_color: str = "ansimagenta",
-        flag_color: str = "ansired",
-        argument_color: str = "ansiyellow",
     ) -> None:
         """Initialize the Lexer.
 
         :param cmd_app: cmd2.Cmd instance
-        :param command_color: color to use for commands, defaults to 'ansigreen'
-        :param alias_color: color to use for aliases, defaults to 'ansicyan'
-        :param macro_color: color to use for macros, defaults to 'ansimagenta'
-        :param flag_color: color to use for flags, defaults to 'ansired'
-        :param argument_color: color to use for arguments, defaults to 'ansiyellow'
         """
         super().__init__()
         self.cmd_app = cmd_app
-        self.command_color = command_color
-        self.alias_color = alias_color
-        self.macro_color = macro_color
-        self.flag_color = flag_color
-        self.argument_color = argument_color
+
+        # Retrieve styles dynamically from the current theme
+        theme = ru.get_theme()
+        self.command_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_COMMAND, ""))
+        self.alias_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ALIAS, ""))
+        self.macro_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_MACRO, ""))
+        self.flag_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_FLAG, ""))
+        self.argument_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ARGUMENT, ""))
 
     def lex_document(self, document: Document) -> Callable[[int], Any]:
         """Lex the document."""

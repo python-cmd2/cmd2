@@ -116,7 +116,11 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("ansigreen", "help"), ("", " "), ("ansiyellow", "something")]
+        assert tokens == [
+            ("noreverse fg:ansigreen bg:default", "help"),
+            ("", " "),
+            ("noreverse fg:ansiyellow bg:default", "something"),
+        ]
 
     def test_lex_document_alias(self, mock_cmd_app):
         """Test lexing an alias."""
@@ -128,7 +132,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("ansicyan", "ls"), ("", " "), ("ansired", "-l")]
+        assert tokens == [("noreverse fg:ansicyan bg:default", "ls"), ("", " "), ("noreverse fg:ansired bg:default", "-l")]
 
     def test_lex_document_macro(self, mock_cmd_app):
         """Test lexing a macro."""
@@ -140,7 +144,11 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("ansimagenta", "my_macro"), ("", " "), ("ansiyellow", "arg1")]
+        assert tokens == [
+            ("noreverse fg:ansimagenta bg:default", "my_macro"),
+            ("", " "),
+            ("noreverse fg:ansiyellow bg:default", "arg1"),
+        ]
 
     def test_lex_document_leading_whitespace(self, mock_cmd_app):
         """Test lexing with leading whitespace."""
@@ -152,7 +160,12 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("", "   "), ("ansigreen", "help"), ("", " "), ("ansiyellow", "something")]
+        assert tokens == [
+            ("", "   "),
+            ("noreverse fg:ansigreen bg:default", "help"),
+            ("", " "),
+            ("noreverse fg:ansiyellow bg:default", "something"),
+        ]
 
     def test_lex_document_unknown_command(self, mock_cmd_app):
         """Test lexing an unknown command."""
@@ -163,7 +176,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("", "unknown"), ("", " "), ("ansiyellow", "command")]
+        assert tokens == [("", "unknown"), ("", " "), ("noreverse fg:ansiyellow bg:default", "command")]
 
     def test_lex_document_no_command(self, mock_cmd_app):
         """Test lexing an empty line or line with only whitespace."""
@@ -200,17 +213,17 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("ansigreen", "help"),
+            ("noreverse fg:ansigreen bg:default", "help"),
             ("", " "),
-            ("ansired", "-v"),
+            ("noreverse fg:ansired bg:default", "-v"),
             ("", " "),
-            ("ansired", "--name"),
+            ("noreverse fg:ansired bg:default", "--name"),
             ("", " "),
-            ("ansiyellow", '"John Doe"'),
+            ("noreverse fg:ansiyellow bg:default", '"John Doe"'),
             ("", " "),
             ("", ">"),
             ("", " "),
-            ("ansiyellow", "out.txt"),
+            ("noreverse fg:ansiyellow bg:default", "out.txt"),
         ]
 
     def test_lex_document_unclosed_quote(self, mock_cmd_app):
@@ -223,7 +236,11 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("ansigreen", "echo"), ("", " "), ("ansiyellow", '"hello')]
+        assert tokens == [
+            ("noreverse fg:ansigreen bg:default", "echo"),
+            ("", " "),
+            ("noreverse fg:ansiyellow bg:default", '"hello'),
+        ]
 
     def test_lex_document_shortcut(self, mock_cmd_app):
         """Test lexing a shortcut."""
@@ -235,13 +252,13 @@ class TestCmd2Lexer:
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
-        assert tokens == [("ansigreen", "!"), ("ansiyellow", "ls")]
+        assert tokens == [("noreverse fg:ansigreen bg:default", "!"), ("noreverse fg:ansiyellow bg:default", "ls")]
 
         line = "! ls"
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
-        assert tokens == [("ansigreen", "!"), ("", " "), ("ansiyellow", "ls")]
+        assert tokens == [("noreverse fg:ansigreen bg:default", "!"), ("", " "), ("noreverse fg:ansiyellow bg:default", "ls")]
 
     def test_lex_document_multiline(self, mock_cmd_app):
         """Test lexing a multiline command."""
@@ -255,11 +272,11 @@ class TestCmd2Lexer:
 
         # First line should have command
         tokens0 = get_line(0)
-        assert tokens0 == [("ansigreen", "orate")]
+        assert tokens0 == [("noreverse fg:ansigreen bg:default", "orate")]
 
         # Second line should have argument (not command)
         tokens1 = get_line(1)
-        assert tokens1 == [("ansiyellow", "help")]
+        assert tokens1 == [("noreverse fg:ansiyellow bg:default", "help")]
 
 
 class TestCmd2Completer:
