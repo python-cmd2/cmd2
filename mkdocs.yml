@@ -125,14 +125,15 @@ markdown_extensions:
 
 # Validation
 validation:
-  nav:
-    omitted_files: info
-    not_found: warn
-    absolute_links: info
-  links:
-    not_found: warn
-    absolute_links: ignore
-    unrecognized_links: info
+  invalid_link_anchors: true
+  invalid_links: true
+  shadowed_definitions: true
+  shadowed_footnotes: true
+  unresolved_footnotes: true
+  # bug with mkdocstrings autorefs: https://github.com/zensical/zensical/issues/600
+  unresolved_references: false
+  unused_definitions: true
+  unused_footnotes: true
 
 not_in_nav: |
   **/download/*.md
