@@ -1240,20 +1240,20 @@ class Cmd:
         return self._always_prefix_settables
 
     @always_prefix_settables.setter
-    def always_prefix_settables(self, new_value: bool) -> None:
+    def always_prefix_settables(self, value: bool) -> None:
         """Set whether CommandSet settable values should always be prefixed.
 
-        :param new_value: True if CommandSet settable values should always be prefixed. False if not.
+        :param value: True if CommandSet settable values should always be prefixed. False if not.
         :raises ValueError: If a registered CommandSet does not have a defined prefix
         """
-        if not self._always_prefix_settables and new_value:
+        if not self._always_prefix_settables and value:
             for cmd_set in self._installed_command_sets:
                 if not cmd_set.settable_prefix:
                     raise ValueError(
                         f"Cannot force settable prefixes. CommandSet {cmd_set.__class__.__name__} does "
                         f"not have a settable prefix defined."
                     )
-        self._always_prefix_settables = new_value
+        self._always_prefix_settables = value
 
     @property
     def settables(self) -> Mapping[str, Settable]:
@@ -1357,14 +1357,20 @@ class Cmd:
         return ru.ALLOW_STYLE
 
     @allow_style.setter
-    def allow_style(self, new_val: ru.AllowStyle) -> None:
+    def allow_style(self, value: ru.AllowStyle) -> None:
         """Setter property needed to support do_set when it updates allow_style."""
-        ru.ALLOW_STYLE = new_val
+        ru.ALLOW_STYLE = value
 
     @property
     def traceback_show_locals(self) -> bool:
         """Property needed to support do_set when it reads traceback_show_locals."""
-        return cast(bool, self.traceback_kwargs.get("show_locals", False))
+        if "show_locals" in self.traceback_kwargs:
+            return cast(bool, self.traceback_kwargs["show_locals"])
+
+        # If setting is not present, then return its default value.
+        traceback_sig = inspect.signature(Traceback.__init__)
+        show_locals = traceback_sig.parameters["show_locals"].default
+        return cast(bool, show_locals)
 
     @traceback_show_locals.setter
     def traceback_show_locals(self, value: bool) -> None:

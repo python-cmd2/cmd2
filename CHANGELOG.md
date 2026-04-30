@@ -81,9 +81,8 @@ prompt is displayed.
     - `cmd2` no longer sets a default title for a subparsers group. If you desire a title, you will
       need to pass one in like this `parser.add_subparsers(title="subcommands")`. This is standard
       `argparse` behavior.
-    - Added `HelpFormatterRenderable` protocol and `HelpContent` type alias to support context-aware
-      help content in `argparse`.
-    - `TextGroup` now implements `HelpFormatterRenderable`.
+    - `TextGroup` now implements `HelpFormatterRenderable` (see Enhancements section below for more
+      details).
         - Removed `formatter_creator` parameter from `TextGroup.__init__()`.
         - Removed `Cmd2ArgumentParser.create_text_group()` method.
     - `argparse` and `Rich` integration refactoring:
@@ -145,6 +144,8 @@ prompt is displayed.
       full type hints and IDE autocompletion for `self._cmd` without needing to override and cast
       the property.
     - Added `traceback_kwargs` attribute to allow customization of Rich-based tracebacks.
+    - Added `HelpFormatterRenderable` protocol and `HelpContent` type alias to support context-aware
+      help content in `argparse`.
     - The `print()` function available in a `pyscript` writes to `self.stdout` and respects the
       `allow_style` setting. It also supports printing `Rich` objects.
     - Added `Cmd2ArgumentParser.output_to()` context manager to temporarily set the output stream

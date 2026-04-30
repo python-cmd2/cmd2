@@ -243,15 +243,22 @@ def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
 
 
 def test_set_traceback_show_locals(base_app: cmd2.Cmd) -> None:
-    # Use the set command to alter traceback_show_locals
+    """Test the set command for reading and setting traceback_show_locals."""
+    import inspect
+
+    from rich.traceback import Traceback
+
+    # Get Traceback's default value for "show_locals"
+    traceback_sig = inspect.signature(Traceback.__init__)
+    default_val = traceback_sig.parameters["show_locals"].default
 
     # Clear any existing value
     base_app.traceback_kwargs.pop("show_locals", None)
     assert "show_locals" not in base_app.traceback_kwargs
 
-    # Test that we receive a default value of False if not present
+    # Test that we receive the default value if not present
     orig_val = base_app.traceback_show_locals
-    assert orig_val is False
+    assert orig_val is default_val
     assert "show_locals" not in base_app.traceback_kwargs
 
     # Test setting it
