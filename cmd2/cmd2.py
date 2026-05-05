@@ -3613,7 +3613,7 @@ class Cmd:
             key_bindings=self.main_session.key_bindings,
             input=self.main_session.input,
             output=self.main_session.output,
-            style=DynamicStyle(self._get_pt_style),
+            style=self.main_session.style,
         )
 
         return self._read_raw_input(prompt, temp_session)
@@ -3632,7 +3632,7 @@ class Cmd:
         temp_session: PromptSession[str] = PromptSession(
             input=self.main_session.input,
             output=self.main_session.output,
-            style=DynamicStyle(self._get_pt_style),
+            style=self.main_session.style,
         )
 
         return self._read_raw_input(prompt, temp_session, is_password=True)
