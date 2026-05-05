@@ -112,6 +112,14 @@ def rich_to_pt_style(rich_style: StyleType) -> str:
         parts.append("italic" if rich_style.italic else "noitalic")
     if rich_style.underline is not None:
         parts.append("underline" if rich_style.underline else "nounderline")
+    if rich_style.blink is not None:
+        parts.append("blink" if rich_style.blink else "noblink")
+    if rich_style.reverse is not None:
+        # prompt-toolkit uses 'reverse'
+        parts.append("reverse" if rich_style.reverse else "noreverse")
+    if rich_style.conceal is not None:
+        # prompt-toolkit uses 'hidden' for Rich's 'conceal'
+        parts.append("hidden" if rich_style.conceal else "nohidden")
     return " ".join(parts)
 
 

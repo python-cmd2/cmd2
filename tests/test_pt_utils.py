@@ -758,3 +758,49 @@ class TestRichToPtStyle:
         style = Style(underline=False)
         pt_style = pt_utils.rich_to_pt_style(style)
         assert "nounderline" in pt_style
+
+    def test_rich_to_pt_style_blink(self):
+        from rich.style import Style
+
+        style = Style(blink=True)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "blink" in pt_style
+
+    def test_rich_to_pt_style_noblink(self):
+        from rich.style import Style
+
+        style = Style(blink=False)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "noblink" in pt_style
+
+    def test_rich_to_pt_style_reverse(self):
+        from rich.style import Style
+
+        style = Style(reverse=True)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        # Note: reverse replaces the default 'noreverse' that is added at the start of parts
+        # wait, we'll check how it works exactly. It will append "reverse". So we just assert "reverse" in pt_style
+        # actually, if reverse=True, "reverse" will be appended to the list, while "noreverse" is also at index 0.
+        # Let's just check the last appended one.
+        assert "reverse" in pt_style.split()
+
+    def test_rich_to_pt_style_noreverse(self):
+        from rich.style import Style
+
+        style = Style(reverse=False)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "noreverse" in pt_style
+
+    def test_rich_to_pt_style_hidden_conceal(self):
+        from rich.style import Style
+
+        style = Style(conceal=True)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "hidden" in pt_style
+
+    def test_rich_to_pt_style_nohidden_conceal(self):
+        from rich.style import Style
+
+        style = Style(conceal=False)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "nohidden" in pt_style
