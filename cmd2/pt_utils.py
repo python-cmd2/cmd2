@@ -98,7 +98,7 @@ def rich_to_pt_style(rich_style: StyleType) -> str:
     if isinstance(rich_style, str):
         rich_style = Style.parse(rich_style)
 
-    parts = ["noreverse"]
+    parts = []
 
     fg_color = rich_to_pt_color(rich_style.color)
     parts.append(f"fg:{fg_color}")
