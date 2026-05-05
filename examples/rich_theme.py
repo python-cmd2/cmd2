@@ -34,8 +34,11 @@ class ThemedApp(cmd2.Cmd):
             Cmd2Style.LEXER_MACRO: Style(color=Color.LIGHT_CORAL),
             Cmd2Style.LEXER_FLAG: Style(color=Color.LIGHT_PINK3),
             Cmd2Style.LEXER_ARGUMENT: Style(color=Color.LIGHT_GOLDENROD1),
-            Cmd2Style.COMPLETION_MENU_ITEM: Style(color=Color.WHITE, bgcolor=Color.NAVY_BLUE),
-            Cmd2Style.COMPLETION_MENU_META: Style(color=Color.WHITE, bgcolor=Color.DARK_SLATE_GRAY2),
+            Cmd2Style.COMPLETION_MENU: Style(color="#000000", bgcolor=Color.SKY_BLUE1),
+            Cmd2Style.COMPLETION_MENU_COMPLETION: Style(color=Color.MAGENTA),
+            Cmd2Style.COMPLETION_MENU_CURRENT: Style(color=Color.WHITE, bgcolor=Color.NAVY_BLUE),
+            Cmd2Style.COMPLETION_MENU_META: Style(color="#000000", bgcolor=Color.CYAN),
+            Cmd2Style.COMPLETION_MENU_META_CURRENT: Style(color=Color.WHITE, bgcolor=Color.DARK_SLATE_GRAY2),
             "traceback.exc_type": Style(color=Color.RED, bgcolor=Color.LIGHT_YELLOW3, bold=True),
             "argparse.args": Style(color=Color.AQUAMARINE3, underline=True),
         }

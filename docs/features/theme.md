@@ -11,12 +11,17 @@ that is appealing to your user base.
 `cmd2` leverages `prompt-toolkit` for its tab completion menu. You can customize the colors of the
 completion menu by overriding the following styles in your `cmd2` theme:
 
-- `Cmd2Style.COMPLETION_MENU_ITEM`: The background and foreground color of the selected completion
-  item.
-- `Cmd2Style.COMPLETION_MENU_META`: The background and foreground color of the selected completion
-  item's help/meta text.
+- `Cmd2Style.COMPLETION_MENU` - Base style for the entire completion menu container (sets the
+  background)
+- `Cmd2Style.COMPLETION_MENU_COMPLETION` -Style for an individual, non-selected completion item
+- `Cmd2Style.COMPLETION_MENU_CURRENT` - Style for the currently selected completion item
+- `Cmd2Style.COMPLETION_MENU_META` - Style for "meta" information shown alongside a completion
+- `Cmd2Style.COMPLETION_MENU_META_CURRENT`- Style for meta info of current item
 
-By default, these are styled with black text on a green background to provide contrast.
+By default, the currently selected completion item and metadata are styled with black text on a
+green background to provide contrast. All others are left at `prompt-toolkit` defaults by default.
+However, `cmd2` application authors are free to customimze these as they see fit in order to match a
+desired visual style and/or branding.
 
 ## Example
 

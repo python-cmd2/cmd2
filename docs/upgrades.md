@@ -51,7 +51,7 @@ periodically.
 `cmd2` now leverages `prompt-toolkit` for its tab completion menu and provides the ability to
 customize its appearance using the `cmd2` theme.
 
-- **Customization**: Override the `Cmd2Style.COMPLETION_MENU_ITEM` and
+- **Customization**: Override the `Cmd2Style.COMPLETION_MENU_CURRENT` and
   `Cmd2Style.COMPLETION_MENU_META` styles using `cmd2.rich_utils.set_theme()`. See
   [Customizing Completion Menu Colors](features/theme.md#customizing-completion-menu-colors) for
   more details.

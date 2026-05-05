@@ -1889,7 +1889,7 @@ def test_get_pt_style_caching(base_app) -> None:
     orig_theme = ru.get_theme()
 
     try:
-        ru.set_theme({Cmd2Style.COMPLETION_MENU_ITEM: Style(color="red")})
+        ru.set_theme({Cmd2Style.COMPLETION_MENU_CURRENT: Style(color="red")})
 
         # Getting the style now should return a new object
         style3 = base_app._get_pt_style()

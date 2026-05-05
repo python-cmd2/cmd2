@@ -529,7 +529,7 @@ class Cmd:
 
         # Cache for prompt_toolkit completion menu styles
         self._cached_pt_style: PtStyle | None = None
-        self._cached_pt_style_params: tuple[StyleType, StyleType] | None = None
+        self._cached_pt_style_params: tuple[StyleType, StyleType, StyleType, StyleType, StyleType] | None = None
 
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
@@ -725,24 +725,33 @@ class Cmd:
                 return False
 
     def _get_pt_style(self) -> "PtStyle":
-        """Return the prompt_toolkit style for the completion menu."""
+        """Return the cached prompt_toolkit style."""
         theme = ru.get_theme()
-        rich_item_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_ITEM, "")
+        rich_menu_style = theme.styles.get(Cmd2Style.COMPLETION_MENU, "")
+        rich_completion_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_COMPLETION, "")
+        rich_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_CURRENT, "")
         rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META, "")
+        rich_meta_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META_CURRENT, "")
 
-        current_params = (rich_item_style, rich_meta_style)
+        current_params = (rich_menu_style, rich_completion_style, rich_current_style, rich_meta_style, rich_meta_current_style)
         if self._cached_pt_style is not None and self._cached_pt_style_params == current_params:
             return self._cached_pt_style
 
-        item_style = rich_to_pt_style(rich_item_style)
+        menu_style = rich_to_pt_style(rich_menu_style)
+        completion_style = rich_to_pt_style(rich_completion_style)
+        current_style = rich_to_pt_style(rich_current_style)
         meta_style = rich_to_pt_style(rich_meta_style)
+        meta_current_style = rich_to_pt_style(rich_meta_current_style)
 
         self._cached_pt_style_params = current_params
         self._cached_pt_style = PtStyle.from_dict(
             {
-                "completion-menu.completion.current": item_style,
-                "completion-menu.meta.completion.current": meta_style,
-                "completion-menu.multi-column-meta": meta_style,
+                "completion-menu": menu_style,
+                "completion-menu.completion": completion_style,
+                "completion-menu.completion.current": current_style,
+                "completion-menu.meta.completion": meta_style,
+                "completion-menu.meta.completion.current": meta_current_style,
+                "completion-menu.multi-column-meta": meta_current_style,
             }
         )
 

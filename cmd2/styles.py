@@ -22,6 +22,8 @@ You can find Rich's default styles in the `rich.default_styles` module.
 For rich-argparse, the style names are defined in the
 `rich_argparse.RichHelpFormatter.styles` dictionary.
 
+For prompt-toolkit default styles, see:
+https://github.com/prompt-toolkit/python-prompt-toolkit/blob/main/src/prompt_toolkit/styles/defaults.py
 """
 
 import sys
@@ -51,8 +53,11 @@ class Cmd2Style(StrEnum):
     """
 
     COMMAND_LINE = "cmd2.example"  # Command line examples in help text
-    COMPLETION_MENU_ITEM = "cmd2.completion_menu.item"  # Selected completion item
-    COMPLETION_MENU_META = "cmd2.completion_menu.meta"  # Selected completion help/meta text
+    COMPLETION_MENU = "cmd2.completion_menu"  # Base style for the entire completion menu container (sets the background)
+    COMPLETION_MENU_COMPLETION = "cmd2.completion-menu.completion"  # Style for an individual, non-selected completion item
+    COMPLETION_MENU_CURRENT = "cmd2.completion-menu.completion.current"  # Style for the currently selected completion item
+    COMPLETION_MENU_META = "cmd2.completion-menu.meta.completion"  # Style for "meta" information shown alongside a completion
+    COMPLETION_MENU_META_CURRENT = "cmd2.completion-menu.meta.completion.current"  # Style for meta info of current item
     ERROR = "cmd2.error"  # Error text (used by perror())
     HELP_HEADER = "cmd2.help.header"  # Help table header text
     HELP_LEADER = "cmd2.help.leader"  # Text right before the help tables are listed
@@ -70,8 +75,11 @@ class Cmd2Style(StrEnum):
 # Tightly coupled with the Cmd2Style enum.
 DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.COMMAND_LINE: Style(color=Color.CYAN, bold=True),
-    Cmd2Style.COMPLETION_MENU_ITEM: Style(color=Color.BLACK, bgcolor=Color.GREEN),
-    Cmd2Style.COMPLETION_MENU_META: Style(color=Color.BLACK, bgcolor=Color.BRIGHT_GREEN),
+    Cmd2Style.COMPLETION_MENU: Style(color="#000000", bgcolor="#bbbbbb"),  # prompt-toolkit default
+    Cmd2Style.COMPLETION_MENU_COMPLETION: Style(),  # prompt-toolkit default
+    Cmd2Style.COMPLETION_MENU_CURRENT: Style(color=Color.GREEN, bgcolor=Color.BLACK),  # This style swaps FG and BG colors
+    Cmd2Style.COMPLETION_MENU_META: Style(color="#000000", bgcolor="#bbbbbb"),  # prompt-toolkit default
+    Cmd2Style.COMPLETION_MENU_META_CURRENT: Style(color=Color.BLACK, bgcolor=Color.BRIGHT_GREEN),
     Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),
     Cmd2Style.HELP_HEADER: Style(color=Color.BRIGHT_GREEN),
     Cmd2Style.HELP_LEADER: Style(color=Color.CYAN),
