@@ -117,9 +117,9 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("noreverse fg:ansigreen bg:default", "help"),
+            ("fg:ansigreen bg:default", "help"),
             ("", " "),
-            ("noreverse fg:ansiyellow bg:default", "something"),
+            ("fg:ansiyellow bg:default", "something"),
         ]
 
     def test_lex_document_alias(self, mock_cmd_app):
@@ -132,7 +132,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("noreverse fg:ansicyan bg:default", "ls"), ("", " "), ("noreverse fg:ansired bg:default", "-l")]
+        assert tokens == [("fg:ansicyan bg:default", "ls"), ("", " "), ("fg:ansired bg:default", "-l")]
 
     def test_lex_document_macro(self, mock_cmd_app):
         """Test lexing a macro."""
@@ -145,9 +145,9 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("noreverse fg:ansimagenta bg:default", "my_macro"),
+            ("fg:ansimagenta bg:default", "my_macro"),
             ("", " "),
-            ("noreverse fg:ansiyellow bg:default", "arg1"),
+            ("fg:ansiyellow bg:default", "arg1"),
         ]
 
     def test_lex_document_leading_whitespace(self, mock_cmd_app):
@@ -162,9 +162,9 @@ class TestCmd2Lexer:
 
         assert tokens == [
             ("", "   "),
-            ("noreverse fg:ansigreen bg:default", "help"),
+            ("fg:ansigreen bg:default", "help"),
             ("", " "),
-            ("noreverse fg:ansiyellow bg:default", "something"),
+            ("fg:ansiyellow bg:default", "something"),
         ]
 
     def test_lex_document_unknown_command(self, mock_cmd_app):
@@ -176,7 +176,7 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("", "unknown"), ("", " "), ("noreverse fg:ansiyellow bg:default", "command")]
+        assert tokens == [("", "unknown"), ("", " "), ("fg:ansiyellow bg:default", "command")]
 
     def test_lex_document_no_command(self, mock_cmd_app):
         """Test lexing an empty line or line with only whitespace."""
@@ -213,17 +213,17 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("noreverse fg:ansigreen bg:default", "help"),
+            ("fg:ansigreen bg:default", "help"),
             ("", " "),
-            ("noreverse fg:ansired bg:default", "-v"),
+            ("fg:ansired bg:default", "-v"),
             ("", " "),
-            ("noreverse fg:ansired bg:default", "--name"),
+            ("fg:ansired bg:default", "--name"),
             ("", " "),
-            ("noreverse fg:ansiyellow bg:default", '"John Doe"'),
+            ("fg:ansiyellow bg:default", '"John Doe"'),
             ("", " "),
             ("", ">"),
             ("", " "),
-            ("noreverse fg:ansiyellow bg:default", "out.txt"),
+            ("fg:ansiyellow bg:default", "out.txt"),
         ]
 
     def test_lex_document_unclosed_quote(self, mock_cmd_app):
@@ -237,9 +237,9 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("noreverse fg:ansigreen bg:default", "echo"),
+            ("fg:ansigreen bg:default", "echo"),
             ("", " "),
-            ("noreverse fg:ansiyellow bg:default", '"hello'),
+            ("fg:ansiyellow bg:default", '"hello'),
         ]
 
     def test_lex_document_shortcut(self, mock_cmd_app):
@@ -252,13 +252,13 @@ class TestCmd2Lexer:
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
-        assert tokens == [("noreverse fg:ansigreen bg:default", "!"), ("noreverse fg:ansiyellow bg:default", "ls")]
+        assert tokens == [("fg:ansigreen bg:default", "!"), ("fg:ansiyellow bg:default", "ls")]
 
         line = "! ls"
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
-        assert tokens == [("noreverse fg:ansigreen bg:default", "!"), ("", " "), ("noreverse fg:ansiyellow bg:default", "ls")]
+        assert tokens == [("fg:ansigreen bg:default", "!"), ("", " "), ("fg:ansiyellow bg:default", "ls")]
 
     def test_lex_document_multiline(self, mock_cmd_app):
         """Test lexing a multiline command."""
@@ -272,11 +272,11 @@ class TestCmd2Lexer:
 
         # First line should have command
         tokens0 = get_line(0)
-        assert tokens0 == [("noreverse fg:ansigreen bg:default", "orate")]
+        assert tokens0 == [("fg:ansigreen bg:default", "orate")]
 
         # Second line should have argument (not command)
         tokens1 = get_line(1)
-        assert tokens1 == [("noreverse fg:ansiyellow bg:default", "help")]
+        assert tokens1 == [("fg:ansiyellow bg:default", "help")]
 
     def test_lexer_set_theme_runtime_update(self, mock_cmd_app):
         """Test that changing the theme updates active lexers."""
@@ -698,7 +698,6 @@ class TestRichToPtStyle:
         pt_style = pt_utils.rich_to_pt_style(style)
         assert "fg:#123456" in pt_style
         assert "bg:default" in pt_style
-        assert "noreverse" in pt_style
 
     def test_rich_to_pt_style_bgcolor(self):
         from rich.style import Style
