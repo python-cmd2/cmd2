@@ -1,6 +1,7 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
 import re
+import weakref
 from collections.abc import (
     Callable,
     Iterable,
@@ -254,6 +255,9 @@ class Cmd2History(History):
         self._loaded_strings.clear()
 
 
+_lexers: "weakref.WeakSet[Cmd2Lexer]" = weakref.WeakSet()
+
+
 class Cmd2Lexer(Lexer):
     """Lexer that highlights cmd2 command names, aliases, and macros."""
 
@@ -268,6 +272,11 @@ class Cmd2Lexer(Lexer):
         super().__init__()
         self.cmd_app = cmd_app
 
+        _lexers.add(self)
+        self.set_colors()
+
+    def set_colors(self) -> None:
+        """Update colors from the current rich theme."""
         # Retrieve styles dynamically from the current theme
         theme = ru.get_theme()
         self.command_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_COMMAND, ""))

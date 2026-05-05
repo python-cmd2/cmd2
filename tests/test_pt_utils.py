@@ -278,6 +278,31 @@ class TestCmd2Lexer:
         tokens1 = get_line(1)
         assert tokens1 == [("noreverse fg:ansiyellow bg:default", "help")]
 
+    def test_lexer_set_theme_runtime_update(self, mock_cmd_app):
+        """Test that changing the theme updates active lexers."""
+        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
+
+        # Get the old color for command
+        old_color = lexer.command_color
+
+        # Change the theme dynamically
+        from rich.style import Style
+
+        from cmd2.styles import Cmd2Style
+
+        new_styles = {Cmd2Style.LEXER_COMMAND: Style(color="red", bgcolor="black")}
+
+        try:
+            ru.set_theme(new_styles)
+
+            # Now verify the lexer's color was updated
+            assert lexer.command_color != old_color
+            assert "ansired" in lexer.command_color
+            assert "ansiblack" in lexer.command_color
+
+        finally:
+            ru.set_theme()  # Reset to default
+
 
 class TestCmd2Completer:
     def test_get_completions(self, mock_cmd_app: MockCmd, monkeypatch) -> None:

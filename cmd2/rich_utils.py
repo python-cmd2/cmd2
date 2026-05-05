@@ -351,6 +351,15 @@ def set_theme(styles: Mapping[str, StyleType] | None = None) -> None:
     for name in Cmd2HelpFormatter.styles.keys() & theme.styles.keys():
         Cmd2HelpFormatter.styles[name] = theme.styles[name]
 
+    # Update colors in active prompt-toolkit lexers
+    try:
+        from . import pt_utils
+
+        for lexer in pt_utils._lexers:
+            lexer.set_colors()
+    except ImportError:
+        pass
+
 
 def _create_default_theme() -> Theme:
     """Create a default theme for the application.
