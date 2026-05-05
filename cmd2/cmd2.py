@@ -78,6 +78,7 @@ from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input import DummyInput, create_input
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.output import DummyOutput, create_output
+from prompt_toolkit.output.color_depth import ColorDepth
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
 from prompt_toolkit.styles import DynamicStyle
@@ -778,6 +779,7 @@ class Cmd:
         kwargs: dict[str, Any] = {
             "auto_suggest": AutoSuggestFromHistory() if auto_suggest else None,
             "bottom_toolbar": self.get_bottom_toolbar if self.bottom_toolbar else None,
+            "color_depth": ColorDepth.TRUE_COLOR,
             "complete_style": CompleteStyle.MULTI_COLUMN,
             "complete_in_thread": True,
             "complete_while_typing": False,
@@ -3593,6 +3595,7 @@ class Cmd:
 
         temp_session: PromptSession[str] = PromptSession(
             auto_suggest=self.main_session.auto_suggest,
+            color_depth=self.main_session.color_depth,
             complete_style=self.main_session.complete_style,
             complete_in_thread=self.main_session.complete_in_thread,
             complete_while_typing=self.main_session.complete_while_typing,
