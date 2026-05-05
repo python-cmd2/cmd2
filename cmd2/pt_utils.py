@@ -266,6 +266,15 @@ class Cmd2History(History):
 _lexers: "weakref.WeakSet[Cmd2Lexer]" = weakref.WeakSet()
 
 
+def _update_lexer_colors() -> None:
+    """Update colors for all active lexers."""
+    for lexer in _lexers:
+        lexer.set_colors()
+
+
+ru.register_theme_update_callback(_update_lexer_colors)
+
+
 class Cmd2Lexer(Lexer):
     """Lexer that highlights cmd2 command names, aliases, and macros."""
 

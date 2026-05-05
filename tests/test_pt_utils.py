@@ -803,3 +803,12 @@ class TestRichToPtStyle:
         style = Style(conceal=False)
         pt_style = pt_utils.rich_to_pt_style(style)
         assert "nohidden" in pt_style
+
+
+def test_update_lexer_colors() -> None:
+    mock_lexer = Mock()
+    pt_utils._lexers.add(mock_lexer)
+
+    pt_utils._update_lexer_colors()
+
+    mock_lexer.set_colors.assert_called_once()
