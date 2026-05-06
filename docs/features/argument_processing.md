@@ -219,8 +219,9 @@ versions of Python.
   separation with spacing using `\\n\\n`
 - [MetavarTypeCmd2HelpFormatter][cmd2.argparse_utils.MetavarTypeCmd2HelpFormatter] - uses the
   argument 'type' as the default metavar value (instead of the argument 'dest')
-- [ExtendedParagraphCmd2HelpFormatter][cmd2.argparse_utils.ExtendedParagraphCmd2HelpFormatter] - retains
-  paragraph separation without spacing using `\\n\\n` and paragraph spacing using `\\n\\n\\n`
+- [ExtendedParagraphCmd2HelpFormatter][cmd2.argparse_utils.ExtendedParagraphCmd2HelpFormatter] -
+  retains paragraph separation without spacing using `\\n\\n` and paragraph spacing using
+  `\\n\\n\\n`
 - [RawDescriptionCmd2HelpFormatter][cmd2.argparse_utils.RawDescriptionCmd2HelpFormatter] - retains
   any formatting in descriptions and epilogs
 - [RawTextCmd2HelpFormatter][cmd2.argparse_utils.RawTextCmd2HelpFormatter] - retains formatting of
