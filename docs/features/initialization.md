@@ -43,7 +43,6 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **editor**: text editor program to use with _edit_ command (e.g. `vim`)
 - **exclude_from_history**: commands to exclude from the _history_ command
 - **exit_code**: this determines the value returned by `cmdloop()` when exiting the application
-- **feedback_to_output**: if `True`, send nonessential output to stdout, if `False` send them to stderr (Default: `False`)
 - **help_error**: the error that prints when no help information can be found
 - **hidden_commands**: commands to exclude from the help menu and tab completion
 - **last_result**: stores results from the last command run to enable usage of results in a Python script or interactive console. Built-in commands don't make use of this. It is purely there for user-defined commands and convenience.

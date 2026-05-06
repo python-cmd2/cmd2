@@ -83,7 +83,6 @@ application:
  debug                           False      Show full traceback on exception
  echo                            False      Echo command issued into output
  editor                          vim        Program used by 'edit'
- feedback_to_output              False      Include nonessentials in '|' and '>' results
  max_column_completion_results   7          Maximum number of completion results to display in a single column
  max_completion_table_items      50         Maximum number of completion results allowed for a completion table to appear
  quiet                           False      Don't print nonessential feedback

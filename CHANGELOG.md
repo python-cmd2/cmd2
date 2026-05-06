@@ -108,6 +108,8 @@ prompt is displayed.
       treated as command output and sent to `self.stdout`, allowing them to be captured.
     - Verbose help table descriptions are no longer generated from help function output. The system
       now relies exclusively on command function docstrings.
+    - Removed `feedback_to_output` settable and changed `cmd2.Cmd.pfeedback` to always print to
+      `self.stdout`
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
@@ -163,6 +165,11 @@ prompt is displayed.
         - `Cmd2Style.COMPLETION_MENU_META` - Style for "meta" information shown alongside a
           completion
         - `Cmd2Style.COMPLETION_MENU_META_CURRENT`- Style for meta info of current item
+    - Updated `set` command to consolidate its confirmation output into a single, colorized line.
+      The confirmation now uses `pfeedback()`, allowing it to be silenced when the `quiet` settable
+      is enabled.
+    - `alias` and `macro` subcommands for `create` and `delete` now output their non-essential
+      success case output using `pfeedback`
 
 ## 3.5.1 (April 24, 2026)
 
