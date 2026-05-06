@@ -4725,7 +4725,7 @@ class Cmd:
                     # Create the feedback message using Rich Text for color
                     feedback_msg = Text.assemble(
                         f"{args.param} ─> ",
-                        (f"{settable.value!r}", "green"),
+                        (f"{settable.value!r}", Cmd2Style.SUCCESS),
                     )
                     self.pfeedback(feedback_msg)
 
