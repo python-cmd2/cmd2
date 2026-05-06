@@ -528,8 +528,9 @@ class Cmd:
         self._initialize_history(persistent_history_file)
 
         # Cache for prompt_toolkit completion menu styles
-        self._cached_pt_style: PtStyle | None = None
-        self._cached_pt_style_params: tuple[StyleType, StyleType, StyleType, StyleType, StyleType] | None = None
+        self.pt_style: PtStyle
+        self.update_pt_style()
+        ru.register_theme_update_callback(self.update_pt_style)
 
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
@@ -724,8 +725,8 @@ class Cmd:
                 # No macro found or already processed. The statement is complete.
                 return False
 
-    def _get_pt_style(self) -> "PtStyle":
-        """Return the cached prompt_toolkit style."""
+    def update_pt_style(self) -> None:
+        """Update the cached prompt_toolkit style."""
         theme = ru.get_theme()
         rich_menu_style = theme.styles.get(Cmd2Style.COMPLETION_MENU, "")
         rich_completion_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_COMPLETION, "")
@@ -733,18 +734,13 @@ class Cmd:
         rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META, "")
         rich_meta_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META_CURRENT, "")
 
-        current_params = (rich_menu_style, rich_completion_style, rich_current_style, rich_meta_style, rich_meta_current_style)
-        if self._cached_pt_style is not None and self._cached_pt_style_params == current_params:
-            return self._cached_pt_style
-
         menu_style = rich_to_pt_style(rich_menu_style)
         completion_style = rich_to_pt_style(rich_completion_style)
         current_style = rich_to_pt_style(rich_current_style)
         meta_style = rich_to_pt_style(rich_meta_style)
         meta_current_style = rich_to_pt_style(rich_meta_current_style)
 
-        self._cached_pt_style_params = current_params
-        self._cached_pt_style = PtStyle.from_dict(
+        self.pt_style = PtStyle.from_dict(
             {
                 "completion-menu": menu_style,
                 "completion-menu.completion": completion_style,
@@ -755,7 +751,9 @@ class Cmd:
             }
         )
 
-        return self._cached_pt_style
+    def _get_pt_style(self) -> "PtStyle":
+        """Return the cached prompt_toolkit style."""
+        return self.pt_style
 
     def _create_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
         """Create and return the main PromptSession for the application.

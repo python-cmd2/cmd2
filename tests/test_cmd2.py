@@ -1871,7 +1871,7 @@ class MultilineApp(cmd2.Cmd):
         self.stdout.write(arg + "\n")
 
 
-def test_get_pt_style_caching(base_app) -> None:
+def test_update_pt_style_caching(base_app) -> None:
     # Get the initial style (populates the cache)
     style1 = base_app._get_pt_style()
 
@@ -1917,6 +1917,7 @@ def test_get_pt_style_caching(base_app) -> None:
 
     finally:
         ru._APP_THEME = orig_theme
+        ru.set_theme()
 
 
 @pytest.fixture
