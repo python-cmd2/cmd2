@@ -281,7 +281,7 @@ def test_set_with_choices(base_app) -> None:
     assert base_app.last_result is True
     assert not err
     assert out[0].startswith("fake")
-    assert out[0].endswith(f"-> {fake_choices[1]!r}")
+    assert out[0].endswith(f"─> {fake_choices[1]!r}")
 
     # Try an invalid choice
     _out, err = run_cmd(base_app, "set fake bad_value")
@@ -857,7 +857,7 @@ def test_allow_clipboard(base_app) -> None:
 def test_base_timing(base_app) -> None:
     out, err = run_cmd(base_app, "set timing True")
     assert out[0].startswith("timing")
-    assert out[0].endswith("-> True")
+    assert out[0].endswith("─> True")
 
     if sys.platform == "win32":
         assert err[0].startswith("Elapsed: 0:00:00")
@@ -878,7 +878,7 @@ def test_base_debug(base_app) -> None:
     out, err = run_cmd(base_app, "set debug True")
     assert not err
     assert out[0].startswith("debug")
-    assert out[0].endswith("-> True")
+    assert out[0].endswith("─> True")
 
     # Verify that we now see the exception traceback
     out, err = run_cmd(base_app, "edit")

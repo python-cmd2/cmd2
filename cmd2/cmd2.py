@@ -4009,7 +4009,7 @@ class Cmd:
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
             "\n\n",
             ("    my_macro beef broccoli", Cmd2Style.COMMAND_LINE),
-            (" ───> ", Style(bold=True)),
+            (" ─> ", Style(bold=True)),
             ("make_dinner --meat beef --veggie broccoli", Cmd2Style.COMMAND_LINE),
         )
         macro_create_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
@@ -4724,7 +4724,7 @@ class Cmd:
                 else:
                     # Create the feedback message using Rich Text for color
                     feedback_msg = Text.assemble(
-                        f"{args.param} -> ",
+                        f"{args.param} ─> ",
                         (f"{settable.value!r}", "green"),
                     )
                     self.pfeedback(feedback_msg)
