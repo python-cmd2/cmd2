@@ -4718,19 +4718,13 @@ class Cmd:
             if args.value:
                 # Try to update the settable's value
                 try:
-                    orig_value = settable.value
                     settable.value = su.strip_quotes(args.value)
                 except ValueError as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
                     # Create the feedback message using Rich Text for color
                     feedback_msg = Text.assemble(
-                        args.param,
-                        ": ",
-                        (f"{orig_value!r}", "red"),
-                        "\n",
-                        " " * max(0, len(args.param) - 1),
-                        "-> ",
+                        f"{args.param} -> ",
                         (f"{settable.value!r}", "green"),
                     )
                     self.pfeedback(feedback_msg)

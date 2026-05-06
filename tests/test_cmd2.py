@@ -238,8 +238,8 @@ def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     # Verify the results
     assert expected == ru.ALLOW_STYLE
     if is_valid:
-        assert err
-        assert not out
+        assert out
+        assert not err
 
 
 def test_set_traceback_show_locals(base_app: cmd2.Cmd) -> None:
