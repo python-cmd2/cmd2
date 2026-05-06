@@ -116,6 +116,13 @@ demonstration of how this is used.
 [read_input](https://github.com/python-cmd2/cmd2/blob/main/examples/read_input.py) example for a
 demonstration.
 
+## Custom Completion Menu Colors
+
+`cmd2` provides the ability to customize the foreground and background colors of the completion menu
+items and their associated help text. See
+[Customizing Completion Menu Colors](./theme.md#customizing-completion-menu-colors) in the Theme
+documentation for more details.
+
 ## For More Information
 
 See [cmd2's argparse_utils API](../api/argparse_utils.md) for a more detailed discussion of argparse
