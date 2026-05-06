@@ -151,6 +151,18 @@ prompt is displayed.
     - Added `Cmd2ArgumentParser.output_to()` context manager to temporarily set the output stream
       during `argparse` operations. This is helpful for directing output for functions like
       `parse_args()`, which default to `sys.stdout` and lack a `file` argument.
+    - Added `cmd2.rich_utils.register_theme_update_callback` function to register callback functions
+      to get called whenever `cmd2.rich_utils.set_theme` is called
+    - Added ability to customize `prompt-toolkit` completion menu colors by overriding the following
+      fields in the `cmd2` theme:
+        - `Cmd2Style.COMPLETION_MENU` - Base style for the entire completion menu container (sets
+          the background)
+        - `Cmd2Style.COMPLETION_MENU_COMPLETION` -Style for an individual, non-selected completion
+          item
+        - `Cmd2Style.COMPLETION_MENU_CURRENT` - Style for the currently selected completion item
+        - `Cmd2Style.COMPLETION_MENU_META` - Style for "meta" information shown alongside a
+          completion
+        - `Cmd2Style.COMPLETION_MENU_META_CURRENT`- Style for meta info of current item
     - Updated `set` command to consolidate its confirmation output into a single, colorized line.
       The confirmation now uses `pfeedback()`, allowing it to be silenced when the `quiet` settable
       is enabled.
