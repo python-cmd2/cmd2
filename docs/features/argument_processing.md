@@ -206,7 +206,7 @@ This command cannot generate tags with no content, like <br/>
 
 ### Argparse HelpFormatter classes
 
-`cmd2` has 5 different Argparse HelpFormatter classes, all of which are based on the
+`cmd2` has 7 different Argparse HelpFormatter classes, all of which are based on the
 `RichHelpFormatter` class from [rich-argparse](https://github.com/hamdanal/rich-argparse). The
 benefit is that your `cmd2` applications now have more aesthetically pleasing help which includes
 color to make it quicker and easier to visually parse help text. This works for all supported
@@ -215,8 +215,12 @@ versions of Python.
 - [Cmd2HelpFormatter][cmd2.argparse_utils.Cmd2HelpFormatter] - default help formatter class
 - [ArgumentDefaultsCmd2HelpFormatter][cmd2.argparse_utils.ArgumentDefaultsCmd2HelpFormatter] - adds
   default values to argument help
+- [ParagraphCmd2HelpFormatter][cmd2.argparse_utils.ParagraphCmd2HelpFormatter] - retains paragraph
+  separation with spacing using `\\n\\n`
 - [MetavarTypeCmd2HelpFormatter][cmd2.argparse_utils.MetavarTypeCmd2HelpFormatter] - uses the
   argument 'type' as the default metavar value (instead of the argument 'dest')
+- [ExtendedParagraphCmd2HelpFormatter][cmd2.argparse_utils.ExtendedParagraphCmd2HelpFormatter] - retains
+  paragraph separation without spacing using `\\n\\n` and paragraph spacing using `\\n\\n\\n`
 - [RawDescriptionCmd2HelpFormatter][cmd2.argparse_utils.RawDescriptionCmd2HelpFormatter] - retains
   any formatting in descriptions and epilogs
 - [RawTextCmd2HelpFormatter][cmd2.argparse_utils.RawTextCmd2HelpFormatter] - retains formatting of

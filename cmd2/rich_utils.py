@@ -44,6 +44,7 @@ from rich_argparse import (
     RawTextRichHelpFormatter,
     RichHelpFormatter,
 )
+from rich_argparse.contrib import ExtendedParagraphRichHelpFormatter, ParagraphRichHelpFormatter
 
 from . import constants
 from .styles import (
@@ -266,6 +267,24 @@ class MetavarTypeCmd2HelpFormatter(
 ):
     """Cmd2 help message formatter which uses the argument 'type' as the default
     metavar value (instead of the argument 'dest').
+    """  # noqa: D205
+
+
+class ParagraphCmd2HelpFormatter(
+    ParagraphRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    r"""Rich help message formatter which retains paragraph separation with spacing
+    using `\\n\\n`.
+    """  # noqa: D205
+
+
+class ExtendedParagraphCmd2HelpFormatter(
+    ExtendedParagraphRichHelpFormatter,
+    Cmd2HelpFormatter,
+):
+    r"""Cmd2 help message formatter which retains paragraph separation without
+    spacing using `\\n\\n` and paragraph spacing using `\\n\\n\\n`.
     """  # noqa: D205
 
 
