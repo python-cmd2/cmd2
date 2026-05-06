@@ -3628,6 +3628,7 @@ class Cmd:
         :raises Exception: any other exceptions raised by prompt()
         """
         temp_session: PromptSession[str] = PromptSession(
+            color_depth=self.main_session.color_depth,
             input=self.main_session.input,
             output=self.main_session.output,
             style=self.main_session.style,
