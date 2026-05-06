@@ -3862,7 +3862,7 @@ class Cmd:
 
         # Set the alias
         result = "overwritten" if args.name in self.aliases else "created"
-        self.poutput(f"Alias '{args.name}' {result}")
+        self.pfeedback(f"Alias '{args.name}' {result}")
 
         self.aliases[args.name] = value
         self.last_result = True
@@ -3891,7 +3891,7 @@ class Cmd:
 
         if args.all:
             self.aliases.clear()
-            self.poutput("All aliases deleted")
+            self.pfeedback("All aliases deleted")
         elif not args.names:
             self.perror("Either --all or alias name(s) must be specified")
             self.last_result = False
@@ -3899,7 +3899,7 @@ class Cmd:
             for cur_name in utils.remove_duplicates(args.names):
                 if cur_name in self.aliases:
                     del self.aliases[cur_name]
-                    self.poutput(f"Alias '{cur_name}' deleted")
+                    self.pfeedback(f"Alias '{cur_name}' deleted")
                 else:
                     self.perror(f"Alias '{cur_name}' does not exist")
 
@@ -4150,7 +4150,7 @@ class Cmd:
 
         # Set the macro
         result = "overwritten" if args.name in self.macros else "created"
-        self.poutput(f"Macro '{args.name}' {result}")
+        self.pfeedback(f"Macro '{args.name}' {result}")
 
         self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, args=macro_args)
         self.last_result = True
@@ -4179,7 +4179,7 @@ class Cmd:
 
         if args.all:
             self.macros.clear()
-            self.poutput("All macros deleted")
+            self.pfeedback("All macros deleted")
         elif not args.names:
             self.perror("Either --all or macro name(s) must be specified")
             self.last_result = False
@@ -4187,7 +4187,7 @@ class Cmd:
             for cur_name in utils.remove_duplicates(args.names):
                 if cur_name in self.macros:
                     del self.macros[cur_name]
-                    self.poutput(f"Macro '{cur_name}' deleted")
+                    self.pfeedback(f"Macro '{cur_name}' deleted")
                 else:
                     self.perror(f"Macro '{cur_name}' does not exist")
 
