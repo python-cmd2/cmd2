@@ -160,16 +160,17 @@ def test_base_set(base_app) -> None:
 
 
 def test_set(base_app) -> None:
-    out, _err = run_cmd(base_app, "set quiet True")
-    expected = normalize(
-        """
-quiet - was: False
-now: True
-"""
-    )
-    assert out == expected
+    out, err = run_cmd(base_app, "set quiet True")
+    assert not out
     assert base_app.last_result is True
 
+    # Test quiet respect
+    out, err = run_cmd(base_app, "set timing False")
+    assert not out
+    assert not err
+    assert base_app.last_result is True
+
+    # Show one settable (this always goes to out)
     line_found = False
     out, _err = run_cmd(base_app, "set quiet")
     for line in out:
@@ -180,6 +181,7 @@ now: True
     assert line_found
     assert len(base_app.last_result) == 1
     assert base_app.last_result["quiet"] is True
+    base_app.quiet = False
 
 
 def test_set_val_empty(base_app) -> None:
@@ -236,8 +238,8 @@ def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     # Verify the results
     assert expected == ru.ALLOW_STYLE
     if is_valid:
-        assert not err
         assert out
+        assert not err
 
 
 def test_set_traceback_show_locals(base_app: cmd2.Cmd) -> None:
@@ -275,9 +277,11 @@ def test_set_with_choices(base_app) -> None:
     base_app.add_settable(fake_settable)
 
     # Try a valid choice
-    _out, err = run_cmd(base_app, f"set fake {fake_choices[1]}")
+    out, err = run_cmd(base_app, f"set fake {fake_choices[1]}")
     assert base_app.last_result is True
     assert not err
+    assert out[0].startswith("fake")
+    assert out[0].endswith(f"─> {fake_choices[1]!r}")
 
     # Try an invalid choice
     _out, err = run_cmd(base_app, "set fake bad_value")
@@ -301,15 +305,10 @@ def onchange_app():
 
 
 def test_set_onchange_hook(onchange_app) -> None:
-    out, _err = run_cmd(onchange_app, "set quiet True")
-    expected = normalize(
-        """
-You changed quiet
-quiet - was: False
-now: True
-"""
-    )
-    assert out == expected
+    out, err = run_cmd(onchange_app, "set quiet True")
+    assert out == ["You changed quiet"]
+    # quiet: False -> True is not shown because quiet is now True
+    assert not err
     assert onchange_app.last_result is True
 
 
@@ -727,8 +726,7 @@ def test_output_redirection_to_too_long_filename(redirection_app) -> None:
     assert "Failed to redirect" in err[0]
 
 
-def test_feedback_to_output_true(redirection_app) -> None:
-    redirection_app.feedback_to_output = True
+def test_feedback(redirection_app) -> None:
     f, filename = tempfile.mkstemp(prefix="cmd2_test", suffix=".txt")
     os.close(f)
 
@@ -737,22 +735,6 @@ def test_feedback_to_output_true(redirection_app) -> None:
         with open(filename) as f:
             content = f.read().splitlines()
         assert "feedback" in content
-    finally:
-        os.remove(filename)
-
-
-def test_feedback_to_output_false(redirection_app) -> None:
-    redirection_app.feedback_to_output = False
-    f, filename = tempfile.mkstemp(prefix="feedback_to_output", suffix=".txt")
-    os.close(f)
-
-    try:
-        _out, err = run_cmd(redirection_app, f"print_feedback > {filename}")
-
-        with open(filename) as f:
-            content = f.read().splitlines()
-        assert not content
-        assert "feedback" in err
     finally:
         os.remove(filename)
 
@@ -873,14 +855,9 @@ def test_allow_clipboard(base_app) -> None:
 
 
 def test_base_timing(base_app) -> None:
-    base_app.feedback_to_output = False
     out, err = run_cmd(base_app, "set timing True")
-    expected = normalize(
-        """timing - was: False
-now: True
-"""
-    )
-    assert out == expected
+    assert out[0].startswith("timing")
+    assert out[0].endswith("─> True")
 
     if sys.platform == "win32":
         assert err[0].startswith("Elapsed: 0:00:00")
@@ -899,13 +876,9 @@ def test_base_debug(base_app) -> None:
 
     # Set debug true
     out, err = run_cmd(base_app, "set debug True")
-    expected = normalize(
-        """
-debug - was: False
-now: True
-"""
-    )
-    assert out == expected
+    assert not err
+    assert out[0].startswith("debug")
+    assert out[0].endswith("─> True")
 
     # Verify that we now see the exception traceback
     out, err = run_cmd(base_app, "edit")

@@ -474,7 +474,6 @@ class Cmd:
         self.debug = False
         self.echo = False
         self.editor = self.DEFAULT_EDITOR
-        self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.quiet = False  # Do not suppress nonessential output
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
         self.timing = False  # Prints elapsed time for each command
@@ -1370,7 +1369,6 @@ class Cmd:
         self.add_settable(Settable("debug", bool, "Show full traceback on exception", self))
         self.add_settable(Settable("echo", bool, "Echo command issued into output", self))
         self.add_settable(Settable("editor", str, "Program used by 'edit'", self))
-        self.add_settable(Settable("feedback_to_output", bool, "Include nonessentials in '|' and '>' results", self))
         self.add_settable(
             Settable(
                 "max_completion_table_items",
@@ -1754,40 +1752,23 @@ class Cmd:
         rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Print nonessential feedback.
-
-        The output can be silenced with the `quiet` setting and its inclusion in redirected output
-        is controlled by the `feedback_to_output` setting.
+        """Print nonessential feedback where the output can be silenced with the `quiet` setting.
 
         For details on the parameters, refer to the `print_to` method documentation.
         """
         if not self.quiet:
-            if self.feedback_to_output:
-                self.poutput(
-                    *objects,
-                    sep=sep,
-                    end=end,
-                    style=style,
-                    soft_wrap=soft_wrap,
-                    justify=justify,
-                    emoji=emoji,
-                    markup=markup,
-                    highlight=highlight,
-                    rich_print_kwargs=rich_print_kwargs,
-                )
-            else:
-                self.perror(
-                    *objects,
-                    sep=sep,
-                    end=end,
-                    style=style,
-                    soft_wrap=soft_wrap,
-                    justify=justify,
-                    emoji=emoji,
-                    markup=markup,
-                    highlight=highlight,
-                    rich_print_kwargs=rich_print_kwargs,
-                )
+            self.poutput(
+                *objects,
+                sep=sep,
+                end=end,
+                style=style,
+                soft_wrap=soft_wrap,
+                justify=justify,
+                emoji=emoji,
+                markup=markup,
+                highlight=highlight,
+                rich_print_kwargs=rich_print_kwargs,
+            )
 
     def ppaged(
         self,
@@ -2992,7 +2973,7 @@ class Cmd:
                 stop = self.postcmd(stop, statement)
 
                 if self.timing:
-                    self.pfeedback(f"Elapsed: {datetime.datetime.now(tz=datetime.timezone.utc) - timestart}")
+                    self.perror(f"Elapsed: {datetime.datetime.now(tz=datetime.timezone.utc) - timestart}", style=None)
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
@@ -3862,7 +3843,7 @@ class Cmd:
 
         # Set the alias
         result = "overwritten" if args.name in self.aliases else "created"
-        self.poutput(f"Alias '{args.name}' {result}")
+        self.pfeedback(f"Alias '{args.name}' {result}")
 
         self.aliases[args.name] = value
         self.last_result = True
@@ -3891,7 +3872,7 @@ class Cmd:
 
         if args.all:
             self.aliases.clear()
-            self.poutput("All aliases deleted")
+            self.pfeedback("All aliases deleted")
         elif not args.names:
             self.perror("Either --all or alias name(s) must be specified")
             self.last_result = False
@@ -3899,7 +3880,7 @@ class Cmd:
             for cur_name in utils.remove_duplicates(args.names):
                 if cur_name in self.aliases:
                     del self.aliases[cur_name]
-                    self.poutput(f"Alias '{cur_name}' deleted")
+                    self.pfeedback(f"Alias '{cur_name}' deleted")
                 else:
                     self.perror(f"Alias '{cur_name}' does not exist")
 
@@ -4028,7 +4009,7 @@ class Cmd:
             "When the macro is called, the provided arguments are resolved and the assembled command is run. For example:",
             "\n\n",
             ("    my_macro beef broccoli", Cmd2Style.COMMAND_LINE),
-            (" ───> ", Style(bold=True)),
+            (" ─> ", Style(bold=True)),
             ("make_dinner --meat beef --veggie broccoli", Cmd2Style.COMMAND_LINE),
         )
         macro_create_parser = argparse_utils.DEFAULT_ARGUMENT_PARSER(description=macro_create_description)
@@ -4150,7 +4131,7 @@ class Cmd:
 
         # Set the macro
         result = "overwritten" if args.name in self.macros else "created"
-        self.poutput(f"Macro '{args.name}' {result}")
+        self.pfeedback(f"Macro '{args.name}' {result}")
 
         self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, args=macro_args)
         self.last_result = True
@@ -4179,7 +4160,7 @@ class Cmd:
 
         if args.all:
             self.macros.clear()
-            self.poutput("All macros deleted")
+            self.pfeedback("All macros deleted")
         elif not args.names:
             self.perror("Either --all or macro name(s) must be specified")
             self.last_result = False
@@ -4187,7 +4168,7 @@ class Cmd:
             for cur_name in utils.remove_duplicates(args.names):
                 if cur_name in self.macros:
                     del self.macros[cur_name]
-                    self.poutput(f"Macro '{cur_name}' deleted")
+                    self.pfeedback(f"Macro '{cur_name}' deleted")
                 else:
                     self.perror(f"Macro '{cur_name}' does not exist")
 
@@ -4737,12 +4718,17 @@ class Cmd:
             if args.value:
                 # Try to update the settable's value
                 try:
-                    orig_value = settable.value
                     settable.value = su.strip_quotes(args.value)
                 except ValueError as ex:
                     self.perror(f"Error setting {args.param}: {ex}")
                 else:
-                    self.poutput(f"{args.param} - was: {orig_value!r}\nnow: {settable.value!r}")
+                    # Create the feedback message using Rich Text for color
+                    feedback_msg = Text.assemble(
+                        f"{args.param} ─> ",
+                        (f"{settable.value!r}", Cmd2Style.SUCCESS),
+                    )
+                    self.pfeedback(feedback_msg)
+
                     self.last_result = True
                 return
 
