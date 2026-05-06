@@ -726,8 +726,7 @@ def test_output_redirection_to_too_long_filename(redirection_app) -> None:
     assert "Failed to redirect" in err[0]
 
 
-def test_feedback_to_output_true(redirection_app) -> None:
-    redirection_app.feedback_to_output = True
+def test_feedback(redirection_app) -> None:
     f, filename = tempfile.mkstemp(prefix="cmd2_test", suffix=".txt")
     os.close(f)
 
@@ -736,22 +735,6 @@ def test_feedback_to_output_true(redirection_app) -> None:
         with open(filename) as f:
             content = f.read().splitlines()
         assert "feedback" in content
-    finally:
-        os.remove(filename)
-
-
-def test_feedback_to_output_false(redirection_app) -> None:
-    redirection_app.feedback_to_output = False
-    f, filename = tempfile.mkstemp(prefix="feedback_to_output", suffix=".txt")
-    os.close(f)
-
-    try:
-        _out, err = run_cmd(redirection_app, f"print_feedback > {filename}")
-
-        with open(filename) as f:
-            content = f.read().splitlines()
-        assert not content
-        assert "feedback" in err
     finally:
         os.remove(filename)
 
@@ -872,7 +855,6 @@ def test_allow_clipboard(base_app) -> None:
 
 
 def test_base_timing(base_app) -> None:
-    base_app.feedback_to_output = False
     out, err = run_cmd(base_app, "set timing True")
     assert not out
     assert err[0].startswith("timing: False")

@@ -84,15 +84,15 @@ output.
 
 You may have the need to display information to the user which is not intended to be part of the
 generated output. This could be debugging information or status information about the progress of
-long running commands. It's not output, it's not error messages, it's feedback. If you use the
+long running commands. It's not output, it's not error messages, it's status. If you use the
 [Timing](./settings.md#timing) setting, the output of how long it took the command to run will be
-output as feedback. You can use the [pfeedback][cmd2.Cmd.pfeedback] method to produce this type of
-output, and several [Settings](./settings.md) control how it is handled.
+output as to `stderr` without any styling. You can use the [perror][cmd2.Cmd.perror] method to
+produce this type of output by passing it `style=None`.
 
 If the [quiet](./settings.md#quiet) setting is `True`, then calling `cmd2.Cmd.pfeedback` produces no
-output. If [quiet](./settings.md#quiet) is `False`, the
-[feedback_to_output](./settings.md#feedback_to_output) setting is consulted to determine whether to
-send the output to `stdout` or `stderr`.
+output. If [quiet](./settings.md#quiet) is `False`,the `pfeedback` method sends output to `stdout`.
+Hence, `pfeedback` is useful for non-essential output that you want the ability to silence when
+`quiet` is `True`.
 
 ## Exceptions
 

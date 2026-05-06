@@ -474,7 +474,6 @@ class Cmd:
         self.debug = False
         self.echo = False
         self.editor = self.DEFAULT_EDITOR
-        self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.quiet = False  # Do not suppress nonessential output
         self.scripts_add_to_history = True  # Scripts and pyscripts add commands to history
         self.timing = False  # Prints elapsed time for each command
@@ -1370,7 +1369,6 @@ class Cmd:
         self.add_settable(Settable("debug", bool, "Show full traceback on exception", self))
         self.add_settable(Settable("echo", bool, "Echo command issued into output", self))
         self.add_settable(Settable("editor", str, "Program used by 'edit'", self))
-        self.add_settable(Settable("feedback_to_output", bool, "Include nonessentials in '|' and '>' results", self))
         self.add_settable(
             Settable(
                 "max_completion_table_items",
@@ -1754,40 +1752,23 @@ class Cmd:
         rich_print_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ARG002
     ) -> None:
-        """Print nonessential feedback.
-
-        The output can be silenced with the `quiet` setting and its inclusion in redirected output
-        is controlled by the `feedback_to_output` setting.
+        """Print nonessential feedback where the output can be silenced with the `quiet` setting.
 
         For details on the parameters, refer to the `print_to` method documentation.
         """
         if not self.quiet:
-            if self.feedback_to_output:
-                self.poutput(
-                    *objects,
-                    sep=sep,
-                    end=end,
-                    style=style,
-                    soft_wrap=soft_wrap,
-                    justify=justify,
-                    emoji=emoji,
-                    markup=markup,
-                    highlight=highlight,
-                    rich_print_kwargs=rich_print_kwargs,
-                )
-            else:
-                self.perror(
-                    *objects,
-                    sep=sep,
-                    end=end,
-                    style=style,
-                    soft_wrap=soft_wrap,
-                    justify=justify,
-                    emoji=emoji,
-                    markup=markup,
-                    highlight=highlight,
-                    rich_print_kwargs=rich_print_kwargs,
-                )
+            self.poutput(
+                *objects,
+                sep=sep,
+                end=end,
+                style=style,
+                soft_wrap=soft_wrap,
+                justify=justify,
+                emoji=emoji,
+                markup=markup,
+                highlight=highlight,
+                rich_print_kwargs=rich_print_kwargs,
+            )
 
     def ppaged(
         self,
@@ -2992,7 +2973,7 @@ class Cmd:
                 stop = self.postcmd(stop, statement)
 
                 if self.timing:
-                    self.pfeedback(f"Elapsed: {datetime.datetime.now(tz=datetime.timezone.utc) - timestart}")
+                    self.perror(f"Elapsed: {datetime.datetime.now(tz=datetime.timezone.utc) - timestart}", style=None)
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
