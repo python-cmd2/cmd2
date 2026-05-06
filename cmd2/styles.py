@@ -56,8 +56,8 @@ class Cmd2Style(StrEnum):
     COMPLETION_MENU = "cmd2.completion_menu"  # Base style for the entire completion menu container (sets the background)
     COMPLETION_MENU_COMPLETION = "cmd2.completion-menu.completion"  # Style for an individual, non-selected completion item
     COMPLETION_MENU_CURRENT = "cmd2.completion-menu.completion.current"  # Style for the currently selected completion item
-    COMPLETION_MENU_META = "cmd2.completion-menu.meta.completion"  # Style for "meta" information shown alongside a completion
-    COMPLETION_MENU_META_CURRENT = "cmd2.completion-menu.meta.completion.current"  # Style for meta info of current item
+    COMPLETION_MENU_META = "cmd2.completion-menu.meta.completion"  # Style for meta information shown alongside a completion
+    COMPLETION_MENU_META_CURRENT = "cmd2.completion-menu.meta.completion.current"  # Style for meta information of current item
     ERROR = "cmd2.error"  # Error text (used by perror())
     HELP_HEADER = "cmd2.help.header"  # Help table header text
     HELP_LEADER = "cmd2.help.leader"  # Text right before the help tables are listed
