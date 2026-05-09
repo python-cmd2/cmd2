@@ -2883,15 +2883,6 @@ class Cmd:
         See [Hooks](../features/hooks.md) for more information.
         """
 
-    def parseline(self, line: str) -> tuple[str, str, str]:
-        """Parse the line into a command name and a string containing the arguments.
-
-        :param line: line read by prompt-toolkit
-        :return: tuple containing (command, args, line)
-        """
-        partial_statement = self.statement_parser.parse_command_only(line)
-        return partial_statement.command, partial_statement.args, partial_statement.command_and_args
-
     def onecmd_plus_hooks(
         self,
         line: str,

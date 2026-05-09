@@ -110,6 +110,8 @@ prompt is displayed.
       now relies exclusively on command function docstrings.
     - Removed `feedback_to_output` settable and changed `cmd2.Cmd.pfeedback` to always print to
       `self.stdout`
+    - Removed `Cmd.parseline()` since it was unused and merely wrapped
+      `StatementParser.parse_command_only()`.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **auto_suggest**: (boolean) if `True`, provide fish shell style auto-suggestions. These
