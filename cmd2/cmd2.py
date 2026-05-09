@@ -239,12 +239,12 @@ class CommandParsers:
     Parser creation and retrieval are accomplished through the get() method.
     """
 
-    def __init__(self, cmd: "Cmd") -> None:
+    def __init__(self, cmd_app: "Cmd") -> None:
         """Initialize CommandParsers.
 
-        :param cmd: the Cmd instance whose parsers are being managed
+        :param cmd_app: the Cmd instance whose parsers are being managed
         """
-        self._cmd = cmd
+        self._cmd_app = cmd_app
 
         # Keyed by the fully qualified method names. This is more reliable than
         # the methods themselves, since wrapping a method will change its address.
@@ -285,8 +285,8 @@ class CommandParsers:
             if parser_builder is None:
                 return None
 
-            parent = self._cmd.find_commandset_for_command(command) or self._cmd
-            parser = self._cmd._build_parser(parent, parser_builder)
+            parent = self._cmd_app.find_commandset_for_command(command) or self._cmd_app
+            parser = self._cmd_app._build_parser(parent, parser_builder)
 
             # To ensure accurate usage strings, recursively update 'prog' values
             # within the parser to match the command name.
@@ -2882,15 +2882,6 @@ class Cmd:
         See [cmd2.Cmd.register_postloop_hook][] for a more robust way to run hooks after the command loop completes.
         See [Hooks](../features/hooks.md) for more information.
         """
-
-    def parseline(self, line: str) -> tuple[str, str, str]:
-        """Parse the line into a command name and a string containing the arguments.
-
-        :param line: line read by prompt-toolkit
-        :return: tuple containing (command, args, line)
-        """
-        partial_statement = self.statement_parser.parse_command_only(line)
-        return partial_statement.command, partial_statement.args, partial_statement.command_and_args
 
     def onecmd_plus_hooks(
         self,

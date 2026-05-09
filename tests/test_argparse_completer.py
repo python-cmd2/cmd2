@@ -1271,7 +1271,7 @@ class CustomCompleter(argparse_completer.ArgparseCompleter):
         # Find flags which should not be completed and place them in used_flags
         for flag in self._flags:
             action = self._flag_to_action[flag]
-            app: CustomCompleterApp = cast(CustomCompleterApp, self._cmd2_app)
+            app: CustomCompleterApp = cast(CustomCompleterApp, self._cmd_app)
             if action.get_complete_when_ready() and not app.is_ready:
                 used_flags.append(flag)
 
