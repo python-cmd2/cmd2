@@ -480,11 +480,9 @@ class StdSim:
         except AttributeError:
             return False
 
-    def __getattr__(self, item: str) -> Any:
-        """When an attribute lookup fails to find the attribute in the usual places, this special method is called."""
-        if item in self.__dict__:
-            return self.__dict__[item]
-        return getattr(self.inner_stream, item)
+    def __getattr__(self, name: str) -> Any:
+        """Forward attribute lookups to the inner stream for attributes not defined on this class."""
+        return getattr(self.inner_stream, name)
 
 
 class ByteBuf:

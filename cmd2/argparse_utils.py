@@ -369,6 +369,24 @@ register_argparse_argument_parameter("table_columns")
 register_argparse_argument_parameter("nargs_range")
 register_argparse_argument_parameter("suppress_tab_hint")
 
+############################################################################################################
+# Workaround for Python 3.15.0b1 argparse bug
+# _ColorlessTheme.__getattr__ incorrectly returns "" for dunder methods, which breaks
+# protocols like copy.deepcopy().
+############################################################################################################
+
+if sys.version_info >= (3, 15):
+
+    def _ColorlessTheme_getattr(_self: argparse._ColorlessTheme, name: str) -> Any:  # noqa: N802
+        """Patched __getattr__ that allows dunder lookups to fail correctly."""
+        if name.startswith("__") and name.endswith("__"):
+            raise AttributeError(name)
+        return ""
+
+    # If the bug still exists, then install the patch.
+    if getattr(argparse._ColorlessTheme(), "__deepcopy__", None) == "":
+        argparse._ColorlessTheme.__getattr__ = _ColorlessTheme_getattr
+
 
 ############################################################################################################
 # Patch _ActionsContainer.add_argument to support more arguments
