@@ -6,6 +6,7 @@ from collections.abc import (
     Callable,
     Iterable,
 )
+from functools import lru_cache
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -75,6 +76,7 @@ def pt_filter_style(text: str | ANSI) -> str | ANSI:
     return text if isinstance(text, ANSI) else ANSI(text)
 
 
+@lru_cache(maxsize=256)
 def rich_to_pt_color(color: "Color | None") -> str:
     """Convert a rich Color object to a prompt_toolkit color string."""
     if not color or color.is_default:
@@ -90,6 +92,7 @@ def rich_to_pt_color(color: "Color | None") -> str:
     return f"#{c.red:02x}{c.green:02x}{c.blue:02x}"
 
 
+@lru_cache(maxsize=1024)
 def rich_to_pt_style(rich_style: StyleType) -> str:
     """Convert a rich Style object to a prompt_toolkit style string."""
     if not rich_style:
@@ -115,10 +118,8 @@ def rich_to_pt_style(rich_style: StyleType) -> str:
     if rich_style.blink is not None:
         parts.append("blink" if rich_style.blink else "noblink")
     if rich_style.reverse is not None:
-        # prompt-toolkit uses 'reverse'
         parts.append("reverse" if rich_style.reverse else "noreverse")
     if rich_style.conceal is not None:
-        # prompt-toolkit uses 'hidden' for Rich's 'conceal'
         parts.append("hidden" if rich_style.conceal else "nohidden")
     return " ".join(parts)
 
@@ -296,11 +297,11 @@ class Cmd2Lexer(Lexer):
         """Update colors from the current rich theme."""
         # Retrieve styles dynamically from the current theme
         theme = ru.get_theme()
-        self.command_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_COMMAND, ""))
-        self.alias_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ALIAS, ""))
-        self.macro_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_MACRO, ""))
-        self.flag_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_FLAG, ""))
-        self.argument_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ARGUMENT, ""))
+        self.command_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_COMMAND, Style.null()))
+        self.alias_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ALIAS, Style.null()))
+        self.macro_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_MACRO, Style.null()))
+        self.flag_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_FLAG, Style.null()))
+        self.argument_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ARGUMENT, Style.null()))
 
     def lex_document(self, document: Document) -> Callable[[int], Any]:
         """Lex the document."""
