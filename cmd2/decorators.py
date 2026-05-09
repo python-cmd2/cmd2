@@ -178,13 +178,13 @@ def with_argument_list(
             """Command function wrapper which translates command line into an argument list and calls actual command function.
 
             :param args: All positional arguments to this function.  We're expecting there to be:
-                            cmd2_app, statement: Union[Statement, str]
+                            cmd_app, statement: Union[Statement, str]
                             contiguously somewhere in the list
             :param kwargs: any keyword arguments being passed to command function
             :return: return value of command function
             """
-            cmd2_app, statement = _parse_positionals(args)
-            _, command_arg_list = cmd2_app.statement_parser.get_command_arg_list(command_name, statement, preserve_quotes)
+            cmd_app, statement = _parse_positionals(args)
+            _, command_arg_list = cmd_app.statement_parser.get_command_arg_list(command_name, statement, preserve_quotes)
             func_arg_list = _arg_swap(args, statement, command_arg_list)
             return func(*func_arg_list, **kwargs)
 
@@ -275,19 +275,19 @@ def with_argparser(
             """Command function wrapper which translates command line into argparse Namespace and call actual command function.
 
             :param args: All positional arguments to this function.  We're expecting there to be:
-                            cmd2_app, statement: Union[Statement, str]
+                            cmd_app, statement: Union[Statement, str]
                             contiguously somewhere in the list
             :param kwargs: any keyword arguments being passed to command function
             :return: return value of command function
             :raises Cmd2ArgparseError: if argparse has error parsing command line
             """
-            cmd2_app, statement_arg = _parse_positionals(args)
-            statement, command_arg_list = cmd2_app.statement_parser.get_command_arg_list(
+            cmd_app, statement_arg = _parse_positionals(args)
+            statement, command_arg_list = cmd_app.statement_parser.get_command_arg_list(
                 command_name, statement_arg, preserve_quotes
             )
 
             # Pass cmd_wrapper instead of func, since it contains the parser info.
-            arg_parser = cmd2_app.command_parsers.get(cmd_wrapper)
+            arg_parser = cmd_app.command_parsers.get(cmd_wrapper)
             if arg_parser is None:
                 # This shouldn't be possible to reach
                 raise ValueError(f"No argument parser found for {command_name}")  # pragma: no cover
@@ -298,12 +298,12 @@ def with_argparser(
                 # The namespace provider may or may not be defined in the same class as the command. Since provider
                 # functions are registered with the command argparser before anything is instantiated, we
                 # need to find an instance at runtime that matches the types during declaration
-                provider_self = cmd2_app._resolve_func_self(ns_provider, args[0])
-                initial_namespace = ns_provider(provider_self if provider_self is not None else cmd2_app)
+                provider_self = cmd_app._resolve_func_self(ns_provider, args[0])
+                initial_namespace = ns_provider(provider_self if provider_self is not None else cmd_app)
 
             try:
                 parsing_results: tuple[argparse.Namespace] | tuple[argparse.Namespace, list[str]]
-                with arg_parser.output_to(cmd2_app.stdout):
+                with arg_parser.output_to(cmd_app.stdout):
                     if with_unknown_args:
                         parsing_results = arg_parser.parse_known_args(command_arg_list, initial_namespace)
                     else:

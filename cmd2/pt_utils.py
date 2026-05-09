@@ -132,7 +132,7 @@ class Cmd2Completer(Completer):
         custom_settings: utils.CustomCompletionSettings | None = None,
     ) -> None:
         """Initialize prompt_toolkit based completer class."""
-        self.cmd_app = cmd_app
+        self._cmd_app = cmd_app
         self.custom_settings = custom_settings
 
     def get_completions(self, document: Document, _complete_event: object) -> Iterable[Completion]:
@@ -143,7 +143,7 @@ class Cmd2Completer(Completer):
 
         # Define delimiters for completion to match cmd2/readline behavior
         delimiters = BASE_DELIMITERS
-        delimiters += "".join(self.cmd_app.statement_parser.terminators)
+        delimiters += "".join(self._cmd_app.statement_parser.terminators)
 
         # Find last delimiter before cursor to determine the word being completed
         begidx = 0
@@ -155,7 +155,7 @@ class Cmd2Completer(Completer):
         endidx = cursor_pos
         text = line[begidx:endidx]
 
-        completions = self.cmd_app.complete(
+        completions = self._cmd_app.complete(
             text, line=line, begidx=begidx, endidx=endidx, custom_settings=self.custom_settings
         )
 
@@ -165,7 +165,7 @@ class Cmd2Completer(Completer):
 
         # Print completion table if present
         if completions.table is not None:
-            console = ru.Cmd2GeneralConsole(file=self.cmd_app.stdout)
+            console = ru.Cmd2GeneralConsole(file=self._cmd_app.stdout)
             with console.capture() as capture:
                 console.print(completions.table, end="", soft_wrap=False)
             print_formatted_text(pt_filter_style("\n" + capture.get()))
@@ -252,7 +252,7 @@ class Cmd2History(History):
             super().append_string(string)
 
     def store_string(self, string: str) -> None:
-        """No-op: Persistent history data is stored in cmd_app.history."""
+        """No-op: Persistent history data is stored in cmd2.Cmd.history."""
 
     def load_history_strings(self) -> Iterable[str]:
         """Yield strings from newest to oldest."""
@@ -287,7 +287,7 @@ class Cmd2Lexer(Lexer):
         :param cmd_app: cmd2.Cmd instance
         """
         super().__init__()
-        self.cmd_app = cmd_app
+        self._cmd_app = cmd_app
 
         _lexers.add(self)
         self.set_colors()
@@ -306,7 +306,7 @@ class Cmd2Lexer(Lexer):
         """Lex the document."""
         # Get redirection tokens and terminators to avoid highlighting them as values
         exclude_tokens = set(constants.REDIRECTION_TOKENS)
-        exclude_tokens.update(self.cmd_app.statement_parser.terminators)
+        exclude_tokens.update(self._cmd_app.statement_parser.terminators)
         arg_pattern = re.compile(r'(\s+)|(--?[^\s\'"]+)|("[^"]*"?|\'[^\']*\'?)|([^\s\'"]+)')
 
         def highlight_args(text: str, tokens: list[tuple[str, str]]) -> None:
@@ -337,7 +337,7 @@ class Cmd2Lexer(Lexer):
             # Only attempt to match a command on the first line
             if lineno == 0:
                 # Use cmd2's command pattern to find the first word (the command)
-                match = self.cmd_app.statement_parser._command_pattern.search(line)
+                match = self._cmd_app.statement_parser._command_pattern.search(line)
                 if match:
                     # Group 1 is the command, Group 2 is the character(s) that terminated the command match
                     command = match.group(1)
@@ -351,7 +351,7 @@ class Cmd2Lexer(Lexer):
                     if command:
                         # Determine the style for the command
                         shortcut_found = False
-                        for shortcut, _ in self.cmd_app.statement_parser.shortcuts:
+                        for shortcut, _ in self._cmd_app.statement_parser.shortcuts:
                             if command.startswith(shortcut):
                                 # Add the shortcut with the command style
                                 tokens.append((self.command_color, shortcut))
@@ -365,11 +365,11 @@ class Cmd2Lexer(Lexer):
 
                         if not shortcut_found:
                             style = ""
-                            if command in self.cmd_app.get_all_commands():
+                            if command in self._cmd_app.get_all_commands():
                                 style = self.command_color
-                            elif command in self.cmd_app.aliases:
+                            elif command in self._cmd_app.aliases:
                                 style = self.alias_color
-                            elif command in self.cmd_app.macros:
+                            elif command in self._cmd_app.macros:
                                 style = self.macro_color
 
                             # Add the command with the determined style

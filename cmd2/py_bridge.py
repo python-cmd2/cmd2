@@ -74,14 +74,14 @@ class CommandResult(NamedTuple):
 class PyBridge:
     """Provides a Python API wrapper for application commands.
 
-    :param cmd2_app: app being controlled by this PyBridge.
+    :param cmd_app: app being controlled by this PyBridge.
     :param add_to_history: If True, then add all commands run by this PyBridge to history.
                            Defaults to True.
     """
 
-    def __init__(self, cmd2_app: "Cmd", *, add_to_history: bool = True) -> None:
+    def __init__(self, cmd_app: "Cmd", *, add_to_history: bool = True) -> None:
         """Initialize PyBridge instances."""
-        self._cmd2_app = cmd2_app
+        self._cmd_app = cmd_app
         self._add_to_history = add_to_history
         self.cmd_echo = False
 
@@ -100,14 +100,14 @@ class PyBridge:
         ex: app('help')
         :param command: command line being run
         :param echo: If provided, this temporarily overrides the value of self.cmd_echo
-                     while the command runs. If True, output will be echoed to _cmd2_app.stdout
+                     while the command runs. If True, output will be echoed to _cmd_app.stdout
                      and sys.stderr. (Defaults to None)
         """
         if echo is None:
             echo = self.cmd_echo
 
-        # This will be used to capture _cmd2_app.stdout
-        copy_cmd_stdout = StdSim(cast(TextIO | StdSim, self._cmd2_app.stdout), echo=echo)
+        # This will be used to capture _cmd_app.stdout
+        copy_cmd_stdout = StdSim(cast(TextIO | StdSim, self._cmd_app.stdout), echo=echo)
 
         # Pause the storing of stdout until onecmd_plus_hooks enables it
         copy_cmd_stdout.pause_storage = True
@@ -115,21 +115,21 @@ class PyBridge:
         # This will be used to capture sys.stderr
         copy_stderr = StdSim(sys.stderr, echo=echo)
 
-        self._cmd2_app.last_result = None
+        self._cmd_app.last_result = None
 
         stop = False
         try:
-            self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout)
+            self._cmd_app.stdout = cast(TextIO, copy_cmd_stdout)
 
             with redirect_stderr(cast(IO[str], copy_stderr)):
-                stop = self._cmd2_app.onecmd_plus_hooks(
+                stop = self._cmd_app.onecmd_plus_hooks(
                     command,
                     add_to_history=self._add_to_history,
                     py_bridge_call=True,
                 )
         finally:
-            with self._cmd2_app.sigint_protection:
-                self._cmd2_app.stdout = cast(TextIO, copy_cmd_stdout.inner_stream)
+            with self._cmd_app.sigint_protection:
+                self._cmd_app.stdout = cast(TextIO, copy_cmd_stdout.inner_stream)
                 self.stop = stop or self.stop
 
         # Save the result
@@ -137,5 +137,5 @@ class PyBridge:
             stdout=copy_cmd_stdout.getvalue(),
             stderr=copy_stderr.getvalue(),
             stop=stop,
-            data=self._cmd2_app.last_result,
+            data=self._cmd_app.last_result,
         )

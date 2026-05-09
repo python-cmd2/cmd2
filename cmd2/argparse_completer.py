@@ -158,20 +158,20 @@ class ArgparseCompleter:
     def __init__(
         self,
         parser: Cmd2ArgumentParser,
-        cmd2_app: "Cmd",
+        cmd_app: "Cmd",
         *,
         parent_tokens: Mapping[str, MutableSequence[str]] | None = None,
     ) -> None:
         """Create an ArgparseCompleter.
 
         :param parser: Cmd2ArgumentParser instance
-        :param cmd2_app: reference to the Cmd2 application that owns this ArgparseCompleter
+        :param cmd_app: reference to the cmd2.Cmd instance that owns this ArgparseCompleter
         :param parent_tokens: optional Mapping of parent parsers' arg names to their tokens
                               This is only used by ArgparseCompleter when recursing on subcommand parsers
                               Defaults to None
         """
         self._parser = parser
-        self._cmd2_app = cmd2_app
+        self._cmd_app = cmd_app
 
         if parent_tokens is None:
             parent_tokens = {}
@@ -366,8 +366,8 @@ class ArgparseCompleter:
                                 parent_tokens[action.dest] = [token]
 
                             parser = self._subcommand_action.choices[token]
-                            completer_type = self._cmd2_app._determine_ap_completer_type(parser)
-                            completer = completer_type(parser, self._cmd2_app, parent_tokens=parent_tokens)
+                            completer_type = self._cmd_app._determine_ap_completer_type(parser)
+                            completer = completer_type(parser, self._cmd_app, parent_tokens=parent_tokens)
                             return completer.complete(text, line, begidx, endidx, tokens[token_index + 1 :], cmd_set=cmd_set)
 
                         # Invalid subcommand entered, so no way to complete remaining tokens
@@ -544,7 +544,7 @@ class ArgparseCompleter:
 
         # Keep flags sorted in the order provided by argparse so our completion
         # suggestions display the same as argparse help text.
-        matched_flags = self._cmd2_app.basic_complete(text, line, begidx, endidx, match_against, sort=False)
+        matched_flags = self._cmd_app.basic_complete(text, line, begidx, endidx, match_against, sort=False)
 
         for flag in matched_flags.to_strings():
             action = self._flag_to_action[flag]
@@ -613,7 +613,7 @@ class ArgparseCompleter:
         # Skip table generation if results are outside thresholds or no columns are defined
         if (
             len(completions) < 2
-            or len(completions) > self._cmd2_app.max_completion_table_items
+            or len(completions) > self._cmd_app.max_completion_table_items
             or table_columns is None
         ):  # fmt: skip
             return completions
@@ -668,13 +668,13 @@ class ArgparseCompleter:
             for token_index, token in enumerate(tokens):
                 if token in self._subcommand_action.choices:
                     parser = self._subcommand_action.choices[token]
-                    completer_type = self._cmd2_app._determine_ap_completer_type(parser)
-                    completer = completer_type(parser, self._cmd2_app)
+                    completer_type = self._cmd_app._determine_ap_completer_type(parser)
+                    completer = completer_type(parser, self._cmd_app)
                     return completer.complete_subcommand_help(text, line, begidx, endidx, tokens[token_index + 1 :])
 
                 if token_index == len(tokens) - 1:
                     # Since this is the last token, we will attempt to complete it
-                    return self._cmd2_app.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
+                    return self._cmd_app.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
                 break
         return Completions()
 
@@ -690,8 +690,8 @@ class ArgparseCompleter:
         if tokens and self._subcommand_action is not None:
             parser = self._subcommand_action.choices.get(tokens[0])
             if parser is not None:
-                completer_type = self._cmd2_app._determine_ap_completer_type(parser)
-                completer = completer_type(parser, self._cmd2_app)
+                completer_type = self._cmd_app._determine_ap_completer_type(parser)
+                completer = completer_type(parser, self._cmd_app)
                 completer.print_help(tokens[1:], file)
                 return
         self._parser.print_help(file)
@@ -732,7 +732,7 @@ class ArgparseCompleter:
         kwargs: dict[str, Any] = {}
 
         # Resolve the 'self' instance for the method
-        self_arg = self._cmd2_app._resolve_func_self(to_call, cmd_set)
+        self_arg = self._cmd_app._resolve_func_self(to_call, cmd_set)
         if self_arg is None:
             raise CompletionError("Could not find CommandSet instance matching defining type")
 
@@ -794,7 +794,7 @@ class ArgparseCompleter:
             # Filter used values and run basic completion
             used_values = consumed_arg_values.get(arg_state.action.dest, [])
             filtered = [choice for choice in all_choices if choice.text not in used_values]
-            completions = self._cmd2_app.basic_complete(text, line, begidx, endidx, filtered)
+            completions = self._cmd_app.basic_complete(text, line, begidx, endidx, filtered)
 
         return self._build_completion_table(arg_state, completions)
 
