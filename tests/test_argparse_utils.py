@@ -750,12 +750,12 @@ def test_argparse_output_capture(base_app: cmd2.Cmd) -> None:
     assert su.strip_style("\n".join(styled_help_out)) == "\n".join(unstyled_help_out)
 
 
+@pytest.mark.skipif(
+    sys.version_info < (3, 15),
+    reason="_ColorlessTheme only exists in 3.15+",
+)
 def test_colorless_theme_monkeypatch() -> None:
     """Test the _ColorlessTheme.__getattr__ monkey patch."""
-
-    # _ColorlessTheme only exists in 3.15+
-    if not hasattr(argparse, "_ColorlessTheme"):
-        return
 
     # If this assertion fails, then the bug no longer exists and our patch wasn't installed.
     # We can remove the patch function and this test.

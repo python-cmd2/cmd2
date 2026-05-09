@@ -375,8 +375,7 @@ register_argparse_argument_parameter("suppress_tab_hint")
 # protocols like copy.deepcopy().
 ############################################################################################################
 
-# _ColorlessTheme only exists in 3.15+
-if hasattr(argparse, "_ColorlessTheme"):
+if sys.version_info >= (3, 15):
 
     def _ColorlessTheme_getattr(_self: argparse._ColorlessTheme, name: str) -> Any:  # noqa: N802
         """Patched __getattr__ that allows dunder lookups to fail correctly."""
