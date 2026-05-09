@@ -22,15 +22,15 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
-def verify_help_text(cmd2_app: cmd2.Cmd, help_output: str | list[str], verbose_strings: list[str] | None = None) -> None:
+def verify_help_text(cmd_app: cmd2.Cmd, help_output: str | list[str], verbose_strings: list[str] | None = None) -> None:
     """This function verifies that all expected commands are present in the help text.
 
-    :param cmd2_app: instance of cmd2.Cmd
+    :param cmd_app: instance of cmd2.Cmd
     :param help_output: output of help, either as a string or list of strings
     :param verbose_strings: optional list of verbose strings to search for
     """
     help_text = help_output if isinstance(help_output, str) else "".join(help_output)
-    commands = cmd2_app.get_visible_commands()
+    commands = cmd_app.get_visible_commands()
     for command in commands:
         assert command in help_text
 

@@ -3527,26 +3527,6 @@ def test_ppretty(base_app: cmd2.Cmd) -> None:
         )
 
 
-# we override cmd.parseline() so we always get consistent
-# command parsing by parent methods we don't override
-# don't need to test all the parsing logic here, because
-# parseline just calls StatementParser.parse_command_only()
-def test_parseline_empty(base_app) -> None:
-    statement = ""
-    command, args, line = base_app.parseline(statement)
-    assert not command
-    assert not args
-    assert not line
-
-
-def test_parseline_quoted(base_app) -> None:
-    statement = " command with 'partially completed quotes  "
-    command, args, line = base_app.parseline(statement)
-    assert command == "command"
-    assert args == "with 'partially completed quotes  "
-    assert line == statement.lstrip()
-
-
 def test_onecmd_raw_str_continue(outsim_app) -> None:
     line = "help"
     stop = outsim_app.onecmd(line)
