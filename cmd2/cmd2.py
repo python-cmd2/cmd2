@@ -727,11 +727,11 @@ class Cmd:
     def update_pt_style(self) -> None:
         """Update the cached prompt_toolkit style."""
         theme = ru.get_theme()
-        rich_menu_style = theme.styles.get(Cmd2Style.COMPLETION_MENU, "")
-        rich_completion_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_COMPLETION, "")
-        rich_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_CURRENT, "")
-        rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META, "")
-        rich_meta_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META_CURRENT, "")
+        rich_menu_style = theme.styles.get(Cmd2Style.COMPLETION_MENU, Style.null())
+        rich_completion_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_COMPLETION, Style.null())
+        rich_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_CURRENT, Style.null())
+        rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META, Style.null())
+        rich_meta_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META_CURRENT, Style.null())
 
         menu_style = rich_to_pt_style(rich_menu_style)
         completion_style = rich_to_pt_style(rich_completion_style)
