@@ -279,7 +279,8 @@ class TestCmd2Lexer:
         assert tokens1 == [("fg:ansiyellow bg:default", "help")]
 
     def test_lexer_set_theme_runtime_update(self, mock_cmd_app):
-        """Test that changing the theme updates active lexers."""
+        """Test that the lexer uses current theme values."""
+        mock_cmd_app.all_commands = ["help"]
         lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
 
         # Get the old color for command
@@ -295,7 +296,13 @@ class TestCmd2Lexer:
         try:
             ru.set_theme(new_styles)
 
-            # Now verify the lexer's color was updated
+            line = "help"
+            document = Document(line)
+            get_line = lexer.lex_document(document)
+            tokens = get_line(0)
+
+            # Now verify the updated colors were used
+            assert tokens == [("fg:ansired bg:ansiblack", "help")]
             assert lexer.command_color != old_color
             assert "ansired" in lexer.command_color
             assert "ansiblack" in lexer.command_color
@@ -803,12 +810,3 @@ class TestRichToPtStyle:
         style = Style(conceal=False)
         pt_style = pt_utils.rich_to_pt_style(style)
         assert "nohidden" in pt_style
-
-
-def test_update_lexer_colors() -> None:
-    mock_lexer = Mock()
-    pt_utils._lexers.add(mock_lexer)
-
-    pt_utils._update_lexer_colors()
-
-    mock_lexer.set_colors.assert_called_once()

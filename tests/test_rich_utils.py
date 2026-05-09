@@ -349,26 +349,3 @@ def test_formatter_set_color(mocker: MockerFixture) -> None:
     assert mock_set_color.call_count == 2
     mock_set_color.assert_any_call(True, file=sys.stdout)
     mock_set_color.assert_any_call(True)
-
-
-def test_register_theme_update_callback() -> None:
-    # Clear callbacks for a clean state
-    ru._theme_update_callbacks.clear()
-
-    # Define a dummy callback
-    def my_callback() -> None:
-        pass
-
-    ru.register_theme_update_callback(my_callback)
-    assert my_callback in ru._theme_update_callbacks
-
-    # Test that registering the same callback again doesn't duplicate it
-    ru.register_theme_update_callback(my_callback)
-    assert len(ru._theme_update_callbacks) == 1
-
-    # Test that set_theme calls the callback
-    mock_callback = mock.Mock()
-    ru.register_theme_update_callback(mock_callback)
-
-    ru.set_theme()
-    mock_callback.assert_called_once()

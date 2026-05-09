@@ -1,11 +1,11 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
 import re
-import weakref
 from collections.abc import (
     Callable,
     Iterable,
 )
+from functools import lru_cache
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -75,6 +75,7 @@ def pt_filter_style(text: str | ANSI) -> str | ANSI:
     return text if isinstance(text, ANSI) else ANSI(text)
 
 
+@lru_cache(maxsize=256)
 def rich_to_pt_color(color: "Color | None") -> str:
     """Convert a rich Color object to a prompt_toolkit color string."""
     if not color or color.is_default:
@@ -90,6 +91,7 @@ def rich_to_pt_color(color: "Color | None") -> str:
     return f"#{c.red:02x}{c.green:02x}{c.blue:02x}"
 
 
+@lru_cache(maxsize=1024)
 def rich_to_pt_style(rich_style: StyleType) -> str:
     """Convert a rich Style object to a prompt_toolkit style string."""
     if not rich_style:
@@ -115,10 +117,8 @@ def rich_to_pt_style(rich_style: StyleType) -> str:
     if rich_style.blink is not None:
         parts.append("blink" if rich_style.blink else "noblink")
     if rich_style.reverse is not None:
-        # prompt-toolkit uses 'reverse'
         parts.append("reverse" if rich_style.reverse else "noreverse")
     if rich_style.conceal is not None:
-        # prompt-toolkit uses 'hidden' for Rich's 'conceal'
         parts.append("hidden" if rich_style.conceal else "nohidden")
     return " ".join(parts)
 
@@ -263,18 +263,6 @@ class Cmd2History(History):
         self._loaded_strings.clear()
 
 
-_lexers: "weakref.WeakSet[Cmd2Lexer]" = weakref.WeakSet()
-
-
-def _update_lexer_colors() -> None:
-    """Update colors for all active lexers."""
-    for lexer in _lexers:
-        lexer.set_colors()
-
-
-ru.register_theme_update_callback(_update_lexer_colors)
-
-
 class Cmd2Lexer(Lexer):
     """Lexer that highlights cmd2 command names, aliases, and macros."""
 
@@ -289,18 +277,29 @@ class Cmd2Lexer(Lexer):
         super().__init__()
         self.cmd_app = cmd_app
 
-        _lexers.add(self)
+        # Cache key used to detect when theme styles have changed
+        self._style_key: tuple[Style, ...] = ()
         self.set_colors()
 
     def set_colors(self) -> None:
-        """Update colors from the current rich theme."""
-        # Retrieve styles dynamically from the current theme
+        """Synchronize lexer colors with the application theme."""
         theme = ru.get_theme()
-        self.command_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_COMMAND, ""))
-        self.alias_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ALIAS, ""))
-        self.macro_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_MACRO, ""))
-        self.flag_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_FLAG, ""))
-        self.argument_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ARGUMENT, ""))
+
+        command_style = theme.styles.get(Cmd2Style.LEXER_COMMAND, Style.null())
+        alias_style = theme.styles.get(Cmd2Style.LEXER_ALIAS, Style.null())
+        macro_style = theme.styles.get(Cmd2Style.LEXER_MACRO, Style.null())
+        flag_style = theme.styles.get(Cmd2Style.LEXER_FLAG, Style.null())
+        argument_style = theme.styles.get(Cmd2Style.LEXER_ARGUMENT, Style.null())
+
+        current_key = (command_style, alias_style, macro_style, flag_style, argument_style)
+
+        if current_key != self._style_key:
+            self._style_key = current_key
+            self.command_color = rich_to_pt_style(command_style)
+            self.alias_color = rich_to_pt_style(alias_style)
+            self.macro_color = rich_to_pt_style(macro_style)
+            self.flag_color = rich_to_pt_style(flag_style)
+            self.argument_color = rich_to_pt_style(argument_style)
 
     def lex_document(self, document: Document) -> Callable[[int], Any]:
         """Lex the document."""
@@ -308,6 +307,8 @@ class Cmd2Lexer(Lexer):
         exclude_tokens = set(constants.REDIRECTION_TOKENS)
         exclude_tokens.update(self.cmd_app.statement_parser.terminators)
         arg_pattern = re.compile(r'(\s+)|(--?[^\s\'"]+)|("[^"]*"?|\'[^\']*\'?)|([^\s\'"]+)')
+
+        self.set_colors()
 
         def highlight_args(text: str, tokens: list[tuple[str, str]]) -> None:
             """Highlight arguments in a string."""
