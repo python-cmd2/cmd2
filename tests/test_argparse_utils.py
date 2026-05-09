@@ -763,4 +763,4 @@ def test_colorless_theme_monkeypatch() -> None:
 
     # Our patch raises an Attribute error for dunder attributes.
     with pytest.raises(AttributeError):
-        getattr(argparse._ColorlessTheme(), "__deep_copy__")  # noqa: B009
+        getattr(argparse._ColorlessTheme(), "__deepcopy__")  # noqa: B009
