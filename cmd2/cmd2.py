@@ -526,13 +526,10 @@ class Cmd:
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
 
-        # Styles used in prompt_toolkit elements like completion menus.
-        # This is initialized when first needed for rendering and is only
-        # updated when the application theme changes. self._pt_style_key
-        # is a tuple of the Rich styles used to build self._pt_style and
-        # acts as a cache key to detect when the theme has changed.
-        self._pt_style: PtStyle | None = None
-        self._pt_style_key: tuple[Style, ...] = ()
+        # Cache for prompt_toolkit completion menu styles
+        self.pt_style: PtStyle
+        self.update_pt_style()
+        ru.register_theme_update_callback(self.update_pt_style)
 
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
@@ -727,39 +724,35 @@ class Cmd:
                 # No macro found or already processed. The statement is complete.
                 return False
 
-    def _get_pt_style(self) -> PtStyle:
-        """Return the prompt_toolkit style synchronized with the application theme."""
+    def update_pt_style(self) -> None:
+        """Update the cached prompt_toolkit style."""
         theme = ru.get_theme()
+        rich_menu_style = theme.styles.get(Cmd2Style.COMPLETION_MENU, Style.null())
+        rich_completion_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_COMPLETION, Style.null())
+        rich_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_CURRENT, Style.null())
+        rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META, Style.null())
+        rich_meta_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META_CURRENT, Style.null())
 
-        completion_menu = theme.styles.get(Cmd2Style.COMPLETION_MENU, Style.null())
-        completion_menu_completion = theme.styles.get(Cmd2Style.COMPLETION_MENU_COMPLETION, Style.null())
-        completion_menu_current = theme.styles.get(Cmd2Style.COMPLETION_MENU_CURRENT, Style.null())
-        completion_menu_meta = theme.styles.get(Cmd2Style.COMPLETION_MENU_META, Style.null())
-        completion_menu_meta_current = theme.styles.get(Cmd2Style.COMPLETION_MENU_META_CURRENT, Style.null())
+        menu_style = rich_to_pt_style(rich_menu_style)
+        completion_style = rich_to_pt_style(rich_completion_style)
+        current_style = rich_to_pt_style(rich_current_style)
+        meta_style = rich_to_pt_style(rich_meta_style)
+        meta_current_style = rich_to_pt_style(rich_meta_current_style)
 
-        current_key = (
-            completion_menu,
-            completion_menu_completion,
-            completion_menu_current,
-            completion_menu_meta,
-            completion_menu_meta_current,
+        self.pt_style = PtStyle.from_dict(
+            {
+                "completion-menu": menu_style,
+                "completion-menu.completion": completion_style,
+                "completion-menu.completion.current": current_style,
+                "completion-menu.meta.completion": meta_style,
+                "completion-menu.meta.completion.current": meta_current_style,
+                "completion-menu.multi-column-meta": meta_current_style,
+            }
         )
 
-        if self._pt_style is None or current_key != self._pt_style_key:
-            self._pt_style_key = current_key
-
-            self._pt_style = PtStyle.from_dict(
-                {
-                    "completion-menu": rich_to_pt_style(completion_menu),
-                    "completion-menu.completion": rich_to_pt_style(completion_menu_completion),
-                    "completion-menu.completion.current": rich_to_pt_style(completion_menu_current),
-                    "completion-menu.meta.completion": rich_to_pt_style(completion_menu_meta),
-                    "completion-menu.meta.completion.current": rich_to_pt_style(completion_menu_meta_current),
-                    "completion-menu.multi-column-meta": rich_to_pt_style(completion_menu_meta_current),
-                }
-            )
-
-        return self._pt_style
+    def _get_pt_style(self) -> "PtStyle":
+        """Return the cached prompt_toolkit style."""
+        return self.pt_style
 
     def _create_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
         """Create and return the main PromptSession for the application.

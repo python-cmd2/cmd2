@@ -4,6 +4,7 @@ import argparse
 import re
 import sys
 from collections.abc import (
+    Callable,
     Iterator,
     Mapping,
 )
@@ -309,6 +310,15 @@ class TextGroup:
 # The application-wide theme. Use get_theme() and set_theme() to access it.
 _APP_THEME: Theme | None = None
 
+# Callbacks to be executed when the theme is updated
+_theme_update_callbacks: list[Callable[[], None]] = []
+
+
+def register_theme_update_callback(callback: Callable[[], None]) -> None:
+    """Register a callback to be executed when the theme is updated."""
+    if callback not in _theme_update_callbacks:
+        _theme_update_callbacks.append(callback)
+
 
 def get_theme() -> Theme:
     """Get the application-wide theme. Initializes it on the first call."""
@@ -350,6 +360,10 @@ def set_theme(styles: Mapping[str, StyleType] | None = None) -> None:
     # Synchronize rich-argparse styles with the main application theme.
     for name in Cmd2HelpFormatter.styles.keys() & theme.styles.keys():
         Cmd2HelpFormatter.styles[name] = theme.styles[name]
+
+    # Notify callbacks that the theme has been updated
+    for callback in _theme_update_callbacks:
+        callback()
 
 
 def _create_default_theme() -> Theme:

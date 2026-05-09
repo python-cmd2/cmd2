@@ -1,6 +1,7 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
 import re
+import weakref
 from collections.abc import (
     Callable,
     Iterable,
@@ -263,6 +264,18 @@ class Cmd2History(History):
         self._loaded_strings.clear()
 
 
+_lexers: "weakref.WeakSet[Cmd2Lexer]" = weakref.WeakSet()
+
+
+def _update_lexer_colors() -> None:
+    """Update colors for all active lexers."""
+    for lexer in _lexers:
+        lexer.set_colors()
+
+
+ru.register_theme_update_callback(_update_lexer_colors)
+
+
 class Cmd2Lexer(Lexer):
     """Lexer that highlights cmd2 command names, aliases, and macros."""
 
@@ -277,29 +290,18 @@ class Cmd2Lexer(Lexer):
         super().__init__()
         self.cmd_app = cmd_app
 
-        # Cache key used to detect when theme styles have changed
-        self._style_key: tuple[Style, ...] = ()
+        _lexers.add(self)
         self.set_colors()
 
     def set_colors(self) -> None:
-        """Synchronize lexer colors with the application theme."""
+        """Update colors from the current rich theme."""
+        # Retrieve styles dynamically from the current theme
         theme = ru.get_theme()
-
-        command_style = theme.styles.get(Cmd2Style.LEXER_COMMAND, Style.null())
-        alias_style = theme.styles.get(Cmd2Style.LEXER_ALIAS, Style.null())
-        macro_style = theme.styles.get(Cmd2Style.LEXER_MACRO, Style.null())
-        flag_style = theme.styles.get(Cmd2Style.LEXER_FLAG, Style.null())
-        argument_style = theme.styles.get(Cmd2Style.LEXER_ARGUMENT, Style.null())
-
-        current_key = (command_style, alias_style, macro_style, flag_style, argument_style)
-
-        if current_key != self._style_key:
-            self._style_key = current_key
-            self.command_color = rich_to_pt_style(command_style)
-            self.alias_color = rich_to_pt_style(alias_style)
-            self.macro_color = rich_to_pt_style(macro_style)
-            self.flag_color = rich_to_pt_style(flag_style)
-            self.argument_color = rich_to_pt_style(argument_style)
+        self.command_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_COMMAND, Style.null()))
+        self.alias_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ALIAS, Style.null()))
+        self.macro_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_MACRO, Style.null()))
+        self.flag_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_FLAG, Style.null()))
+        self.argument_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ARGUMENT, Style.null()))
 
     def lex_document(self, document: Document) -> Callable[[int], Any]:
         """Lex the document."""
@@ -307,8 +309,6 @@ class Cmd2Lexer(Lexer):
         exclude_tokens = set(constants.REDIRECTION_TOKENS)
         exclude_tokens.update(self.cmd_app.statement_parser.terminators)
         arg_pattern = re.compile(r'(\s+)|(--?[^\s\'"]+)|("[^"]*"?|\'[^\']*\'?)|([^\s\'"]+)')
-
-        self.set_colors()
 
         def highlight_args(text: str, tokens: list[tuple[str, str]]) -> None:
             """Highlight arguments in a string."""
