@@ -628,20 +628,20 @@ class ContextFlag:
 
         It should never go below 0.
         """
-        self.__count = 0
+        self._count = 0
 
     def __bool__(self) -> bool:
         """Define the truth value of an object when it is used in a boolean context."""
-        return self.__count > 0
+        return self._count > 0
 
     def __enter__(self) -> None:
         """When a with block is entered, the __enter__ method of the context manager is called."""
-        self.__count += 1
+        self._count += 1
 
     def __exit__(self, *args: object) -> None:
         """When the execution flow exits a with statement block this is called, regardless of whether an exception occurred."""
-        self.__count -= 1
-        if self.__count < 0:
+        self._count -= 1
+        if self._count < 0:
             raise ValueError("count has gone below 0")
 
 
