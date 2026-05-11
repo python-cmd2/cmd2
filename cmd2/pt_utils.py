@@ -1,7 +1,6 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
 import re
-import weakref
 from collections.abc import (
     Callable,
     Iterable,
@@ -111,16 +110,20 @@ def rich_to_pt_style(rich_style: StyleType) -> str:
 
     if rich_style.bold is not None:
         parts.append("bold" if rich_style.bold else "nobold")
-    if rich_style.italic is not None:
-        parts.append("italic" if rich_style.italic else "noitalic")
     if rich_style.underline is not None:
         parts.append("underline" if rich_style.underline else "nounderline")
+    if rich_style.strike is not None:
+        parts.append("strike" if rich_style.strike else "nostrike")
+    if rich_style.italic is not None:
+        parts.append("italic" if rich_style.italic else "noitalic")
     if rich_style.blink is not None:
         parts.append("blink" if rich_style.blink else "noblink")
     if rich_style.reverse is not None:
         parts.append("reverse" if rich_style.reverse else "noreverse")
     if rich_style.conceal is not None:
         parts.append("hidden" if rich_style.conceal else "nohidden")
+    if rich_style.dim is not None:
+        parts.append("dim" if rich_style.dim else "nodim")
     return " ".join(parts)
 
 
@@ -264,20 +267,15 @@ class Cmd2History(History):
         self._loaded_strings.clear()
 
 
-_lexers: "weakref.WeakSet[Cmd2Lexer]" = weakref.WeakSet()
-
-
-def _update_lexer_colors() -> None:
-    """Update colors for all active lexers."""
-    for lexer in _lexers:
-        lexer.set_colors()
-
-
-ru.register_theme_update_callback(_update_lexer_colors)
-
-
 class Cmd2Lexer(Lexer):
     """Lexer that highlights cmd2 command names, aliases, and macros."""
+
+    # Use the 'class:' prefix to look up styles in the prompt-toolkit theme
+    COMMAND_STYLE = f"class:{Cmd2Style.LEXER_COMMAND}"
+    ALIAS_STYLE = f"class:{Cmd2Style.LEXER_ALIAS}"
+    MACRO_STYLE = f"class:{Cmd2Style.LEXER_MACRO}"
+    FLAG_STYLE = f"class:{Cmd2Style.LEXER_FLAG}"
+    ARGUMENT_STYLE = f"class:{Cmd2Style.LEXER_ARGUMENT}"
 
     def __init__(
         self,
@@ -289,19 +287,6 @@ class Cmd2Lexer(Lexer):
         """
         super().__init__()
         self._cmd_app = cmd_app
-
-        _lexers.add(self)
-        self.set_colors()
-
-    def set_colors(self) -> None:
-        """Update colors from the current rich theme."""
-        # Retrieve styles dynamically from the current theme
-        theme = ru.get_theme()
-        self.command_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_COMMAND, Style.null()))
-        self.alias_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ALIAS, Style.null()))
-        self.macro_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_MACRO, Style.null()))
-        self.flag_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_FLAG, Style.null()))
-        self.argument_color = rich_to_pt_style(theme.styles.get(Cmd2Style.LEXER_ARGUMENT, Style.null()))
 
     def lex_document(self, document: Document) -> Callable[[int], Any]:
         """Lex the document."""
@@ -319,9 +304,9 @@ class Cmd2Lexer(Lexer):
                 if space:
                     tokens.append(("", match_text))
                 elif flag:
-                    tokens.append((self.flag_color, match_text))
+                    tokens.append((self.FLAG_STYLE, match_text))
                 elif (quoted or word) and match_text not in exclude_tokens:
-                    tokens.append((self.argument_color, match_text))
+                    tokens.append((self.ARGUMENT_STYLE, match_text))
                 else:
                     tokens.append(("", match_text))
 
@@ -355,11 +340,11 @@ class Cmd2Lexer(Lexer):
                         for shortcut, _ in self._cmd_app.statement_parser.shortcuts:
                             if command.startswith(shortcut):
                                 # Add the shortcut with the command style
-                                tokens.append((self.command_color, shortcut))
+                                tokens.append((self.COMMAND_STYLE, shortcut))
 
                                 # If there's more in the command word, it's an argument
                                 if len(command) > len(shortcut):
-                                    tokens.append((self.argument_color, command[len(shortcut) :]))
+                                    tokens.append((self.ARGUMENT_STYLE, command[len(shortcut) :]))
 
                                 shortcut_found = True
                                 break
@@ -367,11 +352,11 @@ class Cmd2Lexer(Lexer):
                         if not shortcut_found:
                             style = ""
                             if command in self._cmd_app.get_all_commands():
-                                style = self.command_color
+                                style = self.COMMAND_STYLE
                             elif command in self._cmd_app.aliases:
-                                style = self.alias_color
+                                style = self.ALIAS_STYLE
                             elif command in self._cmd_app.macros:
-                                style = self.macro_color
+                                style = self.MACRO_STYLE
 
                             # Add the command with the determined style
                             tokens.append((style, command))

@@ -8,13 +8,11 @@ import pytest
 import rich.box
 from pytest_mock import MockerFixture
 from rich.console import Console
-from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
 from cmd2 import (
     Cmd2ArgumentParser,
-    Cmd2Style,
     Color,
 )
 from cmd2 import rich_utils as ru
@@ -100,36 +98,6 @@ def test_rich_text_to_string_type_error() -> None:
     with pytest.raises(TypeError) as excinfo:
         ru.rich_text_to_string("not a Text object")  # type: ignore[arg-type]
     assert "rich_text_to_string() expected a rich.text.Text object, but got str" in str(excinfo.value)
-
-
-def test_set_theme() -> None:
-    # Save a cmd2, rich-argparse, and rich-specific style.
-    cmd2_style_key = Cmd2Style.ERROR
-    argparse_style_key = "argparse.args"
-    rich_style_key = "inspect.attr"
-
-    theme = ru.get_theme()
-    orig_cmd2_style = theme.styles[cmd2_style_key]
-    orig_argparse_style = theme.styles[argparse_style_key]
-    orig_rich_style = theme.styles[rich_style_key]
-
-    # Overwrite these styles by setting a new theme.
-    new_styles = {
-        cmd2_style_key: Style(color=Color.CYAN),
-        argparse_style_key: Style(color=Color.AQUAMARINE3, underline=True),
-        rich_style_key: Style(color=Color.DARK_GOLDENROD, bold=True),
-    }
-    ru.set_theme(new_styles)
-
-    # Verify theme styles have changed to our custom values.
-    assert theme.styles[cmd2_style_key] != orig_cmd2_style
-    assert theme.styles[cmd2_style_key] == new_styles[cmd2_style_key]
-
-    assert theme.styles[argparse_style_key] != orig_argparse_style
-    assert theme.styles[argparse_style_key] == new_styles[argparse_style_key]
-
-    assert theme.styles[rich_style_key] != orig_rich_style
-    assert theme.styles[rich_style_key] == new_styles[rich_style_key]
 
 
 def test_cmd2_base_console_print(mocker: MockerFixture) -> None:
@@ -349,26 +317,3 @@ def test_formatter_set_color(mocker: MockerFixture) -> None:
     assert mock_set_color.call_count == 2
     mock_set_color.assert_any_call(True, file=sys.stdout)
     mock_set_color.assert_any_call(True)
-
-
-def test_register_theme_update_callback() -> None:
-    # Clear callbacks for a clean state
-    ru._theme_update_callbacks.clear()
-
-    # Define a dummy callback
-    def my_callback() -> None:
-        pass
-
-    ru.register_theme_update_callback(my_callback)
-    assert my_callback in ru._theme_update_callbacks
-
-    # Test that registering the same callback again doesn't duplicate it
-    ru.register_theme_update_callback(my_callback)
-    assert len(ru._theme_update_callbacks) == 1
-
-    # Test that set_theme calls the callback
-    mock_callback = mock.Mock()
-    ru.register_theme_update_callback(mock_callback)
-
-    ru.set_theme()
-    mock_callback.assert_called_once()

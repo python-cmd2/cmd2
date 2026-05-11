@@ -51,11 +51,16 @@ from .rich_utils import (
     RawDescriptionCmd2HelpFormatter,
     RawTextCmd2HelpFormatter,
     TextGroup,
-    get_theme,
-    set_theme,
 )
 from .string_utils import stylize
 from .styles import Cmd2Style
+from .theme import (
+    get_pt_theme,
+    get_theme,
+    register_pt_mapping,
+    register_synchronized_prefix,
+    set_theme,
+)
 from .utils import (
     CustomCompletionSettings,
     Settable,
@@ -100,16 +105,20 @@ __all__: list[str] = [  # noqa: RUF022
     # Rich Utils
     "ArgumentDefaultsCmd2HelpFormatter",
     "Cmd2HelpFormatter",
-    "get_theme",
     "MetavarTypeCmd2HelpFormatter",
     "RawDescriptionCmd2HelpFormatter",
     "RawTextCmd2HelpFormatter",
-    "set_theme",
     "TextGroup",
     # String Utils
     "stylize",
-    # Styles,
+    # Styles
     "Cmd2Style",
+    # Theme
+    "get_pt_theme",
+    "get_theme",
+    "register_pt_mapping",
+    "register_synchronized_prefix",
+    "set_theme",
     # Utilities
     "categorize",
     "CustomCompletionSettings",
