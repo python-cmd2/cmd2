@@ -371,21 +371,27 @@ register_argparse_argument_parameter("suppress_tab_hint")
 
 ############################################################################################################
 # Workaround for Python 3.15.0b1 argparse bug
-# _ColorlessTheme.__getattr__ incorrectly returns "" for dunder methods, which breaks
+# _ColorlessTheme.__getattr__ incorrectly returns "" for non-public attributes, which breaks
 # protocols like copy.deepcopy().
 ############################################################################################################
 
 if sys.version_info >= (3, 15):
 
-    def _ColorlessTheme_getattr(_self: argparse._ColorlessTheme, name: str) -> Any:  # noqa: N802
-        """Patched __getattr__ that allows dunder lookups to fail correctly."""
-        if name.startswith("__") and name.endswith("__"):
+    def _ColorlessTheme_getattr(  # noqa: N802
+        _self: argparse._ColorlessTheme,  # type: ignore[name-defined]
+        name: str,
+    ) -> Any:
+        """Patched __getattr__ that allows non-public lookups to fail correctly.
+
+        This matches the implementation in CPython for their next release.
+        """
+        if name.startswith("_"):
             raise AttributeError(name)
         return ""
 
     # If the bug still exists, then install the patch.
-    if getattr(argparse._ColorlessTheme(), "__deepcopy__", None) == "":
-        argparse._ColorlessTheme.__getattr__ = _ColorlessTheme_getattr
+    if getattr(argparse._ColorlessTheme(), "__deepcopy__", None) == "":  # type: ignore[attr-defined]
+        argparse._ColorlessTheme.__getattr__ = _ColorlessTheme_getattr  # type: ignore[attr-defined]
 
 
 ############################################################################################################
