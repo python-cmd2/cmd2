@@ -151,9 +151,10 @@ def _create_default_theme() -> Theme:
 
 
 def register_pt_mapping(style_name: str, pt_ui_names: str | list[str]) -> None:
-    """Map a style name to one or more prompt-toolkit UI components.
+    """Map a Rich theme style name to one or more prompt-toolkit UI components.
 
-    This allows plugins and applications to define their own themeable UI elements.
+    This enables styling of prompt-toolkit's internal elements (such as the
+    completion menu ) using styles in the application's Rich theme.
 
     :param style_name: The style name used in the Rich theme.
     :param pt_ui_names: One or more prompt-toolkit UI component names (e.g., 'completion-menu').
