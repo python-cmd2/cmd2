@@ -53,7 +53,7 @@ class Cmd2Style(StrEnum):
     """
 
     COMMAND_LINE = "cmd2.example"  # Command line examples in help text
-    COMPLETION_MENU = "cmd2.completion_menu"  # Base style for the entire completion menu container (sets the background)
+    COMPLETION_MENU = "cmd2.completion-menu"  # Base style for the entire completion menu container (sets the background)
     COMPLETION_MENU_COMPLETION = "cmd2.completion-menu.completion"  # Style for an individual, non-selected completion item
     COMPLETION_MENU_CURRENT = "cmd2.completion-menu.completion.current"  # Style for the currently selected completion item
     COMPLETION_MENU_META = "cmd2.completion-menu.meta.completion"  # Style for meta information shown alongside a completion

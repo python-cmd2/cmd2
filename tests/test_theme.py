@@ -16,6 +16,8 @@ from cmd2.theme import (
     register_pt_mapping,
     register_synchronized_prefix,
     set_theme,
+    unregister_pt_mapping,
+    unregister_synchronized_prefix,
 )
 
 
@@ -96,34 +98,6 @@ def test_pt_theme_is_none() -> None:
     assert get_pt_theme() is not None
 
 
-def test_register_synchronized_prefix() -> None:
-    """Test registering a custom synchronization prefix."""
-    from prompt_toolkit.styles import DEFAULT_ATTRS
-
-    prefix = "myapp."
-    style_name = f"{prefix}prompt"
-    set_theme({style_name: Style(color=Color.GREEN)})
-
-    # Initially the style is only in the Rich theme
-    rich_theme = get_theme()
-    orig_pt_theme = get_pt_theme()
-
-    assert style_name in rich_theme.styles
-    assert orig_pt_theme.get_attrs_for_style_str(f"class:{style_name}") == DEFAULT_ATTRS
-
-    # Register the prefix and make sure the style has been synced to the pt theme
-    register_synchronized_prefix(prefix)
-    new_pt_theme = get_pt_theme()
-    style_attrs = new_pt_theme.get_attrs_for_style_str(f"class:{style_name}")
-    assert style_attrs.color == "ansigreen"
-
-
-def test_register_synchronized_prefix_empty() -> None:
-    """Test that an empty prefix raises a ValueError."""
-    with pytest.raises(ValueError, match="Prefix cannot be empty"):
-        register_synchronized_prefix("")
-
-
 def test_register_pt_mapping() -> None:
     """Test style to UI mapping."""
     style_name = "my_custom_scrollbar"
@@ -152,3 +126,100 @@ def test_register_pt_mapping_redundant() -> None:
 
     assert style_name not in theme._PT_UI_MAP[style_name]
     assert "other" in theme._PT_UI_MAP[style_name]
+
+
+def test_unregister_pt_mapping() -> None:
+    """Test unmapping styles from UI components."""
+    from prompt_toolkit.styles import DEFAULT_ATTRS
+
+    style_name = "custom_scroll"
+    ui_names = ["scroll1", "scroll2"]
+
+    register_pt_mapping(style_name, ui_names)
+    set_theme({style_name: Style(color=Color.RED)})
+
+    pt_theme = get_pt_theme()
+    assert pt_theme.get_attrs_for_style_str("class:scroll1").color == "ansired"
+    assert pt_theme.get_attrs_for_style_str("class:scroll2").color == "ansired"
+
+    # Unregister one UI component
+    unregister_pt_mapping(style_name, "scroll1")
+    pt_theme = get_pt_theme()
+    assert pt_theme.get_attrs_for_style_str("class:scroll1") == DEFAULT_ATTRS
+    assert pt_theme.get_attrs_for_style_str("class:scroll2").color == "ansired"
+
+    # Unregister the entire style mapping
+    unregister_pt_mapping(style_name)
+    pt_theme = get_pt_theme()
+    assert pt_theme.get_attrs_for_style_str("class:scroll2") == DEFAULT_ATTRS
+
+
+def test_unregister_pt_mapping_nonexistent() -> None:
+    """Test unregistering a mapping that doesn't exist."""
+    unregister_pt_mapping("nonexistent_style")
+
+
+def test_unregister_pt_mapping_cleans_up_key() -> None:
+    """Test that unregistering the last UI component removes the style key."""
+    style_name = "cleanup_style"
+    ui_name = "cleanup_ui"
+    register_pt_mapping(style_name, ui_name)
+
+    from cmd2 import theme
+
+    assert style_name in theme._PT_UI_MAP
+
+    unregister_pt_mapping(style_name, ui_name)
+    assert style_name not in theme._PT_UI_MAP
+
+
+def test_register_synchronized_prefix() -> None:
+    """Test registering a custom synchronized prefix."""
+    from prompt_toolkit.styles import DEFAULT_ATTRS
+
+    prefix = "myapp."
+    style_name = f"{prefix}prompt"
+    set_theme({style_name: Style(color=Color.GREEN)})
+
+    # Initially the style is only in the Rich theme
+    rich_theme = get_theme()
+    orig_pt_theme = get_pt_theme()
+
+    assert style_name in rich_theme.styles
+    assert orig_pt_theme.get_attrs_for_style_str(f"class:{style_name}") == DEFAULT_ATTRS
+
+    # Register the prefix and make sure the style has been synced to the pt theme
+    register_synchronized_prefix(prefix)
+    new_pt_theme = get_pt_theme()
+    style_attrs = new_pt_theme.get_attrs_for_style_str(f"class:{style_name}")
+    assert style_attrs.color == "ansigreen"
+
+
+def test_register_synchronized_prefix_empty() -> None:
+    """Test that an empty prefix raises a ValueError."""
+    with pytest.raises(ValueError, match="Prefix cannot be empty"):
+        register_synchronized_prefix("")
+
+
+def test_unregister_synchronized_prefix() -> None:
+    """Test unregistering a custom synchronized prefix."""
+    from prompt_toolkit.styles import DEFAULT_ATTRS
+
+    prefix = "unregister."
+    style_name = f"{prefix}prompt"
+    set_theme({style_name: Style(color=Color.GREEN)})
+
+    # Register the prefix and make sure the style has been synced to the pt theme
+    register_synchronized_prefix(prefix)
+    pt_theme = get_pt_theme()
+    assert pt_theme.get_attrs_for_style_str(f"class:{style_name}").color == "ansigreen"
+
+    # Unregister the prefix and make sure the style is no longer synced
+    unregister_synchronized_prefix(prefix)
+    new_pt_theme = get_pt_theme()
+    assert new_pt_theme.get_attrs_for_style_str(f"class:{style_name}") == DEFAULT_ATTRS
+
+
+def test_unregister_synchronized_prefix_nonexistent() -> None:
+    """Test unregistering a prefix that doesn't exist."""
+    unregister_synchronized_prefix("nonexistent_prefix.")

@@ -44,15 +44,15 @@ _PT_THEME: PtStyle | None = None
 # This allows developers to use application-specific style names in set_theme()
 # while ensuring the underlying prompt-toolkit UI is styled correctly.
 # Use register_pt_mapping() to modify it.
-_PT_UI_MAP: dict[str, list[str]] = {
-    Cmd2Style.COMPLETION_MENU: ["completion-menu"],
-    Cmd2Style.COMPLETION_MENU_COMPLETION: ["completion-menu.completion"],
-    Cmd2Style.COMPLETION_MENU_CURRENT: ["completion-menu.completion.current"],
-    Cmd2Style.COMPLETION_MENU_META: ["completion-menu.meta.completion"],
-    Cmd2Style.COMPLETION_MENU_META_CURRENT: [
+_PT_UI_MAP: dict[str, set[str]] = {
+    Cmd2Style.COMPLETION_MENU: {"completion-menu"},
+    Cmd2Style.COMPLETION_MENU_COMPLETION: {"completion-menu.completion"},
+    Cmd2Style.COMPLETION_MENU_CURRENT: {"completion-menu.completion.current"},
+    Cmd2Style.COMPLETION_MENU_META: {"completion-menu.meta.completion"},
+    Cmd2Style.COMPLETION_MENU_META_CURRENT: {
         "completion-menu.meta.completion.current",
         "completion-menu.multi-column-meta",
-    ],
+    },
 }
 
 # Only Rich styles starting with one of these prefixes are synchronized to
@@ -154,7 +154,7 @@ def register_pt_mapping(style_name: str, pt_ui_names: str | list[str]) -> None:
     """Map a Rich theme style name to one or more prompt-toolkit UI components.
 
     This enables styling of prompt-toolkit's internal elements (such as the
-    completion menu ) using styles in the application's Rich theme.
+    completion menu) using styles in the application's Rich theme.
 
     :param style_name: The style name used in the Rich theme.
     :param pt_ui_names: One or more prompt-toolkit UI component names (e.g., 'completion-menu').
@@ -162,12 +162,49 @@ def register_pt_mapping(style_name: str, pt_ui_names: str | list[str]) -> None:
     if isinstance(pt_ui_names, str):
         pt_ui_names = [pt_ui_names]
 
-    # Filter out UI names identical to the style name to avoid redundant registration.
+    if style_name not in _PT_UI_MAP:
+        _PT_UI_MAP[style_name] = set()
+
+    # Only add UI names that differ from the style name to avoid redundant rules in PtStyle
     unique_names = [n for n in pt_ui_names if n != style_name]
-    _PT_UI_MAP[style_name] = unique_names
+    _PT_UI_MAP[style_name].update(unique_names)
 
     # Trigger a re-sync if the theme is already initialized
     if _PT_THEME is not None:
+        _sync_pt_theme()
+
+
+def unregister_pt_mapping(style_name: str, pt_ui_names: str | list[str] | None = None) -> None:
+    """Remove one or more prompt-toolkit UI component mappings.
+
+    If pt_ui_names is None, all mappings for the given style_name are removed.
+
+    :param style_name: The style name used in the Rich theme.
+    :param pt_ui_names: Specific UI component(s) to unmap, or None to clear all.
+    """
+    if style_name not in _PT_UI_MAP:
+        return
+
+    changed = False
+
+    if pt_ui_names is None:
+        del _PT_UI_MAP[style_name]
+        changed = True
+    else:
+        if isinstance(pt_ui_names, str):
+            pt_ui_names = [pt_ui_names]
+
+        for name in pt_ui_names:
+            _PT_UI_MAP[style_name].discard(name)
+            changed = True
+
+        # Clean up the key if no mappings remain
+        if not _PT_UI_MAP[style_name]:
+            del _PT_UI_MAP[style_name]
+            changed = True
+
+    # Trigger a re-sync if the theme is already initialized
+    if changed and _PT_THEME is not None:
         _sync_pt_theme()
 
 
@@ -182,8 +219,22 @@ def register_synchronized_prefix(prefix: str) -> None:
     if not prefix:
         raise ValueError("Prefix cannot be empty.")
 
-    _SYNCHRONIZED_PREFIXES.add(prefix)
+    if prefix not in _SYNCHRONIZED_PREFIXES:
+        _SYNCHRONIZED_PREFIXES.add(prefix)
 
-    # Trigger a re-sync if the theme is already initialized
-    if _PT_THEME is not None:
-        _sync_pt_theme()
+        # Trigger a re-sync if the theme is already initialized
+        if _PT_THEME is not None:
+            _sync_pt_theme()
+
+
+def unregister_synchronized_prefix(prefix: str) -> None:
+    """Stop synchronizing styles starting with the given prefix.
+
+    :param prefix: The prefix string to remove.
+    """
+    if prefix in _SYNCHRONIZED_PREFIXES:
+        _SYNCHRONIZED_PREFIXES.remove(prefix)
+
+        # Trigger a re-sync if the theme is already initialized
+        if _PT_THEME is not None:
+            _sync_pt_theme()
