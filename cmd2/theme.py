@@ -16,7 +16,10 @@ those explicitly mapped to UI elements are synchronized to the
 prompt-toolkit theme.
 """
 
-from collections.abc import Mapping
+from collections.abc import (
+    Iterable,
+    Mapping,
+)
 from typing import cast
 
 from prompt_toolkit.styles import Style as PtStyle
@@ -150,7 +153,7 @@ def _create_default_theme() -> Theme:
     return Theme(app_styles, inherit=True)
 
 
-def register_pt_mapping(style_name: str, pt_ui_names: str | list[str]) -> None:
+def register_pt_mapping(style_name: str, pt_ui_names: str | Iterable[str]) -> None:
     """Map a Rich theme style name to one or more prompt-toolkit UI components.
 
     This enables styling of prompt-toolkit's internal elements (such as the
@@ -162,19 +165,28 @@ def register_pt_mapping(style_name: str, pt_ui_names: str | list[str]) -> None:
     if isinstance(pt_ui_names, str):
         pt_ui_names = [pt_ui_names]
 
+    # Register the style in the map. Presence in this map, even with an empty set,
+    # is the trigger that flags this style for synchronization to prompt-toolkit.
+    # This is helpful for styles which do not begin with a registered prefix.
     if style_name not in _PT_UI_MAP:
         _PT_UI_MAP[style_name] = set()
+        changed = True
+    else:
+        changed = False
 
-    # Only add UI names that differ from the style name to avoid redundant rules in PtStyle
-    unique_names = [n for n in pt_ui_names if n != style_name]
-    _PT_UI_MAP[style_name].update(unique_names)
+    # Add UI aliases, excluding 'style_name' which the sync handles by default.
+    original_size = len(_PT_UI_MAP[style_name])
+    _PT_UI_MAP[style_name].update(n for n in pt_ui_names if n != style_name)
+
+    if len(_PT_UI_MAP[style_name]) > original_size:
+        changed = True
 
     # Trigger a re-sync if the theme is already initialized
-    if _PT_THEME is not None:
+    if changed and _PT_THEME is not None:
         _sync_pt_theme()
 
 
-def unregister_pt_mapping(style_name: str, pt_ui_names: str | list[str] | None = None) -> None:
+def unregister_pt_mapping(style_name: str, pt_ui_names: str | Iterable[str] | None = None) -> None:
     """Remove one or more prompt-toolkit UI component mappings.
 
     If pt_ui_names is None, all mappings for the given style_name are removed.
@@ -194,9 +206,11 @@ def unregister_pt_mapping(style_name: str, pt_ui_names: str | list[str] | None =
         if isinstance(pt_ui_names, str):
             pt_ui_names = [pt_ui_names]
 
+        original_size = len(_PT_UI_MAP[style_name])
         for name in pt_ui_names:
             _PT_UI_MAP[style_name].discard(name)
-            changed = True
+
+        changed = len(_PT_UI_MAP[style_name]) < original_size
 
         # Clean up the key if no mappings remain
         if not _PT_UI_MAP[style_name]:

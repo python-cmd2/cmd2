@@ -128,6 +128,24 @@ def test_register_pt_mapping_redundant() -> None:
     assert "other" in theme._PT_UI_MAP[style_name]
 
 
+def test_register_pt_mapping_existing_style() -> None:
+    """Test calling register_pt_mapping with an existing style name."""
+    style_name = "existing_style"
+    ui_name = "ui_component"
+
+    # First registration
+    register_pt_mapping(style_name, ui_name)
+
+    # Second registration with the same name
+    register_pt_mapping(style_name, ui_name)
+
+    # Verify contents of _PT_UI_MAP
+    from cmd2 import theme
+
+    assert style_name in theme._PT_UI_MAP
+    assert ui_name in theme._PT_UI_MAP[style_name]
+
+
 def test_unregister_pt_mapping() -> None:
     """Test unmapping styles from UI components."""
     from prompt_toolkit.styles import DEFAULT_ATTRS
