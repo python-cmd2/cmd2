@@ -761,6 +761,9 @@ def test_colorless_theme_monkeypatch() -> None:
     # We can remove the patch function and this test.
     assert argparse._ColorlessTheme.__getattr__ == argparse_utils._ColorlessTheme_getattr
 
-    # Our patch raises an Attribute error for dunder attributes.
+    # Our patch raises an Attribute error for non-public.
+    with pytest.raises(AttributeError):
+        getattr(argparse._ColorlessTheme(), "_fake")  # noqa: B009
+
     with pytest.raises(AttributeError):
         getattr(argparse._ColorlessTheme(), "__deepcopy__")  # noqa: B009
