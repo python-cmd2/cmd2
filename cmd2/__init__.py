@@ -55,15 +55,8 @@ from .rich_utils import (
 from .string_utils import stylize
 from .styles import Cmd2Style
 from .theme import (
-    get_pt_theme,
     get_theme,
-    register_pt_mapping,
-    register_synchronized_prefix,
-    register_synchronized_style,
     set_theme,
-    unregister_pt_mapping,
-    unregister_synchronized_prefix,
-    unregister_synchronized_style,
 )
 from .utils import (
     CustomCompletionSettings,
@@ -118,15 +111,8 @@ __all__: list[str] = [  # noqa: RUF022
     # Styles
     "Cmd2Style",
     # Theme
-    "get_pt_theme",
     "get_theme",
-    "register_pt_mapping",
-    "register_synchronized_prefix",
-    "register_synchronized_style",
     "set_theme",
-    "unregister_pt_mapping",
-    "unregister_synchronized_prefix",
-    "unregister_synchronized_style",
     # Utilities
     "categorize",
     "CustomCompletionSettings",
