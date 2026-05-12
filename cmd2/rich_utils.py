@@ -342,8 +342,7 @@ class Cmd2BaseConsole(Console):
             )
 
         # Don't allow a theme to be passed in, as it is controlled by get_theme() and set_theme().
-        # Use cmd2.rich_utils.set_theme() to set the global theme or use a temporary
-        # theme with console.use_theme().
+        # Use set_theme() to set the global theme or use a temporary theme with console.use_theme().
         if "theme" in kwargs:
             raise TypeError("Passing 'theme' is not allowed. Its behavior is controlled by get_theme() and set_theme().")
 

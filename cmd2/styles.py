@@ -14,7 +14,7 @@ styles. Additionally, app developers may use other Rich objects that have
 their own default styles.
 
 For a complete theming experience, you can create a custom theme that includes
-styles from Rich and rich-argparse. The `cmd2.rich_utils.set_theme()` function
+styles from Rich and rich-argparse. The `cmd2.theme.set_theme()` function
 automatically updates rich-argparse's styles with any custom styles provided in
 your theme dictionary, so you don't have to modify them directly.
 

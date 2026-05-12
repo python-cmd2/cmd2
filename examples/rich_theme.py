@@ -4,8 +4,7 @@
 from rich.style import Style
 
 import cmd2
-import cmd2.rich_utils as ru
-from cmd2 import Cmd2Style, Color
+from cmd2 import Cmd2Style, Color, set_theme
 
 
 class ThemedApp(cmd2.Cmd):
@@ -42,7 +41,7 @@ class ThemedApp(cmd2.Cmd):
             "traceback.exc_type": Style(color=Color.RED, bgcolor=Color.LIGHT_YELLOW3, bold=True),
             "argparse.args": Style(color=Color.AQUAMARINE3, underline=True),
         }
-        ru.set_theme(custom_theme)
+        set_theme(custom_theme)
 
     @cmd2.with_category("Theme Commands")
     def do_theme_show(self, _: cmd2.Statement):
