@@ -185,7 +185,7 @@ def register_pt_mapping(style_name: str, pt_ui_names: str | Iterable[str]) -> No
     original_size = len(_PT_UI_MAP[style_name])
     _PT_UI_MAP[style_name].update(n for n in pt_ui_names if n != style_name)
 
-    if len(_PT_UI_MAP[style_name]) > original_size:
+    if len(_PT_UI_MAP[style_name]) != original_size:
         changed = True
 
     # Trigger a re-sync if the theme is already initialized
@@ -228,7 +228,7 @@ def unregister_pt_mapping(style_name: str, pt_ui_names: str | Iterable[str]) -> 
     for name in pt_ui_names:
         _PT_UI_MAP[style_name].discard(name)
 
-    changed = len(_PT_UI_MAP[style_name]) < original_size
+    changed = len(_PT_UI_MAP[style_name]) != original_size
 
     # Trigger a re-sync if the theme is already initialized
     if changed and _PT_THEME is not None:
