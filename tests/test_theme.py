@@ -15,9 +15,11 @@ from cmd2.theme import (
     get_theme,
     register_pt_mapping,
     register_synchronized_prefix,
+    register_synchronized_style,
     set_theme,
     unregister_pt_mapping,
     unregister_synchronized_prefix,
+    unregister_synchronized_style,
 )
 
 
@@ -99,7 +101,7 @@ def test_pt_theme_is_none() -> None:
 
 
 def test_register_pt_mapping() -> None:
-    """Test style to UI mapping."""
+    """Test style registration with UI mapping."""
     style_name = "my_custom_scrollbar"
     ui_name = "scrollbar"
 
@@ -147,7 +149,7 @@ def test_register_pt_mapping_existing_style() -> None:
 
 
 def test_unregister_pt_mapping() -> None:
-    """Test unmapping styles from UI components."""
+    """Test unregistering UI mappings from styles."""
     from prompt_toolkit.styles import DEFAULT_ATTRS
 
     style_name = "custom_scroll"
@@ -166,28 +168,59 @@ def test_unregister_pt_mapping() -> None:
     assert pt_theme.get_attrs_for_style_str("class:scroll1") == DEFAULT_ATTRS
     assert pt_theme.get_attrs_for_style_str("class:scroll2").color == "ansired"
 
-    # Unregister the entire style mapping
-    unregister_pt_mapping(style_name)
+    # Unregister the other UI component
+    unregister_pt_mapping(style_name, "scroll2")
     pt_theme = get_pt_theme()
     assert pt_theme.get_attrs_for_style_str("class:scroll2") == DEFAULT_ATTRS
 
 
 def test_unregister_pt_mapping_nonexistent() -> None:
-    """Test unregistering a mapping that doesn't exist."""
-    unregister_pt_mapping("nonexistent_style")
+    """Test unregistering a style that doesn't exist."""
+    unregister_pt_mapping("nonexistent_style", "some_ui")
 
 
-def test_unregister_pt_mapping_cleans_up_key() -> None:
-    """Test that unregistering the last UI component removes the style key."""
-    style_name = "cleanup_style"
-    ui_name = "cleanup_ui"
+def test_unregister_pt_mapping_preserves_key() -> None:
+    """Test that unregistering UI components preserves the style key for synchronization."""
+    style_name = "preserved_style"
+    ui_name = "some_ui"
     register_pt_mapping(style_name, ui_name)
 
     from cmd2 import theme
 
     assert style_name in theme._PT_UI_MAP
+    assert ui_name in theme._PT_UI_MAP[style_name]
 
+    # Unregister just the UI component
     unregister_pt_mapping(style_name, ui_name)
+
+    # The style key should still be in the map to trigger synchronization
+    assert style_name in theme._PT_UI_MAP
+    assert not theme._PT_UI_MAP[style_name]
+
+
+def test_register_synchronized_style() -> None:
+    """Test that simple registration (no UI mapping) synchronizes to PT."""
+    style_name = "simple_style"
+    register_synchronized_style(style_name)
+
+    set_theme({style_name: Style(color=Color.RED)})
+
+    # It should be available as a class:name
+    pt_theme = get_pt_theme()
+    attrs = pt_theme.get_attrs_for_style_str(f"class:{style_name}")
+    assert attrs.color == "ansired"
+
+
+def test_unregister_synchronized_style() -> None:
+    """Test that unregistering removes the style entirely."""
+    style_name = "removal_style"
+    ui_name = "removal_ui"
+    register_pt_mapping(style_name, ui_name)
+
+    from cmd2 import theme
+
+    assert style_name in theme._PT_UI_MAP
+    unregister_synchronized_style(style_name)
     assert style_name not in theme._PT_UI_MAP
 
 

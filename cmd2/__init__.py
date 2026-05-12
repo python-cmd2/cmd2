@@ -59,9 +59,11 @@ from .theme import (
     get_theme,
     register_pt_mapping,
     register_synchronized_prefix,
+    register_synchronized_style,
     set_theme,
     unregister_pt_mapping,
     unregister_synchronized_prefix,
+    unregister_synchronized_style,
 )
 from .utils import (
     CustomCompletionSettings,
@@ -120,9 +122,11 @@ __all__: list[str] = [  # noqa: RUF022
     "get_theme",
     "register_pt_mapping",
     "register_synchronized_prefix",
+    "register_synchronized_style",
     "set_theme",
     "unregister_pt_mapping",
     "unregister_synchronized_prefix",
+    "unregister_synchronized_style",
     # Utilities
     "categorize",
     "CustomCompletionSettings",
