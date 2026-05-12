@@ -1844,55 +1844,6 @@ class MultilineApp(cmd2.Cmd):
         self.stdout.write(arg + "\n")
 
 
-def test_update_pt_style_caching(base_app) -> None:
-    # Get the initial style (populates the cache)
-    style1 = base_app._get_pt_style()
-
-    # Getting it again should return the exact same object from the cache
-    style2 = base_app._get_pt_style()
-    assert style1 is style2
-
-    # Change the theme which should invalidate the cache
-    from rich.style import Style
-
-    import cmd2.rich_utils as ru
-    from cmd2.styles import Cmd2Style
-
-    # Save the original theme to restore later
-    orig_theme = ru.get_theme()
-
-    try:
-        ru.set_theme({Cmd2Style.COMPLETION_MENU_CURRENT: Style(color="red")})
-
-        # Getting the style now should return a new object
-        style3 = base_app._get_pt_style()
-        assert style3 is not style1
-
-        # Getting it again should return the new cached object
-        style4 = base_app._get_pt_style()
-        assert style4 is style3
-
-        # Verify the style reflects the change
-        # In prompt_toolkit 3, styles are accessed differently
-        attrs = style3.class_names_and_attrs
-        found = False
-        for classes, attr in attrs:
-            if "completion-menu.completion.current" in classes and attr.color in (
-                "800000",
-                "darkred",
-                "ff0000",
-                "#800000",
-                "ansired",
-            ):
-                found = True
-                break
-        assert found, "Color change not found in cached style"
-
-    finally:
-        ru._APP_THEME = orig_theme
-        ru.set_theme()
-
-
 @pytest.fixture
 def multiline_app():
     return MultilineApp()
@@ -2620,12 +2571,14 @@ def test_get_core_print_console_invalidation(base_app: cmd2.Cmd, stream: str) ->
     finally:
         ru.ALLOW_STYLE = orig_allow_style
 
-    # Changing the theme should create a new console
+    # Changing the theme object should create a new console
     from rich.theme import Theme
 
-    old_theme = ru.get_theme()
+    from cmd2 import theme
+
+    old_theme = theme.get_theme()
     try:
-        ru._APP_THEME = Theme()
+        theme._THEME = Theme()
         console6 = base_app._get_core_print_console(
             file=file,
             emoji=False,
@@ -2635,7 +2588,7 @@ def test_get_core_print_console_invalidation(base_app: cmd2.Cmd, stream: str) ->
         assert console6 is not console5
         assert getattr(base_app._console_cache, stream) is console6
     finally:
-        ru._APP_THEME = old_theme
+        theme._THEME = old_theme
 
 
 def test_get_core_print_console_non_cached(base_app: cmd2.Cmd) -> None:

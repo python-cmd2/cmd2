@@ -14,7 +14,7 @@ styles. Additionally, app developers may use other Rich objects that have
 their own default styles.
 
 For a complete theming experience, you can create a custom theme that includes
-styles from Rich and rich-argparse. The `cmd2.rich_utils.set_theme()` function
+styles from Rich and rich-argparse. The `cmd2.theme.set_theme()` function
 automatically updates rich-argparse's styles with any custom styles provided in
 your theme dictionary, so you don't have to modify them directly.
 
@@ -53,7 +53,7 @@ class Cmd2Style(StrEnum):
     """
 
     COMMAND_LINE = "cmd2.example"  # Command line examples in help text
-    COMPLETION_MENU = "cmd2.completion_menu"  # Base style for the entire completion menu container (sets the background)
+    COMPLETION_MENU = "cmd2.completion-menu"  # Base style for the entire completion menu container (sets the background)
     COMPLETION_MENU_COMPLETION = "cmd2.completion-menu.completion"  # Style for an individual, non-selected completion item
     COMPLETION_MENU_CURRENT = "cmd2.completion-menu.completion.current"  # Style for the currently selected completion item
     COMPLETION_MENU_META = "cmd2.completion-menu.meta.completion"  # Style for meta information shown alongside a completion

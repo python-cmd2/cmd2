@@ -3,11 +3,7 @@
 import argparse
 import re
 import sys
-from collections.abc import (
-    Callable,
-    Iterator,
-    Mapping,
-)
+from collections.abc import Iterator
 from enum import Enum
 from typing import (
     IO,
@@ -48,7 +44,6 @@ from rich_argparse import (
 from . import constants
 from .styles import (
     DEFAULT_ARGPARSE_STYLES,
-    DEFAULT_CMD2_STYLES,
     Cmd2Style,
 )
 
@@ -57,6 +52,13 @@ from .styles import (
 # [0-9;]* - zero or more digits or semicolons (parameters for the style)
 # m       - the SGR final character
 ANSI_STYLE_SEQUENCE_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _get_theme() -> Theme:
+    """Retrieve the global Rich theme while avoiding circular imports."""
+    from .theme import get_theme
+
+    return get_theme()
 
 
 @runtime_checkable
@@ -307,75 +309,6 @@ class TextGroup:
         return Group(styled_title, indented_text)
 
 
-# The application-wide theme. Use get_theme() and set_theme() to access it.
-_APP_THEME: Theme | None = None
-
-# Callbacks to be executed when the theme is updated
-_theme_update_callbacks: list[Callable[[], None]] = []
-
-
-def register_theme_update_callback(callback: Callable[[], None]) -> None:
-    """Register a callback to be executed when the theme is updated."""
-    if callback not in _theme_update_callbacks:
-        _theme_update_callbacks.append(callback)
-
-
-def get_theme() -> Theme:
-    """Get the application-wide theme. Initializes it on the first call."""
-    global _APP_THEME  # noqa: PLW0603
-    if _APP_THEME is None:
-        _APP_THEME = _create_default_theme()
-    return _APP_THEME
-
-
-def set_theme(styles: Mapping[str, StyleType] | None = None) -> None:
-    """Set the Rich theme used by cmd2.
-
-    This function performs an in-place update of the existing theme's
-    styles. This ensures that any Console objects already using the theme
-    will reflect the changes immediately without needing to be recreated.
-
-    Call set_theme() with no arguments to reset to the default theme.
-    This will clear any custom styles that were previously applied.
-
-    :param styles: optional mapping of style names to styles
-    """
-    theme = get_theme()
-
-    # Start with a fresh copy of the default styles.
-    unparsed_styles: dict[str, StyleType] = {}
-    unparsed_styles.update(_create_default_theme().styles)
-
-    # Add the custom styles, which may contain unparsed strings
-    if styles is not None:
-        unparsed_styles.update(styles)
-
-    # Use Rich's Theme class to perform the parsing
-    parsed_styles = Theme(unparsed_styles).styles
-
-    # Perform the in-place update with the results
-    theme.styles.clear()
-    theme.styles.update(parsed_styles)
-
-    # Synchronize rich-argparse styles with the main application theme.
-    for name in Cmd2HelpFormatter.styles.keys() & theme.styles.keys():
-        Cmd2HelpFormatter.styles[name] = theme.styles[name]
-
-    # Notify callbacks that the theme has been updated
-    for callback in _theme_update_callbacks:
-        callback()
-
-
-def _create_default_theme() -> Theme:
-    """Create a default theme for the application.
-
-    This theme combines the default styles from cmd2, rich-argparse, and Rich.
-    """
-    app_styles = DEFAULT_CMD2_STYLES.copy()
-    app_styles.update(DEFAULT_ARGPARSE_STYLES)
-    return Theme(app_styles, inherit=True)
-
-
 class Cmd2BaseConsole(Console):
     """Base class for all cmd2 Rich consoles.
 
@@ -409,8 +342,7 @@ class Cmd2BaseConsole(Console):
             )
 
         # Don't allow a theme to be passed in, as it is controlled by get_theme() and set_theme().
-        # Use cmd2.rich_utils.set_theme() to set the global theme or use a temporary
-        # theme with console.use_theme().
+        # Use set_theme() to set the global theme or use a temporary theme with console.use_theme().
         if "theme" in kwargs:
             raise TypeError("Passing 'theme' is not allowed. Its behavior is controlled by get_theme() and set_theme().")
 
@@ -439,7 +371,7 @@ class Cmd2BaseConsole(Console):
             color_system="truecolor" if allow_style else None,
             force_terminal=force_terminal,
             force_interactive=force_interactive,
-            theme=get_theme(),
+            theme=_get_theme(),
             **kwargs,
         )
 
@@ -460,7 +392,7 @@ class Cmd2BaseConsole(Console):
         return (
             id(file),
             ALLOW_STYLE,
-            id(get_theme()),
+            id(_get_theme()),
             tuple(sorted(kwargs.items())),
         )
 
@@ -677,7 +609,7 @@ def rich_text_to_string(text: Text) -> str:
         color_system="truecolor",
         soft_wrap=True,
         no_color=False,
-        theme=get_theme(),
+        theme=_get_theme(),
     )
     with console.capture() as capture:
         console.print(text, end="")

@@ -82,7 +82,6 @@ from prompt_toolkit.output.color_depth import ColorDepth
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
 from prompt_toolkit.styles import DynamicStyle
-from prompt_toolkit.styles import Style as PtStyle
 from rich.console import (
     Group,
     JustifyMethod,
@@ -162,6 +161,7 @@ from .rich_utils import (
     TextGroup,
 )
 from .styles import Cmd2Style
+from .theme import get_pt_theme
 from .types import (
     BoundCommandFunc,
     BoundCompleter,
@@ -195,7 +195,6 @@ from .pt_utils import (
     Cmd2History,
     Cmd2Lexer,
     pt_filter_style,
-    rich_to_pt_style,
 )
 from .utils import (
     Settable,
@@ -526,11 +525,6 @@ class Cmd:
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
 
-        # Cache for prompt_toolkit completion menu styles
-        self.pt_style: PtStyle
-        self.update_pt_style()
-        ru.register_theme_update_callback(self.update_pt_style)
-
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
         self.main_session = self._create_main_session(auto_suggest, completekey)
@@ -724,36 +718,6 @@ class Cmd:
                 # No macro found or already processed. The statement is complete.
                 return False
 
-    def update_pt_style(self) -> None:
-        """Update the cached prompt_toolkit style."""
-        theme = ru.get_theme()
-        rich_menu_style = theme.styles.get(Cmd2Style.COMPLETION_MENU, Style.null())
-        rich_completion_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_COMPLETION, Style.null())
-        rich_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_CURRENT, Style.null())
-        rich_meta_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META, Style.null())
-        rich_meta_current_style = theme.styles.get(Cmd2Style.COMPLETION_MENU_META_CURRENT, Style.null())
-
-        menu_style = rich_to_pt_style(rich_menu_style)
-        completion_style = rich_to_pt_style(rich_completion_style)
-        current_style = rich_to_pt_style(rich_current_style)
-        meta_style = rich_to_pt_style(rich_meta_style)
-        meta_current_style = rich_to_pt_style(rich_meta_current_style)
-
-        self.pt_style = PtStyle.from_dict(
-            {
-                "completion-menu": menu_style,
-                "completion-menu.completion": completion_style,
-                "completion-menu.completion.current": current_style,
-                "completion-menu.meta.completion": meta_style,
-                "completion-menu.meta.completion.current": meta_current_style,
-                "completion-menu.multi-column-meta": meta_current_style,
-            }
-        )
-
-    def _get_pt_style(self) -> "PtStyle":
-        """Return the cached prompt_toolkit style."""
-        return self.pt_style
-
     def _create_main_session(self, auto_suggest: bool, completekey: str) -> PromptSession[str]:
         """Create and return the main PromptSession for the application.
 
@@ -796,7 +760,7 @@ class Cmd:
             "multiline": filters.Condition(self._should_continue_multiline),
             "prompt_continuation": self.continuation_prompt,
             "rprompt": self.get_rprompt,
-            "style": DynamicStyle(self._get_pt_style),
+            "style": DynamicStyle(get_pt_theme),
         }
 
         if self.stdin.isatty() and self.stdout.isatty():

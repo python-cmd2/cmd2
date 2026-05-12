@@ -95,8 +95,8 @@ prompt is displayed.
             - `RawTextCmd2HelpFormatter`
             - `TextGroup`
         - Replaced the global `APP_THEME` constant in `rich_utils.py` with `get_theme()` and
-          `set_theme()` functions to support lazy initialization and safer in-place updates of the
-          theme.
+          `set_theme()` functions in `theme.py` to support lazy initialization and safer in-place
+          updates of the theme.
     - Renamed `Cmd._command_parsers` to `Cmd.command_parsers`.
     - Removed `RichPrintKwargs` `TypedDict` in favor of using `Mapping[str, Any]`, allowing for
       greater flexibility in passing keyword arguments to `console.print()` calls.
@@ -155,8 +155,6 @@ prompt is displayed.
     - Added `Cmd2ArgumentParser.output_to()` context manager to temporarily set the output stream
       during `argparse` operations. This is helpful for directing output for functions like
       `parse_args()`, which default to `sys.stdout` and lack a `file` argument.
-    - Added `cmd2.rich_utils.register_theme_update_callback` function to register callback functions
-      to get called whenever `cmd2.rich_utils.set_theme` is called
     - Added ability to customize `prompt-toolkit` completion menu colors by overriding the following
       fields in the `cmd2` theme:
         - `Cmd2Style.COMPLETION_MENU` - Base style for the entire completion menu container (sets

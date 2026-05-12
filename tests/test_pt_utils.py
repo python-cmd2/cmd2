@@ -22,7 +22,10 @@ from cmd2 import (
 )
 from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
-from cmd2.pt_utils import pt_filter_style
+from cmd2.pt_utils import (
+    Cmd2Lexer,
+    pt_filter_style,
+)
 
 from .conftest import with_ansi_style
 
@@ -117,9 +120,9 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("fg:ansigreen bg:default", "help"),
+            (Cmd2Lexer.COMMAND_STYLE, "help"),
             ("", " "),
-            ("fg:ansiyellow bg:default", "something"),
+            (Cmd2Lexer.ARGUMENT_STYLE, "something"),
         ]
 
     def test_lex_document_alias(self, mock_cmd_app):
@@ -132,7 +135,11 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("fg:ansicyan bg:default", "ls"), ("", " "), ("fg:ansired bg:default", "-l")]
+        assert tokens == [
+            (Cmd2Lexer.ALIAS_STYLE, "ls"),
+            ("", " "),
+            (Cmd2Lexer.FLAG_STYLE, "-l"),
+        ]
 
     def test_lex_document_macro(self, mock_cmd_app):
         """Test lexing a macro."""
@@ -145,9 +152,9 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("fg:ansimagenta bg:default", "my_macro"),
+            (Cmd2Lexer.MACRO_STYLE, "my_macro"),
             ("", " "),
-            ("fg:ansiyellow bg:default", "arg1"),
+            (Cmd2Lexer.ARGUMENT_STYLE, "arg1"),
         ]
 
     def test_lex_document_leading_whitespace(self, mock_cmd_app):
@@ -162,9 +169,9 @@ class TestCmd2Lexer:
 
         assert tokens == [
             ("", "   "),
-            ("fg:ansigreen bg:default", "help"),
+            (Cmd2Lexer.COMMAND_STYLE, "help"),
             ("", " "),
-            ("fg:ansiyellow bg:default", "something"),
+            (Cmd2Lexer.ARGUMENT_STYLE, "something"),
         ]
 
     def test_lex_document_unknown_command(self, mock_cmd_app):
@@ -176,7 +183,11 @@ class TestCmd2Lexer:
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
 
-        assert tokens == [("", "unknown"), ("", " "), ("fg:ansiyellow bg:default", "command")]
+        assert tokens == [
+            ("", "unknown"),
+            ("", " "),
+            (Cmd2Lexer.ARGUMENT_STYLE, "command"),
+        ]
 
     def test_lex_document_no_command(self, mock_cmd_app):
         """Test lexing an empty line or line with only whitespace."""
@@ -213,17 +224,17 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("fg:ansigreen bg:default", "help"),
+            (Cmd2Lexer.COMMAND_STYLE, "help"),
             ("", " "),
-            ("fg:ansired bg:default", "-v"),
+            (Cmd2Lexer.FLAG_STYLE, "-v"),
             ("", " "),
-            ("fg:ansired bg:default", "--name"),
+            (Cmd2Lexer.FLAG_STYLE, "--name"),
             ("", " "),
-            ("fg:ansiyellow bg:default", '"John Doe"'),
+            (Cmd2Lexer.ARGUMENT_STYLE, '"John Doe"'),
             ("", " "),
             ("", ">"),
             ("", " "),
-            ("fg:ansiyellow bg:default", "out.txt"),
+            (Cmd2Lexer.ARGUMENT_STYLE, "out.txt"),
         ]
 
     def test_lex_document_unclosed_quote(self, mock_cmd_app):
@@ -237,9 +248,9 @@ class TestCmd2Lexer:
         tokens = get_line(0)
 
         assert tokens == [
-            ("fg:ansigreen bg:default", "echo"),
+            (Cmd2Lexer.COMMAND_STYLE, "echo"),
             ("", " "),
-            ("fg:ansiyellow bg:default", '"hello'),
+            (Cmd2Lexer.ARGUMENT_STYLE, '"hello'),
         ]
 
     def test_lex_document_shortcut(self, mock_cmd_app):
@@ -252,13 +263,20 @@ class TestCmd2Lexer:
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
-        assert tokens == [("fg:ansigreen bg:default", "!"), ("fg:ansiyellow bg:default", "ls")]
+        assert tokens == [
+            (Cmd2Lexer.COMMAND_STYLE, "!"),
+            (Cmd2Lexer.ARGUMENT_STYLE, "ls"),
+        ]
 
         line = "! ls"
         document = Document(line)
         get_line = lexer.lex_document(document)
         tokens = get_line(0)
-        assert tokens == [("fg:ansigreen bg:default", "!"), ("", " "), ("fg:ansiyellow bg:default", "ls")]
+        assert tokens == [
+            (Cmd2Lexer.COMMAND_STYLE, "!"),
+            ("", " "),
+            (Cmd2Lexer.ARGUMENT_STYLE, "ls"),
+        ]
 
     def test_lex_document_multiline(self, mock_cmd_app):
         """Test lexing a multiline command."""
@@ -272,36 +290,11 @@ class TestCmd2Lexer:
 
         # First line should have command
         tokens0 = get_line(0)
-        assert tokens0 == [("fg:ansigreen bg:default", "orate")]
+        assert tokens0 == [(Cmd2Lexer.COMMAND_STYLE, "orate")]
 
         # Second line should have argument (not command)
         tokens1 = get_line(1)
-        assert tokens1 == [("fg:ansiyellow bg:default", "help")]
-
-    def test_lexer_set_theme_runtime_update(self, mock_cmd_app):
-        """Test that changing the theme updates active lexers."""
-        lexer = pt_utils.Cmd2Lexer(cast(Any, mock_cmd_app))
-
-        # Get the old color for command
-        old_color = lexer.command_color
-
-        # Change the theme dynamically
-        from rich.style import Style
-
-        from cmd2.styles import Cmd2Style
-
-        new_styles = {Cmd2Style.LEXER_COMMAND: Style(color="red", bgcolor="black")}
-
-        try:
-            ru.set_theme(new_styles)
-
-            # Now verify the lexer's color was updated
-            assert lexer.command_color != old_color
-            assert "ansired" in lexer.command_color
-            assert "ansiblack" in lexer.command_color
-
-        finally:
-            ru.set_theme()  # Reset to default
+        assert tokens1 == [(Cmd2Lexer.ARGUMENT_STYLE, "help")]
 
 
 class TestCmd2Completer:
@@ -730,20 +723,6 @@ class TestRichToPtStyle:
         pt_style = pt_utils.rich_to_pt_style(style)
         assert "nobold" in pt_style
 
-    def test_rich_to_pt_style_italic(self):
-        from rich.style import Style
-
-        style = Style(italic=True)
-        pt_style = pt_utils.rich_to_pt_style(style)
-        assert "italic" in pt_style
-
-    def test_rich_to_pt_style_noitalic(self):
-        from rich.style import Style
-
-        style = Style(italic=False)
-        pt_style = pt_utils.rich_to_pt_style(style)
-        assert "noitalic" in pt_style
-
     def test_rich_to_pt_style_underline(self):
         from rich.style import Style
 
@@ -757,6 +736,34 @@ class TestRichToPtStyle:
         style = Style(underline=False)
         pt_style = pt_utils.rich_to_pt_style(style)
         assert "nounderline" in pt_style
+
+    def test_rich_to_pt_style_strike(self):
+        from rich.style import Style
+
+        style = Style(strike=True)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "strike" in pt_style
+
+    def test_rich_to_pt_style_nostrike(self):
+        from rich.style import Style
+
+        style = Style(strike=False)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "nostrike" in pt_style
+
+    def test_rich_to_pt_style_italic(self):
+        from rich.style import Style
+
+        style = Style(italic=True)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "italic" in pt_style
+
+    def test_rich_to_pt_style_noitalic(self):
+        from rich.style import Style
+
+        style = Style(italic=False)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "noitalic" in pt_style
 
     def test_rich_to_pt_style_blink(self):
         from rich.style import Style
@@ -777,11 +784,7 @@ class TestRichToPtStyle:
 
         style = Style(reverse=True)
         pt_style = pt_utils.rich_to_pt_style(style)
-        # Note: reverse replaces the default 'noreverse' that is added at the start of parts
-        # wait, we'll check how it works exactly. It will append "reverse". So we just assert "reverse" in pt_style
-        # actually, if reverse=True, "reverse" will be appended to the list, while "noreverse" is also at index 0.
-        # Let's just check the last appended one.
-        assert "reverse" in pt_style.split()
+        assert "reverse" in pt_style
 
     def test_rich_to_pt_style_noreverse(self):
         from rich.style import Style
@@ -804,11 +807,16 @@ class TestRichToPtStyle:
         pt_style = pt_utils.rich_to_pt_style(style)
         assert "nohidden" in pt_style
 
+    def test_rich_to_pt_style_dim(self):
+        from rich.style import Style
 
-def test_update_lexer_colors() -> None:
-    mock_lexer = Mock()
-    pt_utils._lexers.add(mock_lexer)
+        style = Style(dim=True)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "dim" in pt_style
 
-    pt_utils._update_lexer_colors()
+    def test_rich_to_pt_style_nodim(self):
+        from rich.style import Style
 
-    mock_lexer.set_colors.assert_called_once()
+        style = Style(dim=False)
+        pt_style = pt_utils.rich_to_pt_style(style)
+        assert "nodim" in pt_style
