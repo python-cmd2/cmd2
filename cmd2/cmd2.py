@@ -110,7 +110,12 @@ from . import (
 )
 from . import rich_utils as ru
 from . import string_utils as su
-from .argparse_utils import Cmd2ArgumentParser
+from .argparse_utils import (
+    Cmd2ArgumentParser,
+    ParserSource,
+    SubcommandRecord,
+    SubcommandSpec,
+)
 from .clipboard import (
     get_paste_buffer,
     write_to_paste_buffer,
@@ -205,12 +210,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    StaticArgParseBuilder = staticmethod[[], Cmd2ArgumentParser]
-    ClassArgParseBuilder = classmethod[CmdOrSet, [], Cmd2ArgumentParser]
     from prompt_toolkit.buffer import Buffer
-else:
-    StaticArgParseBuilder = staticmethod
-    ClassArgParseBuilder = classmethod
 
 
 class _SavedCmd2Env:
@@ -280,12 +280,12 @@ class CommandParsers:
                 return None
             command = command_method.__name__[len(COMMAND_FUNC_PREFIX) :]
 
-            parser_builder = getattr(command_method, constants.CMD_ATTR_ARGPARSER, None)
-            if parser_builder is None:
+            parser_source = getattr(command_method, constants.CMD_ATTR_PARSER_SOURCE, None)
+            if parser_source is None:
                 return None
 
-            parent = self._cmd_app.find_commandset_for_command(command) or self._cmd_app
-            parser = self._cmd_app._build_parser(parent, parser_builder)
+            owner = self._cmd_app.find_commandset_for_command(command) or self._cmd_app
+            parser = self._cmd_app._build_parser(owner, parser_source)
 
             # To ensure accurate usage strings, recursively update 'prog' values
             # within the parser to match the command name.
@@ -916,37 +916,48 @@ class Cmd:
 
     def _build_parser(
         self,
-        parent: CmdOrSet,
-        parser_builder: Cmd2ArgumentParser | Callable[[], Cmd2ArgumentParser] | StaticArgParseBuilder | ClassArgParseBuilder,
+        owner: CmdOrSet,
+        parser_source: ParserSource[Any],
     ) -> Cmd2ArgumentParser:
         """Build argument parser for a command/subcommand.
 
-        :param parent: object which owns the command using the parser.
-                       When parser_builder is a classmethod, this function passes
-                       parent's class to it.
-        :param parser_builder: an existing Cmd2ArgumentParser instance or a factory
-                               (callable, staticmethod, or classmethod) that returns one.
+        :param owner: the object that owns the command. If parser_source requires
+                      a class argument (like a classmethod), this object's class is passed.
+        :param parser_source: an existing Cmd2ArgumentParser instance or a factory
+                              (callable, staticmethod, or classmethod) that returns one.
         :return: new parser
-        :raises TypeError: if parser_builder is an invalid type or if the factory fails
+        :raises TypeError: if parser_source is an invalid type or if the factory fails
                            to return a Cmd2ArgumentParser
         """
-        if isinstance(parser_builder, Cmd2ArgumentParser):
-            parser = copy.deepcopy(parser_builder)
-        else:
-            # Try to build the parser with a factory
-            if isinstance(parser_builder, staticmethod):
-                parser = parser_builder.__func__()
-            elif isinstance(parser_builder, classmethod):
-                parser = parser_builder.__func__(parent.__class__)
-            elif callable(parser_builder):
-                parser = parser_builder()
-            else:
-                raise TypeError(f"Invalid type for parser_builder: {type(parser_builder)}")
+        # Handle existing parser
+        if isinstance(parser_source, argparse.ArgumentParser):
+            if not isinstance(parser_source, Cmd2ArgumentParser):
+                raise TypeError(
+                    f"The parser must be an instance of 'Cmd2ArgumentParser' (or subclass). "
+                    f"Received: '{type(parser_source).__name__}'."
+                )
+            return copy.deepcopy(parser_source)
 
-            # Verify the factory returned the required type
-            if not isinstance(parser, Cmd2ArgumentParser):
-                builder_name = getattr(parser_builder, "__name__", str(parser_builder))  # type: ignore[unreachable]
-                raise TypeError(f"The parser returned by '{builder_name}' must be a Cmd2ArgumentParser or a subclass of it")
+        # Handle factories
+        if isinstance(parser_source, staticmethod):
+            parser = parser_source.__func__()
+        elif isinstance(parser_source, classmethod):
+            parser = parser_source.__func__(owner.__class__)
+        else:
+            # Inspect the signature to determine if this factory expects a class argument.
+            builder_sig = inspect.signature(parser_source)
+
+            if builder_sig.parameters:
+                parser = cast(Callable[[Any], Cmd2ArgumentParser], parser_source)(owner.__class__)
+            else:
+                parser = cast(Callable[[], Cmd2ArgumentParser], parser_source)()
+
+        # Verify the factory returned the required type
+        if not isinstance(parser, Cmd2ArgumentParser):
+            builder_name = getattr(parser_source, "__name__", str(parser_source))  # type: ignore[unreachable]
+            raise TypeError(
+                f"'{builder_name}' must return a 'Cmd2ArgumentParser' (or subclass). Received: '{type(parser).__name__}'."
+            )
 
         return parser
 
@@ -1068,7 +1079,7 @@ class Cmd:
                     continue
                 checked_parsers.add(subparser)
 
-                attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_COMMANDSET_ID, None)
+                attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_OWNER_ID, None)
                 if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
                     raise CommandSetRegistrationError(
                         f"Cannot uninstall CommandSet: '{subparser.prog}' is required by another CommandSet"
@@ -1092,37 +1103,33 @@ class Cmd:
                 if command_parser is not None:
                     check_parser_uninstallable(command_parser)
 
-    def _register_subcommands(self, cmdset: CmdOrSet) -> None:
+    def _register_subcommands(self, owner: CmdOrSet) -> None:
         """Register subcommands with their base command.
 
-        :param cmdset: CommandSet or cmd2.Cmd subclass containing subcommands
+        :param owner: Cmd or CommandSet which owns the subcommand functions
         """
-        if not (cmdset is self or cmdset in self._installed_command_sets):
+        if not (owner is self or owner in self._installed_command_sets):
             raise CommandSetRegistrationError("Cannot register subcommands with an unregistered CommandSet")
 
         # find methods that have the required attributes necessary to be recognized as a sub-command
         methods = inspect.getmembers(
-            cmdset,
+            owner,
             predicate=lambda meth: (
                 isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, constants.SUBCMD_ATTR_NAME)
-                and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
-                and hasattr(meth, constants.CMD_ATTR_ARGPARSER)
+                and hasattr(meth, constants.SUBCMD_ATTR_SPEC)
             ),
         )
 
         # iterate through all matching methods
         for _method_name, method in methods:
-            subcommand_name: str = getattr(method, constants.SUBCMD_ATTR_NAME)
-            full_command_name: str = getattr(method, constants.SUBCMD_ATTR_COMMAND)
-            subcmd_parser_builder = getattr(method, constants.CMD_ATTR_ARGPARSER)
+            spec: SubcommandSpec = getattr(method, constants.SUBCMD_ATTR_SPEC)
 
-            subcommand_valid, errmsg = self.statement_parser.is_valid_command(subcommand_name, is_subcommand=True)
+            subcommand_valid, errmsg = self.statement_parser.is_valid_command(spec.name, is_subcommand=True)
             if not subcommand_valid:
-                raise CommandSetRegistrationError(f"Subcommand {subcommand_name} is not valid: {errmsg}")
+                raise CommandSetRegistrationError(f"Subcommand {spec.name} is not valid: {errmsg}")
 
             # Create the subcommand parser and configure it
-            subcmd_parser = self._build_parser(cmdset, subcmd_parser_builder)
+            subcmd_parser = self._build_parser(owner, spec.parser_source)
             if subcmd_parser.description is None and method.__doc__:
                 subcmd_parser.description = strip_doc_annotations(method.__doc__)
 
@@ -1131,43 +1138,46 @@ class Cmd:
             subcmd_parser.set_defaults(**defaults)
 
             # Set what instance the handler is bound to
-            setattr(subcmd_parser, constants.PARSER_ATTR_COMMANDSET_ID, id(cmdset))
+            setattr(subcmd_parser, constants.PARSER_ATTR_OWNER_ID, id(owner))
 
-            # Get add_parser() kwargs (aliases, help, etc.) defined by the decorator
-            add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
+            # Attach this subcommand
+            record = SubcommandRecord(
+                name=spec.name,
+                command=spec.command,
+                help=spec.help,
+                aliases=spec.aliases,
+                deprecated=spec.deprecated,
+                parser=subcmd_parser,
+            )
 
-            # Attach existing parser as a subcommand
             try:
-                self.attach_subcommand(full_command_name, subcommand_name, subcmd_parser, **add_parser_kwargs)
+                self.attach_subcommand(record)
             except ValueError as ex:
                 raise CommandSetRegistrationError(str(ex)) from ex
 
-    def _unregister_subcommands(self, cmdset: CmdOrSet) -> None:
+    def _unregister_subcommands(self, owner: CmdOrSet) -> None:
         """Unregister subcommands from their base command.
 
-        :param cmdset: CommandSet containing subcommands
+        :param owner: Cmd or CommandSet which owns the subcommand functions
         """
-        if not (cmdset is self or cmdset in self._installed_command_sets):
+        if not (owner is self or owner in self._installed_command_sets):
             raise CommandSetRegistrationError("Cannot unregister subcommands with an unregistered CommandSet")
 
         # find methods that have the required attributes necessary to be recognized as a sub-command
         methods = inspect.getmembers(
-            cmdset,
+            owner,
             predicate=lambda meth: (
                 isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, constants.SUBCMD_ATTR_NAME)
-                and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
-                and hasattr(meth, constants.CMD_ATTR_ARGPARSER)
+                and hasattr(meth, constants.SUBCMD_ATTR_SPEC)
             ),
         )
 
         # iterate through all matching methods
         for _method_name, method in methods:
-            subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
-            full_command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)
+            spec: SubcommandSpec = getattr(method, constants.SUBCMD_ATTR_SPEC)
 
             with contextlib.suppress(ValueError):
-                self.detach_subcommand(full_command_name, subcommand_name)
+                self.detach_subcommand(spec.command, spec.name)
 
     def get_root_parser_and_subcmd_path(self, command: str) -> tuple[Cmd2ArgumentParser, list[str]]:
         """Tokenize a command string and resolve the associated root parser and relative subcommand path.
@@ -1200,40 +1210,39 @@ class Cmd:
 
         return root_parser, subcommand_path
 
-    def attach_subcommand(
-        self,
-        command: str,
-        subcommand: str,
-        subcommand_parser: Cmd2ArgumentParser,
-        **add_parser_kwargs: Any,
-    ) -> None:
+    def attach_subcommand(self, record: SubcommandRecord) -> None:
         """Attach a parser as a subcommand to a command at the specified path.
 
-        :param command: full command path (space-delimited) leading to the parser that will
-                        host the new subcommand (e.g. 'foo bar')
-        :param subcommand: name of the new subcommand
-        :param subcommand_parser: the parser to attach
-        :param add_parser_kwargs: additional arguments for the subparser registration (e.g. help, aliases)
-        :raises TypeError: if subcommand_parser is not an instance of the following or their subclasses:
-                           1. Cmd2ArgumentParser
-                           2. The parser_class configured for the target subcommand group
+        :param record: SubcommandRecord object describing the subcommand
+        :raises TypeError: if record.parser is not an instance of Cmd2ArgumentParser (or subclass)
         :raises ValueError: if the command path is invalid, doesn't support subcommands, or the
                             subcommand already exists
         """
-        root_parser, subcommand_path = self.get_root_parser_and_subcmd_path(command)
-        root_parser.attach_subcommand(subcommand_path, subcommand, subcommand_parser, **add_parser_kwargs)
+        root_parser, subcommand_path = self.get_root_parser_and_subcmd_path(record.command)
+        root_parser.attach_subcommand(record, subcommand_path=subcommand_path)
 
-    def detach_subcommand(self, command: str, subcommand: str) -> Cmd2ArgumentParser:
+    def detach_subcommand(self, command: str, subcommand: str) -> SubcommandRecord:
         """Detach a subcommand from a command at the specified path.
 
         :param command: full command path (space-delimited) leading to the parser hosting the
                         subcommand to be detached (e.g. 'foo bar')
         :param subcommand: name of the subcommand to detach
-        :return: the detached parser
+        :return: a SubcommandRecord object describing the detached subcommand
         :raises ValueError: if the command path is invalid or the subcommand doesn't exist
         """
         root_parser, subcommand_path = self.get_root_parser_and_subcmd_path(command)
         return root_parser.detach_subcommand(subcommand_path, subcommand)
+
+    def detach_all_subcommands(self, command: str) -> list[SubcommandRecord]:
+        """Detach all subcommands from a command at the specified path.
+
+        :param command: full command path (space-delimited) leading to the parser hosting the
+                        subcommands to be detached (e.g. 'foo bar')
+        :return: a list of SubcommandRecord objects describing the detached subcommands
+        :raises ValueError: if the command path is invalid or the command doesn't support subcommands
+        """
+        root_parser, subcommand_path = self.get_root_parser_and_subcmd_path(command)
+        return root_parser.detach_all_subcommands(subcommand_path)
 
     @property
     def always_prefix_settables(self) -> bool:

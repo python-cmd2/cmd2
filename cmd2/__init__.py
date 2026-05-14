@@ -14,6 +14,7 @@ from . import (
 from .argparse_completer import set_default_ap_completer_type
 from .argparse_utils import (
     Cmd2ArgumentParser,
+    SubcommandRecord,
     register_argparse_argument_parameter,
     set_default_argument_parser_type,
 )
@@ -70,6 +71,7 @@ __all__: list[str] = [  # noqa: RUF022
     "DEFAULT_SHORTCUTS",
     # Argparse Exports
     "Cmd2ArgumentParser",
+    "SubcommandRecord",
     "register_argparse_argument_parameter",
     "set_default_ap_completer_type",
     "set_default_argument_parser_type",
