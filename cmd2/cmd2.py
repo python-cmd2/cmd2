@@ -944,7 +944,8 @@ class Cmd:
         elif isinstance(parser_source, classmethod):
             parser = parser_source.__func__(owner.__class__)
         else:
-            # Inspect the signature to determine if this factory expects a class argument.
+            # Following the ParserSource definition, any function with parameters
+            # is assumed to be a one-argument factory expecting the owner's class.
             builder_sig = inspect.signature(parser_source)
 
             if builder_sig.parameters:
