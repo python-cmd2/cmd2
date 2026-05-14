@@ -285,6 +285,28 @@ def test_to_bool_float() -> None:
     assert not cu.to_bool(0)
 
 
+def test_optional_int_none() -> None:
+    assert cu.optional_int(None) is None
+    assert cu.optional_int("none") is None
+    assert cu.optional_int("None") is None
+    assert cu.optional_int("nOnE") is None
+
+
+def test_optional_int_int() -> None:
+    assert cu.optional_int(5) == 5
+    assert cu.optional_int("5") == 5
+    assert cu.optional_int("-10") == -10
+
+
+def test_optional_int_invalid() -> None:
+    with pytest.raises(ValueError, match="must be an integer or None"):
+        cu.optional_int("abc")
+    with pytest.raises(ValueError, match="must be an integer or None"):
+        cu.optional_int("3.14")
+    with pytest.raises(ValueError, match="must be an integer or None"):
+        cu.optional_int([])
+
+
 def test_find_editor_specified() -> None:
     expected_editor = os.path.join("fake_dir", "editor")
     with mock.patch.dict(os.environ, {"EDITOR": expected_editor}):
