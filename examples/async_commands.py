@@ -128,7 +128,7 @@ class AsyncCommandsApp(cmd2.Cmd):
         padding_size = random.randint(0, extra_width)
         padding = " " * padding_size
 
-        # Use rich to generate the the overall text to print out
+        # Use rich to generate the overall text to print out
         text = Text()
         text.append(padding)
         text.append(word, style=f"rgb({r},{g},{b})")

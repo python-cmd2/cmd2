@@ -15,12 +15,17 @@ from typing import (
 )
 
 from . import constants
-from .argparse_utils import Cmd2ArgumentParser
+from .argparse_utils import (
+    ClassParamParserFactory,
+    Cmd2ArgumentParser,
+    NoParamParserFactory,
+    ParserSource,
+    SubcommandSpec,
+)
 from .command_set import CommandSet
 from .exceptions import Cmd2ArgparseError
 from .parsing import Statement
 from .types import (
-    CmdOrSetClassT,
     CmdOrSetT,
     UnboundCommandFunc,
 )
@@ -206,10 +211,41 @@ ArgparseCommandFunc: TypeAlias = (
 )
 
 
+# Overload for: existing parser instance
+@overload
 def with_argparser(
-    parser: Cmd2ArgumentParser  # existing parser
-    | Callable[[], Cmd2ArgumentParser]  # function or staticmethod
-    | Callable[[CmdOrSetClassT], Cmd2ArgumentParser],  # Cmd or CommandSet classmethod
+    parser_source: Cmd2ArgumentParser,
+    *,
+    ns_provider: Callable[..., argparse.Namespace] | None = None,
+    preserve_quotes: bool = False,
+    with_unknown_args: bool = False,
+) -> Callable[[ArgparseCommandFunc[CmdOrSetT]], RawCommandFunc[CmdOrSetT]]: ...
+
+
+# Overload for: factory with no arguments (including staticmethod)
+@overload
+def with_argparser(
+    parser_source: NoParamParserFactory,
+    *,
+    ns_provider: Callable[..., argparse.Namespace] | None = None,
+    preserve_quotes: bool = False,
+    with_unknown_args: bool = False,
+) -> Callable[[ArgparseCommandFunc[CmdOrSetT]], RawCommandFunc[CmdOrSetT]]: ...
+
+
+# Overload for: factory with a class argument (including classmethod)
+@overload
+def with_argparser(
+    parser_source: ClassParamParserFactory[CmdOrSetT],
+    *,
+    ns_provider: Callable[..., argparse.Namespace] | None = None,
+    preserve_quotes: bool = False,
+    with_unknown_args: bool = False,
+) -> Callable[[ArgparseCommandFunc[CmdOrSetT]], RawCommandFunc[CmdOrSetT]]: ...
+
+
+def with_argparser(
+    parser_source: ParserSource[CmdOrSetT],
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -217,7 +253,8 @@ def with_argparser(
 ) -> Callable[[ArgparseCommandFunc[CmdOrSetT]], RawCommandFunc[CmdOrSetT]]:
     """Decorate a ``do_*`` command function to populate its ``args`` argument with a Cmd2ArgumentParser.
 
-    :param parser: instance of Cmd2ArgumentParser or a callable that returns a Cmd2ArgumentParser for this command
+    :param parser_source: an existing Cmd2ArgumentParser instance or a factory
+                          (callable, staticmethod, or classmethod) that returns one.
     :param ns_provider: An optional function that accepts a cmd2.Cmd or cmd2.CommandSet object as an argument and returns an
                         argparse.Namespace. This is useful if the Namespace needs to be prepopulated with state data that
                         affects parsing.
@@ -327,7 +364,7 @@ def with_argparser(
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
         # Set some custom attributes for this command
-        setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, parser)
+        setattr(cmd_wrapper, constants.CMD_ATTR_PARSER_SOURCE, parser_source)
         setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
 
         return cmd_wrapper
@@ -335,16 +372,53 @@ def with_argparser(
     return arg_decorator
 
 
+# Overload for: existing parser instance
+@overload
 def as_subcommand_to(
     command: str,
     subcommand: str,
-    parser: Cmd2ArgumentParser  # existing parser
-    | Callable[[], Cmd2ArgumentParser]  # function or staticmethod
-    | Callable[[CmdOrSetClassT], Cmd2ArgumentParser],  # Cmd or CommandSet classmethod
+    parser_source: Cmd2ArgumentParser,
+    *,
+    help: str | None = None,
+    aliases: Sequence[str] = (),
+    deprecated: bool = False,
+) -> Callable[[F], F]: ...
+
+
+# Overload for: factory with no arguments (including staticmethod)
+@overload
+def as_subcommand_to(
+    command: str,
+    subcommand: str,
+    parser_source: NoParamParserFactory,
+    *,
+    help: str | None = None,
+    aliases: Sequence[str] = (),
+    deprecated: bool = False,
+) -> Callable[[F], F]: ...
+
+
+# Overload for: factory with a class argument (including classmethod)
+@overload
+def as_subcommand_to(
+    command: str,
+    subcommand: str,
+    parser_source: ClassParamParserFactory[CmdOrSetT],
+    *,
+    help: str | None = None,
+    aliases: Sequence[str] = (),
+    deprecated: bool = False,
+) -> Callable[[F], F]: ...
+
+
+def as_subcommand_to(
+    command: str,
+    subcommand: str,
+    parser_source: ParserSource[CmdOrSetT],
     *,
     help: str | None = None,  # noqa: A002
-    aliases: Sequence[str] | None = None,
-    **add_parser_kwargs: Any,
+    aliases: Sequence[str] = (),
+    deprecated: bool = False,
 ) -> Callable[[F], F]:
     """Tag a function as a subcommand to an existing argparse decorated command.
 
@@ -359,13 +433,12 @@ def as_subcommand_to(
 
     :param command: Command Name. Space-delimited subcommands may optionally be specified
     :param subcommand: Subcommand name
-    :param parser: instance of Cmd2ArgumentParser or a callable that returns a Cmd2ArgumentParser for this subcommand
-    :param help: Help message for this subcommand which displays in the list of subcommands of the command we are adding to.
-                 If not None, this is passed as the 'help' argument to subparsers.add_parser().
-    :param aliases: Alternative names for this subcommand. If a non-empty sequence is provided, it is passed
-                    as the 'aliases' argument to subparsers.add_parser().
-    :param add_parser_kwargs: other registration-specific kwargs for add_parser()
-                              (e.g. deprecated [Python 3.13+])
+    :param parser_source: an existing Cmd2ArgumentParser instance or a factory
+                          (callable, staticmethod, or classmethod) that returns one.
+    :param help: optional help message for this subcommand which displays in the list of subcommands
+                 of the command we are adding to.
+    :param aliases: optional alternative names for this subcommand.
+    :param deprecated: whether this subcommand is deprecated (requires Python 3.13+).
     :return: a decorator which configures the target function to be a subcommand handler
 
     Example:
@@ -387,20 +460,15 @@ def as_subcommand_to(
     """
 
     def arg_decorator(func: F) -> F:
-        # Set some custom attributes for this command
-        setattr(func, constants.SUBCMD_ATTR_COMMAND, command)
-        setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
-        setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
-
-        # Keyword arguments for subparsers.add_parser()
-        final_kwargs: dict[str, Any] = dict(add_parser_kwargs)
-        if help is not None:
-            final_kwargs["help"] = help
-        if aliases:
-            final_kwargs["aliases"] = tuple(aliases)
-
-        setattr(func, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, final_kwargs)
-
+        spec = SubcommandSpec(
+            name=subcommand,
+            command=command,
+            help=help,
+            aliases=tuple(aliases),
+            deprecated=deprecated,
+            parser_source=parser_source,
+        )
+        setattr(func, constants.SUBCMD_ATTR_SPEC, spec)
         return func
 
     return arg_decorator

@@ -27,6 +27,7 @@ from cmd2 import (
     Color,
     CommandSet,
     Completions,
+    SubcommandRecord,
     clipboard,
     constants,
     exceptions,
@@ -4541,7 +4542,8 @@ def test_subcommand_attachment() -> None:
     # Attach child to root
     child_parser = cmd2.Cmd2ArgumentParser(prog="child")
     child_parser.add_subparsers()
-    app.attach_subcommand("root", "child", child_parser, help="child help")
+    child_record = SubcommandRecord(name="child", command="root", parser=child_parser, help="child help")
+    app.attach_subcommand(child_record)
 
     # Verify child was attached
     root_subparsers_action = root_parser.get_subparsers_action()
@@ -4550,20 +4552,21 @@ def test_subcommand_attachment() -> None:
 
     # Attach grandchild to child
     grandchild_parser = cmd2.Cmd2ArgumentParser(prog="grandchild")
-    app.attach_subcommand("root child", "grandchild", grandchild_parser)
+    grandchild_record = SubcommandRecord(name="grandchild", command="root child", parser=grandchild_parser)
+    app.attach_subcommand(grandchild_record)
 
     # Verify grandchild was attached
     child_subparsers_action = child_parser.get_subparsers_action()
     assert "grandchild" in child_subparsers_action._name_parser_map
 
     # Detach grandchild
-    detached_grandchild = app.detach_subcommand("root child", "grandchild")
-    assert detached_grandchild is grandchild_parser
+    detached_grandchild_info = app.detach_subcommand("root child", "grandchild")
+    assert detached_grandchild_info.parser is grandchild_parser
     assert "grandchild" not in child_subparsers_action._name_parser_map
 
     # Detach child
-    detached_child = app.detach_subcommand("root", "child")
-    assert detached_child is child_parser
+    detached_child_info = app.detach_subcommand("root", "child")
+    assert detached_child_info.parser is child_parser
     assert "child" not in root_subparsers_action._name_parser_map
 
 
@@ -4585,18 +4588,55 @@ def test_subcommand_attachment_errors() -> None:
     app = SubcmdErrorApp()
 
     # Test empty command
+    sub_record = SubcommandRecord(name="sub", command="", parser=cmd2.Cmd2ArgumentParser())
     with pytest.raises(ValueError, match="Command path cannot be empty"):
-        app.attach_subcommand("", "sub", cmd2.Cmd2ArgumentParser())
+        app.attach_subcommand(sub_record)
 
     # Test non-existent command
+    nonexistent_record = SubcommandRecord(name="sub", command="fake", parser=cmd2.Cmd2ArgumentParser())
     with pytest.raises(ValueError, match="Root command 'fake' does not exist"):
-        app.attach_subcommand("fake", "sub", cmd2.Cmd2ArgumentParser())
+        app.attach_subcommand(nonexistent_record)
 
     # Test command that doesn't use argparse
+    no_argparse_record = SubcommandRecord(name="sub", command="no_argparse", parser=cmd2.Cmd2ArgumentParser())
     with pytest.raises(ValueError, match="Command 'no_argparse' does not use argparse"):
-        app.attach_subcommand("no_argparse", "sub", cmd2.Cmd2ArgumentParser())
+        app.attach_subcommand(no_argparse_record)
 
     # Test duplicate subcommand
-    app.attach_subcommand("test", "sub", cmd2.Cmd2ArgumentParser())
+    duplicate_record = SubcommandRecord(name="sub", command="test", parser=cmd2.Cmd2ArgumentParser())
+    app.attach_subcommand(duplicate_record)
     with pytest.raises(ValueError, match="Subcommand 'sub' already exists for 'test'"):
-        app.attach_subcommand("test", "sub", cmd2.Cmd2ArgumentParser())
+        app.attach_subcommand(duplicate_record)
+
+
+def test_detach_all_subcommands() -> None:
+    import argparse
+
+    class RefactorApp(cmd2.Cmd):
+        def __init__(self) -> None:
+            super().__init__()
+
+        base_parser = cmd2.Cmd2ArgumentParser()
+        base_parser.add_subparsers()
+
+        @cmd2.with_argparser(base_parser)
+        def do_base(self, _: argparse.Namespace) -> None:
+            pass
+
+    app = RefactorApp()
+
+    child1 = cmd2.Cmd2ArgumentParser()
+    child2 = cmd2.Cmd2ArgumentParser()
+
+    child1_record = SubcommandRecord(name="child1", command="base", parser=child1)
+    child2_record = SubcommandRecord(name="child2", command="base", parser=child2)
+
+    app.attach_subcommand(child1_record)
+    app.attach_subcommand(child2_record)
+
+    removed = app.detach_all_subcommands("base")
+    assert len(removed) == 2
+
+    root_parser = cast(cmd2.Cmd2ArgumentParser, app.command_parsers.get(app.do_base))
+    subparsers_action = root_parser.get_subparsers_action()
+    assert not subparsers_action._name_parser_map

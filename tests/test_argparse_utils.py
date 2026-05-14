@@ -10,6 +10,7 @@ import cmd2
 from cmd2 import (
     Choices,
     Cmd2ArgumentParser,
+    SubcommandRecord,
     argparse_utils,
     constants,
 )
@@ -353,21 +354,23 @@ def test_subcommand_attachment() -> None:
     ###############################
 
     # Attach child to root
-    root_parser.attach_subcommand(
-        [],
-        "child",
-        child_parser,
+    child_record = SubcommandRecord(
+        name="child",
+        command="root",
+        parser=child_parser,
         help="a child command",
-        aliases=["child_alias"],
+        aliases=("child_alias",),
     )
+    root_parser.attach_subcommand(child_record)
 
     # Attach grandchild to child
-    root_parser.attach_subcommand(
-        ["child"],
-        "grandchild",
-        grandchild_parser,
+    grandchild_record = SubcommandRecord(
+        name="grandchild",
+        command="root",
+        parser=grandchild_parser,
         help="a grandchild command",
     )
+    root_parser.attach_subcommand(grandchild_record, subcommand_path=["child"])
 
     ###############################
     # Verify hierarchy navigation
@@ -397,14 +400,16 @@ def test_subcommand_attachment() -> None:
     ###############################
 
     # Detach grandchild from child
-    detached_grandchild = root_parser.detach_subcommand(["child"], "grandchild")
-    assert detached_grandchild is grandchild_parser
+    detached_grandchild_info = root_parser.detach_subcommand(["child"], "grandchild")
+    assert detached_grandchild_info.parser is grandchild_parser
+    assert detached_grandchild_info.name == "grandchild"
     assert "grandchild" not in child_subparsers._name_parser_map
     assert not any(action.dest == "grandchild" for action in child_subparsers._choices_actions)
 
     # Detach child from root
-    detached_child = root_parser.detach_subcommand([], "child")
-    assert detached_child is child_parser
+    detached_child_info = root_parser.detach_subcommand([], "child")
+    assert detached_child_info.parser is child_parser
+    assert detached_child_info.name == "child"
     assert "child" not in root_subparsers._name_parser_map
     assert "child_alias" not in root_subparsers._name_parser_map
     assert not any(action.dest == "child" for action in root_subparsers._choices_actions)
@@ -416,13 +421,14 @@ def test_detach_subcommand_by_alias() -> None:
     root_subparsers = root_parser.add_subparsers()
 
     child_parser = Cmd2ArgumentParser(prog="child")
-    root_parser.attach_subcommand(
-        [],
-        "child",
-        child_parser,
+    child_record = SubcommandRecord(
+        name="child",
+        command="root",
+        parser=child_parser,
         help="a child command",
-        aliases=["alias1", "alias2"],
+        aliases=("alias1", "alias2"),
     )
+    root_parser.attach_subcommand(child_record)
 
     # Verify all names map to the parser
     assert root_subparsers._name_parser_map["child"] is child_parser
@@ -433,8 +439,9 @@ def test_detach_subcommand_by_alias() -> None:
     assert any(action.dest == "child" for action in root_subparsers._choices_actions)
 
     # Detach using an alias
-    detached = root_parser.detach_subcommand([], "alias1")
-    assert detached is child_parser
+    detached_info = root_parser.detach_subcommand([], "alias1")
+    assert detached_info.parser is child_parser
+    assert detached_info.name == "child"
 
     # Verify all names are gone
     assert "child" not in root_subparsers._name_parser_map
@@ -448,21 +455,22 @@ def test_detach_subcommand_by_alias() -> None:
 def test_subcommand_attachment_errors() -> None:
     root_parser = Cmd2ArgumentParser(prog="root", description="root command")
     child_parser = Cmd2ArgumentParser(prog="child", description="child command")
+    child_record = SubcommandRecord(name="child", command="root", parser=child_parser)
 
     # Verify ValueError when subcommands are not supported
     with pytest.raises(ValueError, match="Command 'root' does not support subcommands"):
-        root_parser.attach_subcommand([], "anything", child_parser)
+        root_parser.attach_subcommand(child_record)
     with pytest.raises(ValueError, match="Command 'root' does not support subcommands"):
-        root_parser.detach_subcommand([], "anything")
+        root_parser.detach_subcommand([], "child")
 
     # Allow subcommands for the next tests
     root_parser.add_subparsers()
 
     # Verify ValueError when path is invalid (find_parser() fails)
     with pytest.raises(ValueError, match="Subcommand 'nonexistent' does not exist for 'root'"):
-        root_parser.attach_subcommand(["nonexistent"], "anything", child_parser)
+        root_parser.attach_subcommand(child_record, subcommand_path=["nonexistent"])
     with pytest.raises(ValueError, match="Subcommand 'nonexistent' does not exist for 'root'"):
-        root_parser.detach_subcommand(["nonexistent"], "anything")
+        root_parser.detach_subcommand(["nonexistent"], "child")
 
     # Verify ValueError when path is valid but subcommand name is wrong
     with pytest.raises(ValueError, match="Subcommand 'fake' does not exist for 'root'"):
@@ -470,14 +478,16 @@ def test_subcommand_attachment_errors() -> None:
 
     # Verify TypeError when attaching a non-Cmd2ArgumentParser type
     ap_parser = argparse.ArgumentParser(prog="non-cmd2-parser")
-    with pytest.raises(TypeError, match=r"must be an instance of 'Cmd2ArgumentParser' \(or a subclass\)"):
-        root_parser.attach_subcommand([], "sub", ap_parser)  # type: ignore[arg-type]
+    ap_record = SubcommandRecord(name="sub", command="root", parser=ap_parser)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match=r"must be an instance of 'Cmd2ArgumentParser'"):
+        root_parser.attach_subcommand(ap_record)
 
     # Verify ValueError when subcommand name already exists
     sub_parser = Cmd2ArgumentParser(prog="sub")
-    root_parser.attach_subcommand([], "sub", sub_parser)
+    sub_record = SubcommandRecord(name="sub", command="root", parser=sub_parser)
+    root_parser.attach_subcommand(sub_record)
     with pytest.raises(ValueError, match="Subcommand 'sub' already exists for 'root'"):
-        root_parser.attach_subcommand([], "sub", sub_parser)
+        root_parser.attach_subcommand(sub_record)
 
 
 def test_subcommand_attachment_parser_class_override() -> None:
@@ -494,16 +504,19 @@ def test_subcommand_attachment_parser_class_override() -> None:
 
     # Attaching a MyParser instance should succeed
     my_parser = MyParser(prog="sub")
-    root_parser.attach_subcommand([], "sub", my_parser)
+    my_record = SubcommandRecord(name="sub", command="root", parser=my_parser)
+    root_parser.attach_subcommand(my_record)
 
     # Attaching a MySubParser instance should also succeed (isinstance check)
     my_sub_parser = MySubParser(prog="sub2")
-    root_parser.attach_subcommand([], "sub2", my_sub_parser)
+    my_sub_record = SubcommandRecord(name="sub2", command="root", parser=my_sub_parser)
+    root_parser.attach_subcommand(my_sub_record)
 
     # Attaching a standard Cmd2ArgumentParser instance should fail
     standard_parser = Cmd2ArgumentParser(prog="standard")
-    with pytest.raises(TypeError, match=r"must be an instance of 'MyParser' \(or a subclass\)"):
-        root_parser.attach_subcommand([], "fail", standard_parser)
+    standard_record = SubcommandRecord(name="fail", command="root", parser=standard_parser)
+    with pytest.raises(TypeError, match=r"must be an instance of 'MyParser'"):
+        root_parser.attach_subcommand(standard_record)
 
 
 def test_completion_items_as_choices(capsys) -> None:
@@ -748,6 +761,108 @@ def test_argparse_output_capture(base_app: cmd2.Cmd) -> None:
     # Prove that the console style settings were used
     assert styled_help_out != unstyled_help_out
     assert su.strip_style("\n".join(styled_help_out)) == "\n".join(unstyled_help_out)
+
+
+def test_detach_all_subcommands() -> None:
+    root_parser = Cmd2ArgumentParser(prog="root")
+    root_parser.add_subparsers()
+
+    child1 = Cmd2ArgumentParser(prog="child1")
+    child2 = Cmd2ArgumentParser(prog="child2")
+
+    child1_record = SubcommandRecord(
+        name="child1",
+        command="root",
+        parser=child1,
+        help="help1",
+        aliases=("alias1",),
+    )
+    child2_record = SubcommandRecord(
+        name="child2",
+        command="root",
+        parser=child2,
+        help="help2",
+    )
+
+    root_parser.attach_subcommand(child1_record)
+    root_parser.attach_subcommand(child2_record)
+
+    removed = root_parser.detach_all_subcommands([])
+    assert len(removed) == 2
+
+    # Sort by name for consistent comparison
+    removed.sort(key=lambda x: x.name)
+
+    assert removed[0].name == "child1"
+    assert removed[0].parser is child1
+    assert removed[0].help == "help1"
+    assert removed[0].aliases == ("alias1",)
+
+    assert removed[1].name == "child2"
+    assert removed[1].parser is child2
+    assert removed[1].help == "help2"
+    assert removed[1].aliases == ()
+
+    # Verify they are gone
+    subparsers_action = root_parser.get_subparsers_action()
+    assert not subparsers_action._name_parser_map
+    assert not subparsers_action._choices_actions
+
+
+def test_subcommand_move() -> None:
+    root = Cmd2ArgumentParser(prog="root")
+    root.add_subparsers()
+
+    other = Cmd2ArgumentParser(prog="other")
+    other.add_subparsers()
+
+    child = Cmd2ArgumentParser(prog="child")
+    child_record = SubcommandRecord(name="child", command="root", parser=child)
+
+    # Attach to root
+    root.attach_subcommand(child_record)
+    assert child_record.command == "root"
+
+    # Detach from root
+    detached_info = root.detach_subcommand([], "child")
+    assert detached_info.command == "root"
+
+    # Attach to other (Move)
+    other.attach_subcommand(detached_info)
+    assert detached_info.command == "other"
+    assert child.prog == "other child"
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 13),
+    reason="deprecated subcommands require Python 3.13+",
+)
+def test_deprecated_subcommand() -> None:
+    root = Cmd2ArgumentParser(prog="root")
+    root.add_subparsers()
+
+    child = Cmd2ArgumentParser(prog="child")
+    child_record = SubcommandRecord(
+        name="old",
+        command="root",
+        parser=child,
+        deprecated=True,
+        aliases=("old_alias",),
+    )
+
+    root.attach_subcommand(child_record)
+
+    subparsers_action = root.get_subparsers_action()
+    assert "old" in subparsers_action._deprecated  # type: ignore[attr-defined]
+    assert "old_alias" in subparsers_action._deprecated  # type: ignore[attr-defined]
+
+    # Detach and verify info captures it
+    detached_info = root.detach_subcommand([], "old")
+    assert detached_info.deprecated is True
+
+    # Verify it was removed from _deprecated set
+    assert "old" not in subparsers_action._deprecated  # type: ignore[attr-defined]
+    assert "old_alias" not in subparsers_action._deprecated  # type: ignore[attr-defined]
 
 
 @pytest.mark.skipif(

@@ -69,8 +69,8 @@ def cmd2_public_attr_name(name: str) -> str:
 
 # --- Private Internal Attributes ---
 
-# Attached to a command function; defines its argument parser
-CMD_ATTR_ARGPARSER = cmd2_private_attr_name("argparser")
+# Attached to a command function; defines the source from which its parser is built
+CMD_ATTR_PARSER_SOURCE = cmd2_private_attr_name("parser_source")
 
 # Attached to a command function; defines its help section category
 CMD_ATTR_HELP_CATEGORY = cmd2_private_attr_name("help_category")
@@ -78,17 +78,11 @@ CMD_ATTR_HELP_CATEGORY = cmd2_private_attr_name("help_category")
 # Attached to a command function; defines whether tokens are unquoted before reaching argparse
 CMD_ATTR_PRESERVE_QUOTES = cmd2_private_attr_name("preserve_quotes")
 
-# Attached to a subcommand function; defines the full command path to the parent (e.g., "foo" or "foo bar")
-SUBCMD_ATTR_COMMAND = cmd2_private_attr_name("parent_command")
+# Attached to a subcommand function; defines its SubcommandSpec instance
+SUBCMD_ATTR_SPEC = cmd2_private_attr_name("subcommand_spec")
 
-# Attached to a subcommand function; defines the name of this specific subcommand (e.g., "bar")
-SUBCMD_ATTR_NAME = cmd2_private_attr_name("subcommand_name")
-
-# Attached to a subcommand function; specifies kwargs passed to add_parser()
-SUBCMD_ATTR_ADD_PARSER_KWARGS = cmd2_private_attr_name("subcommand_add_parser_kwargs")
-
-# Attached to an argparse parser; identifies the CommandSet instance it belongs to
-PARSER_ATTR_COMMANDSET_ID = cmd2_private_attr_name("command_set_id")
+# Attached to an argparse parser; identifies the Cmd or CommandSet instance it belongs to
+PARSER_ATTR_OWNER_ID = cmd2_private_attr_name("owner_id")
 
 
 # --- Public Developer Attributes ---

@@ -245,38 +245,46 @@ def test_preservelist(argparse_app) -> None:
     assert out[0] == "['foo', '\"bar baz\"']"
 
 
-def test_invalid_parser_builder(argparse_app):
-    parser_builder = None
-    with pytest.raises(TypeError, match="Invalid type for parser_builder"):
-        argparse_app._build_parser(argparse_app, parser_builder)
+def test_invalid_parser_type(argparse_app):
+    parser_source = argparse.ArgumentParser()
+    with pytest.raises(TypeError, match="The parser must be an instance of 'Cmd2ArgumentParser'"):
+        argparse_app._build_parser(argparse_app, parser_source)
 
 
-def test_invalid_parser_return_type(argparse_app):
-    def bad_builder():
-        return argparse.ArgumentParser()
-
-    with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
-        argparse_app._build_parser(argparse_app, bad_builder)
-
-
-def test_invalid_parser_return_type_staticmethod(argparse_app):
+def test_invalid_return_staticmethod(argparse_app):
     def bad_builder():
         return argparse.ArgumentParser()
 
     sm = staticmethod(bad_builder)
 
-    with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
+    with pytest.raises(TypeError, match="must return a 'Cmd2ArgumentParser'"):
         argparse_app._build_parser(argparse_app, sm)
 
 
-def test_invalid_parser_return_type_classmethod(argparse_app):
+def test_invalid_return_classmethod(argparse_app):
     def bad_builder(cls):
         return argparse.ArgumentParser()
 
     cm = classmethod(bad_builder)
 
-    with pytest.raises(TypeError, match="must be a Cmd2ArgumentParser or a subclass of it"):
+    with pytest.raises(TypeError, match="must return a 'Cmd2ArgumentParser'"):
         argparse_app._build_parser(argparse_app, cm)
+
+
+def test_invalid_return_class_arg(argparse_app):
+    def bad_builder(cls):
+        return argparse.ArgumentParser()
+
+    with pytest.raises(TypeError, match="must return a 'Cmd2ArgumentParser'"):
+        argparse_app._build_parser(argparse_app, bad_builder)
+
+
+def test_invalid_return_no_arg(argparse_app):
+    def bad_builder():
+        return argparse.ArgumentParser()
+
+    with pytest.raises(TypeError, match="must return a 'Cmd2ArgumentParser'"):
+        argparse_app._build_parser(argparse_app, bad_builder)
 
 
 def test_invalid_parser_return_type_nameless_object(argparse_app):
@@ -291,7 +299,7 @@ def test_invalid_parser_return_type_nameless_object(argparse_app):
     assert not hasattr(builder, "__name__")
 
     # The error message should now contain the string representation of the object
-    expected_msg = f"The parser returned by '{builder}' must be a Cmd2ArgumentParser"
+    expected_msg = f"'{builder}' must return a 'Cmd2ArgumentParser'"
 
     with pytest.raises(TypeError, match=expected_msg):
         argparse_app._build_parser(argparse_app, builder)
