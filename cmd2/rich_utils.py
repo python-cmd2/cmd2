@@ -107,8 +107,8 @@ ALLOW_STYLE = AllowStyle.TERMINAL
 class Cmd2HelpFormatter(RichHelpFormatter):
     """Custom help formatter to configure ordering of help text."""
 
-    # Have our own copy of the styles so set_theme() can synchronize them with
-    # the cmd2 application theme without overwriting RichHelpFormatter's defaults.
+    # Create our own copy of the styles so cmd2 can synchronize them with
+    # the application theme without overwriting RichHelpFormatter's defaults.
     styles: ClassVar[dict[str, StyleType]] = DEFAULT_ARGPARSE_STYLES.copy()
 
     # Disable automatic highlighting in the help text.
@@ -341,10 +341,10 @@ class Cmd2BaseConsole(Console):
                 "Passing 'force_interactive' is not allowed. Its behavior is controlled by the 'ALLOW_STYLE' setting."
             )
 
-        # Don't allow a theme to be passed in, as it is controlled by get_theme() and set_theme().
-        # Use set_theme() to set the global theme or use a temporary theme with console.use_theme().
+        # Don't allow a theme to be passed in. Use update_theme() to modify the global theme
+        # or use a temporary theme with console.use_theme().
         if "theme" in kwargs:
-            raise TypeError("Passing 'theme' is not allowed. Its behavior is controlled by get_theme() and set_theme().")
+            raise TypeError("Passing 'theme' is not allowed. Modify the global theme with update_theme().")
 
         # Store the configuration key used by cmd2 to cache this console.
         self._config_key = self._build_config_key(file=file, **kwargs)
