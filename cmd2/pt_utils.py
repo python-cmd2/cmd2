@@ -175,7 +175,7 @@ class Cmd2Completer(Completer):
             print_formatted_text(pt_filter_style("\n" + capture.get()))
 
         if not completions:
-            # # Print hint if present
+            # Print hint if present
             if completions.hint:
                 print_formatted_text(pt_filter_style(completions.hint))
             return

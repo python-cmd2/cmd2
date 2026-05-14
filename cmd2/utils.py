@@ -64,6 +64,23 @@ def to_bool(val: Any) -> bool:
     return bool(val)
 
 
+def optional_int(val: Any) -> int | None:
+    """Convert a value to an integer or None if it's "None" (case-insensitive).
+
+    :param val: value being converted
+    :return: int or None
+    :raises ValueError: if the value is not "None" and cannot be converted to an integer
+    """
+    if val is None:
+        return None
+    if isinstance(val, str) and val.lower() == "none":
+        return None
+    try:
+        return int(val)
+    except (ValueError, TypeError):
+        raise ValueError("must be an integer or None (case-insensitive)") from None
+
+
 class Settable:
     """Used to configure an attribute to be settable via the set command in the CLI."""
 
