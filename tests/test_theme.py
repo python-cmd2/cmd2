@@ -142,6 +142,32 @@ def test_pt_theme_is_none() -> None:
     assert get_pt_theme() is not None
 
 
+def test_sync_all_theme_is_none() -> None:
+    """Test that calling _sync_all() when _THEME is None is a no-op."""
+    from cmd2 import theme
+
+    theme._THEME = None
+    theme._PT_THEME = None
+
+    theme._sync_all()
+
+    assert theme._THEME is None
+    assert theme._PT_THEME is None
+
+
+def test_sync_pt_theme_theme_is_none() -> None:
+    """Test that calling _sync_pt_theme() when _THEME is None is a no-op."""
+    from cmd2 import theme
+
+    theme._THEME = None
+    theme._PT_THEME = None
+
+    theme._sync_pt_theme()
+
+    assert theme._THEME is None
+    assert theme._PT_THEME is None
+
+
 def test_register_pt_mapping() -> None:
     """Test style registration with UI mapping."""
     style_name = "my_custom_scrollbar"
