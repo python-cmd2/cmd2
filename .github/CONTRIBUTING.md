@@ -64,13 +64,10 @@ See the `dependencies` list under the `[project]` heading in [pyproject.toml](..
 | Prerequisite                                                              | Minimum Version | Purpose                                                |
 | ------------------------------------------------------------------------- | --------------- | ------------------------------------------------------ |
 | [prompt-toolkit](https://github.com/prompt-toolkit/python-prompt-toolkit) | `3.0.52`        | Replacement for GNU `readline` that is cross-platform  |
-| [python](https://www.python.org/downloads/)                               | `3.10`          | Python programming language                            |
+| [python](https://www.python.org/downloads/)                               | `3.11`          | Python programming language                            |
 | [pyperclip](https://github.com/asweigart/pyperclip)                       | `1.8`           | Cross-platform clipboard functions                     |
 | [rich](https://github.com/Textualize/rich)                                | `14.3.0`        | Add rich text and beautiful formatting in the terminal |
 | [rich-argparse](https://github.com/hamdanal/rich-argparse)                | `1.7.1`         | A rich-enabled help formatter for argparse             |
-
-> Python 3.10 depends on [backports.strenum](https://github.com/clbarnes/backports.strenum) to use
-> the `enum.StrEnum` class introduced in Python 3.11.
 
 #### Additional prerequisites to build and publish cmd2
 
@@ -120,7 +117,7 @@ Linux). You can install `uv` using instructions at the link above.
 You can then install multiple versions of Python using `uv` like so:
 
 ```sh
-uv python install 3.10 3.11 3.12 3.13
+uv python install 3.11 3.12 3.13 3.14
 ```
 
 ### Forking the project
