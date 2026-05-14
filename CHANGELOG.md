@@ -94,9 +94,9 @@ prompt is displayed.
             - `RawDescriptionCmd2HelpFormatter`
             - `RawTextCmd2HelpFormatter`
             - `TextGroup`
-        - Replaced the global `APP_THEME` constant in `rich_utils.py` with `get_theme()` and
-          `set_theme()` functions in `theme.py` to support lazy initialization and safer in-place
-          updates of the theme.
+        - Replaced the global `APP_THEME` constant in `rich_utils.py` with `get_theme()`,
+          `reset_theme()`, and `update_theme()` functions in `theme.py` to support lazy
+          initialization and safer in-place updates of the theme.
     - Renamed `Cmd._command_parsers` to `Cmd.command_parsers`.
     - Removed `RichPrintKwargs` `TypedDict` in favor of using `Mapping[str, Any]`, allowing for
       greater flexibility in passing keyword arguments to `console.print()` calls.

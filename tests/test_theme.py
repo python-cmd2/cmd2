@@ -10,21 +10,57 @@ from cmd2 import (
     Color,
 )
 from cmd2 import rich_utils as ru
+from cmd2.rich_utils import Cmd2HelpFormatter
 from cmd2.theme import (
     get_pt_theme,
     get_theme,
     register_pt_mapping,
     register_synchronized_prefix,
     register_synchronized_style,
-    set_theme,
+    reset_theme,
     unregister_pt_mapping,
     unregister_synchronized_prefix,
     unregister_synchronized_style,
+    update_theme,
 )
 
 
-def test_set_theme() -> None:
-    # Save a cmd2, rich-argparse, rich-specific style,
+def test_reset_theme() -> None:
+    # Save values for the initial theme
+    orig_cmd2_styles = dict(get_theme().styles)
+    orig_rich_argparse_styles = Cmd2HelpFormatter.styles.copy()
+    orig_pt_styles = get_pt_theme().style_rules
+
+    # Overwrite values for a cmd2, rich-argparse, rich-specific style,
+    # and one that maps to a prompt-toolkit UI element.
+    cmd2_style_key = Cmd2Style.ERROR
+    argparse_style_key = "argparse.args"
+    rich_style_key = "inspect.attr"
+    pt_mapped_key = Cmd2Style.COMPLETION_MENU
+
+    new_styles = {
+        cmd2_style_key: Style(color=Color.CYAN),
+        argparse_style_key: Style(color=Color.AQUAMARINE3, underline=True),
+        rich_style_key: Style(color=Color.DARK_GOLDENROD, bold=True),
+        pt_mapped_key: Style(color=Color.BLUE),
+    }
+    update_theme(new_styles)
+
+    # Verify the theme has been updated
+    assert orig_cmd2_styles != get_theme().styles
+    assert orig_rich_argparse_styles != Cmd2HelpFormatter.styles
+    assert orig_pt_styles != get_pt_theme().style_rules
+
+    # Verify that we can reset all values
+    reset_theme()
+
+    assert orig_cmd2_styles == get_theme().styles
+    assert orig_rich_argparse_styles == Cmd2HelpFormatter.styles
+    assert orig_pt_styles == get_pt_theme().style_rules
+
+
+def test_update_theme() -> None:
+    # Update values for a cmd2, rich-argparse, rich-specific style,
     # and one that maps to a prompt-toolkit UI element.
     cmd2_style_key = Cmd2Style.ERROR
     argparse_style_key = "argparse.args"
@@ -49,7 +85,7 @@ def test_set_theme() -> None:
         rich_style_key: Style(color=Color.DARK_GOLDENROD, bold=True),
         pt_mapped_key: Style(color=Color.BLUE),
     }
-    set_theme(new_styles)
+    update_theme(new_styles)
 
     # Verify theme styles have changed to our custom values.
     assert theme.styles[cmd2_style_key] != orig_cmd2_style
@@ -81,6 +117,12 @@ def test_set_theme() -> None:
 
         assert expected == value
 
+    # Verify incremental update by checking that a previously set custom style is preserved
+    update_theme({"custom_style": "bold red"})
+    update_theme({"another_style": "blue"})
+    assert theme.styles["custom_style"] == Style(color=Color.RED, bold=True)
+    assert theme.styles["another_style"] == Style(color="blue")
+
 
 def test_theme_is_none() -> None:
     """Test that get_theme() creates the theme when it's None."""
@@ -100,6 +142,32 @@ def test_pt_theme_is_none() -> None:
     assert get_pt_theme() is not None
 
 
+def test_sync_all_theme_is_none() -> None:
+    """Test that calling _sync_all() when _THEME is None is a no-op."""
+    from cmd2 import theme
+
+    theme._THEME = None
+    theme._PT_THEME = None
+
+    theme._sync_all()
+
+    assert theme._THEME is None
+    assert theme._PT_THEME is None
+
+
+def test_sync_pt_theme_theme_is_none() -> None:
+    """Test that calling _sync_pt_theme() when _THEME is None is a no-op."""
+    from cmd2 import theme
+
+    theme._THEME = None
+    theme._PT_THEME = None
+
+    theme._sync_pt_theme()
+
+    assert theme._THEME is None
+    assert theme._PT_THEME is None
+
+
 def test_register_pt_mapping() -> None:
     """Test style registration with UI mapping."""
     style_name = "my_custom_scrollbar"
@@ -107,7 +175,7 @@ def test_register_pt_mapping() -> None:
 
     register_pt_mapping(style_name, ui_name)
 
-    set_theme({style_name: Style(color=Color.BLUE)})
+    update_theme({style_name: Style(color=Color.BLUE)})
 
     pt_theme = get_pt_theme()
 
@@ -156,7 +224,7 @@ def test_unregister_pt_mapping() -> None:
     ui_names = ["scroll1", "scroll2"]
 
     register_pt_mapping(style_name, ui_names)
-    set_theme({style_name: Style(color=Color.RED)})
+    update_theme({style_name: Style(color=Color.RED)})
 
     pt_theme = get_pt_theme()
     assert pt_theme.get_attrs_for_style_str("class:scroll1").color == "ansired"
@@ -203,7 +271,7 @@ def test_register_synchronized_style() -> None:
     style_name = "simple_style"
     register_synchronized_style(style_name)
 
-    set_theme({style_name: Style(color=Color.RED)})
+    update_theme({style_name: Style(color=Color.RED)})
 
     # It should be available as a class:name
     pt_theme = get_pt_theme()
@@ -230,7 +298,7 @@ def test_register_synchronized_prefix() -> None:
 
     prefix = "myapp."
     style_name = f"{prefix}prompt"
-    set_theme({style_name: Style(color=Color.GREEN)})
+    update_theme({style_name: Style(color=Color.GREEN)})
 
     # Initially the style is only in the Rich theme
     rich_theme = get_theme()
@@ -258,7 +326,7 @@ def test_unregister_synchronized_prefix() -> None:
 
     prefix = "unregister."
     style_name = f"{prefix}prompt"
-    set_theme({style_name: Style(color=Color.GREEN)})
+    update_theme({style_name: Style(color=Color.GREEN)})
 
     # Register the prefix and make sure the style has been synced to the pt theme
     register_synchronized_prefix(prefix)
