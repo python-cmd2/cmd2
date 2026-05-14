@@ -266,6 +266,8 @@ from .types import (
 if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import ArgparseCompleter
 
+    # In Python 3.14+, move these definitions outside the TYPE_CHECKING
+    # block as staticmethod/classmethod become subscriptable at runtime.
     _StaticParserFactory = staticmethod[[], "Cmd2ArgumentParser"]
     _ClassParserFactory = classmethod[CmdOrSetT, [], "Cmd2ArgumentParser"]
 else:
