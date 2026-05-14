@@ -56,7 +56,8 @@ from .string_utils import stylize
 from .styles import Cmd2Style
 from .theme import (
     get_theme,
-    set_theme,
+    reset_theme,
+    update_theme,
 )
 from .utils import (
     CustomCompletionSettings,
@@ -112,7 +113,8 @@ __all__: list[str] = [  # noqa: RUF022
     "Cmd2Style",
     # Theme
     "get_theme",
-    "set_theme",
+    "reset_theme",
+    "update_theme",
     # Utilities
     "categorize",
     "CustomCompletionSettings",

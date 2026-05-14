@@ -23,7 +23,10 @@ from collections.abc import (
 from typing import cast
 
 from prompt_toolkit.styles import Style as PtStyle
-from rich.style import StyleType
+from rich.style import (
+    Style,
+    StyleType,
+)
 from rich.theme import Theme
 
 from .pt_utils import rich_to_pt_style
@@ -35,16 +38,16 @@ from .styles import (
 )
 
 # The application-wide theme, defined using Rich's styling system.
-# Use get_theme() to access it and set_theme() to modify it.
+# Use get_theme() to access it.
+# Use reset_theme() and update_theme() to modify it.
 _THEME: Theme | None = None
 
 # The prompt-toolkit version of the theme, synchronized from the Rich theme.
-# Use get_pt_theme() to access it. This object is automatically updated whenever
-# set_theme() is called.
+# Use get_pt_theme() to access it.
 _PT_THEME: PtStyle | None = None
 
 # Maps style names to internal UI component names used by prompt-toolkit.
-# This allows developers to use application-specific style names in set_theme()
+# This allows developers to use application-specific style names in update_theme()
 # while ensuring the underlying prompt-toolkit UI is styled correctly.
 # Use register_pt_mapping() and unregister_pt_mapping() to manage these mappings.
 #
@@ -72,52 +75,73 @@ _SYNCHRONIZED_PREFIXES: set[str] = {"cmd2."}
 def get_theme() -> Theme:
     """Get the application-wide Rich theme. Initializes it on the first call."""
     if _THEME is None:
-        set_theme()
+        reset_theme()
     return cast(Theme, _THEME)
 
 
 def get_pt_theme() -> PtStyle:
     """Get the application-wide prompt-toolkit style. Initializes it on the first call."""
     if _PT_THEME is None:
-        set_theme()
+        reset_theme()
     return cast(PtStyle, _PT_THEME)
 
 
-def set_theme(styles: Mapping[str, StyleType] | None = None) -> None:
-    """Set the application-wide theme.
+def reset_theme() -> None:
+    """Reset the application-wide theme to its initial state.
+
+    This function performs an in-place reset of the existing Rich theme's
+    styles. This ensures that any Console objects already using the theme
+    will reflect the changes immediately without needing to be recreated.
+
+    Changes are automatically propagated to all synchronized components.
+    """
+    global _THEME  # noqa: PLW0603
+
+    # Include default styles from cmd2, rich-argparse, and Rich.
+    styles = DEFAULT_CMD2_STYLES.copy()
+    styles.update(DEFAULT_ARGPARSE_STYLES)
+    default_theme = Theme(styles, inherit=True)
+
+    if _THEME is None:
+        # Initial assignment
+        _THEME = default_theme
+    else:
+        # Perform in-place reset to preserve existing references
+        _THEME.styles.clear()
+        _THEME.styles.update(default_theme.styles)
+
+    _sync_all()
+
+
+def update_theme(styles: Mapping[str, StyleType]) -> None:
+    """Update the existing theme.
 
     This function performs an in-place update of the existing Rich theme's
     styles. This ensures that any Console objects already using the theme
     will reflect the changes immediately without needing to be recreated.
 
-    It also automatically synchronizes the prompt-toolkit theme for any
-    styles with registered prefixes or mapped UI components.
+    Changes are automatically propagated to all synchronized components.
 
-    Call set_theme() with no arguments to reset to the default theme.
-    This will clear any custom styles that were previously applied.
-
-    :param styles: optional mapping of style names to styles
+    :param styles: mapping of style names to styles
     """
-    global _THEME  # noqa: PLW0603
+    # Convert any string styles to Style objects
+    parsed_styles = {name: style if isinstance(style, Style) else Style.parse(style) for name, style in styles.items()}
+
+    # Perform in-place update to preserve existing references
+    get_theme().styles.update(parsed_styles)
+
+    _sync_all()
+
+
+def _sync_all() -> None:
+    """Propagate the global theme to rich-argparse and prompt-toolkit.
+
+    If the theme hasn't been initialized yet, this is a no-op.
+    """
     if _THEME is None:
-        _THEME = Theme()
+        return
 
-    # Start with a fresh copy of the default styles.
-    unparsed_styles: dict[str, StyleType] = {}
-    unparsed_styles.update(_create_default_theme().styles)
-
-    # Add the custom styles, which may contain unparsed strings
-    if styles is not None:
-        unparsed_styles.update(styles)
-
-    # Use Rich's Theme class to perform the parsing
-    parsed_styles = Theme(unparsed_styles).styles
-
-    # Perform the in-place update with the results
-    _THEME.styles.clear()
-    _THEME.styles.update(parsed_styles)
-
-    # Synchronize rich-argparse styles with the main application theme.
+    # Synchronize rich-argparse styles
     for name in Cmd2HelpFormatter.styles.keys() & _THEME.styles.keys():
         Cmd2HelpFormatter.styles[name] = _THEME.styles[name]
 
@@ -126,11 +150,16 @@ def set_theme(styles: Mapping[str, StyleType] | None = None) -> None:
 
 
 def _sync_pt_theme() -> None:
-    """Build a new global PT style object based on the current Rich theme."""
-    theme = get_theme()
+    """Build a new global prompt-toolkit style object based on the current Rich theme.
+
+    If the theme hasn't been initialized yet, this is a no-op.
+    """
+    if _THEME is None:
+        return
+
     style_rules: list[tuple[str, str]] = []
 
-    for name, rich_style in theme.styles.items():
+    for name, rich_style in _THEME.styles.items():
         # Only synchronize if it has a registered prefix or mapped UI component.
         is_framework_style = any(name.startswith(p) for p in _SYNCHRONIZED_PREFIXES)
         is_mapped_style = name in _PT_UI_MAP
@@ -147,16 +176,6 @@ def _sync_pt_theme() -> None:
 
     global _PT_THEME  # noqa: PLW0603
     _PT_THEME = PtStyle(style_rules)
-
-
-def _create_default_theme() -> Theme:
-    """Create a default theme for the application.
-
-    This theme combines the default styles from cmd2, rich-argparse, and Rich.
-    """
-    app_styles = DEFAULT_CMD2_STYLES.copy()
-    app_styles.update(DEFAULT_ARGPARSE_STYLES)
-    return Theme(app_styles, inherit=True)
 
 
 def register_pt_mapping(style_name: str, pt_ui_names: str | Iterable[str]) -> None:

@@ -131,7 +131,7 @@ all colors available to your `cmd2` application.
 
 `cmd2` uses a `rich` [Theme](https://rich.readthedocs.io/en/stable/reference/theme.html) object to
 define styles for various UI elements. You can define your own custom theme using
-[cmd2.rich_utils.set_theme][]. See the
+[cmd2.theme.update_theme][]. See the
 [rich_theme.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_theme.py) example for
 more information.
 
