@@ -52,7 +52,7 @@ periodically.
 customize its appearance using the `cmd2` theme.
 
 - **Customization**: Override the `Cmd2Style.COMPLETION_MENU_CURRENT` and
-  `Cmd2Style.COMPLETION_MENU_META` styles using `cmd2.theme.set_theme()`. See
+  `Cmd2Style.COMPLETION_MENU_META` styles using `cmd2.theme.update_theme()`. See
   [Customizing Completion Menu Colors](features/theme.md#customizing-completion-menu-colors) for
   more details.
 
@@ -136,7 +136,7 @@ The new [cmd2.rich_utils][] module provides common utility classes and functions
 use of `rich` within `cmd2` applications. Most of what is here is not intended to be user-facing.
 
 The one thing many `cmd2` application developers will likely be interested in using is the
-[cmd2.rich_utils.set_theme][] function. See the
+[cmd2.theme.update_theme][] function. See the
 [rich_theme.py](https://github.com/python-cmd2/cmd2/blob/main/examples/rich_theme.py) example for a
 demonstration for how to set a theme (color scheme) for your app.
 

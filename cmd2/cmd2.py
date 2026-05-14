@@ -1341,7 +1341,21 @@ class Cmd:
         )
         self.add_settable(Settable("debug", bool, "Show full traceback on exception", self))
         self.add_settable(Settable("echo", bool, "Echo command issued into output", self))
-        self.add_settable(Settable("editor", str, "Program used by 'edit'", self))
+
+        editor_description = Text.assemble(
+            "Program used by ",
+            ("'edit'", Style(bold=True)),
+            " command",
+        )
+        self.add_settable(
+            Settable(
+                "editor",
+                str,
+                ru.rich_text_to_string(editor_description),
+                self,
+            )
+        )
+
         self.add_settable(
             Settable(
                 "max_completion_table_items",
@@ -1362,6 +1376,20 @@ class Cmd:
         self.add_settable(Settable("scripts_add_to_history", bool, "Scripts and pyscripts add commands to history", self))
         self.add_settable(Settable("timing", bool, "Report execution times", self))
         self.add_settable(Settable("traceback_show_locals", bool, "Display local variables in tracebacks", self))
+
+        traceback_width_description = Text.assemble(
+            "Maximum display width for tracebacks. Set to ",
+            ("None", Style(bold=True)),
+            " (case-insensitive) to fill entire terminal width.",
+        )
+        self.add_settable(
+            Settable(
+                "traceback_width",
+                utils.optional_int,
+                ru.rich_text_to_string(traceback_width_description),
+                self,
+            )
+        )
 
     @property
     def allow_style(self) -> ru.AllowStyle:
@@ -1388,6 +1416,22 @@ class Cmd:
     def traceback_show_locals(self, value: bool) -> None:
         """Setter property needed to support do_set when it updates traceback_show_locals."""
         self.traceback_kwargs["show_locals"] = value
+
+    @property
+    def traceback_width(self) -> int | None:
+        """Property needed to support do_set when it reads traceback_width."""
+        if "width" in self.traceback_kwargs:
+            return cast(int | None, self.traceback_kwargs["width"])
+
+        # If setting is not present, then return its default value.
+        traceback_sig = inspect.signature(Traceback.__init__)
+        width = traceback_sig.parameters["width"].default
+        return cast(int | None, width)
+
+    @traceback_width.setter
+    def traceback_width(self, value: int | None) -> None:
+        """Setter property needed to support do_set when it updates traceback_width."""
+        self.traceback_kwargs["width"] = value
 
     @property
     def visible_prompt(self) -> str:
