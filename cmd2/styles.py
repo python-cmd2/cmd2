@@ -26,18 +26,13 @@ For prompt-toolkit default styles, see:
 https://github.com/prompt-toolkit/python-prompt-toolkit/blob/main/src/prompt_toolkit/styles/defaults.py
 """
 
-import sys
+from enum import StrEnum
 
 from rich.style import (
     Style,
     StyleType,
 )
 from rich_argparse import RichHelpFormatter
-
-if sys.version_info >= (3, 11):
-    from enum import StrEnum
-else:
-    from backports.strenum import StrEnum
 
 from .colors import Color
 

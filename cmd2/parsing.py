@@ -2,7 +2,6 @@
 
 import re
 import shlex
-import sys
 from collections.abc import (
     Iterable,
     Mapping,
@@ -16,12 +15,8 @@ from dataclasses import (
 from typing import (
     Any,
     ClassVar,
+    Self,
 )
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
 
 from . import (
     constants,

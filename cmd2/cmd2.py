@@ -3114,7 +3114,7 @@ class Cmd:
         while True:
             try:
                 return self._check_statement_complete(line)
-            except IncompleteStatement:  # noqa: PERF203
+            except IncompleteStatement:
                 # If incomplete, we need to fetch the next line
                 try:
                     try:
