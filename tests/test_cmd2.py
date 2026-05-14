@@ -267,6 +267,51 @@ def test_set_traceback_show_locals(base_app: cmd2.Cmd) -> None:
     assert base_app.traceback_show_locals is new_val
     assert base_app.traceback_kwargs["show_locals"] is new_val
 
+    # Test invalid input
+    _out, err = run_cmd(base_app, "set traceback_show_locals invalid")
+    assert base_app.last_result is False
+    assert "must be True or False (case-insensitive)" in err[0]
+
+
+def test_set_traceback_width(base_app: cmd2.Cmd) -> None:
+    """Test the set command for reading and setting traceback_width."""
+
+    import inspect
+
+    from rich.traceback import Traceback
+
+    # Get Traceback's default value for "width"
+    traceback_sig = inspect.signature(Traceback.__init__)
+    default_val = traceback_sig.parameters["width"].default
+
+    # Clear any existing value
+    base_app.traceback_kwargs.pop("width", None)
+    assert "width" not in base_app.traceback_kwargs
+
+    # Test that we receive the default value if not present
+    orig_val = base_app.traceback_width
+    assert orig_val == default_val
+    assert "width" not in base_app.traceback_kwargs
+
+    # Test setting it to an integer (handling case where orig_val is None)
+    new_val = (orig_val or 0) + 100
+    run_cmd(base_app, f"set traceback_width {new_val}")
+    assert base_app.traceback_width == new_val
+    assert base_app.traceback_kwargs["width"] == new_val
+
+    # Test setting to "None" (case-insensitive)
+    run_cmd(base_app, "set traceback_width None")
+    assert base_app.traceback_width is None
+    assert base_app.traceback_kwargs["width"] is None  # type: ignore[unreachable]
+
+    run_cmd(base_app, "set traceback_width none")
+    assert base_app.traceback_width is None
+
+    # Test invalid input
+    _out, err = run_cmd(base_app, "set traceback_width invalid")
+    assert base_app.last_result is False
+    assert "must be an integer or None" in err[0]
+
 
 def test_set_with_choices(base_app) -> None:
     """Test choices validation of Settables"""
