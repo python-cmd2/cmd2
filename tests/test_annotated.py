@@ -254,7 +254,7 @@ class TestBuildParser:
             pytest.param(_func_kw_only, {"option_strings": ["--name"], "required": True}, id="kw_only_required"),
             pytest.param(_func_kw_only_with_default, {"option_strings": ["--name"], "default": "world"}, id="kw_only_default"),
             # --- Underscore in flag names ---
-            pytest.param(_func_underscore_option, {"option_strings": ["--my_param"], "default": "x"}, id="underscore_flag"),
+            pytest.param(_func_underscore_option, {"option_strings": ["--my-param"], "default": "x"}, id="underscore_flag"),
             # --- Default type preservation ---
             pytest.param(
                 _func_default_type_mismatch, {"option_strings": ["--count"], "default": "1"}, id="default_not_coerced"
@@ -364,6 +364,28 @@ class TestTypeInferenceBuildParser:
         assert action.choices is None
         assert action.get_choices_provider() is not None  # type: ignore[attr-defined]
         assert action.get_completer() is None  # type: ignore[attr-defined]
+
+    def test_choices_provider_strips_strict_enum_converter(self) -> None:
+        """User-supplied choices_provider on Enum drops the restrictive enum converter."""
+        action = _get_param_action(_func_choices_provider_on_enum)
+        assert action.type is None
+
+    def test_choices_provider_strips_strict_literal_converter(self) -> None:
+        """User-supplied choices_provider on Literal drops the restrictive literal converter."""
+
+        def func(
+            self,
+            mode: Annotated[Literal["fast", "slow"], Argument(choices_provider=_provider)],
+        ) -> None: ...
+
+        action = _get_param_action(func)
+        assert action.type is None
+        assert action.choices is None
+
+    def test_completer_keeps_path_converter(self) -> None:
+        """User-supplied completer on Path preserves the (non-restrictive) Path converter."""
+        action = _get_param_action(_func_completer_on_path)
+        assert action.type is Path
 
     def test_completer_overrides_inferred_path_completion(self) -> None:
         action = _get_param_action(_func_completer_on_path)
@@ -558,7 +580,7 @@ class TestGroupHelpers:
 
 
 # ---------------------------------------------------------------------------
-# _resolve_annotation: positional vs option classification + bool flag
+# _resolve_annotation: positional vs option classification
 # ---------------------------------------------------------------------------
 
 _ARG_META = Argument(help_text="Name")
@@ -567,39 +589,38 @@ _OPT_META = Option("--color", "-c", help_text="Pick")
 
 class TestResolveAnnotation:
     @pytest.mark.parametrize(
-        ("annotation", "has_default", "expected_positional", "expected_bool_flag"),
+        ("annotation", "has_default", "expected_positional"),
         [
-            pytest.param(str, False, True, False, id="plain_str"),
-            pytest.param(str | None, False, False, False, id="optional_str"),
-            pytest.param(Annotated[str, _ARG_META], False, True, False, id="annotated_argument"),
-            pytest.param(Annotated[str, _OPT_META], False, False, False, id="annotated_option"),
-            pytest.param(Annotated[str, "some doc"], False, True, False, id="annotated_no_meta"),
-            pytest.param(str, True, False, False, id="has_default"),
-            pytest.param(bool, True, False, True, id="bool_flag"),
+            pytest.param(str, False, True, id="plain_str"),
+            pytest.param(str | None, False, False, id="optional_str"),
+            pytest.param(Annotated[str, _ARG_META], False, True, id="annotated_argument"),
+            pytest.param(Annotated[str, _OPT_META], False, False, id="annotated_option"),
+            pytest.param(Annotated[str, "some doc"], False, True, id="annotated_no_meta"),
+            pytest.param(str, True, False, id="has_default"),
+            pytest.param(bool, True, False, id="bool_flag"),
         ],
     )
-    def test_classification(self, annotation, has_default, expected_positional, expected_bool_flag) -> None:
-        _kwargs, _meta, positional, is_bool_flag = _resolve_annotation(annotation, has_default=has_default)
+    def test_classification(self, annotation, has_default, expected_positional) -> None:
+        _kwargs, _meta, positional = _resolve_annotation(annotation, has_default=has_default)
         assert positional is expected_positional
-        assert is_bool_flag is expected_bool_flag
 
     def test_optional_wrapping_annotated_with_none_inside(self) -> None:
         """Optional[Annotated[T | None, meta]] is allowed (inner type contains None)."""
         ann = Annotated[str | None, _OPT_META] | None
-        _kwargs, meta, positional, _bf = _resolve_annotation(ann)
+        _kwargs, meta, positional = _resolve_annotation(ann)
         assert meta is _OPT_META
         assert positional is False
 
     def test_typing_union_optional(self) -> None:
         ns: dict = {}
         exec("import typing; t = typing.Union[str, None]", ns)
-        _kwargs, _meta, positional, _bool_flag = _resolve_annotation(ns["t"])
+        _kwargs, _meta, positional = _resolve_annotation(ns["t"])
         assert positional is False
 
     def test_annotated_multiple_metadata_picks_first(self) -> None:
         meta1 = Argument(help_text="first")
         meta2 = Option("--x", help_text="second")
-        kwargs, meta, _, _ = _resolve_annotation(Annotated[str, meta1, meta2])
+        kwargs, meta, _ = _resolve_annotation(Annotated[str, meta1, meta2])
         assert meta is meta1
         assert kwargs.get("help") == "first"
 
@@ -639,7 +660,7 @@ class TestUnsupportedPatterns:
         ],
     )
     def test_unsupported_collection_no_nargs(self, annotation) -> None:
-        kwargs, _, _, _ = _resolve_annotation(annotation)
+        kwargs, _, _ = _resolve_annotation(annotation)
         assert "nargs" not in kwargs
         assert "action" not in kwargs
 
@@ -1085,7 +1106,9 @@ class _GroupedParserApp(cmd2.Cmd):
 
 @pytest.fixture
 def app() -> _IntegrationApp:
-    return _IntegrationApp()
+    app = _IntegrationApp()
+    app.stdout = cmd2.utils.StdSim(app.stdout)
+    return app
 
 
 @pytest.fixture
@@ -1147,11 +1170,28 @@ class TestWithAnnotatedIntegration:
         assert app.ns_calls == 1
 
     def test_cmd2_prefixed_param_is_preserved(self, app) -> None:
-        out, _err = run_cmd(app, "prefixed --cmd2_mode 5")
+        out, _err = run_cmd(app, "prefixed --cmd2-mode 5")
         assert out == ["cmd2_mode=5"]
 
     def test_kwargs_passthrough(self, app) -> None:
         app.do_greet("Alice", keyword_arg="kwarg_value")
+
+    def test_direct_call_with_positional_only(self, app) -> None:
+        """Calling do_* directly with a single statement string parses normally."""
+        app.do_greet("Alice")
+        assert app.stdout.getvalue().splitlines()[-1] == "Hello Alice"
+
+    def test_direct_call_with_options(self, app) -> None:
+        """Direct call with a full statement string including options."""
+        app.do_greet("Alice --count 2 --loud")
+        out = app.stdout.getvalue().splitlines()
+        assert out[-2:] == ["HELLO ALICE", "HELLO ALICE"]
+
+    def test_direct_call_kwargs_override_parsed(self, app) -> None:
+        """Explicit kwargs on a direct call override parsed values."""
+        app.do_greet("Alice", count=3)
+        out = app.stdout.getvalue().splitlines()
+        assert out[-3:] == ["Hello Alice", "Hello Alice", "Hello Alice"]
 
     def test_bare_call_decorator(self) -> None:
         """@with_annotated() with empty parens works same as @with_annotated."""
@@ -1176,7 +1216,7 @@ class TestWithAnnotatedIntegration:
 
 class TestGroupedParserIntegration:
     def test_grouped_command_executes(self, grouped_app) -> None:
-        out, _err = run_cmd(grouped_app, "transfer --local build.tar.gz --dry_run")
+        out, _err = run_cmd(grouped_app, "transfer --local build.tar.gz --dry-run")
         assert out == ["Transfer build.tar.gz in dry-run mode"]
 
     def test_grouped_command_mutex_error(self, grouped_app) -> None:
@@ -1189,7 +1229,7 @@ class TestGroupedParserIntegration:
         assert "--local" in help_text
         assert "--remote" in help_text
         assert "--force" in help_text
-        assert "--dry_run" in help_text
+        assert "--dry-run" in help_text
 
 
 # ---------------------------------------------------------------------------
@@ -1291,6 +1331,14 @@ class TestSubcommandValidation:
 
             @cmd2.with_annotated(base_command=True)
             def do_bad(self, verbose: bool = False) -> None:
+                pass
+
+    def test_cmd2_handler_without_base_command_raises(self) -> None:
+        """A 'cmd2_handler' parameter is only valid when base_command=True."""
+        with pytest.raises(TypeError, match="base_command=True"):
+
+            @cmd2.with_annotated
+            def do_bad(self, cmd2_handler, name: str = "") -> None:
                 pass
 
     @pytest.mark.parametrize(

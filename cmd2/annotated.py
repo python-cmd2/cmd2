@@ -13,8 +13,10 @@ finer control is needed.
 Basic usage -- parameters without defaults become positional arguments,
 parameters with defaults become ``--option`` flags.  Keyword-only
 parameters (after ``*``) always become options; without a default they
-are required.  The parameter name ``dest`` is reserved and cannot be
-used::
+are required.  Underscores in parameter names are auto-converted to
+dashes in the generated flag (``dry_run`` -> ``--dry-run``); pass
+explicit names via ``Option("--my_flag")`` to opt out.  The parameter
+name ``dest`` is reserved and cannot be used::
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_annotated
@@ -76,7 +78,13 @@ When combining ``Annotated`` with ``Optional``, the union must go
 Note: ``Path`` and ``Enum`` annotations with ``@with_annotated`` also get
 automatic tab completion via generated parser metadata.
 If a user-supplied ``choices_provider`` or ``completer`` is set on an argument,
-it always takes priority over the type-inferred completion.
+it always takes priority over the type-inferred completion.  For ``Enum`` and
+``Literal``, the restrictive type converter is also stripped so user-supplied
+values are not rejected at parse time.  The ``Path`` converter is permissive
+and is preserved when a custom completer is provided.
+
+The parameter name ``cmd2_handler`` is reserved for base commands declared with
+``with_annotated(base_command=True)`` and may not be used elsewhere.
 """
 
 import argparse
@@ -100,7 +108,6 @@ from typing import (
 
 from . import constants
 from .argparse_utils import Cmd2ArgumentParser, SubcommandSpec
-from .cmd2 import Cmd
 from .completion import CompletionItem
 from .decorators import _parse_positionals
 from .exceptions import Cmd2ArgparseError
@@ -166,7 +173,8 @@ class Option(_BaseArgMetadata):
     """Metadata for an optional/flag argument in an ``Annotated`` type hint.
 
     Positional ``*names`` are the flag strings (e.g. ``"--color"``, ``"-c"``).
-    When omitted, the decorator auto-generates ``--param_name``.
+    When omitted, the decorator auto-generates ``--param-name`` (underscores
+    in the parameter name are converted to dashes).
 
     Example::
 
@@ -193,10 +201,10 @@ class Option(_BaseArgMetadata):
     def to_kwargs(self) -> dict[str, Any]:
         """Return non-None fields as an argparse kwargs dict."""
         kwargs = super().to_kwargs()
-        if self.action:
+        if self.action is not None:
             kwargs["action"] = self.action
         if self.required:
-            kwargs["required"] = self.required
+            kwargs["required"] = True
         return kwargs
 
 
@@ -265,6 +273,7 @@ def _make_literal_type(literal_values: list[Any]) -> Callable[[str], Any]:
         raise argparse.ArgumentTypeError(f"invalid choice: {value!r} (choose from {valid})")
 
     _convert.__name__ = "literal"
+    _convert._cmd2_strict_choice_converter = True  # type: ignore[attr-defined]
     return _convert
 
 
@@ -287,6 +296,7 @@ def _make_enum_type(enum_class: type[enum.Enum]) -> Callable[[str], enum.Enum]:
 
     _convert.__name__ = enum_class.__name__
     _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]
+    _convert._cmd2_strict_choice_converter = True  # type: ignore[attr-defined]
     return _convert
 
 
@@ -324,6 +334,8 @@ def _make_simple_resolver(converter: Callable[..., Any] | type) -> Callable[...,
 
 def _resolve_path(_tp: Any, _args: tuple[Any, ...], **_ctx: Any) -> dict[str, Any]:
     """Resolve Path and add completer."""
+    from .cmd2 import Cmd
+
     return {"type": Path, "completer": Cmd.path_complete}
 
 
@@ -339,8 +351,8 @@ def _resolve_bool(
     if not is_positional:
         action_str = getattr(metadata, "action", None) if metadata else None
         if action_str:
-            return {"action": action_str, "is_bool_flag": True}
-        return {"action": argparse.BooleanOptionalAction, "is_bool_flag": True}
+            return {"action": action_str}
+        return {"action": argparse.BooleanOptionalAction}
     return {"type": _parse_bool, "choices": list(_BOOL_CHOICES)}
 
 
@@ -504,6 +516,9 @@ def _resolve_type(
 
     if kwargs.get("choices_provider") or kwargs.get("completer"):
         kwargs.pop("choices", None)
+        converter = kwargs.get("type")
+        if getattr(converter, "_cmd2_strict_choice_converter", False):
+            kwargs.pop("type", None)
 
     return base_type, kwargs
 
@@ -572,8 +587,8 @@ def _resolve_annotation(
     has_default: bool = False,
     default: Any = None,
     is_kw_only: bool = False,
-) -> tuple[dict[str, Any], ArgMetadata, bool, bool]:
-    """Decompose a type annotation into ``(type_kwargs, metadata, is_positional, is_bool_flag)``.
+) -> tuple[dict[str, Any], ArgMetadata, bool]:
+    """Decompose a type annotation into ``(type_kwargs, metadata, is_positional)``.
 
     Peels ``Annotated`` then ``Optional``.  The only supported way to combine
     ``Annotated`` with ``Optional`` is ``Annotated[T | None, meta]``.
@@ -585,7 +600,6 @@ def _resolve_annotation(
         not isinstance(metadata, Option) and not has_default and not is_optional and not is_kw_only
     )
 
-    # 4. Resolve type and finalize argparse kwargs
     tp, type_kwargs = _resolve_type(
         tp,
         is_positional=is_positional,
@@ -595,12 +609,10 @@ def _resolve_annotation(
         is_kw_only=is_kw_only,
     )
 
-    # Strip internal keys not meant for argparse
-    is_bool_flag = type_kwargs.pop("is_bool_flag", False)
     type_kwargs.pop("is_collection", None)
     type_kwargs.pop("base_type", None)
 
-    return type_kwargs, metadata, is_positional, is_bool_flag
+    return type_kwargs, metadata, is_positional
 
 
 # Parameter names that conflict with argparse internals and cannot be used
@@ -619,9 +631,7 @@ def _validate_base_command_params(
     skip_params: frozenset[str] | None = None,
 ) -> None:
     """Validate a ``base_command=True`` function has ``cmd2_handler`` and no positional args."""
-    sig = inspect.signature(func)
-
-    if "cmd2_handler" not in sig.parameters:
+    if "cmd2_handler" not in inspect.signature(func).parameters:
         raise TypeError(f"with_annotated(base_command=True) requires a 'cmd2_handler' parameter in {func.__qualname__}")
 
     if skip_params is None:
@@ -689,7 +699,7 @@ def _resolve_parameters(
         default = param.default if has_default else None
         is_kw_only = param.kind == inspect.Parameter.KEYWORD_ONLY
 
-        kwargs, metadata, positional, _is_bool_flag = _resolve_annotation(
+        kwargs, metadata, positional = _resolve_annotation(
             annotation,
             has_default=has_default,
             default=default,
@@ -699,7 +709,9 @@ def _resolve_parameters(
         if positional:
             flags: list[str] = []
         else:
-            flags = list(metadata.names) if isinstance(metadata, Option) and metadata.names else [f"--{name}"]
+            flags = (
+                list(metadata.names) if isinstance(metadata, Option) and metadata.names else [f"--{name.replace('_', '-')}"]
+            )
             kwargs["dest"] = name
 
         resolved.append((name, metadata, positional, flags, kwargs))
@@ -986,6 +998,11 @@ def with_annotated(
                 raise TypeError("with_annotated(with_unknown_args=True) requires a parameter named _unknown")
             if unknown_param.kind is inspect.Parameter.POSITIONAL_ONLY:
                 raise TypeError("Parameter _unknown must be keyword-compatible when with_unknown_args=True")
+
+        if not base_command and "cmd2_handler" in inspect.signature(fn).parameters:
+            raise TypeError(
+                f"Parameter 'cmd2_handler' in {fn.__qualname__} is only valid when with_annotated(base_command=True) is used."
+            )
 
         if subcommand_to is not None:
             handler, subcmd_name, subcmd_parser_builder = build_subcommand_handler(
