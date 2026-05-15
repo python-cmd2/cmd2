@@ -2,7 +2,6 @@
 
 import copy
 import re
-import sys
 from collections.abc import (
     Iterable,
     Iterator,
@@ -14,22 +13,16 @@ from dataclasses import (
 )
 from typing import (
     Any,
+    Self,
     cast,
     overload,
 )
 
+from rich.protocol import is_renderable
 from rich.table import Table
 
-from . import string_utils as su
-
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
-from rich.protocol import is_renderable
-
 from . import rich_utils as ru
+from . import string_utils as su
 
 
 class _UnsetStr(str):

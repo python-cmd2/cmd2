@@ -22,6 +22,7 @@ prompt is displayed.
       each platform and provided utility functions related to `readline`
     - Added a dependency on `prompt-toolkit` and a new `cmd2.pt_utils` module with supporting
       utilities
+    - Dropped support for Python 3.10. `cmd2` now requires Python 3.11 or later
     - Removed **Transcript Testing** feature set along with the `history -t` option for generating
       transcript files and the `cmd2.transcript` module
         - This was an extremely brittle regression testing framework which should never have been
