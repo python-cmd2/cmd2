@@ -99,6 +99,7 @@ from typing import (
 )
 
 from . import constants
+from .argparse_utils import Cmd2ArgumentParser, SubcommandSpec
 from .cmd2 import Cmd
 from .completion import CompletionItem
 from .decorators import _parse_positionals
@@ -816,7 +817,7 @@ def build_parser_from_function(
     skip_params: frozenset[str] = _SKIP_PARAMS,
     groups: tuple[tuple[str, ...], ...] | None = None,
     mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = None,
-) -> argparse.ArgumentParser:
+) -> Cmd2ArgumentParser:
     """Inspect a function's signature and build a ``Cmd2ArgumentParser``.
 
     Parameters without defaults become positional arguments.
@@ -883,7 +884,7 @@ def build_subcommand_handler(
     base_command: bool = False,
     groups: tuple[tuple[str, ...], ...] | None = None,
     mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = None,
-) -> tuple[Callable[..., Any], str, Callable[[], argparse.ArgumentParser]]:
+) -> tuple[Callable[..., Any], str, Callable[[], Cmd2ArgumentParser]]:
     """Build a subcommand handler wrapper and its parser from type annotations.
 
     Validates the naming convention, builds a parser from annotations, and
@@ -908,7 +909,7 @@ def build_subcommand_handler(
         filtered = _filtered_namespace_kwargs(ns, accepted=_accepted)
         return func(self_arg, **filtered)
 
-    def parser_builder() -> argparse.ArgumentParser:
+    def parser_builder() -> Cmd2ArgumentParser:
         parser = build_parser_from_function(func, groups=groups, mutually_exclusive_groups=mutually_exclusive_groups)
         if base_command:
             parser.add_subparsers(dest="subcommand", metavar="SUBCOMMAND", required=True)
@@ -994,15 +995,14 @@ def with_annotated(
                 groups=groups,
                 mutually_exclusive_groups=mutually_exclusive_groups,
             )
-            setattr(handler, constants.SUBCMD_ATTR_COMMAND, subcommand_to)
-            setattr(handler, constants.SUBCMD_ATTR_NAME, subcmd_name)
-            setattr(handler, constants.CMD_ATTR_ARGPARSER, subcmd_parser_builder)
-            add_parser_kwargs: dict[str, Any] = {}
-            if help is not None:
-                add_parser_kwargs["help"] = help
-            if aliases:
-                add_parser_kwargs["aliases"] = list(aliases)
-            setattr(handler, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, add_parser_kwargs)
+            spec = SubcommandSpec(
+                name=subcmd_name,
+                command=subcommand_to,
+                help=help,
+                aliases=tuple(aliases) if aliases else (),
+                parser_source=subcmd_parser_builder,
+            )
+            setattr(handler, constants.SUBCMD_ATTR_SPEC, spec)
             return handler
 
         command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
@@ -1014,7 +1014,7 @@ def with_annotated(
         # Cache signature introspection at decoration time, not per-invocation
         accepted = set(list(inspect.signature(fn).parameters.keys())[1:])
 
-        def parser_builder() -> argparse.ArgumentParser:
+        def parser_builder() -> Cmd2ArgumentParser:
             parser = build_parser_from_function(
                 fn,
                 skip_params=skip_params,
@@ -1067,7 +1067,7 @@ def with_annotated(
             result: bool | None = fn(owner, **func_kwargs)
             return result
 
-        setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, parser_builder)
+        setattr(cmd_wrapper, constants.CMD_ATTR_PARSER_SOURCE, parser_builder)
         setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
 
         return cmd_wrapper

@@ -41,7 +41,7 @@ from .conftest import run_cmd
 # ---------------------------------------------------------------------------
 
 
-class _Color(str, enum.Enum):
+class _Color(enum.StrEnum):
     red = "red"
     green = "green"
     blue = "blue"
@@ -875,7 +875,7 @@ class TestParsePositionals:
 # ---------------------------------------------------------------------------
 
 
-class _Sport(str, enum.Enum):
+class _Sport(enum.StrEnum):
     football = "football"
     basketball = "basketball"
     tennis = "tennis"
@@ -1375,10 +1375,12 @@ class TestSubcommandValidation:
         @cmd2.with_annotated(subcommand_to="team", help="create", aliases=["c"])
         def team_create(self, name: str) -> None: ...
 
-        assert getattr(team_create, constants.SUBCMD_ATTR_COMMAND) == "team"
-        assert getattr(team_create, constants.SUBCMD_ATTR_NAME) == "create"
-        assert getattr(team_create, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS) == {"help": "create", "aliases": ["c"]}
-        parser = getattr(team_create, constants.CMD_ATTR_ARGPARSER)()
+        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
+        assert spec.command == "team"
+        assert spec.name == "create"
+        assert spec.help == "create"
+        assert spec.aliases == ("c",)
+        parser = spec.parser_source()
         assert isinstance(parser, argparse.ArgumentParser)
 
     def test_subcommand_without_help(self) -> None:
@@ -1388,4 +1390,6 @@ class TestSubcommandValidation:
         @cmd2.with_annotated(subcommand_to="team")
         def team_delete(self) -> None: ...
 
-        assert getattr(team_delete, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS) == {}
+        spec = getattr(team_delete, constants.SUBCMD_ATTR_SPEC)
+        assert spec.help is None
+        assert spec.aliases == ()

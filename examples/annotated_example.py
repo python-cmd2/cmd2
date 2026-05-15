@@ -19,7 +19,7 @@ Usage::
 import sys
 from argparse import Namespace
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import (
     Annotated,
@@ -33,14 +33,14 @@ from cmd2 import (
 )
 
 
-class Color(str, Enum):
+class Color(StrEnum):
     red = "red"
     green = "green"
     blue = "blue"
     yellow = "yellow"
 
 
-class LogLevel(str, Enum):
+class LogLevel(StrEnum):
     debug = "debug"
     info = "info"
     warning = "warning"
@@ -280,15 +280,13 @@ class AnnotatedExample(Cmd):
         """
         if verbose:
             self.poutput("verbose mode")
-        handler = cmd2_handler.get()
-        if handler:
-            handler()
+        if cmd2_handler:
+            cmd2_handler()
 
     @cmd2.with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
     def manage_project(self, *, cmd2_handler) -> None:
-        handler = cmd2_handler.get()
-        if handler:
-            handler()
+        if cmd2_handler:
+            cmd2_handler()
 
     @cmd2.with_annotated(subcommand_to="manage project", help="add a project")
     def manage_project_add(self, name: str) -> None:
