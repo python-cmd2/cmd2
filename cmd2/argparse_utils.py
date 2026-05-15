@@ -243,6 +243,8 @@ from typing import (
     Any,
     ClassVar,
     NoReturn,
+    TypeAlias,
+    Union,
     cast,
 )
 
@@ -264,9 +266,61 @@ from .types import (
 if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import ArgparseCompleter
 
+    # In Python 3.14+, move these definitions outside the TYPE_CHECKING
+    # block as staticmethod/classmethod become subscriptable at runtime.
+    _StaticParserFactory = staticmethod[[], "Cmd2ArgumentParser"]
+    _ClassParserFactory = classmethod[CmdOrSetT, [], "Cmd2ArgumentParser"]
+else:
+    _StaticParserFactory = staticmethod
+    _ClassParserFactory = classmethod
+
+# Represents a parser factory with no arguments (including staticmethod)
+NoParamParserFactory: TypeAlias = Callable[[], "Cmd2ArgumentParser"] | _StaticParserFactory
+
+# Represents a parser factory with a class argument (including classmethod)
+ClassParamParserFactory: TypeAlias = Union[
+    Callable[[type[CmdOrSetT]], "Cmd2ArgumentParser"],
+    "_ClassParserFactory[CmdOrSetT]",
+]
+
+# Represents the various types from which cmd2 can build a parser
+ParserSource: TypeAlias = Union[
+    "Cmd2ArgumentParser",
+    NoParamParserFactory,
+    ClassParamParserFactory[CmdOrSetT],
+]
+
+
+@dataclass(kw_only=True)
+class _SubcommandBase:
+    """Base metadata shared by all subcommand representations."""
+
+    name: str
+    command: str  # The full parent command path (e.g., 'foo bar')
+    help: str | None = None
+    aliases: tuple[str, ...] = ()
+    deprecated: bool = False
+
+
+@dataclass(kw_only=True)
+class SubcommandSpec(_SubcommandBase):
+    """Metadata used to build and register a subcommand."""
+
+    parser_source: ParserSource[Any]
+
+
+@dataclass(kw_only=True)
+class SubcommandRecord(_SubcommandBase):
+    """A record of a subcommand's configuration and parser.
+
+    Used primarily for attaching and detaching subcommands.
+    """
+
+    parser: "Cmd2ArgumentParser"
+
 
 def build_range_error(range_min: int, range_max: float) -> str:
-    """Build an error message when the the number of arguments provided is not within the expected range."""
+    """Build an error message when the number of arguments provided is not within the expected range."""
     err_msg = "expected "
 
     if range_max == constants.INFINITY:
@@ -532,9 +586,9 @@ argparse._ActionsContainer.add_argument = _ActionsContainer_add_argument  # type
 
 
 def _SubParsersAction_remove_parser(  # noqa: N802
-    self: argparse._SubParsersAction,  # type: ignore[type-arg]
+    self: "argparse._SubParsersAction[Cmd2ArgumentParser]",
     name: str,
-) -> argparse.ArgumentParser:
+) -> SubcommandRecord:
     """Remove a subparser from a subparsers group.
 
     This function is added by cmd2 as a method called ``remove_parser()``
@@ -544,7 +598,7 @@ def _SubParsersAction_remove_parser(  # noqa: N802
 
     :param self: instance of the _SubParsersAction being edited
     :param name: name of the subcommand for the subparser to remove
-    :return: the removed parser
+    :return: a SubcommandRecord object describing the removed parser
     :raises ValueError: if the subcommand doesn't exist
     """
     if name not in self._name_parser_map:
@@ -555,11 +609,25 @@ def _SubParsersAction_remove_parser(  # noqa: N802
     # Find all names (primary and aliases) that map to this subparser
     all_names = [cur_name for cur_name, cur_parser in self._name_parser_map.items() if cur_parser is subparser]
 
-    # Remove the help entry for this subparser. To handle the case where
-    # name is an alias, we remove the action whose 'dest' matches any of
-    # the names mapped to this subparser.
+    # argparse inserts the primary name before the aliases in _name_parser_map
+    primary_name = all_names[0]
+    aliases = tuple(all_names[1:])
+
+    # Handle Python 3.13+ deprecation
+    deprecated: bool = False
+    deprecated_attr = getattr(self, "_deprecated", None)
+    if isinstance(deprecated_attr, set):
+        if primary_name in deprecated_attr:
+            deprecated = True
+            deprecated_attr.discard(primary_name)
+        for alias in aliases:
+            deprecated_attr.discard(alias)
+
+    # Remove the help entry for this subparser.
+    help_text = None
     for choice_action in self._choices_actions:
-        if choice_action.dest in all_names:
+        if choice_action.dest == primary_name:
+            help_text = choice_action.help
             self._choices_actions.remove(choice_action)
             break
 
@@ -567,10 +635,43 @@ def _SubParsersAction_remove_parser(  # noqa: N802
     for cur_name in all_names:
         del self._name_parser_map[cur_name]
 
-    return cast(argparse.ArgumentParser, subparser)
+    return SubcommandRecord(
+        name=primary_name,
+        command="",  # To be populated by the caller
+        help=help_text,
+        aliases=aliases,
+        deprecated=deprecated,
+        parser=subparser,
+    )
+
+
+def _SubParsersAction_remove_all_parsers(  # noqa: N802
+    self: "argparse._SubParsersAction[Cmd2ArgumentParser]",
+) -> list[SubcommandRecord]:
+    """Remove all subparsers from a subparsers group.
+
+    This function is added by cmd2 as a method called ``remove_all_parsers()``
+    to ``argparse._SubParsersAction`` class.
+
+    To call: ``action.remove_all_parsers()``
+
+    :param self: instance of the _SubParsersAction being edited
+    :return: a list of SubcommandRecord objects for the removed subparsers
+    """
+    records: list[SubcommandRecord] = []
+
+    while self._name_parser_map:
+        # Get the next subcommand name. remove_parser() will remove
+        # it and any associated aliases from _name_parser_map.
+        name = next(iter(self._name_parser_map))
+        record = self.remove_parser(name)  # type: ignore[attr-defined]
+        records.append(record)
+
+    return records
 
 
 argparse._SubParsersAction.remove_parser = _SubParsersAction_remove_parser  # type: ignore[attr-defined]
+argparse._SubParsersAction.remove_all_parsers = _SubParsersAction_remove_all_parsers  # type: ignore[attr-defined]
 
 
 @dataclass
@@ -795,28 +896,27 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
     def attach_subcommand(
         self,
-        subcommand_path: Iterable[str],
-        subcommand: str,
-        subcommand_parser: "Cmd2ArgumentParser",
-        **add_parser_kwargs: Any,
+        record: SubcommandRecord,
+        subcommand_path: Iterable[str] = (),
     ) -> None:
         """Attach a parser as a subcommand to a command at the specified path.
 
+        Note: `record.command` is not used for navigation here. It is assumed you
+        are attaching relative to `self` using `subcommand_path`. However,
+        `record.command` will be updated to reflect the final, absolute path
+        of the parent parser this subcommand is attached to.
+
+        :param record: SubcommandRecord object describing the subcommand
         :param subcommand_path: sequence of subcommand names leading to the parser that will
                                 host the new subcommand. An empty sequence indicates this parser.
-        :param subcommand: name of the new subcommand
-        :param subcommand_parser: the parser to attach
-        :param add_parser_kwargs: additional arguments for the subparser registration (e.g. help, aliases)
-        :raises TypeError: if subcommand_parser is not an instance of the following or their subclasses:
-                           1. Cmd2ArgumentParser
-                           2. The parser_class configured for the target subcommand group
+        :raises TypeError: if record.parser is not an instance of Cmd2ArgumentParser (or subclass)
         :raises ValueError: if the command path is invalid, doesn't support subcommands, or the
                             subcommand already exists
         """
-        if not isinstance(subcommand_parser, Cmd2ArgumentParser):
+        if not isinstance(record.parser, Cmd2ArgumentParser):
             raise TypeError(
-                f"The attached parser must be an instance of 'Cmd2ArgumentParser' (or a subclass). "
-                f"Received: '{type(subcommand_parser).__name__}'."
+                f"The attached parser must be an instance of 'Cmd2ArgumentParser' (or subclass). "
+                f"Received: '{type(record.parser).__name__}'."
             )
 
         target_parser = self.find_parser(subcommand_path)
@@ -826,52 +926,86 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         # subcommand group. We use isinstance() here to allow for subclasses, providing
         # more flexibility than the standard add_parser() factory approach which enforces
         # a specific class.
-        if not isinstance(subcommand_parser, subparsers_action._parser_class):
+        if not isinstance(record.parser, subparsers_action._parser_class):
             raise TypeError(
                 f"The attached parser must be an instance of '{subparsers_action._parser_class.__name__}' "
-                f"(or a subclass) to match the 'parser_class' configured for this subcommand group. "
-                f"Received: '{type(subcommand_parser).__name__}'."
+                f"(or subclass) to match the 'parser_class' configured for this subcommand group. "
+                f"Received: '{type(record.parser).__name__}'."
             )
 
         # Do not overwrite existing subcommands or aliases
-        all_names = (subcommand, *add_parser_kwargs.get("aliases", ()))
+        all_names = (record.name, *record.aliases)
         for name in all_names:
             if name in subparsers_action._name_parser_map:
                 raise ValueError(f"Subcommand '{name}' already exists for '{target_parser.prog}'")
 
+        # Registration kwargs
+        kwargs: dict[str, Any] = {"aliases": record.aliases}
+        if record.help is not None:
+            kwargs["help"] = record.help
+        if record.deprecated:
+            kwargs["deprecated"] = record.deprecated
+
         # Use add_parser to register the subcommand name and any aliases
-        placeholder_parser = subparsers_action.add_parser(subcommand, **add_parser_kwargs)
+        placeholder_parser = subparsers_action.add_parser(record.name, **kwargs)
 
         # To ensure accurate usage strings, recursively update 'prog' values
         # within the injected parser to match its new location in the command hierarchy.
-        subcommand_parser.update_prog(placeholder_parser.prog)
+        record.parser.update_prog(placeholder_parser.prog)
 
         # Replace the parser created by add_parser() with our pre-configured one
-        subparsers_action._name_parser_map[subcommand] = subcommand_parser
+        subparsers_action._name_parser_map[record.name] = record.parser
 
         # Remap any aliases to our pre-configured parser
-        for alias in add_parser_kwargs.get("aliases", ()):
-            subparsers_action._name_parser_map[alias] = subcommand_parser
+        for alias in record.aliases:
+            subparsers_action._name_parser_map[alias] = record.parser
 
-    def detach_subcommand(self, subcommand_path: Iterable[str], subcommand: str) -> "Cmd2ArgumentParser":
+        # Update command to reflect the parent parser's absolute path
+        record.command = target_parser.prog
+
+    def detach_subcommand(self, subcommand_path: Iterable[str], subcommand: str) -> SubcommandRecord:
         """Detach a subcommand from a command at the specified path.
 
         :param subcommand_path: sequence of subcommand names leading to the parser hosting the
                                 subcommand to be detached. An empty sequence indicates this parser.
         :param subcommand: name of the subcommand to detach
-        :return: the detached parser
+        :return: a SubcommandRecord object describing the detached subcommand
         :raises ValueError: if the command path is invalid or the subcommand doesn't exist
         """
         target_parser = self.find_parser(subcommand_path)
         subparsers_action = target_parser.get_subparsers_action()
 
         try:
-            return cast(
-                Cmd2ArgumentParser,
+            record = cast(
+                SubcommandRecord,
                 subparsers_action.remove_parser(subcommand),  # type: ignore[attr-defined]
             )
         except ValueError:
             raise ValueError(f"Subcommand '{subcommand}' does not exist for '{target_parser.prog}'") from None
+
+        # Update command to reflect the parent parser's absolute path
+        record.command = target_parser.prog
+        return record
+
+    def detach_all_subcommands(self, subcommand_path: Iterable[str]) -> list[SubcommandRecord]:
+        """Detach all subcommands from a command at the specified path.
+
+        :param subcommand_path: sequence of subcommand names leading to the parser hosting the
+                                subcommands to be detached. An empty sequence indicates this parser.
+        :return: a list of SubcommandRecord objects describing the detached subcommands
+        :raises ValueError: if the command path is invalid or the command doesn't support subcommands
+        """
+        target_parser = self.find_parser(subcommand_path)
+        subparsers_action = target_parser.get_subparsers_action()
+
+        records = cast(
+            list[SubcommandRecord],
+            subparsers_action.remove_all_parsers(),  # type: ignore[attr-defined]
+        )
+        # Update command for each detached subcommand
+        for record in records:
+            record.command = target_parser.prog
+        return records
 
     def error(self, message: str) -> NoReturn:
         """Override that applies custom formatting to the error message."""
@@ -940,9 +1074,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         :param value: value from command line already run through conversion function by argparse
         """
         # Import gettext like argparse does
-        from gettext import (
-            gettext as _,
-        )
+        from gettext import gettext as _
 
         if action.choices is not None and value not in action.choices:
             # If any choice is a CompletionItem, then display its value property.
