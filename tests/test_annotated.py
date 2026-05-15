@@ -1369,27 +1369,22 @@ class TestSubcommandValidation:
         with pytest.raises(TypeError, match="must be named"):
             cmd2.with_annotated(subcommand_to=subcommand_to)(ns[func_name])
 
-    def test_subcommand_attributes_set(self) -> None:
+    @pytest.mark.parametrize(
+        ("decorator_kwargs", "expected_help", "expected_aliases"),
+        [
+            pytest.param({"help": "create", "aliases": ["c"]}, "create", ("c",), id="with_help_and_aliases"),
+            pytest.param({}, None, (), id="without_help_or_aliases"),
+        ],
+    )
+    def test_subcommand_spec_attributes(self, decorator_kwargs, expected_help, expected_aliases) -> None:
         from cmd2 import constants
 
-        @cmd2.with_annotated(subcommand_to="team", help="create", aliases=["c"])
-        def team_create(self, name: str) -> None: ...
+        @cmd2.with_annotated(subcommand_to="team", **decorator_kwargs)
+        def team_create(self, name: str = "") -> None: ...
 
         spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
         assert spec.command == "team"
         assert spec.name == "create"
-        assert spec.help == "create"
-        assert spec.aliases == ("c",)
-        parser = spec.parser_source()
-        assert isinstance(parser, argparse.ArgumentParser)
-
-    def test_subcommand_without_help(self) -> None:
-        """Subcommand with no help or aliases -- covers the None/empty branches."""
-        from cmd2 import constants
-
-        @cmd2.with_annotated(subcommand_to="team")
-        def team_delete(self) -> None: ...
-
-        spec = getattr(team_delete, constants.SUBCMD_ATTR_SPEC)
-        assert spec.help is None
-        assert spec.aliases == ()
+        assert spec.help == expected_help
+        assert spec.aliases == expected_aliases
+        assert isinstance(spec.parser_source(), argparse.ArgumentParser)
