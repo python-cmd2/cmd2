@@ -27,7 +27,8 @@ when using cmd.
 
 > :warning: **If you are upgrading from an older version of `cmd2`, both `3.x` and `4.x` have some
 > significant backwards incompatibilities from version `2.x`. Please see the
-> [Migration Guide](https://cmd2.readthedocs.io/en/latest/upgrades/) for tips on upgrading from and
+> [CHANGELOG](./CHANGELOG.md) for info on what has changed and the
+> [Migration Guide](https://cmd2.readthedocs.io/en/latest/upgrades/) for tips on upgrading from an
 > older version of `cmd2` to `4.x`**
 
 ## The developers toolbox
