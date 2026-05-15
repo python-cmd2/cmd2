@@ -25,7 +25,7 @@ applications. It provides a simple API which is an extension of Python's built-i
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary
 when using cmd.
 
-> :warning: **`cmd2` If you are upgrading from an older version, both `3.x` and `4.x` have some
+> :warning: **If you are upgrading from an older version of `cmd2`, both `3.x` and `4.x` have some
 > significant backwards incompatibilities from version `2.x`. Please see the
 > [Migration Guide](https://cmd2.readthedocs.io/en/latest/upgrades/) for tips on upgrading from and
 > older version of `cmd2` to `4.x`**
