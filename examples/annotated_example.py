@@ -338,6 +338,25 @@ class AnnotatedExample(Cmd):
         msg = f"Connecting to {host}:{port}"
         self.poutput(f"{msg} (verbose)" if verbose else msg)
 
+    # -- Mutually exclusive groups -------------------------------------------
+    # Group instances passed to mutually_exclusive_groups make argparse reject
+    # combinations (title/description are ignored here).
+
+    @with_annotated(
+        description="Export data in exactly one format.",
+        mutually_exclusive_groups=(Group("json", "csv"),),
+    )
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_export(self, name: str, json: bool = False, csv: bool = False) -> None:
+        """Export a dataset; --json and --csv are mutually exclusive.
+
+        Try:
+            export sales --json
+            export sales --json --csv   # rejected: not allowed together
+        """
+        fmt = "json" if json else "csv" if csv else "text"
+        self.poutput(f"Exporting {name} as {fmt}")
+
     # -- Custom formatter and parser classes ---------------------------------
     # A custom help formatter or Cmd2ArgumentParser subclass can be supplied.
 
