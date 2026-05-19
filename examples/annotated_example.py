@@ -55,6 +55,18 @@ class LogLevel(StrEnum):
     error = "error"
 
 
+class VerbatimHelpFormatter(cmd2.RawDescriptionCmd2HelpFormatter):
+    """Custom help formatter: keeps the description's line breaks verbatim."""
+
+
+class StrictArgumentParser(cmd2.Cmd2ArgumentParser):
+    """Custom parser class: disables ``--opt`` prefix abbreviation."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
+
 ANNOTATED_CATEGORY = "Annotated Commands"
 
 
@@ -324,6 +336,30 @@ class AnnotatedExample(Cmd):
             connect example.com --port 2222 --verbose
         """
         msg = f"Connecting to {host}:{port}"
+        self.poutput(f"{msg} (verbose)" if verbose else msg)
+
+    # -- Custom formatter and parser classes ---------------------------------
+    # formatter_class controls how --help is rendered; parser_class swaps in a
+    # custom Cmd2ArgumentParser subclass.
+
+    @with_annotated(
+        description="Generate a report.\n  - line breaks here are preserved\n  - thanks to the custom formatter",
+        formatter_class=VerbatimHelpFormatter,
+        parser_class=StrictArgumentParser,
+    )
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_report(self, source: str, level: int = 1, verbose: bool = False) -> None:
+        """Generate a report.
+
+        ``help report`` shows the description with its line breaks intact
+        (VerbatimHelpFormatter), and StrictArgumentParser rejects abbreviated flags.
+
+        Try:
+            help report
+            report db --level 2 --verbose
+            report db --lev 2          # rejected: abbreviation disabled
+        """
+        msg = f"Report for {source} at level {level}"
         self.poutput(f"{msg} (verbose)" if verbose else msg)
 
     # -- Preserve quotes -----------------------------------------------------
