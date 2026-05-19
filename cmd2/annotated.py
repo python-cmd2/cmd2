@@ -112,6 +112,7 @@ from .argparse_utils import Cmd2ArgumentParser, SubcommandSpec
 from .completion import CompletionItem
 from .decorators import _parse_positionals
 from .exceptions import Cmd2ArgparseError
+from .rich_utils import Cmd2HelpFormatter
 from .types import CmdOrSetT, UnboundChoicesProvider, UnboundCompleter
 
 # ---------------------------------------------------------------------------
@@ -208,6 +209,38 @@ class Option(_BaseArgMetadata):
             kwargs["required"] = True
         return kwargs
 
+
+class Group:
+    """Argument-group definition for ``with_annotated(groups=...)``.
+
+    Wrap parameter names with an optional ``title`` and ``description`` so the
+    group renders its own section in ``--help`` output. A plain
+    ``tuple[str, ...]`` is still accepted for an untitled group.
+
+    Example::
+
+        @with_annotated(
+            groups=(Group("host", "port", title="connection", description="where to connect"),),
+        )
+        def do_connect(self, host: str, port: int = 22): ...
+    """
+
+    def __init__(self, *members: str, title: str | None = None, description: str | None = None) -> None:
+        """Initialise an argument group definition.
+
+        :param members: parameter names to place in the group (at least one)
+        :param title: optional group title shown as a section header in help
+        :param description: optional group description shown under the title
+        """
+        if not members:
+            raise ValueError("Group requires at least one member parameter name")
+        self.members = members
+        self.title = title
+        self.description = description
+
+
+#: A ``groups``/``mutually_exclusive_groups`` entry: bare names or a titled ``Group``.
+GroupSpec = tuple[str, ...] | Group
 
 #: Metadata extracted from ``Annotated[T, meta]``, or ``None`` for plain types.
 ArgMetadata = Argument | Option | None
@@ -754,10 +787,15 @@ def _validate_group_members(
             raise ValueError(f"{group_type} references nonexistent parameter {name!r}")
 
 
+def _group_members(spec: GroupSpec) -> tuple[str, ...]:
+    """Return the member parameter names for a ``groups`` entry."""
+    return spec.members if isinstance(spec, Group) else spec
+
+
 def _build_argument_group_targets(
     parser: argparse.ArgumentParser,
     *,
-    groups: tuple[tuple[str, ...], ...] | None,
+    groups: tuple[GroupSpec, ...] | None,
     all_param_names: set[str],
 ) -> tuple[dict[str, _ArgumentTarget], dict[str, argparse._ArgumentGroup]]:
     """Build argument groups and return add_argument targets for their members."""
@@ -768,7 +806,8 @@ def _build_argument_group_targets(
     if not groups:
         return target_for, argument_group_for
 
-    for index, member_names in enumerate(groups, start=1):
+    for index, spec in enumerate(groups, start=1):
+        member_names = _group_members(spec)
         _validate_group_members(member_names, all_param_names=all_param_names, group_type="groups")
         for name in member_names:
             if name in argument_group_for:
@@ -777,7 +816,10 @@ def _build_argument_group_targets(
                     f"group {argument_group_index_for[name]} and argument group {index}"
                 )
 
-        group = parser.add_argument_group()
+        if isinstance(spec, Group):
+            group = parser.add_argument_group(title=spec.title, description=spec.description)
+        else:
+            group = parser.add_argument_group()
         for name in member_names:
             argument_group_for[name] = group
             argument_group_index_for[name] = index
@@ -791,7 +833,7 @@ def _apply_mutex_group_targets(
     *,
     target_for: dict[str, _ArgumentTarget],
     argument_group_for: dict[str, argparse._ArgumentGroup],
-    mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None,
+    mutually_exclusive_groups: tuple[GroupSpec, ...] | None,
     all_param_names: set[str],
 ) -> None:
     """Build mutually exclusive groups and update add_argument targets for their members."""
@@ -800,7 +842,8 @@ def _apply_mutex_group_targets(
     if not mutually_exclusive_groups:
         return
 
-    for index, member_names in enumerate(mutually_exclusive_groups, start=1):
+    for index, spec in enumerate(mutually_exclusive_groups, start=1):
+        member_names = _group_members(spec)
         _validate_group_members(
             member_names,
             all_param_names=all_param_names,
@@ -828,8 +871,12 @@ def build_parser_from_function(
     func: Callable[..., Any],
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
-    groups: tuple[tuple[str, ...], ...] | None = None,
-    mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = None,
+    groups: tuple[GroupSpec, ...] | None = None,
+    mutually_exclusive_groups: tuple[GroupSpec, ...] | None = None,
+    description: str | None = None,
+    epilog: str | None = None,
+    formatter_class: type[Cmd2HelpFormatter] | None = None,
+    parser_class: type[Cmd2ArgumentParser] | None = None,
 ) -> Cmd2ArgumentParser:
     """Inspect a function's signature and build a ``Cmd2ArgumentParser``.
 
@@ -840,13 +887,26 @@ def build_parser_from_function(
 
     :param func: the command function to inspect
     :param skip_params: parameter names to exclude from the parser
-    :param groups: tuples of parameter names to place in argument groups (for help display)
-    :param mutually_exclusive_groups: tuples of parameter names that are mutually exclusive
+    :param groups: parameter names to place in argument groups, as bare tuples or
+                   :class:`Group` instances (for help display)
+    :param mutually_exclusive_groups: parameter names that are mutually exclusive
+    :param description: parser description (shown in ``--help``)
+    :param epilog: parser epilog text (shown at the end of ``--help``)
+    :param formatter_class: custom help formatter class for the parser
+    :param parser_class: custom parser class (defaults to the configured default)
     :return: a fully configured ``Cmd2ArgumentParser``
     """
     from .argparse_utils import DEFAULT_ARGUMENT_PARSER
 
-    parser = DEFAULT_ARGUMENT_PARSER()
+    parser_cls = parser_class or DEFAULT_ARGUMENT_PARSER
+    parser_kwargs: dict[str, Any] = {}
+    if description is not None:
+        parser_kwargs["description"] = description
+    if epilog is not None:
+        parser_kwargs["epilog"] = epilog
+    if formatter_class is not None:
+        parser_kwargs["formatter_class"] = formatter_class
+    parser = parser_cls(**parser_kwargs)
 
     resolved = _resolve_parameters(func, skip_params=skip_params)
 
@@ -895,8 +955,12 @@ def build_subcommand_handler(
     subcommand_to: str,
     *,
     base_command: bool = False,
-    groups: tuple[tuple[str, ...], ...] | None = None,
-    mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = None,
+    groups: tuple[GroupSpec, ...] | None = None,
+    mutually_exclusive_groups: tuple[GroupSpec, ...] | None = None,
+    description: str | None = None,
+    epilog: str | None = None,
+    formatter_class: type[Cmd2HelpFormatter] | None = None,
+    parser_class: type[Cmd2ArgumentParser] | None = None,
 ) -> tuple[Callable[..., Any], str, Callable[[], Cmd2ArgumentParser]]:
     """Build a subcommand handler wrapper and its parser from type annotations.
 
@@ -907,6 +971,13 @@ def build_subcommand_handler(
     :param func: the subcommand handler function
     :param subcommand_to: parent command name (space-delimited for nesting)
     :param base_command: if True, the parser also gets ``add_subparsers()``
+    :param groups: parameter names to place in argument groups, as bare tuples or
+                   :class:`Group` instances
+    :param mutually_exclusive_groups: parameter names that are mutually exclusive
+    :param description: parser description (shown in ``--help``)
+    :param epilog: parser epilog text (shown at the end of ``--help``)
+    :param formatter_class: custom help formatter class for the parser
+    :param parser_class: custom parser class (defaults to the configured default)
     :return: ``(handler, subcommand_name, parser_builder)``
     """
     subcmd_name = _derive_subcommand_name(func, subcommand_to)
@@ -923,7 +994,15 @@ def build_subcommand_handler(
         return func(self_arg, **filtered)
 
     def parser_builder() -> Cmd2ArgumentParser:
-        parser = build_parser_from_function(func, groups=groups, mutually_exclusive_groups=mutually_exclusive_groups)
+        parser = build_parser_from_function(
+            func,
+            groups=groups,
+            mutually_exclusive_groups=mutually_exclusive_groups,
+            description=description,
+            epilog=epilog,
+            formatter_class=formatter_class,
+            parser_class=parser_class,
+        )
         if base_command:
             parser.add_subparsers(dest="subcommand", metavar="SUBCOMMAND", required=True)
         return parser
@@ -946,8 +1025,12 @@ def with_annotated(
     subcommand_to: str | None = ...,
     help: str | None = ...,
     aliases: Sequence[str] = ...,
-    groups: tuple[tuple[str, ...], ...] | None = ...,
-    mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = ...,
+    groups: tuple[GroupSpec, ...] | None = ...,
+    mutually_exclusive_groups: tuple[GroupSpec, ...] | None = ...,
+    description: str | None = ...,
+    epilog: str | None = ...,
+    formatter_class: type[Cmd2HelpFormatter] | None = ...,
+    parser_class: type[Cmd2ArgumentParser] | None = ...,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
 
 
@@ -961,8 +1044,12 @@ def with_annotated(
     subcommand_to: str | None = None,
     help: str | None = None,  # noqa: A002
     aliases: Sequence[str] = (),
-    groups: tuple[tuple[str, ...], ...] | None = None,
-    mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = None,
+    groups: tuple[GroupSpec, ...] | None = None,
+    mutually_exclusive_groups: tuple[GroupSpec, ...] | None = None,
+    description: str | None = None,
+    epilog: str | None = None,
+    formatter_class: type[Cmd2HelpFormatter] | None = None,
+    parser_class: type[Cmd2ArgumentParser] | None = None,
 ) -> Callable[..., Any] | Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
@@ -979,8 +1066,13 @@ def with_annotated(
                           Function must be named ``{parent_underscored}_{subcommand}``.
     :param help: help text for the subcommand (only valid with ``subcommand_to``)
     :param aliases: alternative names for the subcommand (only valid with ``subcommand_to``)
-    :param groups: tuples of parameter names to place in argument groups (for help display)
-    :param mutually_exclusive_groups: tuples of parameter names that are mutually exclusive
+    :param groups: parameter names to place in argument groups, as bare tuples or
+                   :class:`Group` instances (use :class:`Group` for a titled section)
+    :param mutually_exclusive_groups: parameter names that are mutually exclusive
+    :param description: parser description (shown in ``--help``)
+    :param epilog: parser epilog text (shown at the end of ``--help``)
+    :param formatter_class: custom help formatter class for the parser
+    :param parser_class: custom parser class (defaults to the configured default)
 
     Example::
 
@@ -1032,6 +1124,10 @@ def with_annotated(
                 base_command=base_command,
                 groups=groups,
                 mutually_exclusive_groups=mutually_exclusive_groups,
+                description=description,
+                epilog=epilog,
+                formatter_class=formatter_class,
+                parser_class=parser_class,
             )
             spec = SubcommandSpec(
                 name=subcmd_name,
@@ -1058,6 +1154,10 @@ def with_annotated(
                 skip_params=skip_params,
                 groups=groups,
                 mutually_exclusive_groups=mutually_exclusive_groups,
+                description=description,
+                epilog=epilog,
+                formatter_class=formatter_class,
+                parser_class=parser_class,
             )
             if base_command:
                 parser.add_subparsers(dest="subcommand", metavar="SUBCOMMAND", required=True)

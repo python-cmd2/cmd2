@@ -22,6 +22,7 @@ from cmd2 import (
 )
 from cmd2.annotated import (
     Argument,
+    Group,
     Option,
     _apply_mutex_group_targets,
     _build_argument_group_targets,
@@ -504,6 +505,108 @@ class TestArgumentGroups:
         assert {"json", "csv"} <= all_custom_dests
         with pytest.raises(SystemExit):
             parser.parse_args(["--json", "--csv"])
+
+
+class TestParserCustomization:
+    """description / epilog / formatter_class / parser_class and titled Group."""
+
+    def test_titled_group(self) -> None:
+        """Group(title=..., description=...) renders a titled help section."""
+
+        def func(self, host: str, port: int = 22, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(
+            func,
+            groups=(Group("host", "port", title="connection", description="where to connect"),),
+        )
+        titled = [g for g in parser._action_groups if g.title == "connection"]
+        assert len(titled) == 1
+        assert titled[0].description == "where to connect"
+        assert {a.dest for a in titled[0]._group_actions} == {"host", "port"}
+
+    def test_group_requires_members(self) -> None:
+        with pytest.raises(ValueError, match="at least one member"):
+            Group(title="empty")
+
+    def test_bare_tuple_group_still_supported(self) -> None:
+        def func(self, src: str, dst: str) -> None: ...
+
+        parser = build_parser_from_function(func, groups=(("src", "dst"),))
+        custom = [g for g in parser._action_groups if g.title not in {"Positional Arguments", "options"}]
+        assert {a.dest for g in custom for a in g._group_actions} >= {"src", "dst"}
+
+    def test_description_and_epilog(self) -> None:
+        def func(self, name: str) -> None: ...
+
+        parser = build_parser_from_function(func, description="my description", epilog="my epilog")
+        assert parser.description == "my description"
+        assert parser.epilog == "my epilog"
+
+    def test_custom_formatter_class(self) -> None:
+        from cmd2.rich_utils import Cmd2HelpFormatter
+
+        class MyFormatter(Cmd2HelpFormatter):
+            pass
+
+        def func(self, name: str) -> None: ...
+
+        parser = build_parser_from_function(func, formatter_class=MyFormatter)
+        assert parser.formatter_class is MyFormatter
+
+    def test_custom_parser_class(self) -> None:
+        class MyParser(cmd2.Cmd2ArgumentParser):
+            pass
+
+        def func(self, name: str) -> None: ...
+
+        parser = build_parser_from_function(func, parser_class=MyParser)
+        assert isinstance(parser, MyParser)
+
+    def test_customization_via_decorator(self) -> None:
+        """description/epilog/titled Group flow through @with_annotated end-to-end."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(
+                description="run the thing",
+                epilog="see docs for more",
+                groups=(Group("name", title="inputs"),),
+            )
+            def do_run(self, name: str) -> None:
+                self.poutput(f"ran {name}")
+
+        app = App()
+        out, _err = run_cmd(app, "run alice")
+        assert out == ["ran alice"]
+
+        help_out, _ = run_cmd(app, "help run")
+        joined = "\n".join(help_out).lower()
+        assert "run the thing" in joined
+        assert "see docs for more" in joined
+        assert "inputs" in joined
+
+    def test_customization_via_subcommand(self) -> None:
+        """description/epilog flow through subcommand parsers."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_team(self, *, cmd2_handler=None) -> None:
+                if cmd2_handler:
+                    cmd2_handler()
+
+            @with_annotated(subcommand_to="team", help="add a member", description="add desc", epilog="add epilog")
+            def team_add(self, name: str) -> None:
+                self.poutput(f"added {name}")
+
+        app = App()
+        out, _err = run_cmd(app, "team add bob")
+        assert out == ["added bob"]
+
+        from cmd2 import constants
+
+        spec = getattr(App.team_add, constants.SUBCMD_ATTR_SPEC)
+        subparser = spec.parser_source()
+        assert subparser.description == "add desc"
+        assert subparser.epilog == "add epilog"
 
 
 class TestGroupHelpers:

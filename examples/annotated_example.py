@@ -35,6 +35,7 @@ from cmd2 import (
 )
 from cmd2.annotated import (
     Argument,
+    Group,
     Option,
     with_annotated,
 )
@@ -302,6 +303,28 @@ class AnnotatedExample(Cmd):
     @with_annotated(subcommand_to="manage project", help="list projects")
     def manage_project_list(self) -> None:
         self.poutput("project list: demo")
+
+    # -- Parser customization ------------------------------------------------
+    # description / epilog set the parser's help text; Group adds a titled,
+    # described section; formatter_class / parser_class accept custom classes.
+
+    @with_annotated(
+        description="Open a network connection.",
+        epilog="Example: connect example.com --port 2222",
+        groups=(
+            Group("host", "port", title="connection", description="where to connect"),
+        ),
+    )
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_connect(self, host: str, port: int = 22, verbose: bool = False) -> None:
+        """Connect to a host.
+
+        Try:
+            help connect
+            connect example.com --port 2222 --verbose
+        """
+        msg = f"Connecting to {host}:{port}"
+        self.poutput(f"{msg} (verbose)" if verbose else msg)
 
     # -- Preserve quotes -----------------------------------------------------
 
