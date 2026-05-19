@@ -323,9 +323,7 @@ class AnnotatedExample(Cmd):
     @with_annotated(
         description="Open a network connection.",
         epilog="Example: connect example.com --port 2222",
-        groups=(
-            Group("host", "port", title="connection", description="where to connect"),
-        ),
+        groups=(Group("host", "port", title="connection", description="where to connect"),),
     )
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_connect(self, host: str, port: int = 22, verbose: bool = False) -> None:

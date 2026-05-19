@@ -236,9 +236,9 @@ def manage_project_add(self, name: str):
 ## Lower-level parser building
 
 [cmd2.annotated.build_parser_from_function][cmd2.annotated.build_parser_from_function] builds the
-parser directly from a function without registering a command. It accepts the same
-`groups`, `mutually_exclusive_groups`, `description`, `epilog`, `formatter_class`, and
-`parser_class` arguments as `@with_annotated`.
+parser directly from a function without registering a command. It accepts the same `groups`,
+`mutually_exclusive_groups`, `description`, `epilog`, `formatter_class`, and `parser_class`
+arguments as `@with_annotated`.
 
 ```py
 @with_annotated(preserve_quotes=True)
