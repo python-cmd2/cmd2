@@ -317,8 +317,8 @@ class AnnotatedExample(Cmd):
         self.poutput("project list: demo")
 
     # -- Parser customization ------------------------------------------------
-    # description / epilog set the parser's help text; Group adds a titled,
-    # described section; formatter_class / parser_class accept custom classes.
+    # The generated parser's help text and argument grouping are configurable
+    # without dropping down to a hand-built parser.
 
     @with_annotated(
         description="Open a network connection.",
@@ -339,8 +339,7 @@ class AnnotatedExample(Cmd):
         self.poutput(f"{msg} (verbose)" if verbose else msg)
 
     # -- Custom formatter and parser classes ---------------------------------
-    # formatter_class controls how --help is rendered; parser_class swaps in a
-    # custom Cmd2ArgumentParser subclass.
+    # A custom help formatter or Cmd2ArgumentParser subclass can be supplied.
 
     @with_annotated(
         description="Generate a report.\n  - line breaks here are preserved\n  - thanks to the custom formatter",

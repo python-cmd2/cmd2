@@ -31,7 +31,6 @@ from cmd2.annotated import (
     _make_literal_type,
     _parse_bool,
     _resolve_annotation,
-    _validate_group_members,
     build_parser_from_function,
     with_annotated,
 )
@@ -411,8 +410,8 @@ class TestArgumentGroups:
     def test_groups_and_mutex_applied(self) -> None:
         parser = build_parser_from_function(
             _func_grouped,
-            groups=(("local", "remote"), ("force", "dry_run")),
-            mutually_exclusive_groups=(("local", "remote"), ("force", "dry_run")),
+            groups=(Group("local", "remote"), Group("force", "dry_run")),
+            mutually_exclusive_groups=(Group("local", "remote"), Group("force", "dry_run")),
         )
 
         nonempty_groups = [group for group in parser._action_groups if group._group_actions]
@@ -426,18 +425,18 @@ class TestArgumentGroups:
 
     def test_group_nonexistent_param_raises(self) -> None:
         with pytest.raises(ValueError, match="nonexistent parameter"):
-            build_parser_from_function(_func_grouped, groups=(("missing",),))
+            build_parser_from_function(_func_grouped, groups=(Group("missing"),))
 
     def test_param_in_multiple_groups_raises(self) -> None:
         with pytest.raises(ValueError, match="cannot be assigned to both argument group"):
-            build_parser_from_function(_func_grouped, groups=(("local",), ("local", "remote")))
+            build_parser_from_function(_func_grouped, groups=(Group("local"), Group("local", "remote")))
 
     def test_mutex_group_spanning_different_argument_groups_raises(self) -> None:
         with pytest.raises(ValueError, match="spans parameters in different argument groups"):
             build_parser_from_function(
                 _func_grouped,
-                groups=(("local",), ("remote",)),
-                mutually_exclusive_groups=(("local", "remote"),),
+                groups=(Group("local"), Group("remote")),
+                mutually_exclusive_groups=(Group("local", "remote"),),
             )
 
     def test_mutually_exclusive_group(self) -> None:
@@ -445,7 +444,7 @@ class TestArgumentGroups:
 
         def func(self, verbose: bool = False, quiet: bool = False) -> None: ...
 
-        parser = build_parser_from_function(func, mutually_exclusive_groups=(("verbose", "quiet"),))
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose", "quiet"),))
         assert len(parser._mutually_exclusive_groups) == 1
         group_dests = {a.dest for a in parser._mutually_exclusive_groups[0]._group_actions}
         assert group_dests == {"verbose", "quiet"}
@@ -457,7 +456,7 @@ class TestArgumentGroups:
 
         def func(self, verbose: bool = False, quiet: bool = False, json: bool = False, csv: bool = False) -> None: ...
 
-        parser = build_parser_from_function(func, mutually_exclusive_groups=(("verbose", "quiet"), ("json", "csv")))
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose", "quiet"), Group("json", "csv")))
         assert len(parser._mutually_exclusive_groups) == 2
 
     def test_argument_group(self) -> None:
@@ -465,7 +464,7 @@ class TestArgumentGroups:
 
         def func(self, src: str, dst: str, recursive: bool = False, verbose: bool = False) -> None: ...
 
-        parser = build_parser_from_function(func, groups=(("src", "dst"),))
+        parser = build_parser_from_function(func, groups=(Group("src", "dst"),))
         default_titles = {"Positional Arguments", "options"}
         custom_groups = [g for g in parser._action_groups if g.title not in default_titles]
         assert len(custom_groups) >= 1
@@ -476,7 +475,7 @@ class TestArgumentGroups:
         """@with_annotated(mutually_exclusive_groups=...) works end-to-end."""
 
         class App(cmd2.Cmd):
-            @with_annotated(mutually_exclusive_groups=(("verbose", "quiet"),))
+            @with_annotated(mutually_exclusive_groups=(Group("verbose", "quiet"),))
             def do_run(self, verbose: bool = False, quiet: bool = False) -> None:
                 if verbose:
                     self.poutput("verbose")
@@ -497,8 +496,8 @@ class TestArgumentGroups:
 
         parser = build_parser_from_function(
             func,
-            groups=(("json", "csv"),),
-            mutually_exclusive_groups=(("json", "csv"),),
+            groups=(Group("json", "csv"),),
+            mutually_exclusive_groups=(Group("json", "csv"),),
         )
         custom_groups = [g for g in parser._action_groups if g.title not in {"Positional Arguments", "options"}]
         all_custom_dests = {a.dest for g in custom_groups for a in g._group_actions}
@@ -527,13 +526,6 @@ class TestParserCustomization:
     def test_group_requires_members(self) -> None:
         with pytest.raises(ValueError, match="at least one member"):
             Group(title="empty")
-
-    def test_bare_tuple_group_still_supported(self) -> None:
-        def func(self, src: str, dst: str) -> None: ...
-
-        parser = build_parser_from_function(func, groups=(("src", "dst"),))
-        custom = [g for g in parser._action_groups if g.title not in {"Positional Arguments", "options"}]
-        assert {a.dest for g in custom for a in g._group_actions} >= {"src", "dst"}
 
     def test_description_and_epilog(self) -> None:
         def func(self, name: str) -> None: ...
@@ -612,13 +604,13 @@ class TestParserCustomization:
 class TestGroupHelpers:
     def test_validate_group_members_rejects_nonexistent_param(self) -> None:
         with pytest.raises(ValueError, match="nonexistent"):
-            _validate_group_members(("verbose", "nonexistent"), all_param_names={"verbose"}, group_type="groups")
+            Group("verbose", "nonexistent")._validate_members(all_param_names={"verbose"}, group_type="groups")
 
     def test_build_argument_group_targets(self) -> None:
         parser = argparse.ArgumentParser()
         target_for, argument_group_for = _build_argument_group_targets(
             parser,
-            groups=(("src", "dst"),),
+            groups=(Group("src", "dst"),),
             all_param_names={"src", "dst", "recursive"},
         )
         assert set(target_for) == {"src", "dst"}
@@ -631,7 +623,7 @@ class TestGroupHelpers:
         with pytest.raises(ValueError, match="argument group 1 and argument group 2"):
             _build_argument_group_targets(
                 parser,
-                groups=(("verbose",), ("verbose",)),
+                groups=(Group("verbose"), Group("verbose")),
                 all_param_names={"verbose"},
             )
 
@@ -639,7 +631,7 @@ class TestGroupHelpers:
         parser = argparse.ArgumentParser()
         target_for, argument_group_for = _build_argument_group_targets(
             parser,
-            groups=(("json", "csv"),),
+            groups=(Group("json", "csv"),),
             all_param_names={"json", "csv", "plain"},
         )
 
@@ -647,7 +639,7 @@ class TestGroupHelpers:
             parser,
             target_for=target_for,
             argument_group_for=argument_group_for,
-            mutually_exclusive_groups=(("json", "csv"),),
+            mutually_exclusive_groups=(Group("json", "csv"),),
             all_param_names={"json", "csv", "plain"},
         )
 
@@ -661,7 +653,7 @@ class TestGroupHelpers:
                 parser,
                 target_for={},
                 argument_group_for={},
-                mutually_exclusive_groups=(("verbose",), ("verbose",)),
+                mutually_exclusive_groups=(Group("verbose"), Group("verbose")),
                 all_param_names={"verbose"},
             )
 
@@ -669,7 +661,7 @@ class TestGroupHelpers:
         parser = argparse.ArgumentParser()
         _target_for, argument_group_for = _build_argument_group_targets(
             parser,
-            groups=(("src",), ("dst",)),
+            groups=(Group("src"), Group("dst")),
             all_param_names={"src", "dst"},
         )
 
@@ -678,7 +670,7 @@ class TestGroupHelpers:
                 parser,
                 target_for={},
                 argument_group_for=argument_group_for,
-                mutually_exclusive_groups=(("src", "dst"),),
+                mutually_exclusive_groups=(Group("src", "dst"),),
                 all_param_names={"src", "dst"},
             )
 
@@ -1192,8 +1184,8 @@ class _IntegrationApp(cmd2.Cmd):
 
 class _GroupedParserApp(cmd2.Cmd):
     @with_annotated(
-        groups=(("local", "remote"), ("force", "dry_run")),
-        mutually_exclusive_groups=(("local", "remote"), ("force", "dry_run")),
+        groups=(Group("local", "remote"), Group("force", "dry_run")),
+        mutually_exclusive_groups=(Group("local", "remote"), Group("force", "dry_run")),
     )
     def do_transfer(
         self,
@@ -1484,7 +1476,7 @@ class TestSubcommandValidation:
                 if handler:
                     handler()
 
-            @with_annotated(subcommand_to="fmt", help="output", mutually_exclusive_groups=(("json", "csv"),))
+            @with_annotated(subcommand_to="fmt", help="output", mutually_exclusive_groups=(Group("json", "csv"),))
             def fmt_out(self, msg: str, json: bool = False, csv: bool = False) -> None:
                 self.poutput(f"json={json} csv={csv} {msg}")
 

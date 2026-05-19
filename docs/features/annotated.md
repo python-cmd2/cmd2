@@ -166,8 +166,8 @@ time. The `Path` converter is permissive and is preserved when a custom complete
   `base_command=True`; declaring one elsewhere raises `TypeError`.
 - `help` -- help text for an annotated subcommand
 - `aliases` -- aliases for an annotated subcommand
-- `groups` -- parameter names to place in argument groups (bare tuples or `Group`)
-- `mutually_exclusive_groups` -- parameter names that are mutually exclusive
+- `groups` -- `Group` instances assigning parameter names to argument groups
+- `mutually_exclusive_groups` -- `Group` instances of mutually exclusive parameters
 - `description` -- parser description shown in `--help`
 - `epilog` -- parser epilog shown at the end of `--help`
 - `formatter_class` -- a custom help formatter class for the parser
@@ -182,8 +182,8 @@ def do_rawish(self, name: str, _unknown: list[str] | None = None):
 ## Parser customization
 
 `description`, `epilog`, `formatter_class`, and `parser_class` are passed through to the generated
-parser. Argument groups accept either a bare `tuple[str, ...]` (an untitled group) or a
-[Group][cmd2.annotated.Group] for a titled, described help section:
+parser. Argument groups are declared with [Group][cmd2.annotated.Group]; pass `title` and
+`description` for a titled help section (omit them for an untitled group):
 
 ```py
 from cmd2.annotated import Group, with_annotated
@@ -198,8 +198,8 @@ class App(cmd2.Cmd):
         self.poutput(f"connecting to {host}:{port}")
 ```
 
-`mutually_exclusive_groups` also accepts `Group` (its `title`/`description` are ignored, since
-argparse mutually-exclusive groups have no header).
+`mutually_exclusive_groups` also takes `Group` instances (their `title`/`description` are ignored,
+since argparse mutually-exclusive groups have no header).
 
 ## Annotated subcommands
 
