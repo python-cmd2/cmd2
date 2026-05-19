@@ -11,11 +11,6 @@ from . import (
     rich_utils,
     string_utils,
 )
-from .annotated import (
-    Argument,
-    Option,
-    with_annotated,
-)
 from .argparse_completer import set_default_ap_completer_type
 from .argparse_utils import (
     Cmd2ArgumentParser,
@@ -92,11 +87,7 @@ __all__: list[str] = [  # noqa: RUF022
     "Choices",
     "CompletionItem",
     "Completions",
-    # Annotated
-    "Argument",
-    "Option",
     # Decorators
-    "with_annotated",
     "with_argument_list",
     "with_argparser",
     "with_category",

@@ -104,6 +104,7 @@ from typing import (
     get_args,
     get_origin,
     get_type_hints,
+    overload,
 )
 
 from . import constants
@@ -930,6 +931,26 @@ def build_subcommand_handler(
     return handler, subcmd_name, parser_builder
 
 
+@overload
+def with_annotated(func: Callable[..., Any]) -> Callable[..., Any]: ...
+
+
+@overload
+def with_annotated(
+    func: None = ...,
+    *,
+    ns_provider: Callable[..., argparse.Namespace] | None = ...,
+    preserve_quotes: bool = ...,
+    with_unknown_args: bool = ...,
+    base_command: bool = ...,
+    subcommand_to: str | None = ...,
+    help: str | None = ...,
+    aliases: Sequence[str] = ...,
+    groups: tuple[tuple[str, ...], ...] | None = ...,
+    mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = ...,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
+
+
 def with_annotated(
     func: Callable[..., Any] | None = None,
     *,
@@ -939,10 +960,10 @@ def with_annotated(
     base_command: bool = False,
     subcommand_to: str | None = None,
     help: str | None = None,  # noqa: A002
-    aliases: Sequence[str] | None = None,
+    aliases: Sequence[str] = (),
     groups: tuple[tuple[str, ...], ...] | None = None,
     mutually_exclusive_groups: tuple[tuple[str, ...], ...] | None = None,
-) -> Any:
+) -> Callable[..., Any] | Callable[[Callable[..., Any]], Callable[..., Any]]:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
     :param func: the command function (when used without parentheses)
@@ -974,7 +995,7 @@ def with_annotated(
             def team_create(self, name: str): ...
 
     """
-    if (help is not None or aliases is not None) and subcommand_to is None:
+    if (help is not None or aliases) and subcommand_to is None:
         raise TypeError("'help' and 'aliases' are only valid with subcommand_to")
     if subcommand_to is not None:
         unsupported: list[str] = []
@@ -1016,7 +1037,7 @@ def with_annotated(
                 name=subcmd_name,
                 command=subcommand_to,
                 help=help,
-                aliases=tuple(aliases) if aliases else (),
+                aliases=tuple(aliases),
                 parser_source=subcmd_parser_builder,
             )
             setattr(handler, constants.SUBCMD_ATTR_SPEC, spec)

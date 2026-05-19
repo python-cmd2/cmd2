@@ -18,11 +18,13 @@ Usage::
 
 import sys
 from argparse import Namespace
+from collections.abc import Callable
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
 from typing import (
     Annotated,
+    Any,
     Literal,
 )
 
@@ -30,6 +32,11 @@ import cmd2
 from cmd2 import (
     Choices,
     Cmd,
+)
+from cmd2.annotated import (
+    Argument,
+    Option,
+    with_annotated,
 )
 
 
@@ -65,7 +72,7 @@ class AnnotatedExample(Cmd):
     # With @with_argparser you'd manually set type=int and action='store_true'.
     # Here the decorator infers everything from the annotations.
 
-    @cmd2.with_annotated
+    @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_add(self, a: int, b: int = 0, verbose: bool = False) -> None:
         """Add two integers. Types are inferred from annotations.
@@ -84,12 +91,12 @@ class AnnotatedExample(Cmd):
     # With @with_argparser you'd list every member in choices=[...].
     # Here the Enum type provides choices and validation automatically.
 
-    @cmd2.with_annotated
+    @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_paint(
         self,
         item: str,
-        color: Annotated[Color, cmd2.Option("--color", "-c", help_text="Color to use")] = Color.blue,
+        color: Annotated[Color, Option("--color", "-c", help_text="Color to use")] = Color.blue,
         level: LogLevel = LogLevel.info,
     ) -> None:
         """Paint an item. Enum types auto-complete their member values.
@@ -104,7 +111,7 @@ class AnnotatedExample(Cmd):
     # With @with_argparser you'd wire completer=Cmd.path_complete on each arg.
     # Here the Path type triggers filesystem completion automatically.
 
-    @cmd2.with_annotated
+    @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_copy(self, src: Path, dst: Path) -> None:
         """Copy a file. Path parameters auto-complete filesystem paths.
@@ -118,7 +125,7 @@ class AnnotatedExample(Cmd):
     # With @with_argparser you'd spell out the action.
     # Here bool defaults drive the generated boolean option.
 
-    @cmd2.with_annotated
+    @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_build(
         self,
@@ -145,7 +152,7 @@ class AnnotatedExample(Cmd):
     # With @with_argparser you'd set type=float and nargs='+'.
     # Here list[float] does both at once.
 
-    @cmd2.with_annotated
+    @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_sum(self, numbers: list[float]) -> None:
         """Sum numbers. ``list[T]`` becomes ``nargs='+'`` automatically.
@@ -158,7 +165,7 @@ class AnnotatedExample(Cmd):
     # -- Literal + Decimal ---------------------------------------------------
     # Literal values become validated choices. Decimal values preserve precision.
 
-    @cmd2.with_annotated
+    @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_deploy(
         self,
@@ -178,7 +185,7 @@ class AnnotatedExample(Cmd):
     # With @with_argparser you'd access args.name, args.count on a Namespace.
     # Here each parameter is a typed local variable.
 
-    @cmd2.with_annotated
+    @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_greet(self, name: str, count: int = 1, loud: bool = False) -> None:
         """Greet someone. Parameters are typed -- no Namespace unpacking.
@@ -206,20 +213,20 @@ class AnnotatedExample(Cmd):
             return Choices.from_values(["touchdown", "field-goal", "punt"])
         return Choices.from_values(["play"])
 
-    @cmd2.with_annotated
+    @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_score(
         self,
         sport: Annotated[
             str,
-            cmd2.Argument(
+            Argument(
                 choices_provider=sport_choices,
                 help_text="Sport to score",
             ),
         ],
         play: Annotated[
             str,
-            cmd2.Argument(
+            Argument(
                 choices_provider=context_choices,
                 help_text="Type of play (depends on sport)",
             ),
@@ -241,7 +248,7 @@ class AnnotatedExample(Cmd):
     def default_namespace(self) -> Namespace:
         return Namespace(region=self._default_region)
 
-    @cmd2.with_annotated(ns_provider=default_namespace)
+    @with_annotated(ns_provider=default_namespace)
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_ship(self, package: str, region: str = "local") -> None:
         """Use ns_provider to prepopulate parser defaults at runtime.
@@ -254,7 +261,7 @@ class AnnotatedExample(Cmd):
 
     # -- Unknown args --------------------------------------------------------
 
-    @cmd2.with_annotated(with_unknown_args=True)
+    @with_annotated(with_unknown_args=True)
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_flex(self, name: str, _unknown: list[str] | None = None) -> None:
         """Capture unknown arguments instead of failing parse.
@@ -269,9 +276,9 @@ class AnnotatedExample(Cmd):
     # -- Subcommands ---------------------------------------------------------
     # @with_annotated also supports typed subcommand trees.
 
-    @cmd2.with_annotated(base_command=True)
+    @with_annotated(base_command=True)
     @cmd2.with_category(ANNOTATED_CATEGORY)
-    def do_manage(self, verbose: bool = False, *, cmd2_handler) -> None:
+    def do_manage(self, verbose: bool = False, *, cmd2_handler: Callable[[], Any] | None = None) -> None:
         """Base command for annotated subcommands.
 
         Try:
@@ -283,22 +290,22 @@ class AnnotatedExample(Cmd):
         if cmd2_handler:
             cmd2_handler()
 
-    @cmd2.with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
-    def manage_project(self, *, cmd2_handler) -> None:
+    @with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
+    def manage_project(self, *, cmd2_handler: Callable[[], Any] | None = None) -> None:
         if cmd2_handler:
             cmd2_handler()
 
-    @cmd2.with_annotated(subcommand_to="manage project", help="add a project")
+    @with_annotated(subcommand_to="manage project", help="add a project")
     def manage_project_add(self, name: str) -> None:
         self.poutput(f"project added: {name}")
 
-    @cmd2.with_annotated(subcommand_to="manage project", help="list projects")
+    @with_annotated(subcommand_to="manage project", help="list projects")
     def manage_project_list(self) -> None:
         self.poutput("project list: demo")
 
     # -- Preserve quotes -----------------------------------------------------
 
-    @cmd2.with_annotated(preserve_quotes=True)
+    @with_annotated(preserve_quotes=True)
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_echo(self, text: str) -> None:
         """Echo text with quotes preserved.

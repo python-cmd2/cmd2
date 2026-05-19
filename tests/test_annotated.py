@@ -32,6 +32,7 @@ from cmd2.annotated import (
     _resolve_annotation,
     _validate_group_members,
     build_parser_from_function,
+    with_annotated,
 )
 
 from .conftest import run_cmd
@@ -474,7 +475,7 @@ class TestArgumentGroups:
         """@with_annotated(mutually_exclusive_groups=...) works end-to-end."""
 
         class App(cmd2.Cmd):
-            @cmd2.with_annotated(mutually_exclusive_groups=(("verbose", "quiet"),))
+            @with_annotated(mutually_exclusive_groups=(("verbose", "quiet"),))
             def do_run(self, verbose: bool = False, quiet: bool = False) -> None:
                 if verbose:
                     self.poutput("verbose")
@@ -910,16 +911,16 @@ class _RuntimeAnnotatedApp(cmd2.Cmd):
     def item_choices(self) -> list[cmd2.CompletionItem]:
         return [cmd2.CompletionItem(item) for item in self._items]
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_greet(self, name: str, count: int = 1) -> None:
         for _ in range(count):
             self.poutput(f"Hello {name}")
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_add(self, a: int, b: int = 0) -> None:
         self.poutput(str(a + b))
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_paint(
         self,
         item: str,
@@ -931,23 +932,23 @@ class _RuntimeAnnotatedApp(cmd2.Cmd):
             msg += " (verbose)"
         self.poutput(msg)
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_pick(self, item: Annotated[str, Argument(choices_provider=item_choices)]) -> None:
         self.poutput(f"Picked: {item}")
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_open(self, path: Path) -> None:
         self.poutput(f"Opening: {path}")
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_sport(self, sport: _Sport) -> None:
         self.poutput(f"Playing: {sport.value}")
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_toggle(self, enabled: bool) -> None:
         self.poutput(f"Enabled: {enabled}")
 
-    @cmd2.with_annotated(preserve_quotes=True)
+    @with_annotated(preserve_quotes=True)
     def do_raw(self, text: str) -> None:
         self.poutput(f"raw: {text}")
 
@@ -1020,7 +1021,7 @@ class _AnnotatedCommandSet(cmd2.CommandSet):
     def sport_choices(self) -> list[cmd2.CompletionItem]:
         return [cmd2.CompletionItem(sport) for sport in self._sports]
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_play(self, sport: Annotated[str, Argument(choices_provider=sport_choices)]) -> None:
         self._cmd.poutput(f"Playing {sport}")
 
@@ -1058,7 +1059,7 @@ class _IntegrationApp(cmd2.Cmd):
         ns.custom_stuff = "custom"
         return ns
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_greet(self, name: str, count: int = 1, loud: bool = False, *, keyword_arg: str | None = None) -> None:
         """Greet someone."""
         for _ in range(count):
@@ -1067,27 +1068,27 @@ class _IntegrationApp(cmd2.Cmd):
         if keyword_arg is not None:
             self.poutput(keyword_arg)
 
-    @cmd2.with_annotated(with_unknown_args=True)
+    @with_annotated(with_unknown_args=True)
     def do_flex(self, name: str, _unknown: list[str] | None = None) -> None:
         self.poutput(f"name={name}")
         if _unknown:
             self.poutput(f"unknown={_unknown}")
 
-    @cmd2.with_annotated(preserve_quotes=True)
+    @with_annotated(preserve_quotes=True)
     def do_raw(self, text: str) -> None:
         self.poutput(f"raw: {text}")
 
-    @cmd2.with_annotated(ns_provider=namespace_provider)
+    @with_annotated(ns_provider=namespace_provider)
     def do_ns_test(self, cmd2_statement=None) -> None:
         self.poutput("ok")
 
-    @cmd2.with_annotated
+    @with_annotated
     def do_prefixed(self, cmd2_mode: int = 1) -> None:
         self.poutput(f"cmd2_mode={cmd2_mode}")
 
 
 class _GroupedParserApp(cmd2.Cmd):
-    @cmd2.with_annotated(
+    @with_annotated(
         groups=(("local", "remote"), ("force", "dry_run")),
         mutually_exclusive_groups=(("local", "remote"), ("force", "dry_run")),
     )
@@ -1153,14 +1154,14 @@ class TestWithAnnotatedIntegration:
     def test_with_unknown_args_requires_param(self) -> None:
         with pytest.raises(TypeError, match="_unknown"):
 
-            @cmd2.with_annotated(with_unknown_args=True)
+            @with_annotated(with_unknown_args=True)
             def do_broken(self, name: str) -> None:
                 pass
 
     def test_positional_only_unknown_rejected(self) -> None:
         with pytest.raises(TypeError, match="keyword-compatible"):
 
-            @cmd2.with_annotated(with_unknown_args=True)
+            @with_annotated(with_unknown_args=True)
             def do_broken(self, _unknown: list[str], /) -> None:
                 pass
 
@@ -1197,7 +1198,7 @@ class TestWithAnnotatedIntegration:
         """@with_annotated() with empty parens works same as @with_annotated."""
 
         class App(cmd2.Cmd):
-            @cmd2.with_annotated()
+            @with_annotated()
             def do_echo(self, text: str) -> None:
                 self.poutput(text)
 
@@ -1239,7 +1240,7 @@ class TestGroupedParserIntegration:
 
 class _SubcommandApp(cmd2.Cmd):
     # Level 1: base command
-    @cmd2.with_annotated(base_command=True)
+    @with_annotated(base_command=True)
     def do_manage(self, cmd2_handler, verbose: bool = False) -> None:
         """Management command with subcommands."""
         if verbose:
@@ -1249,23 +1250,23 @@ class _SubcommandApp(cmd2.Cmd):
             handler()
 
     # Level 2: leaf subcommands
-    @cmd2.with_annotated(subcommand_to="manage", help="add something")
+    @with_annotated(subcommand_to="manage", help="add something")
     def manage_add(self, value: str) -> None:
         self.poutput(f"added: {value}")
 
-    @cmd2.with_annotated(subcommand_to="manage", help="list things", aliases=["ls"])
+    @with_annotated(subcommand_to="manage", help="list things", aliases=["ls"])
     def manage_list(self) -> None:
         self.poutput("listing all")
 
     # Level 2: intermediate subcommand (also a base for level 3)
-    @cmd2.with_annotated(subcommand_to="manage", base_command=True, help="manage members")
+    @with_annotated(subcommand_to="manage", base_command=True, help="manage members")
     def manage_member(self, cmd2_handler) -> None:
         handler = cmd2_handler
         if handler:
             handler()
 
     # Level 3: nested subcommand
-    @cmd2.with_annotated(subcommand_to="manage member", help="add a member")
+    @with_annotated(subcommand_to="manage member", help="add a member")
     def manage_member_add(self, name: str) -> None:
         self.poutput(f"member added: {name}")
 
@@ -1314,7 +1315,7 @@ class TestSubcommandValidation:
         """Positional str param conflicts with subcommand name."""
         with pytest.raises(TypeError, match="positional"):
 
-            @cmd2.with_annotated(base_command=True)
+            @with_annotated(base_command=True)
             def do_bad(self, name: str, cmd2_handler) -> None:
                 pass
 
@@ -1322,14 +1323,14 @@ class TestSubcommandValidation:
         """Explicit Argument() metadata forces positional -- conflict."""
         with pytest.raises(TypeError, match="positional"):
 
-            @cmd2.with_annotated(base_command=True)
+            @with_annotated(base_command=True)
             def do_bad(self, a: Annotated[str, Argument(help_text="x")], cmd2_handler) -> None:
                 pass
 
     def test_base_command_missing_handler_raises(self) -> None:
         with pytest.raises(TypeError, match="cmd2_handler"):
 
-            @cmd2.with_annotated(base_command=True)
+            @with_annotated(base_command=True)
             def do_bad(self, verbose: bool = False) -> None:
                 pass
 
@@ -1337,7 +1338,7 @@ class TestSubcommandValidation:
         """A 'cmd2_handler' parameter is only valid when base_command=True."""
         with pytest.raises(TypeError, match="base_command=True"):
 
-            @cmd2.with_annotated
+            @with_annotated
             def do_bad(self, cmd2_handler, name: str = "") -> None:
                 pass
 
@@ -1351,7 +1352,7 @@ class TestSubcommandValidation:
     def test_subcmd_only_params_without_subcommand_to_raises(self, kwargs) -> None:
         with pytest.raises(TypeError, match="subcommand_to"):
 
-            @cmd2.with_annotated(**kwargs)
+            @with_annotated(**kwargs)
             def do_bad(self, name: str) -> None:
                 pass
 
@@ -1366,7 +1367,7 @@ class TestSubcommandValidation:
     def test_subcommand_rejects_unsupported_runtime_options(self, kwargs, pattern) -> None:
         with pytest.raises(TypeError, match=pattern):
 
-            @cmd2.with_annotated(subcommand_to="team", **kwargs)
+            @with_annotated(subcommand_to="team", **kwargs)
             def team_add(self, name: str, _unknown: list[str] | None = None) -> None:
                 pass
 
@@ -1374,13 +1375,13 @@ class TestSubcommandValidation:
         """mutually_exclusive_groups should work on subcommands."""
 
         class App(cmd2.Cmd):
-            @cmd2.with_annotated(base_command=True)
+            @with_annotated(base_command=True)
             def do_fmt(self, cmd2_handler) -> None:
                 handler = cmd2_handler
                 if handler:
                     handler()
 
-            @cmd2.with_annotated(subcommand_to="fmt", help="output", mutually_exclusive_groups=(("json", "csv"),))
+            @with_annotated(subcommand_to="fmt", help="output", mutually_exclusive_groups=(("json", "csv"),))
             def fmt_out(self, msg: str, json: bool = False, csv: bool = False) -> None:
                 self.poutput(f"json={json} csv={csv} {msg}")
 
@@ -1393,14 +1394,14 @@ class TestSubcommandValidation:
     def test_intermediate_base_command_positional_raises(self) -> None:
         with pytest.raises(TypeError, match="positional"):
 
-            @cmd2.with_annotated(subcommand_to="team", base_command=True)
+            @with_annotated(subcommand_to="team", base_command=True)
             def team_member(self, name: str, cmd2_handler) -> None:
                 pass
 
     def test_intermediate_base_command_missing_handler_raises(self) -> None:
         with pytest.raises(TypeError, match="cmd2_handler"):
 
-            @cmd2.with_annotated(subcommand_to="team", base_command=True)
+            @with_annotated(subcommand_to="team", base_command=True)
             def team_member(self) -> None:
                 pass
 
@@ -1415,7 +1416,7 @@ class TestSubcommandValidation:
         ns: dict = {}
         exec(f"def {func_name}(self, x: str) -> None: ...", ns)
         with pytest.raises(TypeError, match="must be named"):
-            cmd2.with_annotated(subcommand_to=subcommand_to)(ns[func_name])
+            with_annotated(subcommand_to=subcommand_to)(ns[func_name])
 
     @pytest.mark.parametrize(
         ("decorator_kwargs", "expected_help", "expected_aliases"),
@@ -1427,7 +1428,7 @@ class TestSubcommandValidation:
     def test_subcommand_spec_attributes(self, decorator_kwargs, expected_help, expected_aliases) -> None:
         from cmd2 import constants
 
-        @cmd2.with_annotated(subcommand_to="team", **decorator_kwargs)
+        @with_annotated(subcommand_to="team", **decorator_kwargs)
         def team_create(self, name: str = "") -> None: ...
 
         spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)

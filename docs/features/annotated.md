@@ -11,7 +11,7 @@
     For production code that needs stable behavior, use
     [@with_argparser](argument_processing.md#with_argparser-decorator) instead.
 
-The [@with_annotated][cmd2.decorators.with_annotated] decorator builds an argparse parser
+The [@with_annotated][cmd2.annotated.with_annotated] decorator builds an argparse parser
 automatically from the decorated function's type annotations. No manual `add_argument()` calls are
 required, and the command body receives typed keyword arguments directly instead of an
 `argparse.Namespace`.
@@ -60,7 +60,7 @@ Underscores in parameter names are converted to dashes in the generated flag, so
 (`args.dry_run`). To opt out, pass explicit names via `Option("--my_flag", ...)`.
 
 ```py
-from cmd2 import with_annotated
+from cmd2.annotated import with_annotated
 
 class MyApp(cmd2.Cmd):
     @with_annotated
@@ -115,7 +115,7 @@ For finer control, use `typing.Annotated` with [Argument][cmd2.annotated.Argumen
 
 ```py
 from typing import Annotated
-from cmd2 import Argument, Option, with_annotated
+from cmd2.annotated import Argument, Option, with_annotated
 
 class MyApp(cmd2.Cmd):
     def sport_choices(self) -> cmd2.Choices:
