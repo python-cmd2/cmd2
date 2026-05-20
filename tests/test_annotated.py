@@ -102,6 +102,9 @@ def _func_literal_int(self, level: Literal[1, 2, 3]) -> None: ...
 def _func_optional(self, name: str | None = None) -> None: ...
 def _func_optional_positional(self, val: Annotated[int | None, Argument()]) -> None: ...
 def _func_optional_plain(self, val: int | None) -> None: ...
+def _func_optional_list(self, vals: list[int] | None) -> None: ...
+def _func_optional_tuple_ellipsis(self, vals: tuple[int, ...] | None) -> None: ...
+def _func_optional_explicit_nargs(self, vals: Annotated[tuple[int, ...] | None, Argument(nargs=2)]) -> None: ...
 def _func_list(self, files: list[str]) -> None: ...
 def _func_list_default(self, items: list[str] | None = None) -> None: ...
 def _func_set(self, tags: set[str]) -> None: ...
@@ -112,7 +115,7 @@ def _func_bare_tuple(self, items: tuple) -> None: ...
 def _func_annotated_arg(self, name: Annotated[str, Argument(help_text="Your name")]) -> None: ...
 def _func_annotated_option(self, color: Annotated[str, Option("--color", "-c", help_text="Pick")] = "blue") -> None: ...
 def _func_annotated_metavar(self, name: Annotated[str, Argument(metavar="NAME")]) -> None: ...
-def _func_annotated_nargs(self, names: Annotated[str, Argument(nargs=2)]) -> None: ...
+def _func_annotated_nargs(self, names: Annotated[tuple[str, ...], Argument(nargs=2)]) -> None: ...
 def _func_annotated_action(self, verbose: Annotated[bool, Option("--verbose", "-v", action="count")] = False) -> None: ...
 def _func_annotated_action_non_bool(self, count: Annotated[int, Option("--count", action="count")] = 0) -> None: ...
 def _func_annotated_required(self, name: Annotated[str, Option("--name", required=True)]) -> None: ...
@@ -223,6 +226,17 @@ class TestBuildParser:
                 _func_optional_positional, {"option_strings": [], "nargs": "?", "type": int}, id="optional_positional"
             ),
             pytest.param(_func_optional_plain, {"option_strings": [], "nargs": "?", "type": int}, id="optional_plain"),
+            pytest.param(_func_optional_list, {"option_strings": [], "nargs": "*", "type": int}, id="optional_list"),
+            pytest.param(
+                _func_optional_tuple_ellipsis,
+                {"option_strings": [], "nargs": "*", "type": int},
+                id="optional_tuple_ellipsis",
+            ),
+            pytest.param(
+                _func_optional_explicit_nargs,
+                {"option_strings": [], "nargs": 2, "type": int},
+                id="optional_explicit_nargs_overrides",
+            ),
             # --- Options ---
             pytest.param(_func_int_option, {"option_strings": ["--count"], "type": int, "default": 1}, id="int_option"),
             pytest.param(_func_float_option, {"option_strings": ["--rate"], "type": float, "default": 1.0}, id="float_option"),
@@ -748,6 +762,32 @@ class TestUnsupportedPatterns:
     def test_tuple_mixed_raises(self) -> None:
         with pytest.raises(TypeError, match="mixed element types"):
             _resolve_annotation(tuple[int, str, float])
+
+    @pytest.mark.parametrize(
+        "annotation",
+        [
+            pytest.param(Annotated[str, Argument(nargs=2)], id="str_nargs_2"),
+            pytest.param(Annotated[int | None, Argument(nargs="+")], id="optional_int_nargs_plus"),
+            pytest.param(Annotated[int, Argument(nargs="*")], id="int_nargs_star"),
+            pytest.param(Annotated[str, Argument(nargs=1)], id="str_nargs_1"),
+        ],
+    )
+    def test_multi_nargs_on_scalar_raises(self, annotation) -> None:
+        with pytest.raises(TypeError, match=r"nargs=.* not a collection type"):
+            _resolve_annotation(annotation)
+
+    @pytest.mark.parametrize(
+        "annotation",
+        [
+            pytest.param(Annotated[tuple[str, str], Argument(nargs=1)], id="tuple2_nargs_1"),
+            pytest.param(Annotated[tuple[str, str], Argument(nargs=3)], id="tuple2_nargs_3"),
+            pytest.param(Annotated[tuple[int, int, int], Argument(nargs="+")], id="tuple3_nargs_plus"),
+            pytest.param(Annotated[tuple[str, str], Argument(nargs="?")], id="tuple2_nargs_optional"),
+        ],
+    )
+    def test_nargs_overrides_fixed_arity_raises(self, annotation) -> None:
+        with pytest.raises(TypeError, match=r"conflicts with the fixed arity"):
+            _resolve_annotation(annotation)
 
     @pytest.mark.parametrize(
         "annotation",

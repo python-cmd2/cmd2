@@ -54,7 +54,7 @@ How annotations map to argparse settings:
 - ``enum.Enum`` subclass -- ``type=converter``, ``choices`` from member values
 - ``decimal.Decimal`` -- sets ``type=Decimal``
 - ``Literal[...]`` -- sets ``type=converter`` and ``choices`` from literal values
-- ``list[T]`` / ``set[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` if has a default)
+- ``list[T]`` / ``set[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` if has a default or is ``| None``)
 - ``tuple[T, T]`` (fixed arity, same type) -- ``nargs=N`` with ``type=T``
 - ``T | None`` (no default) -- positional with ``nargs='?'`` (accepts 0-or-1 tokens)
 - ``T | None = None`` -- ``--flag`` option with ``default=None``
@@ -71,6 +71,11 @@ Unsupported patterns (raise ``TypeError``):
 - ``str | int`` -- union of multiple non-None types is ambiguous
 - ``tuple[int, str, float]`` -- mixed element types are not currently supported
   because argparse can only apply a single ``type=`` converter per argument
+- ``Annotated[T, Argument(nargs=N)]`` where ``N`` produces a list (``'*'``, ``'+'``,
+  or integer ``>= 1``) and ``T`` is not a collection type.  Use ``list[T]`` or
+  ``tuple[T, ...]`` to match the runtime shape.
+- ``Annotated[tuple[T, T], Argument(nargs=N)]`` where ``N`` differs from the number of
+  elements declared by the tuple type.  The tuple already pins ``nargs``.
 
 When combining ``Annotated`` with ``Optional``, the union must go
 *inside*: ``Annotated[T | None, meta]``.  Writing
@@ -517,7 +522,9 @@ def _resolve_type(
     Returns ``(base_type, kwargs_dict)``.
     """
     args = get_args(tp)
-    resolver_has_default = has_default or is_kw_only
+    # ``has_default``, ``is_kw_only``, and ``is_optional`` all mean "this argument may be absent",
+    # so collection resolvers should pick ``nargs='*'`` instead of ``'+'``.
+    resolver_has_default = has_default or is_kw_only or is_optional
     ctx: dict[str, Any] = {
         "is_positional": is_positional,
         "has_default": resolver_has_default,
@@ -541,8 +548,29 @@ def _resolve_type(
         base_type = tp
         kwargs = {}
 
+    resolver_nargs = kwargs.get("nargs")
+
     if metadata:
         kwargs.update(metadata.to_kwargs())
+
+    type_repr = tp.__name__ if hasattr(tp, "__name__") else str(tp)
+    nargs_val = kwargs.get("nargs")
+
+    # A fixed-arity type (e.g. ``tuple[T, T]``) declares its own nargs;
+    # user metadata cannot override it to a different value.
+    if isinstance(resolver_nargs, int) and nargs_val != resolver_nargs:
+        raise TypeError(
+            f"nargs={nargs_val!r} conflicts with the fixed arity of '{type_repr}' (expected nargs={resolver_nargs})."
+        )
+
+    # nargs that produces a list of values requires a collection annotation.
+    # Catches mistakes like ``Annotated[str, Argument(nargs=2)]`` where the
+    # parameter is typed as a scalar but argparse will hand back a list.
+    if not kwargs.get("is_collection") and (nargs_val in ("*", "+") or (isinstance(nargs_val, int) and nargs_val >= 1)):
+        raise TypeError(
+            f"nargs={nargs_val!r} produces a list of values, but the annotation '{type_repr}' is not a collection type. "
+            f"Use list[T], tuple[T, ...], or set[T] (optionally with | None) to match."
+        )
 
     # Some argparse actions (e.g. count/store_true) do not accept a type converter.
     action_name = kwargs.get("action")

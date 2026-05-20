@@ -78,19 +78,20 @@ them as keyword arguments.
 
 The decorator converts Python type annotations into `add_argument()` calls:
 
-| Type annotation                                          | Generated argparse setting                          |
-| -------------------------------------------------------- | --------------------------------------------------- |
-| `str`                                                    | default (no `type=` needed)                         |
-| `int`, `float`                                           | `type=int` or `type=float`                          |
-| `bool` with a default                                    | boolean optional flag via `BooleanOptionalAction`   |
-| positional `bool`                                        | parsed from `true/false`, `yes/no`, `on/off`, `1/0` |
-| `Path`                                                   | `type=Path`                                         |
-| `Enum` subclass                                          | `type=converter`, `choices` from member values      |
-| `decimal.Decimal`                                        | `type=decimal.Decimal`                              |
-| `Literal[...]`                                           | `type=literal-converter`, `choices` from values     |
-| `Collection[T]` / `list[T]` / `set[T]` / `tuple[T, ...]` | `nargs='+'` (or `'*'` if it has a default)          |
-| `tuple[T, T]`                                            | fixed `nargs=N` with `type=T`                       |
-| `T \| None`                                              | unwrapped to `T`, treated as optional               |
+| Type annotation                                          | Generated argparse setting                                 |
+| -------------------------------------------------------- | ---------------------------------------------------------- |
+| `str`                                                    | default (no `type=` needed)                                |
+| `int`, `float`                                           | `type=int` or `type=float`                                 |
+| `bool` with a default                                    | boolean optional flag via `BooleanOptionalAction`          |
+| positional `bool`                                        | parsed from `true/false`, `yes/no`, `on/off`, `1/0`        |
+| `Path`                                                   | `type=Path`                                                |
+| `Enum` subclass                                          | `type=converter`, `choices` from member values             |
+| `decimal.Decimal`                                        | `type=decimal.Decimal`                                     |
+| `Literal[...]`                                           | `type=literal-converter`, `choices` from values            |
+| `Collection[T]` / `list[T]` / `set[T]` / `tuple[T, ...]` | `nargs='+'` (or `'*'` if it has a default or is `\| None`) |
+| `tuple[T, T]`                                            | fixed `nargs=N` with `type=T`                              |
+| `T \| None` (no default)                                 | positional with `nargs='?'` (accepts 0-or-1 tokens)        |
+| `T \| None = None`                                       | `--flag` option with `default=None`                        |
 
 When collection types are used with `@with_annotated`, parsed values are passed to the command
 function as:
@@ -104,6 +105,11 @@ Unsupported patterns raise `TypeError`, including:
 - unions with multiple non-`None` members such as `str | int`
 - mixed-type tuples such as `tuple[int, str]`
 - `Annotated[T, meta] | None`; write `Annotated[T | None, meta]` instead
+- `Annotated[T, Argument(nargs=N)]` where `N` is `'*'`, `'+'`, or an integer `>= 1` and `T` is not a
+  collection type. `nargs` values that produce a list of values need a collection annotation such as
+  `list[T]` or `tuple[T, ...]`.
+- `Annotated[tuple[T, T], Argument(nargs=N)]` where `N` differs from the number of elements declared
+  by the tuple. The tuple type already pins `nargs`; user metadata cannot change it.
 
 The parameter names `dest` and `subcommand` are reserved and may not be used as annotated parameter
 names.
