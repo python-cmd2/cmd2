@@ -100,6 +100,8 @@ def _func_literal(self, mode: Literal["fast", "slow"]) -> None: ...
 def _func_literal_option(self, mode: Literal["fast", "slow"] = "fast") -> None: ...
 def _func_literal_int(self, level: Literal[1, 2, 3]) -> None: ...
 def _func_optional(self, name: str | None = None) -> None: ...
+def _func_optional_positional(self, val: Annotated[int | None, Argument()]) -> None: ...
+def _func_optional_plain(self, val: int | None) -> None: ...
 def _func_list(self, files: list[str]) -> None: ...
 def _func_list_default(self, items: list[str] | None = None) -> None: ...
 def _func_set(self, tags: set[str]) -> None: ...
@@ -217,6 +219,10 @@ class TestBuildParser:
             pytest.param(_func_tuple_fixed, {"option_strings": [], "nargs": 2, "type": int}, id="tuple_fixed"),
             pytest.param(_func_bare_list, {"option_strings": [], "nargs": "+"}, id="bare_list"),
             pytest.param(_func_bare_tuple, {"option_strings": [], "nargs": "+"}, id="bare_tuple"),
+            pytest.param(
+                _func_optional_positional, {"option_strings": [], "nargs": "?", "type": int}, id="optional_positional"
+            ),
+            pytest.param(_func_optional_plain, {"option_strings": [], "nargs": "?", "type": int}, id="optional_plain"),
             # --- Options ---
             pytest.param(_func_int_option, {"option_strings": ["--count"], "type": int, "default": 1}, id="int_option"),
             pytest.param(_func_float_option, {"option_strings": ["--rate"], "type": float, "default": 1.0}, id="float_option"),
@@ -688,7 +694,8 @@ class TestResolveAnnotation:
         ("annotation", "has_default", "expected_positional"),
         [
             pytest.param(str, False, True, id="plain_str"),
-            pytest.param(str | None, False, False, id="optional_str"),
+            pytest.param(str | None, False, True, id="optional_str_positional"),
+            pytest.param(str | None, True, False, id="optional_str_with_default"),
             pytest.param(Annotated[str, _ARG_META], False, True, id="annotated_argument"),
             pytest.param(Annotated[str, _OPT_META], False, False, id="annotated_option"),
             pytest.param(Annotated[str, "some doc"], False, True, id="annotated_no_meta"),
@@ -711,6 +718,12 @@ class TestResolveAnnotation:
         ns: dict = {}
         exec("import typing; t = typing.Union[str, None]", ns)
         _kwargs, _meta, positional = _resolve_annotation(ns["t"])
+        assert positional is True
+
+    def test_typing_union_optional_with_default(self) -> None:
+        ns: dict = {}
+        exec("import typing; t = typing.Union[str, None]", ns)
+        _kwargs, _meta, positional = _resolve_annotation(ns["t"], has_default=True, default=None)
         assert positional is False
 
     def test_annotated_multiple_metadata_picks_first(self) -> None:

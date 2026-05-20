@@ -56,7 +56,8 @@ How annotations map to argparse settings:
 - ``Literal[...]`` -- sets ``type=converter`` and ``choices`` from literal values
 - ``list[T]`` / ``set[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` if has a default)
 - ``tuple[T, T]`` (fixed arity, same type) -- ``nargs=N`` with ``type=T``
-- ``T | None`` -- unwrapped to ``T``, treated as optional
+- ``T | None`` (no default) -- positional with ``nargs='?'`` (accepts 0-or-1 tokens)
+- ``T | None = None`` -- ``--flag`` option with ``default=None``
 
 Action compatibility note:
 
@@ -503,6 +504,7 @@ def _resolve_type(
     tp: type,
     *,
     is_positional: bool = False,
+    is_optional: bool = False,
     has_default: bool = False,
     default: Any = None,
     metadata: ArgMetadata = None,
@@ -552,6 +554,10 @@ def _resolve_type(
 
     if is_kw_only and not has_default:
         kwargs["required"] = True
+
+    # An optional positional scalar (``T | None`` without a default) takes 0-or-1 tokens.
+    if is_optional and is_positional and "nargs" not in kwargs and not kwargs.get("is_collection"):
+        kwargs["nargs"] = "?"
 
     if kwargs.get("choices_provider") or kwargs.get("completer"):
         kwargs.pop("choices", None)
@@ -635,13 +641,12 @@ def _resolve_annotation(
     """
     tp, metadata, is_optional = _normalize_annotation(annotation)
 
-    is_positional = isinstance(metadata, Argument) or (
-        not isinstance(metadata, Option) and not has_default and not is_optional and not is_kw_only
-    )
+    is_positional = isinstance(metadata, Argument) or (metadata is None and not has_default and not is_kw_only)
 
     tp, type_kwargs = _resolve_type(
         tp,
         is_positional=is_positional,
+        is_optional=is_optional,
         has_default=has_default,
         default=default,
         metadata=metadata,
