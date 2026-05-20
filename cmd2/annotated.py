@@ -458,7 +458,7 @@ def _resolve_tuple(_tp: Any, args: tuple[Any, ...], *, has_default: bool = False
         first = args[0]
         if not all(a == first for a in args[1:]):
             raise TypeError(
-                f"tuple[{', '.join(a.__name__ if hasattr(a, '__name__') else str(a) for a in args)}] "
+                f"tuple[{', '.join(_type_name(a) for a in args)}] "
                 f"has mixed element types which is not currently supported because argparse "
                 f"can only apply a single type= converter per argument. "
                 f"Use tuple[T, T] (same type) or tuple[T, ...] instead."
@@ -503,6 +503,22 @@ _TYPE_RESOLVERS: dict[Any, Callable[..., dict[str, Any]]] = {
     tuple: _resolve_tuple,
     Literal: _resolve_literal,
 }
+
+
+# -- Helpers ------------------------------------------------------------------
+
+
+def _type_name(tp: Any) -> str:
+    """Best-effort type name for diagnostic messages."""
+    return tp.__name__ if hasattr(tp, "__name__") else str(tp)
+
+
+def _nargs_yields_list(nargs: Any) -> bool:
+    """Return ``True`` when an argparse ``nargs`` value produces a list at parse time.
+
+    ``nargs=1`` is included: argparse returns ``[value]``, not the bare value.
+    """
+    return nargs in ("*", "+") or (isinstance(nargs, int) and nargs >= 1)
 
 
 def _resolve_type(
@@ -553,22 +569,19 @@ def _resolve_type(
     if metadata:
         kwargs.update(metadata.to_kwargs())
 
-    type_repr = tp.__name__ if hasattr(tp, "__name__") else str(tp)
     nargs_val = kwargs.get("nargs")
 
     # A fixed-arity type (e.g. ``tuple[T, T]``) declares its own nargs;
     # user metadata cannot override it to a different value.
     if isinstance(resolver_nargs, int) and nargs_val != resolver_nargs:
         raise TypeError(
-            f"nargs={nargs_val!r} conflicts with the fixed arity of '{type_repr}' (expected nargs={resolver_nargs})."
+            f"nargs={nargs_val!r} conflicts with the fixed arity of '{_type_name(tp)}' (expected nargs={resolver_nargs})."
         )
 
     # nargs that produces a list of values requires a collection annotation.
-    # Catches mistakes like ``Annotated[str, Argument(nargs=2)]`` where the
-    # parameter is typed as a scalar but argparse will hand back a list.
-    if not kwargs.get("is_collection") and (nargs_val in ("*", "+") or (isinstance(nargs_val, int) and nargs_val >= 1)):
+    if not kwargs.get("is_collection") and _nargs_yields_list(nargs_val):
         raise TypeError(
-            f"nargs={nargs_val!r} produces a list of values, but the annotation '{type_repr}' is not a collection type. "
+            f"nargs={nargs_val!r} produces a list of values, but the annotation '{_type_name(tp)}' is not a collection type. "
             f"Use list[T], tuple[T, ...], or set[T] (optionally with | None) to match."
         )
 
@@ -613,7 +626,7 @@ def _unwrap_optional(tp: type) -> tuple[type, bool]:
                 f"Unexpected single-element Union without None: Union[{non_none[0]}]. "
                 f"Use the type directly instead of wrapping in Union."
             )
-        type_names = " | ".join(a.__name__ if hasattr(a, "__name__") else str(a) for a in non_none)
+        type_names = " | ".join(_type_name(a) for a in non_none)
         raise TypeError(f"Union type {type_names} is ambiguous for auto-resolution.")
     return tp, False
 
