@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import (
     Annotated,
     Literal,
+    Optional,
 )
 
 import pytest
@@ -79,6 +80,10 @@ _PLAIN_COLOR_CHOICE_ITEMS = [
 ]
 
 
+class _Port(int):
+    """Subclass of ``int`` used to verify subclass fallback in type resolution."""
+
+
 # ---------------------------------------------------------------------------
 # Single-parameter test functions for build_parser_from_function.
 # Each has exactly one param (besides self) so dest is auto-derived.
@@ -134,6 +139,19 @@ def _func_plain_enum(self, color: _PlainColor) -> None: ...
 def _func_list_int(self, nums: list[int]) -> None: ...
 def _func_set_int(self, nums: set[int]) -> None: ...
 def _func_tuple_fixed_triple(self, triple: tuple[int, int, int]) -> None: ...
+def _func_list_bool(self, flags: list[bool]) -> None: ...
+def _func_set_bool(self, flags: set[bool]) -> None: ...
+def _func_list_path(self, files: list[Path]) -> None: ...
+def _func_list_enum(self, colors: list[_Color]) -> None: ...
+def _func_list_literal(self, modes: list[Literal["fast", "slow"]]) -> None: ...
+def _func_tuple_paths(self, src_dst: tuple[Path, Path]) -> None: ...
+def _func_tuple_enums(self, pair: tuple[_Color, _Color]) -> None: ...
+def _func_optional_str_nondefault(self, name: str | None = "world") -> None: ...
+def _func_typing_optional(self, count: Optional[int] = None) -> None: ...  # noqa: UP045
+def _func_int_subclass(self, port: _Port) -> None: ...
+def _func_store_true_action(self, verbose: Annotated[bool, Option("--verbose", action="store_true")] = False) -> None: ...
+def _func_store_false_action(self, quiet: Annotated[bool, Option("--quiet", action="store_false")] = True) -> None: ...
+def _func_append_action(self, tag: Annotated[str | None, Option("--tag", action="append")] = None) -> None: ...
 def _func_multi(self, a: str, b: int, c: int = 1) -> None: ...
 def _func_grouped(
     self,
@@ -287,6 +305,40 @@ class TestBuildParser:
                 {"option_strings": ["--name"], "default": None},
                 id="optional_annotated_inside",
             ),
+            # --- Collections of complex element types ---
+            pytest.param(_func_list_bool, {"option_strings": [], "nargs": "+", "type": _parse_bool}, id="list_bool"),
+            pytest.param(_func_set_bool, {"option_strings": [], "nargs": "+", "type": _parse_bool}, id="set_bool"),
+            pytest.param(_func_list_path, {"option_strings": [], "nargs": "+", "type": Path}, id="list_path"),
+            pytest.param(
+                _func_list_literal,
+                {"option_strings": [], "nargs": "+", "choices": ["fast", "slow"]},
+                id="list_literal",
+            ),
+            pytest.param(
+                _func_list_enum,
+                {"option_strings": [], "nargs": "+", "choices": _COLOR_CHOICE_ITEMS},
+                id="list_enum",
+            ),
+            pytest.param(_func_tuple_paths, {"option_strings": [], "nargs": 2, "type": Path}, id="tuple_paths"),
+            pytest.param(
+                _func_tuple_enums,
+                {"option_strings": [], "nargs": 2, "choices": _COLOR_CHOICE_ITEMS},
+                id="tuple_enums",
+            ),
+            # --- Subclass fallback (Port(int) uses int converter) ---
+            pytest.param(_func_int_subclass, {"option_strings": [], "type": int}, id="int_subclass"),
+            # --- Optional with non-None default ---
+            pytest.param(
+                _func_optional_str_nondefault,
+                {"option_strings": ["--name"], "default": "world"},
+                id="optional_str_nondefault",
+            ),
+            # --- typing.Optional[T] (vs T | None) end-to-end ---
+            pytest.param(
+                _func_typing_optional,
+                {"option_strings": ["--count"], "type": int, "default": None},
+                id="typing_optional",
+            ),
         ],
     )
     def test_action_attributes(self, func, expected) -> None:
@@ -302,6 +354,26 @@ class TestBuildParser:
         action = _get_param_action(_func_annotated_action_non_bool)
         assert isinstance(action, argparse._CountAction)
         assert action.default == 0
+
+    def test_annotated_action_store_true(self) -> None:
+        """``action='store_true'`` strips the inferred bool converter."""
+        action = _get_param_action(_func_store_true_action)
+        assert isinstance(action, argparse._StoreTrueAction)
+        assert action.type is None
+        assert action.default is False
+
+    def test_annotated_action_store_false(self) -> None:
+        """``action='store_false'`` strips the inferred bool converter."""
+        action = _get_param_action(_func_store_false_action)
+        assert isinstance(action, argparse._StoreFalseAction)
+        assert action.type is None
+        assert action.default is True
+
+    def test_annotated_action_append(self) -> None:
+        """``action='append'`` collects repeated flag values into a list."""
+        action = _get_param_action(_func_append_action)
+        assert isinstance(action, argparse._AppendAction)
+        assert action.option_strings == ["--tag"]
 
     @pytest.mark.parametrize(
         "func",
@@ -419,6 +491,20 @@ class TestTypeInferenceBuildParser:
         converter = action.type
         for choice in action.choices:
             assert isinstance(converter(str(choice)), _Color)
+
+    @pytest.mark.parametrize(
+        "func",
+        [
+            pytest.param(_func_path, id="path_positional"),
+            pytest.param(_func_path_option, id="path_option"),
+            pytest.param(_func_list_path, id="list_path"),
+            pytest.param(_func_tuple_paths, id="tuple_paths"),
+        ],
+    )
+    def test_path_annotation_wires_path_completer(self, func) -> None:
+        """A bare ``Path`` annotation (no user metadata) auto-wires ``Cmd.path_complete``."""
+        action = _get_param_action(func)
+        assert action.get_completer() is cmd2.Cmd.path_complete  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------
@@ -986,6 +1072,50 @@ class TestCollectionCastingAction:
         ns = argparse.Namespace()
         action(argparse.ArgumentParser(), ns, "single_value")
         assert ns.items == "single_value"
+
+
+class TestCollectionRuntimeCast:
+    """End-to-end verify ``parse_args`` returns the declared container type, not a plain list."""
+
+    def test_set_int_returns_set(self) -> None:
+        parser = build_parser_from_function(_func_set_int)
+        ns = parser.parse_args(["1", "2", "2", "3"])
+        assert isinstance(ns.nums, set)
+        assert ns.nums == {1, 2, 3}
+
+    def test_tuple_ellipsis_returns_tuple(self) -> None:
+        parser = build_parser_from_function(_func_tuple_ellipsis)
+        ns = parser.parse_args(["1", "2", "3"])
+        assert isinstance(ns.values, tuple)
+        assert ns.values == (1, 2, 3)
+
+    def test_tuple_fixed_returns_tuple(self) -> None:
+        parser = build_parser_from_function(_func_tuple_fixed)
+        ns = parser.parse_args(["5", "10"])
+        assert isinstance(ns.pair, tuple)
+        assert ns.pair == (5, 10)
+
+    def test_list_bool_returns_list_of_bools(self) -> None:
+        parser = build_parser_from_function(_func_list_bool)
+        ns = parser.parse_args(["true", "no", "on"])
+        assert ns.flags == [True, False, True]
+
+    def test_tuple_paths_returns_tuple_of_paths(self) -> None:
+        parser = build_parser_from_function(_func_tuple_paths)
+        ns = parser.parse_args(["/tmp/a", "/tmp/b"])
+        assert isinstance(ns.src_dst, tuple)
+        assert ns.src_dst == (Path("/tmp/a"), Path("/tmp/b"))
+
+    def test_append_action_collects_values(self) -> None:
+        parser = build_parser_from_function(_func_append_action)
+        ns = parser.parse_args(["--tag", "a", "--tag", "b"])
+        assert ns.tag == ["a", "b"]
+
+    def test_int_subclass_uses_int_converter(self) -> None:
+        """``Port(int)`` falls back to ``int`` converter; argparse returns ``int``, not ``Port``."""
+        parser = build_parser_from_function(_func_int_subclass)
+        ns = parser.parse_args(["8080"])
+        assert ns.port == 8080
 
 
 # ---------------------------------------------------------------------------
