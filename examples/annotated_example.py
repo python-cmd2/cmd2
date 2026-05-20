@@ -185,6 +185,7 @@ class AnnotatedExample(Cmd):
         service: str,
         mode: Literal["safe", "fast"] = "safe",
         budget: Decimal = Decimal("1.50"),
+        timeout: Literal[0, 1, 2] = 1,
     ) -> None:
         """Deploy using Literal choices and Decimal parsing.
 
@@ -192,7 +193,7 @@ class AnnotatedExample(Cmd):
             deploy api --mode <TAB>
             deploy api --mode fast --budget 2.75
         """
-        self.poutput(f"Deploying {service} in {mode} mode with budget {budget}")
+        self.poutput(f"Deploying {service} in {mode} mode with budget {budget} and timeout {timeout}")
 
     # -- Typed kwargs --------------------------------------------------------
     # With @with_argparser you'd access args.name, args.count on a Namespace.
