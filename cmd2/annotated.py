@@ -303,8 +303,10 @@ def _make_literal_type(literal_values: list[Any]) -> Callable[[str], Any]:
         else:
             bool_value = None
 
-        if bool_value is not None and bool_value in literal_values:
-            return bool_value
+        if bool_value is not None:
+            for v in literal_values:
+                if type(v) is bool and v == bool_value:
+                    return bool_value
 
         valid = ", ".join(str(v) for v in literal_values)
         raise argparse.ArgumentTypeError(f"invalid choice: {value!r} (choose from {valid})")
