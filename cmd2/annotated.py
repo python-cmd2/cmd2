@@ -495,13 +495,13 @@ _TYPE_RESOLVERS: dict[Any, Callable[..., dict[str, Any]]] = {
     Path: _resolve_path,
     # Exact-match entries (order among these doesn't affect subclass lookup).
     bool: _resolve_bool,
-    int: _make_simple_resolver(int),
-    float: _make_simple_resolver(float),
     decimal.Decimal: _make_simple_resolver(decimal.Decimal),
+    float: _make_simple_resolver(float),
+    int: _make_simple_resolver(int),
+    Literal: _resolve_literal,
     list: _make_collection_resolver(list),
     set: _make_collection_resolver(set),
     tuple: _resolve_tuple,
-    Literal: _resolve_literal,
 }
 
 
