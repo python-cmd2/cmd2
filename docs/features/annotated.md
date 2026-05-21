@@ -108,6 +108,11 @@ Unsupported patterns raise `TypeError`, including:
 - `Annotated[T, Argument(nargs=N)]` where `N` is `'*'`, `'+'`, or an integer `>= 1` and `T` is not a
   collection type. `nargs` values that produce a list of values need a collection annotation such as
   `list[T]` or `tuple[T, ...]`.
+- an optional fixed-arity positional, such as `Annotated[tuple[int, int], Argument()] = (1, 2)`,
+  `Annotated[tuple[int, int] | None, Argument()]`, or any positional `Argument(nargs=N)` with a
+  default or `| None`. argparse cannot make a fixed-arity positional optional (there is no `nargs`
+  for "absent or exactly `N` tokens"), so use a variable-arity type like `tuple[T, ...]`, drop the
+  default, or make it an option (give it a default without `Argument()`).
 - `Annotated[tuple[T, T], Argument(nargs=N)]` where `N` differs from the number of elements declared
   by the tuple. The tuple type already pins `nargs`; user metadata cannot change it.
 
@@ -155,9 +160,11 @@ When an `Option(action=...)` uses an argparse action that does not accept `type=
 inferred `type` converter before calling `add_argument()`. This matches argparse behavior and avoids
 parser-construction errors such as combining `action='count'` with `type=int`.
 
-When a user-supplied `choices_provider` or `completer` overrides an inferred `Enum` or `Literal`,
-the restrictive type converter is also dropped so the user-supplied values are not rejected at parse
-time. The `Path` converter is permissive and is preserved when a custom completer is provided.
+When a user-supplied `choices_provider` or `completer` is given for an inferred `Enum` or `Literal`,
+the inferred static `choices` list is dropped so completion is driven by the provider or completer.
+The inferred `type` converter is preserved, so parsed values still coerce to the declared type
+(`Literal[1, 2]` yields an `int`, an `Enum` yields its member) and values outside the type are
+rejected at parse time.
 
 ## Decorator options
 

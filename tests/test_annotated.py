@@ -106,10 +106,10 @@ def _func_literal_option(self, mode: Literal["fast", "slow"] = "fast") -> None: 
 def _func_literal_int(self, level: Literal[1, 2, 3]) -> None: ...
 def _func_optional(self, name: str | None = None) -> None: ...
 def _func_optional_positional(self, val: Annotated[int | None, Argument()]) -> None: ...
+def _func_positional_with_default(self, arg: Annotated[str, Argument()] = "foo") -> None: ...
 def _func_optional_plain(self, val: int | None) -> None: ...
 def _func_optional_list(self, vals: list[int] | None) -> None: ...
 def _func_optional_tuple_ellipsis(self, vals: tuple[int, ...] | None) -> None: ...
-def _func_optional_explicit_nargs(self, vals: Annotated[tuple[int, ...] | None, Argument(nargs=2)]) -> None: ...
 def _func_list(self, files: list[str]) -> None: ...
 def _func_list_default(self, items: list[str] | None = None) -> None: ...
 def _func_set(self, tags: set[str]) -> None: ...
@@ -243,6 +243,11 @@ class TestBuildParser:
             pytest.param(
                 _func_optional_positional, {"option_strings": [], "nargs": "?", "type": int}, id="optional_positional"
             ),
+            pytest.param(
+                _func_positional_with_default,
+                {"option_strings": [], "nargs": "?", "default": "foo"},
+                id="positional_with_default",
+            ),
             pytest.param(_func_optional_plain, {"option_strings": [], "nargs": "?", "type": int}, id="optional_plain"),
             pytest.param(_func_optional_list, {"option_strings": [], "nargs": "*", "type": int}, id="optional_list"),
             pytest.param(
@@ -250,15 +255,14 @@ class TestBuildParser:
                 {"option_strings": [], "nargs": "*", "type": int},
                 id="optional_tuple_ellipsis",
             ),
-            pytest.param(
-                _func_optional_explicit_nargs,
-                {"option_strings": [], "nargs": 2, "type": int},
-                id="optional_explicit_nargs_overrides",
-            ),
             # --- Options ---
             pytest.param(_func_int_option, {"option_strings": ["--count"], "type": int, "default": 1}, id="int_option"),
             pytest.param(_func_float_option, {"option_strings": ["--rate"], "type": float, "default": 1.0}, id="float_option"),
-            pytest.param(_func_bool_false, {"option_strings": ["--verbose", "--no-verbose"]}, id="bool_optional_action"),
+            pytest.param(
+                _func_bool_false,
+                {"option_strings": ["--verbose", "--no-verbose"], "default": False},
+                id="bool_optional_action",
+            ),
             pytest.param(
                 _func_bool_true,
                 {"option_strings": ["--debug", "--no-debug"], "default": True},
@@ -375,6 +379,28 @@ class TestBuildParser:
         assert isinstance(action, argparse._AppendAction)
         assert action.option_strings == ["--tag"]
 
+    def test_positional_with_default_is_optional(self) -> None:
+        """A positional with a default takes 0-or-1 tokens and falls back to the default when absent."""
+        parser = build_parser_from_function(_func_positional_with_default)
+        assert parser.parse_args([]).arg == "foo"
+        assert parser.parse_args(["bar"]).arg == "bar"
+
+    def test_str_default_on_int_option_coerced_at_parse(self) -> None:
+        """The decorator stores the default literally ('1', see ``default_not_coerced``); at parse
+        time argparse applies ``type=int`` to the string default, so an absent ``--count`` yields int 1.
+        """
+        parser = build_parser_from_function(_func_default_type_mismatch)
+        assert parser.parse_args([]).count == 1
+        assert parser.parse_args(["--count", "5"]).count == 5
+
+    def test_typing_optional_parses_end_to_end(self) -> None:
+        """typing.Optional[int] yields None when absent and coerces to int when provided."""
+        parser = build_parser_from_function(_func_typing_optional)
+        assert parser.parse_args([]).count is None
+        parsed = parser.parse_args(["--count", "5"]).count
+        assert parsed == 5
+        assert isinstance(parsed, int)
+
     @pytest.mark.parametrize(
         "func",
         [
@@ -455,25 +481,64 @@ class TestTypeInferenceBuildParser:
     def test_choices_provider_overrides_inferred_enum_choices(self) -> None:
         action = _get_param_action(_func_choices_provider_on_enum)
         assert action.choices is None
-        assert action.get_choices_provider() is not None  # type: ignore[attr-defined]
+        assert action.get_choices_provider() is _provider  # type: ignore[attr-defined]
         assert action.get_completer() is None  # type: ignore[attr-defined]
 
-    def test_choices_provider_strips_strict_enum_converter(self) -> None:
-        """User-supplied choices_provider on Enum drops the restrictive enum converter."""
+    def test_choices_provider_keeps_enum_coercion(self) -> None:
+        """A choices_provider on an Enum keeps the converter so values still coerce to the member."""
         action = _get_param_action(_func_choices_provider_on_enum)
-        assert action.type is None
+        assert action.type is not None
+        assert action.type("red") is _Color.red
 
-    def test_choices_provider_strips_strict_literal_converter(self) -> None:
-        """User-supplied choices_provider on Literal drops the restrictive literal converter."""
+    def test_choices_provider_keeps_literal_coercion(self) -> None:
+        """A choices_provider on a Literal keeps the converter (coercion) but drops the static choices."""
 
         def func(
             self,
-            mode: Annotated[Literal["fast", "slow"], Argument(choices_provider=_provider)],
+            level: Annotated[Literal[1, 2], Argument(choices_provider=_provider)],
         ) -> None: ...
 
         action = _get_param_action(func)
-        assert action.type is None
         assert action.choices is None
+        assert action.type is not None
+        assert action.type("1") == 1
+
+    def test_choices_provider_enum_coerces_at_parse(self) -> None:
+        """End-to-end: an Enum with a choices_provider still parses to the enum member, not a str."""
+        parser = build_parser_from_function(_func_choices_provider_on_enum)
+        assert parser.parse_args(["red"]).color is _Color.red
+
+    def test_choices_provider_literal_int_coerces_at_parse(self) -> None:
+        """End-to-end: a Literal[int] with a choices_provider parses to int, not a str."""
+
+        def func(
+            self,
+            level: Annotated[Literal[1, 2], Argument(choices_provider=_provider)],
+        ) -> None: ...
+
+        parser = build_parser_from_function(func)
+        parsed = parser.parse_args(["1"]).level
+        assert parsed == 1
+        assert isinstance(parsed, int)
+
+    def test_bare_enum_literal_coerce_at_parse(self) -> None:
+        """Bare Enum/Literal positionals and options coerce to the declared type at parse time.
+
+        Uses identity / isinstance (not ``==``) so a stripped converter returning a raw ``str``
+        cannot hide behind StrEnum/IntEnum equality.
+        """
+        assert build_parser_from_function(_func_literal).parse_args(["fast"]).mode == "fast"
+        assert build_parser_from_function(_func_literal_option).parse_args(["--mode", "slow"]).mode == "slow"
+
+        level = build_parser_from_function(_func_literal_int).parse_args(["2"]).level
+        assert level == 2
+        assert isinstance(level, int)
+
+        assert build_parser_from_function(_func_enum).parse_args(["red"]).color is _Color.red
+        assert build_parser_from_function(_func_enum_option).parse_args(["--color", "red"]).color is _Color.red
+        # Non-StrEnum cases: identity defeats the StrEnum/IntEnum ``==`` masking property.
+        assert build_parser_from_function(_func_int_enum).parse_args(["1"]).color is _IntColor.red
+        assert build_parser_from_function(_func_plain_enum).parse_args(["red"]).color is _PlainColor.RED
 
     def test_completer_keeps_path_converter(self) -> None:
         """User-supplied completer on Path preserves the (non-restrictive) Path converter."""
@@ -876,6 +941,28 @@ class TestUnsupportedPatterns:
             _resolve_annotation(annotation)
 
     @pytest.mark.parametrize(
+        ("annotation", "resolve_kwargs"),
+        [
+            pytest.param(
+                Annotated[tuple[int, int], Argument()],
+                {"has_default": True, "default": (1, 2)},
+                id="fixed_tuple_with_default",
+            ),
+            pytest.param(Annotated[tuple[int, int] | None, Argument()], {}, id="fixed_tuple_optional"),
+            pytest.param(
+                Annotated[tuple[int, ...], Argument(nargs=2)],
+                {"has_default": True, "default": (1, 2)},
+                id="explicit_nargs_with_default",
+            ),
+            pytest.param(Annotated[tuple[int, ...] | None, Argument(nargs=2)], {}, id="explicit_nargs_optional"),
+        ],
+    )
+    def test_optional_fixed_arity_positional_raises(self, annotation, resolve_kwargs) -> None:
+        """argparse cannot make a fixed-arity positional optional, so the combination is rejected."""
+        with pytest.raises(TypeError, match=r"fixed-arity positional"):
+            _resolve_annotation(annotation, **resolve_kwargs)
+
+    @pytest.mark.parametrize(
         "annotation",
         [
             pytest.param(list[set[int]], id="list_of_set"),
@@ -1202,7 +1289,7 @@ class _RuntimeAnnotatedApp(cmd2.Cmd):
     def do_paint(
         self,
         item: str,
-        color: Annotated[_Color, Option("--color", "-c", help_text="Color")] = _Color.blue,
+        color: Annotated[_Color, Option("--color", "-c", help_text="Color to use")] = _Color.blue,
         verbose: bool = False,
     ) -> None:
         msg = f"Painting {item} {color.value}"
@@ -1263,7 +1350,7 @@ class TestRuntimeExecution:
     def test_help_shows_option_help(self, runtime_app) -> None:
         out, _ = run_cmd(runtime_app, "help paint")
         help_text = "\n".join(out)
-        assert "Color" in help_text or "color" in help_text
+        assert "Color to use" in help_text
 
 
 class TestRuntimeCompletion:
@@ -1569,16 +1656,16 @@ class TestSubcommands:
         assert out == expected
 
     @pytest.mark.parametrize(
-        "command",
+        ("command", "expected_error"),
         [
-            pytest.param("manage", id="missing_subcmd"),
-            pytest.param("manage delete", id="invalid_subcmd"),
-            pytest.param("manage member", id="missing_nested_subcmd"),
+            pytest.param("manage", "the following arguments are required: SUBCOMMAND", id="missing_subcmd"),
+            pytest.param("manage delete", "invalid choice: 'delete'", id="invalid_subcmd"),
+            pytest.param("manage member", "the following arguments are required: SUBCOMMAND", id="missing_nested_subcmd"),
         ],
     )
-    def test_subcommand_errors(self, subcmd_app, command) -> None:
+    def test_subcommand_errors(self, subcmd_app, command, expected_error) -> None:
         _out, err = run_cmd(subcmd_app, command)
-        assert any("error" in line.lower() or "usage" in line.lower() or "invalid" in line.lower() for line in err)
+        assert any(expected_error in line for line in err), f"expected {expected_error!r} in {err}"
 
     def test_subcommand_help(self, subcmd_app) -> None:
         out, _err = run_cmd(subcmd_app, "help manage")

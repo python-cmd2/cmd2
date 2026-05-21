@@ -318,7 +318,6 @@ def _make_literal_type(literal_values: list[Any]) -> Callable[[str], Any]:
         raise argparse.ArgumentTypeError(f"invalid choice: {value!r} (choose from {valid})")
 
     _convert.__name__ = "literal"
-    _convert._cmd2_strict_choice_converter = True  # type: ignore[attr-defined]
     return _convert
 
 
@@ -341,7 +340,6 @@ def _make_enum_type(enum_class: type[enum.Enum]) -> Callable[[str], enum.Enum]:
 
     _convert.__name__ = enum_class.__name__
     _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]
-    _convert._cmd2_strict_choice_converter = True  # type: ignore[attr-defined]
     return _convert
 
 
@@ -596,15 +594,23 @@ def _resolve_type(
     if is_kw_only and not has_default:
         kwargs["required"] = True
 
-    # An optional positional scalar (``T | None`` without a default) takes 0-or-1 tokens.
-    if is_optional and is_positional and "nargs" not in kwargs and not kwargs.get("is_collection"):
+    # An optional positional scalar takes 0-or-1 tokens. This covers both ``T | None``
+    # (no default) and a positional given an explicit default; without ``nargs='?'``
+    # argparse would still require the latter, contradicting its default value.
+    if (is_optional or has_default) and is_positional and "nargs" not in kwargs and not kwargs.get("is_collection"):
         kwargs["nargs"] = "?"
 
+    if is_positional and (is_optional or has_default) and isinstance(kwargs.get("nargs"), int):
+        raise TypeError(
+            f"A fixed-arity positional (nargs={kwargs['nargs']}) cannot be optional; argparse always "
+            f"requires it. Drop the default or '| None', make it an option (give it a default without "
+            f"Argument()), or use a variable-arity type such as tuple[T, ...]."
+        )
+
+    # A user-supplied completer/choices_provider drives completion, so drop the inferred
+    # static ``choices`` list.
     if kwargs.get("choices_provider") or kwargs.get("completer"):
         kwargs.pop("choices", None)
-        converter = kwargs.get("type")
-        if getattr(converter, "_cmd2_strict_choice_converter", False):
-            kwargs.pop("type", None)
 
     return base_type, kwargs
 
