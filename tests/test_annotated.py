@@ -136,6 +136,12 @@ def _func_star_args_bare(self, *args) -> None: ...  # type: ignore[no-untyped-de
 def _func_star_args_tuple(self, *files: tuple[str, ...]) -> None: ...
 def _func_star_args_list(self, *xs: list[str]) -> None: ...
 def _func_star_args_bare_list(self, *xs: list) -> None: ...  # type: ignore[type-arg]
+def _func_star_args_meta(self, *files: Annotated[str, Argument(help_text="a file", metavar="FILE")]) -> None: ...
+def _func_star_args_meta_choices(self, *modes: Annotated[str, Argument(choices=["a", "b"])]) -> None: ...
+def _func_star_args_option_meta(self, *files: Annotated[str, Option("--files")]) -> None: ...
+def _func_star_args_nargs_meta(self, *files: Annotated[str, Argument(nargs=2)]) -> None: ...
+def _func_kw_only_argument(self, *, name: Annotated[str, Argument()]) -> None: ...
+def _func_kw_only_argument_default(self, *, name: Annotated[str, Argument()] = "x") -> None: ...
 def _func_var_keyword(self, name: str, **kwargs: str) -> None: ...
 def _func_dest_param(self, dest: str) -> None: ...
 def _func_kw_only(self, *, name: str) -> None: ...
@@ -524,6 +530,43 @@ class TestBuildParser:
         be parsed. The error must steer the user toward annotating the element type.
         """
         with pytest.raises(TypeError, match=r"the type of each value"):
+            build_parser_from_function(func)
+
+    def test_star_args_honors_argument_metadata(self) -> None:
+        """``Annotated[T, Argument(...)]`` on ``*args`` applies help/metavar to the variadic positional."""
+        action = _get_param_action(_func_star_args_meta)
+        assert action.option_strings == []
+        assert action.nargs == "*"
+        assert action.help == "a file"
+        assert action.metavar == "FILE"
+
+    def test_star_args_honors_argument_choices(self) -> None:
+        """``Argument(choices=...)`` on ``*args`` restricts every value to the choices."""
+        parser = build_parser_from_function(_func_star_args_meta_choices)
+        assert parser.parse_args(["a", "b", "a"]).modes == ("a", "b", "a")
+        with pytest.raises(SystemExit):
+            parser.parse_args(["a", "nope"])
+
+    def test_star_args_option_metadata_raises(self) -> None:
+        """``Option()`` on ``*args`` is rejected; *args is always positional."""
+        with pytest.raises(TypeError, match=r"\*args is always a positional"):
+            build_parser_from_function(_func_star_args_option_meta)
+
+    def test_star_args_nargs_metadata_raises(self) -> None:
+        """An explicit ``nargs`` on ``*args`` is rejected; its arity is fixed to ``'*'``."""
+        with pytest.raises(TypeError, match=r"arity cannot be overridden"):
+            build_parser_from_function(_func_star_args_nargs_meta)
+
+    @pytest.mark.parametrize(
+        "func",
+        [
+            pytest.param(_func_kw_only_argument, id="no_default"),
+            pytest.param(_func_kw_only_argument_default, id="with_default"),
+        ],
+    )
+    def test_kw_only_with_argument_metadata_raises(self, func) -> None:
+        """A keyword-only parameter cannot use ``Argument()`` (which marks a positional)."""
+        with pytest.raises(TypeError, match=r"keyword-only but uses Argument\(\)"):
             build_parser_from_function(func)
 
     def test_optional_annotated_outside_raises(self) -> None:

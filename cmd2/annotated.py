@@ -61,7 +61,8 @@ How annotations map to argparse settings:
 - ``list[T]`` / ``set[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` if has a default or is ``| None``)
 - ``tuple[T, T]`` (fixed arity, same type) -- ``nargs=N`` with ``type=T``
 - ``*args: T`` -- variadic positional with ``nargs='*'`` (zero or more), collected into a tuple.
-  ``T`` is the type of each value (a scalar), not the collected tuple
+  ``T`` is the type of each value (a scalar), not the collected tuple.
+  ``Annotated[T, Argument(...)]`` metadata (help text, metavar, choices) is honored
 - ``T | None`` (no default) -- positional with ``nargs='?'`` (accepts 0-or-1 tokens)
 - ``T | None = None`` -- ``--flag`` option with ``default=None``
 
@@ -87,6 +88,12 @@ Unsupported patterns (raise ``TypeError``):
 - ``*args: tuple[T, ...]`` (or ``*args: list[T]`` / any collection element) -- on ``*args``
   the annotation is the type of each value, so a collection element would mean a
   tuple-of-collections.  Annotate the element type instead, e.g. ``*args: str``
+- ``*args: Annotated[T, Option(...)]`` -- ``*args`` is always positional, so ``Option()``
+  metadata is rejected; use ``Argument()`` instead
+- ``*args: Annotated[T, Argument(nargs=N)]`` -- ``*args`` arity is fixed to ``nargs='*'``
+  and cannot be overridden
+- a keyword-only parameter (after ``*``) annotated with ``Argument()`` metadata -- ``Argument()``
+  marks a positional, which contradicts keyword-only; use ``Option()`` or omit the metadata
 - ``Annotated[T, Argument(nargs=N)]`` where ``N`` produces a list (``'*'``, ``'+'``,
   or integer ``>= 1``) and ``T`` is not a collection type.  Use ``list[T]`` or
   ``tuple[T, ...]`` to match the runtime shape.
@@ -550,7 +557,7 @@ def _nargs_yields_list(nargs: Any) -> bool:
 
 
 def _resolve_type(
-    tp: type,
+    tp: Any,
     *,
     is_positional: bool = False,
     is_optional: bool = False,
@@ -837,10 +844,24 @@ def _resolve_parameters(
         if param.kind == inspect.Parameter.VAR_POSITIONAL:
             # ``*args: T`` is a variadic positional: zero or more values (nargs='*')
             # collected into a tuple. The hint gives the element type T (the type of
-            # each value), so annotating *args with a collection -- e.g.
-            # ``*args: tuple[str, ...]`` -- would mean each value is itself a tuple
-            # (a tuple-of-tuples), which cannot be mapped onto a flat command line.
-            element = hints.get(name, str)
+            # each value). Peel any Annotated/Optional so we see the real element
+            # type and any Argument() metadata (help text, metavar, choices, ...).
+            element, metadata, _element_optional = _normalize_annotation(hints.get(name, str))
+
+            if isinstance(metadata, Option):
+                raise TypeError(
+                    f"Parameter '*{name}' in {func.__qualname__} uses Option() metadata, but *args is "
+                    f"always a positional argument. Use Argument() metadata instead."
+                )
+            if isinstance(metadata, Argument) and metadata.nargs is not None:
+                raise TypeError(
+                    f"Parameter '*{name}' in {func.__qualname__} sets nargs={metadata.nargs!r} via Argument(), "
+                    f"but *args always accepts zero or more values (nargs='*') and its arity cannot be overridden."
+                )
+
+            # Annotating *args with a collection -- e.g. ``*args: tuple[str, ...]`` -- would
+            # mean each value is itself a tuple (a tuple-of-collections), which cannot be
+            # mapped onto a flat command line.
             _, element_kwargs = _resolve_type(element, is_positional=True)
             if element_kwargs.get("is_collection"):
                 # Show the parametrized form (e.g. ``tuple[str, ...]``), not the bare origin.
@@ -852,8 +873,15 @@ def _resolve_parameters(
                     f"'{element_display}'. Annotate the element type instead "
                     f"(e.g. '*{name}: str'); values are always collected into a tuple."
                 )
-            variadic_annotation = types.GenericAlias(tuple, (element, ...))
-            kwargs, metadata, positional = _resolve_annotation(variadic_annotation, is_variadic=True)
+
+            # Each value has type ``element``; values are collected into a tuple (nargs='*').
+            # ``is_optional=True`` selects nargs='*' (zero or more); any Argument() metadata
+            # (help text, metavar, choices) is applied to the variadic positional.
+            variadic_tuple = types.GenericAlias(tuple, (element, ...))
+            _, kwargs = _resolve_type(variadic_tuple, is_positional=True, is_optional=True, metadata=metadata)
+            kwargs.pop("is_collection", None)
+            kwargs.pop("base_type", None)
+            positional = True
         else:
             annotation = hints.get(name, param.annotation)
             has_default = param.default is not inspect.Parameter.empty
@@ -866,6 +894,13 @@ def _resolve_parameters(
                 default=default,
                 is_kw_only=is_kw_only,
             )
+
+            if is_kw_only and isinstance(metadata, Argument):
+                raise TypeError(
+                    f"Parameter '{name}' in {func.__qualname__} is keyword-only but uses Argument() metadata, "
+                    f"which marks it as a positional argument. Keyword-only parameters always become options; "
+                    f"use Option() metadata (or omit the metadata) instead."
+                )
 
         if positional:
             flags: list[str] = []
