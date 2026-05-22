@@ -84,10 +84,10 @@ When combining ``Annotated`` with ``Optional``, the union must go
 Note: ``Path`` and ``Enum`` annotations with ``@with_annotated`` also get
 automatic tab completion via generated parser metadata.
 If a user-supplied ``choices_provider`` or ``completer`` is set on an argument,
-it always takes priority over the type-inferred completion.  For ``Enum`` and
-``Literal``, the restrictive type converter is also stripped so user-supplied
-values are not rejected at parse time.  The ``Path`` converter is permissive
-and is preserved when a custom completer is provided.
+it drives completion in place of the inferred static ``choices``.  The inferred
+``type`` converter is kept, so values still coerce to the declared type (an
+``Enum`` to its member, ``Literal[1, 2]`` to ``int``) and values outside the
+declared type are rejected at parse time.
 
 The parameter name ``cmd2_handler`` is reserved for base commands declared with
 ``with_annotated(base_command=True)`` and may not be used elsewhere.
