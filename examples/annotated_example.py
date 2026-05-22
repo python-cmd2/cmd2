@@ -175,6 +175,26 @@ class AnnotatedExample(Cmd):
         """
         self.poutput(f"{' + '.join(str(n) for n in numbers)} = {sum(numbers)}")
 
+    # -- Variadic positional (*args) -----------------------------------------
+    # ``*args: T`` becomes a variadic positional (nargs='*') collected into a
+    # tuple -- zero or more values. A keyword-only option after ``*args`` stays
+    # an ordinary ``--flag``.
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_cat(self, *files: str, number: bool = False) -> None:
+        """Concatenate file names. ``*args`` accepts zero or more values.
+
+        Try:
+            cat a.txt b.txt c.txt
+            cat a.txt b.txt --number
+            cat
+        """
+        if not files:
+            self.poutput("(no files)")
+        for index, name in enumerate(files, start=1):
+            self.poutput(f"{index}: {name}" if number else name)
+
     # -- Literal + Decimal ---------------------------------------------------
     # Literal values become validated choices. Decimal values preserve precision.
 

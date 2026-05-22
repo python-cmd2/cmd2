@@ -6,11 +6,14 @@ We do NOT re-test argparse parsing logic or cmd2 integration here.
 """
 
 import argparse
+import datetime
 import decimal
 import enum
+import uuid
 from pathlib import Path
 from typing import (
     Annotated,
+    Any,
     Literal,
     Optional,
 )
@@ -90,6 +93,7 @@ class _Port(int):
 # ---------------------------------------------------------------------------
 
 
+def _func_empty(self) -> None: ...
 def _func_str(self, name: str) -> None: ...
 def _func_int_option(self, count: int = 1) -> None: ...
 def _func_float_option(self, rate: float = 1.0) -> None: ...
@@ -126,6 +130,13 @@ def _func_annotated_action_non_bool(self, count: Annotated[int, Option("--count"
 def _func_annotated_required(self, name: Annotated[str, Option("--name", required=True)]) -> None: ...
 def _func_annotated_required_auto_flag(self, name: Annotated[str, Option(required=True)]) -> None: ...
 def _func_annotated_choices(self, food: Annotated[str, Argument(choices=["a", "b"])]) -> None: ...
+def _func_star_args(self, *args: str) -> None: ...
+def _func_star_args_int(self, *args: int) -> None: ...
+def _func_star_args_bare(self, *args) -> None: ...  # type: ignore[no-untyped-def]
+def _func_star_args_tuple(self, *files: tuple[str, ...]) -> None: ...
+def _func_star_args_list(self, *xs: list[str]) -> None: ...
+def _func_star_args_bare_list(self, *xs: list) -> None: ...  # type: ignore[type-arg]
+def _func_var_keyword(self, name: str, **kwargs: str) -> None: ...
 def _func_dest_param(self, dest: str) -> None: ...
 def _func_kw_only(self, *, name: str) -> None: ...
 def _func_kw_only_with_default(self, *, name: str = "world") -> None: ...
@@ -164,6 +175,8 @@ def _func_grouped(
 
 
 def _func_positional_only(self, name: str, /) -> None: ...
+def _func_positional_only_xy(self, x: str, /, y: int) -> None: ...
+def _func_positional_only_mixed(self, x: str, /, y: int, *, z: int = 0) -> None: ...
 
 
 def _provider(cmd: cmd2.Cmd):
@@ -293,6 +306,8 @@ class TestBuildParser:
                 id="annotated_required_auto_flag",
             ),
             pytest.param(_func_annotated_choices, {"option_strings": [], "choices": ["a", "b"]}, id="annotated_choices"),
+            pytest.param(_func_star_args, {"option_strings": [], "type": None, "nargs": "*"}, id="star_args"),
+            pytest.param(_func_star_args_int, {"option_strings": [], "type": int, "nargs": "*"}, id="star_args_int"),
             # --- Keyword-only ---
             pytest.param(_func_kw_only, {"option_strings": ["--name"], "required": True}, id="kw_only_required"),
             pytest.param(_func_kw_only_with_default, {"option_strings": ["--name"], "default": "world"}, id="kw_only_default"),
@@ -406,11 +421,27 @@ class TestBuildParser:
         [
             pytest.param(_func_set, id="set"),
             pytest.param(_func_tuple_ellipsis, id="tuple"),
+            pytest.param(_func_star_args, id="star_args"),
         ],
     )
     def test_collection_uses_casting_action(self, func) -> None:
         action = _get_param_action(func)
         assert isinstance(action, _CollectionCastingAction)
+
+    def test_star_args_bare_defaults_to_str(self) -> None:
+        """A bare ``*args`` (no element annotation) is treated as ``*args: str``."""
+        action = _get_param_action(_func_star_args_bare)
+        assert action.option_strings == []
+        assert action.nargs == "*"
+        assert action.type is None
+
+    def test_star_args_parses_to_tuple(self) -> None:
+        """``*args: int`` accepts zero or more values, coerced and collected into a tuple."""
+        parser = build_parser_from_function(_func_star_args_int)
+        assert parser.parse_args([]).args == ()
+        parsed = parser.parse_args(["1", "2", "3"]).args
+        assert parsed == (1, 2, 3)
+        assert isinstance(parsed, tuple)
 
     def test_self_skipped(self) -> None:
         parser = build_parser_from_function(_func_str)
@@ -425,6 +456,13 @@ class TestBuildParser:
         parser = build_parser_from_function(bare)
         dests = {a.dest for a in parser._actions if a.dest != "help"}
         assert dests == set()
+
+    def test_self_only_method_produces_empty_parser(self) -> None:
+        """A method whose only parameter is ``self`` produces a parser with no actions."""
+        parser = build_parser_from_function(_func_empty)
+        dests = {a.dest for a in parser._actions if a.dest != "help"}
+        assert dests == set()
+        assert parser.parse_args([]) == argparse.Namespace()
 
     def test_get_type_hints_failure_raises(self) -> None:
         def do_broken(self, name: "NonExistentType"):  # noqa: F821
@@ -456,6 +494,37 @@ class TestBuildParser:
     def test_with_annotated_positional_only_param_raises(self) -> None:
         with pytest.raises(TypeError, match="positional-only"):
             build_parser_from_function(_func_positional_only)
+
+    def test_with_annotated_positional_only_two_params_raises(self) -> None:
+        with pytest.raises(TypeError, match="positional-only"):
+            build_parser_from_function(_func_positional_only_xy)
+
+    def test_with_annotated_positional_only_mixed_params_raises(self) -> None:
+        with pytest.raises(TypeError, match="positional-only"):
+            build_parser_from_function(_func_positional_only_mixed)
+
+    def test_var_keyword_raises(self) -> None:
+        """``**kwargs`` cannot be mapped to command-line arguments and is rejected."""
+        with pytest.raises(TypeError, match=r"variadic keyword"):
+            build_parser_from_function(_func_var_keyword)
+
+    @pytest.mark.parametrize(
+        "func",
+        [
+            pytest.param(_func_star_args_tuple, id="tuple[str, ...]"),
+            pytest.param(_func_star_args_list, id="list[str]"),
+            pytest.param(_func_star_args_bare_list, id="bare_list"),
+        ],
+    )
+    def test_star_args_collection_element_raises(self, func) -> None:
+        """``*args`` annotated with a collection element is rejected with a targeted hint.
+
+        The annotation on ``*args`` is the type of each value, so a collection element
+        (e.g. ``*files: tuple[str, ...]``) would mean a tuple-of-collections, which cannot
+        be parsed. The error must steer the user toward annotating the element type.
+        """
+        with pytest.raises(TypeError, match=r"the type of each value"):
+            build_parser_from_function(func)
 
     def test_optional_annotated_outside_raises(self) -> None:
         with pytest.raises(TypeError, match="Annotated"):
@@ -989,6 +1058,42 @@ class TestUnsupportedPatterns:
     @pytest.mark.parametrize(
         "annotation",
         [
+            pytest.param(datetime.datetime, id="datetime"),
+            pytest.param(datetime.date, id="date"),
+            pytest.param(uuid.UUID, id="uuid"),
+            pytest.param(bytes, id="bytes"),
+            pytest.param(complex, id="complex"),
+        ],
+    )
+    def test_unsupported_scalar_type_raises(self, annotation) -> None:
+        """A type with no converter must not silently arrive as a plain string."""
+        with pytest.raises(TypeError, match="Unsupported parameter type"):
+            _resolve_annotation(annotation)
+
+    def test_unsupported_custom_class_raises(self) -> None:
+        class Money:
+            def __init__(self, raw: str) -> None:
+                self.raw = raw
+
+        with pytest.raises(TypeError, match="Unsupported parameter type"):
+            _resolve_annotation(Money)
+
+    @pytest.mark.parametrize(
+        "annotation",
+        [
+            pytest.param(str, id="str"),
+            pytest.param(Any, id="any"),
+            pytest.param(object, id="object"),
+        ],
+    )
+    def test_passthrough_scalar_types_keep_no_converter(self, annotation) -> None:
+        """str / Any / object are stored as the raw string (type stays None)."""
+        kwargs, _, _ = _resolve_annotation(annotation)
+        assert "type" not in kwargs
+
+    @pytest.mark.parametrize(
+        "annotation",
+        [
             pytest.param(list[int, str], id="list_multi_args"),
             pytest.param(set[int, str], id="set_multi_args"),
         ],
@@ -1073,9 +1178,18 @@ class TestLiteralConverter:
     def test_convert(self, values, input_val, expected) -> None:
         assert _make_literal_type(values)(input_val) == expected
 
-    def test_invalid(self) -> None:
+    @pytest.mark.parametrize(
+        ("values", "input_val"),
+        [
+            pytest.param(["fast", "slow"], "medium", id="non_bool_string"),
+            # bool-like input ("yes"/"on") must still be rejected when the Literal has no bool member
+            pytest.param(["fast", "slow"], "yes", id="bool_like_no_bool_member"),
+            pytest.param([1, 2], "on", id="bool_like_int_literal"),
+        ],
+    )
+    def test_invalid(self, values, input_val) -> None:
         with pytest.raises(argparse.ArgumentTypeError, match="invalid choice"):
-            _make_literal_type(["fast", "slow"])("medium")
+            _make_literal_type(values)(input_val)
 
     def test_direct_match_before_bool_coercion(self) -> None:
         assert _make_literal_type(["yes", "no"])("yes") == "yes"
@@ -1317,6 +1431,23 @@ class _RuntimeAnnotatedApp(cmd2.Cmd):
     def do_raw(self, text: str) -> None:
         self.poutput(f"raw: {text}")
 
+    @with_annotated
+    def do_echo_all(self, *words: str) -> None:
+        self.poutput(f"words={list(words)}")
+
+    @with_annotated
+    def do_total(self, label: str, *nums: int) -> None:
+        self.poutput(f"{label}={sum(nums)}")
+
+    @with_annotated
+    def do_cat(self, *files: str, upper: bool = False) -> None:
+        joined = " ".join(files)
+        self.poutput(joined.upper() if upper else joined)
+
+    @with_annotated
+    def do_ping(self) -> None:
+        self.poutput("pong")
+
 
 @pytest.fixture
 def runtime_app() -> _RuntimeAnnotatedApp:
@@ -1337,11 +1468,23 @@ class TestRuntimeExecution:
             pytest.param("paint wall --color red", ["Painting wall red"], id="paint_color"),
             pytest.param("paint wall --verbose", ["Painting wall blue (verbose)"], id="paint_verbose"),
             pytest.param("sport football", ["Playing: football"], id="sport_enum"),
+            pytest.param("echo_all a b c", ["words=['a', 'b', 'c']"], id="star_args_values"),
+            pytest.param("echo_all", ["words=[]"], id="star_args_empty"),
+            pytest.param("total score 1 2 3", ["score=6"], id="leading_plus_star_args"),
+            pytest.param("total score", ["score=0"], id="leading_plus_empty_star_args"),
+            pytest.param("cat a b c", ["a b c"], id="star_args_with_kwonly_opt"),
+            pytest.param("cat a b c --upper", ["A B C"], id="star_args_with_kwonly_opt_set"),
+            pytest.param("ping", ["pong"], id="no_args_command"),
         ],
     )
     def test_command_execution(self, runtime_app, command, expected) -> None:
         out, _err = run_cmd(runtime_app, command)
         assert out == expected
+
+    def test_no_args_command_rejects_extra_args(self, runtime_app) -> None:
+        """A no-parameter command accepts no positionals and errors on extras."""
+        _out, err = run_cmd(runtime_app, "ping extra")
+        assert any("unrecognized" in line.lower() or "error" in line.lower() for line in err)
 
     def test_help_shows_arguments(self, runtime_app) -> None:
         out, _ = run_cmd(runtime_app, "help greet")
@@ -1559,6 +1702,35 @@ class TestWithAnnotatedIntegration:
         out = app.stdout.getvalue().splitlines()
         assert out[-3:] == ["Hello Alice", "Hello Alice", "Hello Alice"]
 
+    def test_direct_call_no_arg_command(self) -> None:
+        """A no-parameter command parses an (empty) statement string on a direct call."""
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_ping(self) -> None:
+                self.poutput("pong")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        app.do_ping("")
+        assert app.stdout.getvalue().splitlines()[-1] == "pong"
+
+    def test_direct_call_star_args_command(self) -> None:
+        """A *args command parses a statement string positionally on a direct call."""
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_cat(self, *files: str, upper: bool = False) -> None:
+                joined = "|".join(files)
+                self.poutput(joined.upper() if upper else joined)
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        app.do_cat("a b c")
+        assert app.stdout.getvalue().splitlines()[-1] == "a|b|c"
+        app.do_cat("a b --upper")
+        assert app.stdout.getvalue().splitlines()[-1] == "A|B"
+
     def test_bare_call_decorator(self) -> None:
         """@with_annotated() with empty parens works same as @with_annotated."""
 
@@ -1619,6 +1791,10 @@ class _SubcommandApp(cmd2.Cmd):
     def manage_add(self, value: str) -> None:
         self.poutput(f"added: {value}")
 
+    @with_annotated(subcommand_to="manage", help="sum values")
+    def manage_sum(self, *nums: int) -> None:
+        self.poutput(f"sum: {sum(nums)}")
+
     @with_annotated(subcommand_to="manage", help="list things", aliases=["ls"])
     def manage_list(self) -> None:
         self.poutput("listing all")
@@ -1649,6 +1825,8 @@ class TestSubcommands:
             pytest.param("manage list", ["listing all"], id="list"),
             pytest.param("manage ls", ["listing all"], id="list_alias"),
             pytest.param("manage member add Alice", ["member added: Alice"], id="nested_3_levels"),
+            pytest.param("manage sum 1 2 3", ["sum: 6"], id="subcommand_star_args"),
+            pytest.param("manage sum", ["sum: 0"], id="subcommand_star_args_empty"),
         ],
     )
     def test_subcommand_executes(self, subcmd_app, command, expected) -> None:

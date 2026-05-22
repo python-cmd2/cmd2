@@ -13,10 +13,14 @@ finer control is needed.
 Basic usage -- parameters without defaults become positional arguments,
 parameters with defaults become ``--option`` flags.  Keyword-only
 parameters (after ``*``) always become options; without a default they
-are required.  Underscores in parameter names are auto-converted to
+are required.  A ``*args`` parameter becomes a variadic positional that
+accepts zero or more values (``nargs='*'``), collected into a tuple.
+Underscores in parameter names are auto-converted to
 dashes in the generated flag (``dry_run`` -> ``--dry-run``); pass
 explicit names via ``Option("--my_flag")`` to opt out.  The parameter
-name ``dest`` is reserved and cannot be used::
+name ``dest`` is reserved and cannot be used.  Positional-only
+parameters (before ``/``) and ``**kwargs`` are not supported and raise
+``TypeError``::
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_annotated
@@ -56,6 +60,8 @@ How annotations map to argparse settings:
 - ``Literal[...]`` -- sets ``type=converter`` and ``choices`` from literal values
 - ``list[T]`` / ``set[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` if has a default or is ``| None``)
 - ``tuple[T, T]`` (fixed arity, same type) -- ``nargs=N`` with ``type=T``
+- ``*args: T`` -- variadic positional with ``nargs='*'`` (zero or more), collected into a tuple.
+  ``T`` is the type of each value (a scalar), not the collected tuple
 - ``T | None`` (no default) -- positional with ``nargs='?'`` (accepts 0-or-1 tokens)
 - ``T | None = None`` -- ``--flag`` option with ``default=None``
 
@@ -68,9 +74,19 @@ Action compatibility note:
 
 Unsupported patterns (raise ``TypeError``):
 
+- A scalar type with no converter (e.g. ``datetime.datetime``, ``uuid.UUID``,
+  ``bytes``, or any custom class).  Without a converter the command-line value
+  would silently arrive as a plain string, so it is rejected.  Supported scalar
+  types are ``str``, ``int``, ``float``, ``bool``, ``decimal.Decimal``,
+  ``pathlib.Path``, ``enum.Enum`` subclasses, and ``Literal[...]`` (or a subclass
+  of one).  ``str``/``Any``/``object`` and unannotated parameters pass through as
+  raw strings.
 - ``str | int`` -- union of multiple non-None types is ambiguous
 - ``tuple[int, str, float]`` -- mixed element types are not currently supported
   because argparse can only apply a single ``type=`` converter per argument
+- ``*args: tuple[T, ...]`` (or ``*args: list[T]`` / any collection element) -- on ``*args``
+  the annotation is the type of each value, so a collection element would mean a
+  tuple-of-collections.  Annotate the element type instead, e.g. ``*args: str``
 - ``Annotated[T, Argument(nargs=N)]`` where ``N`` produces a list (``'*'``, ``'+'``,
   or integer ``>= 1``) and ``T`` is not a collection type.  Use ``list[T]`` or
   ``tuple[T, ...]`` to match the runtime shape.
@@ -511,12 +527,26 @@ def _type_name(tp: Any) -> str:
     return tp.__name__ if hasattr(tp, "__name__") else str(tp)
 
 
+#: Scalar annotations that argparse stores as the raw string (no converter needed).
+_PASSTHROUGH_TYPES = frozenset({str, object, Any, inspect.Parameter.empty})
+
+
+def _is_passthrough_type(tp: Any) -> bool:
+    """Return ``True`` for types stored as a raw string without a dedicated converter.
+
+    Covers ``str`` / ``Any`` / ``object`` / unannotated parameters, and any parametrized
+    generic we do not specialize (e.g. ``frozenset[T]``, ``dict[K, V]``, ``Sequence[T]``),
+    which keep their existing scalar-passthrough behavior.
+    """
+    return tp in _PASSTHROUGH_TYPES or get_origin(tp) is not None
+
+
 def _nargs_yields_list(nargs: Any) -> bool:
     """Return ``True`` when an argparse ``nargs`` value produces a list at parse time.
 
     ``nargs=1`` is included: argparse returns ``[value]``, not the bare value.
     """
-    return nargs in ("*", "+") or (isinstance(nargs, int) and nargs >= 1)
+    return nargs in ("*", "+", argparse.REMAINDER) or (isinstance(nargs, int) and nargs >= 1)
 
 
 def _resolve_type(
@@ -558,9 +588,16 @@ def _resolve_type(
     if resolver is not None:
         kwargs = resolver(tp, args, **ctx)
         base_type = kwargs.pop("base_type", tp)
-    else:
+    elif _is_passthrough_type(tp):
         base_type = tp
         kwargs = {}
+    else:
+        raise TypeError(
+            f"Unsupported parameter type {_type_name(tp)!r} for @with_annotated: there is no converter "
+            f"for it, so command-line values would silently arrive as plain strings. Supported scalar types "
+            f"are str, int, float, bool, decimal.Decimal, pathlib.Path, enum.Enum subclasses, and Literal[...]; "
+            f"use one of these (optionally in list/set/tuple) or a subclass of one."
+        )
 
     resolver_nargs = kwargs.get("nargs")
 
@@ -674,26 +711,31 @@ def _normalize_annotation(annotation: type) -> _NormalizedAnnotation:
 
 
 def _resolve_annotation(
-    annotation: type,
+    annotation: Any,
     *,
     has_default: bool = False,
     default: Any = None,
     is_kw_only: bool = False,
+    is_variadic: bool = False,
 ) -> tuple[dict[str, Any], ArgMetadata, bool]:
     """Decompose a type annotation into ``(type_kwargs, metadata, is_positional)``.
 
     Peels ``Annotated`` then ``Optional``.  The only supported way to combine
     ``Annotated`` with ``Optional`` is ``Annotated[T | None, meta]``.
     Writing ``Annotated[T, meta] | None`` is ambiguous and raises ``TypeError``.
+
+    ``is_variadic`` marks a ``*args`` parameter: it is always positional and
+    accepts zero or more values (``nargs='*'``).
     """
     tp, metadata, is_optional = _normalize_annotation(annotation)
 
-    is_positional = isinstance(metadata, Argument) or (metadata is None and not has_default and not is_kw_only)
+    # ``*args`` is always a positional that accepts zero or more values.
+    is_positional = is_variadic or isinstance(metadata, Argument) or (metadata is None and not has_default and not is_kw_only)
 
     tp, type_kwargs = _resolve_type(
         tp,
         is_positional=is_positional,
-        is_optional=is_optional,
+        is_optional=is_optional or is_variadic,
         has_default=has_default,
         default=default,
         metadata=metadata,
@@ -779,23 +821,51 @@ def _resolve_parameters(
                 "which is not supported by @with_annotated because parameters are passed as keyword arguments."
             )
 
+        if param.kind == inspect.Parameter.VAR_KEYWORD:
+            raise TypeError(
+                f"Parameter '**{name}' in {func.__qualname__} is variadic keyword (**kwargs), "
+                "which is not supported by @with_annotated because there is no native way to map "
+                "command-line arguments onto arbitrary keyword names."
+            )
+
         if name in _RESERVED_PARAM_NAMES:
             raise ValueError(
                 f"Parameter name {name!r} in {func.__qualname__} is reserved by argparse "
                 f"and cannot be used as an annotated parameter name."
             )
 
-        annotation = hints.get(name, param.annotation)
-        has_default = param.default is not inspect.Parameter.empty
-        default = param.default if has_default else None
-        is_kw_only = param.kind == inspect.Parameter.KEYWORD_ONLY
+        if param.kind == inspect.Parameter.VAR_POSITIONAL:
+            # ``*args: T`` is a variadic positional: zero or more values (nargs='*')
+            # collected into a tuple. The hint gives the element type T (the type of
+            # each value), so annotating *args with a collection -- e.g.
+            # ``*args: tuple[str, ...]`` -- would mean each value is itself a tuple
+            # (a tuple-of-tuples), which cannot be mapped onto a flat command line.
+            element = hints.get(name, str)
+            _, element_kwargs = _resolve_type(element, is_positional=True)
+            if element_kwargs.get("is_collection"):
+                # Show the parametrized form (e.g. ``tuple[str, ...]``), not the bare origin.
+                element_display = str(element) if get_origin(element) is not None else _type_name(element)
+                raise TypeError(
+                    f"Parameter '*{name}' in {func.__qualname__} is annotated with the collection type "
+                    f"'{element_display}'. For *args the annotation is the type of each value, not the "
+                    f"collected tuple, so '*{name}: {element_display}' would mean a tuple of "
+                    f"'{element_display}'. Annotate the element type instead "
+                    f"(e.g. '*{name}: str'); values are always collected into a tuple."
+                )
+            variadic_annotation = types.GenericAlias(tuple, (element, ...))
+            kwargs, metadata, positional = _resolve_annotation(variadic_annotation, is_variadic=True)
+        else:
+            annotation = hints.get(name, param.annotation)
+            has_default = param.default is not inspect.Parameter.empty
+            default = param.default if has_default else None
+            is_kw_only = param.kind == inspect.Parameter.KEYWORD_ONLY
 
-        kwargs, metadata, positional = _resolve_annotation(
-            annotation,
-            has_default=has_default,
-            default=default,
-            is_kw_only=is_kw_only,
-        )
+            kwargs, metadata, positional = _resolve_annotation(
+                annotation,
+                has_default=has_default,
+                default=default,
+                is_kw_only=is_kw_only,
+            )
 
         if positional:
             flags: list[str] = []
@@ -808,6 +878,40 @@ def _resolve_parameters(
         resolved.append((name, metadata, positional, flags, kwargs))
 
     return resolved
+
+
+def _var_positional_call_plan(func: Callable[..., Any]) -> tuple[list[str], str | None]:
+    """Return ``(leading_positional_names, var_positional_name)`` for unpacking ``*args``.
+
+    ``leading_positional_names`` are the positional-or-keyword parameters that
+    precede ``*args`` (they must be passed positionally, in order, so ``*args``
+    can follow). ``var_positional_name`` is the ``*args`` parameter name, or
+    ``None`` when the function has no ``*args``.
+    """
+    params = list(inspect.signature(func).parameters.values())[1:]  # skip self/cls
+    leading: list[str] = []
+    for param in params:
+        if param.kind is inspect.Parameter.VAR_POSITIONAL:
+            return leading, param.name
+        if param.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD:
+            leading.append(param.name)
+    return leading, None
+
+
+def _invoke_command_func(
+    func: Callable[..., Any],
+    self_arg: Any,
+    func_kwargs: dict[str, Any],
+    *,
+    leading_names: list[str],
+    var_positional_name: str | None,
+) -> Any:
+    """Call *func* from parsed kwargs, unpacking ``*args`` positionally when present."""
+    if var_positional_name is None:
+        return func(self_arg, **func_kwargs)
+    positional = [func_kwargs.pop(name) for name in leading_names if name in func_kwargs]
+    var_values = func_kwargs.pop(var_positional_name, None) or ()
+    return func(self_arg, *positional, *var_values, **func_kwargs)
 
 
 def _filtered_namespace_kwargs(
@@ -1018,12 +1122,15 @@ def build_subcommand_handler(
         _validate_base_command_params(func)
 
     _accepted = set(list(inspect.signature(func).parameters.keys())[1:])
+    _leading_names, _var_positional_name = _var_positional_call_plan(func)
 
     @functools.wraps(func)
     def handler(self_arg: Any, ns: Any) -> Any:
         """Unpack Namespace into typed kwargs for the subcommand handler."""
         filtered = _filtered_namespace_kwargs(ns, accepted=_accepted)
-        return func(self_arg, **filtered)
+        return _invoke_command_func(
+            func, self_arg, filtered, leading_names=_leading_names, var_positional_name=_var_positional_name
+        )
 
     def parser_builder() -> Cmd2ArgumentParser:
         parser = build_parser_from_function(
@@ -1179,6 +1286,7 @@ def with_annotated(
 
         # Cache signature introspection at decoration time, not per-invocation
         accepted = set(list(inspect.signature(fn).parameters.keys())[1:])
+        leading_names, var_positional_name = _var_positional_call_plan(fn)
 
         def parser_builder() -> Cmd2ArgumentParser:
             parser = build_parser_from_function(
@@ -1234,7 +1342,9 @@ def with_annotated(
                 func_kwargs["_unknown"] = unknown
 
             func_kwargs.update(kwargs)
-            result: bool | None = fn(owner, **func_kwargs)
+            result: bool | None = _invoke_command_func(
+                fn, owner, func_kwargs, leading_names=leading_names, var_positional_name=var_positional_name
+            )
             return result
 
         setattr(cmd_wrapper, constants.CMD_ATTR_PARSER_SOURCE, parser_builder)
