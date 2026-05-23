@@ -3,7 +3,10 @@
 import argparse
 import re
 import sys
-from collections.abc import Iterator
+from collections.abc import (
+    Iterable,
+    Iterator,
+)
 from enum import Enum
 from typing import (
     IO,
@@ -14,6 +17,7 @@ from typing import (
     runtime_checkable,
 )
 
+from rich.ansi import AnsiDecoder
 from rich.box import SIMPLE_HEAD
 from rich.console import (
     Console,
@@ -672,3 +676,38 @@ def prepare_objects_for_rendering(*objects: Any) -> tuple[Any, ...]:
             object_list[i] = Text.from_ansi(renderable_as_str)
 
     return tuple(object_list)
+
+
+###################################################################################
+# Rich Library Monkey Patches
+#
+# These patches fix specific bugs in the Rich library. They are conditional and
+# will only be applied if the bug is detected. When the bugs are fixed in a
+# future Rich release, these patches and their corresponding tests should be
+# removed.
+###################################################################################
+
+###################################################################################
+# AnsiDecoder.decode() monkey patch
+###################################################################################
+
+
+def _AnsiDecoder_decode(self: AnsiDecoder, terminal_text: str) -> Iterable[Text]:  # noqa: N802
+    """Patch AnsiDecoder.decode() to properly handle CRLF.
+
+    There is currently a pull request on Rich to fix this.
+    https://github.com/Textualize/rich/pull/4143
+    """
+    for line in re.split(r"(?<=\n)", terminal_text):
+        # Strip off any remaining line break characters from the end
+        yield self.decode_line(line.rstrip("\r\n"))
+
+
+def _decode_has_linebreak_bug() -> bool:
+    """Check if AnsiDecoder.decode() properly handles CRLF."""
+    return Text.from_ansi("hello\r\nworld").plain == "\nworld"
+
+
+# Only apply the monkey patch if the bug is present
+if _decode_has_linebreak_bug():
+    AnsiDecoder.decode = _AnsiDecoder_decode  # type: ignore[assignment]
