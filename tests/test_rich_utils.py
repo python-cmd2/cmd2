@@ -317,3 +317,28 @@ def test_formatter_set_color(mocker: MockerFixture) -> None:
     assert mock_set_color.call_count == 2
     mock_set_color.assert_any_call(True, file=sys.stdout)
     mock_set_color.assert_any_call(True)
+
+
+@pytest.mark.parametrize("line_break", ["\n", "\r\n"])
+def test_ansi_decoder_patch(line_break: str) -> None:
+    # Check if we are still patching AnsiDecoder.decode(). If this check fails, then Rich
+    # has fixed the bug. Therefore, we can remove this test function and ru._AnsiDecoder_decode.
+    from rich.ansi import AnsiDecoder
+
+    assert AnsiDecoder.decode is ru._AnsiDecoder_decode
+
+    assert Text.from_ansi("").plain == ""
+    assert Text.from_ansi(f"{line_break}").plain == "\n"
+    assert Text.from_ansi(f"{line_break}{line_break}").plain == "\n\n"
+    assert Text.from_ansi("Hello").plain == "Hello"
+    assert Text.from_ansi(f"{line_break}Hello").plain == "\nHello"
+    assert Text.from_ansi(f"Hello{line_break}").plain == "Hello\n"
+    assert Text.from_ansi(f"Hello{line_break}{line_break}").plain == "Hello\n\n"
+    assert Text.from_ansi(f"Hello{line_break}World").plain == "Hello\nWorld"
+    assert Text.from_ansi(f"Hello{line_break}{line_break}World").plain == "Hello\n\nWorld"
+    assert Text.from_ansi(f"Hello{line_break}World{line_break}").plain == "Hello\nWorld\n"
+    assert Text.from_ansi(f"Hello{line_break}World{line_break}{line_break}").plain == "Hello\nWorld\n\n"
+    assert Text.from_ansi(f"{line_break}Hello{line_break}World{line_break}{line_break}").plain == "\nHello\nWorld\n\n"
+
+    # Include a mixture of line break types
+    assert Text.from_ansi(f"Hello{line_break}\n\r\nWorld").plain == "Hello\n\n\nWorld"
