@@ -747,7 +747,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             usage=usage,
             description=description,  # type: ignore[arg-type]
             epilog=epilog,  # type: ignore[arg-type]
-            parents=parents or [],
+            parents=parents,
             formatter_class=formatter_class,
             prefix_chars=prefix_chars,
             fromfile_prefix_chars=fromfile_prefix_chars,
