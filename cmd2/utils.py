@@ -21,7 +21,6 @@ from typing import (
     Any,
     TextIO,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -415,7 +414,7 @@ class StdSim:
 
     def __init__(
         self,
-        inner_stream: Union[TextIO, "StdSim"],
+        inner_stream: TextIO | "StdSim",
         *,
         echo: bool = False,
         encoding: str = "utf-8",

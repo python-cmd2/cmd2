@@ -32,6 +32,38 @@ def test_alphabetical_sort() -> None:
     assert cu.alphabetical_sort(my_list) == ["a1", "A11", "A2", "a22", "a3"]
 
 
+def test_alphabetical_sort_empty() -> None:
+    assert cu.alphabetical_sort([]) == []
+
+
+def test_alphabetical_sort_whitespace() -> None:
+    assert cu.alphabetical_sort([" ", "\t", "\n", "a"]) == ["\t", "\n", " ", "a"]
+
+
+def test_quote_specific_tokens_empty() -> None:
+    tokens: list[str] = []
+    cu.quote_specific_tokens(tokens, ["a"])
+    assert tokens == []
+
+
+def test_quote_specific_tokens_mixed_quotes() -> None:
+    tokens = ['"a"', "'b'", "c"]
+    cu.quote_specific_tokens(tokens, ['"a"', "'b'"])
+    assert tokens == ["'" + '"a"' + "'", '"' + "'b'" + '"', "c"]
+
+
+def test_unquote_specific_tokens_empty() -> None:
+    tokens: list[str] = []
+    cu.unquote_specific_tokens(tokens, ["a"])
+    assert tokens == []
+
+
+def test_unquote_specific_tokens_mixed_quotes() -> None:
+    tokens = ['"a"', "'b'", "c"]
+    cu.unquote_specific_tokens(tokens, ["a", "b"])
+    assert tokens == ["a", "b", "c"]
+
+
 def test_try_int_or_force_to_lower_case() -> None:
     str1 = "17"
     assert cu.try_int_or_force_to_lower_case(str1) == 17
@@ -283,6 +315,24 @@ def test_to_bool_float() -> None:
     assert cu.to_bool(0.25)
     assert cu.to_bool(-3.1415)
     assert not cu.to_bool(0)
+
+
+def test_to_bool_empty() -> None:
+    with pytest.raises(ValueError):
+        cu.to_bool("")
+
+
+def test_to_bool_whitespace() -> None:
+    with pytest.raises(ValueError):
+        cu.to_bool(" ")
+    with pytest.raises(ValueError):
+        cu.to_bool("\t")
+    with pytest.raises(ValueError):
+        cu.to_bool("\n")
+
+
+def test_to_bool_none() -> None:
+    assert not cu.to_bool(None)
 
 
 def test_optional_int_none() -> None:
