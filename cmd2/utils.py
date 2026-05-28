@@ -694,7 +694,7 @@ def categorize(func: Callable[..., Any] | Iterable[Callable[..., Any]], category
     The help command output will group the passed function under the
     specified category heading
 
-    :param func: function or list of functions to categorize
+    :param func: function or Iterable of functions to categorize
     :param category: category to put it in
 
     Example:
@@ -710,13 +710,13 @@ def categorize(func: Callable[..., Any] | Iterable[Callable[..., Any]], category
     For an alternative approach to categorizing commands using a decorator, see [cmd2.decorators.with_category][]
 
     """
-    if isinstance(func, Iterable):
-        for item in func:
-            setattr(item, constants.COMMAND_ATTR_HELP_CATEGORY, category)
-    elif inspect.ismethod(func):
-        setattr(func.__func__, constants.COMMAND_ATTR_HELP_CATEGORY, category)
-    else:
-        setattr(func, constants.COMMAND_ATTR_HELP_CATEGORY, category)
+    funcs = func if isinstance(func, Iterable) else (func,)
+
+    for cur_func in funcs:
+        if inspect.ismethod(cur_func):
+            setattr(cur_func.__func__, constants.COMMAND_ATTR_HELP_CATEGORY, category)
+        else:
+            setattr(cur_func, constants.COMMAND_ATTR_HELP_CATEGORY, category)
 
 
 def get_defining_class(meth: Callable[..., Any]) -> type[Any] | None:

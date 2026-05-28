@@ -411,22 +411,24 @@ def test_categorize() -> None:
     cu.categorize(func1, category)
     assert getattr(func1, attr_name) == category
 
-    # Test iterable of functions
-    def func2() -> None:
-        pass
-
-    def func3() -> None:
-        pass
-
-    cu.categorize([func2, func3], category)
-    assert getattr(func2, attr_name) == category
-    assert getattr(func3, attr_name) == category
-
-    # Test bound method
+    # Test single method
     class Foo:
-        def bar(self) -> None:
+        def foo_method(self) -> None:
             pass
 
     f = Foo()
-    cu.categorize(f.bar, category)
-    assert getattr(Foo.bar, attr_name) == category
+    cu.categorize(f.foo_method, category)
+    assert getattr(Foo.foo_method, attr_name) == category
+
+    # Test iterable
+    def func2() -> None:
+        pass
+
+    class Bar:
+        def bar_method(self) -> None:
+            pass
+
+    b = Bar()
+    cu.categorize([func2, b.bar_method], category)
+    assert getattr(func2, attr_name) == category
+    assert getattr(Bar.bar_method, attr_name) == category
