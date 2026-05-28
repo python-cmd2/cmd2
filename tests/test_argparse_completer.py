@@ -1314,7 +1314,7 @@ class CustomCompleterApp(cmd2.Cmd):
     def do_top(self, args: argparse.Namespace) -> None:
         """Top level command"""
         # Call handler for whatever subcommand was selected
-        args.cmd2_subcmd_handler(args)
+        args.cmd2_subcommand_func(args)
 
     # Parser for a subcommand with no custom completer type
     no_custom_completer_parser = Cmd2ArgumentParser(description="No custom completer")

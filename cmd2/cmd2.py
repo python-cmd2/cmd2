@@ -111,6 +111,7 @@ from . import (
 from . import rich_utils as ru
 from . import string_utils as su
 from .argparse_utils import (
+    ApCommandSpec,
     Cmd2ArgumentParser,
     ParserSource,
     SubcommandRecord,
@@ -280,12 +281,12 @@ class CommandParsers:
                 return None
             command = command_method.__name__[len(COMMAND_FUNC_PREFIX) :]
 
-            parser_source = getattr(command_method, constants.CMD_ATTR_PARSER_SOURCE, None)
-            if parser_source is None:
+            spec: ApCommandSpec | None = getattr(command_method, constants.AP_COMMAND_ATTR_SPEC, None)
+            if spec is None:
                 return None
 
             owner = self._cmd_app.find_commandset_for_command(command) or self._cmd_app
-            parser = self._cmd_app._build_parser(owner, parser_source)
+            parser = self._cmd_app._build_parser(owner, spec.parser_source)
 
             # To ensure accurate usage strings, recursively update 'prog' values
             # within the parser to match the command name.
@@ -1063,9 +1064,21 @@ class Cmd:
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet[Any]) -> None:
-        cmdset_id = id(cmdset)
+        """Verify if a CommandSet can be safely uninstalled from the application.
+
+        This method acts as a safety guard before unregistration. It inspects all
+        command parsers provided by the CommandSet and recursively checks their
+        subcommand hierarchies to ensure no other registrant (another CommandSet
+        or the main application) has attached subcommands to them.
+
+        :param cmdset: the CommandSet instance to check for uninstallation safety
+        :raises CommandSetRegistrationError: if any parser in the CommandSet is
+                                             required by another registrant
+        """
+        registrant_id = id(cmdset)
 
         def check_parser_uninstallable(parser: Cmd2ArgumentParser) -> None:
+            # Recursively verify no subcommands belong to a different registrant
             try:
                 subparsers_action = parser.get_subparsers_action()
             except ValueError:
@@ -1080,10 +1093,10 @@ class Cmd:
                     continue
                 checked_parsers.add(subparser)
 
-                attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_OWNER_ID, None)
-                if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
+                attached_registrant_id = getattr(subparser, constants.PARSER_ATTR_REGISTRANT_ID, None)
+                if attached_registrant_id is not None and attached_registrant_id != registrant_id:
                     raise CommandSetRegistrationError(
-                        f"Cannot uninstall CommandSet: '{subparser.prog}' is required by another CommandSet"
+                        f"Cannot uninstall CommandSet: '{subparser.prog}' is required by another registrant"
                     )
                 check_parser_uninstallable(subparser)
 
@@ -1117,13 +1130,13 @@ class Cmd:
             owner,
             predicate=lambda meth: (
                 isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, constants.SUBCMD_ATTR_SPEC)
+                and hasattr(meth, constants.SUBCOMMAND_ATTR_SPEC)
             ),
         )
 
         # iterate through all matching methods
         for _method_name, method in methods:
-            spec: SubcommandSpec = getattr(method, constants.SUBCMD_ATTR_SPEC)
+            spec: SubcommandSpec = getattr(method, constants.SUBCOMMAND_ATTR_SPEC)
 
             subcommand_valid, errmsg = self.statement_parser.is_valid_command(spec.name, is_subcommand=True)
             if not subcommand_valid:
@@ -1134,12 +1147,12 @@ class Cmd:
             if subcmd_parser.description is None and method.__doc__:
                 subcmd_parser.description = strip_doc_annotations(method.__doc__)
 
-            # Set the subcommand handler
-            defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
+            # Set the subcommand function
+            defaults = {constants.NS_ATTR_SUBCOMMAND_FUNC: method}
             subcmd_parser.set_defaults(**defaults)
 
-            # Set what instance the handler is bound to
-            setattr(subcmd_parser, constants.PARSER_ATTR_OWNER_ID, id(owner))
+            # Record the ID of the instance that registered this subcommand parser
+            setattr(subcmd_parser, constants.PARSER_ATTR_REGISTRANT_ID, id(owner))
 
             # Attach this subcommand
             record = SubcommandRecord(
@@ -1169,13 +1182,13 @@ class Cmd:
             owner,
             predicate=lambda meth: (
                 isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, constants.SUBCMD_ATTR_SPEC)
+                and hasattr(meth, constants.SUBCOMMAND_ATTR_SPEC)
             ),
         )
 
         # iterate through all matching methods
         for _method_name, method in methods:
-            spec: SubcommandSpec = getattr(method, constants.SUBCMD_ATTR_SPEC)
+            spec: SubcommandSpec = getattr(method, constants.SUBCOMMAND_ATTR_SPEC)
 
             with contextlib.suppress(ValueError):
                 self.detach_subcommand(spec.command, spec.name)
@@ -2517,7 +2530,7 @@ class Cmd:
 
                     if command_func is not None and argparser is not None:
                         # Get arguments for complete()
-                        preserve_quotes = getattr(command_func, constants.CMD_ATTR_PRESERVE_QUOTES)
+                        spec: ApCommandSpec = getattr(command_func, constants.AP_COMMAND_ATTR_SPEC)
                         cmd_set = self.find_commandset_for_command(command)
 
                         # Create the argparse completer
@@ -2525,7 +2538,7 @@ class Cmd:
                         completer = completer_type(argparser, self)
 
                         completer_func = functools.partial(
-                            completer.complete, tokens=raw_tokens[1:] if preserve_quotes else tokens[1:], cmd_set=cmd_set
+                            completer.complete, tokens=raw_tokens[1:] if spec.preserve_quotes else tokens[1:], cmd_set=cmd_set
                         )
                     else:
                         completer_func = self.completedefault  # type: ignore[assignment]
@@ -3380,8 +3393,8 @@ class Cmd:
         :return: category name
         """
         # Check if the command function has a category.
-        if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
-            category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
+        if hasattr(func, constants.COMMAND_ATTR_HELP_CATEGORY):
+            category: str = getattr(func, constants.COMMAND_ATTR_HELP_CATEGORY)
 
         # Otherwise get the category from its defining class.
         else:
@@ -3784,8 +3797,8 @@ class Cmd:
     @with_argparser(_build_alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases."""
-        # Call handler for whatever subcommand was selected
-        args.cmd2_subcmd_handler(args)
+        # Call function for whatever subcommand was selected
+        args.cmd2_subcommand_func(args)
 
     # alias -> create
     @classmethod
@@ -3998,8 +4011,8 @@ class Cmd:
     @with_argparser(_build_macro_parser, preserve_quotes=True)
     def do_macro(self, args: argparse.Namespace) -> None:
         """Manage macros."""
-        # Call handler for whatever subcommand was selected
-        args.cmd2_subcmd_handler(args)
+        # Call function for whatever subcommand was selected
+        args.cmd2_subcommand_func(args)
 
     # macro -> create
     @classmethod

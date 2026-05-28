@@ -70,9 +70,9 @@ prompt is displayed.
     - Removed `set_ap_completer_type()` and `get_ap_completer_type()` since `ap_completer_type` is
       now a public member of `Cmd2ArgumentParser`.
     - Moved `set_parser_prog()` to `Cmd2ArgumentParser.update_prog()`.
-    - Renamed `cmd2_handler` to `cmd2_subcmd_handler` in the `argparse.Namespace` for clarity.
+    - Renamed `cmd2_handler` to `cmd2_subcommand_func` in the `argparse.Namespace` for clarity.
     - Removed `Cmd2AttributeWrapper` class. `argparse.Namespace` objects passed to command functions
-      now contain direct attributes for `cmd2_statement` and `cmd2_subcmd_handler`.
+      now contain direct attributes for `cmd2_statement` and `cmd2_subcommand_func`.
     - Renamed `cmd2/command_definition.py` to `cmd2/command_set.py`.
     - Removed `Cmd.doc_header` and the `with_default_category` decorator. Help categorization is now
       driven by the `DEFAULT_CATEGORY` class variable (see **Simplified command categorization** in

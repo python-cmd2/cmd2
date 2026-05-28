@@ -358,7 +358,7 @@ class SubcommandApp(cmd2.Cmd):
     # Add subcommands using as_subcommand_to decorator
     @cmd2.with_argparser(_build_has_subcmd_parser)
     def do_test_subcmd_decorator(self, args: argparse.Namespace) -> None:
-        args.cmd2_subcmd_handler(args)
+        args.cmd2_subcommand_func(args)
 
     subcmd_parser = cmd2.Cmd2ArgumentParser(description="A subcommand")
 

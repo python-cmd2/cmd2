@@ -712,11 +712,11 @@ def categorize(func: Callable[..., Any] | Iterable[Callable[..., Any]], category
     """
     if isinstance(func, Iterable):
         for item in func:
-            setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
+            setattr(item, constants.COMMAND_ATTR_HELP_CATEGORY, category)
     elif inspect.ismethod(func):
-        setattr(func.__func__, constants.CMD_ATTR_HELP_CATEGORY, category)
+        setattr(func.__func__, constants.COMMAND_ATTR_HELP_CATEGORY, category)
     else:
-        setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
+        setattr(func, constants.COMMAND_ATTR_HELP_CATEGORY, category)
 
 
 def get_defining_class(meth: Callable[..., Any]) -> type[Any] | None:
