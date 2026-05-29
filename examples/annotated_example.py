@@ -6,7 +6,8 @@ Shows how ``@with_annotated`` eliminates boilerplate compared to
 the annotated style -- type inference, auto-completion from types, and
 typed function parameters -- while also demonstrating that all of cmd2's
 advanced completion features (choices_provider, completer, table_columns,
-arg_tokens) remain available via ``Annotated`` metadata.
+arg_tokens) remain available via ``Annotated`` metadata, as does argparse's
+optional-value idiom (``nargs='?'`` with ``const``).
 
 Compare with ``argparse_completion.py`` which uses ``@with_argparser``
 for the same completion features.
@@ -32,6 +33,7 @@ import cmd2
 from cmd2 import (
     Choices,
     Cmd,
+    CompletionItem,
 )
 from cmd2.annotated import (
     Argument,
@@ -81,14 +83,18 @@ class AnnotatedExample(Cmd):
         self._sports = ["Basketball", "Football", "Tennis", "Hockey"]
         self._default_region = "staging"
 
-    # -- Type inference: int, float, bool ------------------------------------
-    # With @with_argparser you'd manually set type=int and action='store_true'.
-    # Here the decorator infers everything from the annotations.
+    # -- Type inference + typed parameters -----------------------------------
+    # With @with_argparser you'd set type=int and action='store_true', then read
+    # args.a / args.verbose off a Namespace. Here the types are inferred from the
+    # annotations and each parameter arrives as an ordinary typed local variable.
 
     @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
     def do_add(self, a: int, b: int = 0, verbose: bool = False) -> None:
-        """Add two integers. Types are inferred from annotations.
+        """Add two integers. Types are inferred; parameters are typed locals.
+
+        ``a``/``b`` infer ``type=int`` and ``verbose: bool`` infers a flag -- and
+        each is a normal typed argument, not a ``Namespace`` attribute to unpack.
 
         Examples:
             add 2 --b 3
@@ -161,6 +167,25 @@ class AnnotatedExample(Cmd):
             parts.append("(no color)")
         self.poutput(" ".join(parts))
 
+    # -- Count action (-vvv) -------------------------------------------------
+    # action='count' turns a flag into a repeatable counter: each occurrence
+    # adds one, so ``-vvv`` arrives as 3. Set explicitly via Option(action=).
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_log(
+        self,
+        message: str,
+        verbosity: Annotated[int, Option("-v", "--verbose", action="count", help_text="raise verbosity; repeatable")] = 0,
+    ) -> None:
+        """Log a message. Repeat ``-v`` to raise verbosity (``-vvv`` -> 3).
+
+        Try:
+            log hello
+            log hello -vvv
+        """
+        self.poutput(f"[v={verbosity}] {message}")
+
     # -- List arguments ------------------------------------------------------
     # With @with_argparser you'd set type=float and nargs='+'.
     # Here list[float] does both at once.
@@ -195,6 +220,37 @@ class AnnotatedExample(Cmd):
         for index, name in enumerate(files, start=1):
             self.poutput(f"{index}: {name}" if number else name)
 
+    # -- Optional positional (T | None) --------------------------------------
+    # A scalar annotated ``T | None`` becomes an optional positional (nargs='?'):
+    # zero or one value, defaulting to None when omitted. A very common CLI shape.
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_status(self, service: str | None) -> None:
+        """Show status for one service, or for all when the positional is omitted.
+
+        Try:
+            status
+            status web
+        """
+        self.poutput(f"status: {service or 'all services'}")
+
+    # -- Ranged nargs (cmd2 extension) ---------------------------------------
+    # cmd2's patched argparse accepts a (min, max) nargs tuple. ``nargs=(2, 4)``
+    # takes 2 to 4 values; fewer or more is rejected. Plain argparse cannot do this.
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_plot(self, points: Annotated[list[int], Argument(nargs=(2, 4))]) -> None:
+        """Plot 2 to 4 integer points. cmd2 allows a ``(min, max)`` nargs range.
+
+        Try:
+            plot 1 2
+            plot 1 2 3 4
+            plot 1            # rejected: needs at least 2
+        """
+        self.poutput(f"plotting {len(points)} points: {points}")
+
     # -- Literal + Decimal ---------------------------------------------------
     # Literal values become validated choices. Decimal values preserve precision.
 
@@ -215,21 +271,40 @@ class AnnotatedExample(Cmd):
         """
         self.poutput(f"Deploying {service} in {mode} mode with budget {budget} and timeout {timeout}")
 
-    # -- Typed kwargs --------------------------------------------------------
-    # With @with_argparser you'd access args.name, args.count on a Namespace.
-    # Here each parameter is a typed local variable.
+    # -- Optional value with const (nargs='?') + completion ------------------
+    # A scalar Option with nargs='?' + const is argparse's optional-value idiom:
+    # flag absent -> default, bare flag -> const, ``flag VALUE`` -> converted VALUE.
+    # A completion provider tab-completes that optional value -- because the
+    # option still consumes a value, a completer/choices_provider is kept (it is
+    # only rejected on value-less actions like store_true). The provider suggests
+    # common sizes without restricting input: ``--size 999`` is still accepted.
+
+    def common_sizes(self) -> Choices:
+        """choices_provider suggesting common cache sizes (suggestions only, not a constraint)."""
+        return Choices.from_values(["32", "64", "128", "256", "512"])
 
     @with_annotated
     @cmd2.with_category(ANNOTATED_CATEGORY)
-    def do_greet(self, name: str, count: int = 1, loud: bool = False) -> None:
-        """Greet someone. Parameters are typed -- no Namespace unpacking.
+    def do_cache(
+        self,
+        name: str,
+        size: Annotated[
+            int,
+            Option("--size", nargs="?", const=64, choices_provider=common_sizes, help_text="cache size in MB"),
+        ] = 0,
+    ) -> None:
+        """Configure caching. ``--size`` takes an optional value and tab-completes it.
+
+        ``--size`` absent -> 0; bare ``--size`` -> 64 (the const); ``--size 256``
+        -> 256 (the supplied value, converted to int).
 
         Try:
-            greet Alice --count 3 --loud
+            cache build
+            cache build --size
+            cache build --size <TAB>     # suggests 32 64 128 256 512
+            cache build --size 256
         """
-        for _ in range(count):
-            msg = f"Hello {name}!"
-            self.poutput(msg.upper() if loud else msg)
+        self.poutput(f"{name}: cache size = {size} MB")
 
     # -- Advanced: choices_provider + arg_tokens -----------------------------
     # These cmd2-specific features still work via Annotated metadata.
@@ -275,6 +350,58 @@ class AnnotatedExample(Cmd):
             score Football <TAB>
         """
         self.poutput(f"{sport}: {play} for {points} point(s)")
+
+    # -- Advanced: explicit completer ----------------------------------------
+    # A completer wires a completion function onto an argument directly. Unlike
+    # the Path type (which auto-completes), here a plain ``str`` gets filesystem
+    # completion only because ``completer=Cmd.path_complete`` asks for it.
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_load(
+        self,
+        config: Annotated[str, Argument(completer=Cmd.path_complete, help_text="config file to load")],
+    ) -> None:
+        """Load a config. ``completer=`` attaches a completer to a ``str`` arg.
+
+        Try:
+            load ./<TAB>
+        """
+        self.poutput(f"Loading config from {config}")
+
+    # -- Advanced: table_columns ---------------------------------------------
+    # A choices_provider can return CompletionItems carrying extra data, and
+    # table_columns names the columns shown alongside each completion.
+
+    def package_choices(self) -> Choices:
+        """choices_provider returning CompletionItems with a description column."""
+        return Choices(
+            items=[
+                CompletionItem("numpy", table_data=["numerical computing"]),
+                CompletionItem("rich", table_data=["terminal formatting"]),
+                CompletionItem("cmd2", table_data=["interactive CLIs"]),
+            ]
+        )
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_install(
+        self,
+        package: Annotated[
+            str,
+            Argument(
+                choices_provider=package_choices,
+                table_columns=["Description"],
+                help_text="package to install",
+            ),
+        ],
+    ) -> None:
+        """Install a package. ``table_columns`` adds context columns to completions.
+
+        Try:
+            install <TAB>
+        """
+        self.poutput(f"Installing {package}")
 
     # -- Namespace provider --------------------------------------------------
     # This mirrors one of @with_argparser's advanced features.

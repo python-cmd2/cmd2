@@ -9,6 +9,8 @@ import argparse
 import datetime
 import decimal
 import enum
+import inspect
+import types
 import uuid
 from pathlib import Path
 from typing import (
@@ -29,17 +31,46 @@ from cmd2.annotated import (
     Group,
     Option,
     _apply_mutex_group_targets,
+    _ArgparseArgument,
     _build_argument_group_targets,
     _CollectionCastingAction,
     _make_enum_type,
     _make_literal_type,
+    _normalize_annotation,
     _parse_bool,
-    _resolve_annotation,
     build_parser_from_function,
     with_annotated,
 )
+from cmd2.argparse_utils import register_argparse_argument_parameter
 
 from .conftest import run_cmd
+
+
+def _resolve_annotation(annotation: Any, *, has_default: bool = False, default: Any = None) -> _ArgparseArgument:
+    """Build and validate a single argument from a bare annotation (test helper).
+
+    The library builds a whole parameter list in ``_resolve_parameters``; these unit tests exercise one
+    annotation in isolation, mirroring that step: peel the annotation, populate the builder, run the
+    validity table.  A lone argument has no following positional or group membership, so the
+    cross-argument/cross-config rows in ``_CONSTRAINTS`` are naturally inert.
+    """
+    inner_type, metadata, is_optional = _normalize_annotation(annotation)
+    arg = _ArgparseArgument(
+        name="arg",
+        func_qualname="<function>",
+        has_default=has_default,
+        param_default=default,
+        is_kw_only=False,
+        is_variadic=False,
+        inner_type=inner_type,
+        metadata=metadata,
+        is_optional=is_optional,
+        kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        is_base_command=False,
+    )
+    arg._check_constraints()
+    return arg
+
 
 # ---------------------------------------------------------------------------
 # Test enums
@@ -94,81 +125,7 @@ class _Port(int):
 
 
 def _func_empty(self) -> None: ...
-def _func_str(self, name: str) -> None: ...
-def _func_int_option(self, count: int = 1) -> None: ...
-def _func_float_option(self, rate: float = 1.0) -> None: ...
-def _func_bool_false(self, verbose: bool = False) -> None: ...
-def _func_bool_true(self, debug: bool = True) -> None: ...
-def _func_bool_positional(self, flag: bool) -> None: ...
-def _func_path(self, file: Path) -> None: ...
-def _func_path_option(self, file: Path = Path(".")) -> None: ...
-def _func_decimal(self, amount: decimal.Decimal) -> None: ...
-def _func_enum(self, color: _Color) -> None: ...
-def _func_enum_option(self, color: _Color = _Color.blue) -> None: ...
-def _func_literal(self, mode: Literal["fast", "slow"]) -> None: ...
-def _func_literal_option(self, mode: Literal["fast", "slow"] = "fast") -> None: ...
-def _func_literal_int(self, level: Literal[1, 2, 3]) -> None: ...
-def _func_optional(self, name: str | None = None) -> None: ...
-def _func_optional_positional(self, val: Annotated[int | None, Argument()]) -> None: ...
-def _func_positional_with_default(self, arg: Annotated[str, Argument()] = "foo") -> None: ...
-def _func_optional_plain(self, val: int | None) -> None: ...
-def _func_optional_list(self, vals: list[int] | None) -> None: ...
-def _func_optional_tuple_ellipsis(self, vals: tuple[int, ...] | None) -> None: ...
-def _func_list(self, files: list[str]) -> None: ...
-def _func_list_default(self, items: list[str] | None = None) -> None: ...
-def _func_set(self, tags: set[str]) -> None: ...
-def _func_tuple_ellipsis(self, values: tuple[int, ...]) -> None: ...
-def _func_tuple_fixed(self, pair: tuple[int, int]) -> None: ...
-def _func_bare_list(self, items: list) -> None: ...
-def _func_bare_tuple(self, items: tuple) -> None: ...
-def _func_annotated_arg(self, name: Annotated[str, Argument(help_text="Your name")]) -> None: ...
-def _func_annotated_option(self, color: Annotated[str, Option("--color", "-c", help_text="Pick")] = "blue") -> None: ...
-def _func_annotated_metavar(self, name: Annotated[str, Argument(metavar="NAME")]) -> None: ...
-def _func_annotated_nargs(self, names: Annotated[tuple[str, ...], Argument(nargs=2)]) -> None: ...
-def _func_annotated_action(self, verbose: Annotated[bool, Option("--verbose", "-v", action="count")] = False) -> None: ...
-def _func_annotated_action_non_bool(self, count: Annotated[int, Option("--count", action="count")] = 0) -> None: ...
-def _func_annotated_required(self, name: Annotated[str, Option("--name", required=True)]) -> None: ...
-def _func_annotated_required_auto_flag(self, name: Annotated[str, Option(required=True)]) -> None: ...
-def _func_annotated_choices(self, food: Annotated[str, Argument(choices=["a", "b"])]) -> None: ...
-def _func_star_args(self, *args: str) -> None: ...
-def _func_star_args_int(self, *args: int) -> None: ...
-def _func_star_args_bare(self, *args) -> None: ...  # type: ignore[no-untyped-def]
-def _func_star_args_tuple(self, *files: tuple[str, ...]) -> None: ...
-def _func_star_args_list(self, *xs: list[str]) -> None: ...
-def _func_star_args_bare_list(self, *xs: list) -> None: ...  # type: ignore[type-arg]
-def _func_star_args_meta(self, *files: Annotated[str, Argument(help_text="a file", metavar="FILE")]) -> None: ...
-def _func_star_args_meta_choices(self, *modes: Annotated[str, Argument(choices=["a", "b"])]) -> None: ...
-def _func_star_args_option_meta(self, *files: Annotated[str, Option("--files")]) -> None: ...
-def _func_star_args_nargs_meta(self, *files: Annotated[str, Argument(nargs=2)]) -> None: ...
-def _func_kw_only_argument(self, *, name: Annotated[str, Argument()]) -> None: ...
-def _func_kw_only_argument_default(self, *, name: Annotated[str, Argument()] = "x") -> None: ...
 def _func_var_keyword(self, name: str, **kwargs: str) -> None: ...
-def _func_dest_param(self, dest: str) -> None: ...
-def _func_kw_only(self, *, name: str) -> None: ...
-def _func_kw_only_with_default(self, *, name: str = "world") -> None: ...
-def _func_underscore_option(self, my_param: str = "x") -> None: ...
-def _func_default_type_mismatch(self, count: int = "1") -> None: ...  # type: ignore[assignment]
-def _func_path_default(self, file: Path = Path("/tmp")) -> None: ...
-def _func_optional_annotated_inside(self, name: Annotated[str | None, Option("--name")] = None) -> None: ...
-def _func_optional_annotated_outside(self, name: Annotated[str, Option("--name")] | None = None) -> None: ...
-def _func_int_enum(self, color: _IntColor) -> None: ...
-def _func_plain_enum(self, color: _PlainColor) -> None: ...
-def _func_list_int(self, nums: list[int]) -> None: ...
-def _func_set_int(self, nums: set[int]) -> None: ...
-def _func_tuple_fixed_triple(self, triple: tuple[int, int, int]) -> None: ...
-def _func_list_bool(self, flags: list[bool]) -> None: ...
-def _func_set_bool(self, flags: set[bool]) -> None: ...
-def _func_list_path(self, files: list[Path]) -> None: ...
-def _func_list_enum(self, colors: list[_Color]) -> None: ...
-def _func_list_literal(self, modes: list[Literal["fast", "slow"]]) -> None: ...
-def _func_tuple_paths(self, src_dst: tuple[Path, Path]) -> None: ...
-def _func_tuple_enums(self, pair: tuple[_Color, _Color]) -> None: ...
-def _func_optional_str_nondefault(self, name: str | None = "world") -> None: ...
-def _func_typing_optional(self, count: Optional[int] = None) -> None: ...  # noqa: UP045
-def _func_int_subclass(self, port: _Port) -> None: ...
-def _func_store_true_action(self, verbose: Annotated[bool, Option("--verbose", action="store_true")] = False) -> None: ...
-def _func_store_false_action(self, quiet: Annotated[bool, Option("--quiet", action="store_false")] = True) -> None: ...
-def _func_append_action(self, tag: Annotated[str | None, Option("--tag", action="append")] = None) -> None: ...
 def _func_multi(self, a: str, b: int, c: int = 1) -> None: ...
 def _func_grouped(
     self,
@@ -189,18 +146,6 @@ def _provider(cmd: cmd2.Cmd):
     return []
 
 
-def _func_choices_provider_on_enum(
-    self,
-    color: Annotated[_Color, Argument(choices_provider=_provider)],
-) -> None: ...
-
-
-def _func_completer_on_path(
-    self,
-    file: Annotated[Path, Argument(completer=cmd2.Cmd.path_complete)],
-) -> None: ...
-
-
 # ---------------------------------------------------------------------------
 # Helper
 # ---------------------------------------------------------------------------
@@ -208,8 +153,6 @@ def _func_completer_on_path(
 
 def _get_param_action(func: object) -> argparse.Action:
     """Build parser from a single-param function and return its action."""
-    import inspect
-
     sig = inspect.signature(func)  # type: ignore[arg-type]
     param_names = [n for n in sig.parameters if n != "self"]
     assert len(param_names) == 1, f"Expected 1 param besides self, got {param_names}"
@@ -220,11 +163,70 @@ def _get_param_action(func: object) -> argparse.Action:
     raise ValueError(f"No action with dest={param_names[0]!r}")
 
 
+# Templates used by ``_make_func``: one per parameter kind. ``code.replace`` swaps
+# the literal name ``value`` for whatever ``name=`` the caller asks for, so the
+# resulting signature carries the right dest without resorting to ``exec``.
+def _stub_pos(self, value): ...  # type: ignore[no-untyped-def]
+def _stub_kw(self, *, value): ...  # type: ignore[no-untyped-def]
+def _stub_var(self, *value): ...  # type: ignore[no-untyped-def]
+
+
+_STUB_TEMPLATES = {"pos": _stub_pos, "kw": _stub_kw, "var": _stub_var}
+_MISSING: Any = object()
+
+
+def _make_func(
+    annotation: Any,
+    *,
+    name: str = "value",
+    default: Any = _MISSING,
+    kind: str = "pos",
+) -> Any:
+    """Construct a one-parameter ``self``-method carrying just an annotation.
+
+    ``kind`` is ``"pos"`` (positional-or-keyword), ``"kw"`` (keyword-only), or
+    ``"var"`` (``*args``).  Used by tests as a stand-in for the throwaway
+    ``def do_x(self, value: T): ...`` stubs that only exist to be fed to
+    ``build_parser_from_function``.
+    """
+    template = _STUB_TEMPLATES[kind]
+    code = template.__code__
+    new_varnames = tuple(n if n != "value" else name for n in code.co_varnames)
+    new_code = code.replace(co_varnames=new_varnames)
+    f = types.FunctionType(new_code, template.__globals__, name=f"_stub_{name}")
+    # ``_MISSING`` for ``annotation`` produces an unannotated parameter (still ``-> None``).
+    f.__annotations__ = {"return": type(None)} if annotation is _MISSING else {name: annotation, "return": type(None)}
+    if default is not _MISSING:
+        if kind == "pos":
+            f.__defaults__ = (default,)
+        elif kind == "kw":
+            f.__kwdefaults__ = {name: default}
+        else:
+            raise ValueError(f"default not supported for kind={kind!r}")
+    return f
+
+
+def _action_for(annotation: Any, **kwargs: Any) -> argparse.Action:
+    """Build a one-param function with the given annotation and return its action."""
+    return _get_param_action(_make_func(annotation, **kwargs))
+
+
+def _assert_build_error(annotation: Any, *, match: str | None = None, **kwargs: Any) -> None:
+    """Assert ``build_parser_from_function`` rejects a one-param function with this annotation."""
+    with pytest.raises(TypeError, match=match):
+        build_parser_from_function(_make_func(annotation, **kwargs))
+
+
 def _complete_cmd(app: cmd2.Cmd, line: str, text: str) -> list[str]:
     begidx = len(line) - len(text)
     endidx = len(line)
     completions = app.complete(text, line, begidx, endidx)
     return list(completions.to_strings())
+
+
+# Register a custom add_argument parameter so we can verify that Argument()/Option()
+# forward arbitrary registered parameters (parity with hand-built parsers).
+register_argparse_argument_parameter("annotated_custom_attr")
 
 
 # ---------------------------------------------------------------------------
@@ -239,128 +241,273 @@ class TestBuildParser:
         ("func", "expected"),
         [
             # --- Positionals ---
-            pytest.param(_func_str, {"option_strings": [], "type": None}, id="str_positional"),
-            pytest.param(_func_path, {"option_strings": [], "type": Path}, id="path_positional"),
-            pytest.param(_func_decimal, {"option_strings": [], "type": decimal.Decimal}, id="decimal_positional"),
-            pytest.param(_func_bool_positional, {"option_strings": [], "type": _parse_bool}, id="bool_positional"),
-            pytest.param(_func_enum, {"option_strings": [], "choices": _COLOR_CHOICE_ITEMS}, id="enum_positional"),
-            pytest.param(_func_literal, {"option_strings": [], "choices": ["fast", "slow"]}, id="literal_positional"),
-            pytest.param(_func_literal_int, {"option_strings": [], "choices": [1, 2, 3]}, id="literal_int_positional"),
-            pytest.param(_func_int_enum, {"option_strings": [], "choices": _INT_COLOR_CHOICE_ITEMS}, id="int_enum_positional"),
+            pytest.param(_make_func(str, name="name"), {"option_strings": [], "type": None}, id="str_positional"),
+            pytest.param(_make_func(Path, name="file"), {"option_strings": [], "type": Path}, id="path_positional"),
             pytest.param(
-                _func_plain_enum, {"option_strings": [], "choices": _PLAIN_COLOR_CHOICE_ITEMS}, id="plain_enum_positional"
+                _make_func(decimal.Decimal, name="amount"),
+                {"option_strings": [], "type": decimal.Decimal},
+                id="decimal_positional",
             ),
-            pytest.param(_func_list_int, {"option_strings": [], "nargs": "+", "type": int}, id="list_int"),
-            pytest.param(_func_set_int, {"option_strings": [], "nargs": "+", "type": int}, id="set_int"),
-            pytest.param(_func_tuple_fixed_triple, {"option_strings": [], "nargs": 3, "type": int}, id="tuple_fixed_triple"),
-            pytest.param(_func_list, {"option_strings": [], "nargs": "+"}, id="list_positional"),
-            pytest.param(_func_set, {"option_strings": [], "nargs": "+"}, id="set_positional"),
-            pytest.param(_func_tuple_ellipsis, {"option_strings": [], "nargs": "+", "type": int}, id="tuple_ellipsis"),
-            pytest.param(_func_tuple_fixed, {"option_strings": [], "nargs": 2, "type": int}, id="tuple_fixed"),
-            pytest.param(_func_bare_list, {"option_strings": [], "nargs": "+"}, id="bare_list"),
-            pytest.param(_func_bare_tuple, {"option_strings": [], "nargs": "+"}, id="bare_tuple"),
+            pytest.param(_make_func(bool, name="flag"), {"option_strings": [], "type": _parse_bool}, id="bool_positional"),
             pytest.param(
-                _func_optional_positional, {"option_strings": [], "nargs": "?", "type": int}, id="optional_positional"
+                _make_func(_Color, name="color"), {"option_strings": [], "choices": _COLOR_CHOICE_ITEMS}, id="enum_positional"
             ),
             pytest.param(
-                _func_positional_with_default,
+                _make_func(Literal["fast", "slow"], name="mode"),
+                {"option_strings": [], "choices": ["fast", "slow"]},
+                id="literal_positional",
+            ),
+            pytest.param(
+                _make_func(Literal[1, 2, 3], name="level"),
+                {"option_strings": [], "choices": [1, 2, 3]},
+                id="literal_int_positional",
+            ),
+            pytest.param(
+                _make_func(_IntColor, name="color"),
+                {"option_strings": [], "choices": _INT_COLOR_CHOICE_ITEMS},
+                id="int_enum_positional",
+            ),
+            pytest.param(
+                _make_func(_PlainColor, name="color"),
+                {"option_strings": [], "choices": _PLAIN_COLOR_CHOICE_ITEMS},
+                id="plain_enum_positional",
+            ),
+            pytest.param(_make_func(list[int], name="nums"), {"option_strings": [], "nargs": "+", "type": int}, id="list_int"),
+            pytest.param(_make_func(set[int], name="nums"), {"option_strings": [], "nargs": "+", "type": int}, id="set_int"),
+            pytest.param(
+                _make_func(tuple[int, int, int], name="triple"),
+                {"option_strings": [], "nargs": 3, "type": int},
+                id="tuple_fixed_triple",
+            ),
+            pytest.param(_make_func(list[str], name="files"), {"option_strings": [], "nargs": "+"}, id="list_positional"),
+            pytest.param(_make_func(set[str], name="tags"), {"option_strings": [], "nargs": "+"}, id="set_positional"),
+            pytest.param(
+                _make_func(tuple[int, ...], name="values"),
+                {"option_strings": [], "nargs": "+", "type": int},
+                id="tuple_ellipsis",
+            ),
+            pytest.param(
+                _make_func(tuple[int, int], name="pair"), {"option_strings": [], "nargs": 2, "type": int}, id="tuple_fixed"
+            ),
+            pytest.param(_make_func(list, name="items"), {"option_strings": [], "nargs": "+"}, id="bare_list"),
+            pytest.param(_make_func(tuple, name="items"), {"option_strings": [], "nargs": "+"}, id="bare_tuple"),
+            pytest.param(
+                _make_func(Annotated[int | None, Argument()], name="val"),
+                {"option_strings": [], "nargs": "?", "type": int},
+                id="optional_positional",
+            ),
+            pytest.param(
+                _make_func(Annotated[str, Argument()], name="arg", default="foo"),
                 {"option_strings": [], "nargs": "?", "default": "foo"},
                 id="positional_with_default",
             ),
-            pytest.param(_func_optional_plain, {"option_strings": [], "nargs": "?", "type": int}, id="optional_plain"),
-            pytest.param(_func_optional_list, {"option_strings": [], "nargs": "*", "type": int}, id="optional_list"),
             pytest.param(
-                _func_optional_tuple_ellipsis,
+                _make_func(int | None, name="val"), {"option_strings": [], "nargs": "?", "type": int}, id="optional_plain"
+            ),
+            pytest.param(
+                _make_func(list[int] | None, name="vals"),
+                {"option_strings": [], "nargs": "*", "type": int},
+                id="optional_list",
+            ),
+            pytest.param(
+                _make_func(tuple[int, ...] | None, name="vals"),
                 {"option_strings": [], "nargs": "*", "type": int},
                 id="optional_tuple_ellipsis",
             ),
             # --- Options ---
-            pytest.param(_func_int_option, {"option_strings": ["--count"], "type": int, "default": 1}, id="int_option"),
-            pytest.param(_func_float_option, {"option_strings": ["--rate"], "type": float, "default": 1.0}, id="float_option"),
             pytest.param(
-                _func_bool_false,
+                _make_func(int, name="count", default=1),
+                {"option_strings": ["--count"], "type": int, "default": 1},
+                id="int_option",
+            ),
+            pytest.param(
+                _make_func(float, name="rate", default=1.0),
+                {"option_strings": ["--rate"], "type": float, "default": 1.0},
+                id="float_option",
+            ),
+            pytest.param(
+                _make_func(bool, name="verbose", default=False),
                 {"option_strings": ["--verbose", "--no-verbose"], "default": False},
                 id="bool_optional_action",
             ),
             pytest.param(
-                _func_bool_true,
+                _make_func(bool, name="debug", default=True),
                 {"option_strings": ["--debug", "--no-debug"], "default": True},
                 id="bool_optional_action_true",
             ),
-            pytest.param(_func_path_option, {"option_strings": ["--file"], "type": Path}, id="path_option"),
             pytest.param(
-                _func_enum_option,
+                _make_func(Path, name="file", default=Path(".")),
+                {"option_strings": ["--file"], "type": Path},
+                id="path_option",
+            ),
+            pytest.param(
+                _make_func(_Color, name="color", default=_Color.blue),
                 {"option_strings": ["--color"], "choices": _COLOR_CHOICE_ITEMS, "default": _Color.blue},
                 id="enum_option",
             ),
             pytest.param(
-                _func_literal_option, {"option_strings": ["--mode"], "choices": ["fast", "slow"]}, id="literal_option"
+                _make_func(Literal["fast", "slow"], name="mode", default="fast"),
+                {"option_strings": ["--mode"], "choices": ["fast", "slow"]},
+                id="literal_option",
             ),
-            pytest.param(_func_optional, {"option_strings": ["--name"], "default": None}, id="optional_str"),
-            pytest.param(_func_list_default, {"option_strings": ["--items"], "nargs": "*"}, id="list_with_default"),
+            pytest.param(
+                _make_func(str | None, name="name", default=None),
+                {"option_strings": ["--name"], "default": None},
+                id="optional_str",
+            ),
+            pytest.param(
+                _make_func(list[str] | None, name="items", default=None),
+                {"option_strings": ["--items"], "nargs": "*"},
+                id="list_with_default",
+            ),
             # --- Annotated metadata ---
-            pytest.param(_func_annotated_arg, {"option_strings": [], "help": "Your name"}, id="annotated_help"),
             pytest.param(
-                _func_annotated_option, {"option_strings": ["--color", "-c"], "help": "Pick"}, id="annotated_custom_flags"
+                _make_func(Annotated[str, Argument(help_text="Your name")], name="name"),
+                {"option_strings": [], "help": "Your name"},
+                id="annotated_help",
             ),
-            pytest.param(_func_annotated_metavar, {"option_strings": [], "metavar": "NAME"}, id="annotated_metavar"),
-            pytest.param(_func_annotated_nargs, {"option_strings": [], "nargs": 2}, id="annotated_nargs"),
-            pytest.param(_func_annotated_required, {"option_strings": ["--name"], "required": True}, id="annotated_required"),
             pytest.param(
-                _func_annotated_required_auto_flag,
+                _make_func(Annotated[str, Option("--color", "-c", help_text="Pick")], name="color", default="blue"),
+                {"option_strings": ["--color", "-c"], "help": "Pick"},
+                id="annotated_custom_flags",
+            ),
+            pytest.param(
+                _make_func(Annotated[str, Argument(metavar="NAME")], name="name"),
+                {"option_strings": [], "metavar": "NAME"},
+                id="annotated_metavar",
+            ),
+            pytest.param(
+                # argparse accepts a tuple metavar to label each value of a multi-value argument.
+                _make_func(Annotated[tuple[int, int], Argument(metavar=("LO", "HI"))], name="span"),
+                {"option_strings": [], "metavar": ("LO", "HI")},
+                id="annotated_tuple_metavar",
+            ),
+            pytest.param(
+                _make_func(Annotated[tuple[str, ...], Argument(nargs=2)], name="names"),
+                {"option_strings": [], "nargs": 2},
+                id="annotated_nargs",
+            ),
+            pytest.param(
+                _make_func(Annotated[str, Option("--name", required=True)], name="name"),
+                {"option_strings": ["--name"], "required": True},
+                id="annotated_required",
+            ),
+            pytest.param(
+                _make_func(Annotated[str, Option(required=True)], name="name"),
                 {"option_strings": ["--name"], "required": True},
                 id="annotated_required_auto_flag",
             ),
-            pytest.param(_func_annotated_choices, {"option_strings": [], "choices": ["a", "b"]}, id="annotated_choices"),
-            pytest.param(_func_star_args, {"option_strings": [], "type": None, "nargs": "*"}, id="star_args"),
-            pytest.param(_func_star_args_int, {"option_strings": [], "type": int, "nargs": "*"}, id="star_args_int"),
+            # A value option with no default and no ``| None`` must be required (else omitting it
+            # would pass None, violating the non-Optional type hint).
+            pytest.param(
+                _make_func(Annotated[str, Option("-c")], name="color"),
+                {"option_strings": ["-c"], "required": True},
+                id="option_no_default_required",
+            ),
+            # A bool option is a flag, not a value: absence means ``False``, so it defaults to False
+            # and is NOT required (a required bool flag would be unsatisfiable for a short-only flag).
+            pytest.param(
+                _make_func(Annotated[bool, Option("-f")], name="flag"),
+                {"option_strings": ["-f"], "required": False, "default": False},
+                id="bool_option_no_default_defaults_false",
+            ),
+            # ``| None`` opts out of required: None is a valid value when omitted.
+            pytest.param(
+                _make_func(Annotated[str | None, Option("-c")], name="color"),
+                {"option_strings": ["-c"], "required": False, "default": None},
+                id="option_optional_no_default_not_required",
+            ),
+            pytest.param(
+                _make_func(str | None, name="name", kind="kw"),
+                {"option_strings": ["--name"], "required": False, "default": None},
+                id="kw_only_optional_not_required",
+            ),
+            pytest.param(
+                _make_func(Annotated[str, Argument(choices=["a", "b"])], name="food"),
+                {"option_strings": [], "choices": ["a", "b"]},
+                id="annotated_choices",
+            ),
+            pytest.param(
+                _make_func(str, name="args", kind="var"), {"option_strings": [], "type": None, "nargs": "*"}, id="star_args"
+            ),
+            pytest.param(
+                _make_func(int, name="args", kind="var"), {"option_strings": [], "type": int, "nargs": "*"}, id="star_args_int"
+            ),
             # --- Keyword-only ---
-            pytest.param(_func_kw_only, {"option_strings": ["--name"], "required": True}, id="kw_only_required"),
-            pytest.param(_func_kw_only_with_default, {"option_strings": ["--name"], "default": "world"}, id="kw_only_default"),
+            pytest.param(
+                _make_func(str, name="name", kind="kw"),
+                {"option_strings": ["--name"], "required": True},
+                id="kw_only_required",
+            ),
+            pytest.param(
+                _make_func(str, name="name", default="world", kind="kw"),
+                {"option_strings": ["--name"], "default": "world"},
+                id="kw_only_default",
+            ),
             # --- Underscore in flag names ---
-            pytest.param(_func_underscore_option, {"option_strings": ["--my-param"], "default": "x"}, id="underscore_flag"),
+            pytest.param(
+                _make_func(str, name="my_param", default="x"),
+                {"option_strings": ["--my-param"], "default": "x"},
+                id="underscore_flag",
+            ),
             # --- Default type preservation ---
             pytest.param(
-                _func_default_type_mismatch, {"option_strings": ["--count"], "default": "1"}, id="default_not_coerced"
+                _make_func(int, name="count", default="1"),
+                {"option_strings": ["--count"], "default": "1"},
+                id="default_not_coerced",
             ),
-            pytest.param(_func_path_default, {"option_strings": ["--file"], "default": Path("/tmp")}, id="path_default"),
+            pytest.param(
+                _make_func(Path, name="file", default=Path("/tmp")),
+                {"option_strings": ["--file"], "default": Path("/tmp")},
+                id="path_default",
+            ),
             # --- Optional + Annotated (union inside) ---
             pytest.param(
-                _func_optional_annotated_inside,
+                _make_func(Annotated[str | None, Option("--name")], name="name", default=None),
                 {"option_strings": ["--name"], "default": None},
                 id="optional_annotated_inside",
             ),
             # --- Collections of complex element types ---
-            pytest.param(_func_list_bool, {"option_strings": [], "nargs": "+", "type": _parse_bool}, id="list_bool"),
-            pytest.param(_func_set_bool, {"option_strings": [], "nargs": "+", "type": _parse_bool}, id="set_bool"),
-            pytest.param(_func_list_path, {"option_strings": [], "nargs": "+", "type": Path}, id="list_path"),
             pytest.param(
-                _func_list_literal,
+                _make_func(list[bool], name="flags"), {"option_strings": [], "nargs": "+", "type": _parse_bool}, id="list_bool"
+            ),
+            pytest.param(
+                _make_func(set[bool], name="flags"), {"option_strings": [], "nargs": "+", "type": _parse_bool}, id="set_bool"
+            ),
+            pytest.param(
+                _make_func(list[Path], name="files"), {"option_strings": [], "nargs": "+", "type": Path}, id="list_path"
+            ),
+            pytest.param(
+                _make_func(list[Literal["fast", "slow"]], name="modes"),
                 {"option_strings": [], "nargs": "+", "choices": ["fast", "slow"]},
                 id="list_literal",
             ),
             pytest.param(
-                _func_list_enum,
+                _make_func(list[_Color], name="colors"),
                 {"option_strings": [], "nargs": "+", "choices": _COLOR_CHOICE_ITEMS},
                 id="list_enum",
             ),
-            pytest.param(_func_tuple_paths, {"option_strings": [], "nargs": 2, "type": Path}, id="tuple_paths"),
             pytest.param(
-                _func_tuple_enums,
+                _make_func(tuple[Path, Path], name="src_dst"),
+                {"option_strings": [], "nargs": 2, "type": Path},
+                id="tuple_paths",
+            ),
+            pytest.param(
+                _make_func(tuple[_Color, _Color], name="pair"),
                 {"option_strings": [], "nargs": 2, "choices": _COLOR_CHOICE_ITEMS},
                 id="tuple_enums",
             ),
             # --- Subclass fallback (Port(int) uses int converter) ---
-            pytest.param(_func_int_subclass, {"option_strings": [], "type": int}, id="int_subclass"),
+            pytest.param(_make_func(_Port, name="port"), {"option_strings": [], "type": int}, id="int_subclass"),
             # --- Optional with non-None default ---
             pytest.param(
-                _func_optional_str_nondefault,
+                _make_func(str | None, name="name", default="world"),
                 {"option_strings": ["--name"], "default": "world"},
                 id="optional_str_nondefault",
             ),
             # --- typing.Optional[T] (vs T | None) end-to-end ---
             pytest.param(
-                _func_typing_optional,
+                _make_func(Optional[int], name="count", default=None),  # noqa: UP045
                 {"option_strings": ["--count"], "type": int, "default": None},
                 id="typing_optional",
             ),
@@ -372,37 +519,43 @@ class TestBuildParser:
             assert getattr(action, key) == value, f"{key}: expected {value!r}, got {getattr(action, key)!r}"
 
     def test_annotated_action_count(self) -> None:
-        action = _get_param_action(_func_annotated_action)
+        action = _get_param_action(
+            _make_func(Annotated[int, Option("--verbose", "-v", action="count")], name="verbose", default=0)
+        )
         assert isinstance(action, argparse._CountAction)
 
     def test_annotated_action_count_non_bool(self) -> None:
-        action = _get_param_action(_func_annotated_action_non_bool)
+        action = _get_param_action(_make_func(Annotated[int, Option("--count", action="count")], name="count", default=0))
         assert isinstance(action, argparse._CountAction)
         assert action.default == 0
 
     def test_annotated_action_store_true(self) -> None:
         """``action='store_true'`` strips the inferred bool converter."""
-        action = _get_param_action(_func_store_true_action)
+        action = _get_param_action(
+            _make_func(Annotated[bool, Option("--verbose", action="store_true")], name="verbose", default=False)
+        )
         assert isinstance(action, argparse._StoreTrueAction)
         assert action.type is None
         assert action.default is False
 
     def test_annotated_action_store_false(self) -> None:
         """``action='store_false'`` strips the inferred bool converter."""
-        action = _get_param_action(_func_store_false_action)
+        action = _get_param_action(
+            _make_func(Annotated[bool, Option("--quiet", action="store_false")], name="quiet", default=True)
+        )
         assert isinstance(action, argparse._StoreFalseAction)
         assert action.type is None
         assert action.default is True
 
     def test_annotated_action_append(self) -> None:
         """``action='append'`` collects repeated flag values into a list."""
-        action = _get_param_action(_func_append_action)
+        action = _get_param_action(_make_func(Annotated[list[str], Option("--tag", action="append")], name="tag"))
         assert isinstance(action, argparse._AppendAction)
         assert action.option_strings == ["--tag"]
 
     def test_positional_with_default_is_optional(self) -> None:
         """A positional with a default takes 0-or-1 tokens and falls back to the default when absent."""
-        parser = build_parser_from_function(_func_positional_with_default)
+        parser = build_parser_from_function(_make_func(Annotated[str, Argument()], name="arg", default="foo"))
         assert parser.parse_args([]).arg == "foo"
         assert parser.parse_args(["bar"]).arg == "bar"
 
@@ -410,13 +563,13 @@ class TestBuildParser:
         """The decorator stores the default literally ('1', see ``default_not_coerced``); at parse
         time argparse applies ``type=int`` to the string default, so an absent ``--count`` yields int 1.
         """
-        parser = build_parser_from_function(_func_default_type_mismatch)
+        parser = build_parser_from_function(_make_func(int, name="count", default="1"))
         assert parser.parse_args([]).count == 1
         assert parser.parse_args(["--count", "5"]).count == 5
 
     def test_typing_optional_parses_end_to_end(self) -> None:
         """typing.Optional[int] yields None when absent and coerces to int when provided."""
-        parser = build_parser_from_function(_func_typing_optional)
+        parser = build_parser_from_function(_make_func(Optional[int], name="count", default=None))  # noqa: UP045
         assert parser.parse_args([]).count is None
         parsed = parser.parse_args(["--count", "5"]).count
         assert parsed == 5
@@ -425,9 +578,9 @@ class TestBuildParser:
     @pytest.mark.parametrize(
         "func",
         [
-            pytest.param(_func_set, id="set"),
-            pytest.param(_func_tuple_ellipsis, id="tuple"),
-            pytest.param(_func_star_args, id="star_args"),
+            pytest.param(_make_func(set[str], name="tags"), id="set"),
+            pytest.param(_make_func(tuple[int, ...], name="values"), id="tuple"),
+            pytest.param(_make_func(str, name="args", kind="var"), id="star_args"),
         ],
     )
     def test_collection_uses_casting_action(self, func) -> None:
@@ -436,21 +589,21 @@ class TestBuildParser:
 
     def test_star_args_bare_defaults_to_str(self) -> None:
         """A bare ``*args`` (no element annotation) is treated as ``*args: str``."""
-        action = _get_param_action(_func_star_args_bare)
+        action = _get_param_action(_make_func(_MISSING, name="args", kind="var"))
         assert action.option_strings == []
         assert action.nargs == "*"
         assert action.type is None
 
     def test_star_args_parses_to_tuple(self) -> None:
         """``*args: int`` accepts zero or more values, coerced and collected into a tuple."""
-        parser = build_parser_from_function(_func_star_args_int)
+        parser = build_parser_from_function(_make_func(int, name="args", kind="var"))
         assert parser.parse_args([]).args == ()
         parsed = parser.parse_args(["1", "2", "3"]).args
         assert parsed == (1, 2, 3)
         assert isinstance(parsed, tuple)
 
     def test_self_skipped(self) -> None:
-        parser = build_parser_from_function(_func_str)
+        parser = build_parser_from_function(_make_func(str, name="name"))
         dests = {a.dest for a in parser._actions}
         assert "self" not in dests
 
@@ -478,18 +631,18 @@ class TestBuildParser:
             build_parser_from_function(do_broken)
 
     def test_validate_base_command_type_hints_failure_raises(self) -> None:
-        """_validate_base_command_params should raise, not swallow, type hint failures."""
-        from cmd2.annotated import _validate_base_command_params
+        """Base-command validation should raise, not swallow, type hint failures."""
+        from cmd2.annotated import _resolve_parameters
 
         def do_broken(self, cmd2_handler, name: "NonExistentType"):  # noqa: F821
             pass
 
         with pytest.raises(TypeError, match="Failed to resolve type hints"):
-            _validate_base_command_params(do_broken)
+            _resolve_parameters(do_broken, base_command=True)
 
     def test_dest_param_raises(self) -> None:
         with pytest.raises(ValueError, match="dest"):
-            build_parser_from_function(_func_dest_param)
+            build_parser_from_function(_make_func(str, name="dest"))
 
     def test_subcommand_param_raises(self) -> None:
         def func(self, subcommand: str) -> None: ...
@@ -517,24 +670,26 @@ class TestBuildParser:
     @pytest.mark.parametrize(
         "func",
         [
-            pytest.param(_func_star_args_tuple, id="tuple[str, ...]"),
-            pytest.param(_func_star_args_list, id="list[str]"),
-            pytest.param(_func_star_args_bare_list, id="bare_list"),
+            pytest.param(_make_func(tuple[str, ...], name="files", kind="var"), id="tuple[str, ...]"),
+            pytest.param(_make_func(list[str], name="xs", kind="var"), id="list[str]"),
+            pytest.param(_make_func(list, name="xs", kind="var"), id="bare_list"),
         ],
     )
     def test_star_args_collection_element_raises(self, func) -> None:
         """``*args`` annotated with a collection element is rejected with a targeted hint.
 
-        The annotation on ``*args`` is the type of each value, so a collection element
-        (e.g. ``*files: tuple[str, ...]``) would mean a tuple-of-collections, which cannot
-        be parsed. The error must steer the user toward annotating the element type.
+        The annotation on ``*args`` is each value's type, so a collection element (e.g.
+        ``*files: tuple[str, ...]``) would mean a tuple-of-collections.  The error must steer
+        the user toward annotating the element type.
         """
         with pytest.raises(TypeError, match=r"the type of each value"):
             build_parser_from_function(func)
 
     def test_star_args_honors_argument_metadata(self) -> None:
         """``Annotated[T, Argument(...)]`` on ``*args`` applies help/metavar to the variadic positional."""
-        action = _get_param_action(_func_star_args_meta)
+        action = _get_param_action(
+            _make_func(Annotated[str, Argument(help_text="a file", metavar="FILE")], name="files", kind="var")
+        )
         assert action.option_strings == []
         assert action.nargs == "*"
         assert action.help == "a file"
@@ -542,7 +697,7 @@ class TestBuildParser:
 
     def test_star_args_honors_argument_choices(self) -> None:
         """``Argument(choices=...)`` on ``*args`` restricts every value to the choices."""
-        parser = build_parser_from_function(_func_star_args_meta_choices)
+        parser = build_parser_from_function(_make_func(Annotated[str, Argument(choices=["a", "b"])], name="modes", kind="var"))
         assert parser.parse_args(["a", "b", "a"]).modes == ("a", "b", "a")
         with pytest.raises(SystemExit):
             parser.parse_args(["a", "nope"])
@@ -550,18 +705,18 @@ class TestBuildParser:
     def test_star_args_option_metadata_raises(self) -> None:
         """``Option()`` on ``*args`` is rejected; *args is always positional."""
         with pytest.raises(TypeError, match=r"\*args is always a positional"):
-            build_parser_from_function(_func_star_args_option_meta)
+            build_parser_from_function(_make_func(Annotated[str, Option("--files")], name="files", kind="var"))
 
     def test_star_args_nargs_metadata_raises(self) -> None:
         """An explicit ``nargs`` on ``*args`` is rejected; its arity is fixed to ``'*'``."""
         with pytest.raises(TypeError, match=r"arity cannot be overridden"):
-            build_parser_from_function(_func_star_args_nargs_meta)
+            build_parser_from_function(_make_func(Annotated[str, Argument(nargs=2)], name="files", kind="var"))
 
     @pytest.mark.parametrize(
         "func",
         [
-            pytest.param(_func_kw_only_argument, id="no_default"),
-            pytest.param(_func_kw_only_argument_default, id="with_default"),
+            pytest.param(_make_func(Annotated[str, Argument()], name="name", kind="kw"), id="no_default"),
+            pytest.param(_make_func(Annotated[str, Argument()], name="name", default="x", kind="kw"), id="with_default"),
         ],
     )
     def test_kw_only_with_argument_metadata_raises(self, func) -> None:
@@ -569,9 +724,63 @@ class TestBuildParser:
         with pytest.raises(TypeError, match=r"keyword-only but uses Argument\(\)"):
             build_parser_from_function(func)
 
+    def test_option_no_default_is_enforced_at_parse_time(self) -> None:
+        """Omitting a no-default, non-Optional option errors instead of silently passing None."""
+        parser = build_parser_from_function(_make_func(Annotated[str, Option("-c")], name="color"))
+        with pytest.raises(SystemExit):
+            parser.parse_args([])
+        assert parser.parse_args(["-c", "red"]).color == "red"
+
+    def test_optional_option_no_default_yields_none_when_omitted(self) -> None:
+        """``| None`` opts out of required: omitting it yields None, a valid value for the hint."""
+        parser = build_parser_from_function(_make_func(Annotated[str | None, Option("-c")], name="color"))
+        assert parser.parse_args([]).color is None
+        assert parser.parse_args(["-c", "red"]).color == "red"
+
+    def test_generator_choices_are_materialized(self) -> None:
+        """A single-use iterable (generator) as choices must survive repeated argparse iteration."""
+        parser = build_parser_from_function(
+            _make_func(Annotated[str, Argument(choices=(c for c in ["a", "b"]))]),
+        )
+        assert parser.parse_args(["a"]).value == "a"
+        assert parser.parse_args(["b"]).value == "b"
+        with pytest.raises(SystemExit):
+            parser.parse_args(["c"])
+
+    @pytest.mark.parametrize(
+        ("func", "dest", "default"),
+        [
+            pytest.param(
+                _make_func(Annotated[bool, Option("-v", action="store_true")], name="verbose"),
+                "verbose",
+                False,
+                id="store_true",
+            ),
+            pytest.param(_make_func(Annotated[int, Option("-l", action="count")], name="level"), "level", 0, id="count"),
+        ],
+    )
+    def test_flag_action_no_default_not_required(self, func, dest, default) -> None:
+        """Flag-style actions carry their own implicit default, so a missing default does not force required."""
+        parser = build_parser_from_function(func)
+        action = _get_param_action(func)
+        assert action.required is False
+        assert getattr(parser.parse_args([]), dest) == default
+
+    def test_bool_option_no_default_is_usable_flag(self) -> None:
+        """A bool option is a flag (absence -> False), not a required value.
+
+        Marking it required would make a short-only flag unsatisfiable: ``-f`` can only set True
+        and there is no negation form, so a required ``-f`` could never be False.
+        """
+        parser = build_parser_from_function(_make_func(Annotated[bool, Option("-f")], name="flag"))
+        action = _get_param_action(_make_func(Annotated[bool, Option("-f")], name="flag"))
+        assert action.required is False
+        assert parser.parse_args([]).flag is False
+        assert parser.parse_args(["-f"]).flag is True
+
     def test_optional_annotated_outside_raises(self) -> None:
         with pytest.raises(TypeError, match="Annotated"):
-            build_parser_from_function(_func_optional_annotated_outside)
+            build_parser_from_function(_make_func(Annotated[str, Option("--name")] | None, name="name", default=None))
 
     def test_annotated_ambiguous_union_raises(self) -> None:
         """Annotated[str | int, meta] must raise -- ambiguous inner union."""
@@ -591,14 +800,14 @@ class TestTypeInferenceBuildParser:
     """Type-inference behavior and override precedence when building parser actions."""
 
     def test_choices_provider_overrides_inferred_enum_choices(self) -> None:
-        action = _get_param_action(_func_choices_provider_on_enum)
+        action = _get_param_action(_make_func(Annotated[_Color, Argument(choices_provider=_provider)], name="color"))
         assert action.choices is None
         assert action.get_choices_provider() is _provider  # type: ignore[attr-defined]
         assert action.get_completer() is None  # type: ignore[attr-defined]
 
     def test_choices_provider_keeps_enum_coercion(self) -> None:
         """A choices_provider on an Enum keeps the converter so values still coerce to the member."""
-        action = _get_param_action(_func_choices_provider_on_enum)
+        action = _get_param_action(_make_func(Annotated[_Color, Argument(choices_provider=_provider)], name="color"))
         assert action.type is not None
         assert action.type("red") is _Color.red
 
@@ -617,7 +826,7 @@ class TestTypeInferenceBuildParser:
 
     def test_choices_provider_enum_coerces_at_parse(self) -> None:
         """End-to-end: an Enum with a choices_provider still parses to the enum member, not a str."""
-        parser = build_parser_from_function(_func_choices_provider_on_enum)
+        parser = build_parser_from_function(_make_func(Annotated[_Color, Argument(choices_provider=_provider)], name="color"))
         assert parser.parse_args(["red"]).color is _Color.red
 
     def test_choices_provider_literal_int_coerces_at_parse(self) -> None:
@@ -639,32 +848,42 @@ class TestTypeInferenceBuildParser:
         Uses identity / isinstance (not ``==``) so a stripped converter returning a raw ``str``
         cannot hide behind StrEnum/IntEnum equality.
         """
-        assert build_parser_from_function(_func_literal).parse_args(["fast"]).mode == "fast"
-        assert build_parser_from_function(_func_literal_option).parse_args(["--mode", "slow"]).mode == "slow"
+        assert build_parser_from_function(_make_func(Literal["fast", "slow"], name="mode")).parse_args(["fast"]).mode == "fast"
+        assert (
+            build_parser_from_function(_make_func(Literal["fast", "slow"], name="mode", default="fast"))
+            .parse_args(["--mode", "slow"])
+            .mode
+            == "slow"
+        )
 
-        level = build_parser_from_function(_func_literal_int).parse_args(["2"]).level
+        level = build_parser_from_function(_make_func(Literal[1, 2, 3], name="level")).parse_args(["2"]).level
         assert level == 2
         assert isinstance(level, int)
 
-        assert build_parser_from_function(_func_enum).parse_args(["red"]).color is _Color.red
-        assert build_parser_from_function(_func_enum_option).parse_args(["--color", "red"]).color is _Color.red
+        assert build_parser_from_function(_make_func(_Color, name="color")).parse_args(["red"]).color is _Color.red
+        assert (
+            build_parser_from_function(_make_func(_Color, name="color", default=_Color.blue))
+            .parse_args(["--color", "red"])
+            .color
+            is _Color.red
+        )
         # Non-StrEnum cases: identity defeats the StrEnum/IntEnum ``==`` masking property.
-        assert build_parser_from_function(_func_int_enum).parse_args(["1"]).color is _IntColor.red
-        assert build_parser_from_function(_func_plain_enum).parse_args(["red"]).color is _PlainColor.RED
+        assert build_parser_from_function(_make_func(_IntColor, name="color")).parse_args(["1"]).color is _IntColor.red
+        assert build_parser_from_function(_make_func(_PlainColor, name="color")).parse_args(["red"]).color is _PlainColor.RED
 
     def test_completer_keeps_path_converter(self) -> None:
         """User-supplied completer on Path preserves the (non-restrictive) Path converter."""
-        action = _get_param_action(_func_completer_on_path)
+        action = _get_param_action(_make_func(Annotated[Path, Argument(completer=cmd2.Cmd.path_complete)], name="file"))
         assert action.type is Path
 
     def test_completer_overrides_inferred_path_completion(self) -> None:
-        action = _get_param_action(_func_completer_on_path)
+        action = _get_param_action(_make_func(Annotated[Path, Argument(completer=cmd2.Cmd.path_complete)], name="file"))
         assert action.get_choices_provider() is None  # type: ignore[attr-defined]
         assert action.get_completer() is cmd2.Cmd.path_complete  # type: ignore[attr-defined]
 
     def test_inferred_enum_choices_match_type_converter(self) -> None:
         """Enum choices must be convertible by the type converter."""
-        action = _get_param_action(_func_enum)
+        action = _get_param_action(_make_func(_Color, name="color"))
         converter = action.type
         for choice in action.choices:
             assert isinstance(converter(str(choice)), _Color)
@@ -672,10 +891,10 @@ class TestTypeInferenceBuildParser:
     @pytest.mark.parametrize(
         "func",
         [
-            pytest.param(_func_path, id="path_positional"),
-            pytest.param(_func_path_option, id="path_option"),
-            pytest.param(_func_list_path, id="list_path"),
-            pytest.param(_func_tuple_paths, id="tuple_paths"),
+            pytest.param(_make_func(Path, name="file"), id="path_positional"),
+            pytest.param(_make_func(Path, name="file", default=Path(".")), id="path_option"),
+            pytest.param(_make_func(list[Path], name="files"), id="list_path"),
+            pytest.param(_make_func(tuple[Path, Path], name="src_dst"), id="tuple_paths"),
         ],
     )
     def test_path_annotation_wires_path_completer(self, func) -> None:
@@ -741,6 +960,42 @@ class TestArgumentGroups:
 
         parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose", "quiet"), Group("json", "csv")))
         assert len(parser._mutually_exclusive_groups) == 2
+
+    def test_required_member_in_mutex_group_raises(self) -> None:
+        """A required (no default, non-Optional) option in a mutex group is rejected with a clear error.
+
+        argparse forbids required members in a mutex group, and it would be type-unsafe: only one
+        member is supplied, so the others arrive as None. The message must steer toward making it optional.
+        """
+
+        def func(self, local: Annotated[str, Option("--local")], remote: str | None = None) -> None: ...
+
+        with pytest.raises(ValueError, match=r"mutually exclusive group members must be optional"):
+            build_parser_from_function(func, mutually_exclusive_groups=(Group("local", "remote"),))
+
+    def test_optional_members_in_mutex_group_build(self) -> None:
+        """Mutex members that are Optional or have defaults build fine (the regression guard)."""
+
+        def func(self, local: Annotated[str | None, Option("--local")] = None, remote: str = "x") -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("local", "remote"),))
+        assert len(parser._mutually_exclusive_groups) == 1
+
+    def test_bool_flag_members_in_mutex_group_build(self) -> None:
+        """Plain bool flags (no default) are not required, so they belong in a mutex group."""
+
+        def func(self, verbose: Annotated[bool, Option("--verbose")], quiet: Annotated[bool, Option("--quiet")]) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose", "quiet"),))
+        assert len(parser._mutually_exclusive_groups) == 1
+
+    def test_nonexistent_member_reported_over_required_member(self) -> None:
+        """A typo'd member name surfaces as 'nonexistent', not masked by the required-member check."""
+
+        def func(self, local: Annotated[str, Option("--local")], remote: str | None = None) -> None: ...
+
+        with pytest.raises(ValueError, match=r"nonexistent parameter 'ghost'"):
+            build_parser_from_function(func, mutually_exclusive_groups=(Group("local", "ghost"),))
 
     def test_argument_group(self) -> None:
         """Arguments in a group appear under a shared heading in help."""
@@ -811,9 +1066,7 @@ class TestParserCustomization:
             Group(title="empty")
 
     def test_description_and_epilog(self) -> None:
-        def func(self, name: str) -> None: ...
-
-        parser = build_parser_from_function(func, description="my description", epilog="my epilog")
+        parser = build_parser_from_function(_make_func(str), description="my description", epilog="my epilog")
         assert parser.description == "my description"
         assert parser.epilog == "my epilog"
 
@@ -823,19 +1076,53 @@ class TestParserCustomization:
         class MyFormatter(Cmd2HelpFormatter):
             pass
 
-        def func(self, name: str) -> None: ...
-
-        parser = build_parser_from_function(func, formatter_class=MyFormatter)
+        parser = build_parser_from_function(_make_func(str), formatter_class=MyFormatter)
         assert parser.formatter_class is MyFormatter
 
     def test_custom_parser_class(self) -> None:
         class MyParser(cmd2.Cmd2ArgumentParser):
             pass
 
-        def func(self, name: str) -> None: ...
-
-        parser = build_parser_from_function(func, parser_class=MyParser)
+        parser = build_parser_from_function(_make_func(str), parser_class=MyParser)
         assert isinstance(parser, MyParser)
+
+    def test_ap_completer_type(self) -> None:
+        from cmd2.argparse_completer import ArgparseCompleter
+
+        class MyCompleter(ArgparseCompleter):
+            pass
+
+        parser = build_parser_from_function(_make_func(str), ap_completer_type=MyCompleter)
+        assert parser.ap_completer_type is MyCompleter
+
+    def test_ap_completer_type_defaults_to_none(self) -> None:
+        assert build_parser_from_function(_make_func(str)).ap_completer_type is None
+
+    def test_ap_completer_type_via_decorator(self) -> None:
+        from cmd2 import constants
+        from cmd2.argparse_completer import ArgparseCompleter
+
+        class MyCompleter(ArgparseCompleter):
+            pass
+
+        @with_annotated(ap_completer_type=MyCompleter)
+        def do_run(self, name: str) -> None: ...
+
+        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        assert builder().ap_completer_type is MyCompleter
+
+    def test_ap_completer_type_threads_to_subcommand(self) -> None:
+        from cmd2 import constants
+        from cmd2.argparse_completer import ArgparseCompleter
+
+        class MyCompleter(ArgparseCompleter):
+            pass
+
+        @with_annotated(subcommand_to="team", ap_completer_type=MyCompleter)
+        def team_create(self, name: str) -> None: ...
+
+        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
+        assert spec.parser_source().ap_completer_type is MyCompleter
 
     def test_customization_via_decorator(self) -> None:
         """description/epilog/titled Group flow through @with_annotated end-to-end."""
@@ -891,62 +1178,44 @@ class TestGroupHelpers:
 
     def test_build_argument_group_targets(self) -> None:
         parser = argparse.ArgumentParser()
-        target_for, argument_group_for = _build_argument_group_targets(
-            parser,
-            groups=(Group("src", "dst"),),
-            all_param_names={"src", "dst", "recursive"},
-        )
+        target_for, argument_group_for = _build_argument_group_targets(parser, groups=(Group("src", "dst"),))
         assert set(target_for) == {"src", "dst"}
         assert set(argument_group_for) == {"src", "dst"}
         assert target_for["src"] is argument_group_for["src"]
         assert target_for["dst"] is argument_group_for["dst"]
 
-    def test_build_argument_group_targets_rejects_duplicate_assignment(self) -> None:
-        parser = argparse.ArgumentParser()
+    def test_duplicate_argument_group_assignment_raises(self) -> None:
+        # Double-assignment is enforced by _CONSTRAINTS (the argument_group_indices membership fact),
+        # so it surfaces through the real build path rather than _build_argument_group_targets itself.
+        def func(self, *, verbose: bool = False) -> None: ...
+
         with pytest.raises(ValueError, match="argument group 1 and argument group 2"):
-            _build_argument_group_targets(
-                parser,
-                groups=(Group("verbose"), Group("verbose")),
-                all_param_names={"verbose"},
-            )
+            build_parser_from_function(func, groups=(Group("verbose"), Group("verbose")))
 
     def test_apply_mutex_group_targets(self) -> None:
         parser = argparse.ArgumentParser()
-        target_for, argument_group_for = _build_argument_group_targets(
-            parser,
-            groups=(Group("json", "csv"),),
-            all_param_names={"json", "csv", "plain"},
-        )
+        target_for, argument_group_for = _build_argument_group_targets(parser, groups=(Group("json", "csv"),))
 
         _apply_mutex_group_targets(
             parser,
             target_for=target_for,
             argument_group_for=argument_group_for,
             mutually_exclusive_groups=(Group("json", "csv"),),
-            all_param_names={"json", "csv", "plain"},
         )
 
         assert target_for["json"] is target_for["csv"]
         assert isinstance(target_for["json"], argparse._MutuallyExclusiveGroup)
 
-    def test_apply_mutex_group_targets_rejects_duplicate_assignment(self) -> None:
-        parser = argparse.ArgumentParser()
+    def test_duplicate_mutex_group_assignment_raises(self) -> None:
+        # Double-assignment is enforced by _CONSTRAINTS (the mutex_group_indices membership fact).
+        def func(self, *, verbose: bool = False) -> None: ...
+
         with pytest.raises(ValueError, match="multiple mutually exclusive groups"):
-            _apply_mutex_group_targets(
-                parser,
-                target_for={},
-                argument_group_for={},
-                mutually_exclusive_groups=(Group("verbose"), Group("verbose")),
-                all_param_names={"verbose"},
-            )
+            build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose"), Group("verbose")))
 
     def test_apply_mutex_group_targets_rejects_cross_group_members(self) -> None:
         parser = argparse.ArgumentParser()
-        _target_for, argument_group_for = _build_argument_group_targets(
-            parser,
-            groups=(Group("src"), Group("dst")),
-            all_param_names={"src", "dst"},
-        )
+        _target_for, argument_group_for = _build_argument_group_targets(parser, groups=(Group("src"), Group("dst")))
 
         with pytest.raises(ValueError, match="different argument groups"):
             _apply_mutex_group_targets(
@@ -954,7 +1223,6 @@ class TestGroupHelpers:
                 target_for={},
                 argument_group_for=argument_group_for,
                 mutually_exclusive_groups=(Group("src", "dst"),),
-                all_param_names={"src", "dst"},
             )
 
 
@@ -981,34 +1249,35 @@ class TestResolveAnnotation:
         ],
     )
     def test_classification(self, annotation, has_default, expected_positional) -> None:
-        _kwargs, _meta, positional = _resolve_annotation(annotation, has_default=has_default)
-        assert positional is expected_positional
+        # A non-None default is supplied when has_default (default=None on a non-Optional type
+        # is itself rejected); classification depends only on whether a default exists, not its value.
+        extra = {"default": 0} if has_default else {}
+        arg = _resolve_annotation(annotation, has_default=has_default, **extra)
+        assert arg.is_positional is expected_positional
 
     def test_optional_wrapping_annotated_with_none_inside(self) -> None:
         """Optional[Annotated[T | None, meta]] is allowed (inner type contains None)."""
         ann = Annotated[str | None, _OPT_META] | None
-        _kwargs, meta, positional = _resolve_annotation(ann)
-        assert meta is _OPT_META
-        assert positional is False
+        arg = _resolve_annotation(ann)
+        assert arg.metadata is _OPT_META
+        assert arg.is_positional is False
 
     def test_typing_union_optional(self) -> None:
         ns: dict = {}
         exec("import typing; t = typing.Union[str, None]", ns)
-        _kwargs, _meta, positional = _resolve_annotation(ns["t"])
-        assert positional is True
+        assert _resolve_annotation(ns["t"]).is_positional is True
 
     def test_typing_union_optional_with_default(self) -> None:
         ns: dict = {}
         exec("import typing; t = typing.Union[str, None]", ns)
-        _kwargs, _meta, positional = _resolve_annotation(ns["t"], has_default=True, default=None)
-        assert positional is False
+        assert _resolve_annotation(ns["t"], has_default=True, default=None).is_positional is False
 
     def test_annotated_multiple_metadata_picks_first(self) -> None:
         meta1 = Argument(help_text="first")
         meta2 = Option("--x", help_text="second")
-        kwargs, meta, _ = _resolve_annotation(Annotated[str, meta1, meta2])
-        assert meta is meta1
-        assert kwargs.get("help") == "first"
+        arg = _resolve_annotation(Annotated[str, meta1, meta2])
+        assert arg.metadata is meta1
+        assert arg.extras.get("help") == "first"
 
 
 # ---------------------------------------------------------------------------
@@ -1094,7 +1363,7 @@ class TestUnsupportedPatterns:
         ],
     )
     def test_unsupported_collection_no_nargs(self, annotation) -> None:
-        kwargs, _, _ = _resolve_annotation(annotation)
+        _flags, kwargs = _resolve_annotation(annotation)._emit()
         assert "nargs" not in kwargs
         assert "action" not in kwargs
 
@@ -1131,7 +1400,7 @@ class TestUnsupportedPatterns:
     )
     def test_passthrough_scalar_types_keep_no_converter(self, annotation) -> None:
         """str / Any / object are stored as the raw string (type stays None)."""
-        kwargs, _, _ = _resolve_annotation(annotation)
+        _flags, kwargs = _resolve_annotation(annotation)._emit()
         assert "type" not in kwargs
 
     @pytest.mark.parametrize(
@@ -1288,6 +1557,20 @@ class TestMetadata:
     def test_completer_in_kwargs(self) -> None:
         assert Argument(completer=cmd2.Cmd.path_complete).to_kwargs()["completer"] is cmd2.Cmd.path_complete
 
+    def test_extra_kwarg_forwarded_in_to_kwargs(self) -> None:
+        """A registered custom add_argument parameter is forwarded via **kwargs."""
+        assert Argument(annotated_custom_attr="v").to_kwargs()["annotated_custom_attr"] == "v"
+        assert Option("--x", annotated_custom_attr="v").to_kwargs()["annotated_custom_attr"] == "v"
+
+    def test_registered_custom_param_set_on_action(self) -> None:
+        """A registered custom parameter reaches the resulting argparse Action."""
+        action = _action_for(Annotated[str, Argument(annotated_custom_attr="v")])
+        assert action.get_annotated_custom_attr() == "v"  # type: ignore[attr-defined]
+
+    def test_unregistered_kwarg_raises_at_build(self) -> None:
+        """An unknown (unregistered) keyword is rejected when the parser is built."""
+        _assert_build_error(Annotated[str, Argument(definitely_not_registered="v")])
+
 
 # ---------------------------------------------------------------------------
 # _CollectionCastingAction
@@ -1322,42 +1605,42 @@ class TestCollectionRuntimeCast:
     """End-to-end verify ``parse_args`` returns the declared container type, not a plain list."""
 
     def test_set_int_returns_set(self) -> None:
-        parser = build_parser_from_function(_func_set_int)
+        parser = build_parser_from_function(_make_func(set[int], name="nums"))
         ns = parser.parse_args(["1", "2", "2", "3"])
         assert isinstance(ns.nums, set)
         assert ns.nums == {1, 2, 3}
 
     def test_tuple_ellipsis_returns_tuple(self) -> None:
-        parser = build_parser_from_function(_func_tuple_ellipsis)
+        parser = build_parser_from_function(_make_func(tuple[int, ...], name="values"))
         ns = parser.parse_args(["1", "2", "3"])
         assert isinstance(ns.values, tuple)
         assert ns.values == (1, 2, 3)
 
     def test_tuple_fixed_returns_tuple(self) -> None:
-        parser = build_parser_from_function(_func_tuple_fixed)
+        parser = build_parser_from_function(_make_func(tuple[int, int], name="pair"))
         ns = parser.parse_args(["5", "10"])
         assert isinstance(ns.pair, tuple)
         assert ns.pair == (5, 10)
 
     def test_list_bool_returns_list_of_bools(self) -> None:
-        parser = build_parser_from_function(_func_list_bool)
+        parser = build_parser_from_function(_make_func(list[bool], name="flags"))
         ns = parser.parse_args(["true", "no", "on"])
         assert ns.flags == [True, False, True]
 
     def test_tuple_paths_returns_tuple_of_paths(self) -> None:
-        parser = build_parser_from_function(_func_tuple_paths)
+        parser = build_parser_from_function(_make_func(tuple[Path, Path], name="src_dst"))
         ns = parser.parse_args(["/tmp/a", "/tmp/b"])
         assert isinstance(ns.src_dst, tuple)
         assert ns.src_dst == (Path("/tmp/a"), Path("/tmp/b"))
 
     def test_append_action_collects_values(self) -> None:
-        parser = build_parser_from_function(_func_append_action)
+        parser = build_parser_from_function(_make_func(Annotated[list[str], Option("--tag", action="append")], name="tag"))
         ns = parser.parse_args(["--tag", "a", "--tag", "b"])
         assert ns.tag == ["a", "b"]
 
     def test_int_subclass_uses_int_converter(self) -> None:
         """``Port(int)`` falls back to ``int`` converter; argparse returns ``int``, not ``Port``."""
-        parser = build_parser_from_function(_func_int_subclass)
+        parser = build_parser_from_function(_make_func(_Port, name="port"))
         ns = parser.parse_args(["8080"])
         assert ns.port == 8080
 
@@ -1920,6 +2203,20 @@ class TestSubcommandValidation:
             def do_bad(self, verbose: bool = False) -> None:
                 pass
 
+    def test_base_command_missing_handler_raises_with_no_parameters(self) -> None:
+        """A zero-parameter base command with no cmd2_handler must still raise.
+
+        Guards the function-level ``cmd2_handler`` check (a plain ``if`` in ``_resolve_parameters``,
+        not a :data:`_CONSTRAINTS` row): the per-argument :data:`_CONSTRAINTS` loop never runs when
+        no arguments exist, so this case is the sole reason the missing-handler check lives at
+        function scope.
+        """
+        with pytest.raises(TypeError, match="cmd2_handler"):
+
+            @with_annotated(base_command=True)
+            def do_bad(self) -> None:
+                pass
+
     def test_cmd2_handler_without_base_command_raises(self) -> None:
         """A 'cmd2_handler' parameter is only valid when base_command=True."""
         with pytest.raises(TypeError, match="base_command=True"):
@@ -1933,6 +2230,7 @@ class TestSubcommandValidation:
         [
             pytest.param({"help": "not allowed"}, id="help_only"),
             pytest.param({"aliases": ["x"]}, id="aliases_only"),
+            pytest.param({"deprecated": True}, id="deprecated_only"),
         ],
     )
     def test_subcmd_only_params_without_subcommand_to_raises(self, kwargs) -> None:
@@ -2023,3 +2321,1084 @@ class TestSubcommandValidation:
         assert spec.help == expected_help
         assert spec.aliases == expected_aliases
         assert isinstance(spec.parser_source(), argparse.ArgumentParser)
+
+    @pytest.mark.parametrize("deprecated", [True, False])
+    def test_subcommand_deprecated_flows_to_spec(self, deprecated) -> None:
+        from cmd2 import constants
+
+        @with_annotated(subcommand_to="team", deprecated=deprecated)
+        def team_create(self, name: str = "") -> None: ...
+
+        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
+        assert spec.deprecated is deprecated
+
+
+# ---------------------------------------------------------------------------
+# A non-Optional type with a None default is rejected (None would violate the hint)
+# ---------------------------------------------------------------------------
+
+
+class TestNoneDefaultRejection:
+    @pytest.mark.parametrize(
+        ("annotation", "kind"),
+        [
+            pytest.param(str, "pos", id="str"),
+            pytest.param(int, "pos", id="int"),
+            pytest.param(list[str], "pos", id="list"),
+            pytest.param(Annotated[str, Option("-n")], "pos", id="option"),
+            pytest.param(Annotated[str, Argument()], "pos", id="argument"),
+            pytest.param(str, "kw", id="kw_only"),
+        ],
+    )
+    def test_none_default_raises(self, annotation, kind) -> None:
+        _assert_build_error(annotation, default=None, kind=kind, match="not Optional")
+
+    def test_optional_none_default_builds(self) -> None:
+        parser = build_parser_from_function(_make_func(str | None, default=None))
+        assert parser.parse_args([]).value is None
+
+    @pytest.mark.parametrize(
+        "annotation",
+        [
+            pytest.param(Any, id="any"),
+            pytest.param(object, id="object"),
+            pytest.param(_MISSING, id="unannotated"),
+        ],
+    )
+    def test_none_accepting_types_exempt(self, annotation) -> None:
+        assert build_parser_from_function(_make_func(annotation, default=None)).parse_args([]).value is None
+
+
+# ---------------------------------------------------------------------------
+# Tightened action= contract (result type must match the declared type)
+# ---------------------------------------------------------------------------
+
+
+class TestActionTightening:
+    @pytest.mark.parametrize(
+        ("annotation", "pattern"),
+        [
+            pytest.param(Annotated[str, Option("-t", action="append")], "list", id="append_on_scalar"),
+            pytest.param(Annotated[set[str], Option("-t", action="append")], "list", id="append_on_set"),
+            pytest.param(Annotated[tuple[str, str], Option("-t", action="append")], "list", id="append_on_tuple"),
+            pytest.param(Annotated[str, Option("-t", action="extend")], "list", id="extend_on_scalar"),
+            pytest.param(Annotated[bool, Option("-c", action="count")], "int", id="count_on_bool"),
+            pytest.param(Annotated[str, Option("-c", action="store_const")], "const", id="store_const"),
+            pytest.param(Annotated[list[str], Option("-c", action="append_const")], "const", id="append_const"),
+            pytest.param(Annotated[str, Option("-c", action="frobnicate")], "not supported", id="unknown_action"),
+            pytest.param(Annotated[list[str], Option("-c", action="store_true")], "collection", id="noncollection_action"),
+            pytest.param(Annotated[int, Option("-c", action="store")], "not supported", id="explicit_store"),
+            pytest.param(Annotated[int, Option("-c", action="store", const=5)], "ambiguous", id="store_with_const"),
+            # The ambiguity wins even when the const's type also mismatches the declared type.
+            pytest.param(Annotated[int, Option("-c", action="store", const="x")], "ambiguous", id="store_with_mistyped_const"),
+        ],
+    )
+    def test_action_type_mismatch_raises(self, annotation, pattern) -> None:
+        _assert_build_error(annotation, match=pattern)
+
+    def test_append_on_list_accumulates(self) -> None:
+        parser = build_parser_from_function(_make_func(Annotated[list[str], Option("--tag", action="append")]))
+        assert parser.parse_args([]).value == []
+        assert parser.parse_args(["--tag", "a", "--tag", "b"]).value == ["a", "b"]
+
+    def test_extend_on_list_flattens_and_converts(self) -> None:
+        parser = build_parser_from_function(_make_func(Annotated[list[int], Option("-n", action="extend")]))
+        assert parser.parse_args([]).value == []
+        assert parser.parse_args(["-n", "1", "2", "-n", "3"]).value == [1, 2, 3]
+
+    def test_count_no_default_yields_zero(self) -> None:
+        annotation = Annotated[int, Option("-l", action="count")]
+        action = _action_for(annotation)
+        assert action.required is False
+        assert build_parser_from_function(_make_func(annotation)).parse_args([]).value == 0
+
+    def test_append_with_nargs_raises(self) -> None:
+        _assert_build_error(Annotated[list[str], Option("--tag", action="append", nargs=2)], match="nargs")
+
+    @pytest.mark.parametrize(
+        ("annotation", "omit_value"),
+        [
+            pytest.param(Annotated[int | None, Option("-c", action="count")], None, id="count_optional"),
+            pytest.param(Annotated[list[str] | None, Option("-t", action="append")], None, id="append_optional"),
+            pytest.param(Annotated[bool | None, Option("-v", action="store_true")], None, id="store_true_optional"),
+            pytest.param(Annotated[bool | None, Option("-q", action="store_false")], None, id="store_false_optional"),
+        ],
+    )
+    def test_self_defaulting_action_optional_yields_none(self, annotation, omit_value) -> None:
+        assert build_parser_from_function(_make_func(annotation)).parse_args([]).value is omit_value
+
+    @pytest.mark.parametrize(
+        ("annotation", "omit_value"),
+        [
+            pytest.param(Annotated[bool, Option("-v", action="store_true")], False, id="store_true"),
+            pytest.param(Annotated[bool, Option("-q", action="store_false")], True, id="store_false"),
+        ],
+    )
+    def test_store_bool_action_non_optional_default(self, annotation, omit_value) -> None:
+        """A non-Optional store_true/store_false still defaults to its natural absence value."""
+        assert build_parser_from_function(_make_func(annotation)).parse_args([]).value is omit_value
+
+
+# ---------------------------------------------------------------------------
+# const= on Option (store_const / append_const), inferred from the declared type
+# ---------------------------------------------------------------------------
+
+
+class TestConstOption:
+    def test_const_to_kwargs(self) -> None:
+        assert Option("-c", const=5).to_kwargs()["const"] == 5
+
+    def test_const_none_to_kwargs_preserved(self) -> None:
+        """An explicit const=None is kept (distinct from no const given)."""
+        assert Option("-c", const=None).to_kwargs()["const"] is None
+        assert "const" not in Option("-c").to_kwargs()
+
+    def test_const_on_scalar_infers_store_const(self) -> None:
+        p = build_parser_from_function(_make_func(Annotated[int, Option("-v", const=2)], default=0))
+        assert p.parse_args([]).value == 0
+        assert p.parse_args(["-v"]).value == 2
+
+    def test_const_on_list_infers_append_const(self) -> None:
+        p = build_parser_from_function(_make_func(Annotated[list[str], Option("--tag", const="x")]))
+        assert p.parse_args([]).value == []
+        assert p.parse_args(["--tag", "--tag"]).value == ["x", "x"]
+
+    def test_explicit_store_const(self) -> None:
+        annotation = Annotated[int, Option("-v", action="store_const", const=2)]
+        assert build_parser_from_function(_make_func(annotation, default=0)).parse_args(["-v"]).value == 2
+
+    def test_explicit_append_const(self) -> None:
+        annotation = Annotated[list[str], Option("--tag", action="append_const", const="x")]
+        assert build_parser_from_function(_make_func(annotation)).parse_args(["--tag"]).value == ["x"]
+
+    def test_store_const_optional_absent_is_none(self) -> None:
+        p = build_parser_from_function(_make_func(Annotated[str | None, Option("-m", const="fast")], default=None))
+        assert p.parse_args([]).value is None
+        assert p.parse_args(["-m"]).value == "fast"
+
+    def test_const_enum_member_stored_as_member(self) -> None:
+        class Color(enum.Enum):
+            RED = "red"
+            GREEN = "green"
+
+        annotation = Annotated[Color | None, Option("-c", const=Color.RED)]
+        assert build_parser_from_function(_make_func(annotation, default=None)).parse_args(["-c"]).value is Color.RED
+
+    @pytest.mark.parametrize(
+        ("annotation", "default", "expected"),
+        [
+            # const matching the declared (non-str) scalar type is accepted and stored verbatim.
+            pytest.param(Annotated[float, Option("-x", const=1.5)], 0.0, 1.5, id="float_const"),
+            pytest.param(Annotated[float, Option("-x", const=5)], 0.0, 5, id="float_const_int_ok"),
+            pytest.param(
+                Annotated[decimal.Decimal, Option("-x", const=decimal.Decimal("1.5"))],
+                decimal.Decimal(0),
+                decimal.Decimal("1.5"),
+                id="decimal_const",
+            ),
+            pytest.param(Annotated[Path, Option("-x", const=Path("/tmp"))], Path("."), Path("/tmp"), id="path_const"),
+        ],
+    )
+    def test_const_matching_scalar_type_accepted(self, annotation, default, expected) -> None:
+        p = build_parser_from_function(_make_func(annotation, default=default))
+        assert p.parse_args(["-x"]).value == expected
+
+    def test_path_store_const_drops_inferred_completer(self) -> None:
+        """A Path const infers store_const (a zero-arg action); the inferred path completer must be
+        dropped, else argparse rejects a completer on an action that takes no value."""
+        p = build_parser_from_function(_make_func(Annotated[Path, Option("-x", const=Path("/tmp"))], default=Path(".")))
+        assert p.parse_args([]).value == Path(".")
+        assert p.parse_args(["-x"]).value == Path("/tmp")
+
+    def test_path_append_const_drops_inferred_completer(self) -> None:
+        """append_const on list[Path] is also a zero-arg action; its inferred completer is dropped too."""
+        p = build_parser_from_function(
+            _make_func(Annotated[list[Path], Option("-x", action="append_const", const=Path("/tmp"))])
+        )
+        assert p.parse_args(["-x", "-x"]).value == [Path("/tmp"), Path("/tmp")]
+
+    # --- error cases ---
+
+    @pytest.mark.parametrize(
+        ("annotation", "default", "match"),
+        [
+            pytest.param(Annotated[int, Option("-n", const="notanint")], 0, "const", id="type_mismatch_scalar"),
+            pytest.param(Annotated[Literal["a", "b"], Option("-m", const="c")], "a", "const", id="not_a_literal_member"),
+            pytest.param(Annotated[float, Option("-x", const="s")], 0.0, "const", id="type_mismatch_float"),
+            pytest.param(Annotated[float, Option("-x", const=True)], 0.0, "const", id="float_const_rejects_bool"),
+            pytest.param(
+                Annotated[decimal.Decimal, Option("-x", const=5)], decimal.Decimal(0), "const", id="type_mismatch_decimal"
+            ),
+            pytest.param(Annotated[Path, Option("-x", const="/tmp")], Path("."), "const", id="type_mismatch_path"),
+            pytest.param(
+                Annotated[list[str], Option("-x", action="store_const", const="v")],
+                _MISSING,
+                "'list' is a collection",
+                id="store_const_on_list",
+            ),
+            pytest.param(
+                Annotated[str, Option("-x", action="append_const", const="v")],
+                "",
+                "'str' is not a list",
+                id="append_const_on_scalar",
+            ),
+            pytest.param(Annotated[str, Option("-x", action="store_const")], "", "const", id="action_without_const"),
+            pytest.param(Annotated[int, Option("-x", action="count", const=2)], 0, "const", id="incompatible_action"),
+            pytest.param(Annotated[set[str] | None, Option("-x", const="v")], None, "'set' is not a list", id="const_on_set"),
+            pytest.param(Annotated[int, Option("-x", const=5)], _MISSING, "default", id="non_optional_no_default"),
+        ],
+    )
+    def test_const_error(self, annotation, default, match) -> None:
+        _assert_build_error(annotation, default=default, match=match)
+
+
+class TestNargsOptionalConst:
+    """A scalar Option with an explicit nargs + const is argparse's optional-value-with-fallback idiom.
+
+    It must NOT collapse to a value-less store_const (which would drop the explicit nargs and the type
+    converter); it keeps the ``store`` action so absent -> default, bare flag -> const, flag VALUE -> value.
+    """
+
+    def test_str_optional_nargs_const_three_way(self) -> None:
+        annotation = Annotated[str | None, Option("--log", nargs="?", const="CONSOLE")]
+        p = build_parser_from_function(_make_func(annotation, name="log", default="OFF"))
+        act = next(a for a in p._actions if a.dest == "log")
+        assert isinstance(act, argparse._StoreAction)  # not _StoreConstAction
+        assert act.nargs == "?"
+        assert act.const == "CONSOLE"
+        assert p.parse_args([]).log == "OFF"  # absent -> default
+        assert p.parse_args(["--log"]).log == "CONSOLE"  # bare flag -> const
+        assert p.parse_args(["--log", "FILE"]).log == "FILE"  # flag VALUE -> value
+
+    def test_int_optional_nargs_const_converts_supplied_value(self) -> None:
+        """The supplied VALUE still runs through the inferred converter; the const is stored verbatim."""
+        annotation = Annotated[int | None, Option("--n", nargs="?", const=99)]
+        p = build_parser_from_function(_make_func(annotation, name="n", default=0))
+        assert p.parse_args([]).n == 0
+        assert p.parse_args(["--n"]).n == 99
+        assert p.parse_args(["--n", "7"]).n == 7  # type=int applied to the value
+
+    def test_nargs_const_still_validates_const_type(self) -> None:
+        """const must still match the declared type even on the nargs='?' path (stored verbatim)."""
+        _assert_build_error(Annotated[int, Option("--n", nargs="?", const="notint")], name="n", default=0, match="const")
+
+    def test_scalar_const_without_nargs_still_store_const(self) -> None:
+        """Regression guard: const alone (no nargs) keeps inferring the value-less store_const."""
+        p = build_parser_from_function(_make_func(Annotated[str, Option("--log", const="X")], name="log", default="off"))
+        act = next(a for a in p._actions if a.dest == "log")
+        assert isinstance(act, argparse._StoreConstAction)
+        assert p.parse_args(["--log"]).log == "X"
+        with pytest.raises(SystemExit):
+            p.parse_args(["--log", "Y"])  # value-less action rejects a supplied value
+
+
+class TestZeroArgActionRejectsUserCompletion:
+    """A user-supplied completer/choices_provider on a value-less action has nothing to complete.
+
+    Raw cmd2 raises in this case, so @with_annotated must fail loud rather than silently dropping the
+    user's request. A *type-inferred* completer (e.g. Path's) is still dropped silently -- only an
+    explicit one is rejected.
+    """
+
+    def _provider(self) -> list[str]:
+        return ["a", "b"]
+
+    @pytest.mark.parametrize("action", ["store_true", "store_false"])
+    def test_bool_flag_action_rejects_user_completer(self, action) -> None:
+        annotation = Annotated[bool, Option("--flag", action=action, completer=cmd2.Cmd.path_complete)]
+        _assert_build_error(annotation, name="flag", default=False, match="cannot be used with action")
+
+    def test_count_action_rejects_user_choices_provider(self) -> None:
+        annotation = Annotated[
+            int, Option("-v", action="count", choices_provider=TestZeroArgActionRejectsUserCompletion._provider)
+        ]
+        _assert_build_error(annotation, name="v", default=0, match="cannot be used with action")
+
+    def test_store_const_rejects_user_completer(self) -> None:
+        annotation = Annotated[str, Option("-m", action="store_const", const="x", completer=cmd2.Cmd.path_complete)]
+        _assert_build_error(annotation, name="m", default="off", match="cannot be used with action")
+
+    def test_append_const_rejects_user_choices_provider(self) -> None:
+        annotation = Annotated[
+            list[str],
+            Option(
+                "--tag", action="append_const", const="x", choices_provider=TestZeroArgActionRejectsUserCompletion._provider
+            ),
+        ]
+        _assert_build_error(annotation, name="tag", match="cannot be used with action")
+
+    def test_value_action_keeps_user_completer(self) -> None:
+        """Control: a value-consuming option still accepts a user completer (not a zero-arg action)."""
+        annotation = Annotated[str, Option("--path", completer=cmd2.Cmd.path_complete)]
+        p = build_parser_from_function(_make_func(annotation, name="path", default=""))
+        act = next(a for a in p._actions if a.dest == "path")
+        assert act.get_completer() is cmd2.Cmd.path_complete
+
+
+class TestConstArgumentRejected:
+    def test_argument_const_raises(self) -> None:
+        _assert_build_error(Annotated[str, Argument(const="x")], match="const")
+
+    def test_positional_const_via_no_metadata_path(self) -> None:
+        """A const on a parameter that resolves to a positional is rejected, not silently ignored."""
+
+        def do_x(self, name: Annotated[str, Argument(const="x")], other: str = "y") -> None: ...
+
+        with pytest.raises(TypeError, match="const"):
+            build_parser_from_function(do_x)
+
+
+# ---------------------------------------------------------------------------
+# Custom ``argparse.Action`` subclasses pass through to ``add_argument``
+# ---------------------------------------------------------------------------
+
+
+class _UpperAction(argparse.Action):
+    """Test action: store the upper-case value."""
+
+    def __call__(
+        self,
+        _parser: argparse.ArgumentParser,
+        ns: argparse.Namespace,
+        values: Any,
+        _option_string: str | None = None,
+    ) -> None:
+        setattr(ns, self.dest, values.upper() if isinstance(values, str) else values)
+
+
+class _FlagAction(argparse.Action):
+    """Test action: a presence-flag that takes no command-line value."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(nargs=0, **kwargs)
+
+    def __call__(
+        self,
+        _parser: argparse.ArgumentParser,
+        ns: argparse.Namespace,
+        _values: Any,
+        _option_string: str | None = None,
+    ) -> None:
+        setattr(ns, self.dest, True)
+
+
+class _ListAction(argparse.Action):
+    """Test action: store values as a plain list (no container_factory wrap)."""
+
+    def __call__(
+        self,
+        _parser: argparse.ArgumentParser,
+        ns: argparse.Namespace,
+        values: Any,
+        _option_string: str | None = None,
+    ) -> None:
+        setattr(ns, self.dest, list(values))
+
+
+class _ConstAction(argparse.Action):
+    """Test action: store ``self.const`` on presence."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(nargs=0, **kwargs)
+
+    def __call__(
+        self,
+        _parser: argparse.ArgumentParser,
+        ns: argparse.Namespace,
+        _values: Any,
+        _option_string: str | None = None,
+    ) -> None:
+        setattr(ns, self.dest, self.const)
+
+
+class TestCustomActionClass:
+    def test_scalar_class_action_passes_through(self) -> None:
+        """A class action runs verbatim; the type-inferred passthrough doesn't get in the way."""
+
+        def f(self, name: Annotated[str, Option("--name", action=_UpperAction)] = "") -> None: ...
+
+        parser = build_parser_from_function(f)
+        assert parser.parse_args(["--name", "hi"]).name == "HI"
+
+    def test_class_action_overrides_inferred_boolean_optional(self) -> None:
+        """A class action on a bool option replaces the inferred ``BooleanOptionalAction``."""
+
+        def f(self, loud: Annotated[bool, Option("--loud", action=_FlagAction)] = False) -> None: ...
+
+        parser = build_parser_from_function(f)
+        assert parser.parse_args(["--loud"]).loud is True
+
+    def test_class_action_on_list_drops_container_factory(self) -> None:
+        """A class action on ``list[T]`` doesn't receive the casting action's ``container_factory``."""
+
+        def f(self, xs: Annotated[list[str], Option("--xs", action=_ListAction, nargs="+")] = ()) -> None: ...
+
+        parser = build_parser_from_function(f)
+        assert parser.parse_args(["--xs", "a", "b"]).xs == ["a", "b"]
+
+    def test_class_action_with_const_skips_type_check(self) -> None:
+        """``const`` paired with a class action is not validated against the declared type."""
+        sentinel = object()
+
+        def f(self, mode: Annotated[str, Option("-m", action=_ConstAction, const=sentinel)] = "x") -> None: ...
+
+        parser = build_parser_from_function(f)
+        assert parser.parse_args(["-m"]).mode is sentinel
+
+    def test_class_action_uses_inferred_converter_on_scalar(self) -> None:
+        """The inferred ``type=int`` reaches the class action so values still coerce."""
+
+        class CaptureAction(argparse.Action):
+            def __call__(self, _p: Any, ns: Any, values: Any, _o: str | None = None) -> None:
+                setattr(ns, self.dest, ("seen", values))
+
+        def f(self, n: Annotated[int, Option("-n", action=CaptureAction)] = 0) -> None: ...
+
+        parser = build_parser_from_function(f)
+        assert parser.parse_args(["-n", "5"]).n == ("seen", 5)
+
+    def test_unknown_string_action_still_rejected(self) -> None:
+        """A typo in an action string is still caught -- only class actions are exempt."""
+        _assert_build_error(Annotated[str, Option("-x", action="frobnicate")], match="not supported")
+
+
+# ---------------------------------------------------------------------------
+# ``extra_kwargs`` rejects argparse kwargs that the decorator derives elsewhere
+# ---------------------------------------------------------------------------
+
+
+class TestReservedExtraKwargs:
+    @pytest.mark.parametrize("kw", ["type", "dest", "action", "required"])
+    def test_argument_rejects_reserved_kwarg(self, kw: str) -> None:
+        with pytest.raises(TypeError, match=kw):
+            Argument(**{kw: "x"})
+
+    @pytest.mark.parametrize("kw", ["type", "dest"])
+    def test_option_rejects_reserved_kwarg(self, kw: str) -> None:
+        with pytest.raises(TypeError, match=kw):
+            Option("--x", **{kw: "x"})
+
+    def test_option_keeps_named_action_and_required(self) -> None:
+        """``action=`` and ``required=`` are named parameters of ``Option`` and must still work."""
+        opt = Option("--x", action="store_true", required=True)
+        assert opt.action == "store_true"
+        assert opt.required is True
+
+    def test_error_message_includes_remediation_hint(self) -> None:
+        """The error names the offending kwarg and points at the signature-derived source."""
+        with pytest.raises(TypeError) as excinfo:
+            Option("--x", type=int)
+        msg = str(excinfo.value)
+        assert "type" in msg
+        assert "annotation" in msg
+
+    def test_unknown_registered_kwarg_still_passes_through(self) -> None:
+        """A user-registered custom add_argument kwarg still flows through ``extra_kwargs``."""
+        # The custom parameter ``annotated_custom_attr`` is registered at module import.
+        action = _action_for(Annotated[str, Argument(annotated_custom_attr="value")])
+        assert action.get_annotated_custom_attr() == "value"  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# ``default=`` as a metadata kwarg: equivalent to a signature default, with conflict and
+# SUPPRESS rejected.
+# ---------------------------------------------------------------------------
+
+
+class TestMetadataDefault:
+    def test_option_metadata_default_equivalent_to_signature_default(self) -> None:
+        """``Option(default=v)`` (no sig default) behaves the same as ``Option() = v``."""
+
+        def f_meta(self, name: Annotated[str, Option("--name", default="HI")]) -> None: ...
+        def f_sig(self, name: Annotated[str, Option("--name")] = "HI") -> None: ...
+
+        p_meta = build_parser_from_function(f_meta)
+        p_sig = build_parser_from_function(f_sig)
+        assert p_meta.parse_args([]).name == p_sig.parse_args([]).name == "HI"
+        assert p_meta.parse_args(["--name", "X"]).name == p_sig.parse_args(["--name", "X"]).name == "X"
+
+    def test_argument_metadata_default_equivalent_to_signature_default(self) -> None:
+        """``Argument(default=v)`` (no sig default) behaves the same as ``Argument() = v``."""
+
+        def f_meta(self, name: Annotated[str, Argument(default="POS")]) -> None: ...
+        def f_sig(self, name: Annotated[str, Argument()] = "POS") -> None: ...
+
+        p_meta = build_parser_from_function(f_meta)
+        p_sig = build_parser_from_function(f_sig)
+        assert p_meta.parse_args([]).name == p_sig.parse_args([]).name == "POS"
+        assert p_meta.parse_args(["X"]).name == p_sig.parse_args(["X"]).name == "X"
+
+    def test_metadata_default_makes_option_not_required(self) -> None:
+        """A metadata default removes ``required`` -- same as a signature default."""
+        action = _action_for(Annotated[str, Option("--x", default="HI")])
+        assert action.required is False
+
+    def test_metadata_default_makes_positional_nargs_optional(self) -> None:
+        """A metadata default on a positional sets ``nargs='?'`` -- same as a signature default."""
+        action = _action_for(Annotated[str, Argument(default="HI")])
+        assert action.nargs == "?"
+
+    def test_default_conflict_signature_and_metadata_raises(self) -> None:
+        """Both a signature default and a metadata default is a conflict."""
+
+        def f(self, name: Annotated[str, Option("--name", default="HI")] = "hello") -> None: ...
+
+        with pytest.raises(TypeError, match="default in both"):
+            build_parser_from_function(f)
+
+    def test_default_conflict_message_names_both_values(self) -> None:
+        """The conflict error message includes both candidate values."""
+
+        def f(self, name: Annotated[str, Option("--name", default="meta")] = "sig") -> None: ...
+
+        with pytest.raises(TypeError) as excinfo:
+            build_parser_from_function(f)
+        msg = str(excinfo.value)
+        assert "'sig'" in msg
+        assert "'meta'" in msg
+
+    def test_argparse_suppress_metadata_default_rejected(self) -> None:
+        """``default=argparse.SUPPRESS`` in metadata is rejected (kwarg would vanish)."""
+
+        def f(self, name: Annotated[str, Option("--name", default=argparse.SUPPRESS)]) -> None: ...
+
+        with pytest.raises(TypeError, match="SUPPRESS"):
+            build_parser_from_function(f)
+
+    def test_argparse_suppress_signature_default_rejected(self) -> None:
+        """``= argparse.SUPPRESS`` in the signature is rejected as well."""
+
+        def f(self, name: str = argparse.SUPPRESS) -> None: ...
+
+        with pytest.raises(TypeError, match="SUPPRESS"):
+            build_parser_from_function(f)
+
+    def test_metadata_default_none_on_non_optional_rejected(self) -> None:
+        """The 'None default on non-Optional' rule applies to a metadata default as well."""
+        _assert_build_error(Annotated[str, Option("--x", default=None)], match="None")
+
+    def test_metadata_default_none_on_optional_accepted(self) -> None:
+        """``default=None`` on a ``T | None`` annotation is fine (consistent with signature defaults)."""
+        action = _action_for(Annotated[str | None, Option("--x", default=None)])
+        assert action.default is None
+        assert action.required is False
+
+    def test_metadata_default_with_explicit_action(self) -> None:
+        """A metadata default flows through to the action layer (here: store_const)."""
+        annotation = Annotated[int, Option("-v", action="store_const", const=2, default=0)]
+        parser = build_parser_from_function(_make_func(annotation))
+        assert parser.parse_args([]).value == 0
+        assert parser.parse_args(["-v"]).value == 2
+
+
+# ---------------------------------------------------------------------------
+# A variable-arity positional must be the last positional
+# ---------------------------------------------------------------------------
+
+
+class TestPositionalOrdering:
+    def test_optional_positional_before_required_raises(self) -> None:
+        def do_x(self, a: str | None, b: str) -> None: ...
+
+        with pytest.raises(TypeError, match="variable arity"):
+            build_parser_from_function(do_x)
+
+    def test_list_positional_before_positional_raises(self) -> None:
+        def do_x(self, items: list[str], b: str) -> None: ...
+
+        with pytest.raises(TypeError, match="variable arity"):
+            build_parser_from_function(do_x)
+
+    def test_required_positional_before_star_args_builds(self) -> None:
+        def do_x(self, a: str, *args: str) -> None: ...
+
+        parser = build_parser_from_function(do_x)
+        ns = parser.parse_args(["one", "two", "three"])
+        assert ns.a == "one"
+        assert ns.args == ("two", "three")
+
+    def test_ranged_nargs_collection_before_positional_raises(self) -> None:
+        def do_x(self, items: Annotated[list[str], Argument(nargs=(1, 3))], b: str) -> None: ...
+
+        with pytest.raises(TypeError, match="variable arity"):
+            build_parser_from_function(do_x)
+
+
+# ---------------------------------------------------------------------------
+# Ranged nargs (min, max) tuples
+# ---------------------------------------------------------------------------
+
+
+class TestRangedNargs:
+    def test_ranged_nargs_on_scalar_raises(self) -> None:
+        _assert_build_error(Annotated[str, Argument(nargs=(2, 4))], match="not a collection type")
+
+    def test_ranged_nargs_on_list_builds(self) -> None:
+        parser = build_parser_from_function(_make_func(Annotated[list[str], Argument(nargs=(2, 4))]))
+        assert parser.parse_args(["a", "b", "c"]).value == ["a", "b", "c"]
+
+    def test_ranged_nargs_zero_one_on_scalar_builds(self) -> None:
+        # cmd2 collapses the (0, 1) range to OPTIONAL ('?'), which yields a single
+        # optional value -- not a list -- so it is allowed on a scalar, like nargs='?'.
+        parser = build_parser_from_function(_make_func(Annotated[str, Argument(nargs=(0, 1))]))
+        assert parser.parse_args(["x"]).value == "x"
+        assert parser.parse_args([]).value is None
+
+
+# ---------------------------------------------------------------------------
+# Subcommands group configuration (required / metavar / title / description)
+# ---------------------------------------------------------------------------
+
+
+class TestSubcommandGroupConfig:
+    @staticmethod
+    def _base_parser(**subcommand_kwargs):
+        from cmd2 import constants
+
+        @with_annotated(base_command=True, **subcommand_kwargs)
+        def do_root(self, cmd2_handler) -> None: ...
+
+        builder = getattr(do_root, constants.CMD_ATTR_PARSER_SOURCE)
+        return builder()
+
+    @staticmethod
+    def _subparsers_action(parser):
+        return next(a for a in parser._actions if isinstance(a, argparse._SubParsersAction))
+
+    def test_defaults_required_with_subcommand_metavar(self) -> None:
+        action = self._subparsers_action(self._base_parser())
+        assert action.required is True
+        assert action.metavar == "SUBCOMMAND"
+
+    def test_subcommand_required_false(self) -> None:
+        action = self._subparsers_action(self._base_parser(subcommand_required=False))
+        assert action.required is False
+
+    def test_subcommand_metavar_override(self) -> None:
+        action = self._subparsers_action(self._base_parser(subcommand_metavar="CMD"))
+        assert action.metavar == "CMD"
+
+    def test_subcommand_title_and_description(self) -> None:
+        parser = self._base_parser(subcommand_title="Commands", subcommand_description="pick one")
+        group = next((g for g in parser._action_groups if g.title == "Commands"), None)
+        assert group is not None
+        assert group.description == "pick one"
+
+
+# ---------------------------------------------------------------------------
+# Rich objects are accepted for description / epilog (HelpContent)
+# ---------------------------------------------------------------------------
+
+
+class TestRichHelpContent:
+    def test_rich_description_and_epilog_accepted(self) -> None:
+        from rich.text import Text
+
+        desc = Text("a rich description")
+        parser = build_parser_from_function(_make_func(str), description=desc, epilog=Text("epilog"))
+        assert parser.description is desc
+
+
+# ---------------------------------------------------------------------------
+# Docstring auto-extraction for parser description
+# ---------------------------------------------------------------------------
+
+
+class TestDocstringDescription:
+    """The first paragraph of ``func.__doc__`` fills ``description`` when none is given."""
+
+    def test_first_paragraph_used_when_no_description(self) -> None:
+        def func(self, name: str) -> None:
+            """Summary line for the command.
+
+            More detail here that should not appear in description.
+
+            :param name: a name
+            """
+
+        parser = build_parser_from_function(func)
+        assert parser.description == "Summary line for the command."
+
+    def test_multiline_first_paragraph_preserved(self) -> None:
+        def func(self, name: str) -> None:
+            """First line continues
+            onto the second line without a blank gap.
+
+            Detail paragraph below the blank line is dropped.
+            """
+
+        parser = build_parser_from_function(func)
+        assert parser.description == "First line continues\nonto the second line without a blank gap."
+
+    def test_explicit_description_overrides_docstring(self) -> None:
+        def func(self, name: str) -> None:
+            """Auto summary."""
+
+        parser = build_parser_from_function(func, description="explicit")
+        assert parser.description == "explicit"
+
+    def test_no_docstring_means_no_description(self) -> None:
+        def func(self, name: str) -> None: ...
+
+        parser = build_parser_from_function(func)
+        assert parser.description is None
+
+    def test_empty_docstring_means_no_description(self) -> None:
+        def func(self, name: str) -> None:
+            """ """
+
+        parser = build_parser_from_function(func)
+        assert parser.description is None
+
+    def test_field_directive_without_blank_line_does_not_leak(self) -> None:
+        """A ``:param:`` directly under the summary (no blank line) is stripped, not leaked."""
+
+        def func(self, name: str) -> None:
+            """Summary line.
+            :param name: should not leak into the description
+            """
+
+        parser = build_parser_from_function(func)
+        assert parser.description == "Summary line."
+
+    def test_decorator_uses_docstring(self) -> None:
+        from cmd2 import constants
+
+        @with_annotated
+        def do_run(self, name: str) -> None:
+            """Run the thing.
+
+            Extra detail.
+            """
+
+        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        assert builder().description == "Run the thing."
+
+    def test_subcommand_uses_docstring(self) -> None:
+        from cmd2 import constants
+
+        @with_annotated(subcommand_to="team")
+        def team_add(self, name: str) -> None:
+            """Add a member to the team."""
+
+        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        assert spec.parser_source().description == "Add a member to the team."
+
+
+# ---------------------------------------------------------------------------
+# Group(required=...) for mutually exclusive groups
+# ---------------------------------------------------------------------------
+
+
+class TestMutuallyExclusiveGroupRequired:
+    """``Group(required=True)`` reaches ``add_mutually_exclusive_group(required=True)``."""
+
+    def test_required_mutex_group_flag_set(self) -> None:
+        def func(self, verbose: bool = False, quiet: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose", "quiet", required=True),))
+        assert parser._mutually_exclusive_groups[0].required is True
+
+    def test_default_mutex_group_not_required(self) -> None:
+        def func(self, verbose: bool = False, quiet: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose", "quiet"),))
+        assert parser._mutually_exclusive_groups[0].required is False
+
+    def test_required_mutex_group_argparse_enforces(self) -> None:
+        def func(self, verbose: bool = False, quiet: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose", "quiet", required=True),))
+        with pytest.raises(SystemExit):
+            parser.parse_args([])
+
+    def test_required_on_plain_group_rejected(self) -> None:
+        """``required=True`` is only valid in mutex groups; argparse doesn't support it elsewhere."""
+
+        def func(self, host: str, port: int = 22) -> None: ...
+
+        with pytest.raises(ValueError, match="only valid in mutually_exclusive_groups"):
+            build_parser_from_function(func, groups=(Group("host", "port", required=True),))
+
+
+# ---------------------------------------------------------------------------
+# Parser-level kwargs: prog / usage / parents / argument_default
+# ---------------------------------------------------------------------------
+
+
+class TestParserLevelKwargs:
+    """Forward ``prog``, ``usage``, ``parents``, ``argument_default`` to the parser ctor."""
+
+    def test_prog_passthrough(self) -> None:
+        parser = build_parser_from_function(_make_func(str), prog="myprog")
+        assert parser.prog == "myprog"
+
+    def test_usage_passthrough(self) -> None:
+        parser = build_parser_from_function(_make_func(str), usage="usage: do stuff")
+        assert parser.usage == "usage: do stuff"
+
+    def test_parents_passthrough(self) -> None:
+        """argparse ``parents=`` copies argument actions from each parent into the new parser."""
+        parent = argparse.ArgumentParser(add_help=False)
+        parent.add_argument("--shared", help="from parent")
+
+        parser = build_parser_from_function(_make_func(str), parents=[parent])
+        dests = {a.dest for a in parser._actions}
+        assert "shared" in dests
+
+    def test_argument_default_passthrough(self) -> None:
+        sentinel = "DEFAULT_FROM_PARSER"
+        parser = build_parser_from_function(_make_func(str), argument_default=sentinel)
+        assert parser.argument_default == sentinel
+
+    def test_argument_default_suppress_works_with_explicit_defaults(self) -> None:
+        """``argument_default=SUPPRESS`` is safe when every argument sets its own default.
+
+        Every ``@with_annotated`` argument either is positional (always supplied) or
+        has an explicit default, so SUPPRESS at the parser level can't drop a kwarg
+        the function expects.
+        """
+
+        def func(self, name: str, count: int = 1) -> None: ...
+
+        parser = build_parser_from_function(func, argument_default=argparse.SUPPRESS)
+        ns = parser.parse_args(["alice"])
+        assert ns.name == "alice"
+        assert ns.count == 1
+
+    def test_decorator_passes_parser_kwargs(self) -> None:
+        from cmd2 import constants
+
+        @with_annotated(prog="myprog", usage="usage line")
+        def do_run(self, name: str) -> None: ...
+
+        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        parser = builder()
+        assert parser.prog == "myprog"
+        assert parser.usage == "usage line"
+
+    def test_prog_rejected_with_subcommand_to(self) -> None:
+        """cmd2's subcommand machinery rewrites ``prog`` from the parent hierarchy."""
+        with pytest.raises(TypeError, match=r"prog .* not supported with subcommand_to"):
+
+            @with_annotated(subcommand_to="team", prog="something")
+            def team_add(self, name: str) -> None: ...
+
+    def test_usage_allowed_on_subcommand(self) -> None:
+        """``usage`` doesn't conflict with subcommand prog rewriting."""
+        from cmd2 import constants
+
+        @with_annotated(subcommand_to="team", usage="team add NAME")
+        def team_add(self, name: str) -> None: ...
+
+        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        assert spec.parser_source().usage == "team add NAME"
+
+    def test_parents_allowed_on_subcommand(self) -> None:
+        from cmd2 import constants
+
+        parent = argparse.ArgumentParser(add_help=False)
+        parent.add_argument("--shared")
+
+        @with_annotated(subcommand_to="team", parents=[parent])
+        def team_add(self, name: str) -> None: ...
+
+        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        dests = {a.dest for a in spec.parser_source()._actions}
+        assert "shared" in dests
+
+
+# ---------------------------------------------------------------------------
+# Less-common parser-level kwargs: prefix_chars / fromfile_prefix_chars /
+# conflict_handler / add_help / allow_abbrev / exit_on_error
+# ---------------------------------------------------------------------------
+
+
+class TestParserLowLevelKwargs:
+    """Forward the remaining argparse parser ctor kwargs."""
+
+    def test_prefix_chars_passthrough(self) -> None:
+        """A non-default ``prefix_chars`` propagates so ``Option('+flag')`` would be legal."""
+        parser = build_parser_from_function(_make_func(str), prefix_chars="+-")
+        assert parser.prefix_chars == "+-"
+
+    def test_fromfile_prefix_chars_enables_argument_files(self) -> None:
+        """argparse loads tokens from a file when an arg starts with the prefix char."""
+        import tempfile
+
+        def func(self, name: str) -> None: ...
+
+        parser = build_parser_from_function(func, fromfile_prefix_chars="@")
+        with tempfile.NamedTemporaryFile("w", suffix=".args", delete=False) as fh:
+            fh.write("alice\n")
+            path = fh.name
+        try:
+            ns = parser.parse_args([f"@{path}"])
+            assert ns.name == "alice"
+        finally:
+            Path(path).unlink()
+
+    def test_conflict_handler_resolve_lets_parents_be_overridden(self) -> None:
+        """``conflict_handler='resolve'`` allows a parent's ``--flag`` to be redefined."""
+        parent = argparse.ArgumentParser(add_help=False)
+        parent.add_argument("--mode", default="parent")
+
+        def func(self, mode: str = "child") -> None: ...
+
+        parser = build_parser_from_function(func, parents=[parent], conflict_handler="resolve")
+        ns = parser.parse_args([])
+        # The locally-declared --mode wins after the resolve.
+        assert ns.mode == "child"
+
+    def test_add_help_false_drops_help_action(self) -> None:
+        parser = build_parser_from_function(_make_func(str), add_help=False)
+        assert all(not isinstance(a, argparse._HelpAction) for a in parser._actions)
+
+    def test_allow_abbrev_false_rejects_prefix_match(self) -> None:
+        """With abbreviations off, ``--verb`` no longer matches ``--verbose``."""
+
+        def func(self, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, allow_abbrev=False)
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--verb"])
+
+    def test_exit_on_error_false_raises_argument_error(self) -> None:
+        """``exit_on_error=False`` surfaces parse failures as exceptions instead of sys.exit."""
+
+        def func(self, count: int) -> None: ...
+
+        parser = build_parser_from_function(func, exit_on_error=False)
+        with pytest.raises(argparse.ArgumentError):
+            parser.parse_args(["not-an-int"])
+
+    def test_decorator_threads_all_low_level_kwargs(self) -> None:
+        """End-to-end: each kwarg lands on the parser when set on the decorator."""
+        from cmd2 import constants
+
+        @with_annotated(
+            prefix_chars="+-",
+            conflict_handler="resolve",
+            add_help=False,
+            allow_abbrev=False,
+            exit_on_error=False,
+            fromfile_prefix_chars="@",
+        )
+        def do_run(self, name: str) -> None: ...
+
+        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        parser = builder()
+        assert parser.prefix_chars == "+-"
+        assert parser.fromfile_prefix_chars == "@"
+        assert parser.conflict_handler == "resolve"
+        assert all(not isinstance(a, argparse._HelpAction) for a in parser._actions)
+        assert parser.allow_abbrev is False
+        assert parser.exit_on_error is False
+
+
+class TestExplicitChoicesValueSpace:
+    """Explicit ``choices=`` are reconciled with the inferred type converter and completer."""
+
+    def test_string_choices_converted_to_declared_type(self) -> None:
+        """choices=['1','2'] on an int parameter match after argparse runs the int converter."""
+        p = build_parser_from_function(_make_func(Annotated[int, Option("--x", choices=["1", "2"])], default=1, name="x"))
+        action = next(a for a in p._actions if a.dest == "x")
+        assert action.choices == [1, 2]
+        assert p.parse_args(["--x", "1"]).x == 1
+        with pytest.raises(SystemExit):
+            p.parse_args(["--x", "3"])
+
+    def test_already_typed_choices_left_untouched(self) -> None:
+        p = build_parser_from_function(_make_func(Annotated[int, Option("--x", choices=[1, 2])], default=1, name="x"))
+        action = next(a for a in p._actions if a.dest == "x")
+        assert action.choices == [1, 2]
+
+    def test_choice_invalid_for_type_is_build_error(self) -> None:
+        _assert_build_error(Annotated[int, Option("--x", choices=["1", "nope"])], default=1, match="not a valid")
+
+    def test_explicit_choices_kept_over_inferred_path_completer(self) -> None:
+        """An explicit choices= on a Path is retained (and the inferred path completer dropped)."""
+        p = build_parser_from_function(_make_func(Annotated[Path, Argument(choices=[Path("/a"), Path("/b")])], name="p"))
+        action = next(a for a in p._actions if a.dest == "p")
+        assert action.choices == [Path("/a"), Path("/b")]
+        assert getattr(action, "completer", None) is None
+        assert p.parse_args(["/a"]).p == Path("/a")
+        with pytest.raises(SystemExit):
+            p.parse_args(["/c"])
+
+    def test_user_completer_still_overrides_choices(self) -> None:
+        """A user-supplied completer continues to drive completion in place of static choices."""
+
+        def completer(self, *args: Any) -> list[str]:
+            return ["x"]
+
+        p = build_parser_from_function(
+            _make_func(Annotated[str, Option("--x", choices=["a", "b"], completer=completer)], default="a", name="x")
+        )
+        action = next(a for a in p._actions if a.dest == "x")
+        assert action.choices is None
+
+
+class TestStrConstValidation:
+    """A const on a str parameter must itself be a str (it is stored verbatim, not converted)."""
+
+    def test_non_str_const_on_str_rejected(self) -> None:
+        _assert_build_error(Annotated[str, Option("--x", const=123)], default="a", match="does not match")
+
+    def test_str_const_on_str_accepted(self) -> None:
+        p = build_parser_from_function(_make_func(Annotated[str, Option("--x", const="fast")], default="slow", name="x"))
+        assert p.parse_args(["--x"]).x == "fast"
+
+    def test_const_on_untyped_param_not_validated(self) -> None:
+        """Any/object/unannotated are genuinely untyped, so a const of any type is accepted."""
+        p = build_parser_from_function(_make_func(Annotated[Any, Option("--x", const=123)], default=None, name="x"))
+        assert p.parse_args(["--x"]).x == 123
+
+
+class TestArgumentDefaultSuppressGuard:
+    """``argument_default=argparse.SUPPRESS`` is rejected when it would drop an omittable argument."""
+
+    def test_suppress_with_optional_positional_rejected(self) -> None:
+        def do_t(self, x: int | None): ...
+
+        with pytest.raises(TypeError, match="SUPPRESS"):
+            build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
+
+    def test_suppress_safe_when_all_args_required_or_defaulted(self) -> None:
+        def do_t(self, a: int, b: str = "x"): ...
+
+        # ``a`` is always supplied (required positional); ``b`` carries its own default -> safe.
+        parser = build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
+        assert parser is not None
+
+    def test_suppress_safe_with_var_positional(self) -> None:
+        def do_t(self, *vals: int): ...
+
+        # *args is substituted with () by the invocation path, so SUPPRESS cannot strand it.
+        parser = build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
+        assert parser is not None
+
+
+class TestHelpKwargReserved:
+    """Raw ``help=`` is rejected so it cannot silently shadow the mapped ``help_text=``."""
+
+    def test_raw_help_rejected(self) -> None:
+        with pytest.raises(TypeError, match="help_text"):
+            Option("--x", help="raw")
+
+    def test_help_text_still_works(self) -> None:
+        action = _action_for(Annotated[str, Option("--x", help_text="mapped")], default="a")
+        assert action.help == "mapped"
+
+
+class TestEnumAcceptsNameAndValue:
+    """Enum parameters accept member values AND names (documented behavior, locked here)."""
+
+    def test_enum_accepts_both_name_and_value(self) -> None:
+        class Color(enum.Enum):
+            RED = "r"
+            GREEN = "g"
+
+        p = build_parser_from_function(_make_func(Color, name="c"))
+        assert p.parse_args(["r"]).c is Color.RED
+        assert p.parse_args(["RED"]).c is Color.RED
