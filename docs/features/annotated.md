@@ -404,12 +404,18 @@ def manage_project_add(self, name: str):
 [cmd2.annotated.build_parser_from_function][cmd2.annotated.build_parser_from_function] builds the
 parser directly from a function without registering a command. It accepts the same `groups`,
 `mutually_exclusive_groups`, `parser_class`, and forwarded
-[`Unpack[Cmd2ParserKwargs]`][cmd2.annotated.Cmd2ParserKwargs] as `@with_annotated`.
+[`Unpack[Cmd2ParserKwargs]`][cmd2.annotated.Cmd2ParserKwargs] as `@with_annotated`. Like the
+decorator, it skips the first parameter as the method receiver (`self`/`cls`).
 
 ```py
-@with_annotated(preserve_quotes=True)
-def do_raw(self, text: str):
-    self.poutput(f"raw: {text}")
+from cmd2.annotated import build_parser_from_function
+
+def greet(self, name: str, count: int = 1):
+    """Greet someone."""
+
+parser = build_parser_from_function(greet)
+namespace = parser.parse_args(["Alice", "--count", "3"])
+# namespace.name == "Alice", namespace.count == 3
 ```
 
 ## Automatic completion from types

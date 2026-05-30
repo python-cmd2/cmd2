@@ -219,19 +219,11 @@ _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
 
 
 class Cmd2ParserKwargs(TypedDict, total=False):
-    """Forwarded ctor kwargs for :class:`~cmd2.Cmd2ArgumentParser`.
+    """Forwarded ctor kwargs for :class:`~cmd2.Cmd2ArgumentParser` (PEP 692 ``Unpack``).
 
-    Single source of truth for the parser-construction kwargs accepted by
-    :func:`with_annotated` and :func:`build_parser_from_function` via PEP 692
-    ``Unpack[Cmd2ParserKwargs]``. Adding a new ctor kwarg to
-    :class:`~cmd2.Cmd2ArgumentParser` only needs a matching field here -- the
-    decorator picks it up automatically and IDEs/type-checkers surface it on
-    the call site.
-
-    All fields are optional (``total=False``); omit a key to use argparse's
-    default. ``suggest_on_error`` and ``color`` only take effect on
-    Python >= 3.14, where :class:`~cmd2.Cmd2ArgumentParser` forwards them to
-    the stdlib parent.
+    Single source of truth mirroring the parser's ``__init__``: add a field here to expose a new
+    ctor kwarg on the decorator's call site.  All optional (``total=False``); ``suggest_on_error``
+    and ``color`` only take effect on Python >= 3.14.
     """
 
     prog: str | None
@@ -275,15 +267,10 @@ class _BaseArgMetadata:
         "nargs": "nargs",
     }
 
-    #: ``add_argument`` kwargs that ``@with_annotated`` derives from the function signature
-    #: itself (or exposes under a different name), so the metadata classes refuse to accept them
-    #: as ``extra_kwargs``: setting them there would silently disagree with (or be overridden by)
-    #: the inferred value.  ``type`` comes from the annotation, ``dest`` from the parameter name,
-    #: and ``action``/``required`` are the named ``Option`` arguments and have no meaning on a
-    #: positional ``Argument``.  ``help`` is exposed as the ``help_text`` parameter; accepting a
-    #: raw ``help`` too would silently shadow it (``to_kwargs`` lets ``extra_kwargs`` win).
-    #: ``default`` is accepted as a named parameter (see :meth:`__init__`) and reconciled with
-    #: the signature default; it must not appear in ``extra_kwargs`` as well.
+    #: ``add_argument`` kwargs the decorator derives from the signature (or exposes under another
+    #: name), so the metadata classes refuse them as ``extra_kwargs``: ``type`` (from the annotation),
+    #: ``dest`` (parameter name), ``action``/``required`` (named ``Option`` args), ``help`` (use
+    #: ``help_text``).  Per-key remediation hints are in :meth:`__init__`.
     _RESERVED_EXTRA_KWARGS: ClassVar[frozenset[str]] = frozenset(
         {
             "type",
@@ -311,24 +298,12 @@ class _BaseArgMetadata:
     ) -> None:
         """Initialise shared metadata fields.
 
-        ``const`` is the value stored when a flag is present without an argument; on an
-        :class:`Option` it selects ``store_const`` (scalar type) or ``append_const``
-        (``list[T]``).  It is meaningless for a positional :class:`Argument` (argparse
-        ignores it there) and is rejected when the parser is built.  Left as :data:`_UNSET`
-        when not given, so an explicit ``const=None`` is distinct from "no const".
-
-        ``default`` is the value the parser stores when the argument is absent; it is
-        equivalent to writing the same default in the function signature
-        (``Annotated[T, Option('--x', default=v)]`` is the same as
-        ``Annotated[T, Option('--x')] = v``).  Specifying both the signature default and
-        the metadata default is a conflict and rejected; :data:`argparse.SUPPRESS` is also
-        rejected because it removes the kwarg the function expects.
-
-        ``extra_kwargs`` forwards any ``add_argument`` parameter not named above -- in
-        particular custom parameters registered via
-        :func:`~cmd2.argparse_utils.register_argparse_argument_parameter`.  They pass
-        straight through to ``add_argument`` (which validates them: an unknown keyword
-        raises ``TypeError`` when the parser is built), giving parity with a hand-built parser.
+        ``const`` is the value stored on a present flag with no argument (``Option`` only:
+        ``store_const``/``append_const``); ``_UNSET`` distinguishes "no const" from ``const=None``.
+        ``default`` mirrors the signature default (``Option(default=v)`` == ``... = v``); supplying
+        both, or ``argparse.SUPPRESS``, is rejected.  ``extra_kwargs`` forwards any other
+        ``add_argument`` parameter (incl. those from
+        :func:`~cmd2.argparse_utils.register_argparse_argument_parameter`) straight through.
         """
         reserved = self._RESERVED_EXTRA_KWARGS & extra_kwargs.keys()
         if reserved:
@@ -367,37 +342,14 @@ class _BaseArgMetadata:
 
 
 class Argument(_BaseArgMetadata):
-    """Metadata for a positional argument in an ``Annotated`` type hint.
-
-    Example::
-
-        def do_greet(self, name: Annotated[str, Argument(help_text="Person to greet")]):
-            ...
-    """
+    """Metadata for a positional argument in an ``Annotated`` type hint."""
 
 
 class Option(_BaseArgMetadata):
     """Metadata for an optional/flag argument in an ``Annotated`` type hint.
 
-    Positional ``*names`` are the flag strings (e.g. ``"--color"``, ``"-c"``).
-    When omitted, the decorator auto-generates ``--param-name`` (underscores
-    in the parameter name are converted to dashes).
-
-    Pass ``const=`` to store a fixed value when the flag is present: on a scalar parameter this
-    selects ``store_const`` (present -> ``const``, absent -> the default), on a ``list[T]`` it
-    selects ``append_const`` (each flag appends ``const``). A scalar ``const=`` paired with an
-    explicit ``nargs`` (e.g. ``nargs='?'``) instead keeps the ``store`` action for argparse's
-    optional-value idiom (bare flag -> ``const``, ``flag VALUE`` -> the value). ``action=`` may
-    still be given explicitly; otherwise it is inferred from the type.
-
-    Example::
-
-        def do_paint(
-            self,
-            color: Annotated[str, Option("--color", "-c", help_text="Color")] = "blue",
-            verbose: Annotated[int, Option("-v", const=2)] = 0,
-        ):
-            ...
+    Positional ``*names`` are the flag strings (e.g. ``"--color"``, ``"-c"``); when omitted
+    the decorator generates ``--param-name`` (underscores become dashes).
     """
 
     def __init__(
@@ -409,11 +361,10 @@ class Option(_BaseArgMetadata):
     ) -> None:
         """Initialise Option metadata.
 
-        ``action`` may be a string (one of the supported actions: ``store_true``, ``store_false``,
-        ``count``, ``append``, ``extend``, ``store_const``, ``append_const``) or a custom
-        :class:`argparse.Action` subclass.  A custom class is passed straight through to
-        ``add_argument`` and the user's class owns the storage behaviour; the type-inferred
-        action, container factory, and the action-specific constraint checks are skipped.
+        ``action`` is a supported string action (``store_true``/``store_false``/``count``/
+        ``append``/``extend``/``store_const``/``append_const``) or a custom
+        :class:`argparse.Action` subclass (passed through; it owns storage, so the inferred
+        action and the action-specific constraints are skipped).
         """
         super().__init__(**kwargs)
         self.names = names
@@ -431,19 +382,7 @@ class Option(_BaseArgMetadata):
 
 
 class Group:
-    """Argument-group definition for ``with_annotated(groups=...)``.
-
-    Wrap parameter names with an optional ``title`` and ``description`` so the
-    group renders its own section in ``--help`` output. Every ``groups`` and
-    ``mutually_exclusive_groups`` entry must be a ``Group`` instance.
-
-    Example::
-
-        @with_annotated(
-            groups=(Group("host", "port", title="connection", description="where to connect"),),
-        )
-        def do_connect(self, host: str, port: int = 22): ...
-    """
+    """Argument-group definition for ``with_annotated(groups=...)`` / ``mutually_exclusive_groups=...``."""
 
     def __init__(
         self,
@@ -455,12 +394,10 @@ class Group:
         """Initialise an argument group definition.
 
         :param members: parameter names to place in the group (at least one)
-        :param title: optional group title shown as a section header in help
-        :param description: optional group description shown under the title
-        :param required: only meaningful for ``mutually_exclusive_groups``; when
-                         ``True`` argparse requires exactly one member to be supplied.
-                         Setting this on a group passed to ``groups=`` raises ``ValueError``
-                         (argparse's ``add_argument_group`` has no ``required`` flag).
+        :param title: group title shown as a help section header
+        :param description: group description shown under the title
+        :param required: ``mutually_exclusive_groups`` only -- require exactly one member.
+                         On a ``groups=`` entry it raises ``ValueError``.
         """
         if not members:
             raise ValueError("Group requires at least one member parameter name")
@@ -485,12 +422,7 @@ _ArgumentTarget = argparse.ArgumentParser | argparse._MutuallyExclusiveGroup | a
 
 @dataclass
 class _TypeResult:
-    """How a declared type maps onto argparse settings.
-
-    Produced by ``_TYPE_TABLE`` entries and consumed by :meth:`_ArgparseArgument._apply_type`.
-    ``converter``/``choices``/``action``/``completer`` flow to argparse;
-    ``is_collection``/``fixed_arity`` are scratch the nargs table reads.
-    """
+    """How a declared type maps onto argparse settings."""
 
     converter: Callable[[str], Any] | None = None
     choices: Iterable[Any] | None = None
@@ -768,7 +700,7 @@ def _resolve_base_type(tp: Any, *, is_positional: bool = False) -> _TypeResult:
 
     if resolver is not None:
         return resolver(tp, args, is_positional=is_positional)
-    if tp in _PASSTHROUGH_TYPES or get_origin(tp) is not None:
+    if tp in _PASSTHROUGH_TYPES:
         return _TypeResult()
     raise TypeError(
         f"Unsupported parameter type {_type_name(tp)!r} for @with_annotated: there is no converter "
@@ -899,18 +831,7 @@ def _first_match(rules: list[_Rule[_S, _R]], subject: _S) -> _R:
 
 
 class _ArgparseArgument:
-    """Builder whose output fields mirror ``parser.add_argument(...)``'s schema.
-
-    Constructed by :func:`_resolve_parameters` from the signature-derived inputs and populated by
-    :meth:`_apply`, which fills each output slot from its decision table (role / nargs / default /
-    required) or imperative phase (targets / type / metadata / action).  Inputs and scratch live
-    alongside the output slots, but only the named slots are emitted (see :meth:`_emit`).
-
-    Building does *not* validate: validation is deferred to a final pass in :func:`_resolve_parameters`,
-    which links cross-argument facts (e.g. :attr:`has_following_positional`) onto each argument and then
-    runs the single :data:`_CONSTRAINTS` table.  New behavior is added as a table row, not an ``if`` in
-    the phases.  :meth:`add_to` emits the ``add_argument`` call.
-    """
+    """Builder whose output fields mirror ``parser.add_argument(...)``'s schema."""
 
     def __init__(
         self,
@@ -1014,30 +935,30 @@ class _ArgparseArgument:
         return self.metadata.nargs if self.metadata is not None else None
 
     @property
+    def _meta_nargs_yields_optional_single(self) -> bool:
+        """Whether an explicit ``nargs`` yields at most one value that argparse won't wrap in a list.
+
+        ``'?'`` and the ranged ``(0, 1)`` both make argparse store a bare scalar (or ``None`` when
+        absent) instead of a list -- so they neither cast into a declared collection nor give a
+        non-Optional scalar a value when omitted.
+        """
+        return self._meta_nargs == "?" or (isinstance(self._meta_nargs, tuple) and tuple(self._meta_nargs) == (0, 1))
+
+    @property
     def _meta_choices(self) -> Iterable[Any] | None:
         """Explicit ``Argument/Option(choices=)``, else ``None``."""
         return self.metadata.choices if self.metadata is not None else None
 
     @property
     def _has_user_completion(self) -> bool:
-        """Whether the user supplied a ``choices_provider`` / ``completer`` on the metadata.
-
-        A user-supplied completion source drives completion in place of any static ``choices``.
-        Distinct from a completer the *type* inferred (e.g. ``Path``'s ``path_complete``), which
-        yields to an explicit ``choices=`` instead of overriding it.
-        """
+        """Whether the user supplied a ``choices_provider`` / ``completer`` on the metadata."""
         if self.metadata is None:
             return False
         return self.metadata.choices_provider is not None or self.metadata.completer is not None
 
     @property
     def _meta_action(self) -> str | type[argparse.Action] | None:
-        """An explicit ``Option(action=)`` value, else ``None`` (only ``Option`` carries one).
-
-        May be a string (one of the supported actions) or a custom :class:`argparse.Action`
-        subclass; the constraint and policy rules below key on the string form, so a class
-        action skips them and is passed straight through to ``add_argument``.
-        """
+        """An explicit ``Option(action=)`` value, else ``None`` (only ``Option`` carries one)."""
         return self.metadata.action if isinstance(self.metadata, Option) else None
 
     @property
@@ -1110,23 +1031,11 @@ class _ArgparseArgument:
 
     @property
     def _is_inferred_bool_flag(self) -> bool:
-        """Whether this is a bool option using the inferred ``BooleanOptionalAction`` (no explicit action).
-
-        Like the explicit flag actions, it supplies its own value when absent (``False``, or ``None`` for
-        ``bool | None``), so it is neither ``required`` nor needs a user default.  Reads the resolved
-        ``action`` slot, so it is only meaningful after :meth:`_apply_type` / :data:`_ACTION_RULES` run.
-        """
+        """Whether this is a bool option using the inferred ``BooleanOptionalAction`` (no explicit action)."""
         return self.action is argparse.BooleanOptionalAction
 
     def _apply(self) -> None:
-        """Build this argument by deriving each output slot (no validation here).
-
-        :meth:`_apply_type` seeds the type-inferred baselines and :meth:`_apply_metadata_extras` merges
-        the user's display kwargs into ``extras``; then every output slot is filled from its value table
-        (role / action / choices / nargs / default / required).  The action *policy* is applied last, as
-        an override, because ``action=`` is cross-cutting and only makes sense once the rest is known.
-        Validity is checked later by :func:`_resolve_parameters` (via :meth:`_check_constraints`).
-        """
+        """Build this argument by deriving each output slot."""
         self.is_positional = _first_match(_ROLE_RULES, self)
         self._apply_targets()
         self._apply_type()
@@ -1205,11 +1114,7 @@ class _ArgparseArgument:
         self.fixed_arity = result.fixed_arity
 
     def _apply_metadata_extras(self) -> None:
-        """Pass the user's display/completion metadata straight through to ``extras``.
-
-        The override facts (choices/action/required/nargs) are read on demand from ``metadata`` via
-        properties; only these passthrough kwargs need merging into ``extras``.
-        """
+        """Pass the user's display/completion metadata straight through to ``extras``."""
         if self.metadata is None:
             return
         kwargs = self.metadata.to_kwargs()
@@ -1218,12 +1123,9 @@ class _ArgparseArgument:
     def _apply_action(self) -> None:
         """Apply an explicit ``Option(action=...)`` as the final override pass.
 
-        Runs after type/nargs/default/required are resolved and only sets slots; the action's validity
-        (type match, unknown action, ...) is enforced by the constraints.
-
-        A custom :class:`argparse.Action` subclass has no :data:`_ACTION_TABLE` policy: it owns its
-        own storage so the collection casting wrapper is dropped, but the type-inferred converter,
-        default, and required-ness are kept (the user can override them via :data:`extra_kwargs`).
+        Sets slots only; validity (type match, unknown action) is enforced by the constraints.  A
+        custom :class:`argparse.Action` has no policy -- it owns storage, so the casting wrapper is
+        dropped while the inferred converter/default/required are kept.
         """
         if self._meta_action_is_class:
             # The user's class owns storage; drop the casting wrapper's container_factory kwarg.
@@ -1233,10 +1135,8 @@ class _ArgparseArgument:
         if policy is None:
             return
         if policy.drop_converter:
-            # The action stores a fixed value and takes no command-line argument, so the parsed
-            # string is never converted, validated against choices, or tab-completed -- drop the
-            # converter, choices, and any value-completion metadata (e.g. the completer inferred
-            # for a Path type), which argparse rejects on a zero-argument action.
+            # The action takes no command-line value, so drop the converter, choices, and any
+            # value-completion metadata (argparse rejects them on a zero-argument action).
             self.type = None
             self.choices = None
             self.extras.pop("completer", None)
@@ -1345,13 +1245,9 @@ _ROLE_RULES: list[_Rule[_ArgparseArgument, bool]] = [
 #: (collection-casting / ``BooleanOptionalAction`` / none).  The action *policy* is applied later.
 _ACTION_RULES: list[_Rule[_ArgparseArgument, str | type[argparse.Action] | None]] = [
     (lambda a: a._meta_action is not None, lambda a: a._meta_action),  # explicit Option(action=)
-    # A const with no explicit action selects the const action by type shape:
-    # list[T] -> append_const (accumulate), any scalar -> store_const (single value).
-    # Exception: a scalar that *also* sets an explicit nargs (e.g. nargs='?') wants argparse's native
-    # optional-value-with-const semantics (absent -> default, bare flag -> const, flag VALUE -> converted
-    # VALUE), so it keeps the type-inferred ``store`` action instead of the value-less store_const -- the
-    # explicit nargs and the type converter would otherwise be silently dropped.  list[T] still infers
-    # append_const regardless of nargs (append_const takes no value, so nargs is meaningless there).
+    # const with no explicit action infers the const action by shape: list[T] -> append_const,
+    # scalar -> store_const.  Exception: a scalar that also sets nargs (e.g. '?') keeps the inferred
+    # ``store`` for argparse's optional-value idiom (bare flag -> const, flag VALUE -> value).
     (
         lambda a: a._has_const and (a.is_collection or a._meta_nargs is None),
         lambda a: "append_const" if a.is_collection else "store_const",
@@ -1428,11 +1324,8 @@ def _const_element_type(a: _ArgparseArgument) -> Any:
 def _const_mismatches_type(a: _ArgparseArgument) -> bool:
     """Whether a supplied ``const`` is incompatible with the declared (element) type.
 
-    Best-effort, mirroring the decorator's "parsed value matches the annotation" guarantee:
-    ``Literal``/``Enum`` are checked for membership and the concrete scalars by ``isinstance``;
-    open types (``str``/``Any``/``object``/the bool flag) and unresolved types are not validated.
-    A class :class:`argparse.Action` owns its storage semantics, so any ``const`` paired with one
-    is the user's responsibility and is not type-checked here.
+    Best-effort: ``Literal``/``Enum`` checked for membership, concrete scalars by ``isinstance``;
+    open types (``str``/``Any``/``object``/bool flag), unresolved types, and class actions are not checked.
     """
     if not a._has_const or a._meta_action_is_class:
         return False
@@ -1534,10 +1427,8 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
         ),
     ),
     (
-        # const only makes sense with the const actions; pairing it with another explicit action is contradictory.
-        # Restricted to *known* actions so an unsupported action (e.g. 'store') falls through to the
-        # "not supported" row below -- that is the more fundamental problem to report first.
-        # A class action is exempt -- the user's action owns const semantics.
+        # const only goes with the const actions.  Limited to *known* actions so an unsupported one
+        # (e.g. 'store') falls through to the "not supported" row.  Class actions own const, so exempt.
         lambda a: (
             isinstance(a._meta_action, str)
             and a._has_const
@@ -1580,10 +1471,8 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
         ),
     ),
     (
-        # action='store' WITH const is ambiguous, not merely redundant: plain 'store' ignores const
-        # unless paired with nargs='?', so the intent cannot be inferred -- a value-less const flag
-        # (store_const) or an optional value (nargs='?'+const)?  Reported before the const-type-mismatch
-        # row below so the ambiguity wins even when the const's type also happens to mismatch.
+        # action='store' + const is ambiguous: 'store' ignores const unless paired with nargs='?'.
+        # Placed before the const-type-mismatch row so the ambiguity wins even on a mistyped const.
         lambda a: a._meta_action == "store" and a._has_const,
         lambda a: TypeError(
             f"Option(action='store', const=...) on '{a.name}' is ambiguous: 'store' ignores const unless "
@@ -1618,11 +1507,9 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
         ),
     ),
     (
-        # A user-supplied completer / choices_provider on a value-less action (store_true / store_false /
-        # count / store_const / append_const) has nothing to complete: the action consumes no command-line
-        # value.  Raw cmd2 raises here, so fail loud rather than silently dropping the user's request.  A
-        # type-*inferred* completer (e.g. Path's) is still dropped silently by _apply_action -- only an
-        # explicit one is rejected.  A class action owns its storage (no _policy), so it is exempt.
+        # A user completer/choices_provider on a value-less action (store_true/false, count,
+        # store_const, append_const) has nothing to complete.  Fail loud (raw cmd2 raises too) rather
+        # than drop it silently.  Inferred completers (e.g. Path's) are still dropped; class actions exempt.
         lambda a: a._policy is not None and a._policy.drop_converter and a._has_user_completion,
         lambda a: TypeError(
             f"completer=/choices_provider= on '{a.name}' cannot be used with action={a._effective_action!r}, "
@@ -1670,6 +1557,17 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
             f"nargs={a._meta_nargs!r} produces a list of values, but the annotation "
             f"'{_type_name(a.inner_type)}' is not a collection type. "
             f"Use list[T], tuple[T, ...], or set[T] (optionally with | None) to match."
+        ),
+    ),
+    (
+        # An explicit '?' / (0, 1) on a collection yields a single value (or None), which the
+        # collection-casting action cannot wrap into the declared list/set/tuple.
+        lambda a: a.is_collection and a._meta_nargs_yields_optional_single,
+        lambda a: TypeError(
+            f"parameter '{a.name}' in {a.func_qualname} sets nargs={a._meta_nargs!r} on the collection "
+            f"type '{_type_name(a.inner_type)}', but that yields at most a single value, which argparse "
+            f"does not wrap in a list -- so it cannot be cast to the declared collection. Use nargs='*' or "
+            f"'+' (optionally with a default or '| None'), or drop the explicit nargs."
         ),
     ),
     (
@@ -1765,7 +1663,7 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
         # supplied, so the others arrive as None (violating its non-Optional type), and argparse forbids
         # it.  This is an argument-typing rule (required-ness comes from the annotation), so it lives here
         # rather than with the group graph construction.
-        lambda a: a.required and bool(a.mutex_group_indices),
+        lambda a: bool(a.mutex_group_indices) and (a.required or (a.is_positional and not a.omittable)),
         lambda a: ValueError(
             f"parameter {a.name!r} in mutually exclusive group {a.mutex_group_indices[0]} is required (no default "
             f"and not Optional), but mutually exclusive group members must be optional because "
@@ -1820,19 +1718,13 @@ def _resolve_parameters(
 ) -> list[_ArgparseArgument]:
     """Resolve a function signature into a list of argparse-argument builders.
 
-    ``base_command`` marks each argument's context so the base-command rows in :data:`_CONSTRAINTS`
-    fire (a base command's parameters become subcommand-level options, so positionals are rejected),
-    and drives the function-level ``cmd2_handler`` check below (a plain ``if``, not a table row,
-    because its subject is the whole function rather than a single argument).
-    ``groups``/``mutually_exclusive_groups`` are linked onto each argument as membership facts so the
-    cross-config rows in :data:`_CONSTRAINTS` (double-assignment, required-member) fire from the one
-    validity pass.
+    ``base_command`` marks each argument's context for the base-command :data:`_CONSTRAINTS` rows and
+    drives the function-level ``cmd2_handler`` check below.  ``groups``/``mutually_exclusive_groups``
+    are linked onto each argument as membership facts for the cross-config constraint rows.
     """
     sig = inspect.signature(func)
-    # Function-level check, before any argument is built: base_command dispatches to subcommands
-    # through its cmd2_handler parameter, so without one there is nothing to dispatch to.  Checked
-    # here rather than in the per-argument _CONSTRAINTS loop so it also fires when the function
-    # declares zero parameters, and wins over any per-argument rule on the same function.
+    # Function-level check (not a per-argument _CONSTRAINTS row): a base command dispatches through
+    # cmd2_handler, so it must exist.  Here so it also fires when the function has zero parameters.
     if base_command and "cmd2_handler" not in sig.parameters:
         raise TypeError(f"with_annotated(base_command=True) requires a 'cmd2_handler' parameter in {func.__qualname__}")
     try:
@@ -1926,7 +1818,7 @@ def _invoke_command_func(
     if var_positional_name is None:
         return func(self_arg, **func_kwargs)
     positional = [func_kwargs.pop(name) for name in leading_names]
-    var_values = func_kwargs.pop(var_positional_name, None) or ()
+    var_values = func_kwargs.pop(var_positional_name)
     return func(self_arg, *positional, *var_values, **func_kwargs)
 
 
@@ -2049,31 +1941,15 @@ def build_parser_from_function(
 ) -> Cmd2ArgumentParser:
     """Inspect a function's signature and build a ``Cmd2ArgumentParser``.
 
-    Parameters without defaults become positional arguments.
-    Parameters with defaults become ``--option`` flags.
-    ``Annotated[T, Argument(...)]`` or ``Annotated[T, Option(...)]``
-    overrides the default behavior.
-
-    Any kwarg accepted by :class:`~cmd2.Cmd2ArgumentParser`'s constructor
-    (``description``, ``epilog``, ``prog``, ``usage``, ``parents``,
-    ``argument_default``, ``prefix_chars``, ``fromfile_prefix_chars``,
-    ``conflict_handler``, ``add_help``, ``allow_abbrev``, ``exit_on_error``,
-    ``formatter_class``, ``ap_completer_type``, plus Python >= 3.14's
-    ``suggest_on_error`` and ``color``) is forwarded via ``**parser_kwargs``;
-    see :class:`Cmd2ParserKwargs` for the canonical list and IDE
-    autocomplete.
-
-    When ``description`` is omitted from ``parser_kwargs``, the first paragraph
-    of ``func.__doc__`` (up to the first blank line) is used.
+    The lower-level entry point behind :func:`with_annotated`.  ``parser_kwargs`` is forwarded to
+    the parser ctor (see :class:`Cmd2ParserKwargs`); when ``description`` is omitted, the first
+    paragraph of ``func.__doc__`` is used.
 
     :param func: the command function to inspect
     :param skip_params: parameter names to exclude from the parser
-    :param groups: :class:`Group` instances assigning parameter names to argument
-                   groups (for help display)
+    :param groups: :class:`Group` instances assigning parameters to argument groups
     :param mutually_exclusive_groups: :class:`Group` instances of mutually exclusive parameters
-    :param parser_class: custom parser class (defaults to the configured default).
-                         The chosen class must accept whatever subset of
-                         :class:`Cmd2ParserKwargs` you pass.
+    :param parser_class: custom parser class (defaults to the configured default)
     :param parser_kwargs: forwarded :class:`Cmd2ParserKwargs`
     :return: a fully configured ``Cmd2ArgumentParser``
     """
@@ -2209,16 +2085,12 @@ def _build_subcommand_handler(
     base_command: bool = False,
     options: _ParserBuildOptions,
 ) -> tuple[Callable[..., Any], str, Callable[[], Cmd2ArgumentParser]]:
-    """Build a subcommand handler wrapper and its parser from type annotations.
-
-    Validates the naming convention, builds a parser from annotations, and
-    returns a wrapper that unpacks ``argparse.Namespace`` into typed kwargs
-    before calling the original function.
+    """Build a subcommand's parser and a handler that unpacks the Namespace into typed kwargs.
 
     :param func: the subcommand handler function
     :param subcommand_to: parent command name (space-delimited for nesting)
     :param base_command: if True, the parser also gets ``add_subparsers()``
-    :param options: shared parser/subcommand configuration (see :class:`_ParserBuildOptions`)
+    :param options: shared parser/subcommand configuration
     :return: ``(handler, subcommand_name, parser_builder)``
     """
     subcmd_name = _derive_subcommand_name(func, subcommand_to)
@@ -2292,54 +2164,30 @@ def with_annotated(
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
     :param func: the command function (when used without parentheses)
-    :param ns_provider: optional callable returning a prepopulated argparse.Namespace.
-                        Not supported with ``subcommand_to``.
-    :param preserve_quotes: if True, preserve quotes in arguments.
-                            Not supported with ``subcommand_to``.
-    :param with_unknown_args: if True, capture unknown args (passed as extra kwarg ``_unknown``).
-                              Not supported with ``subcommand_to``.
-    :param base_command: if True, this command has subcommands (adds ``add_subparsers()``).
-                         Requires a ``cmd2_handler`` parameter and no positional arguments.
-    :param subcommand_to: parent command name (e.g. ``'team'`` or ``'team member'``).
-                          Function must be named ``{parent_underscored}_{subcommand}``.
-    :param help: help text for the subcommand (only valid with ``subcommand_to``)
-    :param aliases: alternative names for the subcommand (only valid with ``subcommand_to``)
-    :param deprecated: mark the subcommand as deprecated in ``--help`` (only valid with ``subcommand_to``)
-    :param groups: :class:`Group` instances assigning parameter names to argument
-                   groups (pass ``title``/``description`` for a titled section)
+    :param ns_provider: callable returning a prepopulated Namespace (not with ``subcommand_to``)
+    :param preserve_quotes: preserve quotes in arguments (not with ``subcommand_to``)
+    :param with_unknown_args: capture unknown args as the ``_unknown`` kwarg (not with ``subcommand_to``)
+    :param base_command: add ``add_subparsers()``; requires a ``cmd2_handler`` param and no positionals
+    :param subcommand_to: parent command name; function must be named ``{parent_underscored}_{subcommand}``
+    :param help: subcommand help text (only with ``subcommand_to``)
+    :param aliases: alternative subcommand names (only with ``subcommand_to``)
+    :param deprecated: mark the subcommand deprecated in ``--help`` (only with ``subcommand_to``)
+    :param groups: :class:`Group` instances assigning parameters to titled argument groups
     :param mutually_exclusive_groups: :class:`Group` instances of mutually exclusive parameters
     :param parser_class: custom parser class (defaults to the configured default)
-    :param subcommand_required: whether a subcommand must be supplied (only with ``base_command``)
-    :param subcommand_metavar: metavar shown for the subcommands group (only with ``base_command``)
-    :param subcommand_title: title for the subcommands ``--help`` section (only with ``base_command``)
-    :param subcommand_description: description for the subcommands ``--help`` section (only with ``base_command``)
-    :param parser_kwargs: any kwarg accepted by :class:`~cmd2.Cmd2ArgumentParser`'s
-                          constructor (see :class:`Cmd2ParserKwargs` for the full list and
-                          per-field types). IDEs/type-checkers surface these on the call
-                          site via PEP 692 ``Unpack``. Notable behaviors layered on top of
-                          the raw passthrough:
-
-                          - ``description`` -- when omitted, the first paragraph of the
-                            function's docstring (up to the first blank line) is used;
-                            pass an explicit value to override that.
-                          - ``prog`` -- rejected when ``subcommand_to`` is set, because
-                            cmd2's subcommand machinery rewrites ``prog`` from the parent
-                            command hierarchy and any value here would be silently
-                            overwritten.
-
-    Example::
-
-        class MyApp(cmd2.Cmd):
-            @with_annotated
-            def do_greet(self, name: str, count: int = 1): ...
-
-            @with_annotated(base_command=True)
-            def do_team(self, *, cmd2_handler): ...
-
-            @with_annotated(subcommand_to='team', help='create a team')
-            def team_create(self, name: str): ...
-
+    :param subcommand_required: whether a subcommand must be supplied (``base_command`` only)
+    :param subcommand_metavar: metavar for the subcommands group (``base_command`` only)
+    :param subcommand_title: title for the subcommands ``--help`` section (``base_command`` only)
+    :param subcommand_description: description for that section (``base_command`` only)
+    :param parser_kwargs: any :class:`~cmd2.Cmd2ArgumentParser` ctor kwarg (see :class:`Cmd2ParserKwargs`).
+                          ``description`` defaults to the docstring's first paragraph when omitted;
+                          ``prog`` is rejected with ``subcommand_to`` (cmd2 rewrites it from the parent).
     """
+    if aliases is None:
+        raise TypeError(
+            "aliases must be a sequence of subcommand-name strings (e.g. ('co', 'ci')), not None; "
+            "omit it or pass an empty tuple for no aliases."
+        )
     if (help is not None or aliases or deprecated) and subcommand_to is None:
         raise TypeError("'help', 'aliases', and 'deprecated' are only valid with subcommand_to")
     if subcommand_to is not None:

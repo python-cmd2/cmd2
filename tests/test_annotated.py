@@ -34,6 +34,7 @@ from cmd2.annotated import (
     _ArgparseArgument,
     _build_argument_group_targets,
     _CollectionCastingAction,
+    _invoke_command_func,
     _make_enum_type,
     _make_literal_type,
     _normalize_annotation,
@@ -973,6 +974,18 @@ class TestArgumentGroups:
         with pytest.raises(ValueError, match=r"mutually exclusive group members must be optional"):
             build_parser_from_function(func, mutually_exclusive_groups=(Group("local", "remote"),))
 
+    def test_required_positional_member_in_mutex_group_raises(self) -> None:
+        """A required *positional* mutex member is rejected with the same clear, type-safety message.
+
+        Positionals never carry argparse's ``required=`` flag, so the check keys on the parameter
+        being non-omittable, not on ``required`` (which is always False for a positional).
+        """
+
+        def func(self, a: int, b: Annotated[int, Option("--b")] = 0) -> None: ...
+
+        with pytest.raises(ValueError, match=r"mutually exclusive group members must be optional"):
+            build_parser_from_function(func, mutually_exclusive_groups=(Group("a", "b"),))
+
     def test_optional_members_in_mutex_group_build(self) -> None:
         """Mutex members that are Optional or have defaults build fine (the regression guard)."""
 
@@ -1362,10 +1375,23 @@ class TestUnsupportedPatterns:
             pytest.param(dict[str, int], id="dict"),
         ],
     )
-    def test_unsupported_collection_no_nargs(self, annotation) -> None:
-        _flags, kwargs = _resolve_annotation(annotation)._emit()
-        assert "nargs" not in kwargs
-        assert "action" not in kwargs
+    def test_unsupported_subscripted_generic_raises(self, annotation) -> None:
+        """An unsupported subscripted generic must raise, not silently arrive as a plain str."""
+        with pytest.raises(TypeError, match=r"Unsupported parameter type"):
+            _resolve_annotation(annotation)
+
+    @pytest.mark.parametrize(
+        "annotation",
+        [
+            pytest.param(Annotated[list[int] | None, Argument(nargs="?")], id="list_q"),
+            pytest.param(Annotated[list[int] | None, Argument(nargs=(0, 1))], id="list_0_1"),
+            pytest.param(Annotated[set[str] | None, Argument(nargs="?")], id="set_q"),
+        ],
+    )
+    def test_optional_single_nargs_on_collection_raises(self, annotation) -> None:
+        """nargs='?'/(0,1) on a collection yields a single value the casting action cannot wrap."""
+        with pytest.raises(TypeError, match=r"single value"):
+            _resolve_annotation(annotation)
 
     @pytest.mark.parametrize(
         "annotation",
@@ -2057,6 +2083,36 @@ class TestWithAnnotatedIntegration:
         app.do_cat("a b --upper")
         assert app.stdout.getvalue().splitlines()[-1] == "A|B"
 
+    def test_invoke_missing_leading_positional_raises(self) -> None:
+        """A leading positional missing from func_kwargs fails loud instead of shifting *args.
+
+        ``*positional`` is unpacked by index, so silently skipping a missing leading
+        name would slide ``*var_values`` into the wrong parameter. Fail with KeyError.
+        """
+
+        def fn(self, first: str, *rest: str) -> None: ...
+
+        with pytest.raises(KeyError, match="first"):
+            _invoke_command_func(
+                fn,
+                None,
+                {"rest": ("x", "y")},
+                leading_names=["first"],
+                var_positional_name="rest",
+            )
+
+    def test_invoke_missing_var_positional_raises(self) -> None:
+        """A *args name missing from func_kwargs fails loud instead of defaulting to empty.
+
+        argparse always populates the ``*args`` attribute (an empty list when nothing is
+        given), so a missing key signals a bug and must not be silently swallowed.
+        """
+
+        def fn(self, *rest: str) -> None: ...
+
+        with pytest.raises(KeyError, match="rest"):
+            _invoke_command_func(fn, None, {}, leading_names=[], var_positional_name="rest")
+
     def test_bare_call_decorator(self) -> None:
         """@with_annotated() with empty parens works same as @with_annotated."""
 
@@ -2180,6 +2236,11 @@ class TestSubcommands:
 
 
 class TestSubcommandValidation:
+    def test_subcommand_aliases_none_raises(self) -> None:
+        """aliases=None is off-spec (it must be a Sequence[str]); reject it with a clear message."""
+        with pytest.raises(TypeError, match=r"aliases must be a sequence"):
+            with_annotated(subcommand_to="team", aliases=None)
+
     def test_base_command_positional_str_raises(self) -> None:
         """Positional str param conflicts with subcommand name."""
         with pytest.raises(TypeError, match="positional"):
@@ -2938,10 +2999,17 @@ class TestRangedNargs:
         assert parser.parse_args(["a", "b", "c"]).value == ["a", "b", "c"]
 
     def test_ranged_nargs_zero_one_on_scalar_builds(self) -> None:
-        # cmd2 collapses the (0, 1) range to OPTIONAL ('?'), which yields a single
-        # optional value -- not a list -- so it is allowed on a scalar, like nargs='?'.
+        # cmd2 collapses the (0, 1) range to OPTIONAL ('?'), which yields a single optional value
+        # (not a list), so it is allowed on a scalar, like nargs='?'.  Absent -> None.
         parser = build_parser_from_function(_make_func(Annotated[str, Argument(nargs=(0, 1))]))
         assert parser.parse_args(["x"]).value == "x"
+        assert parser.parse_args([]).value is None
+
+    def test_optional_scalar_positional_nargs_question_builds(self) -> None:
+        # An explicit nargs='?' on a scalar positional is the standard argparse optional-positional;
+        # it is allowed (absent -> None). Developers wanting type-safe absence use 'T | None'.
+        parser = build_parser_from_function(_make_func(Annotated[int, Argument(nargs="?")]))
+        assert parser.parse_args(["5"]).value == 5
         assert parser.parse_args([]).value is None
 
 
