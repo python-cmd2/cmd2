@@ -1925,7 +1925,7 @@ def _invoke_command_func(
     """Call *func* from parsed kwargs, unpacking ``*args`` positionally when present."""
     if var_positional_name is None:
         return func(self_arg, **func_kwargs)
-    positional = [func_kwargs.pop(name) for name in leading_names if name in func_kwargs]
+    positional = [func_kwargs.pop(name) for name in leading_names]
     var_values = func_kwargs.pop(var_positional_name, None) or ()
     return func(self_arg, *positional, *var_values, **func_kwargs)
 

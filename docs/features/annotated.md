@@ -11,10 +11,9 @@
     For production code that needs stable behavior, use
     [@with_argparser](argument_processing.md#with_argparser-decorator) instead.
 
-The [@with_annotated][cmd2.annotated.with_annotated] decorator builds an argparse parser
-automatically from the decorated function's type annotations. No manual `add_argument()` calls are
-required, and the command body receives typed keyword arguments directly instead of an
-`argparse.Namespace`.
+The [@with_annotated][cmd2.with_annotated] decorator builds an argparse parser automatically from
+the decorated function's type annotations. No manual `add_argument()` calls are required, and the
+command body receives typed keyword arguments directly instead of an `argparse.Namespace`.
 
 The two decorators are interchangeable -- here is the same command written both ways:
 

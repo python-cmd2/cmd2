@@ -19,7 +19,7 @@ following for you:
 These features are provided by two decorators:
 
 - [@with_argparser][cmd2.with_argparser] -- build parsers manually with `add_argument()` calls
-- [@with_annotated][cmd2.annotated.with_annotated] -- build parsers automatically from type hints
+- [@with_annotated][cmd2.with_annotated] -- build parsers automatically from type hints
 
 See the
 [argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
@@ -61,10 +61,10 @@ stores internally. A consequence is that parsers don't need to be unique across 
 
     The `@with_annotated` decorator is **experimental** and its API may change in future releases.
 
-The [@with_annotated][cmd2.annotated.with_annotated] decorator builds an argparse parser
-automatically from the decorated function's type annotations -- no manual `add_argument()` calls
-required. See [Annotated Argument Processing](annotated.md) for the full reference, including type
-mapping, metadata classes, subcommands, and stability caveats.
+The [@with_annotated][cmd2.with_annotated] decorator builds an argparse parser automatically from
+the decorated function's type annotations -- no manual `add_argument()` calls required. See
+[Annotated Argument Processing](annotated.md) for the full reference, including type mapping,
+metadata classes, subcommands, and stability caveats.
 
 ## Argument Parsing
 
