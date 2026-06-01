@@ -2106,6 +2106,10 @@ def _build_subcommand_handler(
     def handler(self_arg: Any, ns: Any) -> Any:
         """Unpack Namespace into typed kwargs for the subcommand handler."""
         filtered = _filtered_namespace_kwargs(ns, accepted=_accepted)
+        if "cmd2_handler" in filtered:
+            cmd2_h = filtered["cmd2_handler"]
+            if isinstance(cmd2_h, functools.partial) and cmd2_h.func is handler:
+                filtered["cmd2_handler"] = None
         return _invoke_command_func(
             func, self_arg, filtered, leading_names=_leading_names, var_positional_name=_var_positional_name
         )
