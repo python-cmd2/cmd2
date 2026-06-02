@@ -292,11 +292,31 @@ ParserSource: TypeAlias = Union[
 
 
 @dataclass(kw_only=True)
+class ApCommandSpec:
+    """Metadata for an argparse-based command function.
+
+    :param parser_source: an existing Cmd2ArgumentParser instance or a factory
+                          (callable, staticmethod, or classmethod) that returns one.
+    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
+    """
+
+    parser_source: ParserSource[Any]
+    preserve_quotes: bool = False
+
+
+@dataclass(kw_only=True)
 class _SubcommandBase:
-    """Base metadata shared by all subcommand representations."""
+    """Base metadata shared by all subcommand representations.
+
+    :param name: the name of the subcommand
+    :param command: the full parent command path (e.g., 'foo bar')
+    :param help: optional help message for this subcommand
+    :param aliases: optional alternative names for this subcommand
+    :param deprecated: whether this subcommand is deprecated (requires Python 3.13+).
+    """
 
     name: str
-    command: str  # The full parent command path (e.g., 'foo bar')
+    command: str
     help: str | None = None
     aliases: tuple[str, ...] = ()
     deprecated: bool = False
@@ -304,7 +324,11 @@ class _SubcommandBase:
 
 @dataclass(kw_only=True)
 class SubcommandSpec(_SubcommandBase):
-    """Metadata used to build and register a subcommand."""
+    """Metadata used to build and register a subcommand.
+
+    :param parser_source: an existing Cmd2ArgumentParser instance or a factory
+                          (callable, staticmethod, or classmethod) that returns one.
+    """
 
     parser_source: ParserSource[Any]
 
@@ -314,6 +338,8 @@ class SubcommandRecord(_SubcommandBase):
     """A record of a subcommand's configuration and parser.
 
     Used primarily for attaching and detaching subcommands.
+
+    :param parser: the built Cmd2ArgumentParser instance for this subcommand
     """
 
     parser: "Cmd2ArgumentParser"

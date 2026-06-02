@@ -69,20 +69,17 @@ def cmd2_public_attr_name(name: str) -> str:
 
 # --- Private Internal Attributes ---
 
-# Attached to a command function; defines the source from which its parser is built
-CMD_ATTR_PARSER_SOURCE = cmd2_private_attr_name("parser_source")
-
 # Attached to a command function; defines its help section category
-CMD_ATTR_HELP_CATEGORY = cmd2_private_attr_name("help_category")
+COMMAND_ATTR_HELP_CATEGORY = cmd2_private_attr_name("help_category")
 
-# Attached to a command function; defines whether tokens are unquoted before reaching argparse
-CMD_ATTR_PRESERVE_QUOTES = cmd2_private_attr_name("preserve_quotes")
+# Attached to an argparse-based command function; defines its ApCommandSpec instance
+AP_COMMAND_ATTR_SPEC = cmd2_private_attr_name("ap_command_spec")
 
 # Attached to a subcommand function; defines its SubcommandSpec instance
-SUBCMD_ATTR_SPEC = cmd2_private_attr_name("subcommand_spec")
+SUBCOMMAND_ATTR_SPEC = cmd2_private_attr_name("subcommand_spec")
 
-# Attached to an argparse parser; identifies the Cmd or CommandSet instance it belongs to
-PARSER_ATTR_OWNER_ID = cmd2_private_attr_name("owner_id")
+# Attached to an argparse parser; stores the id() of the Cmd or CommandSet instance that registered it
+PARSER_ATTR_REGISTRANT_ID = cmd2_private_attr_name("registrant_id")
 
 
 # --- Public Developer Attributes ---
@@ -91,4 +88,4 @@ PARSER_ATTR_OWNER_ID = cmd2_private_attr_name("owner_id")
 NS_ATTR_STATEMENT = cmd2_public_attr_name("statement")
 
 # Attached to an argparse Namespace; the function to handle the subcommand (or None)
-NS_ATTR_SUBCMD_HANDLER = cmd2_public_attr_name("subcmd_handler")
+NS_ATTR_SUBCOMMAND_FUNC = cmd2_public_attr_name("subcommand_func")

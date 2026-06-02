@@ -16,6 +16,7 @@ from typing import (
 
 from . import constants
 from .argparse_utils import (
+    ApCommandSpec,
     ClassParamParserFactory,
     Cmd2ArgumentParser,
     NoParamParserFactory,
@@ -354,18 +355,20 @@ def with_argparser(
             # Include the Statement object created from the command line
             setattr(parsed_namespace, constants.NS_ATTR_STATEMENT, statement)
 
-            # Ensure NS_ATTR_SUBCMD_HANDLER is always present.
-            if not hasattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER):
-                setattr(parsed_namespace, constants.NS_ATTR_SUBCMD_HANDLER, None)
+            # Ensure subcommand function attribute is always present.
+            if not hasattr(parsed_namespace, constants.NS_ATTR_SUBCOMMAND_FUNC):
+                setattr(parsed_namespace, constants.NS_ATTR_SUBCOMMAND_FUNC, None)
 
             func_arg_list = _arg_swap(args, statement_arg, *parsing_results)
             return func(*func_arg_list, **kwargs)
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
-        # Set some custom attributes for this command
-        setattr(cmd_wrapper, constants.CMD_ATTR_PARSER_SOURCE, parser_source)
-        setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
+        spec = ApCommandSpec(
+            parser_source=parser_source,
+            preserve_quotes=preserve_quotes,
+        )
+        setattr(cmd_wrapper, constants.AP_COMMAND_ATTR_SPEC, spec)
 
         return cmd_wrapper
 
@@ -450,10 +453,10 @@ def as_subcommand_to(
     class MyApp(cmd2.Cmd):
         @cmd2.with_argparser(base_parser)
         def do_base(self, args: argparse.Namespace) -> None:
-            args.cmd2_subcmd_handler(args)
+            args.cmd2_subcommand_func(args)
 
         @cmd2.as_subcommand_to('base', 'sub', sub_parser, help="the subcommand")
-        def sub_handler(self, args: argparse.Namespace) -> None:
+        def sub_func(self, args: argparse.Namespace) -> None:
             self.poutput('Subcommand executed')
     ```
 
@@ -468,7 +471,7 @@ def as_subcommand_to(
             deprecated=deprecated,
             parser_source=parser_source,
         )
-        setattr(func, constants.SUBCMD_ATTR_SPEC, spec)
+        setattr(func, constants.SUBCOMMAND_ATTR_SPEC, spec)
         return func
 
     return arg_decorator
