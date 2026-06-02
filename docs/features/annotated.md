@@ -155,21 +155,31 @@ Both `Argument` and `Option` accept the same cmd2-specific fields as `add_argume
 `Option` additionally accepts `action`, `required`, and positional `*names` for custom flag strings
 (e.g. `Option("--color", "-c")`).
 
+### Actions
+
 When an `Option(action=...)` uses a zero-argument argparse action that takes no value from the
 command line (`count`, `store_true`, `store_false`, `store_const`, `append_const`),
-`@with_annotated` removes the value-oriented metadata inferred from the type before calling
-`add_argument()`: the `type` converter, the static `choices`, and any inferred tab-completer (such
-as the path completer for `Path`) or `choices_provider`. This matches argparse behavior (which
-rejects a completer on a value-less action) and avoids parser-construction errors such as combining
-`action='count'` with `type=int`. Actions that do consume values (`append` / `extend` on a
-`list[T]`, or a plain value option) keep the inferred converter and completer. `action='help'` and
-`action='version'` are not supported.
+`@with_annotated` strips the value-oriented metadata it inferred from the type before calling
+`add_argument()`:
+
+- the `type` converter,
+- the static `choices`, and
+- any inferred tab-completer (such as the path completer for `Path`) or `choices_provider`.
+
+This matches argparse behavior (which rejects a completer on a value-less action) and avoids
+parser-construction errors such as combining `action='count'` with `type=int`. Actions that _do_
+consume values (`append` / `extend` on a `list[T]`, or a plain value option) keep the inferred
+converter and completer.
 
 Pairing `const` with an explicit `nargs` on a scalar `Option` selects argparse's optional-value
 idiom instead of `store_const`. `Annotated[str | None, Option("--log", nargs='?', const="CONSOLE")]`
-keeps the `store` action and the inferred `type` converter, so the flag is three-way: absent yields
-the default, a bare `--log` yields the `const`, and `--log VALUE` yields the converted `VALUE`. The
-`const` is stored verbatim (it is not run through the converter), so it must already match the
+keeps the `store` action and the inferred `type` converter, so the flag is three-way:
+
+- absent yields the default,
+- a bare `--log` yields the `const`, and
+- `--log VALUE` yields the converted `VALUE`.
+
+The `const` is stored verbatim (it is not run through the converter), so it must already match the
 declared type. Without an explicit `nargs`, `const` alone still infers the value-less `store_const`
 (present yields the `const`, and supplying a value is an error).
 
@@ -192,6 +202,8 @@ def do_shout(self, name: Annotated[str, Option("--name", action=UpperAction)] = 
 `action='help'` and `action='version'` are not supported by `@with_annotated`; use `@with_argparser`
 if you need them.
 
+### Reserved keyword arguments
+
 `Argument()` and `Option()` refuse a handful of `add_argument()` kwargs that the decorator derives
 from the function signature itself, so misusing them surfaces as a clear `TypeError` instead of a
 silent override. The refused kwargs are:
@@ -203,6 +215,8 @@ silent override. The refused kwargs are:
 
 Every other `add_argument()` parameter passes through, including any custom parameter registered via
 [register_argparse_argument_parameter][cmd2.argparse_utils.register_argparse_argument_parameter].
+
+### Defaults
 
 A `default` may be supplied either through the function signature or as a metadata kwarg. The two
 forms are equivalent:
@@ -222,6 +236,8 @@ function without the keyword argument it expects.
 Parser-construction kwargs such as `add_help`, `prefix_chars`, `fromfile_prefix_chars`,
 `argument_default`, `conflict_handler`, and `allow_abbrev` are not exposed by `@with_annotated`. Set
 them on a custom `parser_class` subclass and pass it via `parser_class=`.
+
+### Choices and enums
 
 When a user-supplied `choices_provider` or `completer` is given for an inferred `Enum` or `Literal`,
 the inferred static `choices` list is dropped so completion is driven by the provider or completer.
@@ -268,17 +284,10 @@ list the values.
 - `groups` -- `Group` instances assigning parameter names to argument groups
 - `mutually_exclusive_groups` -- `Group` instances of mutually exclusive parameters
 - `parser_class` -- a custom parser class (defaults to the configured default)
-- `**parser_kwargs` -- every other parser-construction kwarg accepted by `Cmd2ArgumentParser` is
-  forwarded through PEP 692
-  [`Unpack`][typing.Unpack][`[Cmd2ParserKwargs]`][cmd2.annotated.Cmd2ParserKwargs]: `description`,
-  `epilog`, `prog`, `usage`, `parents`, `argument_default`, `prefix_chars`, `fromfile_prefix_chars`,
-  `conflict_handler`, `add_help`, `allow_abbrev`, `exit_on_error`, `formatter_class`,
-  `ap_completer_type`, and on Python &ge; 3.14 `suggest_on_error` / `color`. Two behaviors layer on
-  top of the raw passthrough:
-    - `description` -- when omitted, the first paragraph of the function's docstring (up to the
-      first blank line) is used; pass an explicit value to override.
-    - `prog` -- rejected when `subcommand_to` is set; cmd2's subcommand machinery rewrites `prog`
-      from the parent command hierarchy and any value here would be silently overwritten.
+- `**parser_kwargs` -- every other `Cmd2ArgumentParser` constructor kwarg, forwarded through PEP 692
+  [`Unpack[Cmd2ParserKwargs]`][cmd2.annotated.Cmd2ParserKwargs]. See
+  [Parser customization](#parser-customization) below for the full list and the `description` /
+  `prog` special cases.
 
 ```py
 @with_annotated(with_unknown_args=True)
@@ -295,6 +304,16 @@ Every `Cmd2ArgumentParser` constructor kwarg flows straight through `@with_annot
 the forwarded kwargs and gives type-checkers/IDEs autocomplete on the decorator's call site: adding
 a new ctor kwarg to `Cmd2ArgumentParser` only needs a matching field on `Cmd2ParserKwargs`, and the
 annotated decorator picks it up automatically.
+
+The forwarded kwargs are `description`, `epilog`, `prog`, `usage`, `parents`, `argument_default`,
+`prefix_chars`, `fromfile_prefix_chars`, `conflict_handler`, `add_help`, `allow_abbrev`,
+`exit_on_error`, `formatter_class`, `ap_completer_type`, and on Python ≥ 3.14 `suggest_on_error` /
+`color`. Two of them layer extra behavior on top of the raw passthrough:
+
+- `description` -- when omitted, it is filled from the function's docstring (detailed below); pass
+  an explicit value to override.
+- `prog` -- rejected when `subcommand_to` is set; cmd2's subcommand machinery rewrites `prog` from
+  the parent command hierarchy, so any value here would be silently overwritten.
 
 `parser_class` stays as its own explicit kwarg because it selects the class itself rather than a
 value passed to it. Argument groups are declared with [Group][cmd2.annotated.Group]; pass `title`

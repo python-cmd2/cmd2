@@ -1,12 +1,12 @@
 """Build argparse parsers from type-annotated function signatures.
 
-.. warning:: Experimental
+!!! warning "Experimental"
 
-   This module is experimental and its behavior may change in future releases.
+    This module is experimental and its behavior may change in future releases.
 
-The :func:`with_annotated` decorator inspects a command function's type hints and
-default values to build a ``Cmd2ArgumentParser``.  :class:`Argument` and
-:class:`Option` metadata classes give finer per-parameter control via
+The [`with_annotated`][cmd2.annotated.with_annotated] decorator inspects a command function's type hints and
+default values to build a ``Cmd2ArgumentParser``.  [`Argument`][cmd2.annotated.Argument] and
+[`Option`][cmd2.annotated.Option] metadata classes give finer per-parameter control via
 ``typing.Annotated``.
 
 Parameters without defaults become positional arguments; parameters with defaults
@@ -18,7 +18,7 @@ collected into a tuple.  Underscores in a parameter name become dashes in the ge
 flag (``dry_run`` -> ``--dry-run``); pass an explicit ``Option("--my_flag")`` to opt out.
 Positional-only parameters (before ``/``) and ``**kwargs`` raise ``TypeError``.  The parameter
 names ``dest`` and ``subcommand`` are reserved; ``cmd2_statement`` receives the parsed
-``Statement`` and (with ``base_command=True``) ``cmd2_handler`` receives the subcommand handler::
+``Statement`` and (with ``base_command=True``) ``cmd2_handler`` receives the subcommand handler:
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_annotated
@@ -27,8 +27,8 @@ names ``dest`` and ``subcommand`` are reserved; ``cmd2_statement`` receives the 
                 msg = f"Hello {name}"
                 self.poutput(msg.upper() if loud else msg)
 
-Use ``Annotated`` with :class:`Argument` or :class:`Option` for finer
-control over individual parameters::
+Use ``Annotated`` with [`Argument`][cmd2.annotated.Argument] or [`Option`][cmd2.annotated.Option] for finer
+control over individual parameters:
 
     from typing import Annotated
 
@@ -84,7 +84,7 @@ declared type:
   converted ``VALUE``); the ``const`` is stored verbatim and must match the declared type.
   ``const`` is validated against the declared type and is rejected on a positional ``Argument`` (argparse
   ignores it there)
-- a custom :class:`argparse.Action` subclass -- passed straight through to ``add_argument``.
+- a custom `argparse.Action` subclass -- passed straight through to ``add_argument``.
   The user's class owns storage, so the collection-casting wrapper is dropped and the action-specific
   type/const/collection-shape constraints are skipped.  The type-inferred converter, default, and
   ``required`` are still applied; the action receives them like any hand-built ``add_argument`` call.
@@ -106,7 +106,7 @@ signature itself, so passing them through ``Argument(...)`` / ``Option(...)`` ra
 parameter, which maps to it -- a raw ``help`` would silently shadow it), and -- on ``Argument`` only
 -- ``action`` / ``required`` (which have no meaning on a positional).  Every other ``add_argument``
 parameter, including those registered via
-:func:`~cmd2.argparse_utils.register_argparse_argument_parameter`, passes through unchanged.
+[`register_argparse_argument_parameter`][cmd2.argparse_utils.register_argparse_argument_parameter], passes through unchanged.
 
 A ``default`` may be supplied either as the function-signature default (``param: T = v``) or as
 ``Argument(default=v)`` / ``Option(default=v)`` -- the two forms are equivalent.  Specifying both at
@@ -114,12 +114,12 @@ once raises ``TypeError`` (the value would have two sources of truth), and ``arg
 rejected as a default from either source because it would remove the keyword argument the function
 expects.
 
-Parser-level customization is forwarded to :class:`~cmd2.Cmd2ArgumentParser`'s constructor via PEP
+Parser-level customization is forwarded to [`Cmd2ArgumentParser`][cmd2.argparse_utils.Cmd2ArgumentParser]'s constructor via PEP
 692 ``**parser_kwargs: Unpack[Cmd2ParserKwargs]``.  Anything the parser ctor accepts -- ``description``,
 ``epilog``, ``prog``, ``usage``, ``parents``, ``argument_default``, ``prefix_chars``,
 ``fromfile_prefix_chars``, ``conflict_handler``, ``add_help``, ``allow_abbrev``, ``exit_on_error``,
 ``formatter_class``, ``ap_completer_type``, and on Python >= 3.14 ``suggest_on_error`` / ``color`` --
-flows straight through; the :class:`Cmd2ParserKwargs` ``TypedDict`` is the single source of truth
+flows straight through; the [`Cmd2ParserKwargs`][cmd2.annotated.Cmd2ParserKwargs] ``TypedDict`` is the single source of truth
 and gives type-checkers/IDEs autocomplete on the decorator's call site.  ``parser_class`` stays as
 its own explicit kwarg because it selects the class itself, not a value passed to it.  Two
 behaviors layer on top of the raw passthrough: if ``description`` is omitted, the first paragraph
@@ -218,7 +218,7 @@ _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
 
 
 class Cmd2ParserKwargs(TypedDict, total=False):
-    """Forwarded ctor kwargs for :class:`~cmd2.Cmd2ArgumentParser` (PEP 692 ``Unpack``).
+    """Forwarded ctor kwargs for [`Cmd2ArgumentParser`][cmd2.argparse_utils.Cmd2ArgumentParser] (PEP 692 ``Unpack``).
 
     Single source of truth mirroring the parser's ``__init__``: add a field here to expose a new
     ctor kwarg on the decorator's call site.  All optional (``total=False``); ``suggest_on_error``
@@ -302,7 +302,7 @@ class _BaseArgMetadata:
         ``default`` mirrors the signature default (``Option(default=v)`` == ``... = v``); supplying
         both, or ``argparse.SUPPRESS``, is rejected.  ``extra_kwargs`` forwards any other
         ``add_argument`` parameter (incl. those from
-        :func:`~cmd2.argparse_utils.register_argparse_argument_parameter`) straight through.
+        [`register_argparse_argument_parameter`][cmd2.argparse_utils.register_argparse_argument_parameter]) straight through.
         """
         reserved = self._RESERVED_EXTRA_KWARGS & extra_kwargs.keys()
         if reserved:
@@ -362,7 +362,7 @@ class Option(_BaseArgMetadata):
 
         ``action`` is a supported string action (``store_true``/``store_false``/``count``/
         ``append``/``extend``/``store_const``/``append_const``) or a custom
-        :class:`argparse.Action` subclass (passed through; it owns storage, so the inferred
+        `argparse.Action` subclass (passed through; it owns storage, so the inferred
         action and the action-specific constraints are skipped).
         """
         super().__init__(**kwargs)
@@ -1940,16 +1940,16 @@ def build_parser_from_function(
 ) -> Cmd2ArgumentParser:
     """Inspect a function's signature and build a ``Cmd2ArgumentParser``.
 
-    The lower-level entry point behind :func:`with_annotated`.  ``parser_kwargs`` is forwarded to
-    the parser ctor (see :class:`Cmd2ParserKwargs`); when ``description`` is omitted, the first
+    The lower-level entry point behind [`with_annotated`][cmd2.annotated.with_annotated].  ``parser_kwargs`` is forwarded to
+    the parser ctor (see [`Cmd2ParserKwargs`][cmd2.annotated.Cmd2ParserKwargs]); when ``description`` is omitted, the first
     paragraph of ``func.__doc__`` is used.
 
     :param func: the command function to inspect
     :param skip_params: parameter names to exclude from the parser
-    :param groups: :class:`Group` instances assigning parameters to argument groups
-    :param mutually_exclusive_groups: :class:`Group` instances of mutually exclusive parameters
+    :param groups: [`Group`][cmd2.annotated.Group] instances assigning parameters to argument groups
+    :param mutually_exclusive_groups: [`Group`][cmd2.annotated.Group] instances of mutually exclusive parameters
     :param parser_class: custom parser class (defaults to the configured default)
-    :param parser_kwargs: forwarded :class:`Cmd2ParserKwargs`
+    :param parser_kwargs: forwarded [`Cmd2ParserKwargs`][cmd2.annotated.Cmd2ParserKwargs]
     :return: a fully configured ``Cmd2ArgumentParser``
     """
     parser_cls = parser_class or DEFAULT_ARGUMENT_PARSER
@@ -2175,14 +2175,15 @@ def with_annotated(
     :param help: subcommand help text (only with ``subcommand_to``)
     :param aliases: alternative subcommand names (only with ``subcommand_to``)
     :param deprecated: mark the subcommand deprecated in ``--help`` (only with ``subcommand_to``)
-    :param groups: :class:`Group` instances assigning parameters to titled argument groups
-    :param mutually_exclusive_groups: :class:`Group` instances of mutually exclusive parameters
+    :param groups: [`Group`][cmd2.annotated.Group] instances assigning parameters to titled argument groups
+    :param mutually_exclusive_groups: [`Group`][cmd2.annotated.Group] instances of mutually exclusive parameters
     :param parser_class: custom parser class (defaults to the configured default)
     :param subcommand_required: whether a subcommand must be supplied (``base_command`` only)
     :param subcommand_metavar: metavar for the subcommands group (``base_command`` only)
     :param subcommand_title: title for the subcommands ``--help`` section (``base_command`` only)
     :param subcommand_description: description for that section (``base_command`` only)
-    :param parser_kwargs: any :class:`~cmd2.Cmd2ArgumentParser` ctor kwarg (see :class:`Cmd2ParserKwargs`).
+    :param parser_kwargs: any [`Cmd2ArgumentParser`][cmd2.argparse_utils.Cmd2ArgumentParser] ctor kwarg
+                          (see [`Cmd2ParserKwargs`][cmd2.annotated.Cmd2ParserKwargs]).
                           ``description`` defaults to the docstring's first paragraph when omitted;
                           ``prog`` is rejected with ``subcommand_to`` (cmd2 rewrites it from the parent).
     """
