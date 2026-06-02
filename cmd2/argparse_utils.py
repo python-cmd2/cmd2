@@ -16,10 +16,10 @@ Extends argparse nargs functionality by allowing tuples which specify a range
 Example::
 
     # -f argument expects at least 3 values
-    parser.add_argument('-f', nargs=(3,))
+    parser.add_argument("-f", nargs=(3,))
 
     # -f argument expects 3 to 5 values
-    parser.add_argument('-f', nargs=(3, 5))
+    parser.add_argument("-f", nargs=(3, 5))
 
 
 **Completion**
@@ -38,8 +38,8 @@ argument's value. Only one can be used at a time.
 
     Example::
 
-        my_list = ['An Option', 'SomeOtherOption']
-        parser.add_argument('-o', '--options', choices=my_list)
+        my_list = ["An Option", "SomeOtherOption"]
+        parser.add_argument("-o", "--options", choices=my_list)
 
 ``choices_provider`` - pass a function that returns a Choices object. This is good in
 cases where the choices are dynamically generated when the user hits tab.
@@ -49,6 +49,7 @@ cases where the choices are dynamically generated when the user hits tab.
         def my_choices_provider(self) -> Choices:
             ...
             return my_choices
+
 
         parser.add_argument("arg", choices_provider=my_choices_provider)
 
@@ -60,7 +61,7 @@ delimiter_complete)
     Example::
 
         # This adds file-path completion to an argument
-        parser.add_argument('-o', '--options', completer=cmd2.Cmd.path_complete)
+        parser.add_argument("-o", "--options", completer=cmd2.Cmd.path_complete)
 
     You can use functools.partial() to prepopulate values of the underlying
     choices and completer functions/methods.
@@ -68,9 +69,8 @@ delimiter_complete)
     Example::
 
         # This says to call path_complete with a preset value for its path_filter argument
-        dir_completer = functools.partial(path_complete,
-                                          path_filter=lambda path: os.path.isdir(path))
-        parser.add_argument('-o', '--options', completer=dir_completer)
+        dir_completer = functools.partial(path_complete, path_filter=lambda path: os.path.isdir(path))
+        parser.add_argument("-o", "--options", completer=dir_completer)
 
 For ``choices_provider`` and ``completer``, do not set them to a bound method. This
 is because ArgparseCompleter passes the `self` argument explicitly to these

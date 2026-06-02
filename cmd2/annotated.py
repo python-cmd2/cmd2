@@ -32,6 +32,7 @@ control over individual parameters::
 
     from typing import Annotated
 
+
     class MyApp(cmd2.Cmd):
         def color_choices(self) -> cmd2.Choices:
             return cmd2.Choices.from_values(["red", "green", "blue"])
@@ -40,9 +41,7 @@ control over individual parameters::
         def do_paint(
             self,
             item: str,
-            color: Annotated[str, Option("--color", "-c",
-                                         choices_provider=color_choices,
-                                         help_text="Color to use")] = "blue",
+            color: Annotated[str, Option("--color", "-c", choices_provider=color_choices, help_text="Color to use")] = "blue",
         ):
             self.poutput(f"Painting {item} {color}")
 
