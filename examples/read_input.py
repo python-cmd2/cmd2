@@ -111,7 +111,7 @@ class ReadInputApp(cmd2.Cmd):
         except EOFError:
             pass
 
-    def do_eat(self, arg):
+    def do_eat(self, arg) -> None:
         """Example of using the select method for reading multiple choice input.
 
         Usage: eat wheatties

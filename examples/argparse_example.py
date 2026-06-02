@@ -125,13 +125,13 @@ class ArgparsingApp(cmd2.Cmd):
     # subcommand functions for the calculate command
     @cmd2.as_subcommand_to("calculate", "add", add_parser, help=add_description.lower())
     def add(self, args: argparse.Namespace) -> None:
-        """add subcommand of calculate command."""
+        """Add subcommand of calculate command."""
         result = args.num1 + args.num2
         self.poutput(f"{args.num1} + {args.num2} = {result}")
 
     @cmd2.as_subcommand_to("calculate", "subtract", subtract_parser, help=subtract_description.lower())
     def subtract(self, args: argparse.Namespace) -> None:
-        """subtract subcommand of calculate command."""
+        """Subtract subcommand of calculate command."""
         result = args.num1 - args.num2
         self.poutput(f"{args.num1} - {args.num2} = {result}")
 

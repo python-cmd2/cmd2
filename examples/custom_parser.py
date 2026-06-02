@@ -1,5 +1,4 @@
-"""
-The standard parser used by cmd2 built-in commands is Cmd2ArgumentParser.
+"""The standard parser used by cmd2 built-in commands is Cmd2ArgumentParser.
 The following code shows how to override it with your own parser class.
 """
 

@@ -8,7 +8,7 @@ $ python cmd_as_argument.py speak -p hello there
 """
 
 import argparse
-import random
+import secrets
 
 import cmd2
 
@@ -31,6 +31,9 @@ class CmdLineApp(cmd2.Cmd):
         # Make maxrepeats settable at runtime
         self.add_settable(cmd2.Settable("maxrepeats", int, "max repetitions for speak command", self))
 
+        # Create an instance of SystemRandom
+        self._secure_generator = secrets.SystemRandom()
+
     speak_parser = cmd2.Cmd2ArgumentParser()
     speak_parser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
     speak_parser.add_argument("-s", "--shout", action="store_true", help="N00B EMULATION MODE")
@@ -41,7 +44,8 @@ class CmdLineApp(cmd2.Cmd):
     def do_speak(self, args) -> None:
         """Repeats what you tell me to."""
         words = []
-        for word in args.words:
+        for w in args.words:
+            word = w.copy()
             if args.piglatin:
                 word = f"{word[1:]}{word[0]}ay"
             if args.shout:
@@ -65,14 +69,14 @@ class CmdLineApp(cmd2.Cmd):
         repetitions = args.repeat or 1
         for _ in range(min(repetitions, self.maxrepeats)):
             output = []
-            if random.random() < 0.33:
-                output.append(random.choice(self.MUMBLE_FIRST))
+            if self._secure_generator.random() < 0.33:
+                output.append(secrets.choice(self.MUMBLE_FIRST))
             for word in args.words:
-                if random.random() < 0.40:
-                    output.append(random.choice(self.MUMBLES))
+                if self._secure_generator.random() < 0.40:
+                    output.append(secrets.choice(self.MUMBLES))
                 output.append(word)
-            if random.random() < 0.25:
-                output.append(random.choice(self.MUMBLE_LAST))
+            if self._secure_generator.random() < 0.25:
+                output.append(secrets.choice(self.MUMBLE_LAST))
             self.poutput(" ".join(output))
 
 

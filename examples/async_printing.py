@@ -3,7 +3,7 @@
 and changes the window title.
 """
 
-import random
+import secrets
 import threading
 import time
 
@@ -45,6 +45,9 @@ class AlerterApp(cmd2.Cmd):
         # Create some hooks to handle the starting and stopping of our thread
         self.register_preloop_hook(self._preloop_hook)
         self.register_postloop_hook(self._postloop_hook)
+
+        # Create an instance of SystemRandom
+        self._secure_generator = secrets.SystemRandom()
 
     def _preloop_hook(self) -> None:
         """Start the alerter thread."""
@@ -91,7 +94,7 @@ class AlerterApp(cmd2.Cmd):
             self._next_alert_time = cur_time + 4
 
         else:
-            rand_num = random.randint(1, 20)
+            rand_num = self._secure_generator.randint(1, 20)
             if rand_num > 2:
                 return []
 
@@ -129,7 +132,7 @@ class AlerterApp(cmd2.Cmd):
         """Randomly builds a colored prompt
         :return: the new prompt.
         """
-        rand_num = random.randint(1, 6)
+        rand_num = self._secure_generator.randint(1, 6)
 
         status_color = Color.DEFAULT
 

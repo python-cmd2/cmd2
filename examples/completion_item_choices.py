@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-Demonstrates using CompletionItem instances as elements in an argparse choices list.
+"""Demonstrates using CompletionItem instances as elements in an argparse choices list.
 
 Technical Note:
   Using 'choices' is best for fixed datasets that do not change during the
@@ -53,7 +52,7 @@ id_choices = [
 class Account:
     """A complex object that we want to select by a friendly name."""
 
-    def __init__(self, account_id: int, owner: str):
+    def __init__(self, account_id: int, owner: str) -> None:
         self.account_id = account_id
         self.owner = owner
 

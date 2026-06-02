@@ -99,6 +99,7 @@ class AnnotatedExample(Cmd):
         Examples:
             add 2 --b 3
             add 10 --b 5 --verbose
+
         """
         result = a + b
         if verbose:

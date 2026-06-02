@@ -10,7 +10,7 @@ from cmd2 import Cmd2Style, Color, update_theme
 class ThemedApp(cmd2.Cmd):
     """A simple cmd2 application with a custom theme."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         """Initialize the application."""
         super().__init__(*args, **kwargs)
         self.intro = "This is a themed application. Try the 'theme_show' command."
@@ -44,7 +44,7 @@ class ThemedApp(cmd2.Cmd):
         update_theme(custom_theme)
 
     @cmd2.with_category("Theme Commands")
-    def do_theme_show(self, _: cmd2.Statement):
+    def do_theme_show(self, _: cmd2.Statement) -> None:
         """Showcases the custom theme by printing messages with different styles."""
         self.poutput("This is a basic output message.")
         self.psuccess("This is a success message.")
