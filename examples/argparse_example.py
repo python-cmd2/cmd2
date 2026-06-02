@@ -34,7 +34,7 @@ class ArgparsingApp(cmd2.Cmd):
             "cmd2 has awesome decorators to make it easy to use Argparse to parse command arguments", style=color
         )
 
-    ## ------ Basic examples of using argparse for command argument parsing -----
+    # ------ Basic examples of using argparse for command argument parsing -----
 
     # do_fsize parser
     fsize_parser = cmd2.Cmd2ArgumentParser(description="Obtain the size of a file")
@@ -79,7 +79,7 @@ class ArgparsingApp(cmd2.Cmd):
         """
         self.poutput(f"{args.base} ** {args.exponent} == {args.base**args.exponent}")
 
-    ## ------ Examples displaying how argparse arguments are passed to commands by printing them out -----
+    # ------ Examples displaying how argparse arguments are passed to commands by printing them out -----
 
     argprint_parser = cmd2.Cmd2ArgumentParser()
     argprint_parser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
@@ -104,7 +104,7 @@ class ArgparsingApp(cmd2.Cmd):
         """Print the arpgarse argument list this command was called with, including unknown arguments."""
         self.poutput(f"print_unknown was called with the following arguments\n\tknown: {args!r}\n\tunknown: {unknown}")
 
-    ## ------ Examples demonstrating how to use argparse subcommands -----
+    # ------ Examples demonstrating how to use argparse subcommands -----
 
     # create the top-level parser for the base command
     calculate_parser = cmd2.Cmd2ArgumentParser(description="Perform simple mathematical calculations.")

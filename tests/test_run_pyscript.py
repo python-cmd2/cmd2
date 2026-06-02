@@ -1,6 +1,7 @@
 """Unit/functional testing for run_pytest in cmd2"""
 
 import os
+import pathlib
 from unittest import (
     mock,
 )
@@ -245,8 +246,7 @@ def test_run_pyscript_print_redirection(base_app, request, tmp_path, capsys) -> 
     out, err = capsys.readouterr()
 
     # Verify the output file contains what we expect from print()
-    with open(out_file) as f:
-        content = f.read()
+    content = pathlib.Path(out_file).read_text()
 
     # Look for everything written to self.stdout
     assert len(content.splitlines()) == 4

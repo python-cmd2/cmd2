@@ -348,7 +348,7 @@ def test_load_commandset_errors(manual_command_sets_app, capsys) -> None:
     assert "Fruits" not in cmds_cats
     assert not manual_command_sets_app._installed_command_sets
 
-    delattr(manual_command_sets_app, "do_durian")
+    del manual_command_sets_app.do_durian
 
     # pre-create intentionally conflicting macro and alias names
     manual_command_sets_app.app_cmd("macro create apple run_pyscript")

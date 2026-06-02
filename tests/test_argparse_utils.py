@@ -322,7 +322,7 @@ def test_register_argparse_argument_parameter() -> None:
         with pytest.raises(KeyError, match=expected_err):
             register_argparse_argument_parameter("colliding_param")
     finally:
-        delattr(argparse.Action, "get_colliding_param")
+        del argparse.Action.get_colliding_param
 
     # Test collision with internal attribute
     try:

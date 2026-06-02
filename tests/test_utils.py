@@ -1,5 +1,6 @@
 """Unit testing for cmd2/utils.py module."""
 
+import math
 import os
 import signal
 import sys
@@ -281,7 +282,7 @@ def test_to_bool_int() -> None:
 def test_to_bool_float() -> None:
     assert cu.to_bool(2.35)
     assert cu.to_bool(0.25)
-    assert cu.to_bool(-3.1415)
+    assert cu.to_bool(-math.pi)
     assert not cu.to_bool(0)
 
 
