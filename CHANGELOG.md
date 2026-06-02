@@ -1,4 +1,4 @@
-## 4.0.0 (TBD 2026)
+## 4.0.0 (June TBD, 2026)
 
 ### Summary
 
@@ -177,6 +177,10 @@ prompt is displayed.
       enum/literal/path/collection handling, subcommands, groups, mutex). See the
       [annotated_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/annotated_example.py)
       example for demonstration of usage.
+        - This feature allows declaring `cmd2` command parameters using type hints using syntax
+          essentially identical to that used by [Typer](https://typer.tiangolo.com/)
+        - You use declarative syntax to define the arguments a command takes and the
+          `@with_annotated` decorator builds an `argparse` parser for you
 
 ## 3.5.1 (April 24, 2026)
 
