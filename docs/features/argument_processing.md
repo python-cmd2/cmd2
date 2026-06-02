@@ -16,18 +16,21 @@ following for you:
 1. Adds the usage message from the argument parser to your command's help.
 1. Checks if the `-h/--help` option is present, and if so, displays the help message for the command
 
-These features are all provided by the [@with_argparser][cmd2.with_argparser] decorator which is
-imported from `cmd2`.
+These features are provided by two decorators:
+
+- [@with_argparser][cmd2.with_argparser] -- build parsers manually with `add_argument()` calls
+- [@with_annotated][cmd2.with_annotated] -- build parsers automatically from type hints
 
 See the
-[argparse_example](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
-example to learn more about how to use the various `cmd2` argument processing decorators in your
-`cmd2` applications.
+[argparse_completion](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_completion.py)
+and [annotated_example](https://github.com/python-cmd2/cmd2/blob/main/examples/annotated_example.py)
+examples to compare the two styles side by side.
 
 `cmd2` provides the following [decorators](../api/decorators.md) for assisting with parsing
 arguments passed to commands:
 
 - [cmd2.decorators.with_argparser][]
+- [cmd2.annotated.with_annotated][]
 - [cmd2.decorators.with_argument_list][]
 
 All of these decorators accept an optional **preserve_quotes** argument which defaults to `False`.
@@ -51,6 +54,17 @@ stores internally. A consequence is that parsers don't need to be unique across 
     Since the `@with_argparser` decorator is making a deep-copy of the parser provided, if you wish
     to dynamically modify this parser at a later time, you need to retrieve this deep copy. This can
     be done using `self.command_parsers.get(self.do_commandname)`.
+
+## with_annotated decorator
+
+!!! warning "Experimental"
+
+    The `@with_annotated` decorator is **experimental** and its API may change in future releases.
+
+The [@with_annotated][cmd2.with_annotated] decorator builds an argparse parser automatically from
+the decorated function's type annotations -- no manual `add_argument()` calls required. See
+[Annotated Argument Processing](annotated.md) for the full reference, including type mapping,
+metadata classes, subcommands, and stability caveats.
 
 ## Argument Parsing
 
