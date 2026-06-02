@@ -196,6 +196,7 @@ nav:
   - API Reference:
       - api/index.md
       - api/cmd.md
+      - api/annotated.md
       - api/argparse_completer.md
       - api/argparse_utils.md
       - api/clipboard.md
