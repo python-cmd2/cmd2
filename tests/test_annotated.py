@@ -631,6 +631,24 @@ class TestBuildParser:
         with pytest.raises(TypeError, match="Failed to resolve type hints"):
             build_parser_from_function(do_broken)
 
+    def test_unresolvable_hint_on_ignored_self_is_tolerated(self) -> None:
+        """An unresolvable annotation on the bound parameter (self/cls) must not abort
+        parser generation, since it is never turned into an argument. This happens when
+        ``self`` is annotated with a forward reference that is only importable under
+        ``TYPE_CHECKING``.
+        """
+
+        def do_cmd(self: "UnimportableCmd", name: str, count: int = 1):  # noqa: F821
+            pass
+
+        # Without the lenient retry this raises "Failed to resolve type hints".
+        parser = build_parser_from_function(do_cmd)
+        dests = {action.dest for action in parser._actions if action.dest != "help"}
+        assert dests == {"name", "count"}
+        ns = parser.parse_args(["alice"])
+        assert ns.name == "alice"
+        assert ns.count == 1
+
     def test_validate_base_command_type_hints_failure_raises(self) -> None:
         """Base-command validation should raise, not swallow, type hint failures."""
         from cmd2.annotated import _resolve_parameters

@@ -1726,8 +1726,16 @@ def _resolve_parameters(
     # cmd2_handler, so it must exist.  Here so it also fires when the function has zero parameters.
     if base_command and "cmd2_handler" not in sig.parameters:
         raise TypeError(f"with_annotated(base_command=True) requires a 'cmd2_handler' parameter in {func.__qualname__}")
+    # Resolve hints only for the parameters that become arguments
+    ignored = {next(iter(sig.parameters), None), *skip_params}
+    ignored.discard(None)
+    relevant_annotations = {name: ann for name, ann in getattr(func, "__annotations__", {}).items() if name not in ignored}
     try:
-        hints = get_type_hints(func, include_extras=True)
+        hints = get_type_hints(
+            types.SimpleNamespace(__annotations__=relevant_annotations),
+            globalns=getattr(func, "__globals__", {}),
+            include_extras=True,
+        )
     except (NameError, AttributeError, TypeError) as exc:
         raise TypeError(
             f"Failed to resolve type hints for {func.__qualname__}. Ensure all annotations use valid, importable types."
