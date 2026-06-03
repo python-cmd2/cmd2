@@ -18,7 +18,7 @@ collected into a tuple.  Underscores in a parameter name become dashes in the ge
 flag (``dry_run`` -> ``--dry-run``); pass an explicit ``Option("--my_flag")`` to opt out.
 Positional-only parameters (before ``/``) and ``**kwargs`` raise ``TypeError``.  The parameter
 names ``dest`` and ``subcommand`` are reserved; ``cmd2_statement`` receives the parsed
-``Statement`` and (with ``base_command=True``) ``cmd2_handler`` receives the subcommand handler:
+``Statement`` and (with ``base_command=True``) ``cmd2_subcommand_func`` receives the subcommand handler:
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_annotated
@@ -1704,7 +1704,7 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
 
 # Parameters handled specially by the decorator and not added to the parser.  The first positional
 # parameter (self/cls) is always skipped by position; these cover additional decorator-managed names.
-_SKIP_PARAMS = frozenset({"cmd2_handler", "cmd2_statement"})
+_SKIP_PARAMS = frozenset({constants.NS_ATTR_SUBCOMMAND_FUNC, constants.NS_ATTR_STATEMENT})
 
 
 def _link_group_membership(
@@ -1735,14 +1735,17 @@ def _resolve_parameters(
     """Resolve a function signature into a list of argparse-argument builders.
 
     ``base_command`` marks each argument's context for the base-command :data:`_CONSTRAINTS` rows and
-    drives the function-level ``cmd2_handler`` check below.  ``groups``/``mutually_exclusive_groups``
+    drives the function-level ``cmd2_subcommand_func`` check below.  ``groups``/``mutually_exclusive_groups``
     are linked onto each argument as membership facts for the cross-config constraint rows.
     """
     sig = inspect.signature(func)
     # Function-level check (not a per-argument _CONSTRAINTS row): a base command dispatches through
-    # cmd2_handler, so it must exist.  Here so it also fires when the function has zero parameters.
-    if base_command and "cmd2_handler" not in sig.parameters:
-        raise TypeError(f"with_annotated(base_command=True) requires a 'cmd2_handler' parameter in {func.__qualname__}")
+    # cmd2_subcommand_func, so it must exist.  Here so it also fires when the function has zero parameters.
+    if base_command and constants.NS_ATTR_SUBCOMMAND_FUNC not in sig.parameters:
+        raise TypeError(
+            f"with_annotated(base_command=True) requires a '{constants.NS_ATTR_SUBCOMMAND_FUNC}' "
+            f"parameter in {func.__qualname__}"
+        )
     try:
         hints = get_type_hints(func, include_extras=True)
     except (NameError, AttributeError, TypeError) as exc:
@@ -1848,8 +1851,6 @@ def _filtered_namespace_kwargs(
     filtered: dict[str, Any] = {}
     for key, value in vars(ns).items():
         if accepted is not None and key not in accepted:
-            continue
-        if key == constants.NS_ATTR_SUBCOMMAND_FUNC:
             continue
         if exclude_subcommand and key == "subcommand":
             continue
@@ -2120,10 +2121,10 @@ def _build_subcommand_handler(
     def handler(self_arg: Any, ns: Any) -> Any:
         """Unpack Namespace into typed kwargs for the subcommand handler."""
         filtered = _filtered_namespace_kwargs(ns, accepted=_accepted)
-        if "cmd2_handler" in filtered:
-            cmd2_h = filtered["cmd2_handler"]
+        if constants.NS_ATTR_SUBCOMMAND_FUNC in filtered:
+            cmd2_h = filtered[constants.NS_ATTR_SUBCOMMAND_FUNC]
             if isinstance(cmd2_h, functools.partial) and cmd2_h.func is handler:
-                filtered["cmd2_handler"] = None
+                filtered[constants.NS_ATTR_SUBCOMMAND_FUNC] = None
         return _invoke_command_func(
             func, self_arg, filtered, leading_names=_leading_names, var_positional_name=_var_positional_name
         )
@@ -2185,7 +2186,7 @@ def with_annotated(
     :param ns_provider: callable returning a prepopulated Namespace (not with ``subcommand_to``)
     :param preserve_quotes: preserve quotes in arguments (not with ``subcommand_to``)
     :param with_unknown_args: capture unknown args as the ``_unknown`` kwarg (not with ``subcommand_to``)
-    :param base_command: add ``add_subparsers()``; requires a ``cmd2_handler`` param and no positionals
+    :param base_command: add ``add_subparsers()``; requires a ``cmd2_subcommand_func`` param and no positionals
     :param subcommand_to: parent command name; function must be named ``{parent_underscored}_{subcommand}``
     :param help: subcommand help text (only with ``subcommand_to``)
     :param aliases: alternative subcommand names (only with ``subcommand_to``)
@@ -2247,9 +2248,10 @@ def with_annotated(
             if unknown_param.kind is inspect.Parameter.POSITIONAL_ONLY:
                 raise TypeError("Parameter _unknown must be keyword-compatible when with_unknown_args=True")
 
-        if not base_command and "cmd2_handler" in inspect.signature(fn).parameters:
+        if not base_command and constants.NS_ATTR_SUBCOMMAND_FUNC in inspect.signature(fn).parameters:
             raise TypeError(
-                f"Parameter 'cmd2_handler' in {fn.__qualname__} is only valid when with_annotated(base_command=True) is used."
+                f"Parameter '{constants.NS_ATTR_SUBCOMMAND_FUNC}' in {fn.__qualname__} "
+                "is only valid when with_annotated(base_command=True) is used."
             )
 
         if subcommand_to is not None:
@@ -2314,7 +2316,7 @@ def with_annotated(
             handler = getattr(ns, constants.NS_ATTR_SUBCOMMAND_FUNC, None)
             if base_command and handler is not None:
                 handler = functools.partial(handler, ns)
-            ns.cmd2_handler = handler
+            setattr(ns, constants.NS_ATTR_SUBCOMMAND_FUNC, handler)
 
             func_kwargs = _filtered_namespace_kwargs(ns, accepted=accepted, exclude_subcommand=base_command)
 
