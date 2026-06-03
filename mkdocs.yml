@@ -156,6 +156,7 @@ nav:
   - Features:
       - features/index.md
       - features/argument_processing.md
+      - features/annotated.md
       - features/async_commands.md
       - features/builtin_commands.md
       - features/clipboard.md
@@ -195,6 +196,7 @@ nav:
   - API Reference:
       - api/index.md
       - api/cmd.md
+      - api/annotated.md
       - api/argparse_completer.md
       - api/argparse_utils.md
       - api/clipboard.md

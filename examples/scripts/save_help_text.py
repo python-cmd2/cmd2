@@ -38,7 +38,7 @@ def get_sub_commands(parser: Cmd2ArgumentParser) -> list[str]:
 
 
 def add_help_to_file(item: str, outfile: TextIO, is_command: bool) -> None:
-    """Write help text for commands and topics to the output file
+    """Write help text for commands and topics to the output file.
 
     :param item: what is having its help text saved
     :param outfile: file being written to

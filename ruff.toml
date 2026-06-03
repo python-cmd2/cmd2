@@ -143,8 +143,6 @@ mccabe.max-complexity = 49
     "ANN",     # Ignore all type annotation rules in examples folder
     "D",       # Ignore all pydocstyle rules in examples folder
     "INP001",  # Module is part of an implicit namespace
-    "PLW2901", # loop variable overwritten inside loop
-    "S",       # Ignore all Security rules in examples folder
 ]
 "examples/scripts/*.py" = ["F821"] # Undefined name `app`
 
@@ -181,7 +179,7 @@ line-ending = "auto"
 #
 # This is currently disabled by default, but it is planned for this
 # to be opt-out in the future.
-docstring-code-format = false
+docstring-code-format = true
 
 # Set the line length limit used when formatting code snippets in
 # docstrings.

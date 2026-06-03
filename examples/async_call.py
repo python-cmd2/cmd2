@@ -13,7 +13,6 @@ _event_lock = threading.Lock()
 
 def run_async(coro) -> concurrent.futures.Future:
     """Await a coroutine from a synchronous function/method."""
-
     global _event_loop  # noqa: PLW0603
 
     if _event_loop is None:
@@ -31,7 +30,7 @@ def run_async(coro) -> concurrent.futures.Future:
 
 
 async def async_wait(duration: float) -> float:
-    """Example async function that is called from a synchronous cmd2 command"""
+    """Example async function that is called from a synchronous cmd2 command."""
     await asyncio.sleep(duration)
     return duration
 
@@ -47,7 +46,6 @@ class AsyncCallExample(cmd2.Cmd):
 
         Example cmd2 command that calls an async function.
         """
-
         waitable = run_async(async_wait(0.1))
         self.poutput("Begin waiting...")
         # Wait for coroutine to complete and get its return value:

@@ -53,7 +53,7 @@ def with_category(
     Example:
     ```py
     class MyApp(cmd2.Cmd):
-        @cmd2.with_category('Text Functions')
+        @cmd2.with_category("Text Functions")
         def do_echo(self, args: cmd2.Statement) -> None:
             self.poutput(args)
     ```
@@ -160,12 +160,12 @@ def with_argument_list(
         # Basic usage: receives a list of words with quotes stripped
         @cmd2.with_argument_list
         def do_echo(self, arglist: list[str]) -> None:
-            self.poutput(' '.join(arglist))
+            self.poutput(" ".join(arglist))
 
         # Factory usage: preserves quotes in the argument list
         @cmd2.with_argument_list(preserve_quotes=True)
         def do_print_raw(self, arglist: list[str]) -> None:
-            self.poutput(' '.join(arglist))
+            self.poutput(" ".join(arglist))
     ```
 
     """
@@ -269,32 +269,34 @@ def with_argparser(
     Example:
     ```py
     parser = cmd2.Cmd2ArgumentParser()
-    parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    parser.add_argument('words', nargs='+', help='words to print')
+    parser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
+    parser.add_argument("-s", "--shout", action="store_true", help="N00B EMULATION MODE")
+    parser.add_argument("-r", "--repeat", type=int, help="output [n] times")
+    parser.add_argument("words", nargs="+", help="words to print")
+
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_argparser(parser, preserve_quotes=True)
         def do_argprint(self, args: argparse.Namespace) -> None:
             "Print the options and argument list this options command was called with."
-            self.poutput(f'args: {args!r}')
+            self.poutput(f"args: {args!r}")
     ```
 
     Example with unknown args:
 
     ```py
     parser = cmd2.Cmd2ArgumentParser()
-    parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    parser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
+    parser.add_argument("-s", "--shout", action="store_true", help="N00B EMULATION MODE")
+    parser.add_argument("-r", "--repeat", type=int, help="output [n] times")
+
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_argparser(parser, with_unknown_args=True)
         def do_argprint(self, args: argparse.Namespace, unknown_args: list[str]):
             "Print the options and argument list this options command was called with."
-            self.poutput(f'args: {args!r}')
-            self.poutput(f'unknown_args: {unknown_args}')
+            self.poutput(f"args: {args!r}")
+            self.poutput(f"unknown_args: {unknown_args}")
     ```
 
     """
@@ -450,14 +452,15 @@ def as_subcommand_to(
     base_parser.add_subparsers(title="subcommands", metavar="SUBCOMMAND", required=True)
     sub_parser = cmd2.Cmd2ArgumentParser()
 
+
     class MyApp(cmd2.Cmd):
         @cmd2.with_argparser(base_parser)
         def do_base(self, args: argparse.Namespace) -> None:
             args.cmd2_subcommand_func(args)
 
-        @cmd2.as_subcommand_to('base', 'sub', sub_parser, help="the subcommand")
+        @cmd2.as_subcommand_to("base", "sub", sub_parser, help="the subcommand")
         def sub_func(self, args: argparse.Namespace) -> None:
-            self.poutput('Subcommand executed')
+            self.poutput("Subcommand executed")
     ```
 
     """

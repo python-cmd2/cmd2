@@ -2,6 +2,7 @@
 """A simple example demonstrating the using paged output via the ppaged() method."""
 
 import os
+import pathlib
 
 import cmd2
 
@@ -16,8 +17,7 @@ class PagedOutput(cmd2.Cmd):
         """Helper method to prevent having too much duplicated code."""
         filename = os.path.expanduser(file_path)
         try:
-            with open(filename) as f:
-                text = f.read()
+            text = pathlib.Path(filename).read_text()
             self.ppaged(text, chop=chop)
         except OSError as ex:
             self.pexcept(f"Error reading {filename!r}: {ex}")

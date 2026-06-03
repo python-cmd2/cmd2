@@ -356,7 +356,7 @@ class StatementParser:
         If word is not a valid command, return ``False`` and an error string
         suitable for inclusion in an error message of your choice::
 
-            checkit = '>'
+            checkit = ">"
             valid, errmsg = statement_parser.is_valid_command(checkit)
             if not valid:
                 errmsg = f"alias: {errmsg}"

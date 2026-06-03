@@ -7,7 +7,7 @@ key-combo press and how to display colored output above the prompt.
 
 import asyncio
 import functools
-import random
+import secrets
 import shutil
 import threading
 from collections.abc import Callable
@@ -46,7 +46,6 @@ def _get_event_loop() -> asyncio.AbstractEventLoop:
 def with_async_loop(func: Callable[..., Any], cancel_on_interrupt: bool = True) -> Callable[..., Any]:
     """Decorate an async ``do_*`` command method to give it access to the event loop.
 
-
     This decorator wraps a do_* command method. When the command is executed,
     it submits the coroutine returned by the method to a background asyncio loop
     and waits for the result synchronously (blocking the cmd2 loop, as expected
@@ -78,6 +77,9 @@ class AsyncCommandsApp(cmd2.Cmd):
     def __init__(self) -> None:
         super().__init__()
         self.intro = 'Welcome to the Async Commands example. Type "help" to see available commands.'
+
+        # Create an instance of SystemRandom
+        self._secure_generator = secrets.SystemRandom()
 
         if self.main_session.key_bindings is None:
             self.main_session.key_bindings = KeyBindings()
@@ -118,14 +120,14 @@ class AsyncCommandsApp(cmd2.Cmd):
         word = "fnord"
 
         # Generate a random RGB color tuple
-        r = random.randint(0, 255)
-        g = random.randint(0, 255)
-        b = random.randint(0, 255)
+        r = self._secure_generator.randint(0, 255)
+        g = self._secure_generator.randint(0, 255)
+        b = self._secure_generator.randint(0, 255)
 
         # Get terminal width to calculate padding for right-alignment
         cols, _ = shutil.get_terminal_size()
         extra_width = cols - len(word) - 1
-        padding_size = random.randint(0, extra_width)
+        padding_size = self._secure_generator.randint(0, extra_width)
         padding = " " * padding_size
 
         # Use rich to generate the overall text to print out
