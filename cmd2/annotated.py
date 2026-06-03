@@ -1745,8 +1745,9 @@ def _resolve_parameters(
             f"with_annotated(base_command=True) requires a '{constants.NS_ATTR_SUBCOMMAND_FUNC}' "
             f"parameter in {func.__qualname__}"
         )
-    # Resolve hints only for the parameters that become arguments
-    ignored = {next(iter(sig.parameters), None), *skip_params}
+    # Resolve hints only for the parameters that become arguments: the bound first parameter
+    # (self/cls), the injected skip_params, and the "return" annotation never become arguments
+    ignored = {next(iter(sig.parameters), None), "return", *skip_params}
     ignored.discard(None)
     relevant_annotations = {name: ann for name, ann in getattr(func, "__annotations__", {}).items() if name not in ignored}
     try:

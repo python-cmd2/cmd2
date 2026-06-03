@@ -144,6 +144,31 @@ def _func_positional_only_xy(self, x: str, /, y: int) -> None: ...
 def _func_positional_only_mixed(self, x: str, /, y: int, *, z: int = 0) -> None: ...
 
 
+# Forward references with no matching name in this module's globals, so they are unresolvable at
+# runtime. They exercise type-hint resolution: hints on parameters that never become arguments
+# (``self``/``cls`` and the injected, skipped ``cmd2_statement``/``cmd2_subcommand_func``) must be tolerated,
+# while hints on real arguments must still raise. ``noqa: F821`` marks the intentionally-undefined names.
+def _func_unresolvable_self(self: "UnimportableCmd", name: str, count: int = 1) -> None: ...  # noqa: F821
+def _func_unresolvable_cmd2_statement(self, cmd2_statement: "UnimportableStatement", name: str, count: int = 1) -> None: ...  # noqa: F821
+def _func_unresolvable_cmd2_subcommand_func(self, cmd2_subcommand_func: "UnimportableHandler", verbose: bool = False) -> None: ...  # noqa: F821
+def _func_unresolvable_return(self, name: str) -> "UnimportableReturn": ...  # noqa: F821
+def _func_unresolvable_argument(self, name: "NonExistentType") -> None: ...  # noqa: F821
+def _func_unresolvable_argument_base(self, cmd2_subcommand_func, name: "NonExistentType") -> None: ...  # noqa: F821
+
+
+def _arg_names_via_parser(func: Any) -> set[str]:
+    """Resolve argument names through the public ``build_parser_from_function`` entry point."""
+    parser = build_parser_from_function(func)
+    return {action.dest for action in parser._actions if action.dest != "help"}
+
+
+def _arg_names_via_base_command(func: Any) -> set[str]:
+    """Resolve a base command's argument names (``base_command`` is not exposed on the public builder)."""
+    from cmd2.annotated import _resolve_parameters
+
+    return {arg.name for arg in _resolve_parameters(func, base_command=True)}
+
+
 def _provider(cmd: cmd2.Cmd):
     return []
 
@@ -625,40 +650,39 @@ class TestBuildParser:
         assert dests == set()
         assert parser.parse_args([]) == argparse.Namespace()
 
-    def test_get_type_hints_failure_raises(self) -> None:
-        def do_broken(self, name: "NonExistentType"):  # noqa: F821
-            pass
-
-        with pytest.raises(TypeError, match="Failed to resolve type hints"):
-            build_parser_from_function(do_broken)
-
-    def test_unresolvable_hint_on_ignored_self_is_tolerated(self) -> None:
-        """An unresolvable annotation on the bound parameter (self/cls) must not abort
-        parser generation, since it is never turned into an argument. This happens when
-        ``self`` is annotated with a forward reference that is only importable under
-        ``TYPE_CHECKING``.
+    @pytest.mark.parametrize(
+        ("func", "resolve_arg_names", "expected_args"),
+        [
+            pytest.param(_func_unresolvable_self, _arg_names_via_parser, {"name", "count"}, id="self"),
+            pytest.param(_func_unresolvable_cmd2_statement, _arg_names_via_parser, {"name", "count"}, id="cmd2_statement"),
+            pytest.param(_func_unresolvable_cmd2_subcommand_func, _arg_names_via_base_command, {"verbose"}, id="cmd2_subcommand_func"),
+            pytest.param(_func_unresolvable_return, _arg_names_via_parser, {"name"}, id="return"),
+        ],
+    )
+    def test_unresolvable_hint_on_ignored_param_is_tolerated(self, func, resolve_arg_names, expected_args) -> None:
+        """An unresolvable forward reference on an annotation that never becomes an argument must not
+        abort parser generation -- the bound ``self``/``cls``, the injected, skipped
+        ``cmd2_statement``/``cmd2_subcommand_func`` parameters, and the function's ``return`` annotation. This
+        is the common case of annotating with a type only importable under ``TYPE_CHECKING``. Only
+        hints for parameters that actually become arguments are resolved; without that filtering each
+        case raises "Failed to resolve type hints".
         """
+        assert resolve_arg_names(func) == expected_args
 
-        def do_cmd(self: "UnimportableCmd", name: str, count: int = 1):  # noqa: F821
-            pass
-
-        # Without the lenient retry this raises "Failed to resolve type hints".
-        parser = build_parser_from_function(do_cmd)
-        dests = {action.dest for action in parser._actions if action.dest != "help"}
-        assert dests == {"name", "count"}
-        ns = parser.parse_args(["alice"])
-        assert ns.name == "alice"
-        assert ns.count == 1
-
-    def test_validate_base_command_type_hints_failure_raises(self) -> None:
-        """Base-command validation should raise, not swallow, type hint failures."""
-        from cmd2.annotated import _resolve_parameters
-
-        def do_broken(self, cmd2_subcommand_func, name: "NonExistentType"):  # noqa: F821
-            pass
-
+    @pytest.mark.parametrize(
+        ("func", "resolve_arg_names"),
+        [
+            pytest.param(_func_unresolvable_argument, _arg_names_via_parser, id="non_base"),
+            pytest.param(_func_unresolvable_argument_base, _arg_names_via_base_command, id="base_command"),
+        ],
+    )
+    def test_unresolvable_hint_on_real_argument_raises(self, func, resolve_arg_names) -> None:
+        """An unresolvable forward reference on a parameter that *does* become an argument must abort
+        with a clear, actionable error rather than being silently swallowed -- for both plain commands
+        and base commands.
+        """
         with pytest.raises(TypeError, match="Failed to resolve type hints"):
-            _resolve_parameters(do_broken, base_command=True)
+            resolve_arg_names(func)
 
     def test_dest_param_raises(self) -> None:
         with pytest.raises(ValueError, match="dest"):
