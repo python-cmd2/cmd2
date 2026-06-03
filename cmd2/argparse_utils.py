@@ -423,30 +423,6 @@ register_argparse_argument_parameter("table_columns")
 register_argparse_argument_parameter("nargs_range")
 register_argparse_argument_parameter("suppress_tab_hint")
 
-############################################################################################################
-# Workaround for Python 3.15.0b1 argparse bug
-# _ColorlessTheme.__getattr__ incorrectly returns "" for non-public attributes, which breaks
-# protocols like copy.deepcopy().
-############################################################################################################
-
-if sys.version_info >= (3, 15):
-
-    def _ColorlessTheme_getattr(  # noqa: N802
-        _self: argparse._ColorlessTheme,  # type: ignore[name-defined]
-        name: str,
-    ) -> Any:
-        """Patched __getattr__ that allows non-public lookups to fail correctly.
-
-        This matches the implementation in CPython for their next release.
-        """
-        if name.startswith("_"):
-            raise AttributeError(name)
-        return ""
-
-    # If the bug still exists, then install the patch.
-    if getattr(argparse._ColorlessTheme(), "__deepcopy__", None) == "":  # type: ignore[attr-defined]
-        argparse._ColorlessTheme.__getattr__ = _ColorlessTheme_getattr  # type: ignore[attr-defined]
-
 
 ############################################################################################################
 # Patch _ActionsContainer.add_argument to support more arguments
