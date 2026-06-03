@@ -23,9 +23,7 @@ from typing import (
 import pytest
 
 import cmd2
-from cmd2 import (
-    CompletionItem,
-)
+from cmd2 import CompletionItem
 from cmd2.annotated import (
     Argument,
     Group,
@@ -1121,7 +1119,7 @@ class TestParserCustomization:
         @with_annotated(ap_completer_type=MyCompleter)
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_run, constants.AP_COMMAND_ATTR_SPEC).parser_source
         assert builder().ap_completer_type is MyCompleter
 
     def test_ap_completer_type_threads_to_subcommand(self) -> None:
@@ -1134,7 +1132,7 @@ class TestParserCustomization:
         @with_annotated(subcommand_to="team", ap_completer_type=MyCompleter)
         def team_create(self, name: str) -> None: ...
 
-        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_create, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.parser_source().ap_completer_type is MyCompleter
 
     def test_customization_via_decorator(self) -> None:
@@ -1178,7 +1176,7 @@ class TestParserCustomization:
 
         from cmd2 import constants
 
-        spec = getattr(App.team_add, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(App.team_add, constants.SUBCOMMAND_ATTR_SPEC)
         subparser = spec.parser_source()
         assert subparser.description == "add desc"
         assert subparser.epilog == "add epilog"
@@ -1678,12 +1676,12 @@ class TestCollectionRuntimeCast:
 
 class TestFilteredNamespaceKwargs:
     def test_excludes_subcmd_handler_key(self) -> None:
+        from cmd2 import constants
         from cmd2.annotated import _filtered_namespace_kwargs
-        from cmd2.constants import NS_ATTR_SUBCMD_HANDLER
 
-        ns = argparse.Namespace(**{NS_ATTR_SUBCMD_HANDLER: lambda: None, "name": "Alice"})
+        ns = argparse.Namespace(**{constants.NS_ATTR_SUBCOMMAND_FUNC: lambda: None, "name": "Alice"})
         result = _filtered_namespace_kwargs(ns)
-        assert NS_ATTR_SUBCMD_HANDLER not in result
+        assert constants.NS_ATTR_SUBCOMMAND_FUNC not in result
         assert result == {"name": "Alice"}
 
     def test_excludes_subcommand_key(self) -> None:
@@ -2376,7 +2374,7 @@ class TestSubcommandValidation:
         @with_annotated(subcommand_to="team", **decorator_kwargs)
         def team_create(self, name: str = "") -> None: ...
 
-        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_create, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.command == "team"
         assert spec.name == "create"
         assert spec.help == expected_help
@@ -2390,7 +2388,7 @@ class TestSubcommandValidation:
         @with_annotated(subcommand_to="team", deprecated=deprecated)
         def team_create(self, name: str = "") -> None: ...
 
-        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_create, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.deprecated is deprecated
 
 
@@ -3026,7 +3024,7 @@ class TestSubcommandGroupConfig:
         @with_annotated(base_command=True, **subcommand_kwargs)
         def do_root(self, cmd2_handler) -> None: ...
 
-        builder = getattr(do_root, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_root, constants.AP_COMMAND_ATTR_SPEC).parser_source
         return builder()
 
     @staticmethod
@@ -3139,7 +3137,7 @@ class TestDocstringDescription:
             Extra detail.
             """
 
-        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_run, constants.AP_COMMAND_ATTR_SPEC).parser_source
         assert builder().description == "Run the thing."
 
     def test_subcommand_uses_docstring(self) -> None:
@@ -3149,7 +3147,7 @@ class TestDocstringDescription:
         def team_add(self, name: str) -> None:
             """Add a member to the team."""
 
-        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_add, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.parser_source().description == "Add a member to the team."
 
 
@@ -3240,7 +3238,7 @@ class TestParserLevelKwargs:
         @with_annotated(prog="myprog", usage="usage line")
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_run, constants.AP_COMMAND_ATTR_SPEC).parser_source
         parser = builder()
         assert parser.prog == "myprog"
         assert parser.usage == "usage line"
@@ -3259,7 +3257,7 @@ class TestParserLevelKwargs:
         @with_annotated(subcommand_to="team", usage="team add NAME")
         def team_add(self, name: str) -> None: ...
 
-        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_add, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.parser_source().usage == "team add NAME"
 
     def test_parents_allowed_on_subcommand(self) -> None:
@@ -3271,7 +3269,7 @@ class TestParserLevelKwargs:
         @with_annotated(subcommand_to="team", parents=[parent])
         def team_add(self, name: str) -> None: ...
 
-        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_add, constants.SUBCOMMAND_ATTR_SPEC)
         dests = {a.dest for a in spec.parser_source()._actions}
         assert "shared" in dests
 
@@ -3354,7 +3352,7 @@ class TestParserLowLevelKwargs:
         )
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_run, constants.AP_COMMAND_ATTR_SPEC).parser_source
         parser = builder()
         assert parser.prefix_chars == "+-"
         assert parser.fromfile_prefix_chars == "@"

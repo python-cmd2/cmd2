@@ -181,8 +181,16 @@ import enum
 import functools
 import inspect
 import types
-from collections.abc import Callable, Container, Iterable, Sequence
-from dataclasses import dataclass, field
+from collections.abc import (
+    Callable,
+    Container,
+    Iterable,
+    Sequence,
+)
+from dataclasses import (
+    dataclass,
+    field,
+)
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -203,12 +211,21 @@ from typing import (
 from rich.table import Column
 
 from . import constants
-from .argparse_utils import DEFAULT_ARGUMENT_PARSER, Cmd2ArgumentParser, SubcommandSpec
+from .argparse_utils import (
+    DEFAULT_ARGUMENT_PARSER,
+    ApCommandSpec,
+    Cmd2ArgumentParser,
+    SubcommandSpec,
+)
 from .completion import CompletionItem
 from .decorators import _parse_positionals
 from .exceptions import Cmd2ArgparseError
 from .rich_utils import Cmd2HelpFormatter, HelpContent
-from .types import CmdOrSetT, UnboundChoicesProvider, UnboundCompleter
+from .types import (
+    CmdOrSetT,
+    UnboundChoicesProvider,
+    UnboundCompleter,
+)
 
 if TYPE_CHECKING:
     from .argparse_completer import ArgparseCompleter
@@ -1828,13 +1845,11 @@ def _filtered_namespace_kwargs(
     exclude_subcommand: bool = False,
 ) -> dict[str, Any]:
     """Filter a parsed Namespace down to user-visible kwargs."""
-    from .constants import NS_ATTR_SUBCMD_HANDLER
-
     filtered: dict[str, Any] = {}
     for key, value in vars(ns).items():
         if accepted is not None and key not in accepted:
             continue
-        if key == NS_ATTR_SUBCMD_HANDLER:
+        if key == constants.NS_ATTR_SUBCOMMAND_FUNC:
             continue
         if exclude_subcommand and key == "subcommand":
             continue
@@ -2244,7 +2259,7 @@ def with_annotated(
                 base_command=base_command,
                 options=options,
             )
-            spec = SubcommandSpec(
+            subcommand_spec = SubcommandSpec(
                 name=subcmd_name,
                 command=subcommand_to,
                 help=help,
@@ -2252,7 +2267,7 @@ def with_annotated(
                 deprecated=deprecated,
                 parser_source=subcmd_parser_builder,
             )
-            setattr(handler, constants.SUBCMD_ATTR_SPEC, spec)
+            setattr(handler, constants.SUBCOMMAND_ATTR_SPEC, subcommand_spec)
             return handler
 
         command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
@@ -2296,7 +2311,7 @@ def with_annotated(
                 raise Cmd2ArgparseError from exc
 
             setattr(ns, constants.NS_ATTR_STATEMENT, statement)
-            handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
+            handler = getattr(ns, constants.NS_ATTR_SUBCOMMAND_FUNC, None)
             if base_command and handler is not None:
                 handler = functools.partial(handler, ns)
             ns.cmd2_handler = handler
@@ -2312,8 +2327,11 @@ def with_annotated(
             )
             return result
 
-        setattr(cmd_wrapper, constants.CMD_ATTR_PARSER_SOURCE, parser_builder)
-        setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
+        ap_command_spec = ApCommandSpec(
+            parser_source=parser_builder,
+            preserve_quotes=preserve_quotes,
+        )
+        setattr(cmd_wrapper, constants.AP_COMMAND_ATTR_SPEC, ap_command_spec)
 
         return cmd_wrapper
 
