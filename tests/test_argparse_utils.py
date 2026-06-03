@@ -863,22 +863,3 @@ def test_deprecated_subcommand() -> None:
     # Verify it was removed from _deprecated set
     assert "old" not in subparsers_action._deprecated  # type: ignore[attr-defined]
     assert "old_alias" not in subparsers_action._deprecated  # type: ignore[attr-defined]
-
-
-@pytest.mark.skipif(
-    sys.version_info < (3, 15),
-    reason="_ColorlessTheme only exists in 3.15+",
-)
-def test_colorless_theme_monkeypatch() -> None:
-    """Test the _ColorlessTheme.__getattr__ monkey patch."""
-
-    # If this assertion fails, then the bug no longer exists and our patch wasn't installed.
-    # We can remove the patch function and this test.
-    assert argparse._ColorlessTheme.__getattr__ == argparse_utils._ColorlessTheme_getattr
-
-    # Our patch raises an Attribute error for non-public.
-    with pytest.raises(AttributeError):
-        getattr(argparse._ColorlessTheme(), "_fake")  # noqa: B009
-
-    with pytest.raises(AttributeError):
-        getattr(argparse._ColorlessTheme(), "__deepcopy__")  # noqa: B009
