@@ -1750,10 +1750,7 @@ def _resolve_parameters(
     ignored = {next(iter(sig.parameters), None), "return", *skip_params}
     ignored.discard(None)
     relevant_annotations = {name: ann for name, ann in getattr(func, "__annotations__", {}).items() if name not in ignored}
-    # Forward references resolve against the *original* function's module.  When func is a
-    # functools.wraps wrapper (e.g. a user decorator stacked under @with_annotated), wraps copies
-    # __annotations__ but not __globals__, so resolve against the unwrapped function's globals --
-    # the same module get_type_hints would find by walking a bare function's __wrapped__ chain.
+    # Forward references resolve against the *original* function's module during functools.wraps wrapper.
     unwrapped = inspect.unwrap(func)
     try:
         hints = get_type_hints(
