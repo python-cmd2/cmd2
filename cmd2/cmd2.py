@@ -1068,17 +1068,16 @@ class Cmd:
 
         This method acts as a safety guard before unregistration. It inspects all
         command parsers provided by the CommandSet and recursively checks their
-        subcommand hierarchies to ensure no other registrant (another CommandSet
-        or the main application) has attached subcommands to them.
+        subcommand hierarchies to ensure no other CommandSet or Cmd instance has
+        attached subcommands to them.
 
         :param cmdset: the CommandSet instance to check for uninstallation safety
-        :raises CommandSetRegistrationError: if any parser in the CommandSet is
-                                             required by another registrant
+        :raises CommandSetRegistrationError: if it is not safe to uninstall the CommandSet
         """
-        registrant_id = id(cmdset)
+        cmdset_id = id(cmdset)
 
         def check_parser_uninstallable(parser: Cmd2ArgumentParser) -> None:
-            # Recursively verify no subcommands belong to a different registrant
+            # Recursively verify no subcommands belong to a different CommandSet or Cmd instance
             try:
                 subparsers_action = parser.get_subparsers_action()
             except ValueError:
@@ -1093,10 +1092,11 @@ class Cmd:
                     continue
                 checked_parsers.add(subparser)
 
-                attached_registrant_id = getattr(subparser, constants.PARSER_ATTR_REGISTRANT_ID, None)
-                if attached_registrant_id is not None and attached_registrant_id != registrant_id:
+                owner_id = getattr(subparser, constants.PARSER_ATTR_OWNER_ID, None)
+                if owner_id is not None and owner_id != cmdset_id:
                     raise CommandSetRegistrationError(
-                        f"Cannot uninstall CommandSet: '{subparser.prog}' is required by another registrant"
+                        f"Cannot uninstall CommandSet '{type(cmdset).__name__}' because it is still "
+                        f"required by subcommand '{subparser.prog}'"
                     )
                 check_parser_uninstallable(subparser)
 
@@ -1152,7 +1152,7 @@ class Cmd:
             subcmd_parser.set_defaults(**defaults)
 
             # Record the ID of the instance that registered this subcommand parser
-            setattr(subcmd_parser, constants.PARSER_ATTR_REGISTRANT_ID, id(owner))
+            setattr(subcmd_parser, constants.PARSER_ATTR_OWNER_ID, id(owner))
 
             # Attach this subcommand
             record = SubcommandRecord(

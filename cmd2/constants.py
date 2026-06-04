@@ -78,8 +78,8 @@ AP_COMMAND_ATTR_SPEC = cmd2_private_attr_name("ap_command_spec")
 # Attached to a subcommand function; defines its SubcommandSpec instance
 SUBCOMMAND_ATTR_SPEC = cmd2_private_attr_name("subcommand_spec")
 
-# Attached to an argparse parser; stores the id() of the Cmd or CommandSet instance that registered it
-PARSER_ATTR_REGISTRANT_ID = cmd2_private_attr_name("registrant_id")
+# Attached to a subcommand parser; stores the id() of the Cmd or CommandSet instance that registered it
+PARSER_ATTR_OWNER_ID = cmd2_private_attr_name("owner_id")
 
 
 # --- Public Developer Attributes ---
