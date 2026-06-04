@@ -292,11 +292,31 @@ ParserSource: TypeAlias = Union[
 
 
 @dataclass(kw_only=True)
+class ArgparseCommandSpec:
+    """Metadata for an argparse-based command function.
+
+    :param parser_source: an existing Cmd2ArgumentParser instance or a factory
+                          (callable, staticmethod, or classmethod) that returns one.
+    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
+    """
+
+    parser_source: ParserSource[Any]
+    preserve_quotes: bool = False
+
+
+@dataclass(kw_only=True)
 class _SubcommandBase:
-    """Base metadata shared by all subcommand representations."""
+    """Base metadata shared by all subcommand representations.
+
+    :param name: the name of the subcommand
+    :param command: the full parent command path (e.g., 'foo bar')
+    :param help: optional help message for this subcommand
+    :param aliases: optional alternative names for this subcommand
+    :param deprecated: whether this subcommand is deprecated (requires Python 3.13+).
+    """
 
     name: str
-    command: str  # The full parent command path (e.g., 'foo bar')
+    command: str
     help: str | None = None
     aliases: tuple[str, ...] = ()
     deprecated: bool = False
@@ -304,7 +324,11 @@ class _SubcommandBase:
 
 @dataclass(kw_only=True)
 class SubcommandSpec(_SubcommandBase):
-    """Metadata used to build and register a subcommand."""
+    """Metadata used to build and register a subcommand.
+
+    :param parser_source: an existing Cmd2ArgumentParser instance or a factory
+                          (callable, staticmethod, or classmethod) that returns one.
+    """
 
     parser_source: ParserSource[Any]
 
@@ -314,6 +338,8 @@ class SubcommandRecord(_SubcommandBase):
     """A record of a subcommand's configuration and parser.
 
     Used primarily for attaching and detaching subcommands.
+
+    :param parser: the built Cmd2ArgumentParser instance for this subcommand
     """
 
     parser: "Cmd2ArgumentParser"
@@ -422,30 +448,6 @@ register_argparse_argument_parameter("completer", validator=_validate_completion
 register_argparse_argument_parameter("table_columns")
 register_argparse_argument_parameter("nargs_range")
 register_argparse_argument_parameter("suppress_tab_hint")
-
-############################################################################################################
-# Workaround for Python 3.15.0b1 argparse bug
-# _ColorlessTheme.__getattr__ incorrectly returns "" for non-public attributes, which breaks
-# protocols like copy.deepcopy().
-############################################################################################################
-
-if sys.version_info >= (3, 15):
-
-    def _ColorlessTheme_getattr(  # noqa: N802
-        _self: argparse._ColorlessTheme,  # type: ignore[name-defined]
-        name: str,
-    ) -> Any:
-        """Patched __getattr__ that allows non-public lookups to fail correctly.
-
-        This matches the implementation in CPython for their next release.
-        """
-        if name.startswith("_"):
-            raise AttributeError(name)
-        return ""
-
-    # If the bug still exists, then install the patch.
-    if getattr(argparse._ColorlessTheme(), "__deepcopy__", None) == "":  # type: ignore[attr-defined]
-        argparse._ColorlessTheme.__getattr__ = _ColorlessTheme_getattr  # type: ignore[attr-defined]
 
 
 ############################################################################################################
@@ -726,13 +728,13 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         suggest_on_error: bool = False,
         color: bool = False,
         *,
-        ap_completer_type: type["ArgparseCompleter"] | None = None,
+        completer_class: type["ArgparseCompleter"] | None = None,
     ) -> None:
         """Initialize the Cmd2ArgumentParser instance.
 
-        :param ap_completer_type: optional parameter which specifies a subclass of ArgparseCompleter for custom completion
-                                  behavior on this parser. If this is None or not present, then cmd2 will use
-                                  argparse_completer.DEFAULT_AP_COMPLETER when completing this parser's arguments
+        :param completer_class: optional parameter which specifies a subclass of ArgparseCompleter
+                                for custom completion behavior on this parser. If this is None, then
+                                it will be set to argparse_completer.DEFAULT_ARGPARSE_COMPLETER.
         """
         kwargs: dict[str, bool] = {}
         if sys.version_info >= (3, 14):
@@ -759,7 +761,11 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             **kwargs,
         )
 
-        self.ap_completer_type = ap_completer_type
+        if completer_class is None:
+            from . import argparse_completer
+
+            completer_class = argparse_completer.DEFAULT_ARGPARSE_COMPLETER
+        self.completer_class = completer_class
 
         # To assist type checkers, recast these to reflect our usage of rich-argparse.
         self.formatter_class: type[Cmd2HelpFormatter]
@@ -1085,11 +1091,11 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
 
 # Parser type used by cmd2's built-in commands.
-# Set it using cmd2.set_default_argument_parser_type().
+# Set it using cmd2.set_default_argument_parser().
 DEFAULT_ARGUMENT_PARSER: type[Cmd2ArgumentParser] = Cmd2ArgumentParser
 
 
-def set_default_argument_parser_type(parser_type: type[Cmd2ArgumentParser]) -> None:
+def set_default_argument_parser(parser_class: type[Cmd2ArgumentParser]) -> None:
     """Set the default Cmd2ArgumentParser class for cmd2's built-in commands.
 
     Since built-in commands rely on customizations made in Cmd2ArgumentParser,
@@ -1100,4 +1106,4 @@ def set_default_argument_parser_type(parser_type: type[Cmd2ArgumentParser]) -> N
     See examples/custom_parser.py.
     """
     global DEFAULT_ARGUMENT_PARSER  # noqa: PLW0603
-    DEFAULT_ARGUMENT_PARSER = parser_type
+    DEFAULT_ARGUMENT_PARSER = parser_class

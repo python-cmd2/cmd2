@@ -378,19 +378,14 @@ class ExampleApp(cmd2.Cmd):
             self.poutput('Vegetables unloaded')
 
     cut_parser = cmd2.Cmd2ArgumentParser()
-    cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
+    cut_parser.add_subparsers(title="item", help="item to cut", metavar="ITEM", required=True)
 
     @with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace):
         """Cut Command."""
-        handler = ns.cmd2_subcmd_handler
-        if handler is not None:
-            # Call whatever subcommand function was selected
-            handler(ns)
-        else:
-            # No subcommand was provided, so call help
-            self.poutput('This command does nothing without sub-parsers registered')
-            self.do_help('cut')
+        # Call whatever subcommand function was selected
+        ns.cmd2_subcommand_func(ns)
+
 
 
 if __name__ == '__main__':

@@ -414,4 +414,4 @@ example demonstrates both above cases in a concrete fashion.
 naming collisions, do not use any of these names for your argparse arguments.
 
 - `cmd2_statement` - [cmd2.Statement][] object that was created when parsing the command line.
-- `cmd2_subcmd_handler` - subcommand handler function or `None` if one was not set.
+- `cmd2_subcommand_func` - subcommand handler function or `None` if one was not set.

@@ -18,7 +18,7 @@ collected into a tuple.  Underscores in a parameter name become dashes in the ge
 flag (``dry_run`` -> ``--dry-run``); pass an explicit ``Option("--my_flag")`` to opt out.
 Positional-only parameters (before ``/``) and ``**kwargs`` raise ``TypeError``.  The parameter
 names ``dest`` and ``subcommand`` are reserved; ``cmd2_statement`` receives the parsed
-``Statement`` and (with ``base_command=True``) ``cmd2_handler`` receives the subcommand handler:
+``Statement`` and (with ``base_command=True``) ``cmd2_subcommand_func`` receives the subcommand handler:
 
     class MyApp(cmd2.Cmd):
         @cmd2.with_annotated
@@ -118,7 +118,7 @@ Parser-level customization is forwarded to [`Cmd2ArgumentParser`][cmd2.argparse_
 692 ``**parser_kwargs: Unpack[Cmd2ParserKwargs]``.  Anything the parser ctor accepts -- ``description``,
 ``epilog``, ``prog``, ``usage``, ``parents``, ``argument_default``, ``prefix_chars``,
 ``fromfile_prefix_chars``, ``conflict_handler``, ``add_help``, ``allow_abbrev``, ``exit_on_error``,
-``formatter_class``, ``ap_completer_type``, and on Python >= 3.14 ``suggest_on_error`` / ``color`` --
+``formatter_class``, ``completer_class``, and on Python >= 3.14 ``suggest_on_error`` / ``color`` --
 flows straight through; the [`Cmd2ParserKwargs`][cmd2.annotated.Cmd2ParserKwargs] ``TypedDict`` is the single source of truth
 and gives type-checkers/IDEs autocomplete on the decorator's call site.  ``parser_class`` stays as
 its own explicit kwarg because it selects the class itself, not a value passed to it.  Two
@@ -181,8 +181,16 @@ import enum
 import functools
 import inspect
 import types
-from collections.abc import Callable, Container, Iterable, Sequence
-from dataclasses import dataclass, field
+from collections.abc import (
+    Callable,
+    Container,
+    Iterable,
+    Sequence,
+)
+from dataclasses import (
+    dataclass,
+    field,
+)
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -203,14 +211,22 @@ from typing import (
 from rich.table import Column
 
 from . import constants
-from .argparse_utils import DEFAULT_ARGUMENT_PARSER, Cmd2ArgumentParser, SubcommandSpec
+from .argparse_utils import (
+    ArgparseCommandSpec,
+    Cmd2ArgumentParser,
+    SubcommandSpec,
+)
 from .completion import CompletionItem
 from .decorators import _parse_positionals
 from .exceptions import Cmd2ArgparseError
 from .rich_utils import Cmd2HelpFormatter, HelpContent
-from .types import CmdOrSetT, UnboundChoicesProvider, UnboundCompleter
+from .types import (
+    CmdOrSetT,
+    UnboundChoicesProvider,
+    UnboundCompleter,
+)
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import ArgparseCompleter
 
 #: ``nargs`` values accepted by cmd2's patched ``add_argument`` (incl. ranged tuples).
@@ -240,7 +256,7 @@ class Cmd2ParserKwargs(TypedDict, total=False):
     exit_on_error: bool
     suggest_on_error: bool
     color: bool
-    ap_completer_type: "type[ArgparseCompleter] | None"
+    completer_class: "type[ArgparseCompleter] | None"
 
 
 # ---------------------------------------------------------------------------
@@ -1687,7 +1703,7 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
 
 # Parameters handled specially by the decorator and not added to the parser.  The first positional
 # parameter (self/cls) is always skipped by position; these cover additional decorator-managed names.
-_SKIP_PARAMS = frozenset({"cmd2_handler", "cmd2_statement"})
+_SKIP_PARAMS = frozenset({constants.NS_ATTR_SUBCOMMAND_FUNC, constants.NS_ATTR_STATEMENT})
 
 
 def _link_group_membership(
@@ -1718,14 +1734,17 @@ def _resolve_parameters(
     """Resolve a function signature into a list of argparse-argument builders.
 
     ``base_command`` marks each argument's context for the base-command :data:`_CONSTRAINTS` rows and
-    drives the function-level ``cmd2_handler`` check below.  ``groups``/``mutually_exclusive_groups``
+    drives the function-level ``cmd2_subcommand_func`` check below.  ``groups``/``mutually_exclusive_groups``
     are linked onto each argument as membership facts for the cross-config constraint rows.
     """
     sig = inspect.signature(func)
     # Function-level check (not a per-argument _CONSTRAINTS row): a base command dispatches through
-    # cmd2_handler, so it must exist.  Here so it also fires when the function has zero parameters.
-    if base_command and "cmd2_handler" not in sig.parameters:
-        raise TypeError(f"with_annotated(base_command=True) requires a 'cmd2_handler' parameter in {func.__qualname__}")
+    # cmd2_subcommand_func, so it must exist.  Here so it also fires when the function has zero parameters.
+    if base_command and constants.NS_ATTR_SUBCOMMAND_FUNC not in sig.parameters:
+        raise TypeError(
+            f"with_annotated(base_command=True) requires a '{constants.NS_ATTR_SUBCOMMAND_FUNC}' "
+            f"parameter in {func.__qualname__}"
+        )
     # Resolve hints only for the parameters that become arguments
     ignored = {next(iter(sig.parameters), None), *skip_params}
     ignored.discard(None)
@@ -1836,13 +1855,9 @@ def _filtered_namespace_kwargs(
     exclude_subcommand: bool = False,
 ) -> dict[str, Any]:
     """Filter a parsed Namespace down to user-visible kwargs."""
-    from .constants import NS_ATTR_SUBCMD_HANDLER
-
     filtered: dict[str, Any] = {}
     for key, value in vars(ns).items():
         if accepted is not None and key not in accepted:
-            continue
-        if key == NS_ATTR_SUBCMD_HANDLER:
             continue
         if exclude_subcommand and key == "subcommand":
             continue
@@ -1960,7 +1975,9 @@ def build_parser_from_function(
     :param parser_kwargs: forwarded [`Cmd2ParserKwargs`][cmd2.annotated.Cmd2ParserKwargs]
     :return: a fully configured ``Cmd2ArgumentParser``
     """
-    parser_cls = parser_class or DEFAULT_ARGUMENT_PARSER
+    from . import argparse_utils
+
+    parser_cls = parser_class or argparse_utils.DEFAULT_ARGUMENT_PARSER
     if "description" not in parser_kwargs:
         auto_description = _docstring_first_paragraph(func.__doc__)
         if auto_description is not None:
@@ -2113,10 +2130,10 @@ def _build_subcommand_handler(
     def handler(self_arg: Any, ns: Any) -> Any:
         """Unpack Namespace into typed kwargs for the subcommand handler."""
         filtered = _filtered_namespace_kwargs(ns, accepted=_accepted)
-        if "cmd2_handler" in filtered:
-            cmd2_h = filtered["cmd2_handler"]
+        if constants.NS_ATTR_SUBCOMMAND_FUNC in filtered:
+            cmd2_h = filtered[constants.NS_ATTR_SUBCOMMAND_FUNC]
             if isinstance(cmd2_h, functools.partial) and cmd2_h.func is handler:
-                filtered["cmd2_handler"] = None
+                filtered[constants.NS_ATTR_SUBCOMMAND_FUNC] = None
         return _invoke_command_func(
             func, self_arg, filtered, leading_names=_leading_names, var_positional_name=_var_positional_name
         )
@@ -2178,7 +2195,7 @@ def with_annotated(
     :param ns_provider: callable returning a prepopulated Namespace (not with ``subcommand_to``)
     :param preserve_quotes: preserve quotes in arguments (not with ``subcommand_to``)
     :param with_unknown_args: capture unknown args as the ``_unknown`` kwarg (not with ``subcommand_to``)
-    :param base_command: add ``add_subparsers()``; requires a ``cmd2_handler`` param and no positionals
+    :param base_command: add ``add_subparsers()``; requires a ``cmd2_subcommand_func`` param and no positionals
     :param subcommand_to: parent command name; function must be named ``{parent_underscored}_{subcommand}``
     :param help: subcommand help text (only with ``subcommand_to``)
     :param aliases: alternative subcommand names (only with ``subcommand_to``)
@@ -2240,9 +2257,10 @@ def with_annotated(
             if unknown_param.kind is inspect.Parameter.POSITIONAL_ONLY:
                 raise TypeError("Parameter _unknown must be keyword-compatible when with_unknown_args=True")
 
-        if not base_command and "cmd2_handler" in inspect.signature(fn).parameters:
+        if not base_command and constants.NS_ATTR_SUBCOMMAND_FUNC in inspect.signature(fn).parameters:
             raise TypeError(
-                f"Parameter 'cmd2_handler' in {fn.__qualname__} is only valid when with_annotated(base_command=True) is used."
+                f"Parameter '{constants.NS_ATTR_SUBCOMMAND_FUNC}' in {fn.__qualname__} "
+                "is only valid when with_annotated(base_command=True) is used."
             )
 
         if subcommand_to is not None:
@@ -2252,7 +2270,7 @@ def with_annotated(
                 base_command=base_command,
                 options=options,
             )
-            spec = SubcommandSpec(
+            subcommand_spec = SubcommandSpec(
                 name=subcmd_name,
                 command=subcommand_to,
                 help=help,
@@ -2260,7 +2278,7 @@ def with_annotated(
                 deprecated=deprecated,
                 parser_source=subcmd_parser_builder,
             )
-            setattr(handler, constants.SUBCMD_ATTR_SPEC, spec)
+            setattr(handler, constants.SUBCOMMAND_ATTR_SPEC, subcommand_spec)
             return handler
 
         command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
@@ -2304,10 +2322,10 @@ def with_annotated(
                 raise Cmd2ArgparseError from exc
 
             setattr(ns, constants.NS_ATTR_STATEMENT, statement)
-            handler = getattr(ns, constants.NS_ATTR_SUBCMD_HANDLER, None)
+            handler = getattr(ns, constants.NS_ATTR_SUBCOMMAND_FUNC, None)
             if base_command and handler is not None:
                 handler = functools.partial(handler, ns)
-            ns.cmd2_handler = handler
+            setattr(ns, constants.NS_ATTR_SUBCOMMAND_FUNC, handler)
 
             func_kwargs = _filtered_namespace_kwargs(ns, accepted=accepted, exclude_subcommand=base_command)
 
@@ -2320,8 +2338,11 @@ def with_annotated(
             )
             return result
 
-        setattr(cmd_wrapper, constants.CMD_ATTR_PARSER_SOURCE, parser_builder)
-        setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
+        argparse_command_spec = ArgparseCommandSpec(
+            parser_source=parser_builder,
+            preserve_quotes=preserve_quotes,
+        )
+        setattr(cmd_wrapper, constants.ARGPARSE_COMMAND_ATTR_SPEC, argparse_command_spec)
 
         return cmd_wrapper
 
