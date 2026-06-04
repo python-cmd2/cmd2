@@ -1186,6 +1186,28 @@ class TestParserCustomization:
         parser = build_parser_from_function(_make_func(str), parser_class=MyParser)
         assert isinstance(parser, MyParser)
 
+    def test_default_parser_class(self) -> None:
+        """With no parser_class, the parser is an instance of the configured default."""
+        from cmd2 import argparse_utils
+
+        parser = build_parser_from_function(_make_func(str))
+        assert type(parser) is argparse_utils.DEFAULT_ARGUMENT_PARSER
+
+    def test_default_parser_class_follows_current_default(self, monkeypatch) -> None:
+        """The default is resolved at call time, never a copy captured at import.
+
+        ``set_default_argument_parser`` rebinds ``argparse_utils.DEFAULT_ARGUMENT_PARSER`` at runtime;
+        a build issued afterwards must honor the new value.
+        """
+        from cmd2 import argparse_utils
+
+        class MyDefaultParser(cmd2.Cmd2ArgumentParser):
+            pass
+
+        monkeypatch.setattr(argparse_utils, "DEFAULT_ARGUMENT_PARSER", MyDefaultParser)
+        parser = build_parser_from_function(_make_func(str))
+        assert type(parser) is MyDefaultParser
+
     def test_completer_class(self) -> None:
         from cmd2.argparse_completer import ArgparseCompleter
 
@@ -2309,6 +2331,114 @@ class TestSubcommands:
         assert "member" in help_text
 
 
+class _OptionalIntermediateApp(cmd2.Cmd):
+    """An intermediate subcommand that is itself a base command with an *optional* subcommand."""
+
+    @with_annotated(base_command=True)
+    def do_opt(self, cmd2_subcommand_func) -> None:
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
+
+    @with_annotated(subcommand_to="opt", base_command=True, subcommand_required=False, help="optional middle")
+    def opt_mid(self, cmd2_subcommand_func) -> None:
+        # The guard must blank out the self-referential handler so this runs exactly once.
+        self.poutput("mid:none" if cmd2_subcommand_func is None else "mid:recurse")
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
+
+    @with_annotated(subcommand_to="opt mid", help="leaf")
+    def opt_mid_leaf(self, name: str) -> None:
+        self.poutput(f"leaf:{name}")
+
+
+@pytest.fixture
+def opt_app() -> _OptionalIntermediateApp:
+    return _OptionalIntermediateApp()
+
+
+class TestOptionalIntermediateSubcommand:
+    def test_intermediate_without_deeper_subcommand_runs_once(self, opt_app) -> None:
+        """The recursion guard blanks the self-referential handler: the body runs once with None."""
+        out, _err = run_cmd(opt_app, "opt mid")
+        assert out == ["mid:none"]
+
+    def test_deeper_subcommand_still_dispatches(self, opt_app) -> None:
+        """Blanking the self-reference must not break dispatch to a genuine deeper subcommand."""
+        out, _err = run_cmd(opt_app, "opt mid leaf Bob")
+        assert out == ["leaf:Bob"]
+
+    def test_guard_blanks_only_subcommand_func(self) -> None:
+        """The guard must null *only* cmd2_subcommand_func, leaving the intermediate's own args intact."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_opt(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="opt", base_command=True, subcommand_required=False)
+            def opt_mid(self, cmd2_subcommand_func, verbose: bool = False) -> None:
+                self.poutput(f"none={cmd2_subcommand_func is None}:verbose={verbose}")
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+        out, _err = run_cmd(App(), "opt mid --verbose")
+        assert out == ["none=True:verbose=True"]
+
+    def test_guard_fires_at_deeper_nesting_level(self) -> None:
+        """The guard must work past two levels: the deepest *selected* optional base runs once."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_a(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="a", base_command=True, subcommand_required=False)
+            def a_b(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="a b", base_command=True, subcommand_required=False)
+            def a_b_c(self, cmd2_subcommand_func) -> None:
+                self.poutput(f"c:none={cmd2_subcommand_func is None}")
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="a b c", help="leaf")
+            def a_b_c_leaf(self, name: str) -> None:
+                self.poutput(f"leaf:{name}")
+
+        app = App()
+        assert run_cmd(app, "a b c")[0] == ["c:none=True"]
+        assert run_cmd(app, "a b c leaf Z")[0] == ["leaf:Z"]
+
+    def test_guard_works_for_commandset_subcommand(self) -> None:
+        """The handler is a CommandSet-bound method here; unwrapping to __func__ must still match."""
+
+        class _Grp(cmd2.CommandSet):
+            @cmd2.with_category("grp")
+            @with_annotated(base_command=True)
+            def do_grp(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="grp", base_command=True, subcommand_required=False)
+            def grp_mid(self, cmd2_subcommand_func) -> None:
+                self._cmd.poutput(f"mid:none={cmd2_subcommand_func is None}")
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="grp mid", help="leaf")
+            def grp_mid_leaf(self, name: str) -> None:
+                self._cmd.poutput(f"leaf:{name}")
+
+        app = cmd2.Cmd(auto_load_commands=False)
+        app.register_command_set(_Grp())
+        assert run_cmd(app, "grp mid")[0] == ["mid:none=True"]
+        assert run_cmd(app, "grp mid leaf Q")[0] == ["leaf:Q"]
+
+
 class TestSubcommandValidation:
     def test_subcommand_aliases_none_raises(self) -> None:
         """aliases=None is off-spec (it must be a Sequence[str]); reject it with a clear message."""
@@ -3282,21 +3412,6 @@ class TestParserLevelKwargs:
         parser = build_parser_from_function(_make_func(str), argument_default=sentinel)
         assert parser.argument_default == sentinel
 
-    def test_argument_default_suppress_works_with_explicit_defaults(self) -> None:
-        """``argument_default=SUPPRESS`` is safe when every argument sets its own default.
-
-        Every ``@with_annotated`` argument either is positional (always supplied) or
-        has an explicit default, so SUPPRESS at the parser level can't drop a kwarg
-        the function expects.
-        """
-
-        def func(self, name: str, count: int = 1) -> None: ...
-
-        parser = build_parser_from_function(func, argument_default=argparse.SUPPRESS)
-        ns = parser.parse_args(["alice"])
-        assert ns.name == "alice"
-        assert ns.count == 1
-
     def test_decorator_passes_parser_kwargs(self) -> None:
         @with_annotated(prog="myprog", usage="usage line")
         def do_run(self, name: str) -> None: ...
@@ -3481,27 +3596,34 @@ class TestStrConstValidation:
 
 
 class TestArgumentDefaultSuppressGuard:
-    """``argument_default=argparse.SUPPRESS`` is rejected when it would drop an omittable argument."""
+    """``argument_default=argparse.SUPPRESS`` is rejected outright by @with_annotated.
 
-    def test_suppress_with_optional_positional_rejected(self) -> None:
-        def do_t(self, x: int | None): ...
+    SUPPRESS drops an absent argument from the parsed namespace, but @with_annotated builds the call
+    from the signature, so every declared parameter is expected at invocation -- a vanished argument
+    can never be valid.  The rejection is unconditional (it never inspects the signature), so one
+    direct-build case and one subcommand-registration case cover it.
+    """
+
+    def test_suppress_rejected(self) -> None:
+        def do_t(self, a: int, b: str = "x"): ...
 
         with pytest.raises(TypeError, match="SUPPRESS"):
             build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
 
-    def test_suppress_safe_when_all_args_required_or_defaulted(self) -> None:
-        def do_t(self, a: int, b: str = "x"): ...
+    def test_suppress_rejected_in_subcommand(self) -> None:
+        """The subcommand path shares the same builder, so the rejection fires at registration too."""
 
-        # ``a`` is always supplied (required positional); ``b`` carries its own default -> safe.
-        parser = build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
-        assert parser is not None
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_calc(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
 
-    def test_suppress_safe_with_var_positional(self) -> None:
-        def do_t(self, *vals: int): ...
+            @with_annotated(subcommand_to="calc", argument_default=argparse.SUPPRESS, help="sum values")
+            def calc_sum(self, value: str = "x") -> None: ...
 
-        # *args is substituted with () by the invocation path, so SUPPRESS cannot strand it.
-        parser = build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
-        assert parser is not None
+        with pytest.raises(TypeError, match="SUPPRESS"):
+            App()
 
 
 class TestHelpKwargReserved:
