@@ -9,6 +9,7 @@ import argparse
 import datetime
 import decimal
 import enum
+import functools
 import inspect
 import types
 import uuid
@@ -150,7 +151,11 @@ def _func_positional_only_mixed(self, x: str, /, y: int, *, z: int = 0) -> None:
 # while hints on real arguments must still raise. ``noqa: F821`` marks the intentionally-undefined names.
 def _func_unresolvable_self(self: "UnimportableCmd", name: str, count: int = 1) -> None: ...  # noqa: F821
 def _func_unresolvable_cmd2_statement(self, cmd2_statement: "UnimportableStatement", name: str, count: int = 1) -> None: ...  # noqa: F821
-def _func_unresolvable_cmd2_subcommand_func(self, cmd2_subcommand_func: "UnimportableHandler", verbose: bool = False) -> None: ...  # noqa: F821
+def _func_unresolvable_cmd2_subcommand_func(
+    self,
+    cmd2_subcommand_func: "UnimportableHandler",  # noqa: F821
+    verbose: bool = False,
+) -> None: ...
 def _func_unresolvable_return(self, name: str) -> "UnimportableReturn": ...  # noqa: F821
 def _func_unresolvable_argument(self, name: "NonExistentType") -> None: ...  # noqa: F821
 def _func_unresolvable_argument_base(self, cmd2_subcommand_func, name: "NonExistentType") -> None: ...  # noqa: F821
@@ -167,6 +172,25 @@ def _arg_names_via_base_command(func: Any) -> set[str]:
     from cmd2.annotated import _resolve_parameters
 
     return {arg.name for arg in _resolve_parameters(func, base_command=True)}
+
+
+def _wrap_in_foreign_module(func: Any) -> Any:
+    """Wrap *func* as a ``functools.wraps`` decorator would, but give the wrapper a ``__globals__``
+    that lacks this module's names. This mimics a user decorator defined in *another* module and
+    stacked under ``@with_annotated``: ``functools.wraps`` copies ``__annotations__`` but not
+    ``__globals__``, so a forward reference can only be resolved via ``__wrapped__`` (the original
+    function's module), not the wrapper's. Rebinding the wrapper's globals is the single-module way
+    to recreate that cross-module split.
+    """
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return func(*args, **kwargs)
+
+    foreign = types.FunctionType(
+        wrapper.__code__, {"__builtins__": __builtins__}, func.__name__, wrapper.__defaults__, wrapper.__closure__
+    )
+    functools.update_wrapper(foreign, func)  # copies __annotations__ etc. and sets __wrapped__ = func
+    return foreign
 
 
 def _provider(cmd: cmd2.Cmd):
@@ -655,7 +679,9 @@ class TestBuildParser:
         [
             pytest.param(_func_unresolvable_self, _arg_names_via_parser, {"name", "count"}, id="self"),
             pytest.param(_func_unresolvable_cmd2_statement, _arg_names_via_parser, {"name", "count"}, id="cmd2_statement"),
-            pytest.param(_func_unresolvable_cmd2_subcommand_func, _arg_names_via_base_command, {"verbose"}, id="cmd2_subcommand_func"),
+            pytest.param(
+                _func_unresolvable_cmd2_subcommand_func, _arg_names_via_base_command, {"verbose"}, id="cmd2_subcommand_func"
+            ),
             pytest.param(_func_unresolvable_return, _arg_names_via_parser, {"name"}, id="return"),
         ],
     )
@@ -683,6 +709,24 @@ class TestBuildParser:
         """
         with pytest.raises(TypeError, match="Failed to resolve type hints"):
             resolve_arg_names(func)
+
+    def test_forward_ref_resolves_through_functools_wraps_wrapper(self) -> None:
+        """A forward reference must resolve against the *original* function's module even when the
+        function reaching the parser builder is a ``functools.wraps`` wrapper defined in another
+        module (e.g. a user decorator stacked under ``@with_annotated``). ``functools.wraps`` copies
+        ``__annotations__`` but not ``__globals__``, so resolution must follow ``__wrapped__`` --
+        mirroring what ``typing.get_type_hints`` does for a bare function.
+        """
+
+        def do_path(self, target: "Path", count: int = 1):
+            pass
+
+        # The wrapper carries a foreign global namespace lacking ``Path``; resolution must use the
+        # unwrapped function's globals (this module) instead, or it raises "Failed to resolve".
+        wrapped = _wrap_in_foreign_module(do_path)
+        parser = build_parser_from_function(wrapped)
+        dests = {action.dest for action in parser._actions if action.dest != "help"}
+        assert dests == {"target", "count"}
 
     def test_dest_param_raises(self) -> None:
         with pytest.raises(ValueError, match="dest"):
