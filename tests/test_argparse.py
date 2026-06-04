@@ -358,13 +358,13 @@ class SubcommandApp(cmd2.Cmd):
     # Add subcommands using as_subcommand_to decorator
     @cmd2.with_argparser(_build_has_subcmd_parser)
     def do_test_subcmd_decorator(self, args: argparse.Namespace) -> None:
-        args.cmd2_subcmd_handler(args)
+        args.cmd2_subcommand_func(args)
 
     subcmd_parser = cmd2.Cmd2ArgumentParser(description="A subcommand")
 
     @cmd2.as_subcommand_to("test_subcmd_decorator", "subcmd", subcmd_parser, help=subcmd_parser.description.lower())
     def subcmd_func(self, args: argparse.Namespace) -> None:
-        # Make sure printing the Namespace works. The way we originally added cmd2_handler to it resulted in a RecursionError.
+        # Make sure printing the Namespace works.
         self.poutput(args)
 
     helpless_subcmd_parser = cmd2.Cmd2ArgumentParser(add_help=False, description="A subcommand with no help")
@@ -373,7 +373,7 @@ class SubcommandApp(cmd2.Cmd):
         "test_subcmd_decorator", "helpless_subcmd", helpless_subcmd_parser, help=helpless_subcmd_parser.description.lower()
     )
     def helpless_subcmd_func(self, args: argparse.Namespace) -> None:
-        # Make sure vars(Namespace) works. The way we originally added cmd2_handler to it resulted in a RecursionError.
+        # Make sure vars(Namespace) works.
         self.poutput(vars(args))
 
 

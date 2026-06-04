@@ -366,8 +366,7 @@ class ArgparseCompleter:
                                 parent_tokens[action.dest] = [token]
 
                             parser = self._subcommand_action.choices[token]
-                            completer_type = self._cmd_app._determine_ap_completer_type(parser)
-                            completer = completer_type(parser, self._cmd_app, parent_tokens=parent_tokens)
+                            completer = parser.completer_class(parser, self._cmd_app, parent_tokens=parent_tokens)
                             return completer.complete(text, line, begidx, endidx, tokens[token_index + 1 :], cmd_set=cmd_set)
 
                         # Invalid subcommand entered, so no way to complete remaining tokens
@@ -668,8 +667,7 @@ class ArgparseCompleter:
             for token_index, token in enumerate(tokens):
                 if token in self._subcommand_action.choices:
                     parser = self._subcommand_action.choices[token]
-                    completer_type = self._cmd_app._determine_ap_completer_type(parser)
-                    completer = completer_type(parser, self._cmd_app)
+                    completer = parser.completer_class(parser, self._cmd_app)
                     return completer.complete_subcommand_help(text, line, begidx, endidx, tokens[token_index + 1 :])
 
                 if token_index == len(tokens) - 1:
@@ -690,8 +688,7 @@ class ArgparseCompleter:
         if tokens and self._subcommand_action is not None:
             parser = self._subcommand_action.choices.get(tokens[0])
             if parser is not None:
-                completer_type = self._cmd_app._determine_ap_completer_type(parser)
-                completer = completer_type(parser, self._cmd_app)
+                completer = parser.completer_class(parser, self._cmd_app)
                 completer.print_help(tokens[1:], file)
                 return
         self._parser.print_help(file)
@@ -800,13 +797,13 @@ class ArgparseCompleter:
 
 
 # The default ArgparseCompleter class for a cmd2 app
-DEFAULT_AP_COMPLETER: type[ArgparseCompleter] = ArgparseCompleter
+DEFAULT_ARGPARSE_COMPLETER: type[ArgparseCompleter] = ArgparseCompleter
 
 
-def set_default_ap_completer_type(completer_type: type[ArgparseCompleter]) -> None:
+def set_default_argparse_completer(completer_class: type[ArgparseCompleter]) -> None:
     """Set the default ArgparseCompleter class for a cmd2 app.
 
-    :param completer_type: Type that is a subclass of ArgparseCompleter.
+    :param completer_class: Type that is a subclass of ArgparseCompleter.
     """
-    global DEFAULT_AP_COMPLETER  # noqa: PLW0603
-    DEFAULT_AP_COMPLETER = completer_type
+    global DEFAULT_ARGPARSE_COMPLETER  # noqa: PLW0603
+    DEFAULT_ARGPARSE_COMPLETER = completer_class

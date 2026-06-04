@@ -139,7 +139,7 @@ class ArgparsingApp(cmd2.Cmd):
     @cmd2.with_category(ARGPARSE_SUBCOMMANDS)
     def do_calculate(self, args: argparse.Namespace) -> None:
         """Calculate a simple mathematical operation on two integers."""
-        args.cmd2_subcmd_handler(args)
+        args.cmd2_subcommand_func(args)
 
 
 if __name__ == "__main__":

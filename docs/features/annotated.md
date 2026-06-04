@@ -116,8 +116,9 @@ Unsupported patterns raise `TypeError`, including:
   by the tuple. The tuple type already pins `nargs`; user metadata cannot change it.
 
 The parameter names `dest` and `subcommand` are reserved and may not be used as annotated parameter
-names. `cmd2_statement` receives the parsed [cmd2.Statement][] object, and `cmd2_handler` (only on a
-command decorated with `@with_annotated(base_command=True)`) receives the subcommand handler.
+names. `cmd2_statement` receives the parsed [cmd2.Statement][] object, and `cmd2_subcommand_func`
+(only on a command decorated with `@with_annotated(base_command=True)`) receives the subcommand
+handler.
 
 ## Annotated metadata
 
@@ -269,8 +270,8 @@ list the values.
 - `with_unknown_args` -- if `True`, unrecognised arguments are passed as `_unknown`
 - `subcommand_to` -- register the function as an annotated subcommand under a parent command
 - `base_command` -- create a base command whose parser also adds subparsers and exposes
-  `cmd2_handler`. A `cmd2_handler` parameter is only valid on a command decorated with
-  `base_command=True`; declaring one elsewhere raises `TypeError`.
+  `cmd2_subcommand_func`. A `cmd2_subcommand_func` parameter is only valid on a command decorated
+  with `base_command=True`; declaring one elsewhere raises `TypeError`.
 - `subcommand_required` -- whether a subcommand must be supplied (only with `base_command=True`,
   default `True`)
 - `subcommand_metavar` -- metavar shown for the subcommands group (only with `base_command=True`,
@@ -307,7 +308,7 @@ annotated decorator picks it up automatically.
 
 The forwarded kwargs are `description`, `epilog`, `prog`, `usage`, `parents`, `argument_default`,
 `prefix_chars`, `fromfile_prefix_chars`, `conflict_handler`, `add_help`, `allow_abbrev`,
-`exit_on_error`, `formatter_class`, `ap_completer_type`, and on Python ≥ 3.14 `suggest_on_error` /
+`exit_on_error`, `formatter_class`, `completer_class`, and on Python ≥ 3.14 `suggest_on_error` /
 `color`. Two of them layer extra behavior on top of the raw passthrough:
 
 - `description` -- when omitted, it is filled from the function's docstring (detailed below); pass
@@ -392,10 +393,9 @@ The remaining argparse kwargs cover less-common needs but are wired through unch
 
 ```py
 @with_annotated(base_command=True)
-def do_manage(self, *, cmd2_handler):
-    handler = cmd2_handler
-    if handler:
-        handler()
+def do_manage(self, *, cmd2_subcommand_func):
+    if cmd2_subcommand_func:
+        cmd2_subcommand_func()
 
 @with_annotated(subcommand_to="manage", help="list projects")
 def manage_list(self):
@@ -408,10 +408,9 @@ creates its own subparsers:
 
 ```py
 @with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
-def manage_project(self, *, cmd2_handler):
-    handler = cmd2_handler
-    if handler:
-        handler()
+def manage_project(self, *, cmd2_subcommand_func):
+    if cmd2_subcommand_func:
+        cmd2_subcommand_func()
 
 @with_annotated(subcommand_to="manage project", help="add a project")
 def manage_project_add(self, name: str):
