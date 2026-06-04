@@ -118,7 +118,7 @@ Parser-level customization is forwarded to [`Cmd2ArgumentParser`][cmd2.argparse_
 692 ``**parser_kwargs: Unpack[Cmd2ParserKwargs]``.  Anything the parser ctor accepts -- ``description``,
 ``epilog``, ``prog``, ``usage``, ``parents``, ``argument_default``, ``prefix_chars``,
 ``fromfile_prefix_chars``, ``conflict_handler``, ``add_help``, ``allow_abbrev``, ``exit_on_error``,
-``formatter_class``, ``ap_completer_type``, and on Python >= 3.14 ``suggest_on_error`` / ``color`` --
+``formatter_class``, ``completer_class``, and on Python >= 3.14 ``suggest_on_error`` / ``color`` --
 flows straight through; the [`Cmd2ParserKwargs`][cmd2.annotated.Cmd2ParserKwargs] ``TypedDict`` is the single source of truth
 and gives type-checkers/IDEs autocomplete on the decorator's call site.  ``parser_class`` stays as
 its own explicit kwarg because it selects the class itself, not a value passed to it.  Two
@@ -257,7 +257,7 @@ class Cmd2ParserKwargs(TypedDict, total=False):
     exit_on_error: bool
     suggest_on_error: bool
     color: bool
-    ap_completer_type: "type[ArgparseCompleter] | None"
+    completer_class: "type[ArgparseCompleter] | None"
 
 
 # ---------------------------------------------------------------------------

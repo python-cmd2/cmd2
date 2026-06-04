@@ -308,7 +308,7 @@ annotated decorator picks it up automatically.
 
 The forwarded kwargs are `description`, `epilog`, `prog`, `usage`, `parents`, `argument_default`,
 `prefix_chars`, `fromfile_prefix_chars`, `conflict_handler`, `add_help`, `allow_abbrev`,
-`exit_on_error`, `formatter_class`, `ap_completer_type`, and on Python ≥ 3.14 `suggest_on_error` /
+`exit_on_error`, `formatter_class`, `completer_class`, and on Python ≥ 3.14 `suggest_on_error` /
 `color`. Two of them layer extra behavior on top of the raw passthrough:
 
 - `description` -- when omitted, it is filled from the function's docstring (detailed below); pass

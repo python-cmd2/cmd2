@@ -1213,7 +1213,7 @@ class Cmd:
         root_command = tokens[0]
         subcommand_path = tokens[1:]
 
-        # Search for the base command function and verify it has an argparser defined
+        # Search for the base command function and verify it has a parser defined
         command_func = self.get_command_func(root_command)
         if command_func is None:
             raise ValueError(f"Root command '{root_command}' does not exist")
@@ -2449,18 +2449,6 @@ class Cmd:
         # Call the command's completer function
         return compfunc(text, line, begidx, endidx)
 
-    @staticmethod
-    def _determine_ap_completer_type(parser: Cmd2ArgumentParser) -> type[argparse_completer.ArgparseCompleter]:
-        """Determine what type of ArgparseCompleter to use on a given parser.
-
-        If the parser does not have one set, then use argparse_completer.DEFAULT_AP_COMPLETER.
-        :param parser: the parser to examine
-        :return: type of ArgparseCompleter
-        """
-        if parser.ap_completer_type is None:
-            return argparse_completer.DEFAULT_AP_COMPLETER
-        return parser.ap_completer_type
-
     def _perform_completion(
         self, text: str, line: str, begidx: int, endidx: int, custom_settings: utils.CustomCompletionSettings | None = None
     ) -> Completions:
@@ -2526,16 +2514,15 @@ class Cmd:
                 else:
                     # There's no completer function, next see if the command uses argparse
                     command_func = self.get_command_func(command)
-                    argparser = None if command_func is None else self.command_parsers.get(command_func)
+                    parser = None if command_func is None else self.command_parsers.get(command_func)
 
-                    if command_func is not None and argparser is not None:
+                    if command_func is not None and parser is not None:
                         # Get arguments for complete()
                         spec: ArgparseCommandSpec = getattr(command_func, constants.ARGPARSE_COMMAND_ATTR_SPEC)
                         cmd_set = self.find_commandset_for_command(command)
 
                         # Create the argparse completer
-                        completer_type = self._determine_ap_completer_type(argparser)
-                        completer = completer_type(argparser, self)
+                        completer = parser.completer_class(parser, self)
 
                         completer_func = functools.partial(
                             completer.complete, tokens=raw_tokens[1:] if spec.preserve_quotes else tokens[1:], cmd_set=cmd_set
@@ -2550,8 +2537,7 @@ class Cmd:
         # Otherwise we are completing the command token or performing custom completion
         else:
             # Create the argparse completer
-            completer_type = self._determine_ap_completer_type(custom_settings.parser)
-            completer = completer_type(custom_settings.parser, self)
+            completer = custom_settings.parser.completer_class(custom_settings.parser, self)
 
             completer_func = functools.partial(
                 completer.complete, tokens=raw_tokens if custom_settings.preserve_quotes else tokens, cmd_set=None
@@ -4274,11 +4260,11 @@ class Cmd:
 
         # Check if this command uses argparse
         if (command_func := self.get_command_func(command)) is None or (
-            argparser := self.command_parsers.get(command_func)
+            parser := self.command_parsers.get(command_func)
         ) is None:
             return Completions()
 
-        completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
+        completer = parser.completer_class(parser, self)
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens["subcommands"])
 
     def _build_command_info(self) -> tuple[dict[str, list[str]], list[str]]:
@@ -4382,11 +4368,11 @@ class Cmd:
                 return
 
             command_func = self.get_command_func(args.command)
-            argparser = None if command_func is None else self.command_parsers.get(command_func)
+            parser = None if command_func is None else self.command_parsers.get(command_func)
 
             # If the command function uses argparse, then use argparse's help
-            if command_func is not None and argparser is not None:
-                completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
+            if command_func is not None and parser is not None:
+                completer = parser.completer_class(parser, self)
                 completer.print_help(args.subcommands, self.stdout)
 
             # If the command has a custom help function, then call it
@@ -4700,7 +4686,7 @@ class Cmd:
             completer=settable.completer,
         )
 
-        completer = argparse_completer.DEFAULT_AP_COMPLETER(settable_parser, self)
+        completer = settable_parser.completer_class(settable_parser, self)
 
         # Use raw_tokens since quotes have been preserved
         _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)

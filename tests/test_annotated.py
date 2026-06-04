@@ -1100,41 +1100,43 @@ class TestParserCustomization:
         parser = build_parser_from_function(_make_func(str), parser_class=MyParser)
         assert isinstance(parser, MyParser)
 
-    def test_ap_completer_type(self) -> None:
+    def test_completer_class(self) -> None:
         from cmd2.argparse_completer import ArgparseCompleter
 
         class MyCompleter(ArgparseCompleter):
             pass
 
-        parser = build_parser_from_function(_make_func(str), ap_completer_type=MyCompleter)
-        assert parser.ap_completer_type is MyCompleter
+        parser = build_parser_from_function(_make_func(str), completer_class=MyCompleter)
+        assert parser.completer_class is MyCompleter
 
-    def test_ap_completer_type_defaults_to_none(self) -> None:
-        assert build_parser_from_function(_make_func(str)).ap_completer_type is None
+    def test_default_completer_class(self) -> None:
+        from cmd2 import argparse_completer
 
-    def test_ap_completer_type_via_decorator(self) -> None:
+        assert build_parser_from_function(_make_func(str)).completer_class is argparse_completer.DEFAULT_ARGPARSE_COMPLETER
+
+    def test_completer_class_via_decorator(self) -> None:
         from cmd2.argparse_completer import ArgparseCompleter
 
         class MyCompleter(ArgparseCompleter):
             pass
 
-        @with_annotated(ap_completer_type=MyCompleter)
+        @with_annotated(completer_class=MyCompleter)
         def do_run(self, name: str) -> None: ...
 
         builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
-        assert builder().ap_completer_type is MyCompleter
+        assert builder().completer_class is MyCompleter
 
-    def test_ap_completer_type_threads_to_subcommand(self) -> None:
+    def test_completer_class_threads_to_subcommand(self) -> None:
         from cmd2.argparse_completer import ArgparseCompleter
 
         class MyCompleter(ArgparseCompleter):
             pass
 
-        @with_annotated(subcommand_to="team", ap_completer_type=MyCompleter)
+        @with_annotated(subcommand_to="team", completer_class=MyCompleter)
         def team_create(self, name: str) -> None: ...
 
         spec = getattr(team_create, constants.SUBCOMMAND_ATTR_SPEC)
-        assert spec.parser_source().ap_completer_type is MyCompleter
+        assert spec.parser_source().completer_class is MyCompleter
 
     def test_customization_via_decorator(self) -> None:
         """description/epilog/titled Group flow through @with_annotated end-to-end."""
