@@ -212,7 +212,6 @@ from rich.table import Column
 
 from . import constants
 from .argparse_utils import (
-    DEFAULT_ARGUMENT_PARSER,
     ArgparseCommandSpec,
     Cmd2ArgumentParser,
     SubcommandSpec,
@@ -1968,7 +1967,9 @@ def build_parser_from_function(
     :param parser_kwargs: forwarded [`Cmd2ParserKwargs`][cmd2.annotated.Cmd2ParserKwargs]
     :return: a fully configured ``Cmd2ArgumentParser``
     """
-    parser_cls = parser_class or DEFAULT_ARGUMENT_PARSER
+    from . import argparse_utils
+
+    parser_cls = parser_class or argparse_utils.DEFAULT_ARGUMENT_PARSER
     if "description" not in parser_kwargs:
         auto_description = _docstring_first_paragraph(func.__doc__)
         if auto_description is not None:

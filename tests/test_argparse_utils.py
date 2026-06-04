@@ -863,3 +863,30 @@ def test_deprecated_subcommand() -> None:
     # Verify it was removed from _deprecated set
     assert "old" not in subparsers_action._deprecated  # type: ignore[attr-defined]
     assert "old_alias" not in subparsers_action._deprecated  # type: ignore[attr-defined]
+
+
+def test_set_default_argument_parser() -> None:
+    """Test altering the app-wide default Cmd2ArgumentParser class"""
+
+    class CustomParser(Cmd2ArgumentParser):
+        pass
+
+    try:
+        # Check the default parser type
+        assert argparse_utils.DEFAULT_ARGUMENT_PARSER is Cmd2ArgumentParser
+
+        default_app = cmd2.Cmd()
+        default_alias_parser = default_app.command_parsers.get(default_app.do_alias)
+        assert type(default_alias_parser) is Cmd2ArgumentParser
+
+        # Set a custom default parser type
+        argparse_utils.set_default_argument_parser(CustomParser)
+        assert argparse_utils.DEFAULT_ARGUMENT_PARSER is CustomParser
+
+        custom_app = cmd2.Cmd()
+        custom_alias_parser = custom_app.command_parsers.get(custom_app.do_alias)
+        assert type(custom_alias_parser) is CustomParser
+
+    finally:
+        # Restore the original parser
+        argparse_utils.set_default_argument_parser(Cmd2ArgumentParser)
