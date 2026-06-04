@@ -111,7 +111,7 @@ from . import (
 from . import rich_utils as ru
 from . import string_utils as su
 from .argparse_utils import (
-    ApCommandSpec,
+    ArgparseCommandSpec,
     Cmd2ArgumentParser,
     ParserSource,
     SubcommandRecord,
@@ -281,7 +281,7 @@ class CommandParsers:
                 return None
             command = command_method.__name__[len(COMMAND_FUNC_PREFIX) :]
 
-            spec: ApCommandSpec | None = getattr(command_method, constants.AP_COMMAND_ATTR_SPEC, None)
+            spec: ArgparseCommandSpec | None = getattr(command_method, constants.ARGPARSE_COMMAND_ATTR_SPEC, None)
             if spec is None:
                 return None
 
@@ -2530,7 +2530,7 @@ class Cmd:
 
                     if command_func is not None and argparser is not None:
                         # Get arguments for complete()
-                        spec: ApCommandSpec = getattr(command_func, constants.AP_COMMAND_ATTR_SPEC)
+                        spec: ArgparseCommandSpec = getattr(command_func, constants.ARGPARSE_COMMAND_ATTR_SPEC)
                         cmd_set = self.find_commandset_for_command(command)
 
                         # Create the argparse completer

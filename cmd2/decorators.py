@@ -16,7 +16,7 @@ from typing import (
 
 from . import constants
 from .argparse_utils import (
-    ApCommandSpec,
+    ArgparseCommandSpec,
     ClassParamParserFactory,
     Cmd2ArgumentParser,
     NoParamParserFactory,
@@ -366,11 +366,11 @@ def with_argparser(
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
-        spec = ApCommandSpec(
+        spec = ArgparseCommandSpec(
             parser_source=parser_source,
             preserve_quotes=preserve_quotes,
         )
-        setattr(cmd_wrapper, constants.AP_COMMAND_ATTR_SPEC, spec)
+        setattr(cmd_wrapper, constants.ARGPARSE_COMMAND_ATTR_SPEC, spec)
 
         return cmd_wrapper
 

@@ -213,7 +213,7 @@ from rich.table import Column
 from . import constants
 from .argparse_utils import (
     DEFAULT_ARGUMENT_PARSER,
-    ApCommandSpec,
+    ArgparseCommandSpec,
     Cmd2ArgumentParser,
     SubcommandSpec,
 )
@@ -2329,11 +2329,11 @@ def with_annotated(
             )
             return result
 
-        ap_command_spec = ApCommandSpec(
+        argparse_command_spec = ArgparseCommandSpec(
             parser_source=parser_builder,
             preserve_quotes=preserve_quotes,
         )
-        setattr(cmd_wrapper, constants.AP_COMMAND_ATTR_SPEC, ap_command_spec)
+        setattr(cmd_wrapper, constants.ARGPARSE_COMMAND_ATTR_SPEC, argparse_command_spec)
 
         return cmd_wrapper
 

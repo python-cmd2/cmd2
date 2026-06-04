@@ -1121,7 +1121,7 @@ class TestParserCustomization:
         @with_annotated(ap_completer_type=MyCompleter)
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.AP_COMMAND_ATTR_SPEC).parser_source
+        builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         assert builder().ap_completer_type is MyCompleter
 
     def test_ap_completer_type_threads_to_subcommand(self) -> None:
@@ -3005,7 +3005,7 @@ class TestSubcommandGroupConfig:
         @with_annotated(base_command=True, **subcommand_kwargs)
         def do_root(self, cmd2_subcommand_func) -> None: ...
 
-        builder = getattr(do_root, constants.AP_COMMAND_ATTR_SPEC).parser_source
+        builder = getattr(do_root, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         return builder()
 
     @staticmethod
@@ -3116,7 +3116,7 @@ class TestDocstringDescription:
             Extra detail.
             """
 
-        builder = getattr(do_run, constants.AP_COMMAND_ATTR_SPEC).parser_source
+        builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         assert builder().description == "Run the thing."
 
     def test_subcommand_uses_docstring(self) -> None:
@@ -3213,7 +3213,7 @@ class TestParserLevelKwargs:
         @with_annotated(prog="myprog", usage="usage line")
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.AP_COMMAND_ATTR_SPEC).parser_source
+        builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         parser = builder()
         assert parser.prog == "myprog"
         assert parser.usage == "usage line"
@@ -3323,7 +3323,7 @@ class TestParserLowLevelKwargs:
         )
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.AP_COMMAND_ATTR_SPEC).parser_source
+        builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         parser = builder()
         assert parser.prefix_chars == "+-"
         assert parser.fromfile_prefix_chars == "@"

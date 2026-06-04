@@ -292,7 +292,7 @@ ParserSource: TypeAlias = Union[
 
 
 @dataclass(kw_only=True)
-class ApCommandSpec:
+class ArgparseCommandSpec:
     """Metadata for an argparse-based command function.
 
     :param parser_source: an existing Cmd2ArgumentParser instance or a factory

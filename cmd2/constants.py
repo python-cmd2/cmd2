@@ -72,8 +72,8 @@ def cmd2_public_attr_name(name: str) -> str:
 # Attached to a command function; defines its help section category
 COMMAND_ATTR_HELP_CATEGORY = cmd2_private_attr_name("help_category")
 
-# Attached to an argparse-based command function; defines its ApCommandSpec instance
-AP_COMMAND_ATTR_SPEC = cmd2_private_attr_name("ap_command_spec")
+# Attached to an argparse-based command function; defines its ArgparseCommandSpec instance
+ARGPARSE_COMMAND_ATTR_SPEC = cmd2_private_attr_name("argparse_command_spec")
 
 # Attached to a subcommand function; defines its SubcommandSpec instance
 SUBCOMMAND_ATTR_SPEC = cmd2_private_attr_name("subcommand_spec")
