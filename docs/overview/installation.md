@@ -55,7 +55,7 @@ The latest version of `cmd2` can be installed directly from the main branch on :
 GitHub using [pip](https://pypi.org/project/pip):
 
 ```shell
-$ pip install -U git+git://github.com/python-cmd2/cmd2.git
+$ pip install -U git+https://github.com/python-cmd2/cmd2.git
 ```
 
 ## Install from Debian or Ubuntu repos
