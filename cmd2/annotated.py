@@ -226,7 +226,7 @@ from .types import (
     UnboundCompleter,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .argparse_completer import ArgparseCompleter
 
 #: ``nargs`` values accepted by cmd2's patched ``add_argument`` (incl. ranged tuples).
@@ -1745,8 +1745,19 @@ def _resolve_parameters(
             f"with_annotated(base_command=True) requires a '{constants.NS_ATTR_SUBCOMMAND_FUNC}' "
             f"parameter in {func.__qualname__}"
         )
+    # Resolve hints only for the parameters that become arguments: the bound first parameter
+    # (self/cls), the injected skip_params, and the "return" annotation never become arguments
+    ignored = {next(iter(sig.parameters), None), "return", *skip_params}
+    ignored.discard(None)
+    relevant_annotations = {name: ann for name, ann in getattr(func, "__annotations__", {}).items() if name not in ignored}
+    # Forward references resolve against the *original* function's module during functools.wraps wrapper.
+    unwrapped = inspect.unwrap(func)
     try:
-        hints = get_type_hints(func, include_extras=True)
+        hints = get_type_hints(
+            types.SimpleNamespace(__annotations__=relevant_annotations),
+            globalns=getattr(unwrapped, "__globals__", {}),
+            include_extras=True,
+        )
     except (NameError, AttributeError, TypeError) as exc:
         raise TypeError(
             f"Failed to resolve type hints for {func.__qualname__}. Ensure all annotations use valid, importable types."
@@ -1986,25 +1997,16 @@ def build_parser_from_function(
         mutually_exclusive_groups=mutually_exclusive_groups,
     )
 
-    # ``argument_default=argparse.SUPPRESS`` removes an absent argument from the parsed namespace.
-    # That is safe only for arguments that are always supplied (required) or carry their own default;
-    # an *omittable* argument with no default (e.g. a ``T | None`` positional -> nargs='?') would be
-    # dropped when absent, leaving the function without a keyword argument it expects.  ``*args`` is
-    # exempt: the invocation path substitutes an empty tuple for it.  Reject the combination here,
-    # mirroring the per-argument ``default=argparse.SUPPRESS`` rejection.
+    # ``argument_default=argparse.SUPPRESS`` drops an absent argument from the parsed namespace.
+    # @with_annotated builds the call from the function signature, so every declared parameter is
+    # expected at invocation -- an argument vanishing from the namespace can never be valid here.
+    # Reject it outright, mirroring the per-argument ``default=argparse.SUPPRESS`` rejection.
     if parser_kwargs.get("argument_default") is argparse.SUPPRESS:
-        dropped = [
-            arg.name
-            for arg in resolved
-            if arg.default is _UNSET and arg.omittable and not arg.required and not arg.is_variadic
-        ]
-        if dropped:
-            raise TypeError(
-                f"argument_default=argparse.SUPPRESS is not supported by @with_annotated for {func.__qualname__}: "
-                f"it would drop {dropped!r} from the parsed namespace when absent, but the function expects "
-                f"{'them' if len(dropped) > 1 else 'it'} as a keyword argument. Give each an explicit default or "
-                f"make it required, or drop argument_default=argparse.SUPPRESS."
-            )
+        raise TypeError(
+            f"argument_default=argparse.SUPPRESS is not supported by @with_annotated for {func.__qualname__}: "
+            f"it drops absent arguments from the parsed namespace, but every parameter built from the "
+            f"signature is expected at invocation. Drop argument_default=argparse.SUPPRESS."
+        )
 
     # Build the group lookup (member references already validated by _resolve_parameters).
     target_for, argument_group_for = _build_argument_group_targets(parser, groups=groups)
@@ -2124,7 +2126,7 @@ def _build_subcommand_handler(
         filtered = _filtered_namespace_kwargs(ns, accepted=_accepted)
         if constants.NS_ATTR_SUBCOMMAND_FUNC in filtered:
             cmd2_h = filtered[constants.NS_ATTR_SUBCOMMAND_FUNC]
-            if isinstance(cmd2_h, functools.partial) and cmd2_h.func is handler:
+            if isinstance(cmd2_h, functools.partial) and getattr(cmd2_h.func, "__func__", cmd2_h.func) is handler:
                 filtered[constants.NS_ATTR_SUBCOMMAND_FUNC] = None
         return _invoke_command_func(
             func, self_arg, filtered, leading_names=_leading_names, var_positional_name=_var_positional_name
