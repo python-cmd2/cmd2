@@ -363,14 +363,11 @@ def do_run(self, verbose: bool = False, quiet: bool = False): ...
 ```
 
 `parents=` mirrors argparse's standard parents mechanism for sharing argument definitions across
-parsers. `argument_default=argparse.SUPPRESS` is accepted only when no argument could be stranded by
-it: it removes an absent argument from the parsed namespace, which is safe for an argument that is
-always supplied (a required option, a mandatory positional) or that carries its own default, but not
-for an _omittable_ argument with no default (for example a `T | None` positional, which becomes
-`nargs='?'`). If any such argument is present, `@with_annotated` raises `TypeError` rather than let
-the function be called missing a keyword argument it expects (mirroring the per-argument
-`default=argparse.SUPPRESS` rejection). `*args` is exempt, since the invocation path substitutes an
-empty tuple for it.
+parsers. `argument_default=argparse.SUPPRESS` is not supported and raises `TypeError`. It removes an
+absent argument from the parsed namespace, but `@with_annotated` builds the call from the function
+signature, so every declared parameter is expected at invocation; an argument vanishing from the
+namespace can never be valid here (mirroring the per-argument `default=argparse.SUPPRESS`
+rejection). Any other `argument_default` value is forwarded to the parser unchanged.
 
 The remaining argparse kwargs cover less-common needs but are wired through unchanged:
 
