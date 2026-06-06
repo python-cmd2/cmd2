@@ -3692,7 +3692,7 @@ def test_ansi_pouterr_always_tty(mocker, capsys) -> None:
     mocker.patch.object(sys.stderr, "isatty", return_value=True)
 
     expected_plain = "oopsie\n"
-    expected_styled = su.stylize("oopsie\n", Cmd2Style.ERROR)
+    expected_styled = su.stylize('oopsie', Cmd2Style.ERROR) + '\n'
 
     app.onecmd_plus_hooks("echo_error oopsie")
     out, err = capsys.readouterr()
@@ -3712,7 +3712,7 @@ def test_ansi_pouterr_always_notty(mocker, capsys) -> None:
     mocker.patch.object(sys.stderr, "isatty", return_value=False)
 
     expected_plain = "oopsie\n"
-    expected_styled = su.stylize("oopsie\n", Cmd2Style.ERROR)
+    expected_styled = su.stylize('oopsie', Cmd2Style.ERROR) + '\n'
 
     app.onecmd_plus_hooks("echo_error oopsie")
     out, err = capsys.readouterr()
@@ -3732,7 +3732,7 @@ def test_ansi_terminal_tty(mocker, capsys) -> None:
     mocker.patch.object(sys.stderr, "isatty", return_value=True)
 
     expected_plain = "oopsie\n"
-    expected_styled = su.stylize("oopsie\n", Cmd2Style.ERROR)
+    expected_styled = su.stylize('oopsie', Cmd2Style.ERROR) + '\n'
 
     app.onecmd_plus_hooks("echo_error oopsie")
     out, err = capsys.readouterr()
