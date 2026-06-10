@@ -127,7 +127,20 @@ of ``func.__doc__`` (up to the first blank line) is used so docstrings double as
 leaking ``:param:`` directives; and ``prog`` is rejected with ``subcommand_to`` because cmd2
 rewrites it from the parent command's hierarchy.  Mutually exclusive groups accept
 ``Group(required=True)`` to require exactly one member; the same flag on a plain ``groups=`` entry
-raises ``ValueError`` (argparse's ``add_argument_group`` has no ``required``).
+raises ``ValueError`` (argparse's ``add_argument_group`` has no ``required``).  Give a
+``mutually_exclusive_groups`` entry a ``title``/``description`` to render it as a titled help section
+(argparse's one supported nesting -- a mutex *inside* an argument group), and use
+``Option(action='store_true')`` for any ``bool`` member so the mutex reads as ``[--foo | --bar]``
+instead of expanding to ``--no-*`` variants.  To put non-mutex parameters in the same section, list
+its members in a ``groups=`` entry instead and leave the title off the mutex; declaring the section in
+both places, a mutex that sits only partly in a ``groups=`` entry, or one that spans two of them all
+raise ``ValueError``.  The other three nesting directions (an argument group in an argument group or
+in a mutex, and a mutex in a mutex) are removed in argparse on Python 3.14 and cannot be expressed
+here.  These group-spec rules (and member references, double-assignment, and the ``required=True``
+rejection) are checked at decoration time from parameter names alone -- type hints are not resolved,
+so forward-referenced annotations still decorate -- meaning a misconfigured group raises when the
+class is defined rather than on first command use.  The one group rule that needs the annotations
+(a required member in a mutually exclusive group) fires when the parser is built.
 
 Unsupported patterns (raise ``TypeError``):
 
@@ -896,8 +909,8 @@ class _ArgparseArgument:
         self.build_error: Exception | None = None
         # cross-argument facts, linked by _resolve_parameters once the whole list is built:
         self.has_following_positional = False
-        # 1-based indices of the groups=/mutually_exclusive_groups= this parameter belongs to:
-        self.argument_group_indices: list[int] = []
+        # 1-based indices of the mutually_exclusive_groups= entries this parameter belongs to
+        # (spec-shaped rules live in _validate_group_specs; this fact feeds the required-member row):
         self.mutex_group_indices: list[int] = []
         # Derive every output slot now; validation stays deferred to _check_constraints.
         self._apply()
@@ -1663,20 +1676,6 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
         ),
     ),
     (
-        # Cross-config: a parameter assigned to two argument groups is ambiguous. The membership
-        # indices are linked by _resolve_parameters from the decorator's groups= before this runs.
-        lambda a: len(a.argument_group_indices) > 1,
-        lambda a: ValueError(
-            f"parameter {a.name!r} cannot be assigned to both argument "
-            f"group {a.argument_group_indices[0]} and argument group {a.argument_group_indices[1]}"
-        ),
-    ),
-    (
-        # Cross-config: a parameter cannot belong to two mutually exclusive groups.
-        lambda a: len(a.mutex_group_indices) > 1,
-        lambda a: ValueError(f"parameter {a.name!r} cannot be assigned to multiple mutually exclusive groups"),
-    ),
-    (
         # Cross-config: a required member is incompatible with a mutex group -- only one member is
         # supplied, so the others arrive as None (violating its non-Optional type), and argparse forbids
         # it.  This is an argument-typing rule (required-ness comes from the annotation), so it lives here
@@ -1709,21 +1708,21 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
 _SKIP_PARAMS = frozenset({constants.NS_ATTR_SUBCOMMAND_FUNC, constants.NS_ATTR_STATEMENT})
 
 
-def _link_group_membership(
+def _link_mutex_group_membership(
     by_name: dict[str, _ArgparseArgument],
-    specs: tuple[Group, ...] | None,
-    select: Callable[[_ArgparseArgument], list[int]],
+    mutually_exclusive_groups: tuple[Group, ...] | None,
 ) -> None:
-    """Append each spec's 1-based index to the *select*-ed membership list of each member argument.
+    """Append each mutex group's 1-based index to its member arguments' ``mutex_group_indices``.
 
-    :func:`_resolve_parameters` validates member references via :meth:`Group._validate_members`
-    before calling this, so every member name resolves to a built argument.
+    This membership is the fact behind the required-member constraint row.  Member references are
+    validated upstream by :func:`_validate_group_specs` before this runs, so every member name
+    resolves to a built argument.
     """
-    if not specs:
+    if not mutually_exclusive_groups:
         return
-    for index, spec in enumerate(specs, start=1):
+    for index, spec in enumerate(mutually_exclusive_groups, start=1):
         for name in spec.members:
-            select(by_name[name]).append(index)
+            by_name[name].mutex_group_indices.append(index)
 
 
 def _resolve_parameters(
@@ -1731,14 +1730,14 @@ def _resolve_parameters(
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     base_command: bool = False,
-    groups: tuple[Group, ...] | None = None,
     mutually_exclusive_groups: tuple[Group, ...] | None = None,
 ) -> list[_ArgparseArgument]:
     """Resolve a function signature into a list of argparse-argument builders.
 
     ``base_command`` marks each argument's context for the base-command :data:`_CONSTRAINTS` rows and
-    drives the function-level ``cmd2_subcommand_func`` check below.  ``groups``/``mutually_exclusive_groups``
-    are linked onto each argument as membership facts for the cross-config constraint rows.
+    drives the function-level ``cmd2_subcommand_func`` check below.  ``mutually_exclusive_groups``
+    membership is linked onto each argument as the fact behind the required-member constraint row;
+    the spec-shaped group rules live in :func:`_validate_group_specs`, which runs before this.
     """
     sig = inspect.signature(func)
     # Function-level check (not a per-argument _CONSTRAINTS row): a base command dispatches through
@@ -1807,14 +1806,7 @@ def _resolve_parameters(
     for arg in positionals[:-1]:  # every positional except the last has a following positional
         arg.has_following_positional = True
     by_name = {arg.name: arg for arg in resolved}
-    # Reject group references to nonexistent parameters before the constraint table runs.
-    all_param_names = set(by_name)
-    for spec in groups or ():
-        spec._validate_members(all_param_names=all_param_names, group_type="groups")
-    for spec in mutually_exclusive_groups or ():
-        spec._validate_members(all_param_names=all_param_names, group_type="mutually_exclusive_groups")
-    _link_group_membership(by_name, groups, lambda a: a.argument_group_indices)
-    _link_group_membership(by_name, mutually_exclusive_groups, lambda a: a.mutex_group_indices)
+    _link_mutex_group_membership(by_name, mutually_exclusive_groups)
     for arg in resolved:
         arg._check_constraints()
     return resolved
@@ -1872,6 +1864,80 @@ def _filtered_namespace_kwargs(
     return filtered
 
 
+def _validate_group_specs(
+    func: Callable[..., Any],
+    *,
+    skip_params: frozenset[str],
+    groups: tuple[Group, ...] | None,
+    mutually_exclusive_groups: tuple[Group, ...] | None,
+) -> None:
+    """Validate ``groups=`` / ``mutually_exclusive_groups=`` specs from parameter names alone.
+
+    Runs at decoration time (from both the regular-command and subcommand decoration paths, and
+    again from :func:`build_parser_from_function` for direct callers), so a misconfigured group
+    hard-fails when the class is defined instead of on first command use, where cmd2's runtime
+    handler turns the error into a printed message.  Reads only parameter names and the ``Group``
+    specs -- never the type hints -- so forward-referenced annotations still decorate.  The one
+    group rule that needs the annotations (a required member in a mutually exclusive group) stays
+    in :data:`_CONSTRAINTS` and fires when the parser is built.
+    """
+    if not groups and not mutually_exclusive_groups:
+        return
+    params = list(inspect.signature(func).parameters)[1:]  # skip self/cls by position
+    all_param_names = {name for name in params if name not in skip_params}
+
+    group_entry_for: dict[str, int] = {}
+    for index, spec in enumerate(groups or (), start=1):
+        spec._validate_members(all_param_names=all_param_names, group_type="groups")
+        if spec.required:
+            raise ValueError(
+                "Group(required=True) is only valid in mutually_exclusive_groups; "
+                "argparse's add_argument_group has no 'required' flag"
+            )
+        for name in spec.members:
+            previous = group_entry_for.get(name)
+            if previous == index:
+                raise ValueError(f"parameter {name!r} is listed more than once in argument group {index}")
+            if previous is not None:
+                raise ValueError(
+                    f"parameter {name!r} cannot be assigned to both argument group {previous} and argument group {index}"
+                )
+            group_entry_for[name] = index
+
+    mutex_entry_for: dict[str, int] = {}
+    for index, spec in enumerate(mutually_exclusive_groups or (), start=1):
+        spec._validate_members(all_param_names=all_param_names, group_type="mutually_exclusive_groups")
+        for name in spec.members:
+            previous = mutex_entry_for.get(name)
+            if previous == index:
+                raise ValueError(f"parameter {name!r} is listed more than once in mutually exclusive group {index}")
+            if previous is not None:
+                raise ValueError(f"parameter {name!r} cannot be assigned to multiple mutually exclusive groups")
+            mutex_entry_for[name] = index
+        parent_entries = {group_entry_for[name] for name in spec.members if name in group_entry_for}
+        if len(parent_entries) > 1:
+            raise ValueError(
+                f"mutually exclusive group {index} spans parameters in different argument groups, "
+                "which argparse cannot represent cleanly"
+            )
+        if parent_entries:
+            # Members already sit in a titled groups= entry, so the mutex nests there.  A section
+            # declared on both sides is ambiguous, and nesting a mutex that only partly overlaps the
+            # group would pull the ungrouped members into that group's help section.
+            if spec.title is not None or spec.description is not None:
+                raise ValueError(
+                    f"mutually exclusive group {index} sets title/description, but its members already "
+                    "belong to a groups= entry; declare the titled section in one place only"
+                )
+            ungrouped = [name for name in spec.members if name not in group_entry_for]
+            if ungrouped:
+                raise ValueError(
+                    f"mutually exclusive group {index} mixes members in a titled argument group with "
+                    f"members that are not ({ungrouped!r}); list all of its members in the same groups= "
+                    "entry to nest the mutex inside that group, or none of them to keep it top-level"
+                )
+
+
 def _build_argument_group_targets(
     parser: argparse.ArgumentParser,
     *,
@@ -1879,9 +1945,9 @@ def _build_argument_group_targets(
 ) -> tuple[dict[str, _ArgumentTarget], dict[str, argparse._ArgumentGroup]]:
     """Build argument groups and return add_argument targets for their members.
 
-    Member references and double-assignment are validated upstream by :func:`_resolve_parameters`
-    (via :meth:`Group._validate_members`) and :data:`_CONSTRAINTS` (the ``argument_group_indices``
-    fact), so construction can assign each member unconditionally.
+    The specs are validated upstream by :func:`_validate_group_specs` (member references,
+    double-assignment, ``required=True`` rejection), so construction can assign each member
+    unconditionally.
     """
     target_for: dict[str, _ArgumentTarget] = {}
     argument_group_for: dict[str, argparse._ArgumentGroup] = {}
@@ -1890,11 +1956,6 @@ def _build_argument_group_targets(
         return target_for, argument_group_for
 
     for spec in groups:
-        if spec.required:
-            raise ValueError(
-                "Group(required=True) is only valid in mutually_exclusive_groups; "
-                "argparse's add_argument_group has no 'required' flag"
-            )
         group = parser.add_argument_group(title=spec.title, description=spec.description)
         for name in spec.members:
             argument_group_for[name] = group
@@ -1912,27 +1973,29 @@ def _apply_mutex_group_targets(
 ) -> None:
     """Build mutually exclusive groups and update add_argument targets for their members.
 
-    Member references, double-assignment, and required-member rejections are validated upstream by
-    :func:`_resolve_parameters` and :data:`_CONSTRAINTS` (the ``mutex_group_indices`` fact); the
-    remaining check -- a mutex group spanning different argument groups -- stays here because its
-    subject is the group, not an argument.
+    The specs are validated upstream by :func:`_validate_group_specs` (member references,
+    double-assignment, and the group-shaped rules: spanning, partial overlap, a section declared in
+    two places) and :data:`_CONSTRAINTS` (the required-member rule), so construction only chooses
+    each mutex group's parent: the argument group all its members share, a new titled section when
+    the spec carries ``title``/``description``, or the parser itself.
     """
     if not mutually_exclusive_groups:
         return
 
-    for index, spec in enumerate(mutually_exclusive_groups, start=1):
-        member_names = spec.members
+    for spec in mutually_exclusive_groups:
+        parent_groups = {argument_group_for[name] for name in spec.members if name in argument_group_for}
+        if parent_groups:
+            # All members sit in one titled groups= entry, so the mutex nests there.
+            mutex_parent: _ArgumentTarget = next(iter(parent_groups))
+        elif spec.title is not None or spec.description is not None:
+            # title/description on the mutex create the titled section and nest the mutex inside it,
+            # so a titled exclusive group needs only its own declaration -- no paired groups= entry.
+            mutex_parent = parser.add_argument_group(title=spec.title, description=spec.description)
+        else:
+            mutex_parent = parser
 
-        parent_groups = {argument_group_for[name] for name in member_names if name in argument_group_for}
-        if len(parent_groups) > 1:
-            raise ValueError(
-                f"mutually exclusive group {index} spans parameters in different argument groups, "
-                "which argparse cannot represent cleanly"
-            )
-
-        mutex_parent: _ArgumentTarget = next(iter(parent_groups)) if parent_groups else parser
         mutex_group = mutex_parent.add_mutually_exclusive_group(required=spec.required)
-        for name in member_names:
+        for name in spec.members:
             target_for[name] = mutex_group
 
 
@@ -1983,6 +2046,9 @@ def build_parser_from_function(
     """
     from . import argparse_utils
 
+    # The decorator already ran this at decoration time; direct callers get the same checks here.
+    _validate_group_specs(func, skip_params=skip_params, groups=groups, mutually_exclusive_groups=mutually_exclusive_groups)
+
     parser_cls = parser_class or argparse_utils.DEFAULT_ARGUMENT_PARSER
     if "description" not in parser_kwargs:
         auto_description = _docstring_first_paragraph(func.__doc__)
@@ -1990,13 +2056,11 @@ def build_parser_from_function(
             parser_kwargs["description"] = auto_description
     parser = parser_cls(**parser_kwargs)
 
-    # _resolve_parameters validates each argument and the cross-argument/cross-config rules (e.g. a
-    # variable-arity positional must be last; double-assignment and required-mutex-member) once the
-    # whole list is built and the group memberships are linked.
+    # _resolve_parameters validates each argument and the cross-argument rules (e.g. a variable-arity
+    # positional must be last; a required member in a mutex group) once the whole list is built.
     resolved = _resolve_parameters(
         func,
         skip_params=skip_params,
-        groups=groups,
         mutually_exclusive_groups=mutually_exclusive_groups,
     )
 
@@ -2011,7 +2075,7 @@ def build_parser_from_function(
             f"signature is expected at invocation. Drop argument_default=argparse.SUPPRESS."
         )
 
-    # Build the group lookup (member references already validated by _resolve_parameters).
+    # Build the group lookup (specs already validated by _validate_group_specs above).
     target_for, argument_group_for = _build_argument_group_targets(parser, groups=groups)
     _apply_mutex_group_targets(
         parser,
@@ -2116,9 +2180,19 @@ def _build_subcommand_handler(
     """
     subcmd_name = _derive_subcommand_name(func, subcommand_to)
 
+    # Validate the group specs eagerly (decoration time) so a misconfigured group hard-fails when
+    # the class is defined; the name-only checks never resolve type hints, so forward-referenced
+    # annotations still decorate and the parser build stays deferred.
+    _validate_group_specs(
+        func,
+        skip_params=_SKIP_PARAMS,
+        groups=options.groups,
+        mutually_exclusive_groups=options.mutually_exclusive_groups,
+    )
     if base_command:
         # Validate eagerly (decoration time); the base-command rows in _CONSTRAINTS fire here.
-        _resolve_parameters(func, base_command=True)
+        # skip_params is spelled out so this call cannot silently diverge from the parser build below.
+        _resolve_parameters(func, skip_params=_SKIP_PARAMS, base_command=True)
 
     _accepted = set(list(inspect.signature(func).parameters.keys())[1:])
     _leading_names, _var_positional_name = _var_positional_call_plan(func)
@@ -2291,6 +2365,15 @@ def with_annotated(
         command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
         skip_params = _SKIP_PARAMS | ({"_unknown"} if with_unknown_args else frozenset())
+        # Validate the group specs eagerly (decoration time) so a misconfigured group hard-fails when
+        # the class is defined; the name-only checks never resolve type hints, so forward-referenced
+        # annotations still decorate and the parser build stays deferred.
+        _validate_group_specs(
+            fn,
+            skip_params=skip_params,
+            groups=options.groups,
+            mutually_exclusive_groups=options.mutually_exclusive_groups,
+        )
         if base_command:
             # Validate eagerly (decoration time); the base-command rows in _CONSTRAINTS fire here.
             _resolve_parameters(fn, skip_params=skip_params, base_command=True)

@@ -13,6 +13,16 @@
 - Experimental features
     - `@with_annotated` now supports `frozenset[T]` collection parameters, alongside the existing
       `list[T]`, `set[T]`, and `tuple[T, ...]` collection types.
+    - `@with_annotated` mutually exclusive groups now accept a `title`/`description` to render the
+      group as a titled help section (argparse's one supported nesting, a mutex inside an argument
+      group), declared in one place with no paired `groups=` entry.
+    - `@with_annotated` now validates `groups` / `mutually_exclusive_groups` specs eagerly at
+      decoration time, so a misconfigured group (a member that names no parameter, a parameter
+      placed in two groups, a mutex group spanning or partially overlapping argument groups, a
+      titled section declared in two places, or `Group(required=True)` on a plain group) hard-fails
+      when the class is defined instead of being deferred to first command use where the error was
+      swallowed. The checks read parameter names only, so forward-referenced annotations still
+      decorate cleanly.
 
 ## 4.0.0 (June 5, 2026)
 
