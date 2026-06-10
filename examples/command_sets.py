@@ -18,6 +18,7 @@ import argparse
 import cmd2
 from cmd2 import (
     CommandSet,
+    CommandSetRegistrationError,
     with_argparser,
     with_category,
 )
@@ -121,14 +122,14 @@ class CommandSetApp(cmd2.Cmd):
             try:
                 self.register_command_set(self._fruits)
                 self.poutput("Fruits loaded")
-            except ValueError:
+            except CommandSetRegistrationError:
                 self.poutput("Fruits already loaded")
 
         if ns.cmds == "vegetables":
             try:
                 self.register_command_set(self._vegetables)
                 self.poutput("Vegetables loaded")
-            except ValueError:
+            except CommandSetRegistrationError:
                 self.poutput("Vegetables already loaded")
 
     @with_argparser(load_parser)
@@ -144,19 +145,13 @@ class CommandSetApp(cmd2.Cmd):
             self.poutput("Vegetables unloaded")
 
     cut_parser = cmd2.Cmd2ArgumentParser()
-    cut_subparsers = cut_parser.add_subparsers(title="item", help="item to cut")
+    cut_parser.add_subparsers(title="item", help="item to cut", metavar="ITEM", required=True)
 
     @with_argparser(cut_parser)
     @with_category(COMMANDSET_SUBCOMMAND)
     def do_cut(self, ns: argparse.Namespace) -> None:
         """Intended to be used with dynamically loaded subcommands specifically."""
-        handler = ns.cmd2_subcmd_handler
-        if handler is not None:
-            handler(ns)
-        else:
-            # No subcommand was provided, so call help
-            self.poutput("This command does nothing without sub-parsers registered")
-            self.do_help("cut")
+        ns.cmd2_subcommand_func(ns)
 
 
 if __name__ == "__main__":

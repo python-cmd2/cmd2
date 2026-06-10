@@ -865,20 +865,28 @@ def test_deprecated_subcommand() -> None:
     assert "old_alias" not in subparsers_action._deprecated  # type: ignore[attr-defined]
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 15),
-    reason="_ColorlessTheme only exists in 3.15+",
-)
-def test_colorless_theme_monkeypatch() -> None:
-    """Test the _ColorlessTheme.__getattr__ monkey patch."""
+def test_set_default_argument_parser() -> None:
+    """Test altering the app-wide default Cmd2ArgumentParser class"""
 
-    # If this assertion fails, then the bug no longer exists and our patch wasn't installed.
-    # We can remove the patch function and this test.
-    assert argparse._ColorlessTheme.__getattr__ == argparse_utils._ColorlessTheme_getattr
+    class CustomParser(Cmd2ArgumentParser):
+        pass
 
-    # Our patch raises an Attribute error for non-public.
-    with pytest.raises(AttributeError):
-        getattr(argparse._ColorlessTheme(), "_fake")  # noqa: B009
+    try:
+        # Check the default parser type
+        assert argparse_utils.DEFAULT_ARGUMENT_PARSER is Cmd2ArgumentParser
 
-    with pytest.raises(AttributeError):
-        getattr(argparse._ColorlessTheme(), "__deepcopy__")  # noqa: B009
+        default_app = cmd2.Cmd()
+        default_alias_parser = default_app.command_parsers.get(default_app.do_alias)
+        assert type(default_alias_parser) is Cmd2ArgumentParser
+
+        # Set a custom default parser type
+        argparse_utils.set_default_argument_parser(CustomParser)
+        assert argparse_utils.DEFAULT_ARGUMENT_PARSER is CustomParser
+
+        custom_app = cmd2.Cmd()
+        custom_alias_parser = custom_app.command_parsers.get(custom_app.do_alias)
+        assert type(custom_alias_parser) is CustomParser
+
+    finally:
+        # Restore the original parser
+        argparse_utils.set_default_argument_parser(Cmd2ArgumentParser)

@@ -1,4 +1,12 @@
-## 4.0.0 (June TBD, 2026)
+## 4.1.0 (TBD)
+
+- Enhancements
+    - New `cmd2.Cmd` parameters
+        - **complete_in_thread**: (boolean) if `True`, then completion will run in a separate
+          thread. If `False` then completion runs in the main thread and causes it to block if slow.
+          Defaults to `True`.
+
+## 4.0.0 (June 5, 2026)
 
 ### Summary
 
@@ -67,12 +75,14 @@ prompt is displayed.
     - Removed `Cmd.ruler` since `cmd2` no longer uses it.
     - All parsers used with `cmd2` commands must be an instance of `Cmd2ArgumentParser` or a child
       class of it.
-    - Removed `set_ap_completer_type()` and `get_ap_completer_type()` since `ap_completer_type` is
-      now a public member of `Cmd2ArgumentParser`.
+    - Renamed `set_default_argument_parser_type()` to `set_default_argument_parser()`.
+    - Renamed `set_default_ap_completer_type()` to `set_default_argparse_completer()`.
+    - Removed `set_ap_completer_type()` and `get_ap_completer_type()` since `completer_class` is now
+      a public member of `Cmd2ArgumentParser`.
     - Moved `set_parser_prog()` to `Cmd2ArgumentParser.update_prog()`.
-    - Renamed `cmd2_handler` to `cmd2_subcmd_handler` in the `argparse.Namespace` for clarity.
+    - Renamed `cmd2_handler` to `cmd2_subcommand_func` in the `argparse.Namespace` for clarity.
     - Removed `Cmd2AttributeWrapper` class. `argparse.Namespace` objects passed to command functions
-      now contain direct attributes for `cmd2_statement` and `cmd2_subcmd_handler`.
+      now contain direct attributes for `cmd2_statement` and `cmd2_subcommand_func`.
     - Renamed `cmd2/command_definition.py` to `cmd2/command_set.py`.
     - Removed `Cmd.doc_header` and the `with_default_category` decorator. Help categorization is now
       driven by the `DEFAULT_CATEGORY` class variable (see **Simplified command categorization** in

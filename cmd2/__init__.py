@@ -12,12 +12,12 @@ from . import (
     string_utils,
 )
 from .annotated import with_annotated
-from .argparse_completer import set_default_ap_completer_type
+from .argparse_completer import set_default_argparse_completer
 from .argparse_utils import (
     Cmd2ArgumentParser,
     SubcommandRecord,
     register_argparse_argument_parameter,
-    set_default_argument_parser_type,
+    set_default_argument_parser,
 )
 from .cmd2 import Cmd
 from .colors import Color
@@ -75,8 +75,8 @@ __all__: list[str] = [  # noqa: RUF022
     "Cmd2ArgumentParser",
     "SubcommandRecord",
     "register_argparse_argument_parameter",
-    "set_default_ap_completer_type",
-    "set_default_argument_parser_type",
+    "set_default_argparse_completer",
+    "set_default_argument_parser",
     # Cmd2
     "Cmd",
     "CommandResult",

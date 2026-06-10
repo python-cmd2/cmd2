@@ -111,6 +111,7 @@ from . import (
 from . import rich_utils as ru
 from . import string_utils as su
 from .argparse_utils import (
+    ArgparseCommandSpec,
     Cmd2ArgumentParser,
     ParserSource,
     SubcommandRecord,
@@ -280,12 +281,12 @@ class CommandParsers:
                 return None
             command = command_method.__name__[len(COMMAND_FUNC_PREFIX) :]
 
-            parser_source = getattr(command_method, constants.CMD_ATTR_PARSER_SOURCE, None)
-            if parser_source is None:
+            spec: ArgparseCommandSpec | None = getattr(command_method, constants.ARGPARSE_COMMAND_ATTR_SPEC, None)
+            if spec is None:
                 return None
 
             owner = self._cmd_app.find_commandset_for_command(command) or self._cmd_app
-            parser = self._cmd_app._build_parser(owner, parser_source)
+            parser = self._cmd_app._build_parser(owner, spec.parser_source)
 
             # To ensure accurate usage strings, recursively update 'prog' values
             # within the parser to match the command name.
@@ -367,6 +368,7 @@ class Cmd:
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
         bottom_toolbar: bool = False,
+        complete_in_thread: bool = True,
         command_sets: Iterable[CommandSet[Any]] | None = None,
         include_ipy: bool = False,
         include_py: bool = False,
@@ -403,6 +405,7 @@ class Cmd:
                             based on history. User can press right-arrow key to accept the
                             provided suggestion.
         :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
+        :param complete_in_thread: if ``True``, then completion will run in a separate thread.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
@@ -527,6 +530,7 @@ class Cmd:
 
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
+        self.complete_in_thread = complete_in_thread
         self.main_session = self._create_main_session(auto_suggest, completekey)
 
         # The session currently holding focus (either the main REPL or a command's
@@ -751,7 +755,7 @@ class Cmd:
             "bottom_toolbar": self.get_bottom_toolbar if self.bottom_toolbar else None,
             "color_depth": ColorDepth.TRUE_COLOR,
             "complete_style": CompleteStyle.MULTI_COLUMN,
-            "complete_in_thread": True,
+            "complete_in_thread": self.complete_in_thread,
             "complete_while_typing": False,
             "completer": Cmd2Completer(self),
             "history": Cmd2History(item.raw for item in self.history),
@@ -1063,9 +1067,20 @@ class Cmd:
             self._installed_command_sets.remove(cmdset)
 
     def _check_uninstallable(self, cmdset: CommandSet[Any]) -> None:
+        """Verify if a CommandSet can be safely uninstalled from the application.
+
+        This method acts as a safety guard before unregistration. It inspects all
+        command parsers provided by the CommandSet and recursively checks their
+        subcommand hierarchies to ensure no other CommandSet or Cmd instance has
+        attached subcommands to them.
+
+        :param cmdset: the CommandSet instance to check for uninstallation safety
+        :raises CommandSetRegistrationError: if it is not safe to uninstall the CommandSet
+        """
         cmdset_id = id(cmdset)
 
         def check_parser_uninstallable(parser: Cmd2ArgumentParser) -> None:
+            # Recursively verify no subcommands belong to a different CommandSet or Cmd instance
             try:
                 subparsers_action = parser.get_subparsers_action()
             except ValueError:
@@ -1080,10 +1095,11 @@ class Cmd:
                     continue
                 checked_parsers.add(subparser)
 
-                attached_cmdset_id = getattr(subparser, constants.PARSER_ATTR_OWNER_ID, None)
-                if attached_cmdset_id is not None and attached_cmdset_id != cmdset_id:
+                owner_id = getattr(subparser, constants.PARSER_ATTR_OWNER_ID, None)
+                if owner_id is not None and owner_id != cmdset_id:
                     raise CommandSetRegistrationError(
-                        f"Cannot uninstall CommandSet: '{subparser.prog}' is required by another CommandSet"
+                        f"Cannot uninstall CommandSet '{type(cmdset).__name__}' because it is still "
+                        f"required by subcommand '{subparser.prog}'"
                     )
                 check_parser_uninstallable(subparser)
 
@@ -1117,13 +1133,13 @@ class Cmd:
             owner,
             predicate=lambda meth: (
                 isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, constants.SUBCMD_ATTR_SPEC)
+                and hasattr(meth, constants.SUBCOMMAND_ATTR_SPEC)
             ),
         )
 
         # iterate through all matching methods
         for _method_name, method in methods:
-            spec: SubcommandSpec = getattr(method, constants.SUBCMD_ATTR_SPEC)
+            spec: SubcommandSpec = getattr(method, constants.SUBCOMMAND_ATTR_SPEC)
 
             subcommand_valid, errmsg = self.statement_parser.is_valid_command(spec.name, is_subcommand=True)
             if not subcommand_valid:
@@ -1134,11 +1150,11 @@ class Cmd:
             if subcmd_parser.description is None and method.__doc__:
                 subcmd_parser.description = strip_doc_annotations(method.__doc__)
 
-            # Set the subcommand handler
-            defaults = {constants.NS_ATTR_SUBCMD_HANDLER: method}
+            # Set the subcommand function
+            defaults = {constants.NS_ATTR_SUBCOMMAND_FUNC: method}
             subcmd_parser.set_defaults(**defaults)
 
-            # Set what instance the handler is bound to
+            # Record the ID of the instance that registered this subcommand parser
             setattr(subcmd_parser, constants.PARSER_ATTR_OWNER_ID, id(owner))
 
             # Attach this subcommand
@@ -1169,13 +1185,13 @@ class Cmd:
             owner,
             predicate=lambda meth: (
                 isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, constants.SUBCMD_ATTR_SPEC)
+                and hasattr(meth, constants.SUBCOMMAND_ATTR_SPEC)
             ),
         )
 
         # iterate through all matching methods
         for _method_name, method in methods:
-            spec: SubcommandSpec = getattr(method, constants.SUBCMD_ATTR_SPEC)
+            spec: SubcommandSpec = getattr(method, constants.SUBCOMMAND_ATTR_SPEC)
 
             with contextlib.suppress(ValueError):
                 self.detach_subcommand(spec.command, spec.name)
@@ -1200,7 +1216,7 @@ class Cmd:
         root_command = tokens[0]
         subcommand_path = tokens[1:]
 
-        # Search for the base command function and verify it has an argparser defined
+        # Search for the base command function and verify it has a parser defined
         command_func = self.get_command_func(root_command)
         if command_func is None:
             raise ValueError(f"Root command '{root_command}' does not exist")
@@ -2436,18 +2452,6 @@ class Cmd:
         # Call the command's completer function
         return compfunc(text, line, begidx, endidx)
 
-    @staticmethod
-    def _determine_ap_completer_type(parser: Cmd2ArgumentParser) -> type[argparse_completer.ArgparseCompleter]:
-        """Determine what type of ArgparseCompleter to use on a given parser.
-
-        If the parser does not have one set, then use argparse_completer.DEFAULT_AP_COMPLETER.
-        :param parser: the parser to examine
-        :return: type of ArgparseCompleter
-        """
-        if parser.ap_completer_type is None:
-            return argparse_completer.DEFAULT_AP_COMPLETER
-        return parser.ap_completer_type
-
     def _perform_completion(
         self, text: str, line: str, begidx: int, endidx: int, custom_settings: utils.CustomCompletionSettings | None = None
     ) -> Completions:
@@ -2513,19 +2517,18 @@ class Cmd:
                 else:
                     # There's no completer function, next see if the command uses argparse
                     command_func = self.get_command_func(command)
-                    argparser = None if command_func is None else self.command_parsers.get(command_func)
+                    parser = None if command_func is None else self.command_parsers.get(command_func)
 
-                    if command_func is not None and argparser is not None:
+                    if command_func is not None and parser is not None:
                         # Get arguments for complete()
-                        preserve_quotes = getattr(command_func, constants.CMD_ATTR_PRESERVE_QUOTES)
+                        spec: ArgparseCommandSpec = getattr(command_func, constants.ARGPARSE_COMMAND_ATTR_SPEC)
                         cmd_set = self.find_commandset_for_command(command)
 
                         # Create the argparse completer
-                        completer_type = self._determine_ap_completer_type(argparser)
-                        completer = completer_type(argparser, self)
+                        completer = parser.completer_class(parser, self)
 
                         completer_func = functools.partial(
-                            completer.complete, tokens=raw_tokens[1:] if preserve_quotes else tokens[1:], cmd_set=cmd_set
+                            completer.complete, tokens=raw_tokens[1:] if spec.preserve_quotes else tokens[1:], cmd_set=cmd_set
                         )
                     else:
                         completer_func = self.completedefault  # type: ignore[assignment]
@@ -2537,8 +2540,7 @@ class Cmd:
         # Otherwise we are completing the command token or performing custom completion
         else:
             # Create the argparse completer
-            completer_type = self._determine_ap_completer_type(custom_settings.parser)
-            completer = completer_type(custom_settings.parser, self)
+            completer = custom_settings.parser.completer_class(custom_settings.parser, self)
 
             completer_func = functools.partial(
                 completer.complete, tokens=raw_tokens if custom_settings.preserve_quotes else tokens, cmd_set=None
@@ -3380,8 +3382,8 @@ class Cmd:
         :return: category name
         """
         # Check if the command function has a category.
-        if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
-            category: str = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
+        if hasattr(func, constants.COMMAND_ATTR_HELP_CATEGORY):
+            category: str = getattr(func, constants.COMMAND_ATTR_HELP_CATEGORY)
 
         # Otherwise get the category from its defining class.
         else:
@@ -3784,8 +3786,8 @@ class Cmd:
     @with_argparser(_build_alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases."""
-        # Call handler for whatever subcommand was selected
-        args.cmd2_subcmd_handler(args)
+        # Call function for whatever subcommand was selected
+        args.cmd2_subcommand_func(args)
 
     # alias -> create
     @classmethod
@@ -3998,8 +4000,8 @@ class Cmd:
     @with_argparser(_build_macro_parser, preserve_quotes=True)
     def do_macro(self, args: argparse.Namespace) -> None:
         """Manage macros."""
-        # Call handler for whatever subcommand was selected
-        args.cmd2_subcmd_handler(args)
+        # Call function for whatever subcommand was selected
+        args.cmd2_subcommand_func(args)
 
     # macro -> create
     @classmethod
@@ -4261,11 +4263,11 @@ class Cmd:
 
         # Check if this command uses argparse
         if (command_func := self.get_command_func(command)) is None or (
-            argparser := self.command_parsers.get(command_func)
+            parser := self.command_parsers.get(command_func)
         ) is None:
             return Completions()
 
-        completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
+        completer = parser.completer_class(parser, self)
         return completer.complete_subcommand_help(text, line, begidx, endidx, arg_tokens["subcommands"])
 
     def _build_command_info(self) -> tuple[dict[str, list[str]], list[str]]:
@@ -4369,11 +4371,11 @@ class Cmd:
                 return
 
             command_func = self.get_command_func(args.command)
-            argparser = None if command_func is None else self.command_parsers.get(command_func)
+            parser = None if command_func is None else self.command_parsers.get(command_func)
 
             # If the command function uses argparse, then use argparse's help
-            if command_func is not None and argparser is not None:
-                completer = argparse_completer.DEFAULT_AP_COMPLETER(argparser, self)
+            if command_func is not None and parser is not None:
+                completer = parser.completer_class(parser, self)
                 completer.print_help(args.subcommands, self.stdout)
 
             # If the command has a custom help function, then call it
@@ -4687,7 +4689,7 @@ class Cmd:
             completer=settable.completer,
         )
 
-        completer = argparse_completer.DEFAULT_AP_COMPLETER(settable_parser, self)
+        completer = settable_parser.completer_class(settable_parser, self)
 
         # Use raw_tokens since quotes have been preserved
         _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)

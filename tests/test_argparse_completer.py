@@ -1288,17 +1288,23 @@ class CustomCompleterApp(cmd2.Cmd):
         super().__init__()
         self.is_ready = True
 
-    # Parser that's used to test setting the app-wide default ArgparseCompleter type
-    default_completer_parser = Cmd2ArgumentParser(description="Testing app-wide argparse completer")
-    default_completer_parser.add_argument("--myflag", complete_when_ready=True)
+    @staticmethod
+    def _build_default_completer_parser() -> Cmd2ArgumentParser:
+        """Build parser to test setting the app-wide default ArgparseCompleter type.
 
-    @with_argparser(default_completer_parser)
+        Use a factory so set_default_argparse_completer() can be called before parser initialization.
+        """
+        default_completer_parser = Cmd2ArgumentParser(description="Testing app-wide argparse completer")
+        default_completer_parser.add_argument("--myflag", complete_when_ready=True)
+        return default_completer_parser
+
+    @with_argparser(_build_default_completer_parser)
     def do_default_completer(self, args: argparse.Namespace) -> None:
         """Test command"""
 
     # Parser that's used to test setting a custom completer at the parser level
     custom_completer_parser = Cmd2ArgumentParser(
-        description="Testing parser-specific argparse completer", ap_completer_type=CustomCompleter
+        description="Testing parser-specific argparse completer", completer_class=CustomCompleter
     )
     custom_completer_parser.add_argument("--myflag", complete_when_ready=True)
 
@@ -1314,7 +1320,7 @@ class CustomCompleterApp(cmd2.Cmd):
     def do_top(self, args: argparse.Namespace) -> None:
         """Top level command"""
         # Call handler for whatever subcommand was selected
-        args.cmd2_subcmd_handler(args)
+        args.cmd2_subcommand_func(args)
 
     # Parser for a subcommand with no custom completer type
     no_custom_completer_parser = Cmd2ArgumentParser(description="No custom completer")
@@ -1325,7 +1331,7 @@ class CustomCompleterApp(cmd2.Cmd):
         pass
 
     # Parser for a subcommand with a custom completer type
-    custom_completer_parser2 = Cmd2ArgumentParser(description="Custom completer", ap_completer_type=CustomCompleter)
+    custom_completer_parser2 = Cmd2ArgumentParser(description="Custom completer", completer_class=CustomCompleter)
     custom_completer_parser2.add_argument("--myflag", complete_when_ready=True)
 
     @cmd2.as_subcommand_to("top", "custom", custom_completer_parser2, help="custom completer")
@@ -1338,10 +1344,10 @@ def custom_completer_app():
     return CustomCompleterApp()
 
 
-def test_default_custom_completer_type(custom_completer_app: CustomCompleterApp) -> None:
+def test_default_custom_completer(custom_completer_app: CustomCompleterApp) -> None:
     """Test altering the app-wide default ArgparseCompleter type"""
     try:
-        argparse_completer.set_default_ap_completer_type(CustomCompleter)
+        argparse_completer.set_default_argparse_completer(CustomCompleter)
 
         text = "--m"
         line = f"default_completer {text}"
@@ -1360,7 +1366,7 @@ def test_default_custom_completer_type(custom_completer_app: CustomCompleterApp)
 
     finally:
         # Restore the default completer
-        argparse_completer.set_default_ap_completer_type(argparse_completer.ArgparseCompleter)
+        argparse_completer.set_default_argparse_completer(argparse_completer.ArgparseCompleter)
 
 
 def test_custom_completer_type(custom_completer_app: CustomCompleterApp) -> None:
@@ -1421,9 +1427,9 @@ def test_add_parser_custom_completer() -> None:
     subparsers = parser.add_subparsers()
 
     no_custom_completer_parser: Cmd2ArgumentParser = subparsers.add_parser(name="no_custom_completer")
-    assert no_custom_completer_parser.ap_completer_type is None
+    assert no_custom_completer_parser.completer_class is argparse_completer.DEFAULT_ARGPARSE_COMPLETER
 
     custom_completer_parser: Cmd2ArgumentParser = subparsers.add_parser(
-        name="custom_completer", ap_completer_type=CustomCompleter
+        name="custom_completer", completer_class=CustomCompleter
     )
-    assert custom_completer_parser.ap_completer_type is CustomCompleter
+    assert custom_completer_parser.completer_class is CustomCompleter

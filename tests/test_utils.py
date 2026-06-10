@@ -397,3 +397,39 @@ def test_get_types_method() -> None:
     param_name, param_value = next(iter(param_ann.items()))
     assert param_name == "x"
     assert param_value is bool
+
+
+def test_categorize() -> None:
+    from cmd2 import constants
+
+    category = "Test Category"
+    attr_name = constants.COMMAND_ATTR_HELP_CATEGORY
+
+    # Test single function
+    def func1() -> None:
+        pass
+
+    cu.categorize(func1, category)
+    assert getattr(func1, attr_name) == category
+
+    # Test single method
+    class Foo:
+        def foo_method(self) -> None:
+            pass
+
+    f = Foo()
+    cu.categorize(f.foo_method, category)
+    assert getattr(Foo.foo_method, attr_name) == category
+
+    # Test iterable
+    def func2() -> None:
+        pass
+
+    class Bar:
+        def bar_method(self) -> None:
+            pass
+
+    b = Bar()
+    cu.categorize([func2, b.bar_method], category)
+    assert getattr(func2, attr_name) == category
+    assert getattr(Bar.bar_method, attr_name) == category
