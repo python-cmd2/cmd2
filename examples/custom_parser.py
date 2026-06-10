@@ -9,7 +9,7 @@ from cmd2 import (
     Cmd2ArgumentParser,
     Cmd2Style,
     cmd2,
-    set_default_argument_parser_type,
+    set_default_argument_parser,
     stylize,
 )
 
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     import sys
 
     # Set the default parser type before instantiating app.
-    set_default_argument_parser_type(CustomParser)
+    set_default_argument_parser(CustomParser)
 
     app = cmd2.Cmd(include_ipy=True, persistent_history_file="cmd2_history.dat")
     app.self_in_py = True  # Enable access to "self" within the py command

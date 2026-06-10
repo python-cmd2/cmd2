@@ -1,7 +1,8 @@
-# Migrating From cmd
+# Upgrading from cmd to cmd2
 
-If you're thinking of migrating your [cmd](https://docs.python.org/3/library/cmd.html) app to
-`cmd2`, this section will help you decide if it's right for your app, and show you how to do it.
+If you're thinking of upgrading your [cmd](https://docs.python.org/3/library/cmd.html) app to be
+based on `cmd2`, this section will help you decide if it's right for your app, and show you how to
+do it.
 
 - [Why cmd2](why.md) - we try and convince you to use `cmd2` instead of
   [cmd](https://docs.python.org/3/library/cmd.html)

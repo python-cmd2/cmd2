@@ -117,8 +117,9 @@ Unsupported patterns raise `TypeError`, including:
   by the tuple. The tuple type already pins `nargs`; user metadata cannot change it.
 
 The parameter names `dest` and `subcommand` are reserved and may not be used as annotated parameter
-names. `cmd2_statement` receives the parsed [cmd2.Statement][] object, and `cmd2_handler` (only on a
-command decorated with `@with_annotated(base_command=True)`) receives the subcommand handler.
+names. `cmd2_statement` receives the parsed [cmd2.Statement][] object, and `cmd2_subcommand_func`
+(only on a command decorated with `@with_annotated(base_command=True)`) receives the subcommand
+handler.
 
 ## Annotated metadata
 
@@ -270,8 +271,8 @@ list the values.
 - `with_unknown_args` -- if `True`, unrecognised arguments are passed as `_unknown`
 - `subcommand_to` -- register the function as an annotated subcommand under a parent command
 - `base_command` -- create a base command whose parser also adds subparsers and exposes
-  `cmd2_handler`. A `cmd2_handler` parameter is only valid on a command decorated with
-  `base_command=True`; declaring one elsewhere raises `TypeError`.
+  `cmd2_subcommand_func`. A `cmd2_subcommand_func` parameter is only valid on a command decorated
+  with `base_command=True`; declaring one elsewhere raises `TypeError`.
 - `subcommand_required` -- whether a subcommand must be supplied (only with `base_command=True`,
   default `True`)
 - `subcommand_metavar` -- metavar shown for the subcommands group (only with `base_command=True`,
@@ -308,7 +309,7 @@ annotated decorator picks it up automatically.
 
 The forwarded kwargs are `description`, `epilog`, `prog`, `usage`, `parents`, `argument_default`,
 `prefix_chars`, `fromfile_prefix_chars`, `conflict_handler`, `add_help`, `allow_abbrev`,
-`exit_on_error`, `formatter_class`, `ap_completer_type`, and on Python ≥ 3.14 `suggest_on_error` /
+`exit_on_error`, `formatter_class`, `completer_class`, and on Python ≥ 3.14 `suggest_on_error` /
 `color`. Two of them layer extra behavior on top of the raw passthrough:
 
 - `description` -- when omitted, it is filled from the function's docstring (detailed below); pass
@@ -363,14 +364,11 @@ def do_run(self, verbose: bool = False, quiet: bool = False): ...
 ```
 
 `parents=` mirrors argparse's standard parents mechanism for sharing argument definitions across
-parsers. `argument_default=argparse.SUPPRESS` is accepted only when no argument could be stranded by
-it: it removes an absent argument from the parsed namespace, which is safe for an argument that is
-always supplied (a required option, a mandatory positional) or that carries its own default, but not
-for an _omittable_ argument with no default (for example a `T | None` positional, which becomes
-`nargs='?'`). If any such argument is present, `@with_annotated` raises `TypeError` rather than let
-the function be called missing a keyword argument it expects (mirroring the per-argument
-`default=argparse.SUPPRESS` rejection). `*args` is exempt, since the invocation path substitutes an
-empty tuple for it.
+parsers. `argument_default=argparse.SUPPRESS` is not supported and raises `TypeError`. It removes an
+absent argument from the parsed namespace, but `@with_annotated` builds the call from the function
+signature, so every declared parameter is expected at invocation; an argument vanishing from the
+namespace can never be valid here (mirroring the per-argument `default=argparse.SUPPRESS`
+rejection). Any other `argument_default` value is forwarded to the parser unchanged.
 
 The remaining argparse kwargs cover less-common needs but are wired through unchanged:
 
@@ -393,10 +391,9 @@ The remaining argparse kwargs cover less-common needs but are wired through unch
 
 ```py
 @with_annotated(base_command=True)
-def do_manage(self, *, cmd2_handler):
-    handler = cmd2_handler
-    if handler:
-        handler()
+def do_manage(self, *, cmd2_subcommand_func):
+    if cmd2_subcommand_func:
+        cmd2_subcommand_func()
 
 @with_annotated(subcommand_to="manage", help="list projects")
 def manage_list(self):
@@ -409,10 +406,9 @@ creates its own subparsers:
 
 ```py
 @with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
-def manage_project(self, *, cmd2_handler):
-    handler = cmd2_handler
-    if handler:
-        handler()
+def manage_project(self, *, cmd2_subcommand_func):
+    if cmd2_subcommand_func:
+        cmd2_subcommand_func()
 
 @with_annotated(subcommand_to="manage project", help="add a project")
 def manage_project_add(self, name: str):

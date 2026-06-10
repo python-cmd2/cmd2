@@ -440,7 +440,7 @@ class AnnotatedExample(Cmd):
 
     @with_annotated(base_command=True)
     @cmd2.with_category(ANNOTATED_CATEGORY)
-    def do_manage(self, verbose: bool = False, *, cmd2_handler: Callable[[], Any] | None = None) -> None:
+    def do_manage(self, verbose: bool = False, *, cmd2_subcommand_func: Callable[[], Any] | None = None) -> None:
         """Base command for annotated subcommands.
 
         Try:
@@ -449,13 +449,13 @@ class AnnotatedExample(Cmd):
         """
         if verbose:
             self.poutput("verbose mode")
-        if cmd2_handler:
-            cmd2_handler()
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
 
     @with_annotated(subcommand_to="manage", base_command=True, help="manage projects")
-    def manage_project(self, *, cmd2_handler: Callable[[], Any] | None = None) -> None:
-        if cmd2_handler:
-            cmd2_handler()
+    def manage_project(self, *, cmd2_subcommand_func: Callable[[], Any] | None = None) -> None:
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
 
     @with_annotated(subcommand_to="manage project", help="add a project")
     def manage_project_add(self, name: str) -> None:

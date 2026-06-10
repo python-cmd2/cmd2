@@ -9,6 +9,7 @@ import argparse
 import datetime
 import decimal
 import enum
+import functools
 import inspect
 import types
 import uuid
@@ -25,6 +26,7 @@ import pytest
 import cmd2
 from cmd2 import (
     CompletionItem,
+    constants,
 )
 from cmd2.annotated import (
     Argument,
@@ -141,6 +143,54 @@ def _func_grouped(
 def _func_positional_only(self, name: str, /) -> None: ...
 def _func_positional_only_xy(self, x: str, /, y: int) -> None: ...
 def _func_positional_only_mixed(self, x: str, /, y: int, *, z: int = 0) -> None: ...
+
+
+# Forward references with no matching name in this module's globals, so they are unresolvable at
+# runtime. They exercise type-hint resolution: hints on parameters that never become arguments
+# (``self``/``cls`` and the injected, skipped ``cmd2_statement``/``cmd2_subcommand_func``) must be tolerated,
+# while hints on real arguments must still raise. ``noqa: F821`` marks the intentionally-undefined names.
+def _func_unresolvable_self(self: "UnimportableCmd", name: str, count: int = 1) -> None: ...  # noqa: F821
+def _func_unresolvable_cmd2_statement(self, cmd2_statement: "UnimportableStatement", name: str, count: int = 1) -> None: ...  # noqa: F821
+def _func_unresolvable_cmd2_subcommand_func(
+    self,
+    cmd2_subcommand_func: "UnimportableHandler",  # noqa: F821
+    verbose: bool = False,
+) -> None: ...
+def _func_unresolvable_return(self, name: str) -> "UnimportableReturn": ...  # noqa: F821
+def _func_unresolvable_argument(self, name: "NonExistentType") -> None: ...  # noqa: F821
+def _func_unresolvable_argument_base(self, cmd2_subcommand_func, name: "NonExistentType") -> None: ...  # noqa: F821
+
+
+def _arg_names_via_parser(func: Any) -> set[str]:
+    """Resolve argument names through the public ``build_parser_from_function`` entry point."""
+    parser = build_parser_from_function(func)
+    return {action.dest for action in parser._actions if action.dest != "help"}
+
+
+def _arg_names_via_base_command(func: Any) -> set[str]:
+    """Resolve a base command's argument names (``base_command`` is not exposed on the public builder)."""
+    from cmd2.annotated import _resolve_parameters
+
+    return {arg.name for arg in _resolve_parameters(func, base_command=True)}
+
+
+def _wrap_in_foreign_module(func: Any) -> Any:
+    """Wrap *func* as a ``functools.wraps`` decorator would, but give the wrapper a ``__globals__``
+    that lacks this module's names. This mimics a user decorator defined in *another* module and
+    stacked under ``@with_annotated``: ``functools.wraps`` copies ``__annotations__`` but not
+    ``__globals__``, so a forward reference can only be resolved via ``__wrapped__`` (the original
+    function's module), not the wrapper's. Rebinding the wrapper's globals is the single-module way
+    to recreate that cross-module split.
+    """
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return func(*args, **kwargs)
+
+    foreign = types.FunctionType(
+        wrapper.__code__, {"__builtins__": __builtins__}, func.__name__, wrapper.__defaults__, wrapper.__closure__
+    )
+    functools.update_wrapper(foreign, func)  # copies __annotations__ etc. and sets __wrapped__ = func
+    return foreign
 
 
 def _provider(cmd: cmd2.Cmd):
@@ -633,22 +683,59 @@ class TestBuildParser:
         assert dests == set()
         assert parser.parse_args([]) == argparse.Namespace()
 
-    def test_get_type_hints_failure_raises(self) -> None:
-        def do_broken(self, name: "NonExistentType"):  # noqa: F821
+    @pytest.mark.parametrize(
+        ("func", "resolve_arg_names", "expected_args"),
+        [
+            pytest.param(_func_unresolvable_self, _arg_names_via_parser, {"name", "count"}, id="self"),
+            pytest.param(_func_unresolvable_cmd2_statement, _arg_names_via_parser, {"name", "count"}, id="cmd2_statement"),
+            pytest.param(
+                _func_unresolvable_cmd2_subcommand_func, _arg_names_via_base_command, {"verbose"}, id="cmd2_subcommand_func"
+            ),
+            pytest.param(_func_unresolvable_return, _arg_names_via_parser, {"name"}, id="return"),
+        ],
+    )
+    def test_unresolvable_hint_on_ignored_param_is_tolerated(self, func, resolve_arg_names, expected_args) -> None:
+        """An unresolvable forward reference on an annotation that never becomes an argument must not
+        abort parser generation -- the bound ``self``/``cls``, the injected, skipped
+        ``cmd2_statement``/``cmd2_subcommand_func`` parameters, and the function's ``return`` annotation. This
+        is the common case of annotating with a type only importable under ``TYPE_CHECKING``. Only
+        hints for parameters that actually become arguments are resolved; without that filtering each
+        case raises "Failed to resolve type hints".
+        """
+        assert resolve_arg_names(func) == expected_args
+
+    @pytest.mark.parametrize(
+        ("func", "resolve_arg_names"),
+        [
+            pytest.param(_func_unresolvable_argument, _arg_names_via_parser, id="non_base"),
+            pytest.param(_func_unresolvable_argument_base, _arg_names_via_base_command, id="base_command"),
+        ],
+    )
+    def test_unresolvable_hint_on_real_argument_raises(self, func, resolve_arg_names) -> None:
+        """An unresolvable forward reference on a parameter that *does* become an argument must abort
+        with a clear, actionable error rather than being silently swallowed -- for both plain commands
+        and base commands.
+        """
+        with pytest.raises(TypeError, match="Failed to resolve type hints"):
+            resolve_arg_names(func)
+
+    def test_forward_ref_resolves_through_functools_wraps_wrapper(self) -> None:
+        """A forward reference must resolve against the *original* function's module even when the
+        function reaching the parser builder is a ``functools.wraps`` wrapper defined in another
+        module (e.g. a user decorator stacked under ``@with_annotated``). ``functools.wraps`` copies
+        ``__annotations__`` but not ``__globals__``, so resolution must follow ``__wrapped__`` --
+        mirroring what ``typing.get_type_hints`` does for a bare function.
+        """
+
+        def do_path(self, target: "Path", count: int = 1):
             pass
 
-        with pytest.raises(TypeError, match="Failed to resolve type hints"):
-            build_parser_from_function(do_broken)
-
-    def test_validate_base_command_type_hints_failure_raises(self) -> None:
-        """Base-command validation should raise, not swallow, type hint failures."""
-        from cmd2.annotated import _resolve_parameters
-
-        def do_broken(self, cmd2_handler, name: "NonExistentType"):  # noqa: F821
-            pass
-
-        with pytest.raises(TypeError, match="Failed to resolve type hints"):
-            _resolve_parameters(do_broken, base_command=True)
+        # The wrapper carries a foreign global namespace lacking ``Path``; resolution must use the
+        # unwrapped function's globals (this module) instead, or it raises "Failed to resolve".
+        wrapped = _wrap_in_foreign_module(do_path)
+        parser = build_parser_from_function(wrapped)
+        dests = {action.dest for action in parser._actions if action.dest != "help"}
+        assert dests == {"target", "count"}
 
     def test_dest_param_raises(self) -> None:
         with pytest.raises(ValueError, match="dest"):
@@ -1108,43 +1195,65 @@ class TestParserCustomization:
         parser = build_parser_from_function(_make_func(str), parser_class=MyParser)
         assert isinstance(parser, MyParser)
 
-    def test_ap_completer_type(self) -> None:
+    def test_default_parser_class(self) -> None:
+        """With no parser_class, the parser is an instance of the configured default."""
+        from cmd2 import argparse_utils
+
+        parser = build_parser_from_function(_make_func(str))
+        assert type(parser) is argparse_utils.DEFAULT_ARGUMENT_PARSER
+
+    def test_default_parser_class_follows_current_default(self, monkeypatch) -> None:
+        """The default is resolved at call time, never a copy captured at import.
+
+        ``set_default_argument_parser`` rebinds ``argparse_utils.DEFAULT_ARGUMENT_PARSER`` at runtime;
+        a build issued afterwards must honor the new value.
+        """
+        from cmd2 import argparse_utils
+
+        class MyDefaultParser(cmd2.Cmd2ArgumentParser):
+            pass
+
+        monkeypatch.setattr(argparse_utils, "DEFAULT_ARGUMENT_PARSER", MyDefaultParser)
+        parser = build_parser_from_function(_make_func(str))
+        assert type(parser) is MyDefaultParser
+
+    def test_completer_class(self) -> None:
         from cmd2.argparse_completer import ArgparseCompleter
 
         class MyCompleter(ArgparseCompleter):
             pass
 
-        parser = build_parser_from_function(_make_func(str), ap_completer_type=MyCompleter)
-        assert parser.ap_completer_type is MyCompleter
+        parser = build_parser_from_function(_make_func(str), completer_class=MyCompleter)
+        assert parser.completer_class is MyCompleter
 
-    def test_ap_completer_type_defaults_to_none(self) -> None:
-        assert build_parser_from_function(_make_func(str)).ap_completer_type is None
+    def test_default_completer_class(self) -> None:
+        from cmd2 import argparse_completer
 
-    def test_ap_completer_type_via_decorator(self) -> None:
-        from cmd2 import constants
+        assert build_parser_from_function(_make_func(str)).completer_class is argparse_completer.DEFAULT_ARGPARSE_COMPLETER
+
+    def test_completer_class_via_decorator(self) -> None:
         from cmd2.argparse_completer import ArgparseCompleter
 
         class MyCompleter(ArgparseCompleter):
             pass
 
-        @with_annotated(ap_completer_type=MyCompleter)
+        @with_annotated(completer_class=MyCompleter)
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
-        assert builder().ap_completer_type is MyCompleter
+        builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
+        assert builder().completer_class is MyCompleter
 
-    def test_ap_completer_type_threads_to_subcommand(self) -> None:
-        from cmd2 import constants
+    def test_completer_class_threads_to_subcommand(self) -> None:
         from cmd2.argparse_completer import ArgparseCompleter
 
         class MyCompleter(ArgparseCompleter):
             pass
 
-        @with_annotated(subcommand_to="team", ap_completer_type=MyCompleter)
+        @with_annotated(subcommand_to="team", completer_class=MyCompleter)
         def team_create(self, name: str) -> None: ...
 
-        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
-        assert spec.parser_source().ap_completer_type is MyCompleter
+        spec = getattr(team_create, constants.SUBCOMMAND_ATTR_SPEC)
+        assert spec.parser_source().completer_class is MyCompleter
 
     def test_customization_via_decorator(self) -> None:
         """description/epilog/titled Group flow through @with_annotated end-to-end."""
@@ -1173,9 +1282,9 @@ class TestParserCustomization:
 
         class App(cmd2.Cmd):
             @with_annotated(base_command=True)
-            def do_team(self, *, cmd2_handler=None) -> None:
-                if cmd2_handler:
-                    cmd2_handler()
+            def do_team(self, *, cmd2_subcommand_func=None) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
 
             @with_annotated(subcommand_to="team", help="add a member", description="add desc", epilog="add epilog")
             def team_add(self, name: str) -> None:
@@ -1185,9 +1294,7 @@ class TestParserCustomization:
         out, _err = run_cmd(app, "team add bob")
         assert out == ["added bob"]
 
-        from cmd2 import constants
-
-        spec = getattr(App.team_add, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(App.team_add, constants.SUBCOMMAND_ATTR_SPEC)
         subparser = spec.parser_source()
         assert subparser.description == "add desc"
         assert subparser.epilog == "add epilog"
@@ -1682,15 +1789,6 @@ class TestCollectionRuntimeCast:
 
 
 class TestFilteredNamespaceKwargs:
-    def test_excludes_subcmd_handler_key(self) -> None:
-        from cmd2.annotated import _filtered_namespace_kwargs
-        from cmd2.constants import NS_ATTR_SUBCMD_HANDLER
-
-        ns = argparse.Namespace(**{NS_ATTR_SUBCMD_HANDLER: lambda: None, "name": "Alice"})
-        result = _filtered_namespace_kwargs(ns)
-        assert NS_ATTR_SUBCMD_HANDLER not in result
-        assert result == {"name": "Alice"}
-
     def test_excludes_subcommand_key(self) -> None:
         from cmd2.annotated import _filtered_namespace_kwargs
 
@@ -2165,13 +2263,12 @@ class TestGroupedParserIntegration:
 class _SubcommandApp(cmd2.Cmd):
     # Level 1: base command
     @with_annotated(base_command=True)
-    def do_manage(self, cmd2_handler, verbose: bool = False) -> None:
+    def do_manage(self, cmd2_subcommand_func, verbose: bool = False) -> None:
         """Management command with subcommands."""
         if verbose:
             self.poutput("verbose mode")
-        handler = cmd2_handler
-        if handler:
-            handler()
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
 
     # Level 2: leaf subcommands
     @with_annotated(subcommand_to="manage", help="add something")
@@ -2188,10 +2285,9 @@ class _SubcommandApp(cmd2.Cmd):
 
     # Level 2: intermediate subcommand (also a base for level 3)
     @with_annotated(subcommand_to="manage", base_command=True, help="manage members")
-    def manage_member(self, cmd2_handler) -> None:
-        handler = cmd2_handler
-        if handler:
-            handler()
+    def manage_member(self, cmd2_subcommand_func) -> None:
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
 
     # Level 3: nested subcommand
     @with_annotated(subcommand_to="manage member", help="add a member")
@@ -2240,6 +2336,114 @@ class TestSubcommands:
         assert "member" in help_text
 
 
+class _OptionalIntermediateApp(cmd2.Cmd):
+    """An intermediate subcommand that is itself a base command with an *optional* subcommand."""
+
+    @with_annotated(base_command=True)
+    def do_opt(self, cmd2_subcommand_func) -> None:
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
+
+    @with_annotated(subcommand_to="opt", base_command=True, subcommand_required=False, help="optional middle")
+    def opt_mid(self, cmd2_subcommand_func) -> None:
+        # The guard must blank out the self-referential handler so this runs exactly once.
+        self.poutput("mid:none" if cmd2_subcommand_func is None else "mid:recurse")
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
+
+    @with_annotated(subcommand_to="opt mid", help="leaf")
+    def opt_mid_leaf(self, name: str) -> None:
+        self.poutput(f"leaf:{name}")
+
+
+@pytest.fixture
+def opt_app() -> _OptionalIntermediateApp:
+    return _OptionalIntermediateApp()
+
+
+class TestOptionalIntermediateSubcommand:
+    def test_intermediate_without_deeper_subcommand_runs_once(self, opt_app) -> None:
+        """The recursion guard blanks the self-referential handler: the body runs once with None."""
+        out, _err = run_cmd(opt_app, "opt mid")
+        assert out == ["mid:none"]
+
+    def test_deeper_subcommand_still_dispatches(self, opt_app) -> None:
+        """Blanking the self-reference must not break dispatch to a genuine deeper subcommand."""
+        out, _err = run_cmd(opt_app, "opt mid leaf Bob")
+        assert out == ["leaf:Bob"]
+
+    def test_guard_blanks_only_subcommand_func(self) -> None:
+        """The guard must null *only* cmd2_subcommand_func, leaving the intermediate's own args intact."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_opt(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="opt", base_command=True, subcommand_required=False)
+            def opt_mid(self, cmd2_subcommand_func, verbose: bool = False) -> None:
+                self.poutput(f"none={cmd2_subcommand_func is None}:verbose={verbose}")
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+        out, _err = run_cmd(App(), "opt mid --verbose")
+        assert out == ["none=True:verbose=True"]
+
+    def test_guard_fires_at_deeper_nesting_level(self) -> None:
+        """The guard must work past two levels: the deepest *selected* optional base runs once."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_a(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="a", base_command=True, subcommand_required=False)
+            def a_b(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="a b", base_command=True, subcommand_required=False)
+            def a_b_c(self, cmd2_subcommand_func) -> None:
+                self.poutput(f"c:none={cmd2_subcommand_func is None}")
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="a b c", help="leaf")
+            def a_b_c_leaf(self, name: str) -> None:
+                self.poutput(f"leaf:{name}")
+
+        app = App()
+        assert run_cmd(app, "a b c")[0] == ["c:none=True"]
+        assert run_cmd(app, "a b c leaf Z")[0] == ["leaf:Z"]
+
+    def test_guard_works_for_commandset_subcommand(self) -> None:
+        """The handler is a CommandSet-bound method here; unwrapping to __func__ must still match."""
+
+        class _Grp(cmd2.CommandSet):
+            @cmd2.with_category("grp")
+            @with_annotated(base_command=True)
+            def do_grp(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="grp", base_command=True, subcommand_required=False)
+            def grp_mid(self, cmd2_subcommand_func) -> None:
+                self._cmd.poutput(f"mid:none={cmd2_subcommand_func is None}")
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="grp mid", help="leaf")
+            def grp_mid_leaf(self, name: str) -> None:
+                self._cmd.poutput(f"leaf:{name}")
+
+        app = cmd2.Cmd(auto_load_commands=False)
+        app.register_command_set(_Grp())
+        assert run_cmd(app, "grp mid")[0] == ["mid:none=True"]
+        assert run_cmd(app, "grp mid leaf Q")[0] == ["leaf:Q"]
+
+
 class TestSubcommandValidation:
     def test_subcommand_aliases_none_raises(self) -> None:
         """aliases=None is off-spec (it must be a Sequence[str]); reject it with a clear message."""
@@ -2251,7 +2455,7 @@ class TestSubcommandValidation:
         with pytest.raises(TypeError, match="positional"):
 
             @with_annotated(base_command=True)
-            def do_bad(self, name: str, cmd2_handler) -> None:
+            def do_bad(self, name: str, cmd2_subcommand_func) -> None:
                 pass
 
     def test_base_command_positional_annotated_raises(self) -> None:
@@ -2259,36 +2463,36 @@ class TestSubcommandValidation:
         with pytest.raises(TypeError, match="positional"):
 
             @with_annotated(base_command=True)
-            def do_bad(self, a: Annotated[str, Argument(help_text="x")], cmd2_handler) -> None:
+            def do_bad(self, a: Annotated[str, Argument(help_text="x")], cmd2_subcommand_func) -> None:
                 pass
 
-    def test_base_command_missing_handler_raises(self) -> None:
-        with pytest.raises(TypeError, match="cmd2_handler"):
+    def test_base_command_missing_subcommand_func_raises(self) -> None:
+        with pytest.raises(TypeError, match=constants.NS_ATTR_SUBCOMMAND_FUNC):
 
             @with_annotated(base_command=True)
             def do_bad(self, verbose: bool = False) -> None:
                 pass
 
-    def test_base_command_missing_handler_raises_with_no_parameters(self) -> None:
-        """A zero-parameter base command with no cmd2_handler must still raise.
+    def test_base_command_missing_subcommand_func_raises_with_no_parameters(self) -> None:
+        """A zero-parameter base command with no cmd2_subcommand_func must still raise.
 
-        Guards the function-level ``cmd2_handler`` check (a plain ``if`` in ``_resolve_parameters``,
+        Guards the function-level ``cmd2_subcommand_func`` check (a plain ``if`` in ``_resolve_parameters``,
         not a :data:`_CONSTRAINTS` row): the per-argument :data:`_CONSTRAINTS` loop never runs when
         no arguments exist, so this case is the sole reason the missing-handler check lives at
         function scope.
         """
-        with pytest.raises(TypeError, match="cmd2_handler"):
+        with pytest.raises(TypeError, match=constants.NS_ATTR_SUBCOMMAND_FUNC):
 
             @with_annotated(base_command=True)
             def do_bad(self) -> None:
                 pass
 
-    def test_cmd2_handler_without_base_command_raises(self) -> None:
-        """A 'cmd2_handler' parameter is only valid when base_command=True."""
+    def test_cmd2_subcommand_func_without_base_command_raises(self) -> None:
+        """A 'cmd2_subcommand_func' parameter is only valid when base_command=True."""
         with pytest.raises(TypeError, match="base_command=True"):
 
             @with_annotated
-            def do_bad(self, cmd2_handler, name: str = "") -> None:
+            def do_bad(self, cmd2_subcommand_func, name: str = "") -> None:
                 pass
 
     @pytest.mark.parametrize(
@@ -2326,10 +2530,9 @@ class TestSubcommandValidation:
 
         class App(cmd2.Cmd):
             @with_annotated(base_command=True)
-            def do_fmt(self, cmd2_handler) -> None:
-                handler = cmd2_handler
-                if handler:
-                    handler()
+            def do_fmt(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
 
             @with_annotated(subcommand_to="fmt", help="output", mutually_exclusive_groups=(Group("json", "csv"),))
             def fmt_out(self, msg: str, json: bool = False, csv: bool = False) -> None:
@@ -2345,11 +2548,11 @@ class TestSubcommandValidation:
         with pytest.raises(TypeError, match="positional"):
 
             @with_annotated(subcommand_to="team", base_command=True)
-            def team_member(self, name: str, cmd2_handler) -> None:
+            def team_member(self, name: str, cmd2_subcommand_func) -> None:
                 pass
 
-    def test_intermediate_base_command_missing_handler_raises(self) -> None:
-        with pytest.raises(TypeError, match="cmd2_handler"):
+    def test_intermediate_base_command_missing_subcommand_func_raises(self) -> None:
+        with pytest.raises(TypeError, match=constants.NS_ATTR_SUBCOMMAND_FUNC):
 
             @with_annotated(subcommand_to="team", base_command=True)
             def team_member(self) -> None:
@@ -2376,12 +2579,10 @@ class TestSubcommandValidation:
         ],
     )
     def test_subcommand_spec_attributes(self, decorator_kwargs, expected_help, expected_aliases) -> None:
-        from cmd2 import constants
-
         @with_annotated(subcommand_to="team", **decorator_kwargs)
         def team_create(self, name: str = "") -> None: ...
 
-        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_create, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.command == "team"
         assert spec.name == "create"
         assert spec.help == expected_help
@@ -2390,12 +2591,10 @@ class TestSubcommandValidation:
 
     @pytest.mark.parametrize("deprecated", [True, False])
     def test_subcommand_deprecated_flows_to_spec(self, deprecated) -> None:
-        from cmd2 import constants
-
         @with_annotated(subcommand_to="team", deprecated=deprecated)
         def team_create(self, name: str = "") -> None: ...
 
-        spec = getattr(team_create, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_create, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.deprecated is deprecated
 
 
@@ -3026,12 +3225,10 @@ class TestRangedNargs:
 class TestSubcommandGroupConfig:
     @staticmethod
     def _base_parser(**subcommand_kwargs):
-        from cmd2 import constants
-
         @with_annotated(base_command=True, **subcommand_kwargs)
-        def do_root(self, cmd2_handler) -> None: ...
+        def do_root(self, cmd2_subcommand_func) -> None: ...
 
-        builder = getattr(do_root, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_root, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         return builder()
 
     @staticmethod
@@ -3135,8 +3332,6 @@ class TestDocstringDescription:
         assert parser.description == "Summary line."
 
     def test_decorator_uses_docstring(self) -> None:
-        from cmd2 import constants
-
         @with_annotated
         def do_run(self, name: str) -> None:
             """Run the thing.
@@ -3144,17 +3339,15 @@ class TestDocstringDescription:
             Extra detail.
             """
 
-        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         assert builder().description == "Run the thing."
 
     def test_subcommand_uses_docstring(self) -> None:
-        from cmd2 import constants
-
         @with_annotated(subcommand_to="team")
         def team_add(self, name: str) -> None:
             """Add a member to the team."""
 
-        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_add, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.parser_source().description == "Add a member to the team."
 
 
@@ -3224,28 +3417,11 @@ class TestParserLevelKwargs:
         parser = build_parser_from_function(_make_func(str), argument_default=sentinel)
         assert parser.argument_default == sentinel
 
-    def test_argument_default_suppress_works_with_explicit_defaults(self) -> None:
-        """``argument_default=SUPPRESS`` is safe when every argument sets its own default.
-
-        Every ``@with_annotated`` argument either is positional (always supplied) or
-        has an explicit default, so SUPPRESS at the parser level can't drop a kwarg
-        the function expects.
-        """
-
-        def func(self, name: str, count: int = 1) -> None: ...
-
-        parser = build_parser_from_function(func, argument_default=argparse.SUPPRESS)
-        ns = parser.parse_args(["alice"])
-        assert ns.name == "alice"
-        assert ns.count == 1
-
     def test_decorator_passes_parser_kwargs(self) -> None:
-        from cmd2 import constants
-
         @with_annotated(prog="myprog", usage="usage line")
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         parser = builder()
         assert parser.prog == "myprog"
         assert parser.usage == "usage line"
@@ -3259,24 +3435,21 @@ class TestParserLevelKwargs:
 
     def test_usage_allowed_on_subcommand(self) -> None:
         """``usage`` doesn't conflict with subcommand prog rewriting."""
-        from cmd2 import constants
 
         @with_annotated(subcommand_to="team", usage="team add NAME")
         def team_add(self, name: str) -> None: ...
 
-        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_add, constants.SUBCOMMAND_ATTR_SPEC)
         assert spec.parser_source().usage == "team add NAME"
 
     def test_parents_allowed_on_subcommand(self) -> None:
-        from cmd2 import constants
-
         parent = argparse.ArgumentParser(add_help=False)
         parent.add_argument("--shared")
 
         @with_annotated(subcommand_to="team", parents=[parent])
         def team_add(self, name: str) -> None: ...
 
-        spec = getattr(team_add, constants.SUBCMD_ATTR_SPEC)
+        spec = getattr(team_add, constants.SUBCOMMAND_ATTR_SPEC)
         dests = {a.dest for a in spec.parser_source()._actions}
         assert "shared" in dests
 
@@ -3347,7 +3520,6 @@ class TestParserLowLevelKwargs:
 
     def test_decorator_threads_all_low_level_kwargs(self) -> None:
         """End-to-end: each kwarg lands on the parser when set on the decorator."""
-        from cmd2 import constants
 
         @with_annotated(
             prefix_chars="+-",
@@ -3359,7 +3531,7 @@ class TestParserLowLevelKwargs:
         )
         def do_run(self, name: str) -> None: ...
 
-        builder = getattr(do_run, constants.CMD_ATTR_PARSER_SOURCE)
+        builder = getattr(do_run, constants.ARGPARSE_COMMAND_ATTR_SPEC).parser_source
         parser = builder()
         assert parser.prefix_chars == "+-"
         assert parser.fromfile_prefix_chars == "@"
@@ -3429,27 +3601,34 @@ class TestStrConstValidation:
 
 
 class TestArgumentDefaultSuppressGuard:
-    """``argument_default=argparse.SUPPRESS`` is rejected when it would drop an omittable argument."""
+    """``argument_default=argparse.SUPPRESS`` is rejected outright by @with_annotated.
 
-    def test_suppress_with_optional_positional_rejected(self) -> None:
-        def do_t(self, x: int | None): ...
+    SUPPRESS drops an absent argument from the parsed namespace, but @with_annotated builds the call
+    from the signature, so every declared parameter is expected at invocation -- a vanished argument
+    can never be valid.  The rejection is unconditional (it never inspects the signature), so one
+    direct-build case and one subcommand-registration case cover it.
+    """
+
+    def test_suppress_rejected(self) -> None:
+        def do_t(self, a: int, b: str = "x"): ...
 
         with pytest.raises(TypeError, match="SUPPRESS"):
             build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
 
-    def test_suppress_safe_when_all_args_required_or_defaulted(self) -> None:
-        def do_t(self, a: int, b: str = "x"): ...
+    def test_suppress_rejected_in_subcommand(self) -> None:
+        """The subcommand path shares the same builder, so the rejection fires at registration too."""
 
-        # ``a`` is always supplied (required positional); ``b`` carries its own default -> safe.
-        parser = build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
-        assert parser is not None
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_calc(self, cmd2_subcommand_func) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
 
-    def test_suppress_safe_with_var_positional(self) -> None:
-        def do_t(self, *vals: int): ...
+            @with_annotated(subcommand_to="calc", argument_default=argparse.SUPPRESS, help="sum values")
+            def calc_sum(self, value: str = "x") -> None: ...
 
-        # *args is substituted with () by the invocation path, so SUPPRESS cannot strand it.
-        parser = build_parser_from_function(do_t, argument_default=argparse.SUPPRESS)
-        assert parser is not None
+        with pytest.raises(TypeError, match="SUPPRESS"):
+            App()
 
 
 class TestHelpKwargReserved:

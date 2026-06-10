@@ -147,7 +147,7 @@ nav:
       - overview/integrating.md
       - overview/alternatives.md
       - overview/resources.md
-  - Migrating From cmd:
+  - Upgrading from cmd to cmd2:
       - migrating/index.md
       - migrating/why.md
       - migrating/incompatibilities.md
