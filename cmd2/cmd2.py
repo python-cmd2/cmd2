@@ -368,6 +368,7 @@ class Cmd:
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
         bottom_toolbar: bool = False,
+        complete_in_thread: bool = True,
         command_sets: Iterable[CommandSet[Any]] | None = None,
         include_ipy: bool = False,
         include_py: bool = False,
@@ -404,6 +405,7 @@ class Cmd:
                             based on history. User can press right-arrow key to accept the
                             provided suggestion.
         :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
+        :param complete_in_thread: if ``True``, then completion will run in a separate thread.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
@@ -528,6 +530,7 @@ class Cmd:
 
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
+        self.complete_in_thread = complete_in_thread
         self.main_session = self._create_main_session(auto_suggest, completekey)
 
         # The session currently holding focus (either the main REPL or a command's
@@ -752,7 +755,7 @@ class Cmd:
             "bottom_toolbar": self.get_bottom_toolbar if self.bottom_toolbar else None,
             "color_depth": ColorDepth.TRUE_COLOR,
             "complete_style": CompleteStyle.MULTI_COLUMN,
-            "complete_in_thread": True,
+            "complete_in_thread": self.complete_in_thread,
             "complete_while_typing": False,
             "completer": Cmd2Completer(self),
             "history": Cmd2History(item.raw for item in self.history),

@@ -1,3 +1,11 @@
+## 4.1.0 (TBD)
+
+- Enhancements
+    - New `cmd2.Cmd` parameters
+        - **complete_in_thread**: (boolean) if `True`, then completion will run in a separate
+          thread. If `False` then completion runs in the main thread and causes it to block if slow.
+          Defaults to `True`.
+
 ## 4.0.0 (June 5, 2026)
 
 ### Summary
