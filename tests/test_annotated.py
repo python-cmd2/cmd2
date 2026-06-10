@@ -276,12 +276,20 @@ class TestBuildParser:
             pytest.param(_make_func(list[int], name="nums"), {"option_strings": [], "nargs": "+", "type": int}, id="list_int"),
             pytest.param(_make_func(set[int], name="nums"), {"option_strings": [], "nargs": "+", "type": int}, id="set_int"),
             pytest.param(
+                _make_func(frozenset[int], name="nums"),
+                {"option_strings": [], "nargs": "+", "type": int},
+                id="frozenset_int",
+            ),
+            pytest.param(
                 _make_func(tuple[int, int, int], name="triple"),
                 {"option_strings": [], "nargs": 3, "type": int},
                 id="tuple_fixed_triple",
             ),
             pytest.param(_make_func(list[str], name="files"), {"option_strings": [], "nargs": "+"}, id="list_positional"),
             pytest.param(_make_func(set[str], name="tags"), {"option_strings": [], "nargs": "+"}, id="set_positional"),
+            pytest.param(
+                _make_func(frozenset[str], name="tags"), {"option_strings": [], "nargs": "+"}, id="frozenset_positional"
+            ),
             pytest.param(
                 _make_func(tuple[int, ...], name="values"),
                 {"option_strings": [], "nargs": "+", "type": int},
@@ -291,6 +299,7 @@ class TestBuildParser:
                 _make_func(tuple[int, int], name="pair"), {"option_strings": [], "nargs": 2, "type": int}, id="tuple_fixed"
             ),
             pytest.param(_make_func(list, name="items"), {"option_strings": [], "nargs": "+"}, id="bare_list"),
+            pytest.param(_make_func(frozenset, name="items"), {"option_strings": [], "nargs": "+"}, id="bare_frozenset"),
             pytest.param(_make_func(tuple, name="items"), {"option_strings": [], "nargs": "+"}, id="bare_tuple"),
             pytest.param(
                 _make_func(Annotated[int | None, Argument()], name="val"),
@@ -1362,6 +1371,8 @@ class TestUnsupportedPatterns:
             pytest.param(list[set[int]], id="list_of_set"),
             pytest.param(set[list[str]], id="set_of_list"),
             pytest.param(tuple[list[int], ...], id="tuple_of_list"),
+            pytest.param(frozenset[list[int]], id="frozenset_of_list"),
+            pytest.param(list[frozenset[int]], id="list_of_frozenset"),
         ],
     )
     def test_nested_collection_raises(self, annotation) -> None:
@@ -1371,7 +1382,6 @@ class TestUnsupportedPatterns:
     @pytest.mark.parametrize(
         "annotation",
         [
-            pytest.param(frozenset[str], id="frozenset"),
             pytest.param(dict[str, int], id="dict"),
         ],
     )
@@ -1630,34 +1640,29 @@ class TestCollectionCastingAction:
 class TestCollectionRuntimeCast:
     """End-to-end verify ``parse_args`` returns the declared container type, not a plain list."""
 
-    def test_set_int_returns_set(self) -> None:
-        parser = build_parser_from_function(_make_func(set[int], name="nums"))
-        ns = parser.parse_args(["1", "2", "2", "3"])
-        assert isinstance(ns.nums, set)
-        assert ns.nums == {1, 2, 3}
-
-    def test_tuple_ellipsis_returns_tuple(self) -> None:
-        parser = build_parser_from_function(_make_func(tuple[int, ...], name="values"))
-        ns = parser.parse_args(["1", "2", "3"])
-        assert isinstance(ns.values, tuple)
-        assert ns.values == (1, 2, 3)
-
-    def test_tuple_fixed_returns_tuple(self) -> None:
-        parser = build_parser_from_function(_make_func(tuple[int, int], name="pair"))
-        ns = parser.parse_args(["5", "10"])
-        assert isinstance(ns.pair, tuple)
-        assert ns.pair == (5, 10)
-
-    def test_list_bool_returns_list_of_bools(self) -> None:
-        parser = build_parser_from_function(_make_func(list[bool], name="flags"))
-        ns = parser.parse_args(["true", "no", "on"])
-        assert ns.flags == [True, False, True]
-
-    def test_tuple_paths_returns_tuple_of_paths(self) -> None:
-        parser = build_parser_from_function(_make_func(tuple[Path, Path], name="src_dst"))
-        ns = parser.parse_args(["/tmp/a", "/tmp/b"])
-        assert isinstance(ns.src_dst, tuple)
-        assert ns.src_dst == (Path("/tmp/a"), Path("/tmp/b"))
+    @pytest.mark.parametrize(
+        ("annotation", "name", "args", "container", "expected"),
+        [
+            pytest.param(frozenset[int], "nums", ["1", "2", "2", "3"], frozenset, frozenset({1, 2, 3}), id="frozenset_int"),
+            pytest.param(set[int], "nums", ["1", "2", "2", "3"], set, {1, 2, 3}, id="set_int"),
+            pytest.param(tuple[int, ...], "values", ["1", "2", "3"], tuple, (1, 2, 3), id="tuple_ellipsis"),
+            pytest.param(tuple[int, int], "pair", ["5", "10"], tuple, (5, 10), id="tuple_fixed"),
+            pytest.param(list[bool], "flags", ["true", "no", "on"], list, [True, False, True], id="list_bool"),
+            pytest.param(
+                tuple[Path, Path],
+                "src_dst",
+                ["/tmp/a", "/tmp/b"],
+                tuple,
+                (Path("/tmp/a"), Path("/tmp/b")),
+                id="tuple_paths",
+            ),
+        ],
+    )
+    def test_returns_declared_container(self, annotation, name, args, container, expected) -> None:
+        parser = build_parser_from_function(_make_func(annotation, name=name))
+        value = getattr(parser.parse_args(args), name)
+        assert isinstance(value, container)
+        assert value == expected
 
     def test_append_action_collects_values(self) -> None:
         parser = build_parser_from_function(_make_func(Annotated[list[str], Option("--tag", action="append")], name="tag"))

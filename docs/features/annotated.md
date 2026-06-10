@@ -77,26 +77,27 @@ them as keyword arguments.
 
 The decorator converts Python type annotations into `add_argument()` calls:
 
-| Type annotation                        | Generated argparse setting                                 |
-| -------------------------------------- | ---------------------------------------------------------- |
-| `str`                                  | default (no `type=` needed)                                |
-| `int`, `float`                         | `type=int` or `type=float`                                 |
-| `bool` with a default                  | boolean optional flag via `BooleanOptionalAction`          |
-| positional `bool`                      | parsed from `true/false`, `yes/no`, `on/off`, `1/0`        |
-| `Path`                                 | `type=Path`                                                |
-| `Enum` subclass                        | `type=converter`, `choices` from member values             |
-| `decimal.Decimal`                      | `type=decimal.Decimal`                                     |
-| `Literal[...]`                         | `type=literal-converter`, `choices` from values            |
-| `list[T]` / `set[T]` / `tuple[T, ...]` | `nargs='+'` (or `'*'` if it has a default or is `\| None`) |
-| `tuple[T, T]`                          | fixed `nargs=N` with `type=T`                              |
-| `T \| None` (no default)               | positional with `nargs='?'` (accepts 0-or-1 tokens)        |
-| `T \| None = None`                     | `--flag` option with `default=None`                        |
+| Type annotation                                         | Generated argparse setting                                 |
+| ------------------------------------------------------- | ---------------------------------------------------------- |
+| `str`                                                   | default (no `type=` needed)                                |
+| `int`, `float`                                          | `type=int` or `type=float`                                 |
+| `bool` with a default                                   | boolean optional flag via `BooleanOptionalAction`          |
+| positional `bool`                                       | parsed from `true/false`, `yes/no`, `on/off`, `1/0`        |
+| `Path`                                                  | `type=Path`                                                |
+| `Enum` subclass                                         | `type=converter`, `choices` from member values             |
+| `decimal.Decimal`                                       | `type=decimal.Decimal`                                     |
+| `Literal[...]`                                          | `type=literal-converter`, `choices` from values            |
+| `list[T]` / `set[T]` / `frozenset[T]` / `tuple[T, ...]` | `nargs='+'` (or `'*'` if it has a default or is `\| None`) |
+| `tuple[T, T]`                                           | fixed `nargs=N` with `type=T`                              |
+| `T \| None` (no default)                                | positional with `nargs='?'` (accepts 0-or-1 tokens)        |
+| `T \| None = None`                                      | `--flag` option with `default=None`                        |
 
 When collection types are used with `@with_annotated`, parsed values are passed to the command
 function as:
 
 - `list[T]` as `list`
 - `set[T]` as `set`
+- `frozenset[T]` as `frozenset`
 - `tuple[T, ...]` as `tuple`
 
 Unsupported patterns raise `TypeError`, including:

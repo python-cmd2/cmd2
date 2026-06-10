@@ -56,7 +56,7 @@ How annotations map to argparse settings:
 - ``enum.Enum`` subclass -- ``type=converter``, ``choices`` from member values
 - ``decimal.Decimal`` -- sets ``type=Decimal``
 - ``Literal[...]`` -- ``type=converter`` and ``choices`` from the literal values
-- ``list[T]`` / ``set[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` with a default or ``| None``)
+- ``list[T]`` / ``set[T]`` / ``frozenset[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` with a default or ``| None``)
 - ``tuple[T, T]`` (fixed arity, same type) -- ``nargs=N`` with ``type=T``
 - ``*args: T`` -- variadic positional (``nargs='*'``); ``T`` is each value's type, not the
   collected tuple.  ``Annotated[T, Argument(...)]`` metadata is honored
@@ -663,6 +663,7 @@ _TYPE_TABLE: dict[Any, Callable[..., _TypeResult]] = {
     float: _make_simple_resolver(float),
     int: _make_simple_resolver(int),
     Literal: _resolve_literal,
+    frozenset: _make_collection_resolver(frozenset),
     list: _make_collection_resolver(list),
     set: _make_collection_resolver(set),
     tuple: _resolve_tuple,
@@ -916,14 +917,14 @@ class _ArgparseArgument:
 
     @property
     def _var_positional_element_is_collection(self) -> bool:
-        """Whether the ``*args`` element is itself a collection (``list``/``set``/``tuple``).
+        """Whether the ``*args`` element is itself a collection (``list``/``set``/``frozenset``/``tuple``).
 
         Mirrors the collection entries in :data:`_TYPE_TABLE`; a collection element means ``*args``
         would collect a tuple of collections, which the constraint table rejects.
         """
         element = self._var_positional_element
         origin = get_origin(element)
-        return (origin if origin is not None else element) in (list, set, tuple)
+        return (origin if origin is not None else element) in (list, set, frozenset, tuple)
 
     # -- the user's metadata overrides, derived read-only from ``metadata`` (consulted by the
     #    choices/action/nargs/required tables, the action phase, and the constraints) --
