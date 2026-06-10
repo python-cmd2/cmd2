@@ -64,6 +64,23 @@ def test_version(base_app) -> None:
     assert cmd2.__version__
 
 
+def test_complete_in_thread() -> None:
+    # Test default
+    app_default = cmd2.Cmd()
+    assert app_default.complete_in_thread is True
+    assert app_default.main_session.complete_in_thread is True
+
+    # Test True
+    app_true = cmd2.Cmd(complete_in_thread=True)
+    assert app_true.complete_in_thread is True
+    assert app_true.main_session.complete_in_thread is True
+
+    # Test False
+    app_false = cmd2.Cmd(complete_in_thread=False)
+    assert app_false.complete_in_thread is False
+    assert app_false.main_session.complete_in_thread is False
+
+
 def test_not_in_main_thread(base_app, capsys) -> None:
     import threading
 
