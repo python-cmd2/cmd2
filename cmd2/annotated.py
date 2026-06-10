@@ -190,6 +190,8 @@ from typing import (
     Any,
     ClassVar,
     Literal,
+    ParamSpec,
+    Protocol,
     TypedDict,
     TypeVar,
     Union,
@@ -2117,8 +2119,18 @@ def _build_subcommand_handler(
     return handler, subcmd_name, parser_builder
 
 
+_CommandParams = ParamSpec("_CommandParams")
+_CommandReturn = TypeVar("_CommandReturn")
+
+
+class _WithAnnotatedDecorator(Protocol):
+    """The signature-preserving decorator ``with_annotated(...)`` returns (generic per call)."""
+
+    def __call__(self, fn: "Callable[_CommandParams, _CommandReturn]", /) -> "Callable[_CommandParams, _CommandReturn]": ...
+
+
 @overload
-def with_annotated(func: Callable[..., Any]) -> Callable[..., Any]: ...
+def with_annotated(func: Callable[_CommandParams, _CommandReturn]) -> Callable[_CommandParams, _CommandReturn]: ...
 
 
 @overload
@@ -2141,7 +2153,7 @@ def with_annotated(
     subcommand_title: str | None = ...,
     subcommand_description: str | None = ...,
     **parser_kwargs: Unpack[Cmd2ParserKwargs],
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
+) -> _WithAnnotatedDecorator: ...
 
 
 def with_annotated(
