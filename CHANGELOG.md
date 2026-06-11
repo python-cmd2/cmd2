@@ -5,6 +5,11 @@
         - **complete_in_thread**: (boolean) if `True`, then completion will run in a separate
           thread. If `False` then completion runs in the main thread and causes it to block if slow.
           Defaults to `True`.
+
+- Bug Fixes
+    - Fixed type hinting so that methods decorated with `with_annotated` no longer trigger spurious
+      mypy errors and preserve their original signature.
+
 - Experimental features
     - `@with_annotated` now supports `frozenset[T]` collection parameters, alongside the existing
       `list[T]`, `set[T]`, and `tuple[T, ...]` collection types.
