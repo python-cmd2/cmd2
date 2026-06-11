@@ -2145,7 +2145,7 @@ _CommandReturn = TypeVar("_CommandReturn")
 class _WithAnnotatedDecorator(Protocol):
     """The signature-preserving decorator ``with_annotated(...)`` returns (generic per call)."""
 
-    def __call__(self, fn: "Callable[_CommandParams, _CommandReturn]", /) -> "Callable[_CommandParams, _CommandReturn]": ...
+    def __call__(self, fn: Callable[_CommandParams, _CommandReturn], /) -> Callable[_CommandParams, _CommandReturn]: ...
 
 
 @overload
