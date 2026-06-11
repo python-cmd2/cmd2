@@ -588,11 +588,11 @@ def _resolve_element(tp: Any) -> _TypeResult:
 
 
 def _make_collection_resolver(collection_type: type) -> Callable[..., _TypeResult]:
-    """Create a resolver for single-arg collections (list[T], set[T])."""
+    """Create a resolver for single-arg collections (list[T], set[T], frozenset[T])."""
 
     def _resolve(_tp: Any, args: tuple[Any, ...], **_ctx: Any) -> _TypeResult:
         if len(args) == 0:
-            # Bare list/set without type args -- treat as list[str]/set[str].
+            # Bare list/set/frozenset without type args -- treat as list[str]/set[str]/frozenset[str].
             return _TypeResult(is_collection=True, container_factory=collection_type)
         if len(args) != 1:
             raise TypeError(
@@ -722,7 +722,7 @@ def _resolve_base_type(tp: Any, *, is_positional: bool = False) -> _TypeResult:
         f"Unsupported parameter type {_type_name(tp)!r} for @with_annotated: there is no converter "
         f"for it, so command-line values would silently arrive as plain strings. Supported scalar types "
         f"are str, int, float, bool, decimal.Decimal, pathlib.Path, enum.Enum subclasses, and Literal[...]; "
-        f"use one of these (optionally in list/set/tuple) or a subclass of one."
+        f"use one of these (optionally in list/set/frozenset/tuple) or a subclass of one."
     )
 
 
@@ -912,7 +912,7 @@ class _ArgparseArgument:
     def _is_list(self) -> bool:
         """Whether the declared type is ``list``/``list[T]`` -- the shape the list actions need.
 
-        Distinct from :attr:`is_collection` (also true for ``set``/``tuple``): ``append``/``extend``/
+        Distinct from :attr:`is_collection` (also true for ``set``/``frozenset``/``tuple``): ``append``/``extend``/
         ``append_const`` accumulate specifically into a ``list``.
         """
         return get_origin(self.inner_type) is list or self.inner_type is list
@@ -1288,7 +1288,7 @@ _CHOICES_RULES: list[_Rule[_ArgparseArgument, Iterable[Any] | None]] = [
 _NARGS_RULES: list[_Rule[_ArgparseArgument, _NargsValue | None]] = [
     (lambda a: a._meta_nargs is not None, lambda a: a._meta_nargs),  # an explicit Argument(nargs=) wins
     (lambda a: a.fixed_arity is not None, lambda a: a.fixed_arity),  # tuple[T, T] pins nargs to its arity
-    (lambda a: a.is_collection and a.omittable, _const("*")),  # list/set/tuple[T, ...] that may be empty
+    (lambda a: a.is_collection and a.omittable, _const("*")),  # list/set/frozenset/tuple[T, ...] that may be empty
     (lambda a: a.is_collection, _const("+")),  # collection requiring >= 1 value
     (lambda a: a.is_positional and a.omittable, _const("?")),  # an optional scalar positional
     (_always, _const(None)),  # required scalar / any option scalar
@@ -1572,12 +1572,12 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
         lambda a: TypeError(
             f"nargs={a._meta_nargs!r} produces a list of values, but the annotation "
             f"'{_type_name(a.inner_type)}' is not a collection type. "
-            f"Use list[T], tuple[T, ...], or set[T] (optionally with | None) to match."
+            f"Use list[T], tuple[T, ...], set[T], or frozenset[T] (optionally with | None) to match."
         ),
     ),
     (
         # An explicit '?' / (0, 1) on a collection yields a single value (or None), which the
-        # collection-casting action cannot wrap into the declared list/set/tuple.
+        # collection-casting action cannot wrap into the declared list/set/frozenset/tuple.
         lambda a: a.is_collection and a._meta_nargs_yields_optional_single,
         lambda a: TypeError(
             f"parameter '{a.name}' in {a.func_qualname} sets nargs={a._meta_nargs!r} on the collection "
