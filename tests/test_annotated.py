@@ -41,6 +41,7 @@ from cmd2.annotated import (
     _make_literal_type,
     _normalize_annotation,
     _parse_bool,
+    _validate_group_specs,
     build_parser_from_function,
     with_annotated,
 )
@@ -1030,12 +1031,76 @@ class TestArgumentGroups:
         with pytest.raises(ValueError, match="cannot be assigned to both argument group"):
             build_parser_from_function(_func_grouped, groups=(Group("local"), Group("local", "remote")))
 
+    @pytest.mark.filterwarnings("error::DeprecationWarning")
+    def test_mutex_group_nests_inside_argument_group(self) -> None:
+        """A mutex group whose members all sit in one Group(...) is created inside that argument group.
+
+        This is the one nesting direction argparse supports: ``group.add_mutually_exclusive_group()``.
+        The Python 3.11 deprecations cover the other three directions (group-in-group, group-in-mutex,
+        mutex-in-mutex) -- group-in-group is a hard ``ValueError`` on current Python.  The
+        ``filterwarnings`` marker turns any future argparse deprecation of this direction into a
+        test failure.
+        """
+        parser = build_parser_from_function(
+            _func_grouped,
+            groups=(Group("local", "remote", "force", title="Location"),),
+            mutually_exclusive_groups=(Group("local", "remote"),),
+        )
+        assert len(parser._mutually_exclusive_groups) == 1
+        mutex = parser._mutually_exclusive_groups[0]
+        location = next(g for g in parser._action_groups if g.title == "Location")
+        # The mutex group's container is the titled argument group, so its members render under it.
+        assert mutex._container is location
+        mutex_dests = {action.dest for action in mutex._group_actions}
+        assert mutex_dests == {"local", "remote"}
+        # The non-mutex member still lands in the argument group.
+        assert {action.dest for action in location._group_actions} == {"local", "remote", "force"}
+        assert "Location" in parser.format_help()
+        # Exclusivity is enforced.
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--local", "a", "--remote", "b"])
+
     def test_mutex_group_spanning_different_argument_groups_raises(self) -> None:
         with pytest.raises(ValueError, match="spans parameters in different argument groups"):
             build_parser_from_function(
                 _func_grouped,
                 groups=(Group("local"), Group("remote")),
                 mutually_exclusive_groups=(Group("local", "remote"),),
+            )
+
+    def test_mutex_group_partially_in_argument_group_raises(self) -> None:
+        # ``local`` is in the titled group, ``remote`` is not: nesting the whole mutex inside the group
+        # would silently pull ``remote`` into its section, so all-or-none membership is required.
+        with pytest.raises(ValueError, match="mixes members in a titled argument group"):
+            build_parser_from_function(
+                _func_grouped,
+                groups=(Group("local", title="Location"),),
+                mutually_exclusive_groups=(Group("local", "remote"),),
+            )
+
+    def test_mutex_group_title_creates_titled_section(self) -> None:
+        # title/description on the mutex itself build the titled section and nest the mutex inside it,
+        # so no paired groups= entry is needed.
+        parser = build_parser_from_function(
+            _func_grouped,
+            mutually_exclusive_groups=(Group("local", "remote", title="Location", description="where"),),
+        )
+        section = next(g for g in parser._action_groups if g.title == "Location")
+        assert section.description == "where"
+        assert len(parser._mutually_exclusive_groups) == 1
+        mutex = parser._mutually_exclusive_groups[0]
+        assert mutex._container is section
+        assert {action.dest for action in mutex._group_actions} == {"local", "remote"}
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--local", "a", "--remote", "b"])
+
+    def test_mutex_group_title_with_members_in_argument_group_raises(self) -> None:
+        # Declaring the titled section in both places (groups= and the mutex) is ambiguous.
+        with pytest.raises(ValueError, match="declare the titled section in one place only"):
+            build_parser_from_function(
+                _func_grouped,
+                groups=(Group("local", "remote", title="A"),),
+                mutually_exclusive_groups=(Group("local", "remote", title="B"),),
             )
 
     def test_mutually_exclusive_group(self) -> None:
@@ -1314,8 +1379,7 @@ class TestGroupHelpers:
         assert target_for["dst"] is argument_group_for["dst"]
 
     def test_duplicate_argument_group_assignment_raises(self) -> None:
-        # Double-assignment is enforced by _CONSTRAINTS (the argument_group_indices membership fact),
-        # so it surfaces through the real build path rather than _build_argument_group_targets itself.
+        # Double-assignment is enforced by _validate_group_specs, which the build path runs first.
         def func(self, *, verbose: bool = False) -> None: ...
 
         with pytest.raises(ValueError, match="argument group 1 and argument group 2"):
@@ -1336,23 +1400,134 @@ class TestGroupHelpers:
         assert isinstance(target_for["json"], argparse._MutuallyExclusiveGroup)
 
     def test_duplicate_mutex_group_assignment_raises(self) -> None:
-        # Double-assignment is enforced by _CONSTRAINTS (the mutex_group_indices membership fact).
+        # Double-assignment is enforced by _validate_group_specs, which the build path runs first.
         def func(self, *, verbose: bool = False) -> None: ...
 
         with pytest.raises(ValueError, match="multiple mutually exclusive groups"):
             build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose"), Group("verbose")))
 
-    def test_apply_mutex_group_targets_rejects_cross_group_members(self) -> None:
-        parser = argparse.ArgumentParser()
-        _target_for, argument_group_for = _build_argument_group_targets(parser, groups=(Group("src"), Group("dst")))
+    def test_repeated_member_in_one_argument_group_raises(self) -> None:
+        # A name listed twice in a single Group is a distinct mistake from cross-group assignment
+        # and gets its own message (not the misleading "both group 1 and group 1").
+        def func(self, *, verbose: bool = False) -> None: ...
+
+        with pytest.raises(ValueError, match="listed more than once in argument group 1"):
+            build_parser_from_function(func, groups=(Group("verbose", "verbose"),))
+
+    def test_repeated_member_in_one_mutex_group_raises(self) -> None:
+        def func(self, *, verbose: bool = False) -> None: ...
+
+        with pytest.raises(ValueError, match="listed more than once in mutually exclusive group 1"):
+            build_parser_from_function(func, mutually_exclusive_groups=(Group("verbose", "verbose"),))
+
+    def test_validate_group_specs_rejects_cross_group_members(self) -> None:
+        # The spec validator owns the group-shaped rules; construction trusts it.
+        def func(self, src: str = "a", dst: str = "b") -> None: ...
 
         with pytest.raises(ValueError, match="different argument groups"):
-            _apply_mutex_group_targets(
-                parser,
-                target_for={},
-                argument_group_for=argument_group_for,
+            _validate_group_specs(
+                func,
+                skip_params=frozenset(),
+                groups=(Group("src"), Group("dst")),
                 mutually_exclusive_groups=(Group("src", "dst"),),
             )
+
+
+class TestEagerGroupSpecValidation:
+    """Group specs hard-fail at decoration time (class definition), not on first command use.
+
+    The decorator runs the name-only spec checks before deferring the parser build, so a
+    misconfigured group raises while the class body executes instead of surfacing as a swallowed
+    runtime error the first time the command runs.  Type hints are never resolved by these checks,
+    so forward-referenced annotations still decorate (the parser build stays deferred for them).
+    """
+
+    def test_member_typo_fails_at_decoration(self) -> None:
+        def do_x(self, a: str = "v") -> None: ...
+
+        with pytest.raises(ValueError, match="groups references nonexistent parameter 'typo'"):
+            with_annotated(groups=(Group("typo"),))(do_x)
+
+    def test_mutex_member_typo_fails_at_decoration(self) -> None:
+        def do_x(self, a: str = "v") -> None: ...
+
+        with pytest.raises(ValueError, match="mutually_exclusive_groups references nonexistent parameter 'typo'"):
+            with_annotated(mutually_exclusive_groups=(Group("typo"),))(do_x)
+
+    def test_param_in_two_argument_groups_fails_at_decoration(self) -> None:
+        def do_x(self, a: str = "v") -> None: ...
+
+        with pytest.raises(ValueError, match="argument group 1 and argument group 2"):
+            with_annotated(groups=(Group("a"), Group("a")))(do_x)
+
+    def test_param_in_two_mutex_groups_fails_at_decoration(self) -> None:
+        def do_x(self, a: str = "v", b: str = "w") -> None: ...
+
+        with pytest.raises(ValueError, match="multiple mutually exclusive groups"):
+            with_annotated(mutually_exclusive_groups=(Group("a", "b"), Group("a")))(do_x)
+
+    def test_required_on_plain_group_fails_at_decoration(self) -> None:
+        def do_x(self, a: str = "v") -> None: ...
+
+        with pytest.raises(ValueError, match="only valid in mutually_exclusive_groups"):
+            with_annotated(groups=(Group("a", required=True),))(do_x)
+
+    def test_mutex_spanning_argument_groups_fails_at_decoration(self) -> None:
+        def do_x(self, a: str = "v", b: str = "w") -> None: ...
+
+        with pytest.raises(ValueError, match="spans parameters in different argument groups"):
+            with_annotated(groups=(Group("a"), Group("b")), mutually_exclusive_groups=(Group("a", "b"),))(do_x)
+
+    def test_mutex_partially_in_argument_group_fails_at_decoration(self) -> None:
+        def do_x(self, a: str = "v", b: str = "w") -> None: ...
+
+        with pytest.raises(ValueError, match="mixes members in a titled argument group"):
+            with_annotated(groups=(Group("a", title="T"),), mutually_exclusive_groups=(Group("a", "b"),))(do_x)
+
+    def test_titled_section_declared_twice_fails_at_decoration(self) -> None:
+        def do_x(self, a: str = "v", b: str = "w") -> None: ...
+
+        with pytest.raises(ValueError, match="declare the titled section in one place only"):
+            with_annotated(
+                groups=(Group("a", "b", title="T"),),
+                mutually_exclusive_groups=(Group("a", "b", title="U"),),
+            )(do_x)
+
+    def test_subcommand_group_typo_fails_at_decoration(self) -> None:
+        def team_add(self, a: str = "v") -> None: ...
+
+        with pytest.raises(ValueError, match="nonexistent parameter 'typo'"):
+            with_annotated(subcommand_to="team", groups=(Group("typo"),))(team_add)
+
+    def test_eager_validation_does_not_resolve_type_hints(self) -> None:
+        # The group error fires even though the annotation can never resolve: the checks read
+        # parameter names only, so the unresolvable hint is not touched.
+        def do_x(self, a: "NoSuchType" = None) -> None: ...  # noqa: F821
+
+        with pytest.raises(ValueError, match="nonexistent parameter 'typo'"):
+            with_annotated(groups=(Group("typo"),))(do_x)
+
+    def test_unresolvable_hints_with_valid_groups_decorate(self) -> None:
+        # Valid specs + an unresolvable annotation must decorate without raising; type resolution
+        # stays deferred to the parser build, preserving forward-reference support.
+        def do_x(self, a: "NoSuchType" = None) -> None: ...  # noqa: F821
+
+        with_annotated(groups=(Group("a", title="T"),))(do_x)
+
+    def test_valid_nested_config_decorates_cleanly(self) -> None:
+        def do_x(
+            self,
+            a: Annotated[bool, Option(action="store_true")] = False,
+            b: Annotated[bool, Option(action="store_true")] = False,
+            c: Annotated[bool, Option(action="store_true")] = False,
+            d: Annotated[bool, Option(action="store_true")] = False,
+        ) -> None: ...
+
+        # A nested mutex plus a separately titled mutex must decorate without raising.
+        with_annotated(
+            groups=(Group("a", "b", title="T"),),
+            mutually_exclusive_groups=(Group("a", "b"), Group("c", "d", title="U")),
+        )(do_x)
 
 
 # ---------------------------------------------------------------------------

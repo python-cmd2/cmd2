@@ -350,8 +350,7 @@ def do_greet(self, name: str):
 # parser.description == "Greet someone by name."
 ```
 
-`mutually_exclusive_groups` also takes `Group` instances (their `title`/`description` are ignored,
-since argparse mutually-exclusive groups have no header). Pass `Group(..., required=True)` to make
+`mutually_exclusive_groups` also takes `Group` instances. Pass `Group(..., required=True)` to make
 the mutex group itself required -- argparse will then enforce that exactly one of its members must
 be supplied. `required=True` is rejected on a plain (non-mutex) `Group` because `add_argument_group`
 has no `required` flag.
@@ -362,6 +361,39 @@ has no `required` flag.
 )
 def do_run(self, verbose: bool = False, quiet: bool = False): ...
 ```
+
+Give a `mutually_exclusive_groups` `Group` a `title`/`description` to render it as a titled help
+section -- argparse's one supported nesting, a mutex _inside_ an argument group. You declare it
+once, with no paired `groups=` entry. Use `Option(action="store_true")` on each `bool` member so the
+choice reads as `[--json | --csv]` instead of expanding to `--json`/`--no-json` and
+`--csv`/`--no-csv`:
+
+```py
+@with_annotated(
+    mutually_exclusive_groups=(
+        Group("json", "csv", title="output", description="how to write results"),
+    ),
+)
+def do_render(
+    self,
+    json: Annotated[bool, Option(action="store_true")] = False,
+    csv: Annotated[bool, Option(action="store_true")] = False,
+): ...
+```
+
+To put non-mutex parameters in the same section, declare a `groups=` entry with all of them and
+leave the title off the mutex; argparse nests the mutex inside that group. Declaring the section in
+both places, a mutex that sits only partly in a `groups=` entry, or one that spans two of them, each
+raises `ValueError`. The other three nestings (an argument group inside another group or a mutex, or
+a mutex inside a mutex) are removed in argparse on Python 3.14 and cannot be expressed here.
+
+All of these group-spec rules -- member references, a parameter assigned to two groups,
+`required=True` on a plain group, and the mutex nesting rules above -- are validated when the
+decorator runs, so a misconfigured group raises `ValueError` at class definition time instead of on
+first command use. The checks read only parameter names, never the type hints, so forward-referenced
+annotations still decorate cleanly. The one group rule that depends on the annotations (a member of
+a mutually exclusive group must be omittable -- have a default or be `T | None`) fires when the
+parser is built.
 
 `parents=` mirrors argparse's standard parents mechanism for sharing argument definitions across
 parsers. `argument_default=argparse.SUPPRESS` is not supported and raises `TypeError`. It removes an

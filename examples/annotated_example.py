@@ -486,23 +486,30 @@ class AnnotatedExample(Cmd):
         self.poutput(f"{msg} (verbose)" if verbose else msg)
 
     # -- Mutually exclusive groups -------------------------------------------
-    # Group instances passed to mutually_exclusive_groups make argparse reject
-    # combinations (title/description are ignored here).
+    # A plain (untitled) mutex rejects combinations of its members; required=True
+    # makes exactly one of them mandatory.
 
     @with_annotated(
         description="Export data in exactly one format.",
-        mutually_exclusive_groups=(Group("json", "csv"),),
+        mutually_exclusive_groups=(Group("json", "csv", required=True),),
     )
     @cmd2.with_category(ANNOTATED_CATEGORY)
-    def do_export(self, name: str, json: bool = False, csv: bool = False) -> None:
-        """Export a dataset; --json and --csv are mutually exclusive.
+    def do_export(
+        self,
+        name: str,
+        json: Annotated[str | None, Option(help_text="write JSON to this path")] = None,
+        csv: Annotated[str | None, Option(help_text="write CSV to this path")] = None,
+    ) -> None:
+        """Export a dataset to exactly one of --json PATH or --csv PATH (exclusive, required).
 
         Try:
-            export sales --json
-            export sales --json --csv   # rejected: not allowed together
+            export sales --json out.json
+            export sales                    # rejected: one of --json/--csv is required
+            export sales --json a --csv b   # rejected: not allowed together
         """
-        fmt = "json" if json else "csv" if csv else "text"
-        self.poutput(f"Exporting {name} as {fmt}")
+        target = json or csv
+        fmt = "json" if json else "csv"
+        self.poutput(f"Exporting {name} to {target} as {fmt}")
 
     # -- Custom formatter and parser classes ---------------------------------
     # A custom help formatter or Cmd2ArgumentParser subclass can be supplied.
@@ -538,6 +545,32 @@ class AnnotatedExample(Cmd):
             echo "hello world"
         """
         self.poutput(text)
+
+    # -- Mutually exclusive group as a titled section ---------------------------
+    # A title/description on the mutex group renders it as a titled help section
+    # and nests it there in one declaration -- no paired groups= entry needed.
+    # The format flags are store_true so the mutex stays a clean [--json | --csv]
+    # (a bool flag would expand to --json/--no-json and make the group 4-way).
+
+    @with_annotated(
+        mutually_exclusive_groups=(Group("json", "csv", title="output", description="how to write results"),),
+    )
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_render(
+        self,
+        name: str = "report",
+        json: Annotated[bool, Option(action="store_true")] = False,
+        csv: Annotated[bool, Option(action="store_true")] = False,
+    ) -> None:
+        """Render output; --json/--csv are exclusive and listed under 'output' in help.
+
+        Try:
+            help render
+            render --json
+            render
+        """
+        fmt = "json" if json else "csv" if csv else "text"
+        self.poutput(f"Rendering {name} as {fmt}")
 
 
 if __name__ == "__main__":
