@@ -3940,6 +3940,16 @@ class _OtherColor(enum.Enum):
     magenta = "magenta"
 
 
+class _StrictColor(enum.Enum):
+    """An Enum whose ``_missing_`` *raises* on an unknown token, as a strict enum typically does."""
+
+    crimson = "crimson"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "_StrictColor | None":
+        raise ValueError(f"{value!r} is not a valid _StrictColor")
+
+
 class TestEnumUnion:
     """A union of Enums (``EnumA | EnumB``) resolves by trying each member's converter in order."""
 
@@ -3968,6 +3978,9 @@ class TestEnumUnion:
             pytest.param(_Color | Literal["auto"], id="literal-member"),
             pytest.param(_Color | int, id="non-enum-member"),
             pytest.param(str | int, id="plain-scalars"),
+            # `... | None` is stripped and the remaining union rebuilt, so the same rule applies.
+            pytest.param(_Color | int | None, id="non-enum-member-optional"),
+            pytest.param(_Color | Literal["auto"] | None, id="literal-member-optional"),
         ],
     )
     def test_out_of_scope_union_rejected(self, annotation: Any) -> None:
@@ -4015,3 +4028,36 @@ class TestEnumUnion:
         action = _get_param_action(_make_func(_Color | _PlainColor, name="c"))
         texts = [c.text if isinstance(c, CompletionItem) else str(c) for c in action.choices]
         assert texts == ["red", "green", "blue"]  # deduped, order preserved (first member wins)
+
+    def test_member_whose_missing_raises_does_not_preempt_later_members(self) -> None:
+        """A member whose ``_missing_`` *raises* declines the token; the union keeps trying later members.
+
+        A strict Enum (one whose ``_missing_`` raises rather than returning ``None``) listed before a
+        member that accepts the token must not abort the whole union -- the raise means "not mine",
+        same as a clean rejection, so resolution falls through to the next member.
+        """
+        parser = build_parser_from_function(
+            _make_func(Annotated[_StrictColor | _IntColor, Argument(allow_unknown_entry=True)], name="c")
+        )
+        # _StrictColor._missing_("2") raises, but _IntColor accepts "2" -- the later member still wins.
+        assert parser.parse_args(["2"]).c is _IntColor.green
+        # The strict member still claims its own token first.
+        assert parser.parse_args(["crimson"]).c is _StrictColor.crimson
+
+    def test_all_members_declining_reports_invalid_choice_not_member_error(self) -> None:
+        """When every member declines -- even one whose ``_missing_`` raises -- the union reports invalid choice.
+
+        The deferred member error must not surface as-is; the user sees the standard merged-choices
+        rejection, raised only after all members have been tried.
+        """
+        converter = _get_param_action(
+            _make_func(Annotated[_StrictColor | _IntColor, Argument(allow_unknown_entry=True)], name="c")
+        ).type
+        with pytest.raises(argparse.ArgumentTypeError, match="invalid choice"):
+            converter("bogus")
+
+    def test_union_choices_preserve_display_meta(self) -> None:
+        """Merged union choices keep each member's ``display_meta`` (the per-member tab-completion hint)."""
+        action = _get_param_action(_make_func(_Color | _IntColor, name="c"))
+        meta = {c.text: c.display_meta for c in action.choices if isinstance(c, CompletionItem)}
+        assert meta == {"red": "red", "green": "green", "blue": "blue", "1": "red", "2": "green", "3": "blue"}

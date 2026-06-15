@@ -216,8 +216,10 @@ def do_pick(self, choice: Suit | Rank) -> None:
 Because resolution is first-match-wins, **order matters**: if a token is a valid value (or name) for
 more than one member, the member listed first in the union wins, and the later member's identical
 token becomes unreachable. `allow_unknown_entry` and each member's `_missing_` hook still apply per
-member. Only `Enum` members are supported; a union containing a `Literal` or any non-`Enum` type is
-still rejected as ambiguous.
+member; a member whose `_missing_` _raises_ on a token (rather than returning `None`) simply
+declines it, so the next member is still tried and the raise does not abort the whole union. Only
+when every member declines is the usual "choose from ..." error raised. Only `Enum` members are
+supported; a union containing a `Literal` or any non-`Enum` type is still rejected as ambiguous.
 
 When the two value sets overlap, prefer [typed subcommands](#annotated-subcommands) (one `Enum` per
 subcommand) so the choice is explicit and collision-free.

@@ -731,10 +731,9 @@ def _resolve_union(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool
     that accepts it, so when two members share a representation the earlier union member wins.  A
     union with any non-Enum member (including a ``Literal``) is rejected as ambiguous.
 
-    A member converter signals "not mine, try the next member" by raising
-    ``argparse.ArgumentTypeError``; any other exception (e.g. a custom ``_missing_`` that *raises*
-    rather than returning ``None``) is a hard error and propagates, so order matters -- place a
-    strict/raising Enum after the members that should get first refusal.
+    A member declines a token by raising -- a clean ``ArgumentTypeError`` or anything a strict
+    ``_missing_`` raises -- and the next member is tried, so a raising member never pre-empts those
+    after it.  Only when every member declines is the merged-choices rejection raised.
     """
     non_none = [a for a in args if a is not type(None)]
     if not all(_is_enum(a) for a in non_none):
@@ -750,8 +749,8 @@ def _resolve_union(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool
         for converter in converters:
             try:
                 return converter(value)
-            except argparse.ArgumentTypeError:
-                continue  # this member rejected the token; try the next one
+            except Exception:  # noqa: BLE001, S112 - any raise means "not mine"; try the next member
+                continue
         raise _invalid_choice(value, choices)
 
     _convert.__name__ = "union"
