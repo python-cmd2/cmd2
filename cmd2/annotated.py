@@ -54,6 +54,9 @@ How annotations map to argparse settings:
 - positional ``bool`` -- parsed from ``true/false``, ``yes/no``, ``on/off``, ``1/0``
 - ``pathlib.Path`` -- sets ``type=Path``
 - ``enum.Enum`` subclass -- ``type=converter``, ``choices`` from member values
+- a union of Enums (e.g. ``EnumA | EnumB``) -- each member keeps its own converter; a token resolves
+  to the first member that accepts it, and the merged ``choices`` are the concatenation of each
+  member's choices
 - ``decimal.Decimal`` -- sets ``type=Decimal``
 - ``Literal[...]`` -- ``type=converter`` and ``choices`` from the literal values
 - ``list[T]`` / ``set[T]`` / ``frozenset[T]`` / ``tuple[T, ...]`` -- ``nargs='+'`` (or ``'*'`` with a default or ``| None``)
@@ -150,7 +153,8 @@ Unsupported patterns (raise ``TypeError``):
   or any custom class), which would silently arrive as a plain string.  Supported scalars
   are ``str``, ``int``, ``float``, ``bool``, ``decimal.Decimal``, ``pathlib.Path``,
   ``enum.Enum`` subclasses, and ``Literal[...]`` (``str``/``Any``/``object`` pass through raw)
-- ``str | int`` -- a union of multiple non-None types is ambiguous
+- ``str | int`` -- a union of multiple non-None types is ambiguous (unless every member is an
+  ``enum.Enum`` subclass, which resolves by trying each member's converter in turn)
 - ``tuple[int, str, float]`` -- mixed element types (argparse applies one ``type=`` per argument)
 - ``*args: tuple[T, ...]`` (or any collection element) -- the annotation is each value's type,
   so a collection element means a tuple-of-collections; annotate the element, e.g. ``*args: str``
@@ -193,6 +197,7 @@ import decimal
 import enum
 import functools
 import inspect
+import operator
 import types
 from collections.abc import (
     Callable,
@@ -324,6 +329,7 @@ class _BaseArgMetadata:
         suppress_tab_hint: bool | None = None,
         const: Any = _UNSET,
         default: Any = _UNSET,
+        allow_unknown_entry: bool = False,
         **extra_kwargs: Any,
     ) -> None:
         """Initialise shared metadata fields.
@@ -331,8 +337,10 @@ class _BaseArgMetadata:
         ``const`` is the value stored on a present flag with no argument (``Option`` only:
         ``store_const``/``append_const``); ``_UNSET`` distinguishes "no const" from ``const=None``.
         ``default`` mirrors the signature default (``Option(default=v)`` == ``... = v``); supplying
-        both, or ``argparse.SUPPRESS``, is rejected.  ``extra_kwargs`` forwards any other
-        ``add_argument`` parameter (incl. those from
+        both, or ``argparse.SUPPRESS``, is rejected.  ``allow_unknown_entry`` only affects ``Enum``
+        annotations: when set, a token matched by neither a member value nor name is routed through
+        the enum's ``_missing_`` hook (for aliases / special keywords) instead of being rejected
+        outright.  ``extra_kwargs`` forwards any other ``add_argument`` parameter (incl. those from
         [`register_argparse_argument_parameter`][cmd2.argparse_utils.register_argparse_argument_parameter]) straight through.
         """
         reserved = self._RESERVED_EXTRA_KWARGS & extra_kwargs.keys()
@@ -360,6 +368,7 @@ class _BaseArgMetadata:
         self.suppress_tab_hint = suppress_tab_hint
         self.const = const
         self.default = default
+        self.allow_unknown_entry = allow_unknown_entry
         self.extra_kwargs = extra_kwargs
 
     def to_kwargs(self) -> dict[str, Any]:
@@ -489,6 +498,25 @@ def _parse_bool(value: str) -> bool:
     raise argparse.ArgumentTypeError(f"invalid boolean value: {value!r} (choose from: 1, 0, true, false, yes, no, on, off)")
 
 
+def _choice_text(choice: Any) -> str:
+    """Command-line spelling of a choice (the ``CompletionItem`` text, else ``str``)."""
+    return choice.text if isinstance(choice, CompletionItem) else str(choice)
+
+
+def _invalid_choice(value: str, choices: Iterable[Any]) -> argparse.ArgumentTypeError:
+    """Build the standard 'invalid choice' rejection, de-duplicating the listed choices."""
+    valid = ", ".join(dict.fromkeys(_choice_text(c) for c in choices))
+    return argparse.ArgumentTypeError(f"invalid choice: {value!r} (choose from {valid})")
+
+
+def _dedupe_choices(choices: Iterable[Any]) -> list[Any]:
+    """Drop choices that share a command-line spelling, keeping the first occurrence."""
+    by_text: dict[str, Any] = {}
+    for choice in choices:
+        by_text.setdefault(_choice_text(choice), choice)
+    return list(by_text.values())
+
+
 def _make_literal_type(literal_values: list[Any]) -> Callable[[str], Any]:
     """Create an argparse converter for a Literal's exact values."""
     value_map: dict[str, Any] = {}
@@ -516,17 +544,20 @@ def _make_literal_type(literal_values: list[Any]) -> Callable[[str], Any]:
                 if type(v) is bool and v == bool_value:
                     return bool_value
 
-        valid = ", ".join(str(v) for v in literal_values)
-        raise argparse.ArgumentTypeError(f"invalid choice: {value!r} (choose from {valid})")
+        raise _invalid_choice(value, literal_values)
 
     _convert.__name__ = "literal"
     return _convert
 
 
-def _make_enum_type(enum_class: type[enum.Enum]) -> Callable[[str], enum.Enum]:
+def _make_enum_type(enum_class: type[enum.Enum], *, allow_unknown_entry: bool = False) -> Callable[[str], enum.Enum]:
     """Create an argparse *type* converter for an Enum class.
 
-    Accepts both member *values* and member *names*.
+    Accepts both member *values* and member *names*.  When ``allow_unknown_entry`` is set, a token
+    matched by neither is passed to the enum's own ``_missing_`` hook so it can resolve aliases,
+    alternate spellings, or special keywords; a token ``_missing_`` declines to claim (returns
+    ``None``) is still rejected.  An enum that does not override ``_missing_`` inherits the default
+    (which returns ``None``), so the flag is simply inert for it.
     """
     _value_map = {str(m.value): m for m in enum_class}
 
@@ -536,9 +567,15 @@ def _make_enum_type(enum_class: type[enum.Enum]) -> Callable[[str], enum.Enum]:
             return member
         try:
             return enum_class[value]
-        except KeyError as err:
-            valid = ", ".join(_value_map)
-            raise argparse.ArgumentTypeError(f"invalid choice: {value!r} (choose from {valid})") from err
+        except KeyError:
+            pass
+        if allow_unknown_entry:
+            # Call _missing_ directly so its return is honored and any error it raises propagates
+            # (rather than being masked as an "invalid choice"); a None return falls through below.
+            resolved = enum_class._missing_(value)
+            if isinstance(resolved, enum_class):
+                return resolved
+        raise _invalid_choice(value, _value_map)
 
     _convert.__name__ = enum_class.__name__
     _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]
@@ -594,9 +631,9 @@ def _resolve_bool(_tp: Any, _args: tuple[Any, ...], *, is_positional: bool = Fal
     return _TypeResult(converter=_parse_bool, choices=list(_BOOL_CHOICES))
 
 
-def _resolve_element(tp: Any) -> _TypeResult:
+def _resolve_element(tp: Any, *, allow_unknown_entry: bool = False) -> _TypeResult:
     """Resolve a collection element type and reject nested collections."""
-    inner = _resolve_base_type(tp, is_positional=True)
+    inner = _resolve_base_type(tp, is_positional=True, allow_unknown_entry=allow_unknown_entry)
     if inner.is_collection:
         raise TypeError("Nested collections are not supported")
     return inner
@@ -605,7 +642,7 @@ def _resolve_element(tp: Any) -> _TypeResult:
 def _make_collection_resolver(collection_type: type) -> Callable[..., _TypeResult]:
     """Create a resolver for single-arg collections (list[T], set[T], frozenset[T])."""
 
-    def _resolve(_tp: Any, args: tuple[Any, ...], **_ctx: Any) -> _TypeResult:
+    def _resolve(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool = False, **_ctx: Any) -> _TypeResult:
         if len(args) == 0:
             # Bare list/set/frozenset without type args -- treat as list[str]/set[str]/frozenset[str].
             return _TypeResult(is_collection=True, container_factory=collection_type)
@@ -614,7 +651,7 @@ def _make_collection_resolver(collection_type: type) -> Callable[..., _TypeResul
                 f"{collection_type.__name__}[...] with {len(args)} type arguments is not supported; "
                 f"use {collection_type.__name__}[T] with a single element type."
             )
-        element = _resolve_element(args[0])
+        element = _resolve_element(args[0], allow_unknown_entry=allow_unknown_entry)
         return _TypeResult(
             converter=element.converter,
             choices=element.choices,
@@ -626,14 +663,14 @@ def _make_collection_resolver(collection_type: type) -> Callable[..., _TypeResul
     return _resolve
 
 
-def _resolve_tuple(_tp: Any, args: tuple[Any, ...], **_ctx: Any) -> _TypeResult:
+def _resolve_tuple(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool = False, **_ctx: Any) -> _TypeResult:
     """Resolve tuple[T, ...] (variable) and tuple[T, T] (fixed arity)."""
     if not args:
         # Bare tuple without type args -- treat as tuple[str, ...].
         return _TypeResult(is_collection=True, container_factory=tuple)
 
     if len(args) == 2 and args[1] is Ellipsis:
-        element = _resolve_element(args[0])
+        element = _resolve_element(args[0], allow_unknown_entry=allow_unknown_entry)
         return _TypeResult(
             converter=element.converter,
             choices=element.choices,
@@ -651,7 +688,7 @@ def _resolve_tuple(_tp: Any, args: tuple[Any, ...], **_ctx: Any) -> _TypeResult:
                 f"can only apply a single type= converter per argument. "
                 f"Use tuple[T, T] (same type) or tuple[T, ...] instead."
             )
-        element = _resolve_element(first)
+        element = _resolve_element(first, allow_unknown_entry=allow_unknown_entry)
         return _TypeResult(
             converter=element.converter,
             choices=element.choices,
@@ -673,12 +710,52 @@ def _resolve_literal(_tp: Any, args: tuple[Any, ...], **_ctx: Any) -> _TypeResul
     return _TypeResult(converter=_make_literal_type(literal_values), choices=literal_values)
 
 
-def _resolve_enum(tp: Any, _args: tuple[Any, ...], **_ctx: Any) -> _TypeResult:
+def _resolve_enum(tp: Any, _args: tuple[Any, ...], *, allow_unknown_entry: bool = False, **_ctx: Any) -> _TypeResult:
     """Resolve Enum subclasses into converter + choices."""
     return _TypeResult(
-        converter=_make_enum_type(tp),
+        converter=_make_enum_type(tp, allow_unknown_entry=allow_unknown_entry),
         choices=[CompletionItem(m, text=str(m.value), display_meta=m.name) for m in tp],
     )
+
+
+def _is_enum(tp: Any) -> bool:
+    """Whether *tp* is an ``enum.Enum`` subclass."""
+    return isinstance(tp, type) and issubclass(tp, enum.Enum)
+
+
+def _resolve_union(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool = False, **_ctx: Any) -> _TypeResult:
+    """Resolve a union whose non-``None`` members are all Enums by trying each member's converter.
+
+    Each member keeps its own converter, so member values, member names, and any ``_missing_``
+    behavior (via ``allow_unknown_entry``) are preserved.  A token is resolved by the first member
+    that accepts it, so when two members share a representation the earlier union member wins.  A
+    union with any non-Enum member (including a ``Literal``) is rejected as ambiguous.
+
+    A member converter signals "not mine, try the next member" by raising
+    ``argparse.ArgumentTypeError``; any other exception (e.g. a custom ``_missing_`` that *raises*
+    rather than returning ``None``) is a hard error and propagates, so order matters -- place a
+    strict/raising Enum after the members that should get first refusal.
+    """
+    non_none = [a for a in args if a is not type(None)]
+    if not all(_is_enum(a) for a in non_none):
+        type_names = " | ".join(_type_name(a) for a in non_none)
+        raise TypeError(f"Union type {type_names} is ambiguous for auto-resolution.")
+
+    parts = [_resolve_base_type(member, allow_unknown_entry=allow_unknown_entry) for member in non_none]
+    # Every part is an Enum (guarded above), so each has a converter; the None-filter keeps mypy happy.
+    converters = [part.converter for part in parts if part.converter is not None]
+    choices = _dedupe_choices(choice for part in parts for choice in (part.choices or []))
+
+    def _convert(value: str) -> Any:
+        for converter in converters:
+            try:
+                return converter(value)
+            except argparse.ArgumentTypeError:
+                continue  # this member rejected the token; try the next one
+        raise _invalid_choice(value, choices)
+
+    _convert.__name__ = "union"
+    return _TypeResult(converter=_convert, choices=choices)
 
 
 # -- Registry -----------------------------------------------------------------
@@ -694,6 +771,8 @@ _TYPE_TABLE: dict[Any, Callable[..., _TypeResult]] = {
     float: _make_simple_resolver(float),
     int: _make_simple_resolver(int),
     Literal: _resolve_literal,
+    Union: _resolve_union,
+    types.UnionType: _resolve_union,
     frozenset: _make_collection_resolver(frozenset),
     list: _make_collection_resolver(list),
     set: _make_collection_resolver(set),
@@ -713,7 +792,7 @@ def _type_name(tp: Any) -> str:
 _PASSTHROUGH_TYPES = frozenset({str, object, Any, inspect.Parameter.empty})
 
 
-def _resolve_base_type(tp: Any, *, is_positional: bool = False) -> _TypeResult:
+def _resolve_base_type(tp: Any, *, is_positional: bool = False, allow_unknown_entry: bool = False) -> _TypeResult:
     """Resolve a declared type into a :class:`_TypeResult` via the registry.
 
     Lookup order: ``get_origin(tp)`` -> ``tp`` -> ``issubclass`` fallback -> passthrough.
@@ -730,7 +809,7 @@ def _resolve_base_type(tp: Any, *, is_positional: bool = False) -> _TypeResult:
                 break
 
     if resolver is not None:
-        return resolver(tp, args, is_positional=is_positional)
+        return resolver(tp, args, is_positional=is_positional, allow_unknown_entry=allow_unknown_entry)
     if tp in _PASSTHROUGH_TYPES:
         return _TypeResult()
     raise TypeError(
@@ -744,7 +823,9 @@ def _resolve_base_type(tp: Any, *, is_positional: bool = False) -> _TypeResult:
 def _unwrap_optional(tp: Any) -> tuple[Any, bool]:
     """If *tp* is ``T | None``, return ``(T, True)``.  Otherwise ``(tp, False)``.
 
-    Raises ``TypeError`` for ambiguous unions like ``str | int`` or ``str | int | None``.
+    Only the ``None`` is stripped here.  A multi-member union (with ``None`` removed) is handed back
+    intact for :func:`_resolve_union` to accept (all-Enum) or reject (ambiguous); that decision lives
+    there alone, so this helper never validates union members itself.
     """
     origin = get_origin(tp)
     if origin is Union or origin is types.UnionType:  # type: ignore[comparison-overlap]
@@ -758,8 +839,8 @@ def _unwrap_optional(tp: Any) -> tuple[Any, bool]:
                 f"Unexpected single-element Union without None: Union[{non_none[0]}]. "
                 f"Use the type directly instead of wrapping in Union."
             )
-        type_names = " | ".join(_type_name(a) for a in non_none)
-        raise TypeError(f"Union type {type_names} is ambiguous for auto-resolution.")
+        # Rebuild the union without its None member and let _resolve_union judge it.
+        return functools.reduce(operator.or_, non_none), has_none
     return tp, False
 
 
@@ -1128,8 +1209,11 @@ class _ArgparseArgument:
         Rather than raise here -- which would let build order decide the message -- the error is captured
         so :data:`_CONSTRAINTS` can rank it against more specific rules and raise the winner.
         """
+        allow_unknown_entry = self.metadata.allow_unknown_entry if self.metadata is not None else False
         try:
-            result = _resolve_base_type(self.inner_type, is_positional=self.is_positional)
+            result = _resolve_base_type(
+                self.inner_type, is_positional=self.is_positional, allow_unknown_entry=allow_unknown_entry
+            )
         except TypeError as exc:
             self.build_error = exc
             return

@@ -85,6 +85,7 @@ The decorator converts Python type annotations into `add_argument()` calls:
 | positional `bool`                                       | parsed from `true/false`, `yes/no`, `on/off`, `1/0`        |
 | `Path`                                                  | `type=Path`                                                |
 | `Enum` subclass                                         | `type=converter`, `choices` from member values             |
+| `EnumA \| EnumB` (all members `Enum`)                   | first member to accept a token wins; `choices` merged      |
 | `decimal.Decimal`                                       | `type=decimal.Decimal`                                     |
 | `Literal[...]`                                          | `type=literal-converter`, `choices` from values            |
 | `list[T]` / `set[T]` / `frozenset[T]` / `tuple[T, ...]` | `nargs='+'` (or `'*'` if it has a default or is `\| None`) |
@@ -102,7 +103,8 @@ function as:
 
 Unsupported patterns raise `TypeError`, including:
 
-- unions with multiple non-`None` members such as `str | int`
+- unions with multiple non-`None` members such as `str | int`, unless every member is an `Enum`
+  subclass (e.g. `EnumA | EnumB`), which resolves by trying each member's converter in order
 - mixed-type tuples such as `tuple[int, str]`
 - `Annotated[T, meta] | None`; write `Annotated[T | None, meta]` instead
 - `Annotated[T, Argument(nargs=N)]` where `N` is `'*'`, `'+'`, or an integer `>= 1` and `T` is not a
@@ -156,6 +158,69 @@ Both `Argument` and `Option` accept the same cmd2-specific fields as `add_argume
 
 `Option` additionally accepts `action`, `required`, and positional `*names` for custom flag strings
 (e.g. `Option("--color", "-c")`).
+
+### Enum aliases and special keywords (`allow_unknown_entry`)
+
+By default an `Enum` parameter accepts only member values and member names. To let an enum also
+accept aliases, alternate spellings, or special keywords, define the standard Python
+[`_missing_`](https://docs.python.org/3/library/enum.html#enum.Enum._missing_) hook on the enum and
+opt in with `allow_unknown_entry=True`:
+
+```py
+import enum
+from typing import Annotated
+from cmd2.annotated import Argument, with_annotated
+
+class Color(enum.Enum):
+    red = "red"
+    green = "green"
+    blue = "blue"
+
+    @classmethod
+    def _missing_(cls, value):
+        # map a special keyword onto a real member; return None to reject
+        return cls.red if str(value).lower() == "auto" else None
+
+class MyApp(cmd2.Cmd):
+    @with_annotated
+    def do_theme(self, choice: Annotated[Color, Argument(allow_unknown_entry=True)]) -> None:
+        self.poutput(f"theme set to {choice.value}")
+```
+
+`theme auto` now resolves through `_missing_` to `Color.red`, while `theme red` (value) and
+`theme green` (name) keep working as before. A token that `_missing_` declines (returns `None`) is
+still rejected with the usual "choose from ..." error. Any exception `_missing_` itself raises
+propagates as-is (it is not masked as an "invalid choice"). The flag has no effect on non-`Enum`
+annotations, and an `Enum` that does not override `_missing_` inherits the default (which returns
+`None`), so the flag is simply inert for it. It also applies when the enum is a collection element
+(e.g. `Annotated[list[Color], Argument(allow_unknown_entry=True)]`).
+
+Because `_missing_` aliases are dynamic, they are not added to the advertised `choices`, so they do
+not appear in `--help` or tab-completion; the canonical member values remain the listed choice set.
+
+### Unions of Enums
+
+A parameter annotated as a union whose members are all `Enum` subclasses (e.g. `EnumA | EnumB`) is
+accepted. Each member keeps its own converter, and a token is resolved by the **first member that
+accepts it**:
+
+```py
+@with_annotated
+def do_pick(self, choice: Suit | Rank) -> None:
+    if isinstance(choice, Suit):
+        self.poutput(f"suit {choice.name}")
+    else:
+        self.poutput(f"rank {choice.name}")
+```
+
+Because resolution is first-match-wins, **order matters**: if a token is a valid value (or name) for
+more than one member, the member listed first in the union wins, and the later member's identical
+token becomes unreachable. `allow_unknown_entry` and each member's `_missing_` hook still apply per
+member. Only `Enum` members are supported; a union containing a `Literal` or any non-`Enum` type is
+still rejected as ambiguous.
+
+When the two value sets overlap, prefer [typed subcommands](#annotated-subcommands) (one `Enum` per
+subcommand) so the choice is explicit and collision-free.
 
 ### Actions
 
