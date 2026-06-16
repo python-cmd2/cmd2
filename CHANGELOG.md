@@ -23,6 +23,18 @@
       when the class is defined instead of being deferred to first command use where the error was
       swallowed. The checks read parameter names only, so forward-referenced annotations still
       decorate cleanly.
+    - `Argument`/`Option` accept a new `allow_unknown_entry` flag for `Enum` parameters. When set, a
+      command-line token matched by neither a member value nor name is routed through the enum's own
+      [`_missing_`](https://docs.python.org/3/library/enum.html#enum.Enum._missing_) hook, so an
+      enum can resolve aliases, alternate spellings, or special keywords. A token that `_missing_`
+      declines (returns `None`) is still rejected.
+    - `@with_annotated` now supports a union of `Enum` subclasses (e.g. `EnumA | EnumB`). Each
+      member keeps its own converter and a token resolves to the first member that accepts it, so
+      when two members share a representation the earlier one in the union wins. A member whose
+      `_missing_` raises on a token declines it (the next member is still tried) rather than
+      aborting the union, and a merged "choose from ..." error is raised only when every member
+      declines. Unions containing a `Literal` or any non-`Enum` member are still rejected as
+      ambiguous.
 
 ## 4.0.0 (June 5, 2026)
 

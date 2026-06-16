@@ -3829,3 +3829,235 @@ class TestEnumAcceptsNameAndValue:
         p = build_parser_from_function(_make_func(Color, name="c"))
         assert p.parse_args(["r"]).c is Color.RED
         assert p.parse_args(["RED"]).c is Color.RED
+
+
+class _AliasColor(enum.Enum):
+    """An enum that maps extra command-line spellings to members via the standard ``_missing_`` hook."""
+
+    RED = "red"
+    GREEN = "green"
+    BLUE = "blue"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "_AliasColor | None":
+        return {"auto": cls.RED, "default": cls.RED}.get(str(value).lower())
+
+
+class TestAllowUnknownEntry:
+    """``allow_unknown_entry=True`` lets an Enum's ``_missing_`` hook resolve otherwise-unknown tokens."""
+
+    def test_missing_not_consulted_without_flag(self) -> None:
+        """By default the converter ignores ``_missing_`` -- an alias is rejected (current behavior)."""
+        parser = build_parser_from_function(_make_func(_AliasColor, name="c"))
+        with pytest.raises(SystemExit):
+            parser.parse_args(["auto"])
+
+    def test_flag_consults_missing(self) -> None:
+        """With the flag, an unknown token is resolved through the enum's ``_missing_`` hook."""
+        parser = build_parser_from_function(_make_func(Annotated[_AliasColor, Argument(allow_unknown_entry=True)], name="c"))
+        assert parser.parse_args(["auto"]).c is _AliasColor.RED
+        assert parser.parse_args(["default"]).c is _AliasColor.RED
+
+    def test_flag_still_accepts_canonical_value_and_name(self) -> None:
+        """Enabling the flag does not regress value or name lookup; ``_missing_`` is only a fallback."""
+        parser = build_parser_from_function(_make_func(Annotated[_AliasColor, Argument(allow_unknown_entry=True)], name="c"))
+        assert parser.parse_args(["red"]).c is _AliasColor.RED  # by value
+        assert parser.parse_args(["GREEN"]).c is _AliasColor.GREEN  # by name
+
+    def test_flag_preserves_intenum_value_bridge(self) -> None:
+        """An IntEnum value typed as a string still resolves with the flag on (str-bridge intact)."""
+
+        class IntColor(enum.IntEnum):
+            red = 1
+            green = 2
+
+            @classmethod
+            def _missing_(cls, value: object) -> "IntColor | None":
+                return cls.red if str(value).lower() == "auto" else None
+
+        parser = build_parser_from_function(_make_func(Annotated[IntColor, Argument(allow_unknown_entry=True)], name="c"))
+        assert parser.parse_args(["1"]).c is IntColor.red  # int value via str-bridge
+        assert parser.parse_args(["auto"]).c is IntColor.red  # _missing_
+
+    def test_flag_unknown_without_missing_match_still_errors(self) -> None:
+        """A token neither matched nor rescued by ``_missing_`` is still rejected with the choices."""
+        parser = build_parser_from_function(_make_func(Annotated[_AliasColor, Argument(allow_unknown_entry=True)], name="c"))
+        with pytest.raises(SystemExit):
+            parser.parse_args(["bogus"])
+
+    def test_flag_on_option(self) -> None:
+        """The flag also works on an ``Option`` (keyword) parameter."""
+        parser = build_parser_from_function(
+            _make_func(Annotated[_AliasColor | None, Option("--c", allow_unknown_entry=True)], name="c", default=None)
+        )
+        assert parser.parse_args(["--c", "auto"]).c is _AliasColor.RED
+
+    def test_flag_on_collection_element(self) -> None:
+        """The flag propagates to an Enum used as a collection element."""
+        parser = build_parser_from_function(
+            _make_func(Annotated[list[_AliasColor], Argument(allow_unknown_entry=True)], name="cs")
+        )
+        assert parser.parse_args(["auto", "blue"]).cs == [_AliasColor.RED, _AliasColor.BLUE]
+
+    def test_make_enum_type_flag_directly(self) -> None:
+        """Unit-level: ``_make_enum_type`` honors ``_missing_`` only when ``allow_unknown_entry`` is set."""
+        without = _make_enum_type(_AliasColor)
+        with pytest.raises(argparse.ArgumentTypeError):
+            without("auto")
+        with_flag = _make_enum_type(_AliasColor, allow_unknown_entry=True)
+        assert with_flag("auto") is _AliasColor.RED
+
+    def test_missing_exception_propagates_not_swallowed(self) -> None:
+        """A ``_missing_`` that raises is surfaced, not masked as an 'invalid choice' error."""
+
+        class Raises(enum.Enum):
+            a = "a"
+
+            @classmethod
+            def _missing_(cls, value: object) -> "Raises | None":
+                raise ValueError("boom in _missing_")
+
+        conv = _make_enum_type(Raises, allow_unknown_entry=True)
+        with pytest.raises(ValueError, match="boom in _missing_"):
+            conv("zzz")
+
+    def test_flag_without_missing_handler_is_inert(self) -> None:
+        """An Enum with no ``_missing_`` override inherits the default (returns None), so the flag is inert."""
+
+        class NoHandler(enum.Enum):
+            a = "a"
+
+        parser = build_parser_from_function(_make_func(Annotated[NoHandler, Argument(allow_unknown_entry=True)], name="c"))
+        assert parser.parse_args(["a"]).c is NoHandler.a  # canonical value still works
+        with pytest.raises(SystemExit):
+            parser.parse_args(["zzz"])  # unknown token still rejected; the flag added nothing
+
+
+class _OtherColor(enum.Enum):
+    """A third, disjoint Enum used to exercise multi-member unions."""
+
+    cyan = "cyan"
+    magenta = "magenta"
+
+
+class _StrictColor(enum.Enum):
+    """An Enum whose ``_missing_`` *raises* on an unknown token, as a strict enum typically does."""
+
+    crimson = "crimson"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "_StrictColor | None":
+        raise ValueError(f"{value!r} is not a valid _StrictColor")
+
+
+class TestEnumUnion:
+    """A union of Enums (``EnumA | EnumB``) resolves by trying each member's converter in order."""
+
+    @pytest.mark.parametrize(
+        ("annotation", "token", "expected"),
+        [
+            pytest.param(_Color | _IntColor, "red", _Color.red, id="first-member-value"),
+            pytest.param(_Color | _IntColor, "2", _IntColor.green, id="second-member-value"),
+            pytest.param(_IntColor | _Color, "1", _IntColor.red, id="intenum-value"),
+            pytest.param(_IntColor | _Color, "green", _IntColor.green, id="member-name-first-wins"),
+            pytest.param(_Color | _PlainColor, "red", _Color.red, id="shared-repr-first-wins"),
+            pytest.param(_PlainColor | _Color, "red", _PlainColor.RED, id="shared-repr-order-flips"),
+            pytest.param(_Color | _IntColor | _OtherColor, "blue", _Color.blue, id="three-member-first"),
+            pytest.param(_Color | _IntColor | _OtherColor, "2", _IntColor.green, id="three-member-middle"),
+            pytest.param(_Color | _IntColor | _OtherColor, "cyan", _OtherColor.cyan, id="three-member-last"),
+        ],
+    )
+    def test_resolution(self, annotation: Any, token: str, expected: enum.Enum) -> None:
+        """A token resolves to the first union member whose converter accepts it."""
+        parser = build_parser_from_function(_make_func(annotation, name="c"))
+        assert parser.parse_args([token]).c is expected
+
+    @pytest.mark.parametrize(
+        "annotation",
+        [
+            pytest.param(_Color | Literal["auto"], id="literal-member"),
+            pytest.param(_Color | int, id="non-enum-member"),
+            pytest.param(str | int, id="plain-scalars"),
+            # `... | None` is stripped and the remaining union rebuilt, so the same rule applies.
+            pytest.param(_Color | int | None, id="non-enum-member-optional"),
+            pytest.param(_Color | Literal["auto"] | None, id="literal-member-optional"),
+        ],
+    )
+    def test_out_of_scope_union_rejected(self, annotation: Any) -> None:
+        """Scope is Enum-only: a union with a Literal or non-Enum member is rejected as ambiguous."""
+        with pytest.raises(TypeError, match="ambiguous"):
+            build_parser_from_function(_make_func(annotation, name="c"))
+
+    def test_invalid_value_rejected(self) -> None:
+        """A token no member accepts is rejected at parse time."""
+        parser = build_parser_from_function(_make_func(_Color | _IntColor, name="c"))
+        with pytest.raises(SystemExit):
+            parser.parse_args(["bogus"])
+
+    def test_optional_union_without_default_is_optional_positional(self) -> None:
+        """``A | B | None`` with no default is a positional ``nargs='?'`` yielding None when absent."""
+        action = _get_param_action(_make_func(_Color | _IntColor | None, name="c"))
+        assert action.option_strings == []  # positional
+        assert action.nargs == "?"
+        parser = build_parser_from_function(_make_func(_Color | _IntColor | None, name="c"))
+        assert parser.parse_args([]).c is None
+        assert parser.parse_args(["red"]).c is _Color.red
+
+    def test_optional_union_with_default_is_option(self) -> None:
+        """``A | B | None = None`` becomes a ``--flag`` option."""
+        parser = build_parser_from_function(_make_func(_Color | _IntColor | None, name="c", default=None))
+        assert parser.parse_args([]).c is None
+        assert parser.parse_args(["--c", "blue"]).c is _Color.blue
+
+    def test_union_as_collection_element(self) -> None:
+        """A union works as a collection element type."""
+        parser = build_parser_from_function(_make_func(list[_Color | _IntColor], name="cs"))
+        assert parser.parse_args(["red", "2"]).cs == [_Color.red, _IntColor.green]
+
+    def test_allow_unknown_entry_threads_into_union_members(self) -> None:
+        """``allow_unknown_entry`` propagates to each member, so a member's ``_missing_`` still fires."""
+        parser = build_parser_from_function(
+            _make_func(Annotated[_AliasColor | _IntColor, Argument(allow_unknown_entry=True)], name="c")
+        )
+        assert parser.parse_args(["auto"]).c is _AliasColor.RED  # _AliasColor._missing_
+        assert parser.parse_args(["2"]).c is _IntColor.green
+
+    def test_shared_representation_choices_are_deduped(self) -> None:
+        """When members share a text representation the merged choices show it once (not once per member)."""
+        # _Color and _PlainColor both spell their members "red"/"green"/"blue".
+        action = _get_param_action(_make_func(_Color | _PlainColor, name="c"))
+        texts = [c.text if isinstance(c, CompletionItem) else str(c) for c in action.choices]
+        assert texts == ["red", "green", "blue"]  # deduped, order preserved (first member wins)
+
+    def test_member_whose_missing_raises_does_not_preempt_later_members(self) -> None:
+        """A member whose ``_missing_`` *raises* declines the token; the union keeps trying later members.
+
+        A strict Enum (one whose ``_missing_`` raises rather than returning ``None``) listed before a
+        member that accepts the token must not abort the whole union -- the raise means "not mine",
+        same as a clean rejection, so resolution falls through to the next member.
+        """
+        parser = build_parser_from_function(
+            _make_func(Annotated[_StrictColor | _IntColor, Argument(allow_unknown_entry=True)], name="c")
+        )
+        # _StrictColor._missing_("2") raises, but _IntColor accepts "2" -- the later member still wins.
+        assert parser.parse_args(["2"]).c is _IntColor.green
+        # The strict member still claims its own token first.
+        assert parser.parse_args(["crimson"]).c is _StrictColor.crimson
+
+    def test_all_members_declining_reports_invalid_choice_not_member_error(self) -> None:
+        """When every member declines -- even one whose ``_missing_`` raises -- the union reports invalid choice.
+
+        The deferred member error must not surface as-is; the user sees the standard merged-choices
+        rejection, raised only after all members have been tried.
+        """
+        converter = _get_param_action(
+            _make_func(Annotated[_StrictColor | _IntColor, Argument(allow_unknown_entry=True)], name="c")
+        ).type
+        with pytest.raises(argparse.ArgumentTypeError, match="invalid choice"):
+            converter("bogus")
+
+    def test_union_choices_preserve_display_meta(self) -> None:
+        """Merged union choices keep each member's ``display_meta`` (the per-member tab-completion hint)."""
+        action = _get_param_action(_make_func(_Color | _IntColor, name="c"))
+        meta = {c.text: c.display_meta for c in action.choices if isinstance(c, CompletionItem)}
+        assert meta == {"red": "red", "green": "green", "blue": "blue", "1": "red", "2": "green", "3": "blue"}
