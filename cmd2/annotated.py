@@ -190,6 +190,29 @@ matches; a value the converter rejects is a build-time ``TypeError``), and an ex
 takes precedence over a *type-inferred* completer (the ``Path`` completer is dropped so the choices
 drive both validation and completion).  A ``choices_provider`` / ``completer`` you supply yourself
 still wins over ``choices=``.
+
+Two hooks customize the string -> value conversion, parity with a hand-built ``add_argument(type=...)``
+(a raw ``type=`` in the metadata is rejected; use these instead):
+
+- ``converter`` -- a ``Callable[[str], Any]`` that *replaces* the inferred ``type=`` converter.  Because
+  the converter owns the conversion, the annotation is no longer required to be a supported scalar -- any
+  type is legal (``Annotated[datetime, Argument(converter=parse_iso)]``), and the "unsupported type" error
+  is suppressed.  The inferred ``choices`` and completer (which described the *inferred* value-space) are
+  dropped; supply ``choices=`` / ``completer`` / ``choices_provider`` to re-add them (an explicit
+  ``choices=`` is still run through your converter).  argparse applies it per token, so on a ``list[T]`` it
+  converts each value; a non-collection annotation such as ``Any`` keeps a single token, so the converter
+  may itself return a collection (``Annotated[Any, Option('--idx', converter=parse_intset)]``).
+- ``preprocess`` -- a ``Callable[[str], str]`` that runs *before* the inferred converter, transforming the
+  raw token while *keeping* the inferred ``type=``, ``choices``, completer, and coercion.  Use it to
+  normalize input for a type that already has rich inference, e.g. ``Annotated[Color, Argument(preprocess=
+  str.lower)]`` accepts ``RED`` while still showing the ``Color`` choices, or ``Annotated[Path,
+  Argument(preprocess=os.path.expanduser)]`` keeps the path completer.  With a plain ``str`` (no inferred
+  converter) it becomes the ``type=`` directly.
+
+``converter`` and ``preprocess`` are mutually exclusive on one parameter (fold the preprocessing into the
+converter, which already receives the raw token), and neither may be combined with a value-less action
+(``store_true`` / ``store_false`` / ``count`` / ``store_const`` / ``append_const``), which consumes no
+token to convert.
 """
 
 import argparse
@@ -211,7 +234,6 @@ from dataclasses import (
 )
 from pathlib import Path
 from typing import (
-    TYPE_CHECKING,
     Annotated,
     Any,
     ClassVar,
@@ -231,6 +253,7 @@ from typing import (
 from rich.table import Column
 
 from . import constants
+from .argparse_completer import ArgparseCompleter
 from .argparse_utils import (
     ArgparseCommandSpec,
     Cmd2ArgumentParser,
@@ -245,9 +268,6 @@ from .types import (
     UnboundChoicesProvider,
     UnboundCompleter,
 )
-
-if TYPE_CHECKING:  # pragma: no cover
-    from .argparse_completer import ArgparseCompleter
 
 #: ``nargs`` values accepted by cmd2's patched ``add_argument`` (incl. ranged tuples).
 _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
@@ -276,7 +296,7 @@ class Cmd2ParserKwargs(TypedDict, total=False):
     exit_on_error: bool
     suggest_on_error: bool
     color: bool
-    completer_class: "type[ArgparseCompleter] | None"
+    completer_class: type[ArgparseCompleter] | None
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +350,8 @@ class _BaseArgMetadata:
         const: Any = _UNSET,
         default: Any = _UNSET,
         allow_unknown_entry: bool = False,
+        converter: Callable[[str], Any] | None = None,
+        preprocess: Callable[[str], str] | None = None,
         **extra_kwargs: Any,
     ) -> None:
         """Initialise shared metadata fields.
@@ -340,7 +362,11 @@ class _BaseArgMetadata:
         both, or ``argparse.SUPPRESS``, is rejected.  ``allow_unknown_entry`` only affects ``Enum``
         annotations: when set, a token matched by neither a member value nor name is routed through
         the enum's ``_missing_`` hook (for aliases / special keywords) instead of being rejected
-        outright.  ``extra_kwargs`` forwards any other ``add_argument`` parameter (incl. those from
+        outright.  ``converter`` replaces the inferred ``type=`` converter (and makes any annotation
+        type legal); ``preprocess`` runs before the inferred converter to transform the raw token while
+        keeping the inferred choices/completer.  The two are mutually exclusive and neither combines with
+        a value-less action (see the module docstring).  ``extra_kwargs`` forwards any other
+        ``add_argument`` parameter (incl. those from
         [`register_argparse_argument_parameter`][cmd2.argparse_utils.register_argparse_argument_parameter]) straight through.
         """
         reserved = self._RESERVED_EXTRA_KWARGS & extra_kwargs.keys()
@@ -348,7 +374,10 @@ class _BaseArgMetadata:
             name = sorted(reserved)[0]
             # Per-key remediation hint for the reserved kwarg.
             hint = {
-                "type": "The converter is derived from the parameter annotation; change the annotation instead.",
+                "type": (
+                    "The converter is derived from the parameter annotation; change the annotation, or pass "
+                    "converter= for a custom string -> value callable (preprocess= to transform the token first)."
+                ),
                 "dest": "The dest is the parameter name; rename the parameter instead.",
                 "action": "Use Option(action=...) (only Option supports an action; Argument is always positional).",
                 "required": (
@@ -369,6 +398,8 @@ class _BaseArgMetadata:
         self.const = const
         self.default = default
         self.allow_unknown_entry = allow_unknown_entry
+        self.converter = converter
+        self.preprocess = preprocess
         self.extra_kwargs = extra_kwargs
 
     def to_kwargs(self) -> dict[str, Any]:
@@ -631,9 +662,9 @@ def _resolve_bool(_tp: Any, _args: tuple[Any, ...], *, is_positional: bool = Fal
     return _TypeResult(converter=_parse_bool, choices=list(_BOOL_CHOICES))
 
 
-def _resolve_element(tp: Any, *, allow_unknown_entry: bool = False) -> _TypeResult:
+def _resolve_element(tp: Any, *, allow_unknown_entry: bool = False, has_converter: bool = False) -> _TypeResult:
     """Resolve a collection element type and reject nested collections."""
-    inner = _resolve_base_type(tp, is_positional=True, allow_unknown_entry=allow_unknown_entry)
+    inner = _resolve_base_type(tp, is_positional=True, allow_unknown_entry=allow_unknown_entry, has_converter=has_converter)
     if inner.is_collection:
         raise TypeError("Nested collections are not supported")
     return inner
@@ -642,7 +673,14 @@ def _resolve_element(tp: Any, *, allow_unknown_entry: bool = False) -> _TypeResu
 def _make_collection_resolver(collection_type: type) -> Callable[..., _TypeResult]:
     """Create a resolver for single-arg collections (list[T], set[T], frozenset[T])."""
 
-    def _resolve(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool = False, **_ctx: Any) -> _TypeResult:
+    def _resolve(
+        _tp: Any,
+        args: tuple[Any, ...],
+        *,
+        allow_unknown_entry: bool = False,
+        has_converter: bool = False,
+        **_ctx: Any,
+    ) -> _TypeResult:
         if len(args) == 0:
             # Bare list/set/frozenset without type args -- treat as list[str]/set[str]/frozenset[str].
             return _TypeResult(is_collection=True, container_factory=collection_type)
@@ -651,7 +689,7 @@ def _make_collection_resolver(collection_type: type) -> Callable[..., _TypeResul
                 f"{collection_type.__name__}[...] with {len(args)} type arguments is not supported; "
                 f"use {collection_type.__name__}[T] with a single element type."
             )
-        element = _resolve_element(args[0], allow_unknown_entry=allow_unknown_entry)
+        element = _resolve_element(args[0], allow_unknown_entry=allow_unknown_entry, has_converter=has_converter)
         return _TypeResult(
             converter=element.converter,
             choices=element.choices,
@@ -663,14 +701,21 @@ def _make_collection_resolver(collection_type: type) -> Callable[..., _TypeResul
     return _resolve
 
 
-def _resolve_tuple(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool = False, **_ctx: Any) -> _TypeResult:
+def _resolve_tuple(
+    _tp: Any,
+    args: tuple[Any, ...],
+    *,
+    allow_unknown_entry: bool = False,
+    has_converter: bool = False,
+    **_ctx: Any,
+) -> _TypeResult:
     """Resolve tuple[T, ...] (variable) and tuple[T, T] (fixed arity)."""
     if not args:
         # Bare tuple without type args -- treat as tuple[str, ...].
         return _TypeResult(is_collection=True, container_factory=tuple)
 
     if len(args) == 2 and args[1] is Ellipsis:
-        element = _resolve_element(args[0], allow_unknown_entry=allow_unknown_entry)
+        element = _resolve_element(args[0], allow_unknown_entry=allow_unknown_entry, has_converter=has_converter)
         return _TypeResult(
             converter=element.converter,
             choices=element.choices,
@@ -688,7 +733,7 @@ def _resolve_tuple(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool
                 f"can only apply a single type= converter per argument. "
                 f"Use tuple[T, T] (same type) or tuple[T, ...] instead."
             )
-        element = _resolve_element(first, allow_unknown_entry=allow_unknown_entry)
+        element = _resolve_element(first, allow_unknown_entry=allow_unknown_entry, has_converter=has_converter)
         return _TypeResult(
             converter=element.converter,
             choices=element.choices,
@@ -723,7 +768,9 @@ def _is_enum(tp: Any) -> bool:
     return isinstance(tp, type) and issubclass(tp, enum.Enum)
 
 
-def _resolve_union(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool = False, **_ctx: Any) -> _TypeResult:
+def _resolve_union(
+    _tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool = False, has_converter: bool = False, **_ctx: Any
+) -> _TypeResult:
     """Resolve a union whose non-``None`` members are all Enums by trying each member's converter.
 
     Each member keeps its own converter, so member values, member names, and any ``_missing_``
@@ -734,7 +781,12 @@ def _resolve_union(_tp: Any, args: tuple[Any, ...], *, allow_unknown_entry: bool
     A member declines a token by raising -- a clean ``ArgumentTypeError`` or anything a strict
     ``_missing_`` raises -- and the next member is tried, so a raising member never pre-empts those
     after it.  Only when every member declines is the merged-choices rejection raised.
+
+    With ``has_converter`` the user's ``converter=`` owns the conversion, so the ambiguity rejection
+    is suppressed and an empty result is returned (any union, Enum or not, is legal).
     """
+    if has_converter:
+        return _TypeResult()
     non_none = [a for a in args if a is not type(None)]
     if not all(_is_enum(a) for a in non_none):
         type_names = " | ".join(_type_name(a) for a in non_none)
@@ -791,11 +843,15 @@ def _type_name(tp: Any) -> str:
 _PASSTHROUGH_TYPES = frozenset({str, object, Any, inspect.Parameter.empty})
 
 
-def _resolve_base_type(tp: Any, *, is_positional: bool = False, allow_unknown_entry: bool = False) -> _TypeResult:
+def _resolve_base_type(
+    tp: Any, *, is_positional: bool = False, allow_unknown_entry: bool = False, has_converter: bool = False
+) -> _TypeResult:
     """Resolve a declared type into a :class:`_TypeResult` via the registry.
 
     Lookup order: ``get_origin(tp)`` -> ``tp`` -> ``issubclass`` fallback -> passthrough.
-    Raises ``TypeError`` for a scalar with no converter.
+    Raises ``TypeError`` for a scalar with no converter, unless ``has_converter`` is set -- then an
+    unresolvable type yields an empty result, because the user's ``converter=`` owns the conversion
+    and only the collection *shape* (if any) is read from the resolved entry.
     """
     args = get_args(tp)
     resolver = _TYPE_TABLE.get(get_origin(tp)) or _TYPE_TABLE.get(tp)
@@ -808,8 +864,10 @@ def _resolve_base_type(tp: Any, *, is_positional: bool = False, allow_unknown_en
                 break
 
     if resolver is not None:
-        return resolver(tp, args, is_positional=is_positional, allow_unknown_entry=allow_unknown_entry)
-    if tp in _PASSTHROUGH_TYPES:
+        return resolver(
+            tp, args, is_positional=is_positional, allow_unknown_entry=allow_unknown_entry, has_converter=has_converter
+        )
+    if tp in _PASSTHROUGH_TYPES or has_converter:
         return _TypeResult()
     raise TypeError(
         f"Unsupported parameter type {_type_name(tp)!r} for @with_annotated: there is no converter "
@@ -941,6 +999,26 @@ def _first_match(rules: list[_Rule[_S, _R]], subject: _S) -> _R:
     return next(produce(subject) for predicate, produce in rules if predicate(subject))
 
 
+def _compose_preprocess(preprocess: Callable[[str], str], converter: Callable[[str], Any] | None) -> Callable[[str], Any]:
+    """Return a ``type=`` callable that runs *preprocess* on the raw token before *converter*.
+
+    With no inferred converter (a ``str`` passthrough) the preprocess callable becomes the converter
+    itself.  The wrapper copies the inner converter's ``__name__`` and ``_cmd2_enum_class`` so argparse
+    error messages and enum introspection keep working through the wrap.
+    """
+    if converter is None:
+        return preprocess
+
+    def _convert(value: str) -> Any:
+        return converter(preprocess(value))
+
+    _convert.__name__ = getattr(converter, "__name__", "preprocess")
+    enum_class = getattr(converter, "_cmd2_enum_class", None)
+    if enum_class is not None:
+        _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]
+    return _convert
+
+
 class _ArgparseArgument:
     """Builder whose output fields mirror ``parser.add_argument(...)``'s schema."""
 
@@ -1066,6 +1144,24 @@ class _ArgparseArgument:
         if self.metadata is None:
             return False
         return self.metadata.choices_provider is not None or self.metadata.completer is not None
+
+    @property
+    def _meta_converter(self) -> Callable[[str], Any] | None:
+        """An explicit ``Argument/Option(converter=)`` callable, else ``None``.
+
+        When present it replaces the inferred ``type=`` converter and the annotation is no longer
+        required to be a built-in scalar (the converter owns string -> value).
+        """
+        return self.metadata.converter if self.metadata is not None else None
+
+    @property
+    def _meta_preprocess(self) -> Callable[[str], str] | None:
+        """An explicit ``Argument/Option(preprocess=)`` callable, else ``None``.
+
+        When present it runs before the inferred converter (``str -> str``), so the inferred
+        ``type=``/``choices``/completer are all kept and only the raw token is transformed.
+        """
+        return self.metadata.preprocess if self.metadata is not None else None
 
     @property
     def _meta_action(self) -> str | type[argparse.Action] | None:
@@ -1211,19 +1307,31 @@ class _ArgparseArgument:
         allow_unknown_entry = self.metadata.allow_unknown_entry if self.metadata is not None else False
         try:
             result = _resolve_base_type(
-                self.inner_type, is_positional=self.is_positional, allow_unknown_entry=allow_unknown_entry
+                self.inner_type,
+                is_positional=self.is_positional,
+                allow_unknown_entry=allow_unknown_entry,
+                has_converter=self._meta_converter is not None,
             )
         except TypeError as exc:
             self.build_error = exc
             return
-        self.type = result.converter
-        self.choices = result.choices
+        if self._meta_converter is not None:
+            # An explicit converter replaces the inferred type= and owns the value-space, so the
+            # inferred choices/completer (derived from the inferred converter) no longer apply.
+            self.type = self._meta_converter
+            self.choices = None
+        else:
+            self.type = result.converter
+            self.choices = result.choices
+            if result.completer is not None:
+                self.extras["completer"] = result.completer
+        if self._meta_preprocess is not None:
+            # Transform the raw token before the (inferred) converter, keeping its choices/completer.
+            self.type = _compose_preprocess(self._meta_preprocess, self.type)
         # A collection coerces its parsed list into the declared container type; option bool
         # gets ``--flag/--no-flag``.  Either may be overridden by an explicit ``Option(action=)``.
         self.action = _CollectionCastingAction if result.is_collection else result.action
         self.container_factory = result.container_factory
-        if result.completer is not None:
-            self.extras["completer"] = result.completer
         self.is_collection = result.is_collection
         self.fixed_arity = result.fixed_arity
 
@@ -1629,6 +1737,30 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
             f"completer=/choices_provider= on '{a.name}' cannot be used with action={a._effective_action!r}, "
             f"which takes no value from the command line, so there is nothing to tab-complete. Remove the "
             f"completer/choices_provider, or use a value-consuming action."
+        ),
+    ),
+    (
+        # converter= replaces the conversion; preprocess= composes with the inferred one. They are two
+        # ways to set the same thing, so supplying both is ambiguous -- fold the preprocessing into the
+        # converter, which already receives the raw token.
+        lambda a: a._meta_converter is not None and a._meta_preprocess is not None,
+        lambda a: TypeError(
+            f"converter= and preprocess= on '{a.name}' cannot be combined; a converter receives the raw "
+            f"token, so fold the preprocessing into it."
+        ),
+    ),
+    (
+        # A converter/preprocess on a value-less action (store_true/false, count, store_const,
+        # append_const) has no command-line value to convert.
+        lambda a: (
+            a._policy is not None
+            and a._policy.drop_converter
+            and (a._meta_converter is not None or a._meta_preprocess is not None)
+        ),
+        lambda a: TypeError(
+            f"converter=/preprocess= on '{a.name}' cannot be used with action={a._effective_action!r}, "
+            f"which takes no value from the command line, so there is nothing to convert. Remove the "
+            f"converter/preprocess, or use a value-consuming action."
         ),
     ),
     (

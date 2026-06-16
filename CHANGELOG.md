@@ -35,6 +35,16 @@
       aborting the union, and a merged "choose from ..." error is raised only when every member
       declines. Unions containing a `Literal` or any non-`Enum` member are still rejected as
       ambiguous.
+    - `Argument`/`Option` accept new `converter` and `preprocess` hooks for custom string
+      conversion, giving `@with_annotated` parity with a hand-built `add_argument(type=...)` (a raw
+      `type=` in the metadata is still rejected). `converter` is a `Callable[[str], Any]` that
+      replaces the inferred `type=` converter; because it owns the conversion, the annotation may be
+      any type (an otherwise unsupported type like `datetime`, or an otherwise-ambiguous
+      multi-member union like `int | str`, becomes legal) and the inferred `choices`/completer are
+      dropped. `preprocess` is a `Callable[[str], str]` that runs before the inferred converter,
+      transforming the raw token while keeping the inferred `type=`/`choices`/completer (e.g.
+      `preprocess=str.lower` on an `Enum`). The two are mutually exclusive on one parameter and
+      neither may be combined with a value-less action.
 
 ## 4.0.0 (June 5, 2026)
 

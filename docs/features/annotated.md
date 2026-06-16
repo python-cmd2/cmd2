@@ -154,7 +154,9 @@ class MyApp(cmd2.Cmd):
 
 Both `Argument` and `Option` accept the same cmd2-specific fields as `add_argument()`: `choices`,
 `choices_provider`, `completer`, `table_columns`, `suppress_tab_hint`, `metavar`, `nargs`, and
-`help_text`.
+`help_text`. They also accept `converter` / `preprocess` for
+[custom conversion](#custom-conversion-converter-and-preprocess) and `allow_unknown_entry` for
+[enum aliases](#enum-aliases-and-special-keywords-allow_unknown_entry).
 
 `Option` additionally accepts `action`, `required`, and positional `*names` for custom flag strings
 (e.g. `Option("--color", "-c")`).
@@ -277,7 +279,9 @@ if you need them.
 from the function signature itself, so misusing them surfaces as a clear `TypeError` instead of a
 silent override. The refused kwargs are:
 
-- `type` -- comes from the parameter annotation
+- `type` -- comes from the parameter annotation; for a custom string-to-value callable use
+  [`converter`](#custom-conversion-converter-and-preprocess) (or `preprocess` to transform the token
+  first)
 - `dest` -- comes from the parameter name
 - `action` and `required` on `Argument` -- only `Option` accepts them; positional arguments have no
   action and are required unless they carry a default or `| None`
@@ -328,6 +332,94 @@ An explicit `choices=` is reconciled with the inferred type rather than fighting
 An `Enum` parameter accepts both member **values** and member **names** on the command line
 (`Color.RED` with value `"red"` is selected by either `red` or `RED`); tab-completion and `--help`
 list the values.
+
+### Custom conversion (`converter` and `preprocess`)
+
+With `@with_argparser` you can pass any callable as `add_argument(type=...)` to parse a token into a
+custom value. `@with_annotated` derives `type=` from the annotation instead, and rejects a raw
+`type=` in the metadata (it would silently shadow the inferred converter). Two hooks give the same
+power without that footgun:
+
+- `converter` -- a `Callable[[str], Any]` that **replaces** the inferred `type=` converter.
+- `preprocess` -- a `Callable[[str], str]` that runs **before** the inferred converter.
+
+They differ in what survives. A `converter` owns the whole conversion, so the inferred `choices` and
+completer (which described the inferred value-space) are dropped. A `preprocess` only transforms the
+raw token, so the inferred `type=`, `choices`, completer, and coercion are all kept.
+
+#### `converter`: replace the conversion
+
+Use `converter` when the annotation's built-in conversion is wrong for your input, or when the type
+has no built-in conversion at all. Because the converter owns the conversion, the annotation no
+longer has to be one of the supported scalar types -- any type is legal, and the usual "unsupported
+type" error is suppressed:
+
+```py
+import datetime
+from typing import Annotated
+from cmd2.annotated import Argument, Option, with_annotated
+
+def parse_size(value: str) -> int:
+    """Parse an integer with an optional K/M/G suffix."""
+    multiplier = {"K": 1_000, "M": 1_000_000, "G": 1_000_000_000}.get(value[-1:].upper(), 1)
+    return int(value[:-1] if multiplier != 1 else value) * multiplier
+
+class MyApp(cmd2.Cmd):
+    @with_annotated
+    def do_alloc(self, size: Annotated[int, Argument(converter=parse_size)]) -> None:
+        self.poutput(f"Allocating {size} bytes")  # `alloc 64K` -> 64000
+
+    @with_annotated
+    def do_at(self, when: Annotated[datetime.datetime, Option("--when", converter=datetime.datetime.fromisoformat)]):
+        self.poutput(when.isoformat())  # `datetime` has no inferred converter, so converter= makes it legal
+```
+
+argparse applies `type=` per token, so on a `list[T]` the converter runs on each value. To take a
+**single** token and have the converter return a whole collection (the one-token-to-many idiom),
+annotate with a non-collection type such as `Any` -- a collection annotation like `set[int]` would
+instead infer `nargs` and split the input across several tokens:
+
+```py
+from typing import Annotated, Any
+
+def parse_intset(value: str) -> set[int]:
+    return {int(piece) for piece in value.split(",")}
+
+@with_annotated
+def do_select(self, idx: Annotated[Any, Option("--idx", converter=parse_intset)]) -> None:
+    self.poutput(sorted(idx))  # `select --idx 1,3,5` -> [1, 3, 5]
+```
+
+An explicit `choices=` is still reconciled against the converter (its values are run through the
+converter), so you can re-add a restricted choice set after replacing the conversion.
+
+#### `preprocess`: normalize before the inferred conversion
+
+Use `preprocess` when the inferred conversion is correct but the raw token needs massaging first.
+The inferred `type=`, `choices`, and completer are kept, so an `Enum` keeps its choices and
+completion while accepting normalized input, and a `Path` keeps its completer:
+
+```py
+import os
+from typing import Annotated
+from cmd2.annotated import Argument, with_annotated
+
+class MyApp(cmd2.Cmd):
+    @with_annotated
+    def do_tag(self, color: Annotated[Color, Argument(preprocess=str.lower)]) -> None:
+        self.poutput(color.value)  # `tag RED` works, and `tag <TAB>` still lists the colors
+
+    @with_annotated
+    def do_open(self, path: Annotated[Path, Argument(preprocess=os.path.expanduser)]) -> None:
+        self.poutput(path)  # `open ~/file` expands, path completion still works
+```
+
+With a plain `str` (no inferred converter) the `preprocess` callable simply becomes the `type=`.
+
+`converter` and `preprocess` are **mutually exclusive** on one parameter -- a converter already
+receives the raw token, so fold the preprocessing into it. Neither may be combined with a value-less
+action (`store_true`, `store_false`, `count`, `store_const`, `append_const`), which consumes no
+token to convert. Both raise `TypeError` at decoration time.
 
 ## Decorator options
 
