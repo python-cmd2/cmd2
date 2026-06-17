@@ -12,6 +12,8 @@ incremented according to the [Semantic Version Specification](https://semver.org
 ## Modules
 
 - [cmd2.Cmd](./cmd.md) - functions and attributes of the main class in this library
+- [cmd2.annotated](./annotated.md) - build `argparse` parsers from type-annotated function
+  signatures
 - [cmd2.argparse_completer](./argparse_completer.md) - classes for `argparse`-based tab completion
 - [cmd2.argparse_utils](./argparse_utils.md) - classes and functions for extending `argparse`
 - [cmd2.clipboard](./clipboard.md) - functions to copy from and paste to the clipboard/pastebuffer
@@ -31,4 +33,5 @@ incremented according to the [Semantic Version Specification](https://semver.org
 - [cmd2.rich_utils](./rich_utils.md) - common utilities to support Rich in cmd2 applications
 - [cmd2.string_utils](./string_utils.md) - string utility functions
 - [cmd2.styles](./styles.md) - cmd2-specific Rich styles and a StrEnum of their corresponding names
+- [cmd2.theme](./theme.md) - provides a centralized theming system for cmd2
 - [cmd2.utils](./utils.md) - various utility classes and functions
