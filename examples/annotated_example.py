@@ -17,6 +17,8 @@ Usage::
     python examples/annotated_example.py
 """
 
+import datetime
+import os
 import sys
 from argparse import Namespace
 from collections.abc import Callable
@@ -70,6 +72,20 @@ class StrictArgumentParser(cmd2.Cmd2ArgumentParser):
 
 
 ANNOTATED_CATEGORY = "Annotated Commands"
+
+_SIZE_SUFFIXES = {"K": 1_000, "M": 1_000_000, "G": 1_000_000_000}
+
+
+def parse_size(value: str) -> int:
+    """Parse an integer with an optional K/M/G suffix (a custom ``converter=``)."""
+    multiplier = _SIZE_SUFFIXES.get(value[-1:].upper(), 1)
+    digits = value[:-1] if multiplier != 1 else value
+    return int(digits) * multiplier
+
+
+def parse_iso(value: str) -> datetime.datetime:
+    """Parse an ISO-8601 timestamp (a ``converter=`` for an otherwise-unsupported type)."""
+    return datetime.datetime.fromisoformat(value)
 
 
 class AnnotatedExample(Cmd):
@@ -403,6 +419,53 @@ class AnnotatedExample(Cmd):
             install <TAB>
         """
         self.poutput(f"Installing {package}")
+
+    # -- Advanced: converter (custom string -> value) ------------------------
+    # ``converter=`` replaces the inferred type= converter, giving parity with a
+    # hand-built ``add_argument(type=...)``: ``size`` parses a K/M/G suffix into an
+    # int, and ``--until`` makes the otherwise-unsupported ``datetime`` type legal
+    # (the converter owns the conversion, so any annotation type is allowed).
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_alloc(
+        self,
+        size: Annotated[int, Argument(converter=parse_size, help_text="size with optional K/M/G suffix")],
+        until: Annotated[
+            datetime.datetime | None,
+            Option("--until", converter=parse_iso, help_text="ISO-8601 expiry (an unsupported type)"),
+        ] = None,
+    ) -> None:
+        """Allocate memory. ``converter=`` parses ``64K`` / ``2M`` into an int and ``--until`` into a datetime.
+
+        Try:
+            alloc 64K
+            alloc 2M --until 2025-06-16T09:30
+        """
+        msg = f"Allocating {size} bytes"
+        self.poutput(f"{msg} until {until:%Y-%m-%d %H:%M}" if until else msg)
+
+    # -- Advanced: preprocess (normalize the raw token) ----------------------
+    # ``preprocess=`` only transforms the raw token before the inferred converter,
+    # so the inferred type, choices, and completion all survive: ``str.lower`` lets
+    # the ``Color`` Enum accept ``RED`` (keeping its choices), and
+    # ``os.path.expanduser`` expands ``~`` while ``Path`` keeps its completer.
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_tag(
+        self,
+        color: Annotated[Color, Argument(preprocess=str.lower, help_text="color (case-insensitive)")],
+        path: Annotated[Path, Argument(preprocess=os.path.expanduser, help_text="file to tag (~ is expanded)")],
+    ) -> None:
+        """Tag a file with a color. ``preprocess=`` normalizes input while keeping Enum/Path inference.
+
+        Try:
+            tag RED ~/notes.txt
+            tag <TAB>             # Color choices
+            tag red <TAB>         # path completion
+        """
+        self.poutput(f"Tagged {path} {color.value}")
 
     # -- Namespace provider --------------------------------------------------
     # This mirrors one of @with_argparser's advanced features.

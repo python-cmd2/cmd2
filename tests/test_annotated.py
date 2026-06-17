@@ -4061,3 +4061,181 @@ class TestEnumUnion:
         action = _get_param_action(_make_func(_Color | _IntColor, name="c"))
         meta = {c.text: c.display_meta for c in action.choices if isinstance(c, CompletionItem)}
         assert meta == {"red": "red", "green": "green", "blue": "blue", "1": "red", "2": "green", "3": "blue"}
+
+
+# ---------------------------------------------------------------------------
+# converter / preprocess metadata
+# ---------------------------------------------------------------------------
+
+
+def _hex(value: str) -> int:
+    """Parse a hexadecimal integer (test converter)."""
+    return int(value, 16)
+
+
+def _csv_ints(value: str) -> set[int]:
+    """Parse a comma-separated list of ints into a set (single token -> collection)."""
+    return {int(piece) for piece in value.split(",")}
+
+
+def _parse_iso(value: str) -> datetime.datetime:
+    """Parse an ISO-8601 timestamp (test converter for an otherwise-unsupported type)."""
+    return datetime.datetime.fromisoformat(value)
+
+
+class TestConverter:
+    """`Argument`/`Option` ``converter=`` replaces the inferred ``type=`` converter."""
+
+    def test_converter_becomes_type(self) -> None:
+        """A supplied converter is emitted as argparse ``type=``, replacing the inferred one."""
+        action = _action_for(Annotated[int, Argument(converter=_hex)])
+        assert action.type is _hex
+
+    def test_converter_allows_unsupported_annotation_type(self) -> None:
+        """A converter suppresses the 'unsupported scalar type' error: the annotation may be anything."""
+        action = _action_for(Annotated[datetime.datetime, Argument(converter=_parse_iso)])
+        assert action.type is _parse_iso
+
+    def test_converter_parses_end_to_end(self) -> None:
+        """The converter runs at parse time, producing its own value-space."""
+        parser = build_parser_from_function(_make_func(Annotated[int, Argument(converter=_hex)], name="addr"))
+        assert parser.parse_args(["ff"]).addr == 255
+
+    def test_converter_drops_inferred_enum_choices(self) -> None:
+        """Replacing the converter on an Enum drops the inferred choices (user owns the value-space)."""
+        action = _action_for(Annotated[_Color, Argument(converter=str)])
+        assert action.choices is None
+
+    def test_converter_drops_inferred_path_completer(self) -> None:
+        """Replacing the converter on a Path drops the inferred path completer."""
+        action = _action_for(Annotated[Path, Argument(converter=str)])
+        assert action.get_completer() is None  # type: ignore[attr-defined]
+
+    def test_converter_applies_per_element_on_collection(self) -> None:
+        """On a ``list[T]`` the converter runs per token (argparse applies ``type=`` per value)."""
+        parser = build_parser_from_function(_make_func(Annotated[list[int], Option("--n", converter=_hex)], name="n"))
+        assert parser.parse_args(["--n", "ff", "10"]).n == [255, 16]
+
+    def test_converter_single_token_to_collection(self) -> None:
+        """A non-collection annotation (Any) keeps a single token, so the converter may return a collection."""
+        parser = build_parser_from_function(_make_func(Annotated[Any, Option("--idx", converter=_csv_ints)], name="idx"))
+        assert parser.parse_args(["--idx", "1,3,5"]).idx == {1, 3, 5}
+
+    def test_converter_runs_explicit_choices_through_itself(self) -> None:
+        """Explicit ``choices`` are run through the user converter for argparse's post-conversion match."""
+        action = _action_for(Annotated[int, Argument(converter=_hex, choices=["ff", "10"])])
+        assert action.choices == [255, 16]
+
+    def test_converter_allows_unsupported_collection_element(self) -> None:
+        """A converter on ``list[Unsupported]`` keeps the collection shape and suppresses the element error."""
+        parser = build_parser_from_function(
+            _make_func(Annotated[list[datetime.datetime], Option("--ts", converter=_parse_iso)], name="ts")
+        )
+        parsed = parser.parse_args(["--ts", "2020-01-01", "2021-06-15"]).ts
+        assert parsed == [_parse_iso("2020-01-01"), _parse_iso("2021-06-15")]
+
+    def test_converter_allows_ambiguous_union(self) -> None:
+        """A converter suppresses the 'ambiguous union' error: a multi-member union is legal."""
+        parser = build_parser_from_function(_make_func(Annotated[int | str, Argument(converter=_hex)], name="addr"))
+        assert parser.parse_args(["ff"]).addr == 255
+
+    def test_converter_on_optional_single_member(self) -> None:
+        """A converter legalizes ``T | None``: the optional collapses to ``T`` and the converter owns conversion."""
+        parser = build_parser_from_function(
+            _make_func(
+                Annotated[datetime.datetime | None, Option("--until", converter=_parse_iso)],
+                name="until",
+                kind="kw",
+                default=None,
+            )
+        )
+        assert parser.parse_args(["--until", "2020-01-01"]).until == _parse_iso("2020-01-01")
+        assert parser.parse_args([]).until is None
+
+    def test_converter_keeps_user_completer(self) -> None:
+        """``converter=`` drops the *inferred* completer, but a user-supplied ``completer=`` survives."""
+        action = _action_for(Annotated[Path, Argument(converter=str, completer=cmd2.Cmd.path_complete)])
+        assert action.get_completer() is cmd2.Cmd.path_complete  # type: ignore[attr-defined]
+
+    def test_converter_rejects_invalid_explicit_choice(self) -> None:
+        """A choice the user converter rejects is a build-time error (run through the converter, not the inferred type)."""
+        _assert_build_error(
+            Annotated[int, Argument(converter=_hex, choices=["ff", "zz"])],
+            match="not a valid",
+        )
+
+
+class TestPreprocess:
+    """`Argument`/`Option` ``preprocess=`` runs before the inferred converter, keeping inference."""
+
+    def test_preprocess_runs_before_inferred_converter(self) -> None:
+        """The token is transformed before the inferred Enum converter sees it."""
+        parser = build_parser_from_function(_make_func(Annotated[_Color, Argument(preprocess=str.lower)], name="c"))
+        assert parser.parse_args(["RED"]).c is _Color.red
+
+    def test_preprocess_keeps_inferred_choices(self) -> None:
+        """The inferred Enum choices survive (preprocess composes with, not replaces, the converter)."""
+        action = _action_for(Annotated[_Color, Argument(preprocess=str.lower)])
+        assert action.choices == _COLOR_CHOICE_ITEMS
+
+    def test_preprocess_keeps_inferred_path_completer(self) -> None:
+        """The inferred path completer survives a preprocess hook."""
+        action = _action_for(Annotated[Path, Argument(preprocess=str.strip)])
+        assert action.get_completer() is cmd2.Cmd.path_complete  # type: ignore[attr-defined]
+
+    def test_preprocess_on_str_passthrough_becomes_type(self) -> None:
+        """With no inferred converter (plain ``str``), preprocess becomes the ``type=`` directly."""
+        parser = build_parser_from_function(_make_func(Annotated[str, Argument(preprocess=str.upper)], name="s"))
+        assert parser.parse_args(["abc"]).s == "ABC"
+
+    def test_preprocess_applies_per_element_on_collection(self) -> None:
+        """On a ``list[T]`` preprocess runs per token, before the per-token inferred converter."""
+        parser = build_parser_from_function(_make_func(Annotated[list[_Color], Option("--c", preprocess=str.lower)], name="c"))
+        assert parser.parse_args(["--c", "RED", "Blue"]).c == [_Color.red, _Color.blue]
+
+    def test_preprocess_keeps_enum_class_introspection(self) -> None:
+        """The wrapped converter still exposes ``_cmd2_enum_class`` for introspection."""
+        action = _action_for(Annotated[_Color, Argument(preprocess=str.lower)])
+        assert action.type._cmd2_enum_class is _Color
+
+    def test_preprocess_keeps_inferred_converter_name(self) -> None:
+        """The wrapper copies the inner converter's ``__name__`` so argparse error messages stay meaningful."""
+        action = _action_for(Annotated[_Color, Argument(preprocess=str.lower)])
+        assert action.type.__name__ == _Color.__name__
+
+    def test_preprocess_runs_explicit_choices_through_composed_type(self) -> None:
+        """Explicit ``choices`` are run through the preprocess+converter wrapper (``RED`` -> lower -> Enum)."""
+        action = _action_for(Annotated[_Color, Argument(preprocess=str.lower, choices=["RED"])])
+        assert action.choices == [_Color.red]
+
+
+class TestConverterPreprocessConstraints:
+    """Build-time rejections for ``converter=`` / ``preprocess=`` misuse."""
+
+    def test_converter_and_preprocess_together_rejected(self) -> None:
+        """Supplying both is ambiguous -- fold the preprocessing into the converter."""
+        _assert_build_error(
+            Annotated[int, Argument(converter=_hex, preprocess=str.strip)],
+            match="converter= and preprocess=",
+        )
+
+    def test_converter_on_value_less_action_rejected(self) -> None:
+        """A converter on a zero-argument action has nothing to convert."""
+        _assert_build_error(
+            Annotated[bool, Option("--flag", action="store_true", converter=_hex)],
+            match="takes no value",
+            kind="kw",
+        )
+
+    def test_preprocess_on_value_less_action_rejected(self) -> None:
+        """A preprocess hook on a zero-argument action has nothing to transform."""
+        _assert_build_error(
+            Annotated[bool, Option("--flag", action="store_true", preprocess=str.strip)],
+            match="takes no value",
+            kind="kw",
+        )
+
+    def test_reserved_type_hint_points_at_converter(self) -> None:
+        """A raw ``type=`` is still rejected, now pointing the user at ``converter=``."""
+        with pytest.raises(TypeError, match="converter="):
+            Argument(type=int)
