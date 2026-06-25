@@ -662,7 +662,8 @@ A few rules keep blocks unambiguous:
   `Annotated`/`Optional`/a union, or using it as `*args`/`**kwargs`, raises a clear error.
 - Because fields expand flat, a field name that collides with another parameter or another block's
   field raises an error when the parser is built, rather than silently sharing a destination.
-- A field whose type is itself a block is not expanded (no recursion).
+- A field whose type is itself a block is not expanded (no recursion); it is rejected as an
+  unsupported type.
 
 ### Sharing a block with subcommands (`cmd2_base_args` / `cmd2_parent_args`)
 
