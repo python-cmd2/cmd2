@@ -606,6 +606,120 @@ def manage_project_add(self, name: str):
     self.poutput(f"added {name}")
 ```
 
+## Argument blocks
+
+When several commands share the same group of arguments, a reusable _argument block_ removes the
+duplication. Subclass the `cmd2.ArgumentBlock` trait on a `@dataclass` and annotate a parameter with
+it. Each field becomes a flat command-line argument (field name == argument name), and the parsed
+values are reconstructed into an instance of the dataclass that is passed to the command:
+
+```py
+from dataclasses import dataclass
+from typing import Annotated
+from pathlib import Path
+
+import cmd2
+from cmd2 import with_annotated
+from cmd2.annotated import Option
+
+
+@dataclass
+class CommonArgs(cmd2.ArgumentBlock):
+    verbose: Annotated[bool, Option("-v", "--verbose")] = False
+    output: Annotated[Path | None, Option("--output")] = None
+
+
+class App(cmd2.Cmd):
+    @with_annotated
+    def do_build(self, target: str, common: CommonArgs):
+        self.poutput(f"{target} verbose={common.verbose} output={common.output}")
+```
+
+`build app --verbose --output /tmp/x` reconstructs `CommonArgs(verbose=True, output=Path("/tmp/x"))`
+and passes it as `common`. The block parameter itself is never an argument, only its fields are.
+
+A field carries the usual `Annotated[T, Option(...)]` / `Annotated[T, Argument(...)]` metadata and
+behaves exactly as a top-level parameter of the same shape would. The dataclass is the single source
+of truth for defaults: a field with a default (`default` or `default_factory`) is filled by the
+dataclass constructor at call time, so `default_factory` yields a fresh value per invocation and
+`__post_init__` runs. A field with no default becomes a required argument.
+
+Inheritance is the reuse mechanism: a subclass of a block is itself a block, so a shared base block
+can be extended per command without repeating its fields.
+
+```py
+@dataclass
+class TracedArgs(CommonArgs):
+    trace: bool = False  # do_test gets verbose, output, and trace
+```
+
+A few rules keep blocks unambiguous:
+
+- The `ArgumentBlock` trait, not "is a dataclass", is the trigger. A plain `@dataclass` is left
+  alone and can still be used as an ordinary single value (for example via
+  `Argument(converter=...)`).
+- A block must be the _bare_ annotation of a regular parameter. Wrapping it in
+  `Annotated`/`Optional`/a union, or using it as `*args`/`**kwargs`, raises a clear error.
+- Because fields expand flat, a field name that collides with another parameter or another block's
+  field raises an error when the parser is built, rather than silently sharing a destination.
+- A field whose type is itself a block is not expanded (no recursion).
+
+### Sharing a block with subcommands (`cmd2_base_args` / `cmd2_parent_args`)
+
+A base command and its subcommands parse into one shared namespace. To share a block down the chain,
+name the parameter `cmd2_base_args` on the command that owns the flags and `cmd2_parent_args` on
+each subcommand that should receive it, annotating both with the same block type:
+
+```py
+@dataclass
+class SharedOpts(cmd2.ArgumentBlock):
+    verbose: Annotated[bool, Option("-v", "--verbose")] = False
+    level: Annotated[int, Option("--level")] = 1
+
+
+class App(cmd2.Cmd):
+    @with_annotated(base_command=True)
+    def do_root(self, cmd2_subcommand_func, cmd2_base_args: SharedOpts):
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
+
+    @with_annotated(subcommand_to="root", help="show the inherited block")
+    def root_show(self, cmd2_parent_args: SharedOpts):
+        self.poutput(f"verbose={cmd2_parent_args.verbose} level={cmd2_parent_args.level}")
+```
+
+`root --verbose --level 5 show` prints `verbose=True level=5`: the options parsed on `root` flow
+into the subcommand in a typed way without being redeclared. `cmd2_base_args` adds the block's flags
+to its own command's parser, while `cmd2_parent_args` adds _no_ arguments and is reconstructed from
+the values an ancestor parsed (`root --verbose show`, not `root show --verbose`). A
+`cmd2_parent_args` subcommand whose ancestors never declare a matching `cmd2_base_args` raises a
+clear error the first time it runs. This is the typed alternative to forwarding parent-level state
+through `ns_provider`.
+
+A subcommand can also declare its own regular block alongside the inherited one. The two are
+independent: the inherited block's flags are supplied on the parent, while the subcommand's own
+block adds its flags to the subcommand's parser.
+
+```py
+@dataclass
+class RunOpts(cmd2.ArgumentBlock):
+    retries: Annotated[int, Option("--retries")] = 0
+
+
+class App(cmd2.Cmd):
+    @with_annotated(base_command=True)
+    def do_root(self, cmd2_subcommand_func, cmd2_base_args: SharedOpts):
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
+
+    @with_annotated(subcommand_to="root")
+    def root_run(self, name: str, cmd2_parent_args: SharedOpts, run: RunOpts):
+        # --verbose/--level come from `root`; --retries is this subcommand's own flag
+        self.poutput(f"run {name} verbose={cmd2_parent_args.verbose} retries={run.retries}")
+```
+
+`root --verbose run job --retries 3` parses `--verbose` on `root` and `--retries` on `run`.
+
 ## Lower-level parser building
 
 [cmd2.annotated.build_parser_from_function][cmd2.annotated.build_parser_from_function] builds the
