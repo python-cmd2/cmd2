@@ -45,6 +45,13 @@
       transforming the raw token while keeping the inferred `type=`/`choices`/completer (e.g.
       `preprocess=str.lower` on an `Enum`). The two are mutually exclusive on one parameter and
       neither may be combined with a value-less action.
+    - `@with_annotated` now supports reusable argument blocks: a parameter typed with a `@dataclass`
+      that subclasses the new `cmd2.ArgumentBlock` trait expands each field into a flat command-line
+      argument, and the parsed values are reconstructed into a dataclass instance passed to the
+      command, letting several commands reuse the same fields without duplication. See the
+      [annotated](docs/features/annotated.md) documentation.
+    - A command can share an argument block with its subcommands via `cmd2_base_args` /
+      `cmd2_parent_args` parameters, passing parent-level options down without redeclaring them.
 
 ## 4.0.0 (June 5, 2026)
 

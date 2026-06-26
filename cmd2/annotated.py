@@ -145,6 +145,44 @@ so forward-referenced annotations still decorate -- meaning a misconfigured grou
 class is defined rather than on first command use.  The one group rule that needs the annotations
 (a required member in a mutually exclusive group) fires when the parser is built.
 
+A parameter annotated with a ``@dataclass`` that subclasses [`ArgumentBlock`][cmd2.annotated.ArgumentBlock] is a
+reusable *argument block*: each of the dataclass's ``init`` fields is expanded into a flat command-line
+argument (field name == argument name) at the parameter's position, and the parsed values are
+reconstructed into a dataclass instance passed to the command.  This lets several commands share one
+block without duplicating parameters, and a base block shared by inheritance is the reuse mechanism
+(a subclass of a block is itself a block):
+
+    @dataclass
+    class CommonArgs(cmd2.ArgumentBlock):
+        verbose: Annotated[bool, Option("-v", "--verbose")] = False
+        output: Annotated[Path | None, Option("--output")] = None
+
+
+    class MyApp(cmd2.Cmd):
+        @cmd2.with_annotated
+        def do_build(self, target: str, common: CommonArgs):
+            if common.verbose:
+                self.poutput(common.output)
+
+The [`ArgumentBlock`][cmd2.annotated.ArgumentBlock] trait -- not "is a dataclass" -- is the trigger, so a plain
+``@dataclass`` is never expanded and can still be used as an ordinary single argument value (e.g. with an
+``Argument(converter=...)``).  Each field carries the usual ``Annotated[T, Option(...)]`` /
+``Annotated[T, Argument(...)]`` metadata and behaves exactly as a top-level parameter of the same shape
+(type inference, completion, choices).  The dataclass is the single source of truth for defaults: a field
+with a default (``default`` or ``default_factory``) is emitted with ``argparse.SUPPRESS`` and filled by the
+dataclass constructor at reconstruction time, so a ``default_factory`` yields a fresh value per invocation
+(no shared-mutable default) and ``__post_init__`` runs.  A field with no default becomes a required
+argument.  A field whose type is itself a block is not expanded (no recursion) and raises the
+unsupported-type error.  Because fields expand flat, every field name must be unique across the command's
+own parameters and every other block's fields -- a collision (which would put two argparse actions on one
+namespace dest) raises ``TypeError`` when the parser is built.  Block fields cannot participate in
+``groups=`` / ``mutually_exclusive_groups=`` (those reference the function's own parameter names, which are
+validated without resolving type hints).  A block must be the *bare* annotation of a regular parameter:
+wrapping it in ``Annotated``/``Optional``/a union, or using it as ``*args`` / ``**kwargs``, raises
+``TypeError`` (to use a dataclass as a single value instead, make it a plain ``@dataclass`` with an
+``Argument(converter=...)``).  An ``ArgumentBlock`` subclass that is not a ``@dataclass`` has no fields and
+also raises ``TypeError``.
+
 Unsupported patterns (raise ``TypeError``):
 
 - a non-Optional type with a ``None`` default (e.g. ``name: str = None``); annotate it
@@ -229,8 +267,11 @@ from collections.abc import (
     Sequence,
 )
 from dataclasses import (
+    MISSING,
     dataclass,
     field,
+    fields,
+    is_dataclass,
 )
 from pathlib import Path
 from typing import (
@@ -238,9 +279,11 @@ from typing import (
     Any,
     ClassVar,
     Literal,
+    NamedTuple,
     ParamSpec,
     Protocol,
     TypedDict,
+    TypeGuard,
     TypeVar,
     Union,
     Unpack,
@@ -449,6 +492,52 @@ class Option(_BaseArgMetadata):
         if self.required:
             kwargs["required"] = True
         return kwargs
+
+
+class ArgumentBlock:
+    """Marker base class for a reusable ``@with_annotated`` argument block.
+
+    Subclass it on a ``@dataclass`` to have [`with_annotated`][cmd2.annotated.with_annotated] expand the
+    dataclass's fields into flat command-line arguments and reconstruct an instance at call time::
+
+        @dataclass
+        class CommonArgs(ArgumentBlock):
+            verbose: Annotated[bool, Option("-v", "--verbose")] = False
+
+
+        class MyApp(cmd2.Cmd):
+            @cmd2.with_annotated
+            def do_build(self, target: str, common: CommonArgs): ...
+
+    Only a class that inherits ``ArgumentBlock`` is treated as a block, so a plain ``@dataclass`` is left
+    alone and can still be used as an ordinary single argument value (e.g. via an ``Argument(converter=...)``).
+    Inheritance doubles as the reuse mechanism: a subclass of a block is itself a block, so a shared base
+    block can be extended per command without repeating its fields.  A block must be the *bare* annotation
+    of a regular parameter -- wrapping it in ``Annotated``/``Optional``/a union, or using it as ``*args`` /
+    ``**kwargs``, raises ``TypeError``.
+
+    To share a block between a command and its subcommands, name the parameter ``cmd2_base_args`` on the
+    command and ``cmd2_parent_args`` on each subcommand that should receive it::
+
+        @dataclass
+        class SharedOpts(ArgumentBlock):
+            verbose: Annotated[bool, Option("-v", "--verbose")] = False
+
+
+        class MyApp(cmd2.Cmd):
+            @cmd2.with_annotated(base_command=True)
+            def do_root(self, cmd2_subcommand_func, cmd2_base_args: SharedOpts): ...
+
+            @cmd2.with_annotated(subcommand_to="root")
+            def root_show(self, cmd2_parent_args: SharedOpts):
+                self.poutput(cmd2_parent_args.verbose)  # parsed on `root`, read here
+
+    A base command and its subcommands parse into one shared ``argparse.Namespace``.  ``cmd2_base_args``
+    adds the block's flags to the command's *own* parser; ``cmd2_parent_args`` adds *no* arguments and is
+    reconstructed from the values an ancestor parsed (``root --verbose show``, not ``root show --verbose``).
+    A ``cmd2_parent_args`` subcommand whose ancestors never declare a matching ``cmd2_base_args`` raises a
+    clear error the first time it runs.
+    """
 
 
 class Group:
@@ -1036,12 +1125,16 @@ class _ArgparseArgument:
         is_optional: bool,
         kind: inspect._ParameterKind,
         is_base_command: bool,
+        is_block_field: bool = False,
+        dest_override: str | None = None,
     ) -> None:
         # signature-derived inputs (never emitted):
         self.name = name
         self.func_qualname = func_qualname
         self.has_default = has_default
         self.param_default = param_default  # the function's own default, not the argparse `default` slot
+        self.is_block_field = is_block_field
+        self.dest_override = dest_override
         self.is_kw_only = is_kw_only
         self.is_variadic = is_variadic
         self.inner_type = inner_type  # peeled type (after Annotated + Optional)
@@ -1241,6 +1334,15 @@ class _ArgparseArgument:
         """Whether this is a bool option using the inferred ``BooleanOptionalAction`` (no explicit action)."""
         return self.action is argparse.BooleanOptionalAction
 
+    @property
+    def _consumes_value(self) -> bool:
+        """Whether this option takes a command-line value (so argparse derives/shows a metavar for it).
+
+        A flag-style action (``store_true``/``count``/``BooleanOptionalAction``/...) takes none, so it has
+        no metavar -- and some of those actions even reject a ``metavar`` kwarg.
+        """
+        return not self._is_inferred_bool_flag and not (self._policy is not None and self._policy.drop_converter)
+
     def _apply(self) -> None:
         """Build this argument by deriving each output slot."""
         self.is_positional = _first_match(_ROLE_RULES, self)
@@ -1404,9 +1506,14 @@ class _ArgparseArgument:
             kwargs["default"] = self.default
         if self.required:
             kwargs["required"] = True
+        dest = self.dest_override or self.name
         if self.is_positional:
-            return (self.name,), kwargs
-        kwargs["dest"] = self.name
+            if self.dest_override is not None:
+                kwargs.setdefault("metavar", self.name)
+            return (dest,), kwargs
+        if self.dest_override is not None and self._consumes_value:
+            kwargs.setdefault("metavar", self.name.upper())
+        kwargs["dest"] = dest
         return tuple(self.flags), kwargs
 
     def add_to(self, target: _ArgumentTarget) -> None:
@@ -1503,6 +1610,9 @@ _NARGS_RULES: list[_Rule[_ArgparseArgument, _NargsValue | None]] = [
 #: Default-value table.  Either source (signature or metadata) feeds the parser default;
 #: explicit-action defaults (count -> 0, append/extend -> []) are added later by the action phase.
 _DEFAULT_RULES: list[_Rule[_ArgparseArgument, Any]] = [
+    # A dataclass-block field with a field default emits SUPPRESS so the absent field stays out of the
+    # namespace and the dataclass constructor supplies the default (fresh per call for default_factory).
+    (lambda a: a.is_block_field and a.has_default, _const(argparse.SUPPRESS)),
     (lambda a: a._effective_has_default, lambda a: a._effective_param_default),
     # A bool option is a flag: when absent it means ``False`` (not a missing value), so -- like
     # store_true -- it carries its own default.  ``bool | None`` keeps the catch-all ``_UNSET``
@@ -1829,8 +1939,9 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
         # sources of truth for the same value; refuse rather than silently pick a winner.
         lambda a: a.has_default and a._has_meta_default,
         lambda a: TypeError(
-            f"parameter '{a.name}' in {a.func_qualname} has a default in both the function signature "
-            f"({a.param_default!r}) and the metadata ({a._meta_default!r}); specify it in only one place."
+            f"parameter '{a.name}' in {a.func_qualname} has a default in both the "
+            f"{'dataclass field' if a.is_block_field else f'function signature ({a.param_default!r})'} "
+            f"and the metadata ({a._meta_default!r}); specify it in only one place."
         ),
     ),
     (
@@ -1845,10 +1956,25 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
         ),
     ),
     (
+        # A block field's default must live on the dataclass field: a field default emits SUPPRESS (see
+        # _DEFAULT_RULES) so the dataclass constructor produces the value fresh on every call.
+        lambda a: a.is_block_field and not a.has_default and a.default is not _UNSET and a.default is not None,
+        lambda a: TypeError(
+            f"ArgumentBlock field '{a.name}' in {a.func_qualname} would take its default ({a.default!r}) from "
+            f"the option metadata or its action, but a block field's default must live on the dataclass field "
+            f"so the constructor produces it fresh on every call. Put it on the field instead -- a plain "
+            f"default for an immutable value (e.g. '{a.name}: ... = False'), or 'field(default_factory=...)' "
+            f"for a mutable one (e.g. '= field(default_factory=list)')."
+        ),
+    ),
+    (
         lambda a: (
             a._effective_has_default
             and a._effective_param_default is None
             and not a.is_optional
+            # A block field carries a placeholder None default here; its real default lives in the dataclass
+            # (emitted as SUPPRESS), so this signature-default check does not apply.
+            and not a.is_block_field
             and a.inner_type not in (object, Any, inspect.Parameter.empty)
         ),
         lambda a: TypeError(
@@ -1922,6 +2048,29 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
 # parameter (self/cls) is always skipped by position; these cover additional decorator-managed names.
 _SKIP_PARAMS = frozenset({constants.NS_ATTR_SUBCOMMAND_FUNC, constants.NS_ATTR_STATEMENT})
 
+NS_ATTR_BASE_ARGS = constants.cmd2_public_attr_name("base_args")
+NS_ATTR_PARENT_ARGS = constants.cmd2_public_attr_name("parent_args")
+
+
+def _base_args_marker_dest(dc_type: type) -> str:
+    """Namespace dest of the parse-time presence marker for a ``cmd2_base_args`` block of *dc_type*.
+
+    Keyed by ``id()`` of the block type: ``cmd2_base_args`` and ``cmd2_parent_args`` referencing the same
+    block class share the exact type object, so the dest a parent stamps matches the one a child checks,
+    and a child inheriting the wrong type sees its marker absent (a reliable mismatch error).
+    """
+    return constants.cmd2_private_attr_name(f"base_args_{id(dc_type):x}")
+
+
+def _shared_field_dest(dc_type: type, field_name: str) -> str:
+    """Namespace dest for a shared-block (``cmd2_base_args``/``cmd2_parent_args``) field, qualified by type.
+
+    Keyed by ``id()`` of the block type like the presence marker, so a parent's ``cmd2_base_args`` and a
+    child's ``cmd2_parent_args`` of the same class agree on the dest while two different block types that
+    share a field name get distinct dests -- they never collide on one attribute in the shared namespace.
+    """
+    return constants.cmd2_private_attr_name(f"shared_{id(dc_type):x}_{field_name}")
+
 
 def _link_mutex_group_membership(
     by_name: dict[str, _ArgparseArgument],
@@ -1940,14 +2089,276 @@ def _link_mutex_group_membership(
             by_name[name].mutex_group_indices.append(index)
 
 
+def _resolve_func_hints(func: Callable[..., Any], *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, Any]:
+    """Resolve the type hints for the parameters that become arguments.
+
+    The bound first parameter (self/cls), the injected ``skip_params``, and the ``return`` annotation
+    never become arguments, so they are dropped before resolution.  Forward references resolve against
+    the *original* function's module so a ``functools.wraps`` wrapper still resolves correctly.
+    """
+    sig = inspect.signature(func)
+    ignored = {next(iter(sig.parameters), None), "return", *skip_params}
+    ignored.discard(None)
+    relevant_annotations = {name: ann for name, ann in getattr(func, "__annotations__", {}).items() if name not in ignored}
+    unwrapped = inspect.unwrap(func)
+    try:
+        return get_type_hints(
+            types.SimpleNamespace(__annotations__=relevant_annotations),
+            globalns=getattr(unwrapped, "__globals__", {}),
+            include_extras=True,
+        )
+    except (NameError, AttributeError, TypeError) as exc:
+        raise TypeError(
+            f"Failed to resolve type hints for {func.__qualname__}. Ensure all annotations use valid, importable types."
+        ) from exc
+
+
+def _is_argument_block(hint: Any, param: inspect.Parameter) -> TypeGuard[type]:
+    """Whether a parameter is a bare [`ArgumentBlock`][cmd2.annotated.ArgumentBlock] whose fields expand flat.
+
+    Only a by-keyword-passable parameter (positional-or-keyword or keyword-only) annotated with a bare
+    ``ArgumentBlock`` subclass qualifies.  Membership -- not "is a dataclass" -- is the trigger, so a plain
+    ``@dataclass`` is never captured; the block must still be a ``@dataclass`` to have fields to expand,
+    which :func:`_expand_dataclass_block` enforces with a clear message.
+    """
+    return (
+        param.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)
+        and isinstance(hint, type)
+        and issubclass(hint, ArgumentBlock)
+    )
+
+
+def _require_magic_block(name: str, hint: Any, param: inspect.Parameter, func_qualname: str) -> type:
+    """Return the ``ArgumentBlock`` subclass annotating a ``cmd2_base_args``/``cmd2_parent_args`` parameter.
+
+    Both magic parameters must be a bare ``ArgumentBlock`` subclass, the same form a regular block uses.  A
+    wrong annotation (a plain value, or a block wrapped in ``Annotated``/``Optional``/a union) is rejected
+    here with a clear message rather than being silently treated as an ordinary argument.
+    """
+    if _is_argument_block(hint, param):
+        return hint
+    raise TypeError(
+        f"Parameter '{name}' in {func_qualname} must be annotated with a bare ArgumentBlock subclass "
+        f"(e.g. '{name}: SharedOpts'); it shares a block between a command and its subcommands."
+    )
+
+
+def _find_argument_block(hint: Any) -> type | None:
+    """Return an [`ArgumentBlock`][cmd2.annotated.ArgumentBlock] subclass found anywhere within *hint*, else ``None``.
+
+    Used to reject a block that is not the bare annotation: an ``ArgumentBlock`` nested in ``Annotated`` /
+    ``Optional`` / a union is ambiguous (an optional block? a union of blocks? a single value?), so it is
+    rejected rather than silently mishandled.  A bare block is detected by :func:`_is_argument_block` first,
+    so this only fires for the wrapped/misused forms.
+    """
+    if isinstance(hint, type) and issubclass(hint, ArgumentBlock):
+        return hint
+    for arg in get_args(hint):
+        found = _find_argument_block(arg)
+        if found is not None:
+            return found
+    return None
+
+
+def _init_field_names(dc_type: type) -> list[str]:
+    """Names of a dataclass's ``init`` fields in definition order (the flat argument names of a block)."""
+    return [f.name for f in fields(dc_type) if f.init]
+
+
+def _reject_field_shadowing_block_param(dc_type: type, param_name: str, func_qualname: str) -> None:
+    """Reject a block whose field name equals the block parameter name.
+
+    The field's flat argument and the parameter that receives the block instance would share one
+    keyword-argument key, so a parsed value and a directly-supplied instance become indistinguishable.
+    """
+    if param_name in _init_field_names(dc_type):
+        raise TypeError(
+            f"ArgumentBlock '{dc_type.__name__}' field {param_name!r} collides with the block parameter "
+            f"name '{param_name}' in {func_qualname}; rename the field so its command-line argument does not "
+            f"shadow the parameter that receives the block instance."
+        )
+
+
+def _expand_dataclass_block(
+    dc_type: type,
+    *,
+    func_qualname: str,
+    base_command: bool,
+    shared: bool = False,
+) -> list[_ArgparseArgument]:
+    """Expand a dataclass block's ``init`` fields into flat ``_ArgparseArgument`` builders.
+
+    Each field maps to one argument named after the field (flat: field name == argument name).  The
+    field's ``Annotated[T, Option/Argument]`` metadata and its default (``default`` or ``default_factory``)
+    drive the argument exactly as a top-level parameter of the same shape would.
+
+    ``shared`` marks a ``cmd2_base_args`` block: its fields parse into a type-qualified dest (the flag is
+    unchanged) so blocks of different types never collide on one attribute in the shared subcommand
+    namespace; the matching ``cmd2_parent_args`` reads the same qualified dest.
+    """
+    if not is_dataclass(dc_type):
+        raise TypeError(
+            f"ArgumentBlock subclass '{dc_type.__name__}' must be decorated with @dataclass so it has fields "
+            f"to expand into command-line arguments."
+        )
+    try:
+        field_hints = get_type_hints(dc_type, include_extras=True)
+    except (NameError, AttributeError, TypeError) as exc:
+        raise TypeError(
+            f"Failed to resolve type hints for ArgumentBlock '{dc_type.__name__}'. "
+            f"Ensure all field annotations use valid, importable types."
+        ) from exc
+    # An InitVar is a constructor parameter that dataclasses.fields() omits, so it would never become a
+    # command-line argument yet the constructor still requires it.  Reject it up front with a clear message
+    # rather than letting reconstruction fail later with an opaque "missing argument" TypeError.
+    init_field_names = set(_init_field_names(dc_type))
+    init_only = [name for name in list(inspect.signature(dc_type.__init__).parameters)[1:] if name not in init_field_names]
+    if init_only:
+        raise TypeError(
+            f"ArgumentBlock '{dc_type.__name__}' has InitVar field(s) {sorted(init_only)}, which @with_annotated "
+            f"cannot expand into command-line arguments; use a regular field instead."
+        )
+    expanded: list[_ArgparseArgument] = []
+    for f in fields(dc_type):
+        if not f.init:
+            continue  # field(init=False) is not a constructor argument, so it has no command-line value
+        # A field whose name matches a cmd2-injected namespace attribute (e.g. cmd2_statement) would be
+        # silently overwritten by cmd2 at parse time, so its value could never reach the constructor.
+        if f.name in _SKIP_PARAMS:
+            raise TypeError(
+                f"ArgumentBlock '{dc_type.__name__}' field {f.name!r} collides with a reserved cmd2 namespace "
+                f"attribute; rename the field."
+            )
+        inner_type, metadata, is_optional = _normalize_annotation(field_hints[f.name])
+        # The dataclass owns its own defaults: a field with any default (default or default_factory) emits
+        # SUPPRESS (see _DEFAULT_RULES) and is filled by the constructor, so the value is never read here.
+        has_default = f.default is not MISSING or f.default_factory is not MISSING
+        expanded.append(
+            _ArgparseArgument(
+                name=f.name,
+                func_qualname=func_qualname,
+                has_default=has_default,
+                param_default=None,
+                is_kw_only=False,
+                is_variadic=False,
+                inner_type=inner_type,
+                metadata=metadata,
+                is_optional=is_optional,
+                kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                is_base_command=base_command,
+                is_block_field=True,
+                dest_override=_shared_field_dest(dc_type, f.name) if shared else None,
+            )
+        )
+    return expanded
+
+
+class _BlockSpec(NamedTuple):
+    """How to reconstruct one dataclass-block parameter from the parsed namespace at call time."""
+
+    dc_type: type
+    field_names: list[str]
+    inherited: bool  # True for a cmd2_parent_args block (inherited from an ancestor's cmd2_base_args)
+    shared: bool = False  # cmd2_base_args/cmd2_parent_args: fields live under a type-qualified dest
+
+
+def _block_field_dest(spec: _BlockSpec, field_name: str) -> str:
+    """Namespace dest a block field lands under: type-qualified for a shared block, else the field name."""
+    return _shared_field_dest(spec.dc_type, field_name) if spec.shared else field_name
+
+
+def _dataclass_blocks(func: Callable[..., Any], *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, _BlockSpec]:
+    """Map each dataclass-block parameter name to its :class:`_BlockSpec`.
+
+    Used by the runtime handler to reconstruct the dataclass instance from the parsed namespace.  A
+    ``cmd2_parent_args`` parameter is a bare block too, so it is detected the same way and flagged
+    ``inherited`` (its fields live in the shared namespace, populated by an ancestor's ``cmd2_base_args``).
+    """
+    hints = _resolve_func_hints(func, skip_params=skip_params)
+    blocks: dict[str, _BlockSpec] = {}
+    for name, param in list(inspect.signature(func).parameters.items())[1:]:
+        if name in skip_params:
+            continue
+        if _is_argument_block(hints.get(name), param):
+            hint = hints[name]
+            blocks[name] = _BlockSpec(
+                hint,
+                _init_field_names(hint),
+                inherited=name == NS_ATTR_PARENT_ARGS,
+                shared=name in (NS_ATTR_BASE_ARGS, NS_ATTR_PARENT_ARGS),
+            )
+    return blocks
+
+
+def _lazy_block_resolver(
+    func: Callable[..., Any],
+    *,
+    base_accepted: set[str],
+    skip_params: frozenset[str],
+) -> Callable[[], tuple[dict[str, _BlockSpec], set[str]]]:
+    """Return a zero-arg callable yielding ``(blocks, accepted)``, computed once and cached.
+
+    Detecting dataclass blocks resolves type hints, which the decorator defers so forward-referenced
+    annotations still decorate.  The first invocation runs after the class is fully defined, so the
+    hints resolve safely; the result (the blocks and the namespace ``accepted`` set widened to the
+    expanded field names) is cached for subsequent calls.
+    """
+
+    @functools.cache
+    def resolve() -> tuple[dict[str, _BlockSpec], set[str]]:
+        blocks = _dataclass_blocks(func, skip_params=skip_params)
+        accepted = set(base_accepted)
+        for block_name, spec in blocks.items():
+            accepted.discard(block_name)
+            accepted.update(_block_field_dest(spec, name) for name in spec.field_names)
+        return blocks, accepted
+
+    return resolve
+
+
+def _reconstruct_dataclass_blocks(func_kwargs: dict[str, Any], blocks: dict[str, _BlockSpec], ns: Any) -> None:
+    """Fold expanded field values in ``func_kwargs`` back into their dataclass-block instances, in place.
+
+    A block already present in ``func_kwargs`` (e.g. a direct method call passing the instance) is left
+    untouched -- only the namespace-derived field values are gathered and the instance is built.
+
+    An inherited (``cmd2_parent_args``) block is only valid when an ancestor command declared a matching
+    ``cmd2_base_args`` block: that parent stamps a presence marker into the shared namespace at parse time,
+    so its absence here means no ancestor declared the block.  Reconstructing anyway would hand back an
+    all-defaults instance and hide the misconfiguration, so raise instead.
+    """
+    for block_name, spec in blocks.items():
+        # The expanded field values always come out of func_kwargs (keyed by their namespace dest, which is
+        # type-qualified for a shared block)
+        field_values = {
+            field: func_kwargs.pop(dest)
+            for field in spec.field_names
+            if (dest := _block_field_dest(spec, field)) in func_kwargs
+        }
+        if block_name in func_kwargs:
+            # A block instance is already present (e.g. a programmatic call passing it directly); use it as-is.
+            continue
+        if spec.inherited and not getattr(ns, _base_args_marker_dest(spec.dc_type), False):
+            raise TypeError(
+                f"Parameter '{block_name}' inherits the ArgumentBlock '{spec.dc_type.__name__}' from a parent "
+                f"command, but no ancestor command declares a matching 'cmd2_base_args: {spec.dc_type.__name__}'. "
+                f"Add that parameter to the parent command so its fields are parsed into the shared namespace."
+            )
+        func_kwargs[block_name] = spec.dc_type(**field_values)
+
+
 def _resolve_parameters(
     func: Callable[..., Any],
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     base_command: bool = False,
     mutually_exclusive_groups: tuple[Group, ...] | None = None,
-) -> list[_ArgparseArgument]:
-    """Resolve a function signature into a list of argparse-argument builders.
+) -> tuple[list[_ArgparseArgument], set[type]]:
+    """Resolve a function signature into argparse-argument builders and inheritable-block types.
+
+    Returns ``(resolved, base_args_types)`` where ``base_args_types`` are the ``ArgumentBlock`` types of
+    any ``cmd2_base_args`` parameter.  The build path stamps a parse-time presence marker for each so a
+    descendant's ``cmd2_parent_args`` can tell, at call time, that the block was actually declared.
 
     ``base_command`` marks each argument's context for the base-command :data:`_CONSTRAINTS` rows and
     drives the function-level ``cmd2_subcommand_func`` check below.  ``mutually_exclusive_groups``
@@ -1962,25 +2373,11 @@ def _resolve_parameters(
             f"with_annotated(base_command=True) requires a '{constants.NS_ATTR_SUBCOMMAND_FUNC}' "
             f"parameter in {func.__qualname__}"
         )
-    # Resolve hints only for the parameters that become arguments: the bound first parameter
-    # (self/cls), the injected skip_params, and the "return" annotation never become arguments
-    ignored = {next(iter(sig.parameters), None), "return", *skip_params}
-    ignored.discard(None)
-    relevant_annotations = {name: ann for name, ann in getattr(func, "__annotations__", {}).items() if name not in ignored}
-    # Forward references resolve against the *original* function's module during functools.wraps wrapper.
-    unwrapped = inspect.unwrap(func)
-    try:
-        hints = get_type_hints(
-            types.SimpleNamespace(__annotations__=relevant_annotations),
-            globalns=getattr(unwrapped, "__globals__", {}),
-            include_extras=True,
-        )
-    except (NameError, AttributeError, TypeError) as exc:
-        raise TypeError(
-            f"Failed to resolve type hints for {func.__qualname__}. Ensure all annotations use valid, importable types."
-        ) from exc
+    hints = _resolve_func_hints(func, skip_params=skip_params)
 
     resolved: list[_ArgparseArgument] = []
+    inherited_field_names: set[str] = set()
+    base_args_types: set[type] = set()
 
     # Skip the first parameter by position (self/cls for methods)
     params = list(sig.parameters.items())
@@ -1990,6 +2387,49 @@ def _resolve_parameters(
     for name, param in params:
         if name in skip_params:
             continue
+
+        block_hint = hints.get(name)
+        if name == NS_ATTR_PARENT_ARGS:
+            inherited = _require_magic_block(name, block_hint, param, func.__qualname__)
+            _reject_field_shadowing_block_param(inherited, name, func.__qualname__)
+            if param.default is not inspect.Parameter.empty:
+                raise TypeError(
+                    f"Parameter '{name}' in {func.__qualname__} inherits its block from a parent command and "
+                    f"cannot have a default value; remove the default."
+                )
+            inherited_field_names.update(_init_field_names(inherited))
+            continue
+
+        # An ArgumentBlock-typed parameter is an argument block: expand its fields in place (flat) instead of
+        # building a single argument for the container, so the fields keep their signature-order position.
+        if _is_argument_block(block_hint, param):
+            if param.default is not inspect.Parameter.empty:
+                raise TypeError(
+                    f"Parameter '{name}' in {func.__qualname__} is an ArgumentBlock and cannot have a default "
+                    f"value; the dataclass is the single source of truth for its fields' defaults. Remove the default."
+                )
+            if name == NS_ATTR_BASE_ARGS:
+                base_args_types.add(block_hint)
+            # Expand first so its @dataclass-ness check runs before we read field names for the next guard.
+            # A cmd2_base_args block is shared down the chain: its fields use a type-qualified dest.
+            expanded = _expand_dataclass_block(
+                block_hint, func_qualname=func.__qualname__, base_command=base_command, shared=name == NS_ATTR_BASE_ARGS
+            )
+            _reject_field_shadowing_block_param(block_hint, name, func.__qualname__)
+            resolved.extend(expanded)
+            continue
+        # The magic name requires a bare ArgumentBlock; a non-block annotation on it is a clear mistake.
+        if name == NS_ATTR_BASE_ARGS:
+            _require_magic_block(name, block_hint, param, func.__qualname__)
+        wrapped_block = _find_argument_block(block_hint)
+        if wrapped_block is not None:
+            raise TypeError(
+                f"Parameter '{name}' in {func.__qualname__} uses the ArgumentBlock '{wrapped_block.__name__}' in a "
+                f"wrapped position (Annotated/Optional/union, or *args/**kwargs), which @with_annotated does not "
+                f"support: a block must be the bare annotation of a regular parameter (e.g. "
+                f"'{name}: {wrapped_block.__name__}') so its fields can expand. To use a dataclass as a single "
+                f"value instead, make it a plain @dataclass (not an ArgumentBlock) with an Argument(converter=...)."
+            )
 
         # *args has no default and is never keyword-only; its hint is the element type (default str).
         is_variadic = param.kind == inspect.Parameter.VAR_POSITIONAL
@@ -2015,6 +2455,25 @@ def _resolve_parameters(
         )
         resolved.append(arg)
 
+    seen: dict[str, int] = {}
+    for arg in resolved:
+        seen[arg.name] = seen.get(arg.name, 0) + 1
+    duplicates = sorted(name for name, count in seen.items() if count > 1)
+    if duplicates:
+        raise TypeError(
+            f"{func.__qualname__} declares the argument name(s) {duplicates} more than once. A dataclass "
+            f"block expands its fields into flat arguments (field name == argument name), so each field "
+            f"name must be unique across the command's own parameters and every other block's fields."
+        )
+
+    inherited_collisions = sorted(inherited_field_names & seen.keys())
+    if inherited_collisions:
+        raise TypeError(
+            f"{func.__qualname__} has inherited ArgumentBlock field(s) {inherited_collisions} that collide with the "
+            f"command's own argument(s). A cmd2_parent_args block reuses the parent's fields by name, so those "
+            f"names must not also be declared on the subcommand."
+        )
+
     # Validate the whole list at once (per-argument + cross-argument rules) now that every
     # argument is built and its cross-argument facts can be linked.
     positionals = [arg for arg in resolved if arg.is_positional]
@@ -2024,7 +2483,7 @@ def _resolve_parameters(
     _link_mutex_group_membership(by_name, mutually_exclusive_groups)
     for arg in resolved:
         arg._check_constraints()
-    return resolved
+    return resolved, base_args_types
 
 
 def _var_positional_call_plan(func: Callable[..., Any]) -> tuple[list[str], str | None]:
@@ -2273,7 +2732,7 @@ def build_parser_from_function(
 
     # _resolve_parameters validates each argument and the cross-argument rules (e.g. a variable-arity
     # positional must be last; a required member in a mutex group) once the whole list is built.
-    resolved = _resolve_parameters(
+    resolved, base_args_types = _resolve_parameters(
         func,
         skip_params=skip_params,
         mutually_exclusive_groups=mutually_exclusive_groups,
@@ -2302,6 +2761,11 @@ def build_parser_from_function(
     # Add each argument to its target (its group/mutex group if assigned, else the parser).
     for arg in resolved:
         arg.add_to(target_for.get(arg.name, parser))
+
+    # A cmd2_base_args block is inheritable: stamp a parse-time presence marker so a descendant's
+    # cmd2_parent_args can confirm an ancestor actually declared the block.
+    for base_args_type in base_args_types:
+        parser.set_defaults(**{_base_args_marker_dest(base_args_type): True})
 
     return parser
 
@@ -2410,16 +2874,20 @@ def _build_subcommand_handler(
         _resolve_parameters(func, skip_params=_SKIP_PARAMS, base_command=True)
 
     _accepted = set(list(inspect.signature(func).parameters.keys())[1:])
+    # A dataclass-block parameter's expanded fields land in the namespace
+    _resolve_blocks = _lazy_block_resolver(func, base_accepted=_accepted, skip_params=_SKIP_PARAMS)
     _leading_names, _var_positional_name = _var_positional_call_plan(func)
 
     @functools.wraps(func)
     def handler(self_arg: Any, ns: Any) -> Any:
         """Unpack Namespace into typed kwargs for the subcommand handler."""
-        filtered = _filtered_namespace_kwargs(ns, accepted=_accepted)
+        _blocks, _eff_accepted = _resolve_blocks()
+        filtered = _filtered_namespace_kwargs(ns, accepted=_eff_accepted)
         if constants.NS_ATTR_SUBCOMMAND_FUNC in filtered:
             cmd2_h = filtered[constants.NS_ATTR_SUBCOMMAND_FUNC]
             if isinstance(cmd2_h, functools.partial) and getattr(cmd2_h.func, "__func__", cmd2_h.func) is handler:
                 filtered[constants.NS_ATTR_SUBCOMMAND_FUNC] = None
+        _reconstruct_dataclass_blocks(filtered, _blocks, ns)
         return _invoke_command_func(
             func, self_arg, filtered, leading_names=_leading_names, var_positional_name=_var_positional_name
         )
@@ -2595,6 +3063,7 @@ def with_annotated(
 
         # Cache signature introspection at decoration time, not per-invocation
         accepted = set(list(inspect.signature(fn).parameters.keys())[1:])
+        resolve_blocks = _lazy_block_resolver(fn, base_accepted=accepted, skip_params=skip_params)
         leading_names, var_positional_name = _var_positional_call_plan(fn)
 
         parser_builder = _make_parser_builder(fn, skip_params=skip_params, base_command=base_command, options=options)
@@ -2632,12 +3101,14 @@ def with_annotated(
                 handler = functools.partial(handler, ns)
             setattr(ns, constants.NS_ATTR_SUBCOMMAND_FUNC, handler)
 
-            func_kwargs = _filtered_namespace_kwargs(ns, accepted=accepted, exclude_subcommand=base_command)
+            blocks, eff_accepted = resolve_blocks()
+            func_kwargs = _filtered_namespace_kwargs(ns, accepted=eff_accepted, exclude_subcommand=base_command)
 
             if with_unknown_args:
                 func_kwargs["_unknown"] = unknown
 
             func_kwargs.update(kwargs)
+            _reconstruct_dataclass_blocks(func_kwargs, blocks, ns)
             result: bool | None = _invoke_command_func(
                 fn, owner, func_kwargs, leading_names=leading_names, var_positional_name=var_positional_name
             )
