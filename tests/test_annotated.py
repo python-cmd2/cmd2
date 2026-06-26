@@ -4679,6 +4679,46 @@ class TestDataclassBlockEdgeCases:
         with pytest.raises(TypeError, match="InitVar"):
             build_parser_from_function(do_x)
 
+    def test_init_false_field_not_expanded(self) -> None:
+        """A field(init=False) is not a constructor argument, so it gets no CLI option and is left to
+        __post_init__ / its default rather than being expanded into a command-line value."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            name: Annotated[str, Option("--name")] = "n"
+            computed: str = field(init=False, default="auto")
+
+            def __post_init__(self) -> None:
+                self.computed = self.name.upper()
+
+        def do_x(self, blk: Blk) -> None: ...
+
+        parser = build_parser_from_function(do_x)
+        dests = {a.dest for a in parser._actions if a.dest != "help"}
+        assert dests == {"name"}  # computed (init=False) is not a command-line argument
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_x(self, blk: Blk) -> None:
+                self.poutput(f"name={blk.name} computed={blk.computed}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        assert run_cmd(app, "x --name bob")[0] == ["name=bob computed=BOB"]
+
+    def test_unresolvable_field_hint_raises_block_error(self) -> None:
+        """An unresolvable forward reference on a block field aborts with a clear, ArgumentBlock-specific
+        error rather than leaking the opaque NameError raised by typing.get_type_hints."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            x: Annotated["NoSuchType", Option("--x")] = 0  # noqa: F821 -- intentionally undefined
+
+        def do_x(self, blk: Blk) -> None: ...
+
+        with pytest.raises(TypeError, match=r"Failed to resolve type hints for ArgumentBlock"):
+            build_parser_from_function(do_x)
+
 
 class _SubcommandBlockApp(cmd2.Cmd):
     @with_annotated(base_command=True)
