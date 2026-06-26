@@ -4480,6 +4480,59 @@ class TestDataclassBlockEdgeCases:
         with pytest.raises(TypeError, match=r"x.*more than once"):
             build_parser_from_function(do_x)
 
+    def test_field_named_like_block_param_rejected(self) -> None:
+        """A block field whose name equals the block parameter name is rejected: the field's flat argument
+        and the parameter receiving the block instance would share one keyword-argument key."""
+
+        @dataclass
+        class Opts(ArgumentBlock):
+            opts: Annotated[str, Option("--opts")] = "x"
+
+        def do_x(self, opts: Opts) -> None: ...
+
+        with pytest.raises(TypeError, match=r"field 'opts' collides with the block parameter name 'opts'"):
+            build_parser_from_function(do_x)
+
+    def test_init_false_field_named_like_block_param_allowed(self) -> None:
+        """A field(init=False) is not a command-line argument, so sharing the block parameter name is fine
+        (no flat argument shadows the parameter) and must not be rejected."""
+
+        @dataclass
+        class Opts(ArgumentBlock):
+            name: Annotated[str, Option("--name")] = "n"
+            opts: str = field(init=False, default="z")
+
+        def do_x(self, opts: Opts) -> None: ...
+
+        parser = build_parser_from_function(do_x)
+        assert {a.dest for a in parser._actions if a.dest != "help"} == {"name"}
+
+    def test_block_field_append_action_without_dataclass_default_rejected(self) -> None:
+        """An append block field with no dataclass default would emit a shared `[]` argparse default that
+        argparse reuses across invocations; reject it (the default must live on the dataclass field)."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            tags: Annotated[list[str], Option("--tag", action="append")]  # no dataclass default
+
+        def do_x(self, blk: Blk) -> None: ...
+
+        with pytest.raises(TypeError, match=r"field 'tags'.*default.*must live on the dataclass field"):
+            build_parser_from_function(do_x)
+
+    def test_block_field_metadata_default_without_dataclass_default_rejected(self) -> None:
+        """A metadata `Option(default=...)` on a block field with no dataclass default bypasses the
+        dataclass as the single source of truth; reject it."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            count: Annotated[int, Option("--count", default=3)]  # default in metadata, not the field
+
+        def do_x(self, blk: Blk) -> None: ...
+
+        with pytest.raises(TypeError, match=r"field 'count'.*default.*must live on the dataclass field"):
+            build_parser_from_function(do_x)
+
     def test_post_init_runs(self) -> None:
         """Reconstruction goes through the dataclass constructor, so __post_init__ runs."""
 
@@ -4963,3 +5016,117 @@ class TestParentArgsInheritance:
         # The directly-supplied instance is used; the parsed --verbose does not crash the call as a stray kwarg.
         app.do_build("app --verbose", common=_CommonArgs(verbose=False))
         assert app.stdout.getvalue().splitlines() == ["target=app verbose=False"]
+
+
+# ---------------------------------------------------------------------------
+# A base command and its subcommands share one parsed namespace.  Each shared
+# (cmd2_base_args/cmd2_parent_args) block field parses into a type-qualified
+# dest, so two blocks of different types that happen to share a field name never
+# collide on one attribute -- an inherited block always sees its own type's
+# value rather than whatever a different block at another chain level wrote.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _ChainBaseA(ArgumentBlock):
+    level: Annotated[int, Option("--level")] = 1
+    only_a: Annotated[str, Option("--only-a")] = "a"
+
+
+@dataclass
+class _ChainBaseBSameName(ArgumentBlock):
+    level: Annotated[int, Option("--level")] = 2  # same field name as _ChainBaseA, different type
+
+
+@dataclass
+class _ChainBaseBDistinct(ArgumentBlock):
+    region: Annotated[str, Option("--region")] = "us"  # distinct field name
+
+
+class TestBaseArgsChainNamespacing:
+    def test_same_field_name_in_different_block_types_is_isolated(self) -> None:
+        """Two base_args blocks of different types sharing a field name do not collide: the leaf inheriting
+        _ChainBaseA sees root's value, not the _ChainBaseBSameName value parsed at the intervening level."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_root(self, cmd2_subcommand_func, cmd2_base_args: _ChainBaseA) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root", base_command=True)
+            def root_mid(self, cmd2_subcommand_func, cmd2_base_args: _ChainBaseBSameName) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root mid")
+            def root_mid_leaf(self, cmd2_parent_args: _ChainBaseA) -> None:
+                self.poutput(f"level={cmd2_parent_args.level} only_a={cmd2_parent_args.only_a}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        out, _err = run_cmd(app, "root --level 5 mid --level 9 leaf")
+        assert out == ["level=5 only_a=a"]  # root's BaseA.level, not mid's BaseB.level=9
+
+    def test_distinct_fields_across_base_args_levels(self) -> None:
+        """Distinct field names across levels also reach the inherited block with the right value."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_root(self, cmd2_subcommand_func, cmd2_base_args: _ChainBaseA) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root", base_command=True)
+            def root_mid(self, cmd2_subcommand_func, cmd2_base_args: _ChainBaseBDistinct) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root mid")
+            def root_mid_leaf(self, cmd2_parent_args: _ChainBaseA) -> None:
+                self.poutput(f"level={cmd2_parent_args.level} only_a={cmd2_parent_args.only_a}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        out, _err = run_cmd(app, "root --level 5 mid --region eu leaf")
+        assert out == ["level=5 only_a=a"]
+
+    def test_same_base_args_type_at_two_levels_nearest_wins(self) -> None:
+        """Reusing the *same* block type at two levels shares one (type-qualified) dest, so the nearest
+        level that sets the flag wins -- a well-defined override, not a cross-type corruption."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_root(self, cmd2_subcommand_func, cmd2_base_args: _ChainBaseA) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root", base_command=True)
+            def root_mid(self, cmd2_subcommand_func, cmd2_base_args: _ChainBaseA) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root mid")
+            def root_mid_leaf(self, cmd2_parent_args: _ChainBaseA) -> None:
+                self.poutput(f"level={cmd2_parent_args.level}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        assert run_cmd(app, "root --level 5 mid --level 9 leaf")[0] == ["level=9"]  # nearest (mid) wins
+        assert run_cmd(app, "root --level 5 mid leaf")[0] == ["level=5"]  # absent mid does not overwrite
+
+    def test_positional_shared_field_keeps_clean_metavar(self) -> None:
+        """A positional field in a shared block parses into a type-qualified dest (so it can't collide
+        across a chain), but its help metavar stays the field name -- the qualified dest never leaks."""
+
+        @dataclass
+        class Base(ArgumentBlock):
+            target: Annotated[str, Argument()]  # positional
+            level: Annotated[int, Option("--level")] = 1
+
+        def do_x(self, cmd2_base_args: Base) -> None: ...
+
+        parser = build_parser_from_function(do_x)
+        positional = next(a for a in parser._actions if not a.option_strings and a.dest != "help")
+        assert positional.metavar == "target"  # field name shown in help, not the internal dest
+        assert positional.dest != "target"  # but the dest is type-qualified to avoid chain collisions

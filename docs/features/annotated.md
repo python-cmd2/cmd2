@@ -662,6 +662,13 @@ A few rules keep blocks unambiguous:
   `Annotated`/`Optional`/a union, or using it as `*args`/`**kwargs`, raises a clear error.
 - Because fields expand flat, a field name that collides with another parameter or another block's
   field raises an error when the parser is built, rather than silently sharing a destination.
+- A field name that matches the block parameter itself (e.g. `opts` on a block received as
+  `opts: Opts`) is rejected: the field's flat argument and the parameter that receives the block
+  instance would share one destination.
+- A field's default must live on the dataclass field (`= value` or `= field(default_factory=...)`),
+  not in the `Option`/`Argument` metadata or via an action default (`append`/`count`). The dataclass
+  owns defaults so each call gets a fresh value, so a metadata- or action-supplied default on a
+  field that has no dataclass default is rejected.
 - A field whose type is itself a block is not expanded (no recursion); it is rejected as an
   unsupported type.
 
@@ -696,6 +703,12 @@ the values an ancestor parsed (`root --verbose show`, not `root show --verbose`)
 `cmd2_parent_args` subcommand whose ancestors never declare a matching `cmd2_base_args` raises a
 clear error the first time it runs. This is the typed alternative to forwarding parent-level state
 through `ns_provider`.
+
+Each shared block field parses into a destination qualified by its block type, so two
+`cmd2_base_args` blocks of different types at different levels of one chain can use the same field
+name without colliding. An inherited block always receives its own type's value, regardless of what
+a same-named field on another block at an intervening level parsed. Reusing the same block type at
+two levels shares one destination, so the nearest level that sets the flag wins.
 
 A subcommand can also declare its own regular block alongside the inherited one. The two are
 independent: the inherited block's flags are supplied on the parent, while the subcommand's own
