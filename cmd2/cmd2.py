@@ -376,6 +376,7 @@ class Cmd:
         multiline_commands: Iterable[str] | None = None,
         persistent_history_file: str = "",
         persistent_history_length: int = 1000,
+        refresh_interval: float = 0,
         shortcuts: Mapping[str, str] | None = None,
         silence_startup_script: bool = False,
         startup_script: str = "",
@@ -417,6 +418,11 @@ class Cmd:
         :param persistent_history_file: file path to load a persistent cmd2 command history from
         :param persistent_history_length: max number of history items to write
                                           to the persistent history file
+        :param refresh_interval: How often, in seconds, to refresh the UI. Defaults to 0.
+                                 prompt-toolkit already refreshes the UI every time a key is pressed.
+                                 Set this value if you need the UI to update automatically without
+                                 user input (e.g., for displaying a clock or background status
+                                 updates in the bottom toolbar).
         :param shortcuts: Mapping containing shortcuts for commands. If not supplied,
                           then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
                           any shortcuts, pass None and an empty dictionary will be created.
@@ -531,6 +537,7 @@ class Cmd:
         # Create the main PromptSession
         self.bottom_toolbar = bottom_toolbar
         self.complete_in_thread = complete_in_thread
+        self.refresh_interval = refresh_interval
         self.main_session = self._create_main_session(auto_suggest, completekey)
 
         # The session currently holding focus (either the main REPL or a command's
@@ -763,6 +770,7 @@ class Cmd:
             "lexer": Cmd2Lexer(self),
             "multiline": filters.Condition(self._should_continue_multiline),
             "prompt_continuation": self.continuation_prompt,
+            "refresh_interval": self.refresh_interval,
             "rprompt": self.get_rprompt,
             "style": DynamicStyle(get_pt_theme),
         }
@@ -1978,36 +1986,37 @@ class Cmd:
     def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
         """Get the bottom toolbar content.
 
-        If self.bottom_toolbar is False, returns None.
+        Returns None if `self.bottom_toolbar` is False. Otherwise, returns a
+        list of tokens to populate the toolbar (which can span multiple lines).
 
-        Otherwise returns tokens for prompt-toolkit to populate in the bottom toolbar.
-
-        NOTE: This content can extend over multiple lines.  However we would recommend
-        keeping it to a single line or two lines maximum.
+        NOTE: prompt-toolkit calls this method on every UI refresh (e.g., on every keypress
+              and at scheduled refresh intervals). To ensure the CLI remains responsive, keep
+              this function highly optimized.
         """
-        if self.bottom_toolbar:
-            import datetime
-            import shutil
+        if not self.bottom_toolbar:
+            return None
 
-            # Get the current time in ISO format with 0.01s precision
-            dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
-            now = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
-            left_text = sys.argv[0]
+        import datetime
+        import shutil
 
-            # Get terminal width to calculate padding for right-alignment
-            cols, _ = shutil.get_terminal_size()
-            padding_size = cols - len(left_text) - len(now) - 1
-            if padding_size < 1:
-                padding_size = 1
-            padding = " " * padding_size
+        # Get the current time in ISO format with 0.01s precision
+        dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
+        now = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
+        left_text = sys.argv[0]
 
-            # Return formatted text for prompt-toolkit
-            return [
-                ("ansigreen", left_text),
-                ("", padding),
-                ("ansicyan", now),
-            ]
-        return None
+        # Get terminal width to calculate padding for right-alignment
+        cols, _ = shutil.get_terminal_size()
+        padding_size = cols - len(left_text) - len(now) - 1
+        if padding_size < 1:
+            padding_size = 1
+        padding = " " * padding_size
+
+        # Return formatted text for prompt-toolkit
+        return [
+            ("ansigreen", left_text),
+            ("", padding),
+            ("ansicyan", now),
+        ]
 
     def get_rprompt(self) -> str | FormattedText | None:
         """Provide text to populate prompt-toolkit right prompt with.

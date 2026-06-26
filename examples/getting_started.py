@@ -17,8 +17,6 @@ Features demonstrated include all of the following:
 """
 
 import pathlib
-import threading
-import time
 
 from prompt_toolkit.formatted_text import FormattedText
 from rich.style import Style
@@ -43,21 +41,17 @@ class BasicApp(cmd2.Cmd):
         # Create a shortcut for one of our commands
         shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({"&": "intro"})
+
         super().__init__(
             auto_suggest=True,
             bottom_toolbar=True,
             include_ipy=True,
             multiline_commands=["echo"],
             persistent_history_file="cmd2_history.dat",
+            refresh_interval=0.5,  # refresh the UI twice a second to keep the bottom toolbar timestamp current
             shortcuts=shortcuts,
             startup_script=str(alias_script),
         )
-
-        # Spawn a background thread to refresh the bottom toolbar twice a second.
-        # This is necessary because the toolbar contains a timestamp that we want to keep current.
-        self._stop_refresh = False
-        self._refresh_thread = threading.Thread(target=self._refresh_bottom_toolbar, daemon=True)
-        self._refresh_thread.start()
 
         # Prints an intro banner once upon application startup
         self.intro = (
@@ -98,24 +92,6 @@ class BasicApp(cmd2.Cmd):
         style = "bg:ansired fg:ansiwhite"
         text = f"cwd={current_working_directory}"
         return FormattedText([(style, text)])
-
-    def _refresh_bottom_toolbar(self) -> None:
-        """Background thread target to refresh the bottom toolbar.
-
-        This is a toy example to show how the bottom toolbar can be used to display
-        realtime status updates in an otherwise line-oriented command interpreter.
-        """
-        import contextlib
-
-        from prompt_toolkit.application.current import get_app
-
-        while not self._stop_refresh:
-            with contextlib.suppress(Exception):
-                # get_app() will return the currently running prompt-toolkit application
-                app = get_app()
-                if app:
-                    app.invalidate()
-            time.sleep(0.5)
 
     def do_intro(self, _: cmd2.Statement) -> None:
         """Display the intro banner."""
