@@ -16,9 +16,11 @@ Features demonstrated include all of the following:
 12) Persistent bottom toolbar with realtime status updates
 """
 
+import datetime
 import pathlib
 
-from prompt_toolkit.formatted_text import FormattedText
+from prompt_toolkit.application import get_app
+from prompt_toolkit.formatted_text import AnyFormattedText
 from rich.style import Style
 
 import cmd2
@@ -44,7 +46,6 @@ class BasicApp(cmd2.Cmd):
 
         super().__init__(
             auto_suggest=True,
-            bottom_toolbar=True,
             include_ipy=True,
             multiline_commands=["echo"],
             persistent_history_file="cmd2_history.dat",
@@ -87,11 +88,33 @@ class BasicApp(cmd2.Cmd):
             )
         )
 
-    def get_rprompt(self) -> str | FormattedText | None:
+    def get_bottom_toolbar(self) -> AnyFormattedText:
+        # Get the current time in ISO format with 0.01s precision
+        dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
+        now = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
+        left_text = sys.argv[0]
+
+        # Fetch the terminal width to calculate padding for right-alignment.
+        # If called outside a running app loop (e.g., in unit tests), get_app()
+        # safely returns a dummy app with an 80-column fallback.
+        cols = get_app().output.get_size().columns
+        padding_size = cols - len(left_text) - len(now) - 1
+        if padding_size < 1:
+            padding_size = 1
+        padding = " " * padding_size
+
+        # Return formatted text for prompt-toolkit
+        return [
+            ("ansigreen", left_text),
+            ("", padding),
+            ("ansicyan", now),
+        ]
+
+    def get_rprompt(self) -> AnyFormattedText:
         current_working_directory = pathlib.Path.cwd()
         style = "bg:ansired fg:ansiwhite"
         text = f"cwd={current_working_directory}"
-        return FormattedText([(style, text)])
+        return [(style, text)]
 
     def do_intro(self, _: cmd2.Statement) -> None:
         """Display the intro banner."""

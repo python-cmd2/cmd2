@@ -65,22 +65,11 @@ terminal window while the application is idle and waiting for input.
 
 ### Enabling the Toolbar
 
-To enable the toolbar, set `bottom_toolbar=True` in the [cmd2.Cmd.__init__][] constructor:
+To enable the toolbar, override the [cmd2.Cmd.get_bottom_toolbar][] method to return the content you
+wish to display.
 
 ```py
-class App(cmd2.Cmd):
-    def __init__(self):
-        super().__init__(bottom_toolbar=True)
-```
-
-### Customizing Toolbar Content
-
-You can customize the content of the toolbar by overriding the [cmd2.Cmd.get_bottom_toolbar][]
-method. This method should return either a string or a list of `(style, text)` tuples for formatted
-text.
-
-```py
-    def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
+    def get_bottom_toolbar(self) -> AnyFormattedText:
         return [
             ('ansigreen', 'My Application Name'),
             ('', ' - '),
@@ -92,7 +81,14 @@ text.
 
 Since the toolbar is rendered by `prompt-toolkit` as part of the prompt, it is naturally redrawn
 whenever the prompt is refreshed. If you want the toolbar to update automatically (for example, to
-display a clock), you can use a background thread to call `app.invalidate()` periodically.
+display a clock), you can set `refresh_interval` in the [cmd2.Cmd.__init__][] constructor to a value
+greater than 0.0.
+
+```py
+class App(cmd2.Cmd):
+    def __init__(self):
+        super().__init__(refresh_interval=0.5)
+```
 
 See the
 [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)

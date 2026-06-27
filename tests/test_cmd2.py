@@ -4289,16 +4289,13 @@ def test_path_complete_users_windows(monkeypatch, base_app):
 
 
 def test_get_bottom_toolbar(base_app, monkeypatch):
-    # Test default (disabled)
+    # Test default
     assert base_app.get_bottom_toolbar() is None
 
-    # Test enabled
-    base_app.bottom_toolbar = True
-    monkeypatch.setattr(sys, "argv", ["myapp.py"])
-    toolbar = base_app.get_bottom_toolbar()
-    assert isinstance(toolbar, list)
-    assert toolbar[0] == ("ansigreen", "myapp.py")
-    assert toolbar[2][0] == "ansicyan"
+    # Test overridden
+    expected_text = "bottom toolbar text"
+    base_app.get_bottom_toolbar = lambda: expected_text
+    assert base_app.get_bottom_toolbar() == expected_text
 
 
 def test_get_rprompt(base_app):
@@ -4306,15 +4303,9 @@ def test_get_rprompt(base_app):
     assert base_app.get_rprompt() is None
 
     # Test overridden
-    from prompt_toolkit.formatted_text import FormattedText
-
     expected_text = "rprompt text"
     base_app.get_rprompt = lambda: expected_text
     assert base_app.get_rprompt() == expected_text
-
-    expected_formatted = FormattedText([("class:status", "OK")])
-    base_app.get_rprompt = lambda: expected_formatted
-    assert base_app.get_rprompt() == expected_formatted
 
 
 def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypatch):
@@ -4497,25 +4488,6 @@ def test_pre_prompt_running_loop(base_app):
         base_app._read_command_line("prompt> ")
 
         assert loop_check["running"]
-
-
-def test_get_bottom_toolbar_narrow_terminal(base_app, monkeypatch):
-    """Test get_bottom_toolbar when terminal is too narrow for calculated padding"""
-    import shutil
-
-    base_app.bottom_toolbar = True
-    monkeypatch.setattr(sys, "argv", ["myapp.py"])
-
-    # Mock shutil.get_terminal_size to return a very small width (e.g. 5)
-    # Calculated padding_size = 5 - len('myapp.py') - len(now) - 1
-    # Since len(now) is ~29, this will definitely be < 1
-    monkeypatch.setattr(shutil, "get_terminal_size", lambda: os.terminal_size((5, 20)))
-
-    toolbar = base_app.get_bottom_toolbar()
-    assert isinstance(toolbar, list)
-
-    # The padding (index 1) should be exactly 1 space
-    assert toolbar[1] == ("", " ")
 
 
 def test_auto_suggest_true():

@@ -32,6 +32,7 @@ import argparse
 import contextlib
 import copy
 import dataclasses
+import datetime
 import functools
 import glob
 import inspect
@@ -73,7 +74,7 @@ from prompt_toolkit import (
 from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import Completer, DummyCompleter
-from prompt_toolkit.formatted_text import ANSI, FormattedText
+from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input import DummyInput, create_input
 from prompt_toolkit.key_binding import KeyBindings
@@ -367,7 +368,6 @@ class Cmd:
         allow_redirection: bool = True,
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
-        bottom_toolbar: bool = False,
         complete_in_thread: bool = True,
         command_sets: Iterable[CommandSet[Any]] | None = None,
         include_ipy: bool = False,
@@ -376,7 +376,7 @@ class Cmd:
         multiline_commands: Iterable[str] | None = None,
         persistent_history_file: str = "",
         persistent_history_length: int = 1000,
-        refresh_interval: float = 0,
+        refresh_interval: float = 0.0,
         shortcuts: Mapping[str, str] | None = None,
         silence_startup_script: bool = False,
         startup_script: str = "",
@@ -405,7 +405,6 @@ class Cmd:
         :param auto_suggest: If True, cmd2 will provide fish shell style auto-suggestions
                             based on history. User can press right-arrow key to accept the
                             provided suggestion.
-        :param bottom_toolbar: if ``True``, then a bottom toolbar will be displayed.
         :param complete_in_thread: if ``True``, then completion will run in a separate thread.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
@@ -418,7 +417,7 @@ class Cmd:
         :param persistent_history_file: file path to load a persistent cmd2 command history from
         :param persistent_history_length: max number of history items to write
                                           to the persistent history file
-        :param refresh_interval: How often, in seconds, to refresh the UI. Defaults to 0.
+        :param refresh_interval: How often, in seconds, to refresh the UI. Defaults to 0.0.
                                  prompt-toolkit already refreshes the UI every time a key is pressed.
                                  Set this value if you need the UI to update automatically without
                                  user input (e.g., for displaying a clock or background status
@@ -535,7 +534,6 @@ class Cmd:
         self._initialize_history(persistent_history_file)
 
         # Create the main PromptSession
-        self.bottom_toolbar = bottom_toolbar
         self.complete_in_thread = complete_in_thread
         self.refresh_interval = refresh_interval
         self.main_session = self._create_main_session(auto_suggest, completekey)
@@ -759,7 +757,7 @@ class Cmd:
         # Base configuration
         kwargs: dict[str, Any] = {
             "auto_suggest": AutoSuggestFromHistory() if auto_suggest else None,
-            "bottom_toolbar": self.get_bottom_toolbar if self.bottom_toolbar else None,
+            "bottom_toolbar": self.get_bottom_toolbar,
             "color_depth": ColorDepth.TRUE_COLOR,
             "complete_style": CompleteStyle.MULTI_COLUMN,
             "complete_in_thread": self.complete_in_thread,
@@ -1983,49 +1981,35 @@ class Cmd:
             end=end,
         )
 
-    def get_bottom_toolbar(self) -> list[str | tuple[str, str]] | None:
+    def get_bottom_toolbar(self) -> AnyFormattedText:
         """Get the bottom toolbar content.
 
-        Returns None if `self.bottom_toolbar` is False. Otherwise, returns a
-        list of tokens to populate the toolbar (which can span multiple lines).
+        This method is intended to be called by prompt-toolkit as a UI lifecycle callback.
+        Because prompt-toolkit triggers this callback on every UI refresh (e.g., on every
+        keypress and at scheduled refresh intervals), keeping this function highly optimized
+        is critical to ensuring the CLI remains responsive.
 
-        NOTE: prompt-toolkit calls this method on every UI refresh (e.g., on every keypress
-              and at scheduled refresh intervals). To ensure the CLI remains responsive, keep
-              this function highly optimized.
+        Override this if you want a bottom toolbar displaying contextual information useful for
+        your application. This could be information like the application name, current state,
+        or even a real-time clock.
+
+        :return: Content to populate the bottom toolbar, or None to hide it.
         """
-        if not self.bottom_toolbar:
-            return None
+        return None
 
-        import datetime
-        import shutil
+    def get_rprompt(self) -> AnyFormattedText:
+        """Provide text to populate the prompt-toolkit right prompt.
 
-        # Get the current time in ISO format with 0.01s precision
-        dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
-        now = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
-        left_text = sys.argv[0]
+        This method is intended to be called by prompt-toolkit as a UI lifecycle callback.
+        Because prompt-toolkit triggers this callback on every UI refresh (e.g., on every
+        keypress and at scheduled refresh intervals), keeping this function highly optimized
+        is critical to ensuring the CLI remains responsive.
 
-        # Get terminal width to calculate padding for right-alignment
-        cols, _ = shutil.get_terminal_size()
-        padding_size = cols - len(left_text) - len(now) - 1
-        if padding_size < 1:
-            padding_size = 1
-        padding = " " * padding_size
+        Override this if you want a right-prompt displaying contextual information useful for
+        your application. This could be information like the current Git branch, time, or current
+        working directory that is displayed without cluttering the main input area.
 
-        # Return formatted text for prompt-toolkit
-        return [
-            ("ansigreen", left_text),
-            ("", padding),
-            ("ansicyan", now),
-        ]
-
-    def get_rprompt(self) -> str | FormattedText | None:
-        """Provide text to populate prompt-toolkit right prompt with.
-
-        Override this if you want a right-prompt displaying contetual information useful for your application.
-        This could be information like current Git branch, time, current working directory, etc that is displayed
-        without cluttering the main input area.
-
-        :return: any type of formatted text to display as the right prompt
+        :return: Content to populate the right prompt, or None to hide it.
         """
         return None
 
@@ -2932,8 +2916,6 @@ class Cmd:
                                command's stdout.
         :return: True if running of commands should stop
         """
-        import datetime
-
         stop = False
         statement = None
 
