@@ -4288,6 +4288,16 @@ def test_path_complete_users_windows(monkeypatch, base_app):
     assert expected in matches
 
 
+def test_refresh_interval() -> None:
+    # Test default value
+    default_refresh_app = cmd2.Cmd()
+    assert default_refresh_app.main_session.refresh_interval == 0.0
+
+    # Test custom value
+    custom_refresh_app = cmd2.Cmd(refresh_interval=5.0)
+    assert custom_refresh_app.main_session.refresh_interval == 5.0
+
+
 def test_get_bottom_toolbar(base_app, monkeypatch):
     # Test default
     assert base_app.get_bottom_toolbar() is None
