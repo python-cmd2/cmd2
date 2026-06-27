@@ -2006,8 +2006,8 @@ class Cmd:
 
         This method is called by prompt-toolkit while at the main prompt if ``enable_bottom_toolbar``
         was set to ``True`` during initialization. Because prompt-toolkit executes this callback
-        on every UI refresh (such as on every keypress or timed interval), keeping this function
-        highly optimized is critical to ensuring the CLI remains responsive.
+        on every UI refresh (such as on every keypress or at scheduled refresh intervals), keeping
+        this function highly optimized is critical to ensuring the CLI remains responsive.
 
         Override this if you want a bottom toolbar displaying contextual information useful for
         your application. This could be information like the application name, current state,
@@ -2022,8 +2022,8 @@ class Cmd:
 
         This method is called by prompt-toolkit while at the main prompt if ``enable_rprompt``
         was set to ``True`` during initialization. Because prompt-toolkit executes this callback
-        on every UI refresh (such as on every keypress or timed interval), keeping this function
-        highly optimized is critical to ensuring the CLI remains responsive.
+        on every UI refresh (such as on every keypress or at scheduled refresh intervals), keeping
+        this function highly optimized is critical to ensuring the CLI remains responsive.
 
         Override this if you want a right prompt displaying contextual information useful for
         your application. This could be information like the current Git branch, time, or current
