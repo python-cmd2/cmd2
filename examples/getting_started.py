@@ -46,6 +46,8 @@ class BasicApp(cmd2.Cmd):
 
         super().__init__(
             auto_suggest=True,
+            enable_bottom_toolbar=True,
+            enable_rprompt=True,
             include_ipy=True,
             multiline_commands=["echo"],
             persistent_history_file="cmd2_history.dat",

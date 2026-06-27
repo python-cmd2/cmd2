@@ -6,7 +6,8 @@
           thread. If `False` then completion runs in the main thread and causes it to block if slow.
           Defaults to `True`.
         - **refresh_interval**: (float) How often, in seconds, to automatically refresh the UI.
-          Defaults to 0.0.
+          Defaults to 0.0. This is used for bottom toolbars and right prompts which have dynamic
+          content needing to be refreshed at regular intervals and not just when a key is pressed.
 
 - Bug Fixes
     - Fixed type hinting so that methods decorated with `with_annotated` no longer trigger spurious
@@ -48,9 +49,10 @@
       `preprocess=str.lower` on an `Enum`). The two are mutually exclusive on one parameter and
       neither may be combined with a value-less action.
 
-    - Breaking Changes
-        - Removed `Cmd.bottom_toolbar` boolean. Just return `None` from `Cmd.get_bottom_toolbar()`
-          when you don't want to display one. This is exactly how `Cmd.get_rprompt()` works.
+- Breaking Changes
+    - Renamed the `bottom_toolbar` argument in `Cmd.__init__()` to `enable_bottom_toolbar`.
+    - `get_rprompt()` is now only called if the `enable_rprompt` argument in `Cmd.__init__()` is set
+      to `True`.
 
 ## 4.0.0 (June 5, 2026)
 
