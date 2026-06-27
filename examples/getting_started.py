@@ -14,10 +14,12 @@ Features demonstrated include all of the following:
 10) How to make custom attributes settable at runtime.
 11) Shortcuts for commands
 12) Persistent bottom toolbar with realtime status updates
+13) Right prompt which displays contextual information
 """
 
 import datetime
 import pathlib
+import sys
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import AnyFormattedText
@@ -133,7 +135,5 @@ class BasicApp(cmd2.Cmd):
 
 
 if __name__ == "__main__":
-    import sys
-
     app = BasicApp()
     sys.exit(app.cmdloop())
