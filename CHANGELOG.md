@@ -5,6 +5,8 @@
         - **complete_in_thread**: (boolean) if `True`, then completion will run in a separate
           thread. If `False` then completion runs in the main thread and causes it to block if slow.
           Defaults to `True`.
+        - **refresh_interval**: (float) How often, in seconds, to automatically refresh the UI.
+          Defaults to 0.0.
 
 - Bug Fixes
     - Fixed type hinting so that methods decorated with `with_annotated` no longer trigger spurious
@@ -45,6 +47,10 @@
       transforming the raw token while keeping the inferred `type=`/`choices`/completer (e.g.
       `preprocess=str.lower` on an `Enum`). The two are mutually exclusive on one parameter and
       neither may be combined with a value-less action.
+
+    - Breaking Changes
+        - Removed `Cmd.bottom_toolbar` boolean. Just return `None` from `Cmd.get_bottom_toolbar()`
+          when you don't want to display one. This is exactly how `Cmd.get_rprompt()` works.
 
 ## 4.0.0 (June 5, 2026)
 
