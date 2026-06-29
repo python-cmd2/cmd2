@@ -22,6 +22,7 @@ import os
 import sys
 from argparse import Namespace
 from collections.abc import Callable
+from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 from pathlib import Path
@@ -39,6 +40,7 @@ from cmd2 import (
 )
 from cmd2.annotated import (
     Argument,
+    ArgumentBlock,
     Group,
     Option,
     with_annotated,
@@ -86,6 +88,32 @@ def parse_size(value: str) -> int:
 def parse_iso(value: str) -> datetime.datetime:
     """Parse an ISO-8601 timestamp (a ``converter=`` for an otherwise-unsupported type)."""
     return datetime.datetime.fromisoformat(value)
+
+
+@dataclass
+class OutputOpts(ArgumentBlock):
+    """A reusable argument block: subclass ``ArgumentBlock`` on a ``@dataclass``.
+
+    Each field becomes a flat command-line argument and the parsed values arrive
+    reconstructed as an ``OutputOpts`` instance. Several commands share these output
+    flags without repeating them, and a subcommand can inherit them from its parent
+    (see ``trace`` / ``cmd2_parent_args``).
+    """
+
+    verbose: Annotated[bool, Option("-v", "--verbose", help_text="show detail")] = False
+    indent: Annotated[int, Option("--indent", help_text="indent width")] = 0
+
+
+@dataclass
+class RunOpts(ArgumentBlock):
+    """A second block, declared *directly* on a subcommand alongside an inherited one.
+
+    A subcommand can combine its own block (whose flags live on the subcommand) with a
+    ``cmd2_parent_args`` block inherited from its parent -- see ``trace_run``.
+    """
+
+    retries: Annotated[int, Option("--retries", help_text="retry attempts on failure")] = 0
+    dry_run: Annotated[bool, Option("--dry-run", help_text="don't actually run")] = False
 
 
 class AnnotatedExample(Cmd):
@@ -527,6 +555,71 @@ class AnnotatedExample(Cmd):
     @with_annotated(subcommand_to="manage project", help="list projects")
     def manage_project_list(self) -> None:
         self.poutput("project list: demo")
+
+    # -- Argument blocks: reuse a shared set of flags ------------------------
+    # A parameter typed as an ``ArgumentBlock`` dataclass expands its fields into
+    # flat arguments and arrives reconstructed as an instance. ``describe`` and
+    # ``dump`` reuse the same ``OutputOpts`` block instead of redeclaring its flags.
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_describe(self, item: str, out: OutputOpts) -> None:
+        """Describe an item. ``out: OutputOpts`` expands a reusable argument block.
+
+        The block's fields (``--verbose``, ``--indent``) become flat options and
+        arrive as an ``OutputOpts`` instance -- the same block ``dump`` reuses.
+
+        Try:
+            describe widget --verbose --indent 4
+        """
+        self.poutput(" " * out.indent + item + (" (verbose)" if out.verbose else ""))
+
+    @with_annotated
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_dump(self, path: str, out: OutputOpts) -> None:
+        """Dump a path. Reuses the same ``OutputOpts`` block as ``describe`` -- no duplicated flags.
+
+        Try:
+            dump /etc/hosts --verbose
+        """
+        self.poutput(" " * out.indent + f"dumping {path}" + (" (verbose)" if out.verbose else ""))
+
+    # -- Sharing a block with subcommands (cmd2_base_args / cmd2_parent_args) -
+    # A base command and its subcommands share one namespace. The parent names the
+    # inheritable block ``cmd2_base_args`` (its flags land on the parent parser); a
+    # subcommand receives the same block, reconstructed from what the parent parsed,
+    # by naming its parameter ``cmd2_parent_args`` -- without redeclaring the flags.
+    # The flags are supplied on the parent: ``trace --verbose run job``. The subcommand
+    # can also declare its own block (``RunOpts`` below), whose flags live on it.
+
+    @with_annotated(base_command=True)
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_trace(self, cmd2_base_args: OutputOpts, *, cmd2_subcommand_func: Callable[[], Any] | None = None) -> None:
+        """Base command whose subcommands inherit its ``OutputOpts`` block via ``cmd2_parent_args``.
+
+        Try:
+            help trace
+            trace --verbose --indent 2 run nightly
+        """
+        if cmd2_base_args.verbose:
+            self.poutput("tracing enabled")
+        if cmd2_subcommand_func:
+            cmd2_subcommand_func()
+
+    @with_annotated(subcommand_to="trace", help="run a traced job")
+    def trace_run(self, name: str, cmd2_parent_args: OutputOpts, run: RunOpts) -> None:
+        """Run a job, combining an inherited block with the subcommand's own ``RunOpts`` block.
+
+        ``--verbose`` / ``--indent`` are parsed on ``trace`` (inherited via ``cmd2_parent_args``);
+        ``--retries`` / ``--dry-run`` are this subcommand's own flags (the ``run`` block).
+
+        Try:
+            trace --verbose run nightly --retries 3
+            trace --indent 2 run nightly --dry-run
+        """
+        mode = "dry-run" if run.dry_run else f"{run.retries} retries"
+        suffix = " (verbose)" if cmd2_parent_args.verbose else ""
+        self.poutput(" " * cmd2_parent_args.indent + f"run {name} [{mode}]" + suffix)
 
     # -- Parser customization ------------------------------------------------
     # The generated parser's help text and argument grouping are configurable
