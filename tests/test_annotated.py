@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import (
     Annotated,
     Any,
+    ClassVar,
     Literal,
     Optional,
 )
@@ -4533,6 +4534,19 @@ class TestDataclassBlockEdgeCases:
         with pytest.raises(TypeError, match=r"field 'count'.*default.*must live on the dataclass field"):
             build_parser_from_function(do_x)
 
+    def test_block_field_metadata_default_none_without_dataclass_default_rejected(self) -> None:
+        """A metadata `Option(default=None)` on a block field with no dataclass default still bypasses the
+        dataclass as the single source of truth; `None` is not exempt from the rule."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            count: Annotated[int, Option("--count", default=None)]  # default in metadata, not the field
+
+        def do_x(self, blk: Blk) -> None: ...
+
+        with pytest.raises(TypeError, match=r"field 'count'.*default.*must live on the dataclass field"):
+            build_parser_from_function(do_x)
+
     def test_post_init_runs(self) -> None:
         """Reconstruction goes through the dataclass constructor, so __post_init__ runs."""
 
@@ -5130,3 +5144,361 @@ class TestBaseArgsChainNamespacing:
         positional = next(a for a in parser._actions if not a.option_strings and a.dest != "help")
         assert positional.metavar == "target"  # field name shown in help, not the internal dest
         assert positional.dest != "target"  # but the dest is type-qualified to avoid chain collisions
+
+
+# ---------------------------------------------------------------------------
+# Field-type matrix through a block.  The conversion / collection-casting /
+# action paths are tested at the top-level-parameter level elsewhere; these
+# confirm they also work through a block field's expansion + reconstruction.
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _MultiBlockA(ArgumentBlock):
+    a: Annotated[int, Option("--a")] = 0
+
+
+@dataclass
+class _MultiBlockB(ArgumentBlock):
+    b: Annotated[int, Option("--b")] = 0
+
+
+@dataclass
+class _SetBlock(ArgumentBlock):
+    val: Annotated[set[str], Option("--val", nargs="*")] = field(default_factory=set)
+
+
+@dataclass
+class _FrozensetBlock(ArgumentBlock):
+    val: Annotated[frozenset[str], Option("--val", nargs="*")] = field(default_factory=frozenset)
+
+
+@dataclass
+class _TupleBlock(ArgumentBlock):
+    val: Annotated[tuple[int, int], Option("--val")] = (0, 0)  # fixed arity inferred from the tuple
+
+
+@dataclass
+class _TupleNargsBlock(ArgumentBlock):
+    val: Annotated[tuple[int, int], Option("--val", nargs=2)] = (0, 0)  # explicit nargs honored
+
+
+class _BlockColor(enum.Enum):
+    RED = "red"
+    GREEN = "green"
+
+
+@dataclass
+class _EnumBlock(ArgumentBlock):
+    mode: _BlockColor = _BlockColor.RED
+
+
+@dataclass
+class _LiteralBlock(ArgumentBlock):
+    mode: Annotated[Literal["fast", "slow"], Option("--mode")] = "fast"
+
+
+class TestDataclassBlockFieldTypes:
+    def test_multiple_blocks_in_one_command(self) -> None:
+        """Two distinct blocks in one signature each reconstruct from their own fields without cross-talk."""
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_x(self, first: _MultiBlockA, second: _MultiBlockB) -> None:
+                self.poutput(f"a={first.a} b={second.b} types={type(first).__name__},{type(second).__name__}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        assert run_cmd(app, "x --a 1 --b 2")[0] == ["a=1 b=2 types=_MultiBlockA,_MultiBlockB"]
+
+    @pytest.mark.parametrize(
+        ("blk_cls", "cli", "expected", "expected_type"),
+        [
+            (_SetBlock, "x --val a b a", {"a", "b"}, set),
+            (_FrozensetBlock, "x --val a b", frozenset({"a", "b"}), frozenset),
+            (_TupleBlock, "x --val 3 4", (3, 4), tuple),
+            (_TupleNargsBlock, "x --val 7 8", (7, 8), tuple),
+        ],
+        ids=["set", "frozenset", "tuple", "tuple-nargs"],
+    )
+    def test_collection_block_field_reconstructs(self, blk_cls, cli, expected, expected_type) -> None:
+        """A collection block field goes through the casting action and rebuilds as the declared container."""
+        captured: dict[str, object] = {}
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_x(self, blk: blk_cls) -> None:
+                captured["val"] = blk.val
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        run_cmd(app, cli)
+        assert captured["val"] == expected
+        assert type(captured["val"]) is expected_type
+
+    @pytest.mark.parametrize(
+        ("blk_cls", "cli", "expected"),
+        [
+            (_EnumBlock, "x --mode green", _BlockColor.GREEN),
+            (_LiteralBlock, "x --mode slow", "slow"),
+        ],
+        ids=["enum", "literal"],
+    )
+    def test_choice_block_field_reconstructs(self, blk_cls, cli, expected) -> None:
+        """An Enum/Literal block field converts the token (to the member, not the raw string) before reconstruction."""
+        captured: dict[str, object] = {}
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_x(self, blk: blk_cls) -> None:
+                captured["mode"] = blk.mode
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        run_cmd(app, cli)
+        assert captured["mode"] == expected  # for the enum, == holds only against the member, proving conversion
+
+    def test_store_const_block_field_with_dataclass_default(self) -> None:
+        """A store_const block field with a dataclass default: the field default emits SUPPRESS so the
+        constructor supplies it when the flag is absent, and the const when present."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            level: Annotated[int, Option("--hi", action="store_const", const=10)] = 1
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_x(self, blk: Blk) -> None:
+                self.poutput(f"level={blk.level}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        assert run_cmd(app, "x")[0] == ["level=1"]  # absent -> dataclass default, not the const
+        assert run_cmd(app, "x --hi")[0] == ["level=10"]  # present -> the const
+
+    def test_converter_on_block_field(self) -> None:
+        """A user converter= on a block field runs during parsing and feeds the reconstructed instance."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            count: Annotated[int, Option("--count", converter=lambda s: int(s) * 2)] = 0
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_x(self, blk: Blk) -> None:
+                self.poutput(f"count={blk.count}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        assert run_cmd(app, "x --count 5")[0] == ["count=10"]
+
+    def test_optional_bool_block_field_defaults_to_none(self) -> None:
+        """A bool | None block field (Optional flag) reconstructs to None when absent and True when given."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            flag: Annotated[bool | None, Option("--flag")] = None
+
+        captured: dict[str, object] = {}
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_x(self, blk: Blk) -> None:
+                captured["flag"] = blk.flag
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        run_cmd(app, "x")
+        assert captured["flag"] is None
+        run_cmd(app, "x --flag")
+        assert captured["flag"] is True
+
+    def test_classvar_field_is_not_expanded(self) -> None:
+        """A ClassVar is not a dataclass field, so it produces no argument and does not break reconstruction."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            name: Annotated[str, Option("--name")] = "n"
+            kind: ClassVar[str] = "fixed"
+
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_x(self, blk: Blk) -> None:
+                self.poutput(f"name={blk.name} kind={blk.kind}")
+
+        parser = build_parser_from_function(App.do_x)
+        assert {a.dest for a in parser._actions if a.dest != "help"} == {"name"}
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        assert run_cmd(app, "x --name bob")[0] == ["name=bob kind=fixed"]
+
+
+@dataclass
+class _VarBlock(ArgumentBlock):
+    x: Annotated[int, Option("--x")] = 0
+
+
+def _block_var_positional(self, *args: _VarBlock) -> None: ...
+
+
+def _block_var_keyword(self, **kwargs: _VarBlock) -> None: ...
+
+
+@dataclass
+class _ReservedCmd2Block(ArgumentBlock):
+    cmd2_subcommand_func: Annotated[str, Option("--x")] = "z"
+
+
+@dataclass
+class _ReservedArgparseBlock(ArgumentBlock):
+    dest: Annotated[str, Option("--d")] = "z"
+
+
+class TestDataclassBlockValidationExtra:
+    """Rejection branches that were reachable but previously untested."""
+
+    @pytest.mark.parametrize("func", [_block_var_positional, _block_var_keyword], ids=["var_positional", "var_keyword"])
+    def test_block_in_variadic_position_rejected(self, func) -> None:
+        """An ArgumentBlock used as *args / **kwargs is a wrapped position, not a bare block parameter."""
+        with pytest.raises(TypeError, match="wrapped position"):
+            build_parser_from_function(func)
+
+    def test_count_block_field_without_dataclass_default_rejected(self) -> None:
+        """A count block field has an action default (0) but no dataclass default, so it bypasses the
+        dataclass as the single source of truth -- the rule fires for a scalar action default too."""
+
+        @dataclass
+        class Blk(ArgumentBlock):
+            verbosity: Annotated[int, Option("--v", action="count")]  # no dataclass default
+
+        def do_x(self, blk: Blk) -> None: ...
+
+        with pytest.raises(TypeError, match=r"field 'verbosity'.*must live on the dataclass field"):
+            build_parser_from_function(do_x)
+
+    @pytest.mark.parametrize(
+        ("blk_cls", "exc", "match"),
+        [
+            (_ReservedCmd2Block, TypeError, "reserved cmd2 namespace attribute"),
+            (_ReservedArgparseBlock, ValueError, "reserved by argparse"),
+        ],
+        ids=["cmd2_namespace", "argparse"],
+    )
+    def test_reserved_block_field_name_rejected(self, blk_cls, exc, match) -> None:
+        """A block field whose name is reserved (by cmd2's namespace or by argparse) is rejected."""
+
+        def do_x(self, blk: blk_cls) -> None: ...
+
+        with pytest.raises(exc, match=match):
+            build_parser_from_function(do_x)
+
+
+def _optional_base_args(self, cmd2_base_args: _SharedOpts | None) -> None: ...
+
+
+def _optional_parent_args(self, cmd2_parent_args: _SharedOpts | None) -> None: ...
+
+
+class TestSharedBlockEdgeCases:
+    """Edge cases of the cmd2_base_args / cmd2_parent_args shared-block machinery."""
+
+    @pytest.mark.parametrize("func", [_optional_base_args, _optional_parent_args], ids=["base_args", "parent_args"])
+    def test_optional_magic_block_param_rejected(self, func) -> None:
+        """A magic param (cmd2_base_args/cmd2_parent_args) wrapped in Optional is not a bare block."""
+        with pytest.raises(TypeError, match="must be annotated with a bare ArgumentBlock"):
+            build_parser_from_function(func)
+
+    def test_subclass_parent_args_against_superclass_base_args_errors(self) -> None:
+        """Sharing is keyed by exact type: a cmd2_parent_args typed as a subclass of the ancestor's
+        cmd2_base_args is a different type, so it errors at runtime like any unmatched inherited block."""
+
+        @dataclass
+        class _Base(ArgumentBlock):
+            level: Annotated[int, Option("--level")] = 0
+
+        @dataclass
+        class _Sub(_Base):
+            extra: Annotated[int, Option("--extra")] = 0
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_root(self, cmd2_subcommand_func, cmd2_base_args: _Base) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root")
+            def root_show(self, cmd2_parent_args: _Sub) -> None: ...
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        _out, err = run_cmd(app, "root show")
+        assert any("no ancestor command declares" in line for line in err), err
+
+    def test_base_command_reconstructs_its_own_base_args(self) -> None:
+        """The declaring base command reconstructs its OWN cmd2_base_args block (shared, not inherited)."""
+
+        captured: dict[str, object] = {}
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_root(self, cmd2_subcommand_func, cmd2_base_args: _SharedOpts) -> None:
+                captured["block"] = cmd2_base_args
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root")
+            def root_show(self, cmd2_parent_args: _SharedOpts) -> None:
+                self.poutput("ran")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        run_cmd(app, "root --verbose --level 7 show")
+        assert isinstance(captured["block"], _SharedOpts)
+        assert captured["block"].verbose is True
+        assert captured["block"].level == 7
+
+    def test_same_base_args_type_in_two_independent_trees_no_leak(self) -> None:
+        """The same block type used by two unrelated base commands does not leak across them: each command
+        parses its own namespace, so the shared (type-qualified) dest is isolated per command."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_root1(self, cmd2_subcommand_func, cmd2_base_args: _SharedOpts) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root1")
+            def root1_show(self, cmd2_parent_args: _SharedOpts) -> None:
+                self.poutput(f"root1 level={cmd2_parent_args.level}")
+
+            @with_annotated(base_command=True)
+            def do_root2(self, cmd2_subcommand_func, cmd2_base_args: _SharedOpts) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root2")
+            def root2_show(self, cmd2_parent_args: _SharedOpts) -> None:
+                self.poutput(f"root2 level={cmd2_parent_args.level}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        assert run_cmd(app, "root1 --level 3 show")[0] == ["root1 level=3"]
+        assert run_cmd(app, "root2 --level 8 show")[0] == ["root2 level=8"]
+
+    def test_flat_field_kwarg_on_shared_block_is_not_supported(self) -> None:
+        """A shared block's fields use a type-qualified dest, so a programmatic flat-field kwarg by bare name
+        is not folded into the block (pass the block instance instead). Pins the shared-vs-regular asymmetry."""
+
+        class App(cmd2.Cmd):
+            @with_annotated(base_command=True)
+            def do_root(self, cmd2_subcommand_func, cmd2_base_args: _SharedOpts) -> None:
+                if cmd2_subcommand_func:
+                    cmd2_subcommand_func()
+
+            @with_annotated(subcommand_to="root")
+            def root_show(self, cmd2_parent_args: _SharedOpts) -> None: ...
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        with pytest.raises(TypeError, match="unexpected keyword argument"):
+            app.do_root("show", level=5)

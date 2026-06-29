@@ -1958,7 +1958,7 @@ _CONSTRAINTS: list[_Rule[_ArgparseArgument, Exception | None]] = [
     (
         # A block field's default must live on the dataclass field: a field default emits SUPPRESS (see
         # _DEFAULT_RULES) so the dataclass constructor produces the value fresh on every call.
-        lambda a: a.is_block_field and not a.has_default and a.default is not _UNSET and a.default is not None,
+        lambda a: a.is_block_field and not a.has_default and a.default is not _UNSET,
         lambda a: TypeError(
             f"ArgumentBlock field '{a.name}' in {a.func_qualname} would take its default ({a.default!r}) from "
             f"the option metadata or its action, but a block field's default must live on the dataclass field "
@@ -2113,7 +2113,7 @@ def _resolve_func_hints(func: Callable[..., Any], *, skip_params: frozenset[str]
         ) from exc
 
 
-def _is_argument_block(hint: Any, param: inspect.Parameter) -> TypeGuard[type]:
+def _is_argument_block(hint: Any, param: inspect.Parameter) -> TypeGuard[type[ArgumentBlock]]:
     """Whether a parameter is a bare [`ArgumentBlock`][cmd2.annotated.ArgumentBlock] whose fields expand flat.
 
     Only a by-keyword-passable parameter (positional-or-keyword or keyword-only) annotated with a bare
@@ -2128,7 +2128,7 @@ def _is_argument_block(hint: Any, param: inspect.Parameter) -> TypeGuard[type]:
     )
 
 
-def _require_magic_block(name: str, hint: Any, param: inspect.Parameter, func_qualname: str) -> type:
+def _require_magic_block(name: str, hint: Any, param: inspect.Parameter, func_qualname: str) -> type[ArgumentBlock]:
     """Return the ``ArgumentBlock`` subclass annotating a ``cmd2_base_args``/``cmd2_parent_args`` parameter.
 
     Both magic parameters must be a bare ``ArgumentBlock`` subclass, the same form a regular block uses.  A
@@ -2143,7 +2143,7 @@ def _require_magic_block(name: str, hint: Any, param: inspect.Parameter, func_qu
     )
 
 
-def _find_argument_block(hint: Any) -> type | None:
+def _find_argument_block(hint: Any) -> type[ArgumentBlock] | None:
     """Return an [`ArgumentBlock`][cmd2.annotated.ArgumentBlock] subclass found anywhere within *hint*, else ``None``.
 
     Used to reject a block that is not the bare annotation: an ``ArgumentBlock`` nested in ``Annotated`` /
@@ -2256,7 +2256,7 @@ def _expand_dataclass_block(
 class _BlockSpec(NamedTuple):
     """How to reconstruct one dataclass-block parameter from the parsed namespace at call time."""
 
-    dc_type: type
+    dc_type: type[ArgumentBlock]
     field_names: list[str]
     inherited: bool  # True for a cmd2_parent_args block (inherited from an ancestor's cmd2_base_args)
     shared: bool = False  # cmd2_base_args/cmd2_parent_args: fields live under a type-qualified dest
