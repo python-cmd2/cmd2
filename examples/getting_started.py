@@ -128,10 +128,10 @@ class BasicApp(cmd2.Cmd):
             self._toolbar_thread.join()
 
     def get_bottom_toolbar(self) -> AnyFormattedText:
-        # Get the current time in ISO format with 0.01s precision
-        dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
-        now = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
         left_text = sys.argv[0]
+
+        with self._toolbar_lock:
+            now = self._toolbar_state.get("now", "")
 
         # Fetch the terminal width to calculate padding for right-alignment.
         # If called outside a running app loop (e.g., in unit tests), get_app()
