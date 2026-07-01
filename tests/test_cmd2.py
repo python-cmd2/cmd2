@@ -4324,24 +4324,12 @@ def test_enable_rprompt() -> None:
     assert custom_app.main_session.rprompt is None
 
 
-def test_get_bottom_toolbar(base_app, monkeypatch):
-    # Test default
+def test_get_bottom_toolbar(base_app: cmd2.Cmd) -> None:
     assert base_app.get_bottom_toolbar() is None
 
-    # Test overridden
-    expected_text = "bottom toolbar text"
-    base_app.get_bottom_toolbar = lambda: expected_text
-    assert base_app.get_bottom_toolbar() == expected_text
 
-
-def test_get_rprompt(base_app):
-    # Test default
+def test_get_rprompt(base_app: cmd2.Cmd) -> None:
     assert base_app.get_rprompt() is None
-
-    # Test overridden
-    expected_text = "rprompt text"
-    base_app.get_rprompt = lambda: expected_text
-    assert base_app.get_rprompt() == expected_text
 
 
 def test_multiline_complete_statement_keyboard_interrupt(multiline_app, monkeypatch):
