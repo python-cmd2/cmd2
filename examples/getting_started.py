@@ -26,6 +26,7 @@ import datetime
 import pathlib
 import sys
 import threading
+from typing import Annotated
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import AnyFormattedText
@@ -36,6 +37,7 @@ from cmd2 import (
     Color,
     stylize,
 )
+from cmd2.annotated import Option
 
 
 class BasicApp(cmd2.Cmd):
@@ -160,7 +162,11 @@ class BasicApp(cmd2.Cmd):
         return [(style, text)]
 
     @cmd2.with_annotated
-    def do_intro(self, interactive: bool = False, repeat: int = 1) -> None:
+    def do_intro(
+        self,
+        interactive: Annotated[bool, Option(help_text="If True, prints a simulated interactive setup message")] = False,
+        repeat: Annotated[int, Option(help_text="Number of times to repeat the intro banner")] = 1,
+    ) -> None:
         """Display the intro banner.
 
         :param interactive: If True, prints a simulated interactive setup message.
