@@ -164,10 +164,10 @@ class BasicApp(cmd2.Cmd):
     @cmd2.with_annotated
     def do_intro(
         self,
-        interactive: Annotated[
+        interactive: Annotated[  # Full annotation for an optional argument with default value and help text
             bool, Option(help_text="If True, prints a simulated interactive setup message after the intro banner")
         ] = False,
-        repeat: Annotated[int, Option(help_text="Number of times to repeat the intro banner")] = 1,
+        repeat: int = 1,  # Simple annotation for an optional argument with default value but no help text
     ) -> None:
         """Display the intro banner.
 
