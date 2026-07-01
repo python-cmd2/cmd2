@@ -20,6 +20,8 @@ Features demonstrated include all of the following:
 import datetime
 import pathlib
 import sys
+import threading
+import time
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import AnyFormattedText
@@ -91,6 +93,29 @@ class BasicApp(cmd2.Cmd):
                 choices=fg_colors,
             )
         )
+
+        # Initialize background thread state for the bottom toolbar
+        self._toolbar_state = {"cols": 80, "now": ""}
+        self._toolbar_lock = threading.Lock()
+        self._stop_thread_event = threading.Event()
+        self._toolbar_thread = None
+
+    def _update_toolbar_state(self) -> None:
+        """Background thread worker to update toolbar state continuously."""
+        while not self._stop_thread_event.is_set():
+            # Get the current time in ISO format with 0.01s precision
+            dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
+            now = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
+
+            # Fetch the terminal width.
+            cols = get_app().output.get_size().columns
+
+            with self._toolbar_lock:
+                self._toolbar_state["cols"] = cols
+                self._toolbar_state["now"] = now
+
+            # Sleep to yield CPU, polling 10 times a second
+            time.sleep(0.1)
 
     def get_bottom_toolbar(self) -> AnyFormattedText:
         # Get the current time in ISO format with 0.01s precision
