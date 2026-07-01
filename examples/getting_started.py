@@ -17,12 +17,16 @@ Features demonstrated include all of the following:
 13) Right prompt which displays contextual information
 14) Background thread to update the content displayed by the bottom toolbar outside of the UI thread to keep things responsive
 15) Using preloop() and postloop() hooks to start and stop a background thread
+16) Using the with_annotated decorator to parse typed command arguments
+17) Using the with_argparser decorator to parse command arguments with a custom parser
 """
 
+import argparse
 import datetime
 import pathlib
 import sys
 import threading
+from typing import Annotated
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import AnyFormattedText
@@ -33,6 +37,7 @@ from cmd2 import (
     Color,
     stylize,
 )
+from cmd2.annotated import Option
 
 
 class BasicApp(cmd2.Cmd):
@@ -156,18 +161,49 @@ class BasicApp(cmd2.Cmd):
         text = f"cwd={current_working_directory}"
         return [(style, text)]
 
-    def do_intro(self, _: cmd2.Statement) -> None:
-        """Display the intro banner."""
-        self.poutput(self.intro)
+    @cmd2.with_annotated
+    def do_intro(
+        self,
+        interactive: Annotated[  # Full annotation for an optional argument with default value and help text
+            bool, Option(help_text="If True, prints a simulated interactive setup message after the intro banner")
+        ] = False,
+        repeat: int = 1,  # Simple annotation for an optional argument with default value but no help text
+    ) -> None:
+        """Display the intro banner.
 
-    def do_echo(self, arg: cmd2.Statement) -> None:
-        """Multiline command."""
-        self.poutput(
-            stylize(
-                arg,
-                style=Style(color=self.foreground_color),
+        :param interactive: If True, prints a simulated interactive setup message.
+        :param repeat: Number of times to repeat the intro banner.
+        """
+        for _ in range(repeat):
+            self.poutput(self.intro)
+        if interactive:
+            self.poutput(
+                stylize(
+                    "Interactive mode enabled! (Simulated interactive setup)",
+                    style=Style(color=Color.YELLOW.value),
+                )
             )
-        )
+
+    # do_echo parser
+    echo_parser = cmd2.Cmd2ArgumentParser(description="Multiline command that echoes input.")
+    echo_parser.add_argument("-u", "--upper", action="store_true", help="uppercase the output")
+    echo_parser.add_argument("-r", "--repeat", type=int, default=1, help="output [n] times")
+    echo_parser.add_argument("words", nargs="+", help="words to print")
+
+    @cmd2.with_argparser(echo_parser)
+    def do_echo(self, args: argparse.Namespace) -> None:
+        """Multiline command."""
+        output_str = " ".join(args.words)
+        if args.upper:
+            output_str = output_str.upper()
+
+        for _ in range(args.repeat):
+            self.poutput(
+                stylize(
+                    output_str,
+                    style=Style(color=self.foreground_color),
+                )
+            )
 
 
 if __name__ == "__main__":
