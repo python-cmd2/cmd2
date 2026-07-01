@@ -95,7 +95,7 @@ class BasicApp(cmd2.Cmd):
         )
 
         # Initialize background thread state for the bottom toolbar
-        self._toolbar_state = {"cols": 80, "now": ""}
+        self._toolbar_state = {"now": ""}
         self._toolbar_lock = threading.Lock()
         self._stop_thread_event = threading.Event()
         self._toolbar_thread = None
@@ -107,11 +107,7 @@ class BasicApp(cmd2.Cmd):
             dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
             now = dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-4] + dt.strftime("%z")
 
-            # Fetch the terminal width.
-            cols = get_app().output.get_size().columns
-
             with self._toolbar_lock:
-                self._toolbar_state["cols"] = cols
                 self._toolbar_state["now"] = now
 
             # Sleep to yield CPU, polling 10 times a second
