@@ -13,6 +13,7 @@ Python project, which utilizes `uv` for environment and package management.
     - To run programs directly from a PyPI package (installing it on the fly if necessary), use
       `uvx ...` (shortcut for `uv tool run`).
 - **New Dependencies:** If a new dependency is required, please state the reason for its inclusion.
+- **Do not commit spec or plan documents to git without asking first.**
 
 ## Python Code Standards
 
