@@ -113,6 +113,20 @@ class BasicApp(cmd2.Cmd):
             # Sleep to yield CPU, polling 10 times a second
             time.sleep(0.1)
 
+    def preloop(self) -> None:
+        """Hook method executed once when the cmdloop() method is called."""
+        super().preloop()
+        self._stop_thread_event.clear()
+        self._toolbar_thread = threading.Thread(target=self._update_toolbar_state)
+        self._toolbar_thread.start()
+
+    def postloop(self) -> None:
+        """Hook method executed once when the cmdloop() method is about to return."""
+        super().postloop()
+        if self._toolbar_thread and self._toolbar_thread.is_alive():
+            self._stop_thread_event.set()
+            self._toolbar_thread.join()
+
     def get_bottom_toolbar(self) -> AnyFormattedText:
         # Get the current time in ISO format with 0.01s precision
         dt = datetime.datetime.now(datetime.timezone.utc).astimezone()
