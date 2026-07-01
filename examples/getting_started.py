@@ -99,7 +99,7 @@ class BasicApp(cmd2.Cmd):
         self._toolbar_state = {"now": ""}
         self._toolbar_lock = threading.Lock()
         self._stop_thread_event = threading.Event()
-        self._toolbar_thread = None
+        self._toolbar_thread: threading.Thread | None = None
 
     def _update_toolbar_state(self) -> None:
         """Background thread worker to update toolbar state continuously."""
