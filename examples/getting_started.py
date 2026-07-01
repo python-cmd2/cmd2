@@ -21,7 +21,6 @@ import datetime
 import pathlib
 import sys
 import threading
-import time
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import AnyFormattedText
@@ -111,13 +110,13 @@ class BasicApp(cmd2.Cmd):
                 self._toolbar_state["now"] = now
 
             # Sleep to yield CPU, polling 10 times a second
-            time.sleep(0.1)
+            self._stop_thread_event.wait(0.1)
 
     def preloop(self) -> None:
         """Hook method executed once when the cmdloop() method is called."""
         super().preloop()
         self._stop_thread_event.clear()
-        self._toolbar_thread = threading.Thread(target=self._update_toolbar_state)
+        self._toolbar_thread = threading.Thread(target=self._update_toolbar_state, daemon=True)
         self._toolbar_thread.start()
 
     def postloop(self) -> None:
