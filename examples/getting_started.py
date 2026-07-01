@@ -15,7 +15,7 @@ Features demonstrated include all of the following:
 11) Shortcuts for commands
 12) Persistent bottom toolbar with realtime status updates
 13) Right prompt which displays contextual information
-14) Using a background thread to update the bottom toolbar in an efficient manner
+14) Background thread to update the content displayed by the bottom toolbar outside of the UI thread to keep things responsive
 15) Using preloop() and postloop() hooks to start and stop a background thread
 """
 
