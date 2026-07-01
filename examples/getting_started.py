@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A simple example cmd2 application demonstrating many common features.
+"""An example cmd2 application demonstrating many common features.
 
 Features demonstrated include all of the following:
  1) Colorizing/stylizing output
@@ -15,6 +15,8 @@ Features demonstrated include all of the following:
 11) Shortcuts for commands
 12) Persistent bottom toolbar with realtime status updates
 13) Right prompt which displays contextual information
+14) Using a background thread to update the bottom toolbar in an efficient manner
+15) Using preloop() and postloop() hooks to start and stop a background thread
 """
 
 import datetime
@@ -109,8 +111,8 @@ class BasicApp(cmd2.Cmd):
             with self._toolbar_lock:
                 self._toolbar_state["now"] = now
 
-            # Sleep to yield CPU, polling 10 times a second
-            self._stop_thread_event.wait(0.1)
+            # Sleep to yield CPU, polling 4 times a second
+            self._stop_thread_event.wait(0.25)
 
     def preloop(self) -> None:
         """Hook method executed once when the cmdloop() method is called."""
@@ -136,7 +138,7 @@ class BasicApp(cmd2.Cmd):
         # If called outside a running app loop (e.g., in unit tests), get_app()
         # safely returns a dummy app with an 80-column fallback.
         cols = get_app().output.get_size().columns
-        padding_size = cols - len(left_text) - len(now) - 1
+        padding_size = cols - len(left_text) - len(now)
         if padding_size < 1:
             padding_size = 1
         padding = " " * padding_size
