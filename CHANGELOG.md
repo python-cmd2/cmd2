@@ -57,7 +57,10 @@
       `cmd2_parent_args` parameters, passing parent-level options down without redeclaring them.
 
 - Breaking Changes
-    - Renamed the `bottom_toolbar` argument in `Cmd.__init__()` to `enable_bottom_toolbar`.
+    - Renamed the `bottom_toolbar` argument in `Cmd.__init__()` to `enable_bottom_toolbar`. It is
+      also now strictly an `__init__` parameter and not an instance attribute.
+    - `complete_in_thread` is now strictly an `__init__` parameter and not an instance attribute of
+      `Cmd`.
     - `get_rprompt()` is now only called if the `enable_rprompt` argument in `Cmd.__init__()` is set
       to `True`.
 

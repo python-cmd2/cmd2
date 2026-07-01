@@ -34,15 +34,12 @@ The `cmd2.Cmd` class provides a large number of public instance attributes which
 Here are instance attributes of `cmd2.Cmd` which developers might wish to override:
 
 - **broken_pipe_warning**: if non-empty, this string will be displayed if a broken pipe error occurs
-- **complete_in_thread**: if `True`, then completion will run in a separate thread (Default: `True`)
 - **continuation_prompt**: used for multiline commands on 2nd+ line of input
 - **debug**: if `True`, show full stack trace on error (Default: `False`)
 - **default_error**: the error that prints when a non-existent command is run
 - **disabled_commands**: commands that have been disabled from use. This is to support commands that are only available during specific states of the application. This dictionary's keys are the command names and its values are DisabledCommand objects.
 - **echo**: if `True`, each command the user issues will be repeated to the screen before it is executed. This is particularly useful when running scripts. This behavior does not occur when running a command at the prompt. (Default: `False`)
 - **editor**: text editor program to use with _edit_ command (e.g. `vim`)
-- **enable_bottom_toolbar**: if `True`, enables a bottom toolbar while at the main prompt. (Default: `False`)
-- **enable_rprompt**: if `True`, enables a right prompt while at the main prompt. (Default: `False`)
 - **exclude_from_history**: commands to exclude from the _history_ command
 - **exit_code**: this determines the value returned by `cmdloop()` when exiting the application
 - **help_error**: the error that prints when no help information can be found
@@ -56,7 +53,6 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **py_bridge_name**: name by which embedded Python environments and scripts refer to the `cmd2` application by in order to call commands (Default: `app`)
 - **py_locals**: dictionary that defines specific variables/functions available in Python shells and scripts (provides more fine-grained control than making everything available with **self_in_py**)
 - **quiet**: if `True`, then completely suppress nonessential output (Default: `False`)
-- **refresh_interval**: how often, in seconds, to automatically refresh the UI. (Default: 0.0)
 - **scripts_add_to_history**: if `True`, scripts and pyscripts add commands to history (Default: `True`)
 - **self_in_py**: if `True`, allow access to your application in _py_ command via `self` (Default: `False`)
 - **settable**: dictionary that controls which of these instance attributes are settable at runtime using the _set_ command
