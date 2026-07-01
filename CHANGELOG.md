@@ -5,6 +5,9 @@
         - **complete_in_thread**: (boolean) if `True`, then completion will run in a separate
           thread. If `False` then completion runs in the main thread and causes it to block if slow.
           Defaults to `True`.
+        - **refresh_interval**: (float) How often, in seconds, to automatically refresh the UI.
+          Defaults to 0.0. This is used for bottom toolbars and right prompts which have dynamic
+          content needing to be refreshed at regular intervals and not just when a key is pressed.
 
 - Bug Fixes
     - Fixed type hinting so that methods decorated with `with_annotated` no longer trigger spurious
@@ -52,6 +55,14 @@
       [annotated](docs/features/annotated.md) documentation.
     - A command can share an argument block with its subcommands via `cmd2_base_args` /
       `cmd2_parent_args` parameters, passing parent-level options down without redeclaring them.
+
+- Breaking Changes
+    - Renamed the `bottom_toolbar` argument in `Cmd.__init__()` to `enable_bottom_toolbar`. It is
+      also now strictly an `__init__` parameter and not an instance attribute.
+    - `complete_in_thread` is now strictly an `__init__` parameter and not an instance attribute of
+      `Cmd`.
+    - `get_rprompt()` is now only called if the `enable_rprompt` argument in `Cmd.__init__()` is set
+      to `True`.
 
 ## 4.0.0 (June 5, 2026)
 

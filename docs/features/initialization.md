@@ -33,9 +33,7 @@ The `cmd2.Cmd` class provides a large number of public instance attributes which
 
 Here are instance attributes of `cmd2.Cmd` which developers might wish to override:
 
-- **bottom_toolbar**: if `True`, then a bottom toolbar will be displayed (Default: `False`)
 - **broken_pipe_warning**: if non-empty, this string will be displayed if a broken pipe error occurs
-- **complete_in_thread**: if `True`, then completion will run in a separate thread (Default: `True`)
 - **continuation_prompt**: used for multiline commands on 2nd+ line of input
 - **debug**: if `True`, show full stack trace on error (Default: `False`)
 - **default_error**: the error that prints when a non-existent command is run
