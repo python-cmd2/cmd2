@@ -63,3 +63,6 @@ package-lock.json
 
 # GitHub App credentials
 gha-creds-*.json
+
+# Superpowers extension
+docs/superpowers
