@@ -184,13 +184,16 @@ class BasicApp(cmd2.Cmd):
                 )
             )
 
-    # do_echo parser
-    echo_parser = cmd2.Cmd2ArgumentParser(description="Multiline command that echoes input.")
-    echo_parser.add_argument("-u", "--upper", action="store_true", help="uppercase the output")
-    echo_parser.add_argument("-r", "--repeat", type=int, default=1, help="output [n] times")
-    echo_parser.add_argument("words", nargs="+", help="words to print")
+    @staticmethod
+    def _build_echo_parser() -> cmd2.Cmd2ArgumentParser:
+        """Parser factory method for use with the echo command."""
+        echo_parser = cmd2.Cmd2ArgumentParser(description="Multiline command that echoes input.")
+        echo_parser.add_argument("-u", "--upper", action="store_true", help="uppercase the output")
+        echo_parser.add_argument("-r", "--repeat", type=int, default=1, help="output [n] times")
+        echo_parser.add_argument("words", nargs="+", help="words to print")
+        return echo_parser
 
-    @cmd2.with_argparser(echo_parser)
+    @cmd2.with_argparser(_build_echo_parser)
     def do_echo(self, args: argparse.Namespace) -> None:
         """Multiline command."""
         output_str = " ".join(args.words)
