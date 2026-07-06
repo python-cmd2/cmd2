@@ -162,27 +162,41 @@ class BasicApp(cmd2.Cmd):
         return [(style, text)]
 
     @cmd2.with_annotated
-    def do_intro(
+    def do_cat(
         self,
-        interactive: Annotated[  # Full annotation for an optional argument with default value and help text
-            bool, Option(help_text="If True, prints a simulated interactive setup message after the intro banner")
+        path: pathlib.Path,  # Required positional argument with type annotation, tab-completes filesystem paths automatically
+        numbered: Annotated[  # Optional flag argument with type annotation, default value, and help text
+            bool, Option("-n", "--number", help_text="prefix each line with its number")
         ] = False,
-        repeat: int = 1,  # Simple annotation for an optional argument with default value but no help text
     ) -> None:
+        """Print a file's contents. `path` tab-completes filesystem paths automatically.
+
+        Try:
+            cat <TAB>              # path completes files/dirs -- no completer wired
+            cat notes.txt
+            cat notes.txt -n       # -n / --number, declared via Option metadata
+            cat notes.txt --no-number
+        """
+        text = path.read_text()
+        lines = text.splitlines()
+        if numbered:
+            numbered_lines = []
+            for index, line in enumerate(lines, start=1):
+                numbered_lines.append(f"{index}: {line}")
+            self.ppaged("\n".join(numbered_lines))
+        else:
+            # Just print the contents using a pager
+            self.ppaged(path.read_text())
+
+    def do_intro(self, _: cmd2.Statement) -> None:
         """Display the intro banner.
 
-        :param interactive: If True, prints a simulated interactive setup message.
-        :param repeat: Number of times to repeat the intro banner.
+        This command uses raw statement parsing. In general, we strongly recommend against this approach. But since this
+        command effectively takes no arguments, it is safe to use raw statement parsing here.
+
+        The & key is also used as a shortcut for this command, so you can also type & to display the intro banner.
         """
-        for _ in range(repeat):
-            self.poutput(self.intro)
-        if interactive:
-            self.poutput(
-                stylize(
-                    "Interactive mode enabled! (Simulated interactive setup)",
-                    style=Style(color=Color.YELLOW.value),
-                )
-            )
+        self.poutput(self.intro)
 
     @staticmethod
     def _build_echo_parser() -> cmd2.Cmd2ArgumentParser:
