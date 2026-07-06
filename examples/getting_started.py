@@ -17,12 +17,16 @@ Features demonstrated include all of the following:
 13) Right prompt which displays contextual information
 14) Background thread to update the content displayed by the bottom toolbar outside of the UI thread to keep things responsive
 15) Using preloop() and postloop() hooks to start and stop a background thread
+16) Using the with_annotated decorator to parse typed command arguments
+17) Using the with_argparser decorator to parse command arguments with a custom parser
 """
 
+import argparse
 import datetime
 import pathlib
 import sys
 import threading
+from typing import Annotated
 
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import AnyFormattedText
@@ -33,6 +37,7 @@ from cmd2 import (
     Color,
     stylize,
 )
+from cmd2.annotated import Option
 
 
 class BasicApp(cmd2.Cmd):
@@ -156,18 +161,66 @@ class BasicApp(cmd2.Cmd):
         text = f"cwd={current_working_directory}"
         return [(style, text)]
 
+    @cmd2.with_annotated
+    def do_cat(
+        self,
+        path: pathlib.Path,  # Required positional argument with type annotation, tab-completes filesystem paths automatically
+        numbered: Annotated[  # Optional flag argument with type annotation, default value, and help text
+            bool, Option("-n", "--number", help_text="prefix each line with its number")
+        ] = False,
+    ) -> None:
+        """Print a file's contents. `path` tab-completes filesystem paths automatically.
+
+        Try:
+            cat <TAB>              # path completes files/dirs -- no completer wired
+            cat notes.txt
+            cat notes.txt -n       # -n / --number, declared via Option metadata
+            cat notes.txt --no-number
+        """
+        text = path.read_text()
+        lines = text.splitlines()
+        if numbered:
+            numbered_lines = []
+            for index, line in enumerate(lines, start=1):
+                numbered_lines.append(f"{index}: {line}")
+            self.ppaged("\n".join(numbered_lines))
+        else:
+            # Just print the contents using a pager
+            self.ppaged(path.read_text())
+
     def do_intro(self, _: cmd2.Statement) -> None:
-        """Display the intro banner."""
+        """Display the intro banner.
+
+        This command uses raw statement parsing. In general, we strongly recommend against this approach. But since this
+        command effectively takes no arguments, it is safe to use raw statement parsing here.
+
+        The & key is also used as a shortcut for this command, so you can also type & to display the intro banner.
+        """
         self.poutput(self.intro)
 
-    def do_echo(self, arg: cmd2.Statement) -> None:
+    @staticmethod
+    def _build_echo_parser() -> cmd2.Cmd2ArgumentParser:
+        """Parser factory method for use with the echo command."""
+        echo_parser = cmd2.Cmd2ArgumentParser(description="Multiline command that echoes input.")
+        echo_parser.add_argument("-u", "--upper", action="store_true", help="uppercase the output")
+        echo_parser.add_argument("-r", "--repeat", type=int, default=1, help="output [n] times")
+        echo_parser.add_argument("words", nargs="+", help="words to print")
+        return echo_parser
+
+    @cmd2.with_argparser(_build_echo_parser)
+    def do_echo(self, args: argparse.Namespace) -> None:
         """Multiline command."""
-        self.poutput(
-            stylize(
-                arg,
-                style=Style(color=self.foreground_color),
+        output_str = " ".join(args.words)
+        if args.upper:
+            output_str = output_str.upper()
+
+        for _ in range(args.repeat):
+            self.poutput(
+                stylize(
+                    output_str,
+                    style=Style(color=self.foreground_color),
+                )
             )
-        )
 
 
 if __name__ == "__main__":
