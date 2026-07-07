@@ -80,7 +80,7 @@ def pt_filter_style(text: str | ANSI) -> str | ANSI:
 def pt_resolve_color_depth() -> ColorDepth:
     """Determine the prompt-toolkit ColorDepth based on NO_COLOR and ru.ALLOW_STYLE."""
     if os.environ.get("NO_COLOR") or ru.ALLOW_STYLE == ru.AllowStyle.NEVER:
-        return ColorDepth.DEPTH_1_BIT
+        return ColorDepth.MONOCHROME
     return ColorDepth.TRUE_COLOR
 
 

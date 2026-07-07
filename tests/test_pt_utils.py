@@ -116,14 +116,14 @@ def test_pt_resolve_color_depth_terminal(monkeypatch) -> None:
 def test_pt_resolve_color_depth_never(monkeypatch) -> None:
     # Under NEVER, colors are suppressed regardless of NO_COLOR
     monkeypatch.delenv("NO_COLOR", raising=False)
-    assert pt_resolve_color_depth() == ColorDepth.DEPTH_1_BIT
+    assert pt_resolve_color_depth() == ColorDepth.MONOCHROME
 
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_pt_resolve_color_depth_no_color(monkeypatch) -> None:
     # Mock NO_COLOR to ensure colors are suppressed
     monkeypatch.setenv("NO_COLOR", "1")
-    assert pt_resolve_color_depth() == ColorDepth.DEPTH_1_BIT
+    assert pt_resolve_color_depth() == ColorDepth.MONOCHROME
 
 
 class TestCmd2Lexer:
