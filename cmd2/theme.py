@@ -212,18 +212,6 @@ def register_pt_mapping(style_name: str, pt_ui_names: str | Iterable[str]) -> No
         _sync_pt_theme()
 
 
-def register_synchronized_style(style_name: str) -> None:
-    """Register a Rich theme style for synchronization with prompt-toolkit.
-
-    This ensures that the style is synchronized to the prompt-toolkit theme
-    (accessible via 'class:style_name') even if it does not begin with a
-    registered prefix.
-
-    :param style_name: The style name used in the Rich theme.
-    """
-    register_pt_mapping(style_name, [])
-
-
 def unregister_pt_mapping(style_name: str, pt_ui_names: str | Iterable[str]) -> None:
     """Remove one or more prompt-toolkit UI component mappings.
 
@@ -252,6 +240,18 @@ def unregister_pt_mapping(style_name: str, pt_ui_names: str | Iterable[str]) -> 
     # Trigger a re-sync if the theme is already initialized
     if changed and _PT_THEME is not None:
         _sync_pt_theme()
+
+
+def register_synchronized_style(style_name: str) -> None:
+    """Register a Rich theme style for synchronization with prompt-toolkit.
+
+    This ensures that the style is synchronized to the prompt-toolkit theme
+    (accessible via 'class:style_name') even if it does not begin with a
+    registered prefix.
+
+    :param style_name: The style name used in the Rich theme.
+    """
+    register_pt_mapping(style_name, [])
 
 
 def unregister_synchronized_style(style_name: str) -> None:
