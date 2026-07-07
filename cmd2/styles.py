@@ -72,7 +72,10 @@ DEFAULT_CMD2_STYLES: dict[str, StyleType] = {
     Cmd2Style.COMMAND_LINE: Style(color=Color.CYAN, bold=True),
     Cmd2Style.COMPLETION_MENU: Style(color="#000000", bgcolor="#bbbbbb"),  # prompt-toolkit default
     Cmd2Style.COMPLETION_MENU_COMPLETION: Style(),  # prompt-toolkit default
-    Cmd2Style.COMPLETION_MENU_CURRENT: Style(color=Color.GREEN, bgcolor=Color.BLACK),  # This style swaps FG and BG colors
+    # Defined with swapped FG/BG colors because prompt-toolkit applies 'reverse' by default.
+    # This yields a black-on-green highlight in color mode, while maintaining a fallback
+    # reverse-video highlight when colors are disabled (e.g. NO_COLOR=1 or allow_style=never).
+    Cmd2Style.COMPLETION_MENU_CURRENT: Style(color=Color.GREEN, bgcolor=Color.BLACK),
     Cmd2Style.COMPLETION_MENU_META: Style(color="#000000", bgcolor="#bbbbbb"),  # prompt-toolkit default
     Cmd2Style.COMPLETION_MENU_META_CURRENT: Style(color=Color.BLACK, bgcolor=Color.BRIGHT_GREEN),
     Cmd2Style.ERROR: Style(color=Color.BRIGHT_RED),

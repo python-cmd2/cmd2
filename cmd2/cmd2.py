@@ -79,7 +79,6 @@ from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input import DummyInput, create_input
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.output import DummyOutput, create_output
-from prompt_toolkit.output.color_depth import ColorDepth
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
 from prompt_toolkit.styles import DynamicStyle
@@ -202,6 +201,7 @@ from .pt_utils import (
     Cmd2History,
     Cmd2Lexer,
     pt_filter_style,
+    pt_resolve_color_depth,
 )
 from .utils import (
     Settable,
@@ -778,7 +778,7 @@ class Cmd:
         kwargs: dict[str, Any] = {
             "auto_suggest": AutoSuggestFromHistory() if auto_suggest else None,
             "bottom_toolbar": self.get_bottom_toolbar if enable_bottom_toolbar else None,
-            "color_depth": ColorDepth.TRUE_COLOR,
+            "color_depth": pt_resolve_color_depth(),
             "complete_style": CompleteStyle.MULTI_COLUMN,
             "complete_in_thread": complete_in_thread,
             "complete_while_typing": False,
@@ -1443,6 +1443,7 @@ class Cmd:
     def allow_style(self, value: ru.AllowStyle) -> None:
         """Setter property needed to support do_set when it updates allow_style."""
         ru.ALLOW_STYLE = value
+        self.main_session.color_depth = pt_resolve_color_depth()
 
     @property
     def traceback_show_locals(self) -> bool:

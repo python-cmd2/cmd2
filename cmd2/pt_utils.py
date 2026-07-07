@@ -1,5 +1,6 @@
 """Utilities for integrating prompt_toolkit with cmd2."""
 
+import os
 import re
 from collections.abc import (
     Callable,
@@ -21,6 +22,7 @@ from prompt_toolkit.document import Document
 from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.history import History
 from prompt_toolkit.lexers import Lexer
+from prompt_toolkit.output.color_depth import ColorDepth
 from rich.style import Style, StyleType
 
 from . import (
@@ -73,6 +75,13 @@ def pt_filter_style(text: str | ANSI) -> str | ANSI:
 
     # String must be an ANSI object for prompt-toolkit to render ANSI style sequences.
     return text if isinstance(text, ANSI) else ANSI(text)
+
+
+def pt_resolve_color_depth() -> ColorDepth:
+    """Determine the prompt-toolkit ColorDepth based on NO_COLOR and ru.ALLOW_STYLE."""
+    if os.environ.get("NO_COLOR") or ru.ALLOW_STYLE == ru.AllowStyle.NEVER:
+        return ColorDepth.DEPTH_1_BIT
+    return ColorDepth.TRUE_COLOR
 
 
 @lru_cache(maxsize=256)

@@ -245,7 +245,9 @@ def test_set_no_settables(base_app) -> None:
     ],
 )
 @with_ansi_style(ru.AllowStyle.TERMINAL)
-def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
+def test_set_allow_style(base_app: cmd2.Cmd, new_val: str, is_valid: bool, expected: ru.AllowStyle) -> None:
+    from cmd2.pt_utils import pt_resolve_color_depth
+
     # Use the set command to alter allow_style
     out, err = run_cmd(base_app, f"set allow_style {new_val}")
     assert base_app.last_result is is_valid
@@ -255,6 +257,7 @@ def test_set_allow_style(base_app, new_val, is_valid, expected) -> None:
     if is_valid:
         assert out
         assert not err
+        assert base_app.main_session.color_depth == pt_resolve_color_depth()
 
 
 def test_set_traceback_show_locals(base_app: cmd2.Cmd) -> None:
