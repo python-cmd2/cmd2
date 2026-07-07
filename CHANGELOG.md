@@ -1,5 +1,16 @@
-## 4.1.0 (TBD)
+## 4.1.0 (July 7, 2026)
 
+- Breaking Changes
+    - Renamed the `bottom_toolbar` argument in `Cmd.__init__()` to `enable_bottom_toolbar`. It is
+      also now strictly an `__init__` parameter and not an instance attribute.
+    - `complete_in_thread` is now strictly an `__init__` parameter and not an instance attribute of
+      `Cmd`.
+    - `get_rprompt()` is now only called if the `enable_rprompt` argument in `Cmd.__init__()` is set
+      to `True`.
+- Bug Fixes
+    - Fixed type hinting so that methods decorated with `with_annotated` no longer trigger spurious
+      mypy errors and preserve their original signature.
+    - Fixed cmd2 bypassing NO_COLOR and allow_style when setting prompt-toolkit's color depth.
 - Enhancements
     - New `cmd2.Cmd` parameters
         - **complete_in_thread**: (boolean) if `True`, then completion will run in a separate
@@ -8,12 +19,13 @@
         - **refresh_interval**: (float) How often, in seconds, to automatically refresh the UI.
           Defaults to 0.0. This is used for bottom toolbars and right prompts which have dynamic
           content needing to be refreshed at regular intervals and not just when a key is pressed.
-
-- Bug Fixes
-    - Fixed type hinting so that methods decorated with `with_annotated` no longer trigger spurious
-      mypy errors and preserve their original signature.
-    - Fixed cmd2 bypassing NO_COLOR and allow_style when setting prompt-toolkit's color depth.
-
+    - Improved
+      [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
+      example
+        - Shows how to properly and safely use a background thread to update the bottom toolbar with
+          dynamic content
+        - Demonstrates how to use the `@with_argparser` and `@with_argument_block` decorators for
+          parsing command arguments
 - Experimental features
     - `@with_annotated` now supports `frozenset[T]` collection parameters, alongside the existing
       `list[T]`, `set[T]`, and `tuple[T, ...]` collection types.
@@ -56,14 +68,6 @@
       [annotated](docs/features/annotated.md) documentation.
     - A command can share an argument block with its subcommands via `cmd2_base_args` /
       `cmd2_parent_args` parameters, passing parent-level options down without redeclaring them.
-
-- Breaking Changes
-    - Renamed the `bottom_toolbar` argument in `Cmd.__init__()` to `enable_bottom_toolbar`. It is
-      also now strictly an `__init__` parameter and not an instance attribute.
-    - `complete_in_thread` is now strictly an `__init__` parameter and not an instance attribute of
-      `Cmd`.
-    - `get_rprompt()` is now only called if the `enable_rprompt` argument in `Cmd.__init__()` is set
-      to `True`.
 
 ## 4.0.0 (June 5, 2026)
 
