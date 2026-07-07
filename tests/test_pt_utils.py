@@ -100,15 +100,15 @@ def test_pt_filter_style_never() -> None:
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_pt_resolve_color_depth_always(monkeypatch) -> None:
-    # Ensure any host NO_COLOR environment variable doesn't affect the test
+    # Clear NO_COLOR to ensure colors are not suppressed
     monkeypatch.delenv("NO_COLOR", raising=False)
     assert pt_resolve_color_depth() == ColorDepth.TRUE_COLOR
 
 
 @with_ansi_style(ru.AllowStyle.TERMINAL)
 def test_pt_resolve_color_depth_terminal(monkeypatch) -> None:
-    # Ensure any host NO_COLOR environment variable doesn't affect the test
-    monkeypatch.delenv("NO_COLOR", raising=False)
+    # Mock NO_COLOR to an empty string to ensure colors are not suppressed
+    monkeypatch.setenv("NO_COLOR", "")
     assert pt_resolve_color_depth() == ColorDepth.TRUE_COLOR
 
 
@@ -121,7 +121,7 @@ def test_pt_resolve_color_depth_never(monkeypatch) -> None:
 
 @with_ansi_style(ru.AllowStyle.ALWAYS)
 def test_pt_resolve_color_depth_no_color(monkeypatch) -> None:
-    # Mock NO_COLOR=1 to ensure colors are suppressed
+    # Mock NO_COLOR to ensure colors are suppressed
     monkeypatch.setenv("NO_COLOR", "1")
     assert pt_resolve_color_depth() == ColorDepth.DEPTH_1_BIT
 
