@@ -12,6 +12,7 @@
 - Bug Fixes
     - Fixed type hinting so that methods decorated with `with_annotated` no longer trigger spurious
       mypy errors and preserve their original signature.
+    - Fixed cmd2 bypassing NO_COLOR and allow_style when setting prompt-toolkit's color depth.
 
 - Experimental features
     - `@with_annotated` now supports `frozenset[T]` collection parameters, alongside the existing

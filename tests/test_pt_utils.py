@@ -11,6 +11,7 @@ from prompt_toolkit.formatted_text import (
     ANSI,
     to_formatted_text,
 )
+from prompt_toolkit.output.color_depth import ColorDepth
 from rich.table import Table
 
 import cmd2
@@ -25,6 +26,7 @@ from cmd2 import string_utils as su
 from cmd2.pt_utils import (
     Cmd2Lexer,
     pt_filter_style,
+    pt_resolve_color_depth,
 )
 
 from .conftest import with_ansi_style
@@ -94,6 +96,34 @@ def test_pt_filter_style_never() -> None:
     result = pt_filter_style(styled)
     assert isinstance(result, str)
     assert result == su.strip_style(styled)
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_pt_resolve_color_depth_always(monkeypatch) -> None:
+    # Ensure any host NO_COLOR environment variable doesn't affect the test
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    assert pt_resolve_color_depth() == ColorDepth.TRUE_COLOR
+
+
+@with_ansi_style(ru.AllowStyle.TERMINAL)
+def test_pt_resolve_color_depth_terminal(monkeypatch) -> None:
+    # Ensure any host NO_COLOR environment variable doesn't affect the test
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    assert pt_resolve_color_depth() == ColorDepth.TRUE_COLOR
+
+
+@with_ansi_style(ru.AllowStyle.NEVER)
+def test_pt_resolve_color_depth_never(monkeypatch) -> None:
+    # Under NEVER, colors are suppressed regardless of NO_COLOR
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    assert pt_resolve_color_depth() == ColorDepth.DEPTH_1_BIT
+
+
+@with_ansi_style(ru.AllowStyle.ALWAYS)
+def test_pt_resolve_color_depth_no_color(monkeypatch) -> None:
+    # Mock NO_COLOR=1 to ensure colors are suppressed
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert pt_resolve_color_depth() == ColorDepth.DEPTH_1_BIT
 
 
 class TestCmd2Lexer:
