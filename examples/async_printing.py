@@ -75,13 +75,13 @@ class AlerterApp(cmd2.Cmd):
         self._add_alert_thread.start()
 
     def _postloop_hook(self) -> None:
-        """Stops the alerter thread."""
+        """Stop the alerter thread."""
         self._stop_event.set()
         if self._add_alert_thread.is_alive():
             self._add_alert_thread.join()
 
     def do_start_alerts(self, _: cmd2.Statement) -> None:
-        """Starts the alerter thread."""
+        """Start the alerter thread."""
         if self._add_alert_thread.is_alive():
             print("The alert thread is already started")
         else:
@@ -90,7 +90,7 @@ class AlerterApp(cmd2.Cmd):
             self._add_alert_thread.start()
 
     def do_stop_alerts(self, _: cmd2.Statement) -> None:
-        """Stops the alerter thread."""
+        """Stop the alerter thread."""
         self._stop_event.set()
         if self._add_alert_thread.is_alive():
             self._add_alert_thread.join()
@@ -98,7 +98,8 @@ class AlerterApp(cmd2.Cmd):
             print("The alert thread is already stopped")
 
     def _build_colored_prompt(self) -> str:
-        """Randomly builds a colored prompt
+        """Randomly build a colored prompt.
+
         :return: the new prompt.
         """
         rand_num = self._secure_generator.randint(1, 6)
@@ -119,7 +120,7 @@ class AlerterApp(cmd2.Cmd):
         return stylize(self.visible_prompt, style=status_color)
 
     def _add_alerts_func(self) -> None:
-        """Prints alerts and updates the prompt any time the prompt is showing."""
+        """Print alerts and update the prompt any time the prompt is showing."""
         self._alert_count = 0
 
         alerts = get_alerts()
