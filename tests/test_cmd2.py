@@ -1311,6 +1311,10 @@ def test_async_alert(base_app: cmd2.Cmd, msg: str, prompt: str, is_stale: bool) 
                     assert base_app.prompt == prompt
 
 
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
 def test_async_alert_rich(base_app: cmd2.Cmd) -> None:
     from prompt_toolkit.formatted_text import ANSI
     from rich.table import Table
