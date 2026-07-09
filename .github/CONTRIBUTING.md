@@ -289,8 +289,8 @@ documentation, and building and distributing releases. These modules can be conf
 different ways, which can make it difficult to learn the specific incantations required for each
 project you're familiar with.
 
-This project uses [make]() to provide a clean, high-level interface for these development tasks. To
-see the full list of make commands available:
+This project uses [make](<https://en.wikipedia.org/wiki/Make_(software)>) to provide a clean,
+high-level interface for these development tasks. To see the full list of make commands available:
 
 ```sh
 $ make help

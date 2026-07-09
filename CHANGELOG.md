@@ -1,4 +1,4 @@
-## 4.1.1 (TBD)
+## 4.1.1 (July 9, 2026)
 
 - Bug Fixes
     - Fixed a couple type issues that emerged with the upgrade to `mypy` 2.2.0
