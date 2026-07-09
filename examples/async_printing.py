@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-"""A simple example demonstrating an application that asynchronously prints alerts, updates the prompt
-and changes the window title.
+"""A simple example demonstrating an application that asynchronously prints alerts,
+updates the prompt, and changes the window title.
 """
 
 import secrets
@@ -58,10 +58,10 @@ def get_alerts() -> list[tuple[Any, bool]]:
 
 
 class AlerterApp(cmd2.Cmd):
-    """An app that shows off async_alert() and async_update_prompt()."""
+    """An app that shows off add_alert() and set_window_title()."""
 
     def __init__(self) -> None:
-        """Initializer."""
+        """Initialize AlerterApp."""
         super().__init__()
 
         self.prompt = "(APR)> "
