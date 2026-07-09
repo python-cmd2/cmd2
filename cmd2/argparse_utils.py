@@ -1035,13 +1035,13 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
         self.exit(2, f"{formatted_message}\n")
 
-    def _get_formatter(self, **_kwargs: Any) -> Cmd2HelpFormatter:
+    def _get_formatter(self, *_args: Any, **_kwargs: Any) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
         return self.formatter_class(prog=self.prog, file=self._thread_locals.current_output_file)
 
-    def format_help(self) -> str:
+    def format_help(self, *args: Any, **kwargs: Any) -> str:
         """Override to add a newline."""
-        return super().format_help() + "\n"
+        return super().format_help(*args, **kwargs) + "\n"
 
     def _get_nargs_pattern(self, action: argparse.Action) -> str:
         """Override to support nargs ranges."""
