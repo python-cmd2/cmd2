@@ -313,6 +313,9 @@ class AsyncAlert:
     """Contents of an asynchronous alert which display while user is at prompt.
 
     :param msg: an optional message to be printed above the prompt.
+    :param soft_wrap: Enable soft wrap mode. This only applies with msg is not None.
+                      Defaults to True. See print_to() docstring for more details on
+                      this parameter.
     :param prompt: an optional string to dynamically replace the current prompt.
 
     :ivar timestamp: monotonic creation time of the alert. If an alert was created
@@ -320,7 +323,8 @@ class AsyncAlert:
                      to avoid a stale display, but its msg data will still be displayed.
     """
 
-    msg: str | None = None
+    msg: RenderableType | None = None
+    soft_wrap: bool = True
     prompt: str | None = None
     timestamp: float = field(default_factory=time.monotonic, init=False)
 
@@ -3657,7 +3661,19 @@ class Cmd:
                 # prevents async alerts from printing once a command starts.
 
                 # Print all alerts at once to reduce flicker.
-                alert_text = "\n".join(alert.msg for alert in self._alert_queue if alert.msg)
+                console = self._get_core_print_console(
+                    file=self.stdout,
+                    emoji=False,
+                    markup=False,
+                    highlight=False,
+                )
+
+                with console.capture() as capture:
+                    for alert in self._alert_queue:
+                        if alert.msg is not None:
+                            console.print(alert.msg, soft_wrap=alert.soft_wrap)
+
+                alert_text = capture.get()
 
                 # Find the latest prompt update among all pending alerts.
                 latest_prompt = None
@@ -3681,7 +3697,7 @@ class Cmd:
                 if alert_text:
                     # Print the alert messages above the prompt.
                     with patch_stdout():
-                        print_formatted_text(pt_filter_style(alert_text))
+                        print_formatted_text(ANSI(alert_text), end="")
 
                 elif latest_prompt is not None:
                     # Refresh UI immediately to show the new prompt
@@ -5616,7 +5632,13 @@ class Cmd:
         # self.last_result will be set by do_run_script()
         return self.do_run_script(su.quote(relative_path))
 
-    def add_alert(self, *, msg: str | None = None, prompt: str | None = None) -> None:
+    def add_alert(
+        self,
+        *,
+        msg: RenderableType | None = None,
+        soft_wrap: bool = True,
+        prompt: str | None = None,
+    ) -> None:
         """Queue an asynchronous alert to be displayed when the prompt is active.
 
         Examples:
@@ -5625,6 +5647,9 @@ class Cmd:
             add_alert(msg="Done", prompt="> ")    # Update both
 
         :param msg: an optional message to be printed above the prompt.
+        :param soft_wrap: Enable soft wrap mode. This only applies with msg is not None.
+                          Defaults to True. See print_to() docstring for more details on
+                          this parameter.
         :param prompt: an optional string to dynamically replace the current prompt.
 
         """
@@ -5632,7 +5657,7 @@ class Cmd:
             return
 
         with self._alert_condition:
-            alert = AsyncAlert(msg=msg, prompt=prompt)
+            alert = AsyncAlert(msg=msg, soft_wrap=soft_wrap, prompt=prompt)
             self._alert_queue.append(alert)
             self._alert_condition.notify_all()
 
