@@ -10,6 +10,7 @@ from typing import Any
 
 from rich.console import Group
 from rich.panel import Panel
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
@@ -31,13 +32,22 @@ def get_alerts() -> list[tuple[Any, bool]]:
     # to ensure they render as expected. For example, when soft_wrap is True, Panels truncate
     # text which is wider than the terminal.
     return [
-        (Text("Watch as this application prints alerts asynchronously!", style="bold bright_cyan"), True),
+        (
+            Text(
+                "Watch as this application prints alerts asynchronously!",
+                style=Style(
+                    color=Color.BRIGHT_CYAN,
+                    bold=True,
+                ),
+            ),
+            True,
+        ),
         ("Notice how alerts don't interfere with your typing or cursor location.", True),
         (
             Panel(
                 "This message is wrapped in a Rich Panel!",
                 title="System Alert",
-                border_style="bright_blue",
+                border_style=Color.BRIGHT_BLUE,
                 expand=False,
             ),
             False,
