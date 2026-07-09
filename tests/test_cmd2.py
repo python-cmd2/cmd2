@@ -1258,7 +1258,7 @@ def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
         (None, "", False),
     ],
 )
-def test_async_alert(base_app, msg, prompt, is_stale) -> None:
+def test_async_alert(base_app: cmd2.Cmd, msg: str, prompt: str, is_stale: bool) -> None:
     import time
 
     with (
@@ -1311,18 +1311,82 @@ def test_async_alert(base_app, msg, prompt, is_stale) -> None:
                     assert base_app.prompt == prompt
 
 
-def test_add_alert(base_app) -> None:
-    orig_num_alerts = len(base_app._alert_queue)
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+def test_async_alert_rich(base_app: cmd2.Cmd) -> None:
+    from prompt_toolkit.formatted_text import ANSI
+    from rich.table import Table
+
+    table = Table("Header")
+    table.add_row("Value")
+
+    with (
+        mock.patch("cmd2.cmd2.print_formatted_text") as mock_print,
+        mock.patch("cmd2.cmd2.get_app") as mock_get_app,
+    ):
+        mock_app = mock.MagicMock()
+        mock_get_app.return_value = mock_app
+
+        # Add alert with a Rich table
+        base_app.add_alert(msg=table, soft_wrap=False)
+
+        with create_pipe_input() as pipe_input:
+            base_app.main_session = PromptSession(
+                input=pipe_input,
+                output=DummyOutput(),
+                history=base_app.main_session.history,
+                completer=base_app.main_session.completer,
+            )
+            pipe_input.send_text("quit\n")
+            base_app._cmdloop()
+
+            # Verify that print_formatted_text was called with a formatted ANSI object
+            assert mock_print.called
+            args, _kwargs = mock_print.call_args
+            printed_arg = args[0]
+            assert isinstance(printed_arg, ANSI)
+
+            # The printed text should contain our table values
+            assert "Header" in printed_arg.value
+            assert "Value" in printed_arg.value
+
+
+def test_add_alert(base_app: cmd2.Cmd) -> None:
+    base_app._alert_queue.clear()
 
     # Nothing is added when both are None
     base_app.add_alert(msg=None, prompt=None)
-    assert len(base_app._alert_queue) == orig_num_alerts
+    assert not base_app._alert_queue
 
-    # Now test valid alert arguments
+    # Test that soft_wrap defaults to True
     base_app.add_alert(msg="Hello", prompt=None)
-    base_app.add_alert(msg="Hello", prompt="prompt> ")
+    last_alert = base_app._alert_queue[-1]
+    assert last_alert.msg == "Hello"
+    assert last_alert.soft_wrap is True
+    assert last_alert.prompt is None
+
+    # Test that soft_wrap can be set to True
+    base_app.add_alert(msg="Hello", soft_wrap=True, prompt=None)
+    last_alert = base_app._alert_queue[-1]
+    assert last_alert.msg == "Hello"
+    assert last_alert.soft_wrap is True
+    assert last_alert.prompt is None
+
+    # Test that soft_wrap can be set to False
+    base_app.add_alert(msg="Hello", soft_wrap=False, prompt=None)
+    last_alert = base_app._alert_queue[-1]
+    assert last_alert.msg == "Hello"
+    assert last_alert.soft_wrap is False
+    assert last_alert.prompt is None
+
+    # Test only prompt
     base_app.add_alert(msg=None, prompt="prompt> ")
-    assert len(base_app._alert_queue) == orig_num_alerts + 3
+    last_alert = base_app._alert_queue[-1]
+    assert last_alert.msg is None
+    assert last_alert.soft_wrap is True
+    assert last_alert.prompt == "prompt> "
 
 
 def test_visible_prompt() -> None:
