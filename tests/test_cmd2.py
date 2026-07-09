@@ -1344,7 +1344,8 @@ def test_async_alert_rich(base_app: cmd2.Cmd) -> None:
 
             # Verify that print_formatted_text was called with a formatted ANSI object
             assert mock_print.called
-            printed_arg = mock_print.call_args[0][0]
+            args, _kwargs = mock_print.call_args
+            printed_arg = args[0]
             assert isinstance(printed_arg, ANSI)
 
             # The printed text should contain our table values
