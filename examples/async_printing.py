@@ -6,6 +6,12 @@ and changes the window title.
 import secrets
 import threading
 import time
+from typing import Any
+
+from rich.console import Group
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
 import cmd2
 from cmd2 import (
@@ -13,18 +19,29 @@ from cmd2 import (
     stylize,
 )
 
-ALERTS = [
-    "Watch as this application prints alerts and updates the prompt",
-    "This will only happen when the prompt is present",
-    "Notice how it doesn't interfere with your typing or cursor location",
-    "Go ahead and type some stuff and move the cursor throughout the line",
-    "Keep typing...",
-    "Move that cursor...",
-    "Pretty seamless, eh?",
-    "Feedback can also be given in the window title. Notice the alert count up there?",
-    "You can stop and start the alerts by typing stop_alerts and start_alerts",
-    "This demo will now continue to print alerts at random intervals",
-]
+
+def get_alerts() -> list[tuple[Any, bool]]:
+    """Return a list of (alert_msg, soft_wrap) tuples."""
+    table = Table("Command", "Description", title="Quick Help")
+    table.add_row("start_alerts", "Start the async alert generator")
+    table.add_row("stop_alerts", "Stop the async alert generator")
+    table.add_row("help", "Show help menu")
+
+    return [
+        (Text("Watch as this application prints alerts asynchronously!", style="bold bright_cyan"), True),
+        ("Notice how alerts don't interfere with your typing or cursor location.", True),
+        (
+            Panel(
+                "This message is wrapped in a Rich Panel!",
+                title="System Alert",
+                border_style="bright_blue",
+                expand=False,
+            ),
+            False,
+        ),
+        (table, False),
+        ("You can stop and start the alerts by typing stop_alerts and start_alerts.", True),
+    ]
 
 
 class AlerterApp(cmd2.Cmd):
@@ -40,7 +57,6 @@ class AlerterApp(cmd2.Cmd):
         self._stop_event = threading.Event()
         self._add_alert_thread = threading.Thread()
         self._alert_count = 0
-        self._next_alert_time = 0.0
 
         # Create some hooks to handle the starting and stopping of our thread
         self.register_preloop_hook(self._preloop_hook)
@@ -78,56 +94,6 @@ class AlerterApp(cmd2.Cmd):
         else:
             print("The alert thread is already stopped")
 
-    def _get_alerts(self) -> list[str]:
-        """Reports alerts
-        :return: the list of alerts.
-        """
-        cur_time = time.monotonic()
-        if cur_time < self._next_alert_time:
-            return []
-
-        alerts = []
-
-        if self._alert_count < len(ALERTS):
-            alerts.append(ALERTS[self._alert_count])
-            self._alert_count += 1
-            self._next_alert_time = cur_time + 4
-
-        else:
-            rand_num = self._secure_generator.randint(1, 20)
-            if rand_num > 2:
-                return []
-
-            for _ in range(rand_num):
-                self._alert_count += 1
-                alerts.append(f"Alert {self._alert_count}")
-
-            self._next_alert_time = 0
-
-        return alerts
-
-    def _build_alert_str(self) -> str:
-        """Combines alerts into one string that can be printed to the terminal
-        :return: the alert string.
-        """
-        alert_str = ""
-        alerts = self._get_alerts()
-
-        longest_alert = max(ALERTS, key=len)
-        num_asterisks = len(longest_alert) + 8
-
-        for i, cur_alert in enumerate(alerts):
-            # Use padding to center the alert
-            padding = " " * int((num_asterisks - len(cur_alert)) / 2)
-
-            if i > 0:
-                alert_str += "\n"
-            alert_str += "*" * num_asterisks + "\n"
-            alert_str += padding + cur_alert + padding + "\n"
-            alert_str += "*" * num_asterisks + "\n"
-
-        return alert_str
-
     def _build_colored_prompt(self) -> str:
         """Randomly builds a colored prompt
         :return: the new prompt.
@@ -152,26 +118,45 @@ class AlerterApp(cmd2.Cmd):
     def _add_alerts_func(self) -> None:
         """Prints alerts and updates the prompt any time the prompt is showing."""
         self._alert_count = 0
-        self._next_alert_time = 0
+
+        alerts = get_alerts()
+        alert_index = 0
+        last_alert_time = 0.0
 
         while not self._stop_event.is_set():
-            # Get any alerts that need to be printed
-            alert_str = self._build_alert_str()
+            cur_time = time.monotonic()
+            alert_msg = None
+            soft_wrap = True
 
-            # Build a new prompt
+            # Trigger the next alert every 4 seconds
+            if cur_time - last_alert_time >= 4.0:
+                alert_msg, soft_wrap = alerts[alert_index]
+                alert_index = (alert_index + 1) % len(alerts)
+                self._alert_count += 1
+                last_alert_time = cur_time
+
+            # Build a new prompt (color changes randomly)
             new_prompt = self._build_colored_prompt()
 
-            # Check if we have alerts to print
-            if alert_str:
-                self.add_alert(msg=alert_str, prompt=new_prompt)
+            # Check if we have an alert to print
+            if alert_msg is not None:
+                # Wrap the alert message and an empty string in a Rich Group.
+                # This is a clean way to append a blank line after any RenderableType
+                # (strings, panels, tables, etc.) for visual separation.
+                self.add_alert(
+                    msg=Group(alert_msg, ""),
+                    soft_wrap=soft_wrap,
+                    prompt=new_prompt,
+                )
+
                 new_title = f"Alerts Printed: {self._alert_count}"
                 self.set_window_title(new_title)
 
-            # Otherwise check if the prompt needs to be updated or refreshed
+            # Otherwise, check if the prompt needs to be updated or refreshed
             elif self.prompt != new_prompt:
                 self.add_alert(prompt=new_prompt)
 
-            self._stop_event.wait(0.5)
+            self._stop_event.wait(1.0)
 
 
 if __name__ == "__main__":

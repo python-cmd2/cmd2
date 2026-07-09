@@ -2,6 +2,8 @@
 
 - Bug Fixes
     - Fixed a couple type issues that emerged with the upgrade to `mypy` 2.2.0
+- Enhancements
+    - Async alert messages can now be Rich renderables.
 
 ## 4.1.0 (July 7, 2026)
 

@@ -312,7 +312,8 @@ class CommandParsers:
 class AsyncAlert:
     """Contents of an asynchronous alert which display while user is at prompt.
 
-    :param msg: an optional message to be printed above the prompt.
+    :param msg: an optional printable object (including Rich renderables) to be
+                printed above the prompt.
     :param soft_wrap: Enable soft wrap mode. This only applies with msg is not None.
                       Defaults to True. See print_to() docstring for more details on
                       this parameter.
@@ -323,7 +324,7 @@ class AsyncAlert:
                      to avoid a stale display, but its msg data will still be displayed.
     """
 
-    msg: RenderableType | None = None
+    msg: Any | None = None
     soft_wrap: bool = True
     prompt: str | None = None
     timestamp: float = field(default_factory=time.monotonic, init=False)
@@ -5635,7 +5636,7 @@ class Cmd:
     def add_alert(
         self,
         *,
-        msg: RenderableType | None = None,
+        msg: Any | None = None,
         soft_wrap: bool = True,
         prompt: str | None = None,
     ) -> None:
@@ -5646,7 +5647,8 @@ class Cmd:
             add_alert(prompt="user@host> ")       # Update prompt only
             add_alert(msg="Done", prompt="> ")    # Update both
 
-        :param msg: an optional message to be printed above the prompt.
+        :param msg: an optional printable object (including Rich renderables) to be
+                    printed above the prompt.
         :param soft_wrap: Enable soft wrap mode. This only applies with msg is not None.
                           Defaults to True. See print_to() docstring for more details on
                           this parameter.
