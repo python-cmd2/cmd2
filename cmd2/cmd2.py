@@ -1577,7 +1577,7 @@ class Cmd:
                           If False, Rich wraps text to fit the terminal width.
                           Set this to False when printing structured Renderables like
                           Tables, Panels, or Columns to ensure they render as expected.
-                          For example, when soft_wrap is True Panels truncate text
+                          For example, when soft_wrap is True, Panels truncate text
                           which is wider than the terminal.
         :param justify: justify method ("left", "center", "right", "full"). Defaults to None.
         :param emoji: If True, Rich will replace emoji codes (e.g., :smiley:) with their

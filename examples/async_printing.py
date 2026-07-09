@@ -27,6 +27,9 @@ def get_alerts() -> list[tuple[Any, bool]]:
     table.add_row("stop_alerts", "Stop the async alert generator")
     table.add_row("help", "Show help menu")
 
+    # Set soft_wrap to False when printing structured Renderables like Tables, Panels, or Columns
+    # to ensure they render as expected. For example, when soft_wrap is True, Panels truncate
+    # text which is wider than the terminal.
     return [
         (Text("Watch as this application prints alerts asynchronously!", style="bold bright_cyan"), True),
         ("Notice how alerts don't interfere with your typing or cursor location.", True),
