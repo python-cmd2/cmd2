@@ -4304,7 +4304,6 @@ def test_completekey_empty_string() -> None:
 
 
 def test_create_main_session_exception(monkeypatch):
-
     # Mock PromptSession to raise ValueError on first call, then succeed
     valid_session_mock = mock.MagicMock(spec=PromptSession)
     mock_session = mock.MagicMock(side_effect=[ValueError, valid_session_mock])

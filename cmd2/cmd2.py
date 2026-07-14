@@ -1382,7 +1382,7 @@ class Cmd:
             Settable(
                 "allow_style",
                 allow_style_type,
-                ru.rich_text_to_string(settable_description),
+                settable_description,
                 self,
                 choices_provider=get_allow_style_choices,
             )
@@ -1399,7 +1399,7 @@ class Cmd:
             Settable(
                 "editor",
                 str,
-                ru.rich_text_to_string(editor_description),
+                editor_description,
                 self,
             )
         )
@@ -1434,7 +1434,7 @@ class Cmd:
             Settable(
                 "traceback_width",
                 utils.optional_int,
-                ru.rich_text_to_string(traceback_width_description),
+                traceback_width_description,
                 self,
             )
         )

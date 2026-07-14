@@ -25,7 +25,10 @@ from typing import (
     cast,
 )
 
+from rich.text import Text
+
 from . import constants
+from . import rich_utils as ru
 from . import string_utils as su
 from .types import (
     CmdOrSet,
@@ -88,7 +91,7 @@ class Settable:
         self,
         name: str,
         val_type: type[Any] | Callable[[Any], Any],
-        description: str,
+        description: str | Text,
         settable_object: object,
         *,
         settable_attrib_name: str | None = None,
@@ -108,7 +111,8 @@ class Settable:
                          input is a valid integer. Specifying bool automatically provides
                          completion for 'true' and 'false' and uses a built-in function
                          for conversion and validation.
-        :param description: A concise string that describes the purpose of this setting.
+        :param description: A concise string or rich Text object that describes the purpose of
+                         this setting.
         :param settable_object: The object that owns the attribute being made settable (e.g. self).
         :param settable_attrib_name: The name of the attribute on the settable_object that
                                      will be modified. This defaults to the value of the name
@@ -142,7 +146,7 @@ class Settable:
 
         self.name = name
         self.val_type = val_type
-        self.description = description
+        self.description = ru.rich_text_to_string(description) if isinstance(description, Text) else description
         self.settable_obj = settable_object
         self.settable_attrib_name = settable_attrib_name if settable_attrib_name is not None else name
         self.onchange_cb = onchange_cb
