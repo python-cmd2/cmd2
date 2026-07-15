@@ -31,6 +31,7 @@ from typing import Annotated
 from prompt_toolkit.application import get_app
 from prompt_toolkit.formatted_text import AnyFormattedText
 from rich.style import Style
+from rich.text import Text
 
 import cmd2
 from cmd2 import (
@@ -94,7 +95,16 @@ class BasicApp(cmd2.Cmd):
             cmd2.Settable(
                 "foreground_color",
                 str,
-                "Foreground color to use with echo command",
+                Text.assemble(
+                    "Foreground color to use with echo command ",
+                    "(Options: ",
+                    Text("Green", Style(color=Color.GREEN)),
+                    ", ",
+                    Text("Red", Style(color=Color.RED)),
+                    ", ",
+                    Text("Blue", Style(color=Color.BLUE)),
+                    ", ...)",
+                ),
                 self,
                 choices=fg_colors,
             )

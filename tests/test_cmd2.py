@@ -18,6 +18,7 @@ from prompt_toolkit.completion import DummyCompleter
 from prompt_toolkit.input import DummyInput, create_pipe_input
 from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.shortcuts import PromptSession
+from rich.style import Style
 from rich.text import Text
 
 import cmd2
@@ -350,6 +351,31 @@ def test_set_with_choices(base_app) -> None:
     _out, err = run_cmd(base_app, "set fake bad_value")
     assert base_app.last_result is False
     assert err[0].startswith("Error setting fake: invalid choice")
+
+
+def test_set_with_rich_description(base_app) -> None:
+    """Test with rich Text description."""
+    description = "Rich text description"
+    base_app.rich_settable = "old"
+    rich_settable = cmd2.Settable(
+        "rich_settable", type(base_app.rich_settable), Text(description, Style(color="red", bold=True)), base_app
+    )
+    base_app.add_settable(rich_settable)
+
+    # Try see list settables info
+    out, err = run_cmd(base_app, "set rich_settable")
+    assert not err
+    name, value, text = out[-1].strip().split(maxsplit=2)
+    assert name == "rich_settable"
+    assert value == "old"
+    assert text == description
+
+    # Try to set a valid value
+    out, err = run_cmd(base_app, "set rich_settable new")
+    assert base_app.last_result is True
+    assert not err
+    assert out[0].startswith("rich_settable")
+    assert out[0].endswith("─> 'new'")
 
 
 class OnChangeHookApp(cmd2.Cmd):
@@ -4724,5 +4750,9 @@ def test_detach_all_subcommands() -> None:
     assert len(removed) == 2
 
     root_parser = cast(cmd2.Cmd2ArgumentParser, app.command_parsers.get(app.do_base))
+    subparsers_action = root_parser.get_subparsers_action()
+    assert not subparsers_action._name_parser_map
+    subparsers_action = root_parser.get_subparsers_action()
+    assert not subparsers_action._name_parser_map
     subparsers_action = root_parser.get_subparsers_action()
     assert not subparsers_action._name_parser_map

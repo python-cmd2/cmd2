@@ -111,8 +111,7 @@ class Settable:
                          input is a valid integer. Specifying bool automatically provides
                          completion for 'true' and 'false' and uses a built-in function
                          for conversion and validation.
-        :param description: A concise string or rich Text object that describes the purpose of
-                         this setting.
+        :param description: A concise string or rich Text object that describes the purpose of this setting.
         :param settable_object: The object that owns the attribute being made settable (e.g. self).
         :param settable_attrib_name: The name of the attribute on the settable_object that
                                      will be modified. This defaults to the value of the name
