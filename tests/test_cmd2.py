@@ -4752,7 +4752,3 @@ def test_detach_all_subcommands() -> None:
     root_parser = cast(cmd2.Cmd2ArgumentParser, app.command_parsers.get(app.do_base))
     subparsers_action = root_parser.get_subparsers_action()
     assert not subparsers_action._name_parser_map
-    subparsers_action = root_parser.get_subparsers_action()
-    assert not subparsers_action._name_parser_map
-    subparsers_action = root_parser.get_subparsers_action()
-    assert not subparsers_action._name_parser_map
