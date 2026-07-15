@@ -1,3 +1,8 @@
+## (TBA)
+
+- Enhancements
+    - Added possibility to use rich Text objects to set the description argument of a `Settable`
+
 ## 4.1.1 (July 9, 2026)
 
 - Bug Fixes
