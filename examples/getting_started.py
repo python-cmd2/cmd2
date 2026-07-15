@@ -3,22 +3,21 @@
 
 Features demonstrated include all of the following:
  1) Colorizing/stylizing output
- 2) Using multiline commands
- 3) Persistent history
- 4) How to run an initialization script at startup
- 5) How to group and categorize commands when displaying them in help
- 6) Opting-in to using the ipy command to run an IPython shell
- 7) Allowing access to your application in py and ipy
- 8) Displaying an intro banner upon starting your application
- 9) Using a custom prompt
-10) How to make custom attributes settable at runtime.
-11) Shortcuts for commands
-12) Persistent bottom toolbar with realtime status updates
-13) Right prompt which displays contextual information
-14) Background thread to update the content displayed by the bottom toolbar outside of the UI thread to keep things responsive
-15) Using preloop() and postloop() hooks to start and stop a background thread
-16) Using the with_annotated decorator to parse typed command arguments
-17) Using the with_argparser decorator to parse command arguments with a custom parser
+ 2) Persistent history
+ 3) How to run an initialization script at startup
+ 4) How to group and categorize commands when displaying them in help
+ 5) Opting-in to using the ipy command to run an IPython shell
+ 6) Allowing access to your application in py and ipy
+ 7) Displaying an intro banner upon starting your application
+ 8) Using a custom prompt
+ 9) How to make custom attributes settable at runtime
+10) Shortcuts for commands
+11) Persistent bottom toolbar with realtime status updates
+12) Right prompt which displays contextual information
+13) Background thread to update the content displayed by the bottom toolbar outside of the UI thread to keep things responsive
+14) Using preloop() and postloop() hooks to start and stop a background thread
+15) Using the with_annotated decorator to parse typed command arguments
+16) Using the with_argparser decorator to parse command arguments with a custom parser
 """
 
 import argparse
@@ -60,7 +59,6 @@ class BasicApp(cmd2.Cmd):
             enable_bottom_toolbar=True,
             enable_rprompt=True,
             include_ipy=True,
-            multiline_commands=["echo"],
             persistent_history_file="cmd2_history.dat",
             refresh_interval=0.5,  # refresh the UI twice a second to keep the bottom toolbar timestamp current
             shortcuts=shortcuts,
@@ -79,9 +77,6 @@ class BasicApp(cmd2.Cmd):
 
         # Show this as the prompt when asking for input
         self.prompt = "myapp> "
-
-        # Used as prompt for multiline commands after the first line
-        self.continuation_prompt = "... "
 
         # Allow access to your application in py and ipy via self
         self.self_in_py = True
@@ -131,14 +126,12 @@ class BasicApp(cmd2.Cmd):
 
     def preloop(self) -> None:
         """Hook method executed once when the cmdloop() method is called."""
-        super().preloop()
         self._stop_thread_event.clear()
         self._toolbar_thread = threading.Thread(target=self._update_toolbar_state, daemon=True)
         self._toolbar_thread.start()
 
     def postloop(self) -> None:
         """Hook method executed once when the cmdloop() method is about to return."""
-        super().postloop()
         if self._toolbar_thread and self._toolbar_thread.is_alive():
             self._stop_thread_event.set()
             self._toolbar_thread.join()
@@ -211,7 +204,7 @@ class BasicApp(cmd2.Cmd):
     @staticmethod
     def _build_echo_parser() -> cmd2.Cmd2ArgumentParser:
         """Parser factory method for use with the echo command."""
-        echo_parser = cmd2.Cmd2ArgumentParser(description="Multiline command that echoes input.")
+        echo_parser = cmd2.Cmd2ArgumentParser(description="Command that echoes input.")
         echo_parser.add_argument("-u", "--upper", action="store_true", help="uppercase the output")
         echo_parser.add_argument("-r", "--repeat", type=int, default=1, help="output [n] times")
         echo_parser.add_argument("words", nargs="+", help="words to print")
@@ -219,7 +212,7 @@ class BasicApp(cmd2.Cmd):
 
     @cmd2.with_argparser(_build_echo_parser)
     def do_echo(self, args: argparse.Namespace) -> None:
-        """Multiline command."""
+        """Command using with_argparser decorator for parsing arguments."""
         output_str = " ".join(args.words)
         if args.upper:
             output_str = output_str.upper()
