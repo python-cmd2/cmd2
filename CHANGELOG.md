@@ -6,6 +6,7 @@
       `Cmd2ArgumentParser`. They were placed in an untitled section of their own instead. Passing
       `subcommand_title` or `subcommand_description` still gives the subcommands a dedicated section
       ([#1715](https://github.com/python-cmd2/cmd2/issues/1715)).
+    - Fix `@with_annotated` decorator so using `ArgumentBlock` works with groups
 
 ## 4.1.2 (July 16, 2026)
 
