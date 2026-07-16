@@ -1,5 +1,21 @@
 ## 4.2.0 (TBD)
 
+- Enhancements
+    - `@with_annotated` argument groups can now contain an `ArgumentBlock`'s arguments. A `Group`
+      member names a command-line argument, and a block expands into one argument per field, so its
+      fields are named: `Group("host", "port")`.
+- Breaking Changes
+    - A `Group` member now names an argument rather than a parameter. The two differ only for an
+      `ArgumentBlock` parameter, which is expanded away and has no argument of its own:
+      `Group("conn")` now raises `ValueError` pointing at the block's fields. It previously produced
+      an empty argument group in `groups=` and a `KeyError` in `mutually_exclusive_groups=`.
+    - Whether a `Group` member exists is now validated when the parser is built rather than at
+      decoration time, because a block's field names cannot be known without resolving its type
+      hint, and resolving hints eagerly would break forward-referenced annotations. A typo in a
+      member name still raises `ValueError`, but on first use of that command rather than at class
+      definition. The spec-shape rules (a member listed twice, a member in two groups,
+      `required=True` on a plain group, the mutex nesting rules) are unaffected and still hard-fail
+      at decoration time.
 - Bug Fixes
     - Fixed `@with_annotated(base_command=True)` not listing its subcommands under the positional
       arguments section of the parent command's `--help`, unlike `argparse` and

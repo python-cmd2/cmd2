@@ -445,8 +445,8 @@ token to convert. Both raise `TypeError` at decoration time.
 - `help` -- help text for an annotated subcommand (only valid with `subcommand_to`)
 - `aliases` -- aliases for an annotated subcommand (only valid with `subcommand_to`)
 - `deprecated` -- mark the subcommand as deprecated in `--help` (only valid with `subcommand_to`)
-- `groups` -- `Group` instances assigning parameter names to argument groups
-- `mutually_exclusive_groups` -- `Group` instances of mutually exclusive parameters
+- `groups` -- `Group` instances assigning argument names to argument groups
+- `mutually_exclusive_groups` -- `Group` instances of mutually exclusive arguments
 - `parser_class` -- a custom parser class (defaults to the configured default)
 - `**parser_kwargs` -- every other `Cmd2ArgumentParser` constructor kwarg, forwarded through PEP 692
   [`Unpack[Cmd2ParserKwargs]`][cmd2.annotated.Cmd2ParserKwargs]. See
@@ -549,13 +549,35 @@ both places, a mutex that sits only partly in a `groups=` entry, or one that spa
 raises `ValueError`. The other three nestings (an argument group inside another group or a mutex, or
 a mutex inside a mutex) are removed in argparse on Python 3.14 and cannot be expressed here.
 
-All of these group-spec rules -- member references, a parameter assigned to two groups,
+A `Group` member names a command-line **argument**. For a plain parameter the argument is the
+parameter, so the name is the same either way. An `ArgumentBlock` parameter is different: it is
+expanded into one argument per field (field name == argument name), so you name its fields rather
+than the block:
+
+```python
+@dataclass
+class Conn(ArgumentBlock):
+    host: Annotated[str, Option("--host")] = "localhost"
+    port: Annotated[int, Option("--port")] = 8080
+
+@with_annotated(groups=(Group("host", "port", title="connection"),))
+def do_connect(self, conn: Conn) -> None: ...
+```
+
+Naming the block parameter itself (`Group("conn")`) raises `ValueError`: the parameter is expanded
+away and has no argument of its own. Naming a block's fields individually is also what lets you say
+which fields are alternatives -- put `Group("json", "csv")` in `mutually_exclusive_groups` and only
+those two exclude each other, rather than every field of the block they happen to live in.
+
+The group-spec **shape** rules -- a member listed twice, a member assigned to two groups,
 `required=True` on a plain group, and the mutex nesting rules above -- are validated when the
-decorator runs, so a misconfigured group raises `ValueError` at class definition time instead of on
-first command use. The checks read only parameter names, never the type hints, so forward-referenced
-annotations still decorate cleanly. The one group rule that depends on the annotations (a member of
-a mutually exclusive group must be omittable -- have a default or be `T | None`) fires when the
-parser is built.
+decorator runs, so a misshapen group raises `ValueError` at class definition time instead of on
+first command use. Those checks read only the `Group` specs, never the signature or the type hints,
+so forward-referenced annotations still decorate cleanly.
+
+The rules that depend on what a member _is_ fire when the parser is built, because a block's field
+names cannot be known without resolving its type hint: that every member names a real argument, and
+that a member of a mutually exclusive group is omittable (has a default or is `T | None`).
 
 `parents=` mirrors argparse's standard parents mechanism for sharing argument definitions across
 parsers. `argument_default=argparse.SUPPRESS` is not supported and raises `TypeError`. It removes an

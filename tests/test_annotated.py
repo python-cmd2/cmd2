@@ -1034,7 +1034,7 @@ class TestArgumentGroups:
         assert {"force", "dry_run"} in mutex_groups
 
     def test_group_nonexistent_param_raises(self) -> None:
-        with pytest.raises(ValueError, match="nonexistent parameter"):
+        with pytest.raises(ValueError, match="'missing', which is not a command-line argument"):
             build_parser_from_function(_func_grouped, groups=(Group("missing"),))
 
     def test_param_in_multiple_groups_raises(self) -> None:
@@ -1178,7 +1178,7 @@ class TestArgumentGroups:
 
         def func(self, local: Annotated[str, Option("--local")], remote: str | None = None) -> None: ...
 
-        with pytest.raises(ValueError, match=r"nonexistent parameter 'ghost'"):
+        with pytest.raises(ValueError, match=r"'ghost', which is not a command-line argument"):
             build_parser_from_function(func, mutually_exclusive_groups=(Group("local", "ghost"),))
 
     def test_argument_group(self) -> None:
@@ -1192,37 +1192,6 @@ class TestArgumentGroups:
         assert len(custom_groups) >= 1
         all_custom_dests = {a.dest for g in custom_groups for a in g._group_actions}
         assert {"src", "dst"} <= all_custom_dests
-
-    def test_group_with_argument_block(self) -> None:
-        """An ArgumentBlock in a Group expands to all its fields."""
-
-        @dataclass
-        class MyBlock(ArgumentBlock):
-            host: Annotated[str, Option("--host")] = "localhost"
-            port: Annotated[int, Option("--port")] = 8080
-
-        def func(self, block: MyBlock, verbose: bool = False) -> None: ...
-
-        parser = build_parser_from_function(func, groups=(Group("block", title="Connection"),))
-        custom_groups = [g for g in parser._action_groups if g.title == "Connection"]
-        assert len(custom_groups) == 1
-        dests = {a.dest for a in custom_groups[0]._group_actions}
-        assert dests == {"host", "port"}
-
-    def test_mutex_group_with_argument_block(self) -> None:
-        """An ArgumentBlock in a MutuallyExclusiveGroup expands to all its fields."""
-
-        @dataclass
-        class MyBlock(ArgumentBlock):
-            fast: Annotated[bool, Option("--fast")] = False
-            slow: Annotated[bool, Option("--slow")] = False
-
-        def func(self, block: MyBlock, verbose: bool = False) -> None: ...
-
-        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("block"),))
-        assert len(parser._mutually_exclusive_groups) == 1
-        dests = {a.dest for a in parser._mutually_exclusive_groups[0]._group_actions}
-        assert dests == {"fast", "slow"}
 
     def test_mutually_exclusive_via_decorator(self) -> None:
         """@with_annotated(mutually_exclusive_groups=...) works end-to-end."""
@@ -1407,10 +1376,6 @@ class TestParserCustomization:
 
 
 class TestGroupHelpers:
-    def test_validate_group_members_rejects_nonexistent_param(self) -> None:
-        with pytest.raises(ValueError, match="nonexistent"):
-            Group("verbose", "nonexistent")._validate_members(all_param_names={"verbose"}, group_type="groups")
-
     def test_build_argument_group_targets(self) -> None:
         parser = argparse.ArgumentParser()
         target_for, argument_group_for = _build_argument_group_targets(parser, groups=(Group("src", "dst"),))
@@ -1467,33 +1432,154 @@ class TestGroupHelpers:
 
         with pytest.raises(ValueError, match="different argument groups"):
             _validate_group_specs(
-                func,
-                skip_params=frozenset(),
                 groups=(Group("src"), Group("dst")),
                 mutually_exclusive_groups=(Group("src", "dst"),),
             )
 
 
-class TestEagerGroupSpecValidation:
-    """Group specs hard-fail at decoration time (class definition), not on first command use.
+class TestBuildTimeMemberValidation:
+    """A Group member names an argument, and that is checked once the arguments are built.
 
-    The decorator runs the name-only spec checks before deferring the parser build, so a
-    misconfigured group raises while the class body executes instead of surfacing as a swallowed
-    runtime error the first time the command runs.  Type hints are never resolved by these checks,
-    so forward-referenced annotations still decorate (the parser build stays deferred for them).
+    It cannot be checked at decoration time: an ArgumentBlock expands into one argument per field, and the
+    field names live inside the dataclass, reachable only by resolving the block's type hint -- which the
+    decoration-time checks never do, so forward references keep working.
     """
 
-    def test_member_typo_fails_at_decoration(self) -> None:
+    def test_block_fields_can_be_named_in_an_argument_group(self) -> None:
+        """The #1714 case: a block's arguments are its fields, so its fields are what a group names."""
+
+        @dataclass
+        class Conn(ArgumentBlock):
+            host: Annotated[str, Option("--host")] = "localhost"
+            port: Annotated[int, Option("--port")] = 8080
+
+        def func(self, conn: Conn, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, groups=(Group("host", "port", title="Connection"),))
+        section = next(g for g in parser._action_groups if g.title == "Connection")
+        assert {a.dest for a in section._group_actions} == {"host", "port"}
+
+    def test_block_fields_can_be_named_in_a_mutex_group(self) -> None:
+        """Fields that are genuinely alternatives are named individually, so the meaning is explicit."""
+
+        @dataclass
+        class Format(ArgumentBlock):
+            json: Annotated[bool, Option("--json")] = False
+            csv: Annotated[bool, Option("--csv")] = False
+
+        def func(self, fmt: Format, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("json", "csv"),))
+        assert {a.dest for a in parser._mutually_exclusive_groups[0]._group_actions} == {"json", "csv"}
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--json", "--csv"])
+
+    def test_a_group_can_mix_block_fields_and_plain_parameters(self) -> None:
+        """Members name arguments, so where an argument came from stops mattering once it is built.
+
+        The block's own `port` is left out to pin down that a group takes the fields it names rather
+        than the whole block that one of them happens to belong to.
+        """
+
+        @dataclass
+        class Conn(ArgumentBlock):
+            host: Annotated[str, Option("--host")] = "localhost"
+            port: Annotated[int, Option("--port")] = 8080
+
+        def func(self, conn: Conn, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, groups=(Group("host", "verbose", title="Mixed"),))
+        section = next(g for g in parser._action_groups if g.title == "Mixed")
+        assert {a.dest for a in section._group_actions} == {"host", "verbose"}
+        ns = parser.parse_args(["--host", "h", "--verbose"])
+        assert (ns.host, ns.verbose) == ("h", True)
+
+    def test_a_mutex_can_mix_a_block_field_and_a_plain_parameter(self) -> None:
+        """A block field and a plain parameter can be genuine alternatives to each other."""
+
+        @dataclass
+        class Conn(ArgumentBlock):
+            host: Annotated[str, Option("--host")] = "localhost"
+
+        def func(self, conn: Conn, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("host", "verbose"),))
+        assert {a.dest for a in parser._mutually_exclusive_groups[0]._group_actions} == {"host", "verbose"}
+        assert parser.parse_args(["--host", "h"]).host == "h"
+        assert parser.parse_args(["--verbose"]).verbose is True
+        with pytest.raises(SystemExit):
+            parser.parse_args(["--host", "h", "--verbose"])
+
+    def test_naming_the_block_parameter_is_rejected(self) -> None:
+        """The block parameter is expanded away and has no argument, so it cannot be a member."""
+
+        @dataclass
+        class Conn(ArgumentBlock):
+            host: Annotated[str, Option("--host")] = "localhost"
+
+        def func(self, conn: Conn, verbose: bool = False) -> None: ...
+
+        with pytest.raises(ValueError, match="'conn', which is an ArgumentBlock parameter"):
+            build_parser_from_function(func, groups=(Group("conn", title="Connection"),))
+
+    def test_naming_the_block_parameter_in_a_mutex_is_rejected_too(self) -> None:
+        """Same rule in both spec kinds -- there is no groups=/mutex asymmetry to remember."""
+
+        @dataclass
+        class Conn(ArgumentBlock):
+            host: Annotated[str, Option("--host")] = "localhost"
+
+        def func(self, conn: Conn, verbose: bool = False) -> None: ...
+
+        with pytest.raises(ValueError, match="'conn', which is an ArgumentBlock parameter"):
+            build_parser_from_function(func, mutually_exclusive_groups=(Group("conn", "verbose"),))
+
+    def test_naming_the_block_class_is_rejected(self) -> None:
+        """The class name is not a parameter or an argument; only fields are."""
+
+        @dataclass
+        class Conn(ArgumentBlock):
+            host: Annotated[str, Option("--host")] = "localhost"
+
+        def func(self, conn: Conn, verbose: bool = False) -> None: ...
+
+        with pytest.raises(ValueError, match="'Conn', which is not a command-line argument"):
+            build_parser_from_function(func, groups=(Group("Conn", title="Connection"),))
+
+    def test_parent_args_block_parameter_is_rejected(self) -> None:
+        """cmd2_parent_args declares no arguments of its own; its fields come from the parent."""
+
+        @dataclass
+        class Base(ArgumentBlock):
+            dry: Annotated[bool, Option("--dry")] = False
+
+        def func(self, cmd2_parent_args: Base, verbose: bool = False) -> None: ...
+
+        with pytest.raises(ValueError, match="'cmd2_parent_args', which is an ArgumentBlock parameter"):
+            build_parser_from_function(func, groups=(Group("cmd2_parent_args", title="Inherited"),))
+
+    def test_member_typo_fails_at_build(self) -> None:
+        """A typo still hard-fails -- at the parser build rather than at decoration."""
+
         def do_x(self, a: str = "v") -> None: ...
 
-        with pytest.raises(ValueError, match="groups references nonexistent parameter 'typo'"):
-            with_annotated(groups=(Group("typo"),))(do_x)
+        with_annotated(groups=(Group("typo"),))(do_x)  # decorates: existence is not knowable yet
+        with pytest.raises(ValueError, match="'typo', which is not a command-line argument"):
+            build_parser_from_function(do_x, groups=(Group("typo"),))
 
-    def test_mutex_member_typo_fails_at_decoration(self) -> None:
-        def do_x(self, a: str = "v") -> None: ...
 
-        with pytest.raises(ValueError, match="mutually_exclusive_groups references nonexistent parameter 'typo'"):
-            with_annotated(mutually_exclusive_groups=(Group("typo"),))(do_x)
+class TestEagerGroupSpecValidation:
+    """Spec-*shape* rules hard-fail at decoration time (class definition), not on first command use.
+
+    The decorator runs the spec-shape checks before deferring the parser build, so a misshapen group
+    raises while the class body executes instead of surfacing as a swallowed runtime error the first
+    time the command runs.  These checks read the ``Group`` specs only -- never the signature and never
+    the type hints -- so forward-referenced annotations still decorate.
+
+    Whether a member *exists* is deliberately not among them: an ArgumentBlock's arguments are its
+    dataclass fields, which only resolving its hint would reveal, so that check runs at parser build
+    (see :class:`TestBuildTimeMemberValidation`).
+    """
 
     def test_param_in_two_argument_groups_fails_at_decoration(self) -> None:
         def do_x(self, a: str = "v") -> None: ...
@@ -1534,19 +1620,13 @@ class TestEagerGroupSpecValidation:
                 mutually_exclusive_groups=(Group("a", "b", title="U"),),
             )(do_x)
 
-    def test_subcommand_group_typo_fails_at_decoration(self) -> None:
-        def team_add(self, a: str = "v") -> None: ...
-
-        with pytest.raises(ValueError, match="nonexistent parameter 'typo'"):
-            with_annotated(subcommand_to="team", groups=(Group("typo"),))(team_add)
-
     def test_eager_validation_does_not_resolve_type_hints(self) -> None:
-        # The group error fires even though the annotation can never resolve: the checks read
-        # parameter names only, so the unresolvable hint is not touched.
+        # The shape error fires even though the annotation can never resolve: the checks read the
+        # Group specs only, so the unresolvable hint is not touched.
         def do_x(self, a: "NoSuchType" = None) -> None: ...  # noqa: F821
 
-        with pytest.raises(ValueError, match="nonexistent parameter 'typo'"):
-            with_annotated(groups=(Group("typo"),))(do_x)
+        with pytest.raises(ValueError, match="only valid in mutually_exclusive_groups"):
+            with_annotated(groups=(Group("a", required=True),))(do_x)
 
     def test_unresolvable_hints_with_valid_groups_decorate(self) -> None:
         # Valid specs + an unresolvable annotation must decorate without raising; type resolution
