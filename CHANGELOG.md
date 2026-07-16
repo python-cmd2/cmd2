@@ -2,6 +2,7 @@
 
 - Enhancements
     - Added possibility to use rich Text objects to set the description argument of a `Settable`
+    - Removed redundant `ipython` import which slowed application startup time
 
 ## 4.1.1 (July 9, 2026)
 
