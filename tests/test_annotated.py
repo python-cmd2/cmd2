@@ -3439,6 +3439,37 @@ class TestSubcommandGroupConfig:
         assert group is not None
         assert group.description == "pick one"
 
+    def test_subparsers_default_to_positionals_group(self) -> None:
+        """Without a title/description the subparsers belong to argparse's own positionals group."""
+        parser = self._base_parser()
+        action = self._subparsers_action(parser)
+        assert action in parser._positionals._group_actions
+        # No untitled group is created to hold them.
+        assert [g for g in parser._action_groups if g.title is None] == []
+
+    def test_subparsers_listed_under_positional_arguments_in_help(self) -> None:
+        """The subcommands are documented in --help like argparse and Cmd2ArgumentParser do."""
+        parser = self._base_parser()
+        help_text = parser.format_help()
+        _, header, rest = help_text.partition("Positional Arguments:")
+        assert header, f"no positional arguments section in:\n{help_text}"
+        assert "SUBCOMMAND" in rest.partition("Options:")[0]
+
+    @pytest.mark.parametrize(
+        ("kwargs", "expected_title"),
+        [
+            pytest.param({"subcommand_title": "Commands"}, "Commands", id="title-only"),
+            pytest.param({"subcommand_description": "pick one"}, "subcommands", id="description-only"),
+        ],
+    )
+    def test_subparsers_move_out_of_positionals_when_titled(self, kwargs, expected_title) -> None:
+        """Supplying either knob still opts into a dedicated group, argparse's documented behavior."""
+        parser = self._base_parser(**kwargs)
+        action = self._subparsers_action(parser)
+        assert action not in parser._positionals._group_actions
+        group = next(g for g in parser._action_groups if action in g._group_actions)
+        assert group.title == expected_title
+
 
 # ---------------------------------------------------------------------------
 # Rich objects are accepted for description / epilog (HelpContent)
