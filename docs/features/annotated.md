@@ -436,9 +436,12 @@ token to convert. Both raise `TypeError` at decoration time.
   default `True`)
 - `subcommand_metavar` -- metavar shown for the subcommands group (only with `base_command=True`,
   default `"SUBCOMMAND"`)
-- `subcommand_title` -- title for the subcommands `--help` section (only with `base_command=True`)
+- `subcommand_title` -- title for the subcommands `--help` section (only with `base_command=True`).
+  Setting either this or `subcommand_description` moves the subcommands out of the positional
+  arguments section into a section of their own, as it does in argparse.
 - `subcommand_description` -- description for the subcommands `--help` section (only with
-  `base_command=True`)
+  `base_command=True`). Supplying this without `subcommand_title` gives that section argparse's
+  default title, `subcommands`.
 - `help` -- help text for an annotated subcommand (only valid with `subcommand_to`)
 - `aliases` -- aliases for an annotated subcommand (only valid with `subcommand_to`)
 - `deprecated` -- mark the subcommand as deprecated in `--help` (only valid with `subcommand_to`)

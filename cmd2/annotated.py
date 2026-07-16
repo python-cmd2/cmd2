@@ -2827,15 +2827,17 @@ def _make_parser_builder(
             **options.parser_kwargs,
         )
         if base_command:
-            # dict[str, Any] is load-bearing: the typeshed stub types title/metavar as non-None,
-            # but argparse accepts None at runtime, so splatting avoids a false overload error.
+            # dict[str, Any] is load-bearing: title/description are added conditionally below,
+            # which the typeshed overloads for add_subparsers cannot express.
             kwargs: dict[str, Any] = {
                 "dest": "subcommand",
                 "metavar": options.subcommand_metavar,
                 "required": options.subcommand_required,
-                "title": options.subcommand_title,
-                "description": options.subcommand_description,
             }
+            if options.subcommand_title is not None:
+                kwargs["title"] = options.subcommand_title
+            if options.subcommand_description is not None:
+                kwargs["description"] = options.subcommand_description
             parser.add_subparsers(**kwargs)
         return parser
 
