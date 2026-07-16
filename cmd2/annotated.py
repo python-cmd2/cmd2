@@ -1126,6 +1126,7 @@ class _ArgparseArgument:
         kind: inspect._ParameterKind,
         is_base_command: bool,
         is_block_field: bool = False,
+        block_param_name: str | None = None,
         dest_override: str | None = None,
     ) -> None:
         # signature-derived inputs (never emitted):
@@ -1134,6 +1135,7 @@ class _ArgparseArgument:
         self.has_default = has_default
         self.param_default = param_default  # the function's own default, not the argparse `default` slot
         self.is_block_field = is_block_field
+        self.block_param_name = block_param_name
         self.dest_override = dest_override
         self.is_kw_only = is_kw_only
         self.is_variadic = is_variadic
@@ -2074,19 +2076,24 @@ def _shared_field_dest(dc_type: type, field_name: str) -> str:
 
 def _link_mutex_group_membership(
     by_name: dict[str, _ArgparseArgument],
+    by_block_param_name: dict[str, list[_ArgparseArgument]],
     mutually_exclusive_groups: tuple[Group, ...] | None,
 ) -> None:
     """Append each mutex group's 1-based index to its member arguments' ``mutex_group_indices``.
 
     This membership is the fact behind the required-member constraint row.  Member references are
     validated upstream by :func:`_validate_group_specs` before this runs, so every member name
-    resolves to a built argument.
+    resolves to a built argument or block parameter.
     """
     if not mutually_exclusive_groups:
         return
     for index, spec in enumerate(mutually_exclusive_groups, start=1):
         for name in spec.members:
-            by_name[name].mutex_group_indices.append(index)
+            if name in by_block_param_name:
+                for arg in by_block_param_name[name]:
+                    arg.mutex_group_indices.append(index)
+            else:
+                by_name[name].mutex_group_indices.append(index)
 
 
 def _resolve_func_hints(func: Callable[..., Any], *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, Any]:
@@ -2184,6 +2191,7 @@ def _expand_dataclass_block(
     *,
     func_qualname: str,
     base_command: bool,
+    block_param_name: str,
     shared: bool = False,
 ) -> list[_ArgparseArgument]:
     """Expand a dataclass block's ``init`` fields into flat ``_ArgparseArgument`` builders.
@@ -2247,6 +2255,7 @@ def _expand_dataclass_block(
                 kind=inspect.Parameter.POSITIONAL_OR_KEYWORD,
                 is_base_command=base_command,
                 is_block_field=True,
+                block_param_name=block_param_name,
                 dest_override=_shared_field_dest(dc_type, f.name) if shared else None,
             )
         )
@@ -2413,7 +2422,11 @@ def _resolve_parameters(
             # Expand first so its @dataclass-ness check runs before we read field names for the next guard.
             # A cmd2_base_args block is shared down the chain: its fields use a type-qualified dest.
             expanded = _expand_dataclass_block(
-                block_hint, func_qualname=func.__qualname__, base_command=base_command, shared=name == NS_ATTR_BASE_ARGS
+                block_hint,
+                func_qualname=func.__qualname__,
+                base_command=base_command,
+                block_param_name=name,
+                shared=name == NS_ATTR_BASE_ARGS,
             )
             _reject_field_shadowing_block_param(block_hint, name, func.__qualname__)
             resolved.extend(expanded)
@@ -2480,7 +2493,11 @@ def _resolve_parameters(
     for arg in positionals[:-1]:  # every positional except the last has a following positional
         arg.has_following_positional = True
     by_name = {arg.name: arg for arg in resolved}
-    _link_mutex_group_membership(by_name, mutually_exclusive_groups)
+    by_block_param_name: dict[str, list[_ArgparseArgument]] = {}
+    for arg in resolved:
+        if arg.block_param_name is not None:
+            by_block_param_name.setdefault(arg.block_param_name, []).append(arg)
+    _link_mutex_group_membership(by_name, by_block_param_name, mutually_exclusive_groups)
     for arg in resolved:
         arg._check_constraints()
     return resolved, base_args_types
@@ -2760,7 +2777,10 @@ def build_parser_from_function(
 
     # Add each argument to its target (its group/mutex group if assigned, else the parser).
     for arg in resolved:
-        arg.add_to(target_for.get(arg.name, parser))
+        target = target_for.get(arg.name)
+        if target is None and arg.block_param_name is not None:
+            target = target_for.get(arg.block_param_name)
+        arg.add_to(target if target is not None else parser)
 
     # A cmd2_base_args block is inheritable: stamp a parse-time presence marker so a descendant's
     # cmd2_parent_args can confirm an ancestor actually declared the block.

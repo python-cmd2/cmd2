@@ -1193,6 +1193,37 @@ class TestArgumentGroups:
         all_custom_dests = {a.dest for g in custom_groups for a in g._group_actions}
         assert {"src", "dst"} <= all_custom_dests
 
+    def test_group_with_argument_block(self) -> None:
+        """An ArgumentBlock in a Group expands to all its fields."""
+
+        @dataclass
+        class MyBlock(ArgumentBlock):
+            host: Annotated[str, Option("--host")] = "localhost"
+            port: Annotated[int, Option("--port")] = 8080
+
+        def func(self, block: MyBlock, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, groups=(Group("block", title="Connection"),))
+        custom_groups = [g for g in parser._action_groups if g.title == "Connection"]
+        assert len(custom_groups) == 1
+        dests = {a.dest for a in custom_groups[0]._group_actions}
+        assert dests == {"host", "port"}
+
+    def test_mutex_group_with_argument_block(self) -> None:
+        """An ArgumentBlock in a MutuallyExclusiveGroup expands to all its fields."""
+
+        @dataclass
+        class MyBlock(ArgumentBlock):
+            fast: Annotated[bool, Option("--fast")] = False
+            slow: Annotated[bool, Option("--slow")] = False
+
+        def func(self, block: MyBlock, verbose: bool = False) -> None: ...
+
+        parser = build_parser_from_function(func, mutually_exclusive_groups=(Group("block"),))
+        assert len(parser._mutually_exclusive_groups) == 1
+        dests = {a.dest for a in parser._mutually_exclusive_groups[0]._group_actions}
+        assert dests == {"fast", "slow"}
+
     def test_mutually_exclusive_via_decorator(self) -> None:
         """@with_annotated(mutually_exclusive_groups=...) works end-to-end."""
 
