@@ -13,7 +13,6 @@ import argparse
 
 import cmd2
 from cmd2 import (
-    Cmd2ArgumentParser,
     CommandSet,
     with_argparser,
     with_category,
@@ -48,16 +47,16 @@ class CategoryApp(cmd2.Cmd):
         """A standard command defined in the child class."""
         self.poutput("Application command executed")
 
-    @with_argparser(Cmd2ArgumentParser(description="Overridden quit command"))
-    def do_quit(self, _: argparse.Namespace) -> bool | None:
+    @with_argparser(cmd2.Cmd._build_quit_parser)
+    def do_quit(self, args: argparse.Namespace) -> bool | None:
         """Overriding a built-in command without a decorator moves it to our category."""
-        return super().do_quit("")
+        return super().do_quit(args.cmd2_statement)
 
     @with_category(cmd2.Cmd.DEFAULT_CATEGORY)
-    @with_argparser(Cmd2ArgumentParser(description="Overridden shortcuts command"))
-    def do_shortcuts(self, _: argparse.Namespace) -> None:
+    @with_argparser(cmd2.Cmd._build_shortcuts_parser)
+    def do_shortcuts(self, args: argparse.Namespace) -> None:
         """Overriding with @with_category(cmd2.Cmd.DEFAULT_CATEGORY) keeps it cmd2's category."""
-        super().do_shortcuts("")
+        super().do_shortcuts(args.cmd2_statement)
 
 
 if __name__ == "__main__":
