@@ -1,3 +1,12 @@
+## 4.2.0 (TBD)
+
+- Bug Fixes
+    - Fixed `@with_annotated(base_command=True)` not listing its subcommands under the positional
+      arguments section of the parent command's `--help`, unlike `argparse` and
+      `Cmd2ArgumentParser`. They were placed in an untitled section of their own instead. Passing
+      `subcommand_title` or `subcommand_description` still gives the subcommands a dedicated section
+      ([#1715](https://github.com/python-cmd2/cmd2/issues/1715)).
+
 ## 4.1.2 (July 16, 2026)
 
 - Enhancements
