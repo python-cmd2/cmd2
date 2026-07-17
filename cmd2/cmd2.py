@@ -73,6 +73,7 @@ from prompt_toolkit import (
 )
 from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.clipboard.pyperclip import PyperclipClipboard
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
 from prompt_toolkit.history import InMemoryHistory
@@ -116,10 +117,6 @@ from .argparse_utils import (
     ParserSource,
     SubcommandRecord,
     SubcommandSpec,
-)
-from .clipboard import (
-    get_paste_buffer,
-    write_to_paste_buffer,
 )
 from .command_set import CommandSet
 from .completion import (
@@ -793,6 +790,7 @@ class Cmd:
             "refresh_interval": refresh_interval,
             "rprompt": self.get_rprompt if enable_rprompt else None,
             "style": DynamicStyle(get_pt_theme),
+            "clipboard": PyperclipClipboard(),
         }
 
         if self.stdin.isatty() and self.stdout.isatty():
@@ -3332,7 +3330,7 @@ class Cmd:
                 # if it's not gonna work. That way we throw the exception before we go
                 # run the command and queue up all the output. if this is going to fail,
                 # no point opening up the temporary file
-                current_paste_buffer = get_paste_buffer()
+                current_paste_buffer = self.main_session.clipboard.get_data().text
                 # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
                 redir_saved_state.redirecting = True
@@ -3362,7 +3360,7 @@ class Cmd:
                 and not statement.redirect_to
             ):
                 self.stdout.seek(0)
-                write_to_paste_buffer(self.stdout.read())
+                self.main_session.clipboard.set_text(self.stdout.read())
 
             with contextlib.suppress(BrokenPipeError):
                 # Close the file or pipe that stdout was redirected to

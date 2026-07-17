@@ -12,6 +12,7 @@ from typing import (
 )
 from unittest import mock
 
+import pyperclip  # type: ignore[import-untyped]
 import pytest
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import DummyCompleter
@@ -29,7 +30,6 @@ from cmd2 import (
     CommandSet,
     Completions,
     SubcommandRecord,
-    clipboard,
     constants,
     exceptions,
     plugin,
@@ -48,6 +48,15 @@ from .conftest import (
     verify_help_text,
     with_ansi_style,
 )
+
+
+def get_paste_buffer() -> str:
+    """
+    Get the contents of the clipboard / paste buffer. This is just wrapper around
+    pyperclip paste() that provides the correct type annotation.
+
+    """
+    return cast(str, pyperclip.paste())
 
 
 def create_outsim_app():
@@ -873,7 +882,7 @@ def test_pipe_to_shell_error(redirection_app) -> None:
 
 try:
     # try getting the contents of the clipboard
-    _ = clipboard.get_paste_buffer()
+    _ = get_paste_buffer()
     # pyperclip raises at least the following types of exceptions
     #   FileNotFoundError on Windows Subsystem for Linux (WSL) when Windows paths are removed from $PATH
     #   ValueError for headless Linux systems without Gtk installed
@@ -894,7 +903,7 @@ def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.Ca
     out, _err = capsys.readouterr()
     assert out == "print\n"
 
-    lines = cmd2.clipboard.get_paste_buffer().splitlines()
+    lines = get_paste_buffer().splitlines()
     assert len(lines) == 1
     assert lines[0] == "poutput"
 
@@ -904,7 +913,7 @@ def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.Ca
     out, _err = capsys.readouterr()
     assert out == "print\n"
 
-    lines = cmd2.clipboard.get_paste_buffer().splitlines()
+    lines = get_paste_buffer().splitlines()
     assert len(lines) == 2
     assert lines[0] == "poutput"
     assert lines[1] == "poutput"

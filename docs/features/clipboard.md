@@ -4,9 +4,10 @@ Nearly every operating system has some notion of a short-term storage area which
 any program. Usually this is called the :clipboard: clipboard, but sometimes people refer to it as
 the paste buffer.
 
-`cmd2` integrates with the operating system clipboard using the
-[pyperclip](https://github.com/asweigart/pyperclip) module. Command output can be sent to the
-clipboard by ending the command with a greater than symbol:
+`cmd2` integrates with the operating system clipboard using the clipboard integration of
+[prompt_toolkit](https://github.com/jonathanslenders/prompt_toolkit) in conjunction with the
+[pyperclip](https://github.com/prompt-toolkit/python-prompt-toolkit) module. Command output can be
+sent to the clipboard by ending the command with a greater than symbol:
 
 ```text
 mycommand args >
@@ -36,5 +37,3 @@ you can change it at any time from within your code.
 If you would like your `cmd2` based application to be able to use the clipboard in additional or
 alternative ways, you can use the following methods (which work uniformly on Windows, macOS, and
 Linux).
-
-::: cmd2.clipboard
