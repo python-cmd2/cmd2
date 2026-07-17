@@ -116,6 +116,19 @@ class RunOpts(ArgumentBlock):
     dry_run: Annotated[bool, Option("--dry-run", help_text="don't actually run")] = False
 
 
+@dataclass
+class ConnOpts(ArgumentBlock):
+    """A block whose fields are placed in an argument group by name.
+
+    A ``Group`` names command-line arguments, and a block expands into one argument
+    per field -- so a group names the block's *fields* (``host``, ``port``), not the
+    block parameter (``Group("conn")`` is rejected). See ``bind`` below.
+    """
+
+    host: Annotated[str, Option("--host", help_text="host to connect to")] = "localhost"
+    port: Annotated[int, Option("--port", help_text="port to connect on")] = 8080
+
+
 class AnnotatedExample(Cmd):
     """Demonstrates @with_annotated strengths over @with_argparser."""
 
@@ -639,6 +652,28 @@ class AnnotatedExample(Cmd):
             connect example.com --port 2222 --verbose
         """
         msg = f"Connecting to {host}:{port}"
+        self.poutput(f"{msg} (verbose)" if verbose else msg)
+
+    # An ``ArgumentBlock``'s fields can go in a group too: a ``Group`` names the
+    # arguments a block expands into (its fields), not the block parameter itself.
+
+    @with_annotated(
+        description="Open a connection whose grouped flags come from an argument block.",
+        groups=(Group("host", "port", title="connection", description="where to connect"),),
+    )
+    @cmd2.with_category(ANNOTATED_CATEGORY)
+    def do_bind(self, conn: ConnOpts, verbose: bool = False) -> None:
+        """Group a block's fields: ``Group("host", "port")`` names the ``ConnOpts`` fields.
+
+        ``--host`` / ``--port`` come from the block yet still render under the ``connection``
+        help section, because a group names the arguments a block expands into -- not the
+        ``conn`` parameter (naming that, ``Group("conn")``, is rejected).
+
+        Try:
+            help bind
+            bind --host example.com --port 2222 --verbose
+        """
+        msg = f"Binding to {conn.host}:{conn.port}"
         self.poutput(f"{msg} (verbose)" if verbose else msg)
 
     # -- Mutually exclusive groups -------------------------------------------
