@@ -175,9 +175,11 @@ dataclass constructor at reconstruction time, so a ``default_factory`` yields a 
 argument.  A field whose type is itself a block is not expanded (no recursion) and raises the
 unsupported-type error.  Because fields expand flat, every field name must be unique across the command's
 own parameters and every other block's fields -- a collision (which would put two argparse actions on one
-namespace dest) raises ``TypeError`` when the parser is built.  Block fields cannot participate in
-``groups=`` / ``mutually_exclusive_groups=`` (those reference the function's own parameter names, which are
-validated without resolving type hints).  A block must be the *bare* annotation of a regular parameter:
+namespace dest) raises ``TypeError`` when the parser is built.  Block fields can participate in
+``groups=`` / ``mutually_exclusive_groups=``: a group names arguments, and because a block expands to one
+argument per field, you name its *field* names.  Since resolving those field names needs the block's
+type hints, this membership is checked when the parser is built rather than at decoration time.  A block
+must be the *bare* annotation of a regular parameter:
 wrapping it in ``Annotated``/``Optional``/a union, or using it as ``*args`` / ``**kwargs``, raises
 ``TypeError`` (to use a dataclass as a single value instead, make it a plain ``@dataclass`` with an
 ``Argument(converter=...)``).  An ``ArgumentBlock`` subclass that is not a ``@dataclass`` has no fields and
