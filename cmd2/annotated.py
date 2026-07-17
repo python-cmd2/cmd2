@@ -175,9 +175,11 @@ dataclass constructor at reconstruction time, so a ``default_factory`` yields a 
 argument.  A field whose type is itself a block is not expanded (no recursion) and raises the
 unsupported-type error.  Because fields expand flat, every field name must be unique across the command's
 own parameters and every other block's fields -- a collision (which would put two argparse actions on one
-namespace dest) raises ``TypeError`` when the parser is built.  Block fields cannot participate in
-``groups=`` / ``mutually_exclusive_groups=`` (those reference the function's own parameter names, which are
-validated without resolving type hints).  A block must be the *bare* annotation of a regular parameter:
+namespace dest) raises ``TypeError`` when the parser is built.  Block fields can participate in
+``groups=`` / ``mutually_exclusive_groups=``: a group names arguments, and because a block expands to one
+argument per field, you name its *field* names.  Since resolving those field names needs the block's
+type hints, this membership is checked when the parser is built rather than at decoration time.  A block
+must be the *bare* annotation of a regular parameter:
 wrapping it in ``Annotated``/``Optional``/a union, or using it as ``*args`` / ``**kwargs``, raises
 ``TypeError`` (to use a dataclass as a single value instead, make it a plain ``@dataclass`` with an
 ``Argument(converter=...)``).  An ``ArgumentBlock`` subclass that is not a ``@dataclass`` has no fields and
@@ -552,24 +554,19 @@ class Group:
     ) -> None:
         """Initialise an argument group definition.
 
-        :param members: parameter names to place in the group (at least one)
+        :param members: argument names to place in the group (at least one).  A plain parameter's name is its
+                        argument name; for an ``ArgumentBlock`` name its fields.
         :param title: group title shown as a help section header
         :param description: group description shown under the title
         :param required: ``mutually_exclusive_groups`` only -- require exactly one member.
                          On a ``groups=`` entry it raises ``ValueError``.
         """
         if not members:
-            raise ValueError("Group requires at least one member parameter name")
+            raise ValueError("Group requires at least one member argument name")
         self.members = members
         self.title = title
         self.description = description
         self.required = required
-
-    def _validate_members(self, *, all_param_names: set[str], group_type: str) -> None:
-        """Validate that every referenced member parameter exists."""
-        for name in self.members:
-            if name not in all_param_names:
-                raise ValueError(f"{group_type} references nonexistent parameter {name!r}")
 
 
 #: Metadata extracted from ``Annotated[T, meta]``, or ``None`` for plain types.
@@ -2072,6 +2069,39 @@ def _shared_field_dest(dc_type: type, field_name: str) -> str:
     return constants.cmd2_private_attr_name(f"shared_{id(dc_type):x}_{field_name}")
 
 
+def _check_group_members_exist(
+    by_name: dict[str, _ArgparseArgument],
+    block_param_names: set[str],
+    func_qualname: str,
+    *specs: tuple[Group, ...] | None,
+) -> None:
+    """Reject a ``Group`` member that names no command-line argument, once every argument is built.
+
+    :func:`_validate_group_specs` cannot do this at decoration time: an ArgumentBlock's arguments are its
+    dataclass fields, which only resolving the block's type hint would reveal, and resolving hints there
+    would break forward-referenced annotations.  So this is where a bad member name is finally caught.
+
+    Naming the block parameter itself is the likely mistake -- it reads natural but the parameter is expanded
+    away and has no argument -- so it gets its own message pointing at the fields to name instead.
+    """
+    for spec_group in specs:
+        for spec in spec_group or ():
+            for name in spec.members:
+                if name in by_name:
+                    continue
+                if name in block_param_names:
+                    raise ValueError(
+                        f"group in {func_qualname} references {name!r}, which is an ArgumentBlock parameter "
+                        f"and not a command-line argument: a block is expanded into one argument per field, "
+                        f"so name those fields instead."
+                    )
+                raise ValueError(
+                    f"group in {func_qualname} references {name!r}, which is not a command-line argument. "
+                    f"Members name arguments: a plain parameter is its own argument, and an ArgumentBlock's "
+                    f"arguments are its field names."
+                )
+
+
 def _link_mutex_group_membership(
     by_name: dict[str, _ArgparseArgument],
     mutually_exclusive_groups: tuple[Group, ...] | None,
@@ -2079,8 +2109,7 @@ def _link_mutex_group_membership(
     """Append each mutex group's 1-based index to its member arguments' ``mutex_group_indices``.
 
     This membership is the fact behind the required-member constraint row.  Member references are
-    validated upstream by :func:`_validate_group_specs` before this runs, so every member name
-    resolves to a built argument.
+    resolved to built arguments upstream by :func:`_check_group_members_exist` before this runs.
     """
     if not mutually_exclusive_groups:
         return
@@ -2352,6 +2381,7 @@ def _resolve_parameters(
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     base_command: bool = False,
+    groups: tuple[Group, ...] | None = None,
     mutually_exclusive_groups: tuple[Group, ...] | None = None,
 ) -> tuple[list[_ArgparseArgument], set[type]]:
     """Resolve a function signature into argparse-argument builders and inheritable-block types.
@@ -2378,6 +2408,7 @@ def _resolve_parameters(
     resolved: list[_ArgparseArgument] = []
     inherited_field_names: set[str] = set()
     base_args_types: set[type] = set()
+    block_param_names: set[str] = set()
 
     # Skip the first parameter by position (self/cls for methods)
     params = list(sig.parameters.items())
@@ -2398,6 +2429,7 @@ def _resolve_parameters(
                     f"cannot have a default value; remove the default."
                 )
             inherited_field_names.update(_init_field_names(inherited))
+            block_param_names.add(name)
             continue
 
         # An ArgumentBlock-typed parameter is an argument block: expand its fields in place (flat) instead of
@@ -2416,6 +2448,7 @@ def _resolve_parameters(
                 block_hint, func_qualname=func.__qualname__, base_command=base_command, shared=name == NS_ATTR_BASE_ARGS
             )
             _reject_field_shadowing_block_param(block_hint, name, func.__qualname__)
+            block_param_names.add(name)
             resolved.extend(expanded)
             continue
         # The magic name requires a bare ArgumentBlock; a non-block annotation on it is a clear mistake.
@@ -2480,6 +2513,7 @@ def _resolve_parameters(
     for arg in positionals[:-1]:  # every positional except the last has a following positional
         arg.has_following_positional = True
     by_name = {arg.name: arg for arg in resolved}
+    _check_group_members_exist(by_name, block_param_names, func.__qualname__, groups, mutually_exclusive_groups)
     _link_mutex_group_membership(by_name, mutually_exclusive_groups)
     for arg in resolved:
         arg._check_constraints()
@@ -2539,30 +2573,22 @@ def _filtered_namespace_kwargs(
 
 
 def _validate_group_specs(
-    func: Callable[..., Any],
-    *,
-    skip_params: frozenset[str],
     groups: tuple[Group, ...] | None,
     mutually_exclusive_groups: tuple[Group, ...] | None,
 ) -> None:
-    """Validate ``groups=`` / ``mutually_exclusive_groups=`` specs from parameter names alone.
+    """Validate the *shape* of ``groups=`` / ``mutually_exclusive_groups=`` specs.
 
-    Runs at decoration time (from both the regular-command and subcommand decoration paths, and
-    again from :func:`build_parser_from_function` for direct callers), so a misconfigured group
-    hard-fails when the class is defined instead of on first command use, where cmd2's runtime
-    handler turns the error into a printed message.  Reads only parameter names and the ``Group``
-    specs -- never the type hints -- so forward-referenced annotations still decorate.  The one
-    group rule that needs the annotations (a required member in a mutually exclusive group) stays
-    in :data:`_CONSTRAINTS` and fires when the parser is built.
+    Runs at decoration time (from both the regular-command and subcommand decoration paths, and again from
+    :func:`build_parser_from_function` for direct callers), so a misshapen group hard-fails when the class is
+    defined instead of on first command use, where cmd2's runtime handler turns the error into a printed
+    message.  Reads only the ``Group`` specs -- never the signature or the type hints -- so
+    forward-referenced annotations still decorate.
     """
     if not groups and not mutually_exclusive_groups:
         return
-    params = list(inspect.signature(func).parameters)[1:]  # skip self/cls by position
-    all_param_names = {name for name in params if name not in skip_params}
 
     group_entry_for: dict[str, int] = {}
     for index, spec in enumerate(groups or (), start=1):
-        spec._validate_members(all_param_names=all_param_names, group_type="groups")
         if spec.required:
             raise ValueError(
                 "Group(required=True) is only valid in mutually_exclusive_groups; "
@@ -2580,7 +2606,6 @@ def _validate_group_specs(
 
     mutex_entry_for: dict[str, int] = {}
     for index, spec in enumerate(mutually_exclusive_groups or (), start=1):
-        spec._validate_members(all_param_names=all_param_names, group_type="mutually_exclusive_groups")
         for name in spec.members:
             previous = mutex_entry_for.get(name)
             if previous == index:
@@ -2721,7 +2746,7 @@ def build_parser_from_function(
     from . import argparse_utils
 
     # The decorator already ran this at decoration time; direct callers get the same checks here.
-    _validate_group_specs(func, skip_params=skip_params, groups=groups, mutually_exclusive_groups=mutually_exclusive_groups)
+    _validate_group_specs(groups, mutually_exclusive_groups)
 
     parser_cls = parser_class or argparse_utils.DEFAULT_ARGUMENT_PARSER
     if "description" not in parser_kwargs:
@@ -2735,6 +2760,7 @@ def build_parser_from_function(
     resolved, base_args_types = _resolve_parameters(
         func,
         skip_params=skip_params,
+        groups=groups,
         mutually_exclusive_groups=mutually_exclusive_groups,
     )
 
@@ -2864,12 +2890,7 @@ def _build_subcommand_handler(
     # Validate the group specs eagerly (decoration time) so a misconfigured group hard-fails when
     # the class is defined; the name-only checks never resolve type hints, so forward-referenced
     # annotations still decorate and the parser build stays deferred.
-    _validate_group_specs(
-        func,
-        skip_params=_SKIP_PARAMS,
-        groups=options.groups,
-        mutually_exclusive_groups=options.mutually_exclusive_groups,
-    )
+    _validate_group_specs(options.groups, options.mutually_exclusive_groups)
     if base_command:
         # Validate eagerly (decoration time); the base-command rows in _CONSTRAINTS fire here.
         # skip_params is spelled out so this call cannot silently diverge from the parser build below.
@@ -3053,12 +3074,7 @@ def with_annotated(
         # Validate the group specs eagerly (decoration time) so a misconfigured group hard-fails when
         # the class is defined; the name-only checks never resolve type hints, so forward-referenced
         # annotations still decorate and the parser build stays deferred.
-        _validate_group_specs(
-            fn,
-            skip_params=skip_params,
-            groups=options.groups,
-            mutually_exclusive_groups=options.mutually_exclusive_groups,
-        )
+        _validate_group_specs(options.groups, options.mutually_exclusive_groups)
         if base_command:
             # Validate eagerly (decoration time); the base-command rows in _CONSTRAINTS fire here.
             _resolve_parameters(fn, skip_params=skip_params, base_command=True)
