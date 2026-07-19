@@ -135,6 +135,7 @@ from .decorators import (
     with_argparser,
 )
 from .exceptions import (
+    ClipboardError,
     Cmd2ShlexError,
     CommandSetRegistrationError,
     CompletionError,
@@ -797,7 +798,7 @@ class Cmd:
         # Only enable PyperclipClipboard if the system clipboard is accessible to Pyperclip.
         try:
             cb = PyperclipClipboard()
-            cb.get_data()  # Check if the system clipboard is accessible to Pyperclip
+            _ = cb.get_data()  # Check if the system clipboard is accessible to Pyperclip
         except Exception:  # noqa: BLE001, S110
             # Prevent prompt_toolkit from crashing in headless environments and fallback
             # on prompt toolkit's default clipboard (InMemoryClipboard) by not providing
@@ -3351,7 +3352,10 @@ class Cmd:
 
                 # Get the current paste buffer from either the system clipboard if available
                 # or the in-memory clipboard only available to the main session
-                current_paste_buffer = self.clipboard.get_data().text
+                try:
+                    current_paste_buffer = self.clipboard.get_data().text
+                except Exception as ex:
+                    raise ClipboardError(f"Failed to access clipboard data: {ex}") from ex
                 # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
                 redir_saved_state.redirecting = True
@@ -3384,7 +3388,10 @@ class Cmd:
                 # Read stdout into the clipboard. Uses the system clipboard if available
                 # otherwise fall back to the in-memory clipboard only available to the main
                 # session
-                self.clipboard.set_text(self.stdout.read())
+                try:
+                    self.clipboard.set_text(self.stdout.read())
+                except Exception as ex:
+                    raise ClipboardError(f"Failed to set clipboard data: {ex}") from ex
 
             with contextlib.suppress(BrokenPipeError):
                 # Close the file or pipe that stdout was redirected to
