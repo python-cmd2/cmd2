@@ -798,7 +798,7 @@ class Cmd:
         # Only enable PyperclipClipboard if the system clipboard is accessible to Pyperclip.
         try:
             cb = PyperclipClipboard()
-            _ = cb.get_data()  # Check if the system clipboard is accessible to Pyperclip
+            cb.get_data()  # Check if the system clipboard is accessible to Pyperclip
         except Exception:  # noqa: BLE001, S110
             # Prevent prompt_toolkit from crashing in headless environments and fallback
             # on prompt toolkit's default clipboard (InMemoryClipboard) by not providing
