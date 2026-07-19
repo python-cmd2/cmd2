@@ -947,37 +947,43 @@ def test_pyperclip_exception_on_init(mocker) -> None:
 
 
 def test_get_paste_copy_exception(redirection_app, mocker, capsys) -> None:
-    # Force pyperclip.paste to throw an exception
-    pastemock = mocker.patch("pyperclip.copy")
-    pastemock.side_effect = ValueError("foo")
+    # Force pyperclip.copy to throw an exception
+    copymock = mocker.patch("pyperclip.copy")
+    copymock.side_effect = ValueError("copy fail")
 
     # Redirect command output to the clipboard
     redirection_app.onecmd_plus_hooks("print_output > ")
 
     # Make sure we got the exception output
     out, err = capsys.readouterr()
-    assert out == "print\n"
+
     # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.copy
     assert "ClipboardError" in err
     assert "Failed to set clipboard data" in err
-    assert "foo" in err
+    assert "copy fail" in err
+
+    # check stdout
+    assert out == "print\n"
 
 
 def test_get_paste_buffer_exception(redirection_app, mocker, capsys) -> None:
     # Force pyperclip.paste to throw an exception
     pastemock = mocker.patch("pyperclip.paste")
-    pastemock.side_effect = ValueError("foo")
+    pastemock.side_effect = ValueError("paste fail")
 
     # Redirect command output to the clipboard
     redirection_app.onecmd_plus_hooks("print_output > ")
 
     # Make sure we got the exception output
     out, err = capsys.readouterr()
-    assert out == ""
+
     # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.paste
     assert "ClipboardError" in err
     assert "Failed to access clipboard data" in err
-    assert "foo" in err
+    assert "paste fail" in err
+
+    # check stdout
+    assert out == ""
 
 
 def test_allow_clipboard_initializer(redirection_app) -> None:
