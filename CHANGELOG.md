@@ -4,6 +4,8 @@
     - `@with_annotated` argument groups can now contain an `ArgumentBlock`'s arguments. A `Group`
       member names a command-line argument, and a block expands into one argument per field, so its
       fields are named: `Group("host", "port")`.
+    - `Cmd` now uses the `pyperclip` clipboard integration from `prompt_toolkit` as the default
+      clipboard if available and provides it as a property.
 - Breaking Changes
     - A `Group` member now names an argument rather than a parameter. The two differ only for an
       `ArgumentBlock` parameter, which is expanded away and has no argument of its own:

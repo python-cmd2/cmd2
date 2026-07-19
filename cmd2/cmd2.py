@@ -73,6 +73,7 @@ from prompt_toolkit import (
 )
 from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.clipboard import Clipboard
 from prompt_toolkit.clipboard.pyperclip import PyperclipClipboard
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
@@ -386,31 +387,32 @@ class Cmd:
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
-        :param completekey: name of a completion key, default to 'tab'. (If None or an empty string, 'tab' is used)
+        :param completekey: name of a completion key, default to 'tab'. (If ``None`` or an empty string, 'tab' is used)
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
         :param allow_cli_args: if ``True``, then [cmd2.Cmd.__init__][] will process command
                                line arguments as either commands to be run. This should be
                                set to ``False`` if your application parses its own command line
                                arguments.
-        :param allow_clipboard: If False, cmd2 will disable clipboard interactions
+        :param allow_clipboard: If ``False``, cmd2 will disable clipboard interactions
         :param allow_redirection: If ``False``, prevent output redirection and piping to shell
                                   commands. This parameter prevents redirection and piping, but
                                   does not alter parsing behavior. A user can still type
                                   redirection and piping tokens, and they will be parsed as such
                                   but they won't do anything.
-        :param auto_load_commands: If True, cmd2 will check for all subclasses of `CommandSet`
+        :param auto_load_commands: If ``True``, cmd2 will check for all subclasses of `CommandSet`
                                    that are currently loaded by Python and automatically
-                                   instantiate and register all commands. If False, CommandSets
+                                   instantiate and register all commands. If ``False``, CommandSets
                                    must be manually installed with `register_command_set`.
-        :param auto_suggest: If True, cmd2 will provide fish shell style auto-suggestions
+        :param auto_suggest: If ``True``, cmd2 will provide fish shell style auto-suggestions
                             based on history. User can press right-arrow key to accept the
                             provided suggestion.
         :param complete_in_thread: if ``True``, then completion will run in a separate thread.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
-                             when `auto_load_commands` is set to False
+                             when `auto_load_commands` is set to ``False``
+
         :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar while at the main prompt.
                                       Override ``get_bottom_toolbar()`` to define its content.
         :param enable_rprompt: if ``True``, enables a right prompt while at the main prompt.
@@ -429,7 +431,7 @@ class Cmd:
                                  updates in the bottom toolbar).
         :param shortcuts: Mapping containing shortcuts for commands. If not supplied,
                           then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
-                          any shortcuts, pass None and an empty dictionary will be created.
+                          any shortcuts, pass ``None`` and an empty dictionary will be created.
         :param silence_startup_script: if ``True``, then the startup script's output will be
                                        suppressed. Anything written to stderr will still display.
         :param startup_script: file path to a script to execute at startup
@@ -440,7 +442,7 @@ class Cmd:
                             terminate single-line commands. If not supplied, the default
                             is a semicolon. If your app only contains single-line commands
                             and you want terminators to be treated as literals by the parser,
-                            then set this to None.
+                            then set this to ``None``.
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -790,8 +792,19 @@ class Cmd:
             "refresh_interval": refresh_interval,
             "rprompt": self.get_rprompt if enable_rprompt else None,
             "style": DynamicStyle(get_pt_theme),
-            "clipboard": PyperclipClipboard(),
         }
+
+        # Only enable PyperclipClipboard if the system clipboard is accessible to Pyperclip.
+        try:
+            cb = PyperclipClipboard()
+            cb.get_data()  # Check if the system clipboard is accessible to Pyperclip
+        except Exception:  # noqa: BLE001, S110
+            # Prevent prompt_toolkit from crashing in headless environments and fallback
+            # on prompt toolkit's default clipboard (InMemoryClipboard) by not providing
+            # any argument for 'clipboard' in kwargs
+            pass
+        else:
+            kwargs["clipboard"] = cb
 
         if self.stdin.isatty() and self.stdout.isatty():
             try:
@@ -1486,6 +1499,17 @@ class Cmd:
         :return: the stripped prompt
         """
         return su.strip_style(self.prompt)
+
+    @property
+    def clipboard(self) -> Clipboard:
+        """The application clipboard.
+
+        The clipboard the be either a ``PyperclipClipboard`` or an ``InMemoryClipboard``
+        depending on weather the system clipboard is accessible to ``pyperclip``.
+
+        :return: the clipboard of the application's main session
+        """
+        return self.main_session.clipboard
 
     def _get_core_print_console(
         self,
@@ -3325,12 +3349,9 @@ class Cmd:
                 if not self.allow_clipboard:
                     raise RedirectionError("Clipboard access not allowed")
 
-                # attempt to get the paste buffer, this forces pyperclip to go figure
-                # out if it can actually interact with the paste buffer, and will throw exceptions
-                # if it's not gonna work. That way we throw the exception before we go
-                # run the command and queue up all the output. if this is going to fail,
-                # no point opening up the temporary file
-                current_paste_buffer = self.main_session.clipboard.get_data().text
+                # Get the current paste buffer from either the system clipboard if available
+                # or the in-memory clipboard only available to the main session
+                current_paste_buffer = self.clipboard.get_data().text
                 # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
                 redir_saved_state.redirecting = True
@@ -3360,7 +3381,10 @@ class Cmd:
                 and not statement.redirect_to
             ):
                 self.stdout.seek(0)
-                self.main_session.clipboard.set_text(self.stdout.read())
+                # Read stdout into the clipboard. Uses the system clipboard if available
+                # otherwise fall back to the in-memory clipboard only available to the main
+                # session
+                self.clipboard.set_text(self.stdout.read())
 
             with contextlib.suppress(BrokenPipeError):
                 # Close the file or pipe that stdout was redirected to
