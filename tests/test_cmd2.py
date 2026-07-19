@@ -957,7 +957,7 @@ def test_get_paste_copy_exception(redirection_app, mocker, capsys) -> None:
     # Make sure we got the exception output
     out, err = capsys.readouterr()
     assert out == "print\n"
-    # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.paste
+    # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.copy
     assert "ClipboardError" in err
     assert "Failed to set clipboard data" in err
     assert "foo" in err
