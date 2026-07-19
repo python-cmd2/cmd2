@@ -1505,8 +1505,8 @@ class Cmd:
     def clipboard(self) -> Clipboard:
         """The application clipboard.
 
-        The clipboard the be either a ``PyperclipClipboard`` or an ``InMemoryClipboard``
-        depending on weather the system clipboard is accessible to ``pyperclip``.
+        The clipboard can be either ``PyperclipClipboard`` or ``InMemoryClipboard``
+        depending on whether the system clipboard is accessible to ``pyperclip``.
 
         :return: the clipboard of the application's main session
         """
@@ -3329,6 +3329,8 @@ class Cmd:
             self.stdout = new_stdout
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
+            redir_saved_state.redirecting = True
+
             if statement.redirect_to:
                 # redirecting to a file
                 # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
@@ -3339,8 +3341,6 @@ class Cmd:
                 except OSError as ex:
                     raise RedirectionError("Failed to redirect output") from ex
 
-                redir_saved_state.redirecting = True
-
                 self.stdout = new_stdout
 
             else:
@@ -3350,19 +3350,20 @@ class Cmd:
                 if not self.allow_clipboard:
                     raise RedirectionError("Clipboard access not allowed")
 
-                # Get the current paste buffer from either the system clipboard if available
-                # or the in-memory clipboard only available to the main session
-                try:
-                    current_paste_buffer = self.clipboard.get_data().text
-                except Exception as ex:
-                    raise ClipboardError(f"Failed to access clipboard data: {ex}") from ex
                 # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
-                redir_saved_state.redirecting = True
-
                 self.stdout = new_stdout
 
+                # The current clipboard contents only need to be accessed for appending
+                # to the clipboard. Hence skip reading the clipboard content for overwriting.
                 if statement.redirector == constants.REDIRECTION_APPEND:
+                    # Get the current paste buffer from either the system clipboard if available
+                    # or the in-memory clipboard only available to the main session
+                    try:
+                        current_paste_buffer = self.clipboard.get_data().text
+                    except Exception as ex:
+                        raise ClipboardError(f"Failed to access clipboard data: {ex}") from ex
+
                     self.stdout.write(current_paste_buffer)
                     self.stdout.flush()
 
@@ -3379,34 +3380,36 @@ class Cmd:
         :param saved_redir_state: contains information needed to restore state data
         """
         if saved_redir_state.redirecting:
-            # If we redirected output to the clipboard
-            if (
-                statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
-                and not statement.redirect_to
-            ):
-                self.stdout.seek(0)
-                # Read stdout into the clipboard. Uses the system clipboard if available
-                # otherwise fall back to the in-memory clipboard only available to the main
-                # session
-                try:
-                    self.clipboard.set_text(self.stdout.read())
-                except Exception as ex:
-                    raise ClipboardError(f"Failed to set clipboard data: {ex}") from ex
+            try:
+                # If we redirected output to the clipboard
+                if (
+                    statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                    and not statement.redirect_to
+                ):
+                    self.stdout.seek(0)
+                    # Read stdout into the clipboard. Uses the system clipboard if available otherwise
+                    # fall back to the in-memory clipboard only available to the main session
+                    try:
+                        self.clipboard.set_text(self.stdout.read())
+                    except Exception as ex:
+                        raise ClipboardError(f"Failed to set clipboard data: {ex}") from ex
+            finally:
+                with contextlib.suppress(BrokenPipeError):
+                    # Close the file or pipe that stdout was redirected to
+                    self.stdout.close()
 
-            with contextlib.suppress(BrokenPipeError):
-                # Close the file or pipe that stdout was redirected to
-                self.stdout.close()
+                # Restore self.stdout
+                self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
 
-            # Restore self.stdout
-            self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+                # Check if we need to wait for the process being piped to
+                if self._cur_pipe_proc_reader is not None:
+                    self._cur_pipe_proc_reader.wait()
 
-            # Check if we need to wait for the process being piped to
-            if self._cur_pipe_proc_reader is not None:
-                self._cur_pipe_proc_reader.wait()
-
-        # These are restored regardless of whether the command redirected
-        self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
-        self._redirecting = saved_redir_state.saved_redirecting
+                self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+                self._redirecting = saved_redir_state.saved_redirecting
+        else:
+            self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+            self._redirecting = saved_redir_state.saved_redirecting
 
     def get_command_func(self, command: str) -> BoundCommandFunc | None:
         """Get the bound command function for a command.
