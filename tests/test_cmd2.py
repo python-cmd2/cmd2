@@ -937,8 +937,7 @@ def test_init_with_clipboard_allowed() -> None:
 
 def test_pyperclip_exception_on_init(mocker) -> None:
     # Force pyperclip.paste to throw an exception
-    pastemock = mocker.patch("pyperclip.paste")
-    pastemock.side_effect = ValueError("foo")
+    _ = mocker.patch("pyperclip.paste", side_effect=ValueError("paste fail on init"))
     app = cmd2.Cmd(allow_clipboard=True)
 
     # Check if if the clipboard is an InMemoryClipboard when pyperclip cannot access
@@ -946,10 +945,13 @@ def test_pyperclip_exception_on_init(mocker) -> None:
     assert isinstance(app.clipboard, InMemoryClipboard)
 
 
+@pytest.mark.skipif(not pyperclip_can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_get_paste_copy_exception(redirection_app, mocker, capsys) -> None:
+    # check clipboard type
+    assert isinstance(redirection_app.clipboard, PyperclipClipboard)
+
     # Force pyperclip.copy to throw an exception
-    copymock = mocker.patch("pyperclip.copy")
-    copymock.side_effect = ValueError("copy fail")
+    _ = mocker.patch("pyperclip.copy", side_effect=ValueError("copy fail"))
 
     # Redirect command output to the clipboard
     redirection_app.onecmd_plus_hooks("print_output > ")
@@ -966,10 +968,13 @@ def test_get_paste_copy_exception(redirection_app, mocker, capsys) -> None:
     assert out == "print\n"
 
 
+@pytest.mark.skipif(not pyperclip_can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_get_paste_buffer_exception(redirection_app, mocker, capsys) -> None:
+    # check clipboard type
+    assert isinstance(redirection_app.clipboard, PyperclipClipboard)
+
     # Force pyperclip.paste to throw an exception
-    pastemock = mocker.patch("pyperclip.paste")
-    pastemock.side_effect = ValueError("paste fail")
+    _ = mocker.patch("pyperclip.paste", side_effect=ValueError("paste fail"))
 
     # Redirect command output to the clipboard
     redirection_app.onecmd_plus_hooks("print_output > ")
