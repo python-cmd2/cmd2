@@ -968,6 +968,7 @@ def test_get_paste_copy_exception_overwrite(redirection_app, mocker, capsys) -> 
     assert out == "print\n"
 
 
+@pytest.mark.skipif(not pyperclip_can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_get_paste_copy_exception_append(redirection_app, mocker, capsys) -> None:
     # check clipboard type
     assert isinstance(redirection_app.clipboard, PyperclipClipboard)
