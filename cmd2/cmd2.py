@@ -73,6 +73,8 @@ from prompt_toolkit import (
 )
 from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.clipboard import Clipboard
+from prompt_toolkit.clipboard.pyperclip import PyperclipClipboard
 from prompt_toolkit.completion import Completer, DummyCompleter
 from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
 from prompt_toolkit.history import InMemoryHistory
@@ -117,10 +119,6 @@ from .argparse_utils import (
     SubcommandRecord,
     SubcommandSpec,
 )
-from .clipboard import (
-    get_paste_buffer,
-    write_to_paste_buffer,
-)
 from .command_set import CommandSet
 from .completion import (
     Choices,
@@ -137,6 +135,7 @@ from .decorators import (
     with_argparser,
 )
 from .exceptions import (
+    ClipboardError,
     Cmd2ShlexError,
     CommandSetRegistrationError,
     CompletionError,
@@ -389,31 +388,32 @@ class Cmd:
     ) -> None:
         """Easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
-        :param completekey: name of a completion key, default to 'tab'. (If None or an empty string, 'tab' is used)
+        :param completekey: name of a completion key, default to 'tab'. (If ``None`` or an empty string, 'tab' is used)
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
         :param allow_cli_args: if ``True``, then [cmd2.Cmd.__init__][] will process command
                                line arguments as either commands to be run. This should be
                                set to ``False`` if your application parses its own command line
                                arguments.
-        :param allow_clipboard: If False, cmd2 will disable clipboard interactions
+        :param allow_clipboard: If ``False``, cmd2 will disable clipboard interactions
         :param allow_redirection: If ``False``, prevent output redirection and piping to shell
                                   commands. This parameter prevents redirection and piping, but
                                   does not alter parsing behavior. A user can still type
                                   redirection and piping tokens, and they will be parsed as such
                                   but they won't do anything.
-        :param auto_load_commands: If True, cmd2 will check for all subclasses of `CommandSet`
+        :param auto_load_commands: If ``True``, cmd2 will check for all subclasses of `CommandSet`
                                    that are currently loaded by Python and automatically
-                                   instantiate and register all commands. If False, CommandSets
+                                   instantiate and register all commands. If ``False``, CommandSets
                                    must be manually installed with `register_command_set`.
-        :param auto_suggest: If True, cmd2 will provide fish shell style auto-suggestions
+        :param auto_suggest: If ``True``, cmd2 will provide fish shell style auto-suggestions
                             based on history. User can press right-arrow key to accept the
                             provided suggestion.
         :param complete_in_thread: if ``True``, then completion will run in a separate thread.
         :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
-                             when `auto_load_commands` is set to False
+                             when `auto_load_commands` is set to ``False``
+
         :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar while at the main prompt.
                                       Override ``get_bottom_toolbar()`` to define its content.
         :param enable_rprompt: if ``True``, enables a right prompt while at the main prompt.
@@ -432,7 +432,7 @@ class Cmd:
                                  updates in the bottom toolbar).
         :param shortcuts: Mapping containing shortcuts for commands. If not supplied,
                           then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
-                          any shortcuts, pass None and an empty dictionary will be created.
+                          any shortcuts, pass ``None`` and an empty dictionary will be created.
         :param silence_startup_script: if ``True``, then the startup script's output will be
                                        suppressed. Anything written to stderr will still display.
         :param startup_script: file path to a script to execute at startup
@@ -443,7 +443,7 @@ class Cmd:
                             terminate single-line commands. If not supplied, the default
                             is a semicolon. If your app only contains single-line commands
                             and you want terminators to be treated as literals by the parser,
-                            then set this to None.
+                            then set this to ``None``.
         """
         # Check if py or ipy need to be disabled in this instance
         if not include_py:
@@ -794,6 +794,18 @@ class Cmd:
             "rprompt": self.get_rprompt if enable_rprompt else None,
             "style": DynamicStyle(get_pt_theme),
         }
+
+        # Only enable PyperclipClipboard if the system clipboard is accessible to Pyperclip.
+        try:
+            cb = PyperclipClipboard()
+            cb.get_data()  # Check if the system clipboard is accessible to Pyperclip
+        except Exception:  # noqa: BLE001, S110
+            # Prevent prompt_toolkit from crashing in headless environments and fallback
+            # on prompt toolkit's default clipboard (InMemoryClipboard) by not providing
+            # any argument for 'clipboard' in kwargs
+            pass
+        else:
+            kwargs["clipboard"] = cb
 
         if self.stdin.isatty() and self.stdout.isatty():
             try:
@@ -1488,6 +1500,17 @@ class Cmd:
         :return: the stripped prompt
         """
         return su.strip_style(self.prompt)
+
+    @property
+    def clipboard(self) -> Clipboard:
+        """The application clipboard.
+
+        The clipboard can be either ``PyperclipClipboard`` or ``InMemoryClipboard``
+        depending on whether the system clipboard is accessible to ``pyperclip``.
+
+        :return: the clipboard of the application's main session
+        """
+        return self.main_session.clipboard
 
     def _get_core_print_console(
         self,
@@ -3306,6 +3329,8 @@ class Cmd:
             self.stdout = new_stdout
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
+            redir_saved_state.redirecting = True
+
             if statement.redirect_to:
                 # redirecting to a file
                 # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
@@ -3316,8 +3341,6 @@ class Cmd:
                 except OSError as ex:
                     raise RedirectionError("Failed to redirect output") from ex
 
-                redir_saved_state.redirecting = True
-
                 self.stdout = new_stdout
 
             else:
@@ -3327,16 +3350,19 @@ class Cmd:
                 if not self.allow_clipboard:
                     raise RedirectionError("Clipboard access not allowed")
 
-                # attempt to get the paste buffer, this forces pyperclip to go figure
-                # out if it can actually interact with the paste buffer, and will throw exceptions
-                # if it's not gonna work. That way we throw the exception before we go
-                # run the command and queue up all the output. if this is going to fail,
-                # no point opening up the temporary file
-                current_paste_buffer = get_paste_buffer()
+                current_paste_buffer = ""
+                # The current clipboard contents only need to be accessed for appending
+                # to the clipboard. Hence skip reading the clipboard content for overwriting.
+                if statement.redirector == constants.REDIRECTION_APPEND:
+                    # Get the current paste buffer from either the system clipboard if available
+                    # or the in-memory clipboard only available to the main session
+                    try:
+                        current_paste_buffer = self.clipboard.get_data().text
+                    except Exception as ex:
+                        raise ClipboardError(f"Failed to access clipboard data: {ex}") from ex
+
                 # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
-                redir_saved_state.redirecting = True
-
                 self.stdout = new_stdout
 
                 if statement.redirector == constants.REDIRECTION_APPEND:
@@ -3356,28 +3382,36 @@ class Cmd:
         :param saved_redir_state: contains information needed to restore state data
         """
         if saved_redir_state.redirecting:
-            # If we redirected output to the clipboard
-            if (
-                statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
-                and not statement.redirect_to
-            ):
-                self.stdout.seek(0)
-                write_to_paste_buffer(self.stdout.read())
+            try:
+                # If we redirected output to the clipboard
+                if (
+                    statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                    and not statement.redirect_to
+                ):
+                    self.stdout.seek(0)
+                    # Read stdout into the clipboard. Uses the system clipboard if available otherwise
+                    # fall back to the in-memory clipboard only available to the main session
+                    try:
+                        self.clipboard.set_text(self.stdout.read())
+                    except Exception as ex:
+                        raise ClipboardError(f"Failed to set clipboard data: {ex}") from ex
+            finally:
+                with contextlib.suppress(BrokenPipeError):
+                    # Close the file or pipe that stdout was redirected to
+                    self.stdout.close()
 
-            with contextlib.suppress(BrokenPipeError):
-                # Close the file or pipe that stdout was redirected to
-                self.stdout.close()
+                # Restore self.stdout
+                self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
 
-            # Restore self.stdout
-            self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+                # Check if we need to wait for the process being piped to
+                if self._cur_pipe_proc_reader is not None:
+                    self._cur_pipe_proc_reader.wait()
 
-            # Check if we need to wait for the process being piped to
-            if self._cur_pipe_proc_reader is not None:
-                self._cur_pipe_proc_reader.wait()
-
-        # These are restored regardless of whether the command redirected
-        self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
-        self._redirecting = saved_redir_state.saved_redirecting
+                self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+                self._redirecting = saved_redir_state.saved_redirecting
+        else:
+            self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+            self._redirecting = saved_redir_state.saved_redirecting
 
     def get_command_func(self, command: str) -> BoundCommandFunc | None:
         """Get the bound command function for a command.
