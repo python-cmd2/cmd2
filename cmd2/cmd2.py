@@ -3350,10 +3350,7 @@ class Cmd:
                 if not self.allow_clipboard:
                     raise RedirectionError("Clipboard access not allowed")
 
-                # create a temporary file to store output
-                new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
-                self.stdout = new_stdout
-
+                current_paste_buffer = ""
                 # The current clipboard contents only need to be accessed for appending
                 # to the clipboard. Hence skip reading the clipboard content for overwriting.
                 if statement.redirector == constants.REDIRECTION_APPEND:
@@ -3364,6 +3361,11 @@ class Cmd:
                     except Exception as ex:
                         raise ClipboardError(f"Failed to access clipboard data: {ex}") from ex
 
+                # create a temporary file to store output
+                new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
+                self.stdout = new_stdout
+
+                if statement.redirector == constants.REDIRECTION_APPEND:
                     self.stdout.write(current_paste_buffer)
                     self.stdout.flush()
 
