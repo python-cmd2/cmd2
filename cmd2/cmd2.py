@@ -395,7 +395,7 @@ class Cmd:
                                line arguments as either commands to be run. This should be
                                set to ``False`` if your application parses its own command line
                                arguments.
-        :param allow_clipboard: If ``False``, cmd2 will disable clipboard interactions
+        :param allow_clipboard: If ``False``, cmd2 will disable system clipboard interactions
         :param allow_redirection: If ``False``, prevent output redirection and piping to shell
                                   commands. This parameter prevents redirection and piping, but
                                   does not alter parsing behavior. A user can still type
@@ -541,6 +541,9 @@ class Cmd:
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
 
+        # This boolean flag stores whether cmd2 will allow clipboard related features
+        self.allow_clipboard = allow_clipboard
+
         # Create the main PromptSession
         self.main_session = self._create_main_session(
             auto_suggest=auto_suggest,
@@ -651,9 +654,6 @@ class Cmd:
             # -F causes less to automatically exit if the entire file can be displayed on the first screen
             self.pager = "less -RXF"
             self.pager_chop = "less -SRXF"
-
-        # This boolean flag stores whether cmd2 will allow clipboard related features
-        self.allow_clipboard = allow_clipboard
 
         # This determines the value returned by cmdloop() when exiting the application
         self.exit_code = 0
@@ -795,17 +795,18 @@ class Cmd:
             "style": DynamicStyle(get_pt_theme),
         }
 
-        # Only enable PyperclipClipboard if the system clipboard is accessible to Pyperclip.
-        try:
-            cb = PyperclipClipboard()
-            cb.get_data()  # Check if the system clipboard is accessible to Pyperclip
-        except Exception:  # noqa: BLE001, S110
-            # Prevent prompt_toolkit from crashing in headless environments and fallback
-            # on prompt toolkit's default clipboard (InMemoryClipboard) by not providing
-            # any argument for 'clipboard' in kwargs
-            pass
-        else:
-            kwargs["clipboard"] = cb
+        if self.allow_clipboard:
+            # Only enable PyperclipClipboard if the system clipboard is accessible to Pyperclip.
+            try:
+                cb = PyperclipClipboard()
+                cb.get_data()  # Check if the system clipboard is accessible to Pyperclip
+            except Exception:  # noqa: BLE001, S110
+                # Prevent prompt_toolkit from crashing in headless environments and fallback
+                # on prompt toolkit's default clipboard (InMemoryClipboard) by not providing
+                # any argument for 'clipboard' in kwargs
+                pass
+            else:
+                kwargs["clipboard"] = cb
 
         if self.stdin.isatty() and self.stdout.isatty():
             try:
@@ -3036,7 +3037,7 @@ class Cmd:
             pass
         except Cmd2ShlexError as ex:
             self.perror(f"Invalid syntax: {ex}")
-        except RedirectionError as ex:
+        except (ClipboardError, RedirectionError) as ex:
             self.perror(ex)
         except KeyboardInterrupt:
             if raise_keyboard_interrupt and not stop:
@@ -3266,6 +3267,7 @@ class Cmd:
         :param statement: a parsed statement from the user
         :return: A bool telling if an error occurred and a utils.RedirectionSavedState object
         :raises RedirectionError: if an error occurs trying to pipe or redirect
+        :raises ClipboardError: if an error occurs trying to access clipboard data
         """
         import subprocess
 
@@ -3359,7 +3361,7 @@ class Cmd:
                     try:
                         current_paste_buffer = self.clipboard.get_data().text
                     except Exception as ex:
-                        raise ClipboardError(f"Failed to access clipboard data: {ex}") from ex
+                        raise ClipboardError("Failed to access clipboard data") from ex
 
                 # create a temporary file to store output
                 new_stdout = cast(TextIO, tempfile.TemporaryFile(mode="w+"))  # noqa: SIM115
@@ -3380,6 +3382,7 @@ class Cmd:
 
         :param statement: Statement object which contains the parsed input from the user
         :param saved_redir_state: contains information needed to restore state data
+        :raises ClipboardError: if an error occurs while trying to set the clipboard data
         """
         if saved_redir_state.redirecting:
             try:
@@ -3394,7 +3397,7 @@ class Cmd:
                     try:
                         self.clipboard.set_text(self.stdout.read())
                     except Exception as ex:
-                        raise ClipboardError(f"Failed to set clipboard data: {ex}") from ex
+                        raise ClipboardError("Failed to set clipboard data") from ex
             finally:
                 with contextlib.suppress(BrokenPipeError):
                     # Close the file or pipe that stdout was redirected to

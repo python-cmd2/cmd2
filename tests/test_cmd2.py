@@ -919,10 +919,7 @@ def test_init_with_no_clipboard_allowed() -> None:
     app = cmd2.Cmd(allow_clipboard=False)
 
     # Check for the clipboard type
-    if pyperclip_can_paste:
-        assert isinstance(app.clipboard, PyperclipClipboard)
-    else:
-        assert isinstance(app.clipboard, InMemoryClipboard)
+    assert isinstance(app.clipboard, InMemoryClipboard)
 
 
 def test_init_with_clipboard_allowed() -> None:
@@ -960,9 +957,7 @@ def test_get_paste_copy_exception_overwrite(redirection_app, mocker, capsys) -> 
     out, err = capsys.readouterr()
 
     # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.copy
-    assert "ClipboardError" in err
-    assert "Failed to set clipboard data" in err
-    assert "copy fail" in err
+    assert err == "Failed to set clipboard data\n"
 
     # check stdout
     assert out == "print\n"
@@ -983,9 +978,7 @@ def test_get_paste_copy_exception_append(redirection_app, mocker, capsys) -> Non
     out, err = capsys.readouterr()
 
     # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.copy
-    assert "ClipboardError" in err
-    assert "Failed to set clipboard data" in err
-    assert "copy fail" in err
+    assert err == "Failed to set clipboard data\n"
 
     # check stdout
     assert out == "print\n"
@@ -1028,9 +1021,7 @@ def test_get_paste_buffer_exception_append(redirection_app, mocker, capsys) -> N
     out, err = capsys.readouterr()
 
     # this just checks that cmd2 is surfacing whatever error gets raised by pyperclip.paste
-    assert "ClipboardError" in err
-    assert "Failed to access clipboard data" in err
-    assert "paste fail" in err
+    assert err == "Failed to access clipboard data\n"
 
     # check stdout
     assert out == ""
