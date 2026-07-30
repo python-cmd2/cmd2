@@ -416,7 +416,7 @@ class _BaseArgMetadata:
         """
         reserved = self._RESERVED_EXTRA_KWARGS & extra_kwargs.keys()
         if reserved:
-            name = sorted(reserved)[0]
+            name = min(reserved)
             # Per-key remediation hint for the reserved kwarg.
             hint = {
                 "type": (
