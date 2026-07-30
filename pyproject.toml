@@ -28,7 +28,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "prompt-toolkit>=3.0.52",
+    "prompt-toolkit>=3.0.53",
     "pyperclip>=1.8.2",
     "rich>=15.0.0",
     "rich-argparse>=1.7.2",
