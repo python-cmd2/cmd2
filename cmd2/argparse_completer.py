@@ -694,7 +694,7 @@ class ArgparseCompleter:
         self._parser.print_help(file)
 
     def _choices_to_items(self, arg_state: _ArgumentState) -> list[CompletionItem]:
-        """Convert choices from action to list of CompletionItems."""
+        """Convert an action's choices to a list of CompletionItems."""
         if arg_state.action.choices is None:
             return []
 
@@ -785,13 +785,15 @@ class ArgparseCompleter:
                     cmd_set,
                 )
                 all_choices = list(choices_provider(*args, **kwargs))
+                sort = False  # choices_provider results are already sorted, so don't re-sort them
             else:
                 all_choices = self._choices_to_items(arg_state)
+                sort = True
 
             # Filter used values and run basic completion
             used_values = consumed_arg_values.get(arg_state.action.dest, [])
             filtered = [choice for choice in all_choices if choice.text not in used_values]
-            completions = self._cmd_app.basic_complete(text, line, begidx, endidx, filtered)
+            completions = self._cmd_app.basic_complete(text, line, begidx, endidx, filtered, sort=sort)
 
         return self._build_completion_table(arg_state, completions)
 

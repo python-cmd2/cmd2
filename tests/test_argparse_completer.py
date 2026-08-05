@@ -1433,3 +1433,55 @@ def test_add_parser_custom_completer() -> None:
         name="custom_completer", completer_class=CustomCompleter
     )
     assert custom_completer_parser.completer_class is CustomCompleter
+
+
+def test_completer_preserves_custom_order() -> None:
+    """Test that completer returning Completions with is_sorted=True preserves custom item ordering."""
+    custom_order = ("zebra", "apple", "banana")
+
+    class CustomApp(cmd2.Cmd):
+        def custom_completer(self, text: str, line: str, begidx: int, endidx: int) -> Completions:
+            return Completions.from_values(custom_order, is_sorted=True)
+
+        parser = Cmd2ArgumentParser()
+        parser.add_argument("--custom", completer=custom_completer)
+
+        @with_argparser(parser)
+        def do_test(self, args: argparse.Namespace) -> None:
+            pass
+
+    app = CustomApp()
+    text = ""
+    line = f"test --custom {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = app.complete(text, line, begidx, endidx)
+
+    assert completions.to_strings() == custom_order
+
+
+def test_choices_provider_preserves_custom_order() -> None:
+    """Test that choices_provider returning Choices with is_sorted=True preserves custom item ordering."""
+    custom_order = ("zebra", "apple", "banana")
+
+    class CustomApp(cmd2.Cmd):
+        def custom_provider(self) -> Choices:
+            return Choices.from_values(custom_order, is_sorted=True)
+
+        parser = Cmd2ArgumentParser()
+        parser.add_argument("--custom", choices_provider=custom_provider)
+
+        @with_argparser(parser)
+        def do_test(self, args: argparse.Namespace) -> None:
+            pass
+
+    app = CustomApp()
+    text = ""
+    line = f"test --custom {text}"
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completions = app.complete(text, line, begidx, endidx)
+
+    assert completions.to_strings() == custom_order

@@ -23,6 +23,7 @@
       `subcommand_title` or `subcommand_description` still gives the subcommands a dedicated section
       ([#1715](https://github.com/python-cmd2/cmd2/issues/1715)).
     - Fix `@with_annotated` decorator so using `ArgumentBlock` works with groups
+    - Fixed bug where already sorted `choices_provider` results were being re-sorted.
 
 ## 4.1.2 (July 16, 2026)
 
