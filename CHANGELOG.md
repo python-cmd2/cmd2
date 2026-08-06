@@ -1,4 +1,4 @@
-## 4.2.0 (TBD)
+## 4.2.0 (August 6, 2026)
 
 - Enhancements
     - `@with_annotated` argument groups can now contain an `ArgumentBlock`'s arguments. A `Group`
@@ -23,7 +23,9 @@
       `subcommand_title` or `subcommand_description` still gives the subcommands a dedicated section
       ([#1715](https://github.com/python-cmd2/cmd2/issues/1715)).
     - Fix `@with_annotated` decorator so using `ArgumentBlock` works with groups
-    - Fixed bug where already sorted `choices_provider` results were being re-sorted.
+      ([#1718](https://github.com/python-cmd2/cmd2/issues/1718)).
+    - Fixed bug where already sorted `choices_provider` results were being re-sorted
+      ([#1727](https://github.com/python-cmd2/cmd2/issues/1727)).
 
 ## 4.1.2 (July 16, 2026)
 
