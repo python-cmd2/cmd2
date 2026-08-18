@@ -552,7 +552,7 @@ class StatementParser:
     def parse_command_only(self, rawinput: str) -> PartialStatement:
         """Identify the command and arguments from raw input.
 
-        Partially parse input into a `cmd2.parsingPartialStatement` object.
+        Partially parse input into a [cmd2.parsing.PartialStatement][] object.
 
         The command is identified, and shortcuts and aliases are expanded.
         Multiline commands are identified, but terminators and output
