@@ -226,15 +226,15 @@ benefit is that your `cmd2` applications now have more aesthetically pleasing he
 color to make it quicker and easier to visually parse help text. This works for all supported
 versions of Python.
 
-- [Cmd2HelpFormatter][cmd2.argparse_utils.Cmd2HelpFormatter] - default help formatter class
-- [ArgumentDefaultsCmd2HelpFormatter][cmd2.argparse_utils.ArgumentDefaultsCmd2HelpFormatter] - adds
+- [Cmd2HelpFormatter][cmd2.rich_utils.Cmd2HelpFormatter] - default help formatter class
+- [ArgumentDefaultsCmd2HelpFormatter][cmd2.rich_utils.ArgumentDefaultsCmd2HelpFormatter] - adds
   default values to argument help
-- [MetavarTypeCmd2HelpFormatter][cmd2.argparse_utils.MetavarTypeCmd2HelpFormatter] - uses the
-  argument 'type' as the default metavar value (instead of the argument 'dest')
-- [RawDescriptionCmd2HelpFormatter][cmd2.argparse_utils.RawDescriptionCmd2HelpFormatter] - retains
-  any formatting in descriptions and epilogs
-- [RawTextCmd2HelpFormatter][cmd2.argparse_utils.RawTextCmd2HelpFormatter] - retains formatting of
-  all help text
+- [MetavarTypeCmd2HelpFormatter][cmd2.rich_utils.MetavarTypeCmd2HelpFormatter] - uses the argument
+  'type' as the default metavar value (instead of the argument 'dest')
+- [RawDescriptionCmd2HelpFormatter][cmd2.rich_utils.RawDescriptionCmd2HelpFormatter] - retains any
+  formatting in descriptions and epilogs
+- [RawTextCmd2HelpFormatter][cmd2.rich_utils.RawTextCmd2HelpFormatter] - retains formatting of all
+  help text
 
 The default `Cmd2HelpFormatter` class inherits from `argparse.HelpFormatter`. If you want a
 different behavior, then pass the desired class to the `formatter_class` argument of your argparse

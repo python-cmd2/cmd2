@@ -76,8 +76,8 @@ The major things users should be aware of when upgrading to 3.x are detailed in 
 #### ansi
 
 The functionality within the `cmd2.ansi` module has either been removed or changed to be based on
-`rich` and moved to one of the new modules: [cmd2.string_utils][], [cmd2.styles][], or
-[cmd2.terminal_utils][].
+`rich` and moved to one of the new modules: [cmd2.colors][], [cmd2.string_utils][], or
+[cmd2.styles][].
 
 To ease the migration path from `cmd2` 2.x to 3.x, we have created the `cmd2-ansi` module which is a
 backport of the `cmd2.ansi` module present in `cmd2` 2.7.0 in a standalone fashion. Relevant links:
@@ -163,11 +163,11 @@ example for a demonstration of how to use the common [cmd2.string_utils.stylize]
 #### terminal_utils
 
 Support for terminal control escape sequences for things like setting the window title and
-asynchronous alerts has been moved from `cmd2.ansi` to the new [cmd2.terminal_utils][] module.
+asynchronous alerts has been moved from `cmd2.ansi` to within the main `cmd2.Cmd` application class.
 
 This isn't really intended to be used by end users, but is used by higher-level functionality that
 is intended to be used by end users such as [cmd2.Cmd.set_window_title][] and
-[cmd2.Cmd.async_alert][].
+[cmd2.Cmd.add_alert][].
 
 See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_printing.py)
 for an example of how to use this functionality in a `cmd2` application.
@@ -177,11 +177,11 @@ for an example of how to use this functionality in a `cmd2` application.
 `cmd2` now has 5 different Argparse HelpFormatter classes, all of which are based on the
 `RichHelpFormatter` class from [rich-argparse](https://github.com/hamdanal/rich-argparse).
 
-- [Cmd2HelpFormatter][cmd2.argparse_custom.Cmd2HelpFormatter]
-- [ArgumentDefaultsCmd2HelpFormatter][cmd2.argparse_custom.ArgumentDefaultsCmd2HelpFormatter]
-- [MetavarTypeCmd2HelpFormatter][cmd2.argparse_custom.MetavarTypeCmd2HelpFormatter]
-- [RawDescriptionCmd2HelpFormatter][cmd2.argparse_custom.RawDescriptionCmd2HelpFormatter]
-- [RawTextCmd2HelpFormatter][cmd2.argparse_custom.RawTextCmd2HelpFormatter]
+- [Cmd2HelpFormatter][cmd2.rich_utils.Cmd2HelpFormatter]
+- [ArgumentDefaultsCmd2HelpFormatter][cmd2.rich_utils.ArgumentDefaultsCmd2HelpFormatter]
+- [MetavarTypeCmd2HelpFormatter][cmd2.rich_utils.MetavarTypeCmd2HelpFormatter]
+- [RawDescriptionCmd2HelpFormatter][cmd2.rich_utils.RawDescriptionCmd2HelpFormatter]
+- [RawTextCmd2HelpFormatter][cmd2.rich_utils.RawTextCmd2HelpFormatter]
 
 Previously the default `Cmd2HelpFormatter` class inherited from `argparse.RawTextHelpFormatter`,
 however it now inherits from `argparse.HelpFormatter`. If you want RawText behavior, then pass

@@ -248,7 +248,7 @@ class PartialStatement:
 
     Note:
         Unlike [cmd2.parsing.Statement][], this is a simple data object
-        and does not inherit from [str][].
+        and does not inherit from `str`.
 
     """
 
@@ -552,7 +552,7 @@ class StatementParser:
     def parse_command_only(self, rawinput: str) -> PartialStatement:
         """Identify the command and arguments from raw input.
 
-        Partially parse input into a [cmd2.PartialStatement][] object.
+        Partially parse input into a [cmd2.parsing.PartialStatement][] object.
 
         The command is identified, and shortcuts and aliases are expanded.
         Multiline commands are identified, but terminators and output
@@ -561,7 +561,7 @@ class StatementParser:
         This method is optimized for completion code and gracefully handles
         unclosed quotes without raising exceptions.
 
-        [cmd2.parsing.PartialStatement.args][] will include all output redirection
+        `cmd2.parsing.PartialStatement.args` will include all output redirection
         clauses and command terminators.
 
         Note:
@@ -571,7 +571,7 @@ class StatementParser:
             whitespace only if all quotes are closed.
 
         :param rawinput: the command line as entered by the user
-        :return: a [cmd2.PartialStatement][] object representing the split input
+        :return: a `PartialStatement` object representing the split input
 
         """
         # Expand shortcuts and aliases
