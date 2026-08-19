@@ -18,8 +18,8 @@ check: ## Run code quality tools.
 	@uv lock --locked
 	@echo "🚀 Auto-formatting/Linting code and documentation: Running prek"
 	@uv run prek run -a
-	@echo "🚀 Static type checking: Running mypy"
-	@uv run mypy
+	@echo "🚀 Static type checking: Running ty"
+	@uv run ty check
 
 .PHONY: format
 format: ## Perform ruff formatting
@@ -31,7 +31,7 @@ lint: ## Perform ruff linting
 
 .PHONY: typecheck
 typecheck: ## Perform type checking
-	@uv run mypy
+	@uv run ty check
 
 .PHONY: test
 test: ## Test the code with pytest.
@@ -76,7 +76,7 @@ publish: validate-tag build ## Publish a release to PyPI, uses token from ~/.pyp
 # Define variables for files/directories to clean
 BUILD_DIRS = build dist *.egg-info
 DOC_DIRS = build
-MYPY_DIRS = .mypy_cache dmypy.json dmypy.sock
+TY_DIRS = .ty_cache .red_knot_cache
 TEST_DIRS = .cache .pytest_cache htmlcov
 TEST_FILES = .coverage coverage.xml
 
@@ -90,10 +90,10 @@ clean-docs: ## Clean documentation artifacts
 	@echo "🚀 Removing documentation artifacts"
 	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(DOC_DIRS)'.split() if os.path.isdir(d)]"
 
-.PHONY: clean-mypy
-clean-mypy: ## Clean mypy artifacts
-	@echo "🚀 Removing mypy artifacts"
-	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(MYPY_DIRS)'.split() if os.path.isdir(d)]"
+.PHONY: clean-ty
+clean-ty: ## Clean ty artifacts
+	@echo "🚀 Removing ty artifacts"
+	@uv run python -c "import shutil; import os; [shutil.rmtree(d, ignore_errors=True) for d in '$(TY_DIRS)'.split() if os.path.isdir(d)]"
 
 .PHONY: clean-pycache
 clean-pycache: ## Clean pycache artifacts
@@ -112,7 +112,7 @@ clean-test: ## Clean test artifacts
 	@uv run python -c "from pathlib import Path; [Path(f).unlink(missing_ok=True) for f in '$(TEST_FILES)'.split()]"
 
 .PHONY: clean
-clean: clean-build clean-docs clean-mypy clean-pycache clean-ruff clean-test ## Clean all artifacts
+clean: clean-build clean-docs clean-ty clean-pycache clean-ruff clean-test ## Clean all artifacts
 	@echo "🚀 Cleaned all artifacts"
 
 .PHONY: help

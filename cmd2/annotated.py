@@ -879,7 +879,7 @@ def _resolve_union(
         raise TypeError(f"Union type {type_names} is ambiguous for auto-resolution.")
 
     parts = [_resolve_base_type(member, allow_unknown_entry=allow_unknown_entry) for member in non_none]
-    # Every part is an Enum (guarded above), so each has a converter; the None-filter keeps mypy happy.
+    # Every part is an Enum (guarded above), so each has a converter; the None-filter keeps the type checker happy.
     converters = [part.converter for part in parts if part.converter is not None]
     choices = _dedupe_choices(choice for part in parts for choice in (part.choices or []))
 
