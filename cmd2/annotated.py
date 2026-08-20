@@ -3115,6 +3115,7 @@ def with_annotated(
 
             if ns is None:
                 raise ValueError("ns is None")
+
             setattr(ns, constants.NS_ATTR_STATEMENT, statement)
             handler = getattr(ns, constants.NS_ATTR_SUBCOMMAND_FUNC, None)
             if base_command and handler is not None:

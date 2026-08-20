@@ -5644,3 +5644,46 @@ class TestSharedBlockEdgeCases:
         app.stdout = cmd2.utils.StdSim(app.stdout)
         with pytest.raises(TypeError, match="unexpected keyword argument"):
             app.do_root("show", level=5)
+
+
+class TestNsIsNoneValueError:
+    """Verify that a ValueError is raised when parsing results in a None namespace."""
+
+    def test_ns_is_none_raises_value_error(self) -> None:
+        class App(cmd2.Cmd):
+            @with_annotated
+            def do_greet(self, name: str) -> None:
+                self.poutput(f"Hello {name}")
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        parser = app.command_parsers.get(app.do_greet)
+        assert parser is not None
+
+        import unittest.mock
+
+        with (
+            unittest.mock.patch.object(parser, "parse_args", return_value=None),
+            pytest.raises(ValueError, match="ns is None"),
+        ):
+            app.onecmd("greet Alice")
+
+    def test_ns_is_none_with_unknown_args_raises_value_error(self) -> None:
+        class App(cmd2.Cmd):
+            @with_annotated(with_unknown_args=True)
+            def do_flex(self, name: str, _unknown: list[str] | None = None) -> None:
+                pass
+
+        app = App()
+        app.stdout = cmd2.utils.StdSim(app.stdout)
+        parser = app.command_parsers.get(app.do_flex)
+        assert parser is not None
+
+        import unittest.mock
+
+        # parse_known_args returns (namespace, unknown_args)
+        with (
+            unittest.mock.patch.object(parser, "parse_known_args", return_value=(None, [])),
+            pytest.raises(ValueError, match="ns is None"),
+        ):
+            app.onecmd("flex Alice")
