@@ -148,7 +148,7 @@ class Cmd2Completer(Completer):
         self._cmd_app = cmd_app
         self.custom_settings = custom_settings
 
-    def get_completions(self, document: Document, _complete_event: object) -> Iterable[Completion]:
+    def get_completions(self, document: Document, complete_event: object) -> Iterable[Completion]:  # noqa: ARG002
         """Get completions for the current input."""
         # Find the beginning of the current word based on delimiters
         line = document.text

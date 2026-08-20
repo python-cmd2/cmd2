@@ -6,9 +6,3 @@ include = ["cmd2"]
 
 [rules]
 unresolved-attribute = "ignore" # 64 warnings
-invalid-method-override = "ignore" # 4 warnings
-invalid-argument-type = "ignore" # 8 warnings
-invalid-assignment = "ignore" # 16 warnings
-call-top-callable = "ignore" # 2 warnings
-invalid-return-type = "ignore" # 1 warning
-unknown-argument = "ignore" # 1 warning

@@ -747,8 +747,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         super().__init__(
             prog=prog,
             usage=usage,
-            description=description,  # type: ignore[arg-type]
-            epilog=epilog,  # type: ignore[arg-type]
+            description=description,  # type: ignore[arg-type, ty:invalid-argument-type]
+            epilog=epilog,  # type: ignore[arg-type, ty:invalid-argument-type]
             parents=parents,
             formatter_class=formatter_class,
             prefix_chars=prefix_chars,
@@ -772,7 +772,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         self.description: HelpContent | None  # type: ignore[assignment]
         self.epilog: HelpContent | None  # type: ignore[assignment]
 
-    def print_usage(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
+    def print_usage(self, file: IO[str] | None = None) -> None:  # type: ignore[override, ty:invalid-method-override]
         """Override to ensure the formatter is aware of the target file."""
         if file is None:
             file = self._thread_locals.current_output_file
@@ -780,7 +780,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         with self.output_to(file):
             super().print_usage(file)
 
-    def print_help(self, file: IO[str] | None = None) -> None:  # type:ignore[override]
+    def print_help(self, file: IO[str] | None = None) -> None:  # type: ignore[override, ty:invalid-method-override]
         """Override to ensure the formatter is aware of the target file."""
         if file is None:
             file = self._thread_locals.current_output_file
@@ -831,7 +831,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         temp_parser = Cmd2ArgumentParser(
             prog=self.prog,
             usage=None,
-            formatter_class=self.formatter_class,
+            formatter_class=cast(type[Cmd2HelpFormatter], self.formatter_class),
             add_help=False,
         )
 
@@ -1037,7 +1037,8 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
     def _get_formatter(self, *_args: Any, **_kwargs: Any) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
-        return self.formatter_class(prog=self.prog, file=self._thread_locals.current_output_file)
+        formatter_class = cast(type[Cmd2HelpFormatter], self.formatter_class)
+        return formatter_class(prog=self.prog, file=self._thread_locals.current_output_file)
 
     def format_help(self, *args: Any, **kwargs: Any) -> str:
         """Override to add a newline."""

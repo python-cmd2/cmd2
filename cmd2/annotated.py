@@ -708,10 +708,10 @@ class _CollectionCastingAction(argparse._StoreAction):
 
     def __call__(
         self,
-        _parser: argparse.ArgumentParser,
+        parser: argparse.ArgumentParser,  # noqa: ARG002
         namespace: argparse.Namespace,
         values: Any,
-        _option_string: str | None = None,
+        option_string: str | None = None,  # noqa: ARG002
     ) -> None:
         result = values
         if self._container_factory is not None and isinstance(values, list):
@@ -2189,7 +2189,7 @@ def _find_argument_block(hint: Any) -> type[ArgumentBlock] | None:
     return None
 
 
-def _init_field_names(dc_type: type) -> list[str]:
+def _init_field_names(dc_type: Any) -> list[str]:
     """Names of a dataclass's ``init`` fields in definition order (the flat argument names of a block)."""
     return [f.name for f in fields(dc_type) if f.init]
 
@@ -3113,6 +3113,8 @@ def with_annotated(
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
 
+            if ns is None:
+                raise ValueError("ns is None")
             setattr(ns, constants.NS_ATTR_STATEMENT, statement)
             handler = getattr(ns, constants.NS_ATTR_SUBCOMMAND_FUNC, None)
             if base_command and handler is not None:
