@@ -32,4 +32,4 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Check typing
-        run: uv run mypy .
+        run: uv run ty check
