@@ -1,3 +1,8 @@
+## 4.2.1 (TBD)
+
+- Enhancements
+    - Enabled Ctrl-Z suspension at the prompt
+
 ## 4.2.0 (August 6, 2026)
 
 - Enhancements

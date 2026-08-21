@@ -785,6 +785,7 @@ class Cmd:
             "complete_in_thread": complete_in_thread,
             "complete_while_typing": False,
             "completer": Cmd2Completer(self),
+            "enable_suspend": True,
             "history": Cmd2History(item.raw for item in self.history),
             "key_bindings": key_bindings,
             "lexer": Cmd2Lexer(self),
@@ -3613,6 +3614,7 @@ class Cmd:
             complete_in_thread=self.main_session.complete_in_thread,
             complete_while_typing=self.main_session.complete_while_typing,
             completer=completer_to_use,
+            enable_suspend=self.main_session.enable_suspend,
             history=InMemoryHistory(history) if history is not None else InMemoryHistory(),
             key_bindings=self.main_session.key_bindings,
             input=self.main_session.input,
@@ -3635,6 +3637,7 @@ class Cmd:
         """
         temp_session: PromptSession[str] = PromptSession(
             color_depth=self.main_session.color_depth,
+            enable_suspend=self.main_session.enable_suspend,
             input=self.main_session.input,
             output=self.main_session.output,
             style=self.main_session.style,
