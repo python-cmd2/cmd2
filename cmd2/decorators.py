@@ -310,7 +310,7 @@ def with_argparser(
         :return: Function that takes raw input and converts to an argparse Namespace to passed to the wrapped function.
         """
 
-        @functools.wraps(func)
+        @functools.wraps(func)  # type: ignore[arg-type, ty:invalid-argument-type]
         def cmd_wrapper(*args: Any, **kwargs: Any) -> bool | None:
             """Command function wrapper which translates command line into argparse Namespace and call actual command function.
 
@@ -345,9 +345,9 @@ def with_argparser(
                 parsing_results: tuple[argparse.Namespace] | tuple[argparse.Namespace, list[str]]
                 with arg_parser.output_to(cmd_app.stdout):
                     if with_unknown_args:
-                        parsing_results = arg_parser.parse_known_args(command_arg_list, initial_namespace)
+                        parsing_results = arg_parser.parse_known_args(command_arg_list, initial_namespace)  # type: ignore[assignment, ty:invalid-assignment]
                     else:
-                        parsing_results = (arg_parser.parse_args(command_arg_list, initial_namespace),)
+                        parsing_results = (arg_parser.parse_args(command_arg_list, initial_namespace),)  # type: ignore[assignment, ty:invalid-assignment]
             except SystemExit as exc:
                 raise Cmd2ArgparseError from exc
 

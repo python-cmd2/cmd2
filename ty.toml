@@ -1,0 +1,8 @@
+[environment]
+python-version = "3.11"
+
+[src]
+include = ["cmd2"]
+
+[rules]
+unresolved-attribute = "ignore" # 64 warnings

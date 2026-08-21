@@ -105,7 +105,7 @@ class AllowStyle(Enum):
 
 
 # Controls when ANSI style sequences are allowed in output
-ALLOW_STYLE = AllowStyle.TERMINAL
+ALLOW_STYLE: AllowStyle = AllowStyle.TERMINAL
 
 
 class Cmd2HelpFormatter(RichHelpFormatter):
