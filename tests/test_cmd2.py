@@ -1544,6 +1544,13 @@ def test_help_verbose_with_fake_command(capsys) -> None:
     assert cmds[1] not in out
 
 
+def test_ipy_help(base_app: cmd2.Cmd) -> None:
+    """Verify that help for ipy builds its parser and displays correctly."""
+    out, err = run_cmd(base_app, "help ipy")
+    assert "Run an interactive IPython shell." in out
+    assert not err
+
+
 def test_render_columns_no_strs(help_app: HelpApp) -> None:
     no_strs = []
     result = help_app.render_columns(no_strs)
@@ -4297,6 +4304,20 @@ def test_command_synonym_parser() -> None:
     assert synonym_parser is help_parser
 
 
+def test_command_parsers_contains() -> None:
+    class SampleApp(cmd2.Cmd):
+        def do_non_argparse(self, args: str) -> None:
+            """Plain command without an argparse decorator."""
+
+    app = SampleApp()
+
+    # Argparse-based command returns True
+    assert app.do_help in app.command_parsers
+
+    # Non-argparse command returns False
+    assert app.do_non_argparse not in app.command_parsers
+
+
 def test_custom_completekey_ctrl_k():
     from prompt_toolkit.keys import Keys
 
@@ -4805,25 +4826,19 @@ def test_bracketed_paste_multiple_commands(base_app) -> None:
     sys.platform.startswith("win"),
     reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
 )
-def test_bracketed_paste_multiline_command() -> None:
+def test_bracketed_paste_multiline_command(multiline_app) -> None:
     """Test pasting multiline command awaiting terminator."""
-
-    class MultilineApp(cmd2.Cmd):
-        def __init__(self) -> None:
-            super().__init__(multiline_commands=["sql"])
-
-    app = MultilineApp()
     with create_pipe_input() as pipe_input:
-        app.main_session = PromptSession(
+        multiline_app.main_session = PromptSession(
             input=pipe_input,
             output=DummyOutput(),
-            key_bindings=app.main_session.key_bindings,
-            multiline=app.main_session.multiline,
-            prompt_continuation=app.main_session.prompt_continuation,
+            key_bindings=multiline_app.main_session.key_bindings,
+            multiline=multiline_app.main_session.multiline,
+            prompt_continuation=multiline_app.main_session.prompt_continuation,
         )
 
-        pipe_input.send_text("\x1b[200~sql select 1\nfrom table;\nhelp\n\x1b[201~")
-        line1 = app._read_command_line("prompt> ")
-        assert line1 == "sql select 1\nfrom table;"
-        line2 = app._read_command_line("prompt> ")
+        pipe_input.send_text("\x1b[200~orate line 1\nline 2;\nhelp\n\x1b[201~")
+        line1 = multiline_app._read_command_line("prompt> ")
+        assert line1 == "orate line 1\nline 2;"
+        line2 = multiline_app._read_command_line("prompt> ")
         assert line2 == "help"
