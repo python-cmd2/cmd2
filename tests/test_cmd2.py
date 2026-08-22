@@ -17,7 +17,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import DummyCompleter
 from prompt_toolkit.input import DummyInput, create_pipe_input
 from prompt_toolkit.output import DummyOutput
-from prompt_toolkit.shortcuts import PromptSession
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession
 from rich.style import Style
 from rich.text import Text
 
@@ -1542,6 +1542,13 @@ def test_help_verbose_with_fake_command(capsys) -> None:
     out, _err = capsys.readouterr()
     assert cmds[0] in out
     assert cmds[1] not in out
+
+
+def test_ipy_help(base_app: cmd2.Cmd) -> None:
+    """Verify that help for ipy builds its parser and displays correctly."""
+    out, err = run_cmd(base_app, "help ipy")
+    assert "Run an interactive IPython shell." in out
+    assert not err
 
 
 def test_render_columns_no_strs(help_app: HelpApp) -> None:
@@ -4297,6 +4304,20 @@ def test_command_synonym_parser() -> None:
     assert synonym_parser is help_parser
 
 
+def test_command_parsers_contains() -> None:
+    class SampleApp(cmd2.Cmd):
+        def do_non_argparse(self, args: str) -> None:
+            """Plain command without an argparse decorator."""
+
+    app = SampleApp()
+
+    # Argparse-based command returns True
+    assert app.do_help in app.command_parsers
+
+    # Non-argparse command returns False
+    assert app.do_non_argparse not in app.command_parsers
+
+
 def test_custom_completekey_ctrl_k():
     from prompt_toolkit.keys import Keys
 
@@ -4376,6 +4397,13 @@ def test_path_complete_users_windows(monkeypatch, base_app):
     # Since we didn't mock os.path.sep, it will use system separator.
     expected = "~user" + os.path.sep
     assert expected in matches
+
+
+def test_main_session_defaults(base_app: cmd2.Cmd) -> None:
+    """Verify default configuration of the main PromptSession."""
+    assert base_app.main_session.complete_style == CompleteStyle.MULTI_COLUMN
+    assert base_app.main_session.complete_while_typing is False
+    assert base_app.main_session.enable_suspend is True
 
 
 def test_refresh_interval() -> None:
@@ -4752,3 +4780,65 @@ def test_detach_all_subcommands() -> None:
     root_parser = cast(cmd2.Cmd2ArgumentParser, app.command_parsers.get(app.do_base))
     subparsers_action = root_parser.get_subparsers_action()
     assert not subparsers_action._name_parser_map
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+def test_bracketed_paste_single_line(base_app) -> None:
+    """Test pasting single line text without newlines."""
+    with create_pipe_input() as pipe_input:
+        base_app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            key_bindings=base_app.main_session.key_bindings,
+            multiline=base_app.main_session.multiline,
+        )
+
+        pipe_input.send_text("\x1b[200~help\x1b[201~\n")
+        line = base_app._read_command_line("prompt> ")
+        assert line == "help"
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+def test_bracketed_paste_multiple_commands(base_app) -> None:
+    """Test pasting multiple lines with newlines."""
+    with create_pipe_input() as pipe_input:
+        base_app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            key_bindings=base_app.main_session.key_bindings,
+            multiline=base_app.main_session.multiline,
+        )
+
+        pipe_input.send_text("\x1b[200~help\nhistory\n\x1b[201~")
+        line1 = base_app._read_command_line("prompt> ")
+        assert line1 == "help"
+        line2 = base_app._read_command_line("prompt> ")
+        assert line2 == "history"
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+def test_bracketed_paste_multiline_command(multiline_app) -> None:
+    """Test pasting multiline command awaiting terminator."""
+    with create_pipe_input() as pipe_input:
+        multiline_app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            key_bindings=multiline_app.main_session.key_bindings,
+            multiline=multiline_app.main_session.multiline,
+            prompt_continuation=multiline_app.main_session.prompt_continuation,
+        )
+
+        pipe_input.send_text("\x1b[200~orate line 1\nline 2;\nhelp\n\x1b[201~")
+        line1 = multiline_app._read_command_line("prompt> ")
+        assert line1 == "orate line 1\nline 2;"
+        line2 = multiline_app._read_command_line("prompt> ")
+        assert line2 == "help"
