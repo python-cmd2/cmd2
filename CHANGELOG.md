@@ -1,9 +1,11 @@
-## 4.2.1 (TBD)
+## 4.2.1 (August 22, 2026)
 
 - Enhancements
-    - Enabled Ctrl-Z suspension at the prompt
     - Added bracketed paste support so multiple pasted commands execute sequentially and multiline
       commands continue as expected.
+
+- Bug Fixes
+    - Enabled Ctrl-Z suspension at the prompt
 
 ## 4.2.0 (August 6, 2026)
 
