@@ -3,7 +3,6 @@
 - Enhancements
     - Added bracketed paste support so multiple pasted commands execute sequentially and multiline
       commands continue as expected.
-
 - Bug Fixes
     - Enabled Ctrl-Z suspension at the prompt
 
