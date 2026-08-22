@@ -4752,3 +4752,71 @@ def test_detach_all_subcommands() -> None:
     root_parser = cast(cmd2.Cmd2ArgumentParser, app.command_parsers.get(app.do_base))
     subparsers_action = root_parser.get_subparsers_action()
     assert not subparsers_action._name_parser_map
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+def test_bracketed_paste_single_line(base_app) -> None:
+    """Test pasting single line text without newlines."""
+    with create_pipe_input() as pipe_input:
+        base_app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            key_bindings=base_app.main_session.key_bindings,
+            multiline=base_app.main_session.multiline,
+        )
+
+        pipe_input.send_text("\x1b[200~help\x1b[201~\n")
+        line = base_app._read_command_line("prompt> ")
+        assert line == "help"
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+def test_bracketed_paste_multiple_commands(base_app) -> None:
+    """Test pasting multiple lines with newlines."""
+    with create_pipe_input() as pipe_input:
+        base_app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            key_bindings=base_app.main_session.key_bindings,
+            multiline=base_app.main_session.multiline,
+        )
+
+        pipe_input.send_text("\x1b[200~help\nhistory\n\x1b[201~")
+        line1 = base_app._read_command_line("prompt> ")
+        assert line1 == "help"
+        line2 = base_app._read_command_line("prompt> ")
+        assert line2 == "history"
+
+
+@pytest.mark.skipif(
+    sys.platform.startswith("win"),
+    reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
+)
+def test_bracketed_paste_multiline_command() -> None:
+    """Test pasting multiline command awaiting terminator."""
+
+    class MultilineApp(cmd2.Cmd):
+        def __init__(self) -> None:
+            super().__init__(multiline_commands=["sql"])
+
+    app = MultilineApp()
+    with create_pipe_input() as pipe_input:
+        app.main_session = PromptSession(
+            input=pipe_input,
+            output=DummyOutput(),
+            key_bindings=app.main_session.key_bindings,
+            multiline=app.main_session.multiline,
+            prompt_continuation=app.main_session.prompt_continuation,
+        )
+
+        pipe_input.send_text("\x1b[200~sql select 1\nfrom table;\nhelp\n\x1b[201~")
+        line1 = app._read_command_line("prompt> ")
+        assert line1 == "sql select 1\nfrom table;"
+        line2 = app._read_command_line("prompt> ")
+        assert line2 == "help"

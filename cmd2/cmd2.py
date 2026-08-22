@@ -78,6 +78,8 @@ from prompt_toolkit.formatted_text import ANSI, AnyFormattedText
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.input import DummyInput, create_input
 from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
+from prompt_toolkit.keys import Keys
 from prompt_toolkit.output import DummyOutput, create_output
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import CompleteStyle, PromptSession, choice, set_title
@@ -740,6 +742,49 @@ class Cmd:
                 # No macro found or already processed. The statement is complete.
                 return False
 
+    def _create_key_bindings(self, completekey: str) -> KeyBindings:
+        """Create and configure custom key bindings for the PromptSession."""
+        key_bindings = KeyBindings()
+
+        if completekey != self.DEFAULT_COMPLETEKEY:
+
+            @key_bindings.add(completekey)
+            def _trigger_completion(event: KeyPressEvent) -> None:  # pragma: no cover
+                """Trigger completion using the custom completion key."""
+                b = event.current_buffer
+                if b.complete_state:
+                    b.complete_next()
+                else:
+                    b.start_completion(select_first=False)
+
+        @key_bindings.add("enter", filter=filters.completion_is_selected)
+        def _accept_completion(event: KeyPressEvent) -> None:  # pragma: no cover
+            """Accept a selected completion on Enter without submitting the command."""
+            event.current_buffer.complete_state = None
+
+        @key_bindings.add(Keys.BracketedPaste)
+        def _handle_bracketed_paste(event: KeyPressEvent) -> None:
+            """Handle bracketed paste by feeding lines as keystrokes separated by Enter.
+
+            By default, prompt_toolkit inserts pasted text as a single buffer blob.
+            Translating newlines into Enter keystrokes allows multiple pasted commands
+            to execute sequentially and multiline commands to continue as expected.
+            """
+            data = event.data.replace("\r\n", "\n").replace("\r", "\n")
+            if "\n" not in data:
+                event.current_buffer.insert_text(data)
+                return
+
+            key_presses = []
+            for i, line in enumerate(data.split("\n")):
+                if i > 0:
+                    key_presses.append(KeyPress(Keys.ControlM, "\r"))
+                key_presses.extend(KeyPress(ch, ch) for ch in line)
+
+            event.key_processor.feed_multiple(key_presses)
+
+        return key_bindings
+
     def _create_main_session(
         self,
         *,
@@ -756,26 +801,6 @@ class Cmd:
         Otherwise, uses dummy drivers to support non-interactive streams like
         pipes or files.
         """
-        # Configure custom key bindings
-        key_bindings = KeyBindings()
-
-        # Add a binding for 'enter' that triggers only when a completion is selected.
-        # This allows accepting a completion without submitting the command.
-        @key_bindings.add("enter", filter=filters.completion_is_selected)
-        def _(event: Any) -> None:  # pragma: no cover
-            event.current_buffer.complete_state = None
-
-        if completekey != self.DEFAULT_COMPLETEKEY:
-            # Configure prompt_toolkit `KeyBindings` with the custom key for completion
-            @key_bindings.add(completekey)
-            def _(event: Any) -> None:  # pragma: no cover
-                """Trigger completion."""
-                b = event.current_buffer
-                if b.complete_state:
-                    b.complete_next()
-                else:
-                    b.start_completion(select_first=False)
-
         # Base configuration
         kwargs: dict[str, Any] = {
             "auto_suggest": AutoSuggestFromHistory() if auto_suggest else None,
@@ -787,7 +812,7 @@ class Cmd:
             "completer": Cmd2Completer(self),
             "enable_suspend": True,
             "history": Cmd2History(item.raw for item in self.history),
-            "key_bindings": key_bindings,
+            "key_bindings": self._create_key_bindings(completekey),
             "lexer": Cmd2Lexer(self),
             "multiline": filters.Condition(self._should_continue_multiline),
             "prompt_continuation": self.continuation_prompt,
