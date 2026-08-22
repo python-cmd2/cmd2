@@ -17,7 +17,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import DummyCompleter
 from prompt_toolkit.input import DummyInput, create_pipe_input
 from prompt_toolkit.output import DummyOutput
-from prompt_toolkit.shortcuts import PromptSession
+from prompt_toolkit.shortcuts import CompleteStyle, PromptSession
 from rich.style import Style
 from rich.text import Text
 
@@ -4376,6 +4376,13 @@ def test_path_complete_users_windows(monkeypatch, base_app):
     # Since we didn't mock os.path.sep, it will use system separator.
     expected = "~user" + os.path.sep
     assert expected in matches
+
+
+def test_main_session_defaults(base_app: cmd2.Cmd) -> None:
+    """Verify default configuration of the main PromptSession."""
+    assert base_app.main_session.complete_style == CompleteStyle.MULTI_COLUMN
+    assert base_app.main_session.complete_while_typing is False
+    assert base_app.main_session.enable_suspend is True
 
 
 def test_refresh_interval() -> None:
