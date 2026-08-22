@@ -779,7 +779,8 @@ class Cmd:
             for i, line in enumerate(data.split("\n")):
                 if i > 0:
                     key_presses.append(KeyPress(Keys.ControlM, "\r"))
-                key_presses.extend(KeyPress(ch, ch) for ch in line)
+                if line:
+                    key_presses.append(KeyPress(Keys.Any, line))
 
             event.key_processor.feed_multiple(key_presses)
 
