@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 """A sample application for cmd2.
 
-This example has additional code in main() that shows how to accept a command from
-the command line at invocation:
+This example relies on the `allow_cli_args` init parameter being `True` by default which allows passing commands on the
+command line to execute when the application is invoked.
 
-$ python cmd_as_argument.py speak -p hello there
+This can be run like so:
+$ python cmd_as_argument.py "speak -p hello there" help
+
+By default, the application will enter the interactive shell mode after executing the commands passed in on the command line.
+You can have it exit after executing by providing `quit` as the last command.
+Commands and arguments can be grouped together by including in quotes.
 """
 
-import argparse
 import secrets
 
 import cmd2
@@ -24,7 +28,7 @@ class CmdLineApp(cmd2.Cmd):
         shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({"&": "speak"})
         # Set include_ipy to True to enable the "ipy" command which runs an interactive IPython shell
-        super().__init__(allow_cli_args=False, include_ipy=True, multiline_commands=["orate"], shortcuts=shortcuts)
+        super().__init__(allow_cli_args=True, include_ipy=True, multiline_commands=["orate"], shortcuts=shortcuts)
 
         self.self_in_py = True
         self.maxrepeats = 3
@@ -45,8 +49,8 @@ class CmdLineApp(cmd2.Cmd):
         """Repeats what you tell me to."""
         words = []
         for w in args.words:
-            word = w.copy()
-            if args.piglatin:
+            word = w.strip()
+            if args.piglatin and word:
                 word = f"{word[1:]}{word[0]}ay"
             if args.shout:
                 word = word.upper()
@@ -80,30 +84,8 @@ class CmdLineApp(cmd2.Cmd):
             self.poutput(" ".join(output))
 
 
-def main(argv=None):
-    """Run when invoked from the operating system shell."""
-    parser = cmd2.Cmd2ArgumentParser(description="Commands as arguments")
-    command_help = "optional command to run, if no command given, enter an interactive shell"
-    parser.add_argument("command", nargs="?", help=command_help)
-    arg_help = "optional arguments for command"
-    parser.add_argument("command_args", nargs=argparse.REMAINDER, help=arg_help)
-
-    args = parser.parse_args(argv)
-
-    c = CmdLineApp()
-
-    sys_exit_code = 0
-    if args.command:
-        # we have a command, run it and then exit
-        c.onecmd_plus_hooks("{} {}".format(args.command, " ".join(args.command_args)))
-    else:
-        # we have no command, drop into interactive mode
-        sys_exit_code = c.cmdloop()
-
-    return sys_exit_code
-
-
 if __name__ == "__main__":
     import sys
 
-    sys.exit(main())
+    app = CmdLineApp()
+    sys.exit(app.cmdloop())

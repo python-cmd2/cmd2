@@ -17,6 +17,8 @@ each:
     - Comprehensive example demonstrating various aspects of using
       [argparse](https://docs.python.org/3/library/argparse.html) for command argument processing
       via the `cmd2.with_argparser` decorator
+    - Also demonstrates how to use a custom `argparse` parser when invoking your application and
+      still pass commands at invocation
 - [async_call.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_call.py)
     - Shows how to make a call to an async function from a cmd2 command.
 - [async_commands.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_commands.py)
@@ -26,8 +28,8 @@ each:
       title
 - [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/main/examples/basic_completion.py)
     - Show how to enable custom tab completion by assigning a completer function to `do_*` commands
-- [cmd2_as_argument.py](https://github.com/python-cmd2/cmd2/blob/main/examples/cmd_as_argument.py)
-    - Demonstrates how to accept and parse command-line arguments when invoking a cmd2 application
+- [cmd_as_argument.py](https://github.com/python-cmd2/cmd2/blob/main/examples/cmd_as_argument.py)
+    - Demonstrates how to accept command-line arguments when invoking a cmd2 application
 - [color.py](https://github.com/python-cmd2/cmd2/blob/main/examples/color.py)
     - Show the numerous colors available to use in your cmd2 applications
 - [command_sets.py](https://github.com/python-cmd2/cmd2/blob/main/examples/command_sets.py)
