@@ -11,12 +11,12 @@ initializing so they are guaranteed to run before any _Commands At Invocation_.
 
 ## Commands At Invocation
 
-You can send commands to your app as you invoke it by including them as extra arguments to the
-program. `cmd2` interprets each argument as a separate command, so you should enclose each command
-in quotation marks if it is more than a one-word command. You can use either single or double quotes
-for this purpose.
+By default, users can send commands to your app as you invoke it by including them as extra
+arguments to the program. `cmd2` interprets each argument as a separate command, so you should
+enclose each command in quotation marks if it is more than a one-word command. You can use either
+single or double quotes for this purpose.
 
-    $ python examples/cmd_as_argument.py "say hello" "say Gracie" quit
+    $ uv run examples/cmd_as_argument.py "say hello" "say Gracie" quit
     hello
     Gracie
 
@@ -26,13 +26,26 @@ application and easily used in automation.
 
 !!! note
 
-    If you wish to disable cmd2's consumption of command-line arguments, you can do so by setting the `allow_cli_args` argument of your [cmd2.Cmd][] class instance to `False`. This would be useful, for example, if you wish to use something like [argparse](https://docs.python.org/3/library/argparse.html) to parse the overall command line arguments for your application:
+    If you wish to disable cmd2's consumption of command-line arguments, you can do so by setting the `allow_cli_args` argument of your [cmd2.Cmd][] class instance to `False`.
+    This would be useful, for example, if you wish to use something like [argparse](https://docs.python.org/3/library/argparse.html) to parse the overall command line arguments
+    for your application:
 
     ```py
     from cmd2 import Cmd
     class App(Cmd):
         def __init__(self):
             super().__init__(allow_cli_args=False)
+    ```
+
+!!! tip
+
+    If you want to use something like [argparse](https://docs.python.org/3/library/argparse.html) to parse the overall command line arguments for your application
+    but still want to be able to pass any extra arguments to your application as commands, then see the `if __name__ == "__main__":` block at the end of the
+    [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py) example.
+
+    This can be run like so:
+    ```sh
+    uv run examples/argparse_example.py -c blue help quit
     ```
 
 ## Startup Script
