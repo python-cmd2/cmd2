@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """A sample application for cmd2.
 
-This example reliese on the `allow_cli_args` init parameter being `True` by default which allows passing commands on the
+This example relies on the `allow_cli_args` init parameter being `True` by default which allows passing commands on the
 command line to execute when the application is invoked.
 
 This can be run like so:
