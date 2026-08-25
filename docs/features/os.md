@@ -112,7 +112,7 @@ double or single quotes:
     ellohay heretay
     (Cmd)
 
-If you want to start your application using a custom `arparse` parser to collect high-level
+If you want to start your application using a custom `argparse` parser to collect high-level
 application arguments but still want to be able to pass extra unknown arguments as commands at
 invocation, then see the
 [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)

@@ -1894,7 +1894,7 @@ time reading the [rich documentation](https://rich.readthedocs.io/).
         - **with_argument_list** decorator to change argument type from str to List[str]
             - **do\_\*** commands get a single argument which is a list of strings, as pre-parsed by
               shlex.split()
-        - **with_arparser** decorator for strict argparse-based argument parsing of command
+        - **with_argparser** decorator for strict argparse-based argument parsing of command
           arguments
             - **do\_\*** commands get a single argument which is the output of argparse.parse_args()
         - **with_argparser_and_unknown_args** decorator for argparse-based argument parsing, but
