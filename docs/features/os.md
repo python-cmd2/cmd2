@@ -75,25 +75,25 @@ Either of these methods will launch your program and enter the `cmd2` command lo
 user to enter commands, which are then executed by your program.
 
 You may want to execute commands in your program without prompting the user for any input. There are
-several ways you might accomplish this task. The easiest one is to pipe commands and their arguments
-into your program via standard input. You don't need to do anything to your program in order to use
-this technique. Here's a demonstration using the `examples/cmd_as_argument.py` included in the
-source code of `cmd2`:
+several ways you might accomplish this task. One is to pipe commands and their arguments into your
+program via standard input. You don't need to do anything to your program in order to use this
+technique. Here's a demonstration using the `examples/cmd_as_argument.py` included in the source
+code of `cmd2`:
 
-    $ echo "speak -p some words" | python examples/cmd_as_argument.py
+    $ echo "speak -p some words" | uv run examples/cmd_as_argument.py
     omesay ordsway
 
 Using this same approach you could create a text file containing the commands you would like to run,
 one command per line in the file. Say your file was called `somecmds.txt`. To run the commands in
 the text file using your `cmd2` program (from a Windows command prompt):
 
-    c:\cmd2> type somecmds.txt | python.exe examples/cmd_as_argument.py
+    c:\cmd2> type somecmds.txt | uv run examples/cmd_as_argument.py
     omesay ordsway
 
 By default, `cmd2` programs also look for commands passed as arguments from the operating system
 shell, and execute those commands before entering the command loop:
 
-    $ python examples/cmd_as_argument.py help
+    $ uv run examples/cmd_as_argument.py help
 
     Documented Commands
     ───────────────────
@@ -105,35 +105,23 @@ shell, and execute those commands before entering the command loop:
 You may need more control over command line arguments passed from the operating system shell. For
 example, you might have a command inside your `cmd2` program which itself accepts arguments, and
 maybe even option strings. Say you wanted to run the `speak` command from the operating system
-shell, but have it say it in pig latin:
+shell, but have it say it in pig latin - just group the command and its arguments inside either
+double or single quotes:
 
-    $ python examples/cmd_as_argument.py speak -p hello there
-    python cmd_as_argument.py speak -p hello there
-    usage: speak [-h] [-p] [-s] [-r REPEAT] words [words ...]
-    speak: error: the following arguments are required: words
-    *** Unknown syntax: -p
-    *** Unknown syntax: hello
-    *** Unknown syntax: there
-    (Cmd)
-
-Uh-oh, that's not what we wanted. `cmd2` treated `-p`, `hello`, and `there` as commands, which don't
-exist in that program, thus the syntax errors.
-
-There is an easy way around this, which is demonstrated in
-[cmd_as_argument.py](https://github.com/python-cmd2/cmd2/blob/main/examples/cmd_as_argument.py)
-example. By setting `allow_cli_args=False` you can do your own argument parsing of the command line:
-
-    $ python examples/cmd_as_argument.py speak -p hello there
-    ellohay heretay
-
-Check the source code of this example, especially the `main()` function, to see the technique.
-
-Alternatively you can simply wrap the command plus arguments in quotes (either single or double
-quotes):
-
-    $ python examples/cmd_as_argument.py "speak -p hello there"
+    $ uv run examples/cmd_as_argument.py "speak -p hello there"
     ellohay heretay
     (Cmd)
+
+If you want to start your application using a custom `arparse` parser to collect high-level
+application arguments but still want to be able to pass extra unknown arguments as commands at
+invocation, then see the
+[argparse_example.py](https://github.com/python-cmd2/cmd2/blob/main/examples/argparse_example.py)
+example. Using this methodology you can call it like so:
+
+    $ uv run examples/argparse_example.py -c blue help
+
+Check the source code of this example, especially the `if __name__ == '__main__':` block, to see the
+technique.
 
 ### Automating cmd2 apps from other CLI/CLU tools
 
@@ -150,13 +138,13 @@ This is easily achieved by combining the following capabilities of `cmd2`:
 Here is a simple example which doesn't require the quit command since the custom `exit` command
 quits while returning an exit code:
 
-    $ python examples/exit_code.py "exit 23"
+    $ uv run examples/exit_code.py "exit 23"
     'examples/exit_code.py' exiting with code: 23
     $ echo $?
     23
 
 Here is another example using `quit`:
 
-    $ python examples/cmd_as_argument.py "speak -p hello there" quit
+    $ uv run examples/cmd_as_argument.py "speak -p hello there" quit
     ellohay heretay
     $
