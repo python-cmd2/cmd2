@@ -17,7 +17,7 @@ each:
     - Comprehensive example demonstrating various aspects of using
       [argparse](https://docs.python.org/3/library/argparse.html) for command argument processing
       via the `cmd2.with_argparser` decorator
-    - Also demonstrates how to use a custom `arparse` parser when invoking your application and
+    - Also demonstrates how to use a custom `argparse` parser when invoking your application and
       still pass commands at invocation
 - [async_call.py](https://github.com/python-cmd2/cmd2/blob/main/examples/async_call.py)
     - Shows how to make a call to an async function from a cmd2 command.
