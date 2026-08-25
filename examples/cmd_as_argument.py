@@ -50,7 +50,7 @@ class CmdLineApp(cmd2.Cmd):
         words = []
         for w in args.words:
             word = w.strip()
-            if args.piglatin:
+            if args.piglatin and word:
                 word = f"{word[1:]}{word[0]}ay"
             if args.shout:
                 word = word.upper()

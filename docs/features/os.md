@@ -120,7 +120,7 @@ example. Using this methodology you can call it like so:
 
     $ uv run examples/argparse_example.py -c blue help
 
-Check the source code of this example, especially the `if __name__ == '__main__':` block, to see the
+Check the source code of this example, especially the `if __name__ == "__main__":` block, to see the
 technique.
 
 ### Automating cmd2 apps from other CLI/CLU tools
