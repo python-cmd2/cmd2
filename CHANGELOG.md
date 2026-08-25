@@ -1,3 +1,9 @@
+## 4.2.2 (August 25, 2026)
+
+- Documentation Improvements
+    - Improved documentation in attempt at making some recommended best-practices more discoverable
+    - Fixed the broken `cmd_as_argument` example
+
 ## 4.2.1 (August 22, 2026)
 
 - Enhancements
