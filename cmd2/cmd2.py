@@ -919,7 +919,7 @@ class Cmd:
 
         cmdset.on_register(self)
         methods = cast(
-            list[tuple[str, Callable[..., Any]]],
+            list[tuple[str, BoundCommandFunc]],
             inspect.getmembers(
                 cmdset,
                 predicate=lambda meth: (  # type: ignore[arg-type]
@@ -935,7 +935,7 @@ class Cmd:
             for cmd_func_name, command_method in methods:
                 command = cmd_func_name[len(COMMAND_FUNC_PREFIX) :]
 
-                self._install_command_function(cmd_func_name, cast(BoundCommandFunc, command_method), type(cmdset).__name__)
+                self._install_command_function(cmd_func_name, command_method, type(cmdset).__name__)
                 installed_attributes.append(cmd_func_name)
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
@@ -953,7 +953,7 @@ class Cmd:
                 self._cmd_to_command_sets[command] = cmdset
 
                 # If this command is in a disabled category, then disable it
-                command_category = self._get_command_category(cast(BoundCommandFunc, command_method))
+                command_category = self._get_command_category(command_method)
                 if command_category in self.disabled_categories:
                     message_to_print = self.disabled_categories[command_category]
                     self.disable_command(command, message_to_print)
@@ -1086,17 +1086,19 @@ class Cmd:
             cmdset.on_unregister()
             self._unregister_subcommands(cmdset)
 
-            methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
-                cmdset,
-                predicate=lambda meth: (  # type: ignore[arg-type]
-                    isinstance(meth, Callable)  # type: ignore[arg-type]
-                    and hasattr(meth, "__name__")
-                    and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+            methods: list[tuple[str, BoundCommandFunc]] = cast(
+                list[tuple[str, BoundCommandFunc]],
+                inspect.getmembers(
+                    cmdset,
+                    predicate=lambda meth: (  # type: ignore[arg-type]
+                        isinstance(meth, Callable)  # type: ignore[arg-type]
+                        and hasattr(meth, "__name__")
+                        and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+                    ),
                 ),
             )
 
-            for cmd_func_name, command_method_raw in methods:
-                command_method = cast(BoundCommandFunc, command_method_raw)
+            for cmd_func_name, command_method in methods:
                 command = cmd_func_name[len(COMMAND_FUNC_PREFIX) :]
 
                 # Enable the command before uninstalling it to make sure we remove both
@@ -1159,17 +1161,19 @@ class Cmd:
                     )
                 check_parser_uninstallable(subparser)
 
-        methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
-            cmdset,
-            predicate=lambda meth: (  # type: ignore[arg-type]
-                isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, "__name__")
-                and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+        methods: list[tuple[str, BoundCommandFunc]] = cast(
+            list[tuple[str, BoundCommandFunc]],
+            inspect.getmembers(
+                cmdset,
+                predicate=lambda meth: (  # type: ignore[arg-type]
+                    isinstance(meth, Callable)  # type: ignore[arg-type]
+                    and hasattr(meth, "__name__")
+                    and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+                ),
             ),
         )
 
-        for cmd_func_name, command_method_raw in methods:
-            command_method = cast(BoundCommandFunc, command_method_raw)
+        for cmd_func_name, command_method in methods:
             # We only need to check if it's safe to remove the parser if this
             # is the actual command since command synonyms don't own it.
             if cmd_func_name == command_method.__name__:
@@ -2829,9 +2833,10 @@ class Cmd:
 
         # Add commands
         for command in self.get_visible_commands():
-            command_func = cast(BoundCommandFunc, self.get_command_func(command))
-            description = strip_doc_annotations(command_func.__doc__).splitlines()[0] if command_func.__doc__ else ""
-            items.append(CompletionItem(command, display_meta=description))
+            command_func = self.get_command_func(command)
+            if command_func is not None:
+                description = strip_doc_annotations(command_func.__doc__).splitlines()[0] if command_func.__doc__ else ""
+                items.append(CompletionItem(command, display_meta=description))
 
         # Add aliases
         for name, value in self.aliases.items():
@@ -4347,9 +4352,10 @@ class Cmd:
                 help_topics.remove(command)
 
             # Store the command within its category
-            command_func = cast(BoundCommandFunc, self.get_command_func(command))
-            category = self._get_command_category(command_func)
-            cmds_cats.setdefault(category, []).append(command)
+            command_func = self.get_command_func(command)
+            if command_func is not None:
+                category = self._get_command_category(command_func)
+                cmds_cats.setdefault(category, []).append(command)
 
         return cmds_cats, help_topics
 
@@ -5816,8 +5822,8 @@ class Cmd:
         all_commands = self.get_all_commands()
 
         for command in all_commands:
-            command_func = cast(BoundCommandFunc, self.get_command_func(command))
-            if self._get_command_category(command_func) == category:
+            command_func = self.get_command_func(command)
+            if command_func is not None and self._get_command_category(command_func) == category:
                 self.disable_command(command, message_to_print)
 
         self.disabled_categories[category] = message_to_print
