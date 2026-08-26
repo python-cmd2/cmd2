@@ -72,12 +72,8 @@ CmdOrSetClassT = TypeVar("CmdOrSetClassT", bound=CmdOrSetClass)
 class BoundCommandFunc(Protocol):
     """Protocol for a command function bound to a command instance."""
 
+    __name__: str
     __qualname__: str
-
-    @property
-    def __name__(self) -> str:
-        """The name of the bound command function."""
-        ...
 
     def __call__(self, *args: Any, **kwargs: Any) -> bool | None:
         """Invoke the bound command function."""
@@ -88,22 +84,18 @@ class BoundCommandFunc(Protocol):
 class UnboundCommandFunc(Protocol[CmdOrSetT, P]):
     """Protocol for an unbound command function."""
 
+    __name__: str
     __qualname__: str
-
-    @property
-    def __name__(self) -> str:
-        """The name of the unbound command function."""
-        ...
 
     def __call__(self, __self: CmdOrSetT, /, *args: P.args, **kwargs: P.kwargs) -> bool | None:
         """Invoke the unbound command function with its command instance."""
         ...
 
     @overload
-    def __get__(self, instance: None, owner: Any) -> "UnboundCommandFunc[CmdOrSetT, P]": ...
+    def __get__(self, instance: None, owner: Any = ...) -> "UnboundCommandFunc[CmdOrSetT, P]": ...
 
     @overload
-    def __get__(self, instance: CmdOrSetT, owner: Any) -> BoundCommandFunc: ...
+    def __get__(self, instance: CmdOrSetT, owner: Any = ...) -> BoundCommandFunc: ...
 
 
 ##################################################################################################

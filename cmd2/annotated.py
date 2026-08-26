@@ -311,6 +311,7 @@ from .exceptions import Cmd2ArgparseError
 from .rich_utils import Cmd2HelpFormatter, HelpContent
 from .types import (
     BoundCommandFunc,
+    CmdOrSet,
     CmdOrSetT,
     UnboundChoicesProvider,
     UnboundCommandFunc,
@@ -321,7 +322,7 @@ from .types import (
 _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
 
 
-_CommandFunc: TypeAlias = BoundCommandFunc | UnboundCommandFunc[CmdOrSetT, Any]
+_CommandFunc: TypeAlias = BoundCommandFunc | UnboundCommandFunc[CmdOrSet, Any]
 
 
 class Cmd2ParserKwargs(TypedDict, total=False):
