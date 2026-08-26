@@ -321,7 +321,7 @@ from .types import (
 _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
 
 
-_CommandFunc: TypeAlias = BoundCommandFunc | UnboundCommandFunc[CmdOrSetT, [argparse.Namespace]]
+_CommandFunc: TypeAlias = BoundCommandFunc | UnboundCommandFunc[CmdOrSetT, Any]
 
 
 class Cmd2ParserKwargs(TypedDict, total=False):
