@@ -52,7 +52,7 @@ ARG_TOKENS = "arg_tokens"
 def _build_hint(parser: Cmd2ArgumentParser, arg_action: argparse.Action) -> str:
     """Build completion hint for a given argument."""
     # Check if hinting is disabled for this argument
-    suppress_hint = arg_action.get_suppress_tab_hint()  # type: ignore[attr-defined]
+    suppress_hint = arg_action.get_suppress_tab_hint()  # type: ignore[attr-defined, ty:unresolved-attribute]
     if suppress_hint or arg_action.help == argparse.SUPPRESS:
         return ""
 
@@ -104,7 +104,7 @@ class _ArgumentState:
         self.is_remainder = self.action.nargs == argparse.REMAINDER
 
         # Check if nargs is a range
-        nargs_range: tuple[int, int | float] | None = self.action.get_nargs_range()  # type: ignore[attr-defined]
+        nargs_range: tuple[int, int | float] | None = self.action.get_nargs_range()  # type: ignore[attr-defined, ty:unresolved-attribute]
         if nargs_range is not None:
             self.min = nargs_range[0]
             self.max = nargs_range[1]
@@ -575,7 +575,7 @@ class ArgparseCompleter:
 
         :raises ValueError: if there is an error with the data.
         """
-        table_columns = arg_state.action.get_table_columns()  # type: ignore[attr-defined]
+        table_columns = arg_state.action.get_table_columns()  # type: ignore[attr-defined, ty:unresolved-attribute]
         has_table_data = any(item.table_data for item in completions)
 
         if table_columns is None:
@@ -606,7 +606,7 @@ class ArgparseCompleter:
 
         table_columns = cast(
             Sequence[str | Column] | None,
-            arg_state.action.get_table_columns(),  # type: ignore[attr-defined]
+            arg_state.action.get_table_columns(),  # type: ignore[attr-defined, ty:unresolved-attribute]
         )
 
         # Skip table generation if results are outside thresholds or no columns are defined
@@ -761,7 +761,7 @@ class ArgparseCompleter:
         :raises CompletionError: if the completer or choices function this calls raises one
         """
         # Check if the argument uses a completer
-        completer = arg_state.action.get_completer()  # type: ignore[attr-defined]
+        completer = arg_state.action.get_completer()  # type: ignore[attr-defined, ty:unresolved-attribute]
         if completer is not None:
             args, kwargs = self._prepare_callable_params(
                 completer,
@@ -775,7 +775,7 @@ class ArgparseCompleter:
 
         # Otherwise it uses a choices provider or choices list
         else:
-            choices_provider = arg_state.action.get_choices_provider()  # type: ignore[attr-defined]
+            choices_provider = arg_state.action.get_choices_provider()  # type: ignore[attr-defined, ty:unresolved-attribute]
             if choices_provider is not None:
                 args, kwargs = self._prepare_callable_params(
                     choices_provider,

@@ -8,11 +8,12 @@ from collections.abc import (
 from typing import (
     TYPE_CHECKING,
     Any,
-    Concatenate,
     ParamSpec,
+    Protocol,
     TypeAlias,
     TypeVar,
     Union,
+    overload,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -65,13 +66,36 @@ CmdOrSetClassT = TypeVar("CmdOrSetClassT", bound=CmdOrSetClass)
 # Command Function Types
 ##################################################################################################
 
+
 # A bound cmd2 command function (e.g. do_command).
 # The 'self' argument is already tied to an instance and is omitted.
-BoundCommandFunc: TypeAlias = Callable[..., bool | None]
+class BoundCommandFunc(Protocol):
+    """Protocol for a command function bound to a command instance."""
+
+    __name__: str
+    __qualname__: str
+
+    def __call__(self, *args: Any, **kwargs: Any) -> bool | None:
+        """Invoke the bound command function."""
+
 
 # An unbound cmd2 command function (e.g. the class method do_command).
 # The 'self' argument can be either a Cmd or CommandSet instance.
-UnboundCommandFunc: TypeAlias = Callable[Concatenate[CmdOrSetT, P], bool | None]
+class UnboundCommandFunc(Protocol[CmdOrSetT, P]):
+    """Protocol for an unbound command function."""
+
+    __name__: str
+    __qualname__: str
+
+    def __call__(self, __self: CmdOrSetT, /, *args: P.args, **kwargs: P.kwargs) -> bool | None:
+        """Invoke the unbound command function with its command instance."""
+        ...
+
+    @overload
+    def __get__(self, instance: None, owner: Any) -> "UnboundCommandFunc[CmdOrSetT, P]": ...
+
+    @overload
+    def __get__(self, instance: CmdOrSetT, owner: Any) -> BoundCommandFunc: ...
 
 
 ##################################################################################################

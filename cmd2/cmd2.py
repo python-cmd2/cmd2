@@ -935,7 +935,7 @@ class Cmd:
             for cmd_func_name, command_method in methods:
                 command = cmd_func_name[len(COMMAND_FUNC_PREFIX) :]
 
-                self._install_command_function(cmd_func_name, command_method, type(cmdset).__name__)
+                self._install_command_function(cmd_func_name, cast(BoundCommandFunc, command_method), type(cmdset).__name__)
                 installed_attributes.append(cmd_func_name)
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
@@ -953,7 +953,7 @@ class Cmd:
                 self._cmd_to_command_sets[command] = cmdset
 
                 # If this command is in a disabled category, then disable it
-                command_category = self._get_command_category(command_method)
+                command_category = self._get_command_category(cast(BoundCommandFunc, command_method))
                 if command_category in self.disabled_categories:
                     message_to_print = self.disabled_categories[command_category]
                     self.disable_command(command, message_to_print)
@@ -1095,7 +1095,8 @@ class Cmd:
                 ),
             )
 
-            for cmd_func_name, command_method in methods:
+            for cmd_func_name, command_method_raw in methods:
+                command_method = cast(BoundCommandFunc, command_method_raw)
                 command = cmd_func_name[len(COMMAND_FUNC_PREFIX) :]
 
                 # Enable the command before uninstalling it to make sure we remove both
@@ -1167,7 +1168,8 @@ class Cmd:
             ),
         )
 
-        for cmd_func_name, command_method in methods:
+        for cmd_func_name, command_method_raw in methods:
+            command_method = cast(BoundCommandFunc, command_method_raw)
             # We only need to check if it's safe to remove the parser if this
             # is the actual command since command synonyms don't own it.
             if cmd_func_name == command_method.__name__:
@@ -5918,7 +5920,7 @@ class Cmd:
         nparam = len(signature.parameters)
         if nparam != count:
             plural = "" if nparam == 1 else "s"
-            raise TypeError(f"{func.__name__} has {nparam} positional argument{plural}, expected {count}")
+            raise TypeError(f"{getattr(func, '__name__', 'hook')} has {nparam} positional argument{plural}, expected {count}")
 
     @classmethod
     def _validate_prepostloop_callable(cls, func: Callable[[], None]) -> None:
@@ -5927,7 +5929,7 @@ class Cmd:
         # make sure there is no return annotation or the return is specified as None
         _, ret_ann = get_types(func)
         if ret_ann is not None:
-            raise TypeError(f"{func.__name__} must have a return type of 'None', got: {ret_ann}")
+            raise TypeError(f"{getattr(func, '__name__', 'hook')} must have a return type of 'None', got: {ret_ann}")
 
     def register_preloop_hook(self, func: Callable[[], None]) -> None:
         """Register a function to be called at the beginning of the command loop."""
@@ -5944,13 +5946,14 @@ class Cmd:
         """Check parameter and return types for postparsing hooks."""
         cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
         type_hints, ret_ann = get_types(func)
+        func_name = getattr(func, "__name__", "hook")
         if not type_hints:
-            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: 'cmd2.plugin.PostparsingData'")
+            raise TypeError(f"{func_name} parameter is missing a type hint, expected: 'cmd2.plugin.PostparsingData'")
         par_ann = next(iter(type_hints.values()))
         if par_ann != plugin.PostparsingData:
-            raise TypeError(f"{func.__name__} must have one parameter declared with type 'cmd2.plugin.PostparsingData'")
+            raise TypeError(f"{func_name} must have one parameter declared with type 'cmd2.plugin.PostparsingData'")
         if ret_ann != plugin.PostparsingData:
-            raise TypeError(f"{func.__name__} must declare return a return type of 'cmd2.plugin.PostparsingData'")
+            raise TypeError(f"{func_name} must declare return a return type of 'cmd2.plugin.PostparsingData'")
 
     def register_postparsing_hook(self, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Register a function to be called after parsing user input but before running the command."""
@@ -5968,17 +5971,18 @@ class Cmd:
         cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
 
         type_hints, ret_ann = get_types(func)
+        func_name = getattr(func, "__name__", "hook")
         if not type_hints:
-            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: {data_type}")
+            raise TypeError(f"{func_name} parameter is missing a type hint, expected: {data_type}")
         _param_name, par_ann = next(iter(type_hints.items()))
         # validate the parameter has the right annotation
         if par_ann != data_type:
-            raise TypeError(f"argument 1 of {func.__name__} has incompatible type {par_ann}, expected {data_type}")
+            raise TypeError(f"argument 1 of {func_name} has incompatible type {par_ann}, expected {data_type}")
         # validate the return value has the right annotation
         if ret_ann is None:
-            raise TypeError(f"{func.__name__} does not have a declared return type, expected {data_type}")
+            raise TypeError(f"{func_name} does not have a declared return type, expected {data_type}")
         if ret_ann != data_type:
-            raise TypeError(f"{func.__name__} has incompatible return type {ret_ann}, expected {data_type}")
+            raise TypeError(f"{func_name} has incompatible return type {ret_ann}, expected {data_type}")
 
     def register_precmd_hook(self, func: Callable[[plugin.PrecommandData], plugin.PrecommandData]) -> None:
         """Register a hook to be called before the command function."""
@@ -5997,15 +6001,16 @@ class Cmd:
         """Check parameter and return types for command finalization hooks."""
         cls._validate_callable_param_count(func, 1)
         type_hints, ret_ann = get_types(func)
+        func_name = getattr(func, "__name__", "hook")
         if not type_hints:
-            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: {plugin.CommandFinalizationData}")
+            raise TypeError(f"{func_name} parameter is missing a type hint, expected: {plugin.CommandFinalizationData}")
         _, par_ann = next(iter(type_hints.items()))
         if par_ann != plugin.CommandFinalizationData:
             raise TypeError(
-                f"{func.__name__} must have one parameter declared with type {plugin.CommandFinalizationData}, got: {par_ann}"
+                f"{func_name} must have one parameter declared with type {plugin.CommandFinalizationData}, got: {par_ann}"
             )
         if ret_ann != plugin.CommandFinalizationData:
-            raise TypeError(f"{func.__name__} must declare return a return type of {plugin.CommandFinalizationData}")
+            raise TypeError(f"{func_name} must declare return a return type of {plugin.CommandFinalizationData}")
 
     def register_cmdfinalization_hook(
         self, func: Callable[[plugin.CommandFinalizationData], plugin.CommandFinalizationData]

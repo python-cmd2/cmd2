@@ -318,6 +318,13 @@ from .types import (
 _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
 
 
+class _NamedCallable(Protocol):
+    __name__: str
+    __qualname__: str
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
 class Cmd2ParserKwargs(TypedDict, total=False):
     """Forwarded ctor kwargs for [`Cmd2ArgumentParser`][cmd2.argparse_utils.Cmd2ArgumentParser] (PEP 692 ``Unpack``).
 
@@ -695,7 +702,7 @@ def _make_enum_type(enum_class: type[enum.Enum], *, allow_unknown_entry: bool = 
         raise _invalid_choice(value, _value_map)
 
     _convert.__name__ = enum_class.__name__
-    _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]
+    _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined, ty:unresolved-attribute]
     return _convert
 
 
@@ -1101,7 +1108,7 @@ def _compose_preprocess(preprocess: Callable[[str], str], converter: Callable[[s
     _convert.__name__ = getattr(converter, "__name__", "preprocess")
     enum_class = getattr(converter, "_cmd2_enum_class", None)
     if enum_class is not None:
-        _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined]
+        _convert._cmd2_enum_class = enum_class  # type: ignore[attr-defined, ty:unresolved-attribute]
     return _convert
 
 
@@ -2118,7 +2125,7 @@ def _link_mutex_group_membership(
             by_name[name].mutex_group_indices.append(index)
 
 
-def _resolve_func_hints(func: Callable[..., Any], *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, Any]:
+def _resolve_func_hints(func: _NamedCallable, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, Any]:
     """Resolve the type hints for the parameters that become arguments.
 
     The bound first parameter (self/cls), the injected ``skip_params``, and the ``return`` annotation
@@ -2296,7 +2303,7 @@ def _block_field_dest(spec: _BlockSpec, field_name: str) -> str:
     return _shared_field_dest(spec.dc_type, field_name) if spec.shared else field_name
 
 
-def _dataclass_blocks(func: Callable[..., Any], *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, _BlockSpec]:
+def _dataclass_blocks(func: _NamedCallable, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, _BlockSpec]:
     """Map each dataclass-block parameter name to its :class:`_BlockSpec`.
 
     Used by the runtime handler to reconstruct the dataclass instance from the parsed namespace.  A
@@ -2320,7 +2327,7 @@ def _dataclass_blocks(func: Callable[..., Any], *, skip_params: frozenset[str] =
 
 
 def _lazy_block_resolver(
-    func: Callable[..., Any],
+    func: _NamedCallable,
     *,
     base_accepted: set[str],
     skip_params: frozenset[str],
@@ -2377,7 +2384,7 @@ def _reconstruct_dataclass_blocks(func_kwargs: dict[str, Any], blocks: dict[str,
 
 
 def _resolve_parameters(
-    func: Callable[..., Any],
+    func: _NamedCallable,
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     base_command: bool = False,
@@ -2721,7 +2728,7 @@ def _docstring_first_paragraph(doc: str | None) -> str | None:
 
 
 def build_parser_from_function(
-    func: Callable[..., Any],
+    func: _NamedCallable,
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     groups: tuple[Group, ...] | None = None,
@@ -2796,7 +2803,7 @@ def build_parser_from_function(
     return parser
 
 
-def _derive_subcommand_name(func: Callable[..., Any], subcommand_to: str) -> str:
+def _derive_subcommand_name(func: _NamedCallable, subcommand_to: str) -> str:
     """Derive the subcommand name from the function name and validate the naming convention.
 
     ``subcommand_to='team member'`` + ``func.__name__='team_member_add'`` -> ``'add'``.
@@ -2832,7 +2839,7 @@ class _ParserBuildOptions:
 
 
 def _make_parser_builder(
-    func: Callable[..., Any],
+    func: _NamedCallable,
     *,
     skip_params: frozenset[str],
     base_command: bool,
@@ -2871,12 +2878,12 @@ def _make_parser_builder(
 
 
 def _build_subcommand_handler(
-    func: Callable[..., Any],
+    func: _NamedCallable,
     subcommand_to: str,
     *,
     base_command: bool = False,
     options: _ParserBuildOptions,
-) -> tuple[Callable[..., Any], str, Callable[[], Cmd2ArgumentParser]]:
+) -> tuple[_NamedCallable, str, Callable[[], Cmd2ArgumentParser]]:
     """Build a subcommand's parser and a handler that unpacks the Namespace into typed kwargs.
 
     :param func: the subcommand handler function
@@ -2957,7 +2964,7 @@ def with_annotated(
 
 
 def with_annotated(
-    func: Callable[..., Any] | None = None,
+    func: _NamedCallable | None = None,
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -3036,7 +3043,7 @@ def with_annotated(
         subcommand_description=subcommand_description,
     )
 
-    def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(fn: _NamedCallable) -> _NamedCallable:
         if with_unknown_args:
             unknown_param = inspect.signature(fn).parameters.get("_unknown")
             if unknown_param is None:
