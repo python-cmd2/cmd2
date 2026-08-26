@@ -284,6 +284,7 @@ from typing import (
     NamedTuple,
     ParamSpec,
     Protocol,
+    TypeAlias,
     TypedDict,
     TypeGuard,
     TypeVar,
@@ -309,8 +310,10 @@ from .decorators import _parse_positionals
 from .exceptions import Cmd2ArgparseError
 from .rich_utils import Cmd2HelpFormatter, HelpContent
 from .types import (
+    BoundCommandFunc,
     CmdOrSetT,
     UnboundChoicesProvider,
+    UnboundCommandFunc,
     UnboundCompleter,
 )
 
@@ -318,11 +321,7 @@ from .types import (
 _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
 
 
-class _NamedCallable(Protocol):
-    __name__: str
-    __qualname__: str
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Any: ...
+_CommandFunc: TypeAlias = BoundCommandFunc | UnboundCommandFunc[CmdOrSetT, [argparse.Namespace]]
 
 
 class Cmd2ParserKwargs(TypedDict, total=False):
@@ -2125,7 +2124,7 @@ def _link_mutex_group_membership(
             by_name[name].mutex_group_indices.append(index)
 
 
-def _resolve_func_hints(func: _NamedCallable, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, Any]:
+def _resolve_func_hints(func: _CommandFunc, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, Any]:
     """Resolve the type hints for the parameters that become arguments.
 
     The bound first parameter (self/cls), the injected ``skip_params``, and the ``return`` annotation
@@ -2303,7 +2302,7 @@ def _block_field_dest(spec: _BlockSpec, field_name: str) -> str:
     return _shared_field_dest(spec.dc_type, field_name) if spec.shared else field_name
 
 
-def _dataclass_blocks(func: _NamedCallable, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, _BlockSpec]:
+def _dataclass_blocks(func: _CommandFunc, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, _BlockSpec]:
     """Map each dataclass-block parameter name to its :class:`_BlockSpec`.
 
     Used by the runtime handler to reconstruct the dataclass instance from the parsed namespace.  A
@@ -2327,7 +2326,7 @@ def _dataclass_blocks(func: _NamedCallable, *, skip_params: frozenset[str] = _SK
 
 
 def _lazy_block_resolver(
-    func: _NamedCallable,
+    func: _CommandFunc,
     *,
     base_accepted: set[str],
     skip_params: frozenset[str],
@@ -2384,7 +2383,7 @@ def _reconstruct_dataclass_blocks(func_kwargs: dict[str, Any], blocks: dict[str,
 
 
 def _resolve_parameters(
-    func: _NamedCallable,
+    func: _CommandFunc,
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     base_command: bool = False,
@@ -2728,7 +2727,7 @@ def _docstring_first_paragraph(doc: str | None) -> str | None:
 
 
 def build_parser_from_function(
-    func: _NamedCallable,
+    func: _CommandFunc,
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     groups: tuple[Group, ...] | None = None,
@@ -2803,7 +2802,7 @@ def build_parser_from_function(
     return parser
 
 
-def _derive_subcommand_name(func: _NamedCallable, subcommand_to: str) -> str:
+def _derive_subcommand_name(func: _CommandFunc, subcommand_to: str) -> str:
     """Derive the subcommand name from the function name and validate the naming convention.
 
     ``subcommand_to='team member'`` + ``func.__name__='team_member_add'`` -> ``'add'``.
@@ -2839,7 +2838,7 @@ class _ParserBuildOptions:
 
 
 def _make_parser_builder(
-    func: _NamedCallable,
+    func: _CommandFunc,
     *,
     skip_params: frozenset[str],
     base_command: bool,
@@ -2878,12 +2877,12 @@ def _make_parser_builder(
 
 
 def _build_subcommand_handler(
-    func: _NamedCallable,
+    func: _CommandFunc,
     subcommand_to: str,
     *,
     base_command: bool = False,
     options: _ParserBuildOptions,
-) -> tuple[_NamedCallable, str, Callable[[], Cmd2ArgumentParser]]:
+) -> tuple[_CommandFunc, str, Callable[[], Cmd2ArgumentParser]]:
     """Build a subcommand's parser and a handler that unpacks the Namespace into typed kwargs.
 
     :param func: the subcommand handler function
@@ -2964,7 +2963,7 @@ def with_annotated(
 
 
 def with_annotated(
-    func: _NamedCallable | None = None,
+    func: _CommandFunc | None = None,
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -3043,7 +3042,7 @@ def with_annotated(
         subcommand_description=subcommand_description,
     )
 
-    def decorator(fn: _NamedCallable) -> _NamedCallable:
+    def decorator(fn: _CommandFunc) -> _CommandFunc:
         if with_unknown_args:
             unknown_param = inspect.signature(fn).parameters.get("_unknown")
             if unknown_param is None:

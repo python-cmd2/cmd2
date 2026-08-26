@@ -4,8 +4,9 @@
     - Converted `BoundCommandFunc` and `UnboundCommandFunc` TypeAliases in `types.py` to Protocol
       classes for stricter type checking on `cmd2` command method references
 - Experimental features
-    - Defined `_NamedCallable` protocol class in `annotated.py` to implement some stricter type
-      checking on function references
+    - Defined private, unified type alias `_CommandFunc` in `annotated.py` basead on
+      `BoundCommandFunc` and `UnboundCommandFunc` to get the benefit of stricter type checking here
+      as well
 
 ## 4.2.2 (August 25, 2026)
 
