@@ -290,6 +290,7 @@ from typing import (
     TypeVar,
     Union,
     Unpack,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -2964,7 +2965,7 @@ def with_annotated(
 
 
 def with_annotated(
-    func: _CommandFunc | None = None,
+    func: Callable[_CommandParams, _CommandReturn] | None = None,
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -2982,7 +2983,7 @@ def with_annotated(
     subcommand_title: str | None = None,
     subcommand_description: str | None = None,
     **parser_kwargs: Unpack[Cmd2ParserKwargs],
-) -> Callable[..., Any] | Callable[[Callable[..., Any]], Callable[..., Any]]:
+) -> Callable[_CommandParams, _CommandReturn] | _WithAnnotatedDecorator:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
     :param func: the command function (when used without parentheses)
@@ -3043,23 +3044,27 @@ def with_annotated(
         subcommand_description=subcommand_description,
     )
 
-    def decorator(fn: _CommandFunc) -> _CommandFunc:
+    def decorator(fn: Callable[_CommandParams, _CommandReturn]) -> Callable[_CommandParams, _CommandReturn]:
+        # ``with_annotated`` is publicly typed as signature-preserving. Its runtime contract is
+        # narrower: decorated functions must be cmd2 command methods. Keep that narrowing local
+        # to the parser-building machinery while retaining the callable's public signature.
+        command_func = cast(_CommandFunc, fn)
         if with_unknown_args:
-            unknown_param = inspect.signature(fn).parameters.get("_unknown")
+            unknown_param = inspect.signature(command_func).parameters.get("_unknown")
             if unknown_param is None:
                 raise TypeError("with_annotated(with_unknown_args=True) requires a parameter named _unknown")
             if unknown_param.kind is inspect.Parameter.POSITIONAL_ONLY:
                 raise TypeError("Parameter _unknown must be keyword-compatible when with_unknown_args=True")
 
-        if not base_command and constants.NS_ATTR_SUBCOMMAND_FUNC in inspect.signature(fn).parameters:
+        if not base_command and constants.NS_ATTR_SUBCOMMAND_FUNC in inspect.signature(command_func).parameters:
             raise TypeError(
-                f"Parameter '{constants.NS_ATTR_SUBCOMMAND_FUNC}' in {fn.__qualname__} "
+                f"Parameter '{constants.NS_ATTR_SUBCOMMAND_FUNC}' in {command_func.__qualname__} "
                 "is only valid when with_annotated(base_command=True) is used."
             )
 
         if subcommand_to is not None:
             handler, subcmd_name, subcmd_parser_builder = _build_subcommand_handler(
-                fn,
+                command_func,
                 subcommand_to,
                 base_command=base_command,
                 options=options,
@@ -3073,9 +3078,9 @@ def with_annotated(
                 parser_source=subcmd_parser_builder,
             )
             setattr(handler, constants.SUBCOMMAND_ATTR_SPEC, subcommand_spec)
-            return handler
+            return cast(Callable[_CommandParams, _CommandReturn], handler)
 
-        command_name = fn.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
+        command_name = command_func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
         skip_params = _SKIP_PARAMS | ({"_unknown"} if with_unknown_args else frozenset())
         # Validate the group specs eagerly (decoration time) so a misconfigured group hard-fails when
@@ -3084,16 +3089,18 @@ def with_annotated(
         _validate_group_specs(options.groups, options.mutually_exclusive_groups)
         if base_command:
             # Validate eagerly (decoration time); the base-command rows in _CONSTRAINTS fire here.
-            _resolve_parameters(fn, skip_params=skip_params, base_command=True)
+            _resolve_parameters(command_func, skip_params=skip_params, base_command=True)
 
         # Cache signature introspection at decoration time, not per-invocation
-        accepted = set(list(inspect.signature(fn).parameters.keys())[1:])
-        resolve_blocks = _lazy_block_resolver(fn, base_accepted=accepted, skip_params=skip_params)
-        leading_names, var_positional_name = _var_positional_call_plan(fn)
+        accepted = set(list(inspect.signature(command_func).parameters.keys())[1:])
+        resolve_blocks = _lazy_block_resolver(command_func, base_accepted=accepted, skip_params=skip_params)
+        leading_names, var_positional_name = _var_positional_call_plan(command_func)
 
-        parser_builder = _make_parser_builder(fn, skip_params=skip_params, base_command=base_command, options=options)
+        parser_builder = _make_parser_builder(
+            command_func, skip_params=skip_params, base_command=base_command, options=options
+        )
 
-        @functools.wraps(fn)
+        @functools.wraps(command_func)
         def cmd_wrapper(*args: Any, **kwargs: Any) -> bool | None:
             cmd2_app, statement_arg = _parse_positionals(args)
             owner = args[0]  # Cmd or CommandSet instance
@@ -3138,7 +3145,7 @@ def with_annotated(
             func_kwargs.update(kwargs)
             _reconstruct_dataclass_blocks(func_kwargs, blocks, ns)
             result: bool | None = _invoke_command_func(
-                fn, owner, func_kwargs, leading_names=leading_names, var_positional_name=var_positional_name
+                command_func, owner, func_kwargs, leading_names=leading_names, var_positional_name=var_positional_name
             )
             return result
 
@@ -3148,9 +3155,9 @@ def with_annotated(
         )
         setattr(cmd_wrapper, constants.ARGPARSE_COMMAND_ATTR_SPEC, argparse_command_spec)
 
-        return cmd_wrapper
+        return cast(Callable[_CommandParams, _CommandReturn], cmd_wrapper)
 
     # Support both @with_annotated and @with_annotated(...)
     if func is not None:
         return decorator(func)
-    return decorator
+    return cast(_WithAnnotatedDecorator, decorator)
