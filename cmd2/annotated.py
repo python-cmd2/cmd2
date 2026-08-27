@@ -284,13 +284,11 @@ from typing import (
     NamedTuple,
     ParamSpec,
     Protocol,
-    TypeAlias,
     TypedDict,
     TypeGuard,
     TypeVar,
     Union,
     Unpack,
-    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -311,11 +309,8 @@ from .decorators import _parse_positionals
 from .exceptions import Cmd2ArgparseError
 from .rich_utils import Cmd2HelpFormatter, HelpContent
 from .types import (
-    BoundCommandFunc,
-    CmdOrSet,
     CmdOrSetT,
     UnboundChoicesProvider,
-    UnboundCommandFunc,
     UnboundCompleter,
 )
 
@@ -323,7 +318,18 @@ from .types import (
 _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
 
 
-_CommandFunc: TypeAlias = BoundCommandFunc | UnboundCommandFunc[CmdOrSet, Any]
+class _CommandFunc(Protocol):
+    """The command-function interface required by the annotation machinery.
+
+    The parser builders only depend on a command's name metadata and its
+    boolean command result; they never depend on whether the function is
+    bound or unbound, nor on the types of its parsed arguments.
+    """
+
+    __name__: str
+    __qualname__: str
+
+    def __call__(self, *args: Any, **kwargs: Any) -> bool | None: ...
 
 
 class Cmd2ParserKwargs(TypedDict, total=False):
@@ -2928,17 +2934,22 @@ def _build_subcommand_handler(
 
 
 _CommandParams = ParamSpec("_CommandParams")
-_CommandReturn = TypeVar("_CommandReturn")
+
+
+class _AnnotatedCommand(_CommandFunc, Protocol[_CommandParams]):
+    """A callable command method with the metadata used by ``with_annotated``."""
+
+    def __call__(self, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> bool | None: ...
 
 
 class _WithAnnotatedDecorator(Protocol):
     """The signature-preserving decorator ``with_annotated(...)`` returns (generic per call)."""
 
-    def __call__(self, fn: Callable[_CommandParams, _CommandReturn], /) -> Callable[_CommandParams, _CommandReturn]: ...
+    def __call__(self, fn: _AnnotatedCommand[_CommandParams], /) -> _AnnotatedCommand[_CommandParams]: ...
 
 
 @overload
-def with_annotated(func: Callable[_CommandParams, _CommandReturn]) -> Callable[_CommandParams, _CommandReturn]: ...
+def with_annotated(func: _AnnotatedCommand[_CommandParams], /) -> _AnnotatedCommand[_CommandParams]: ...
 
 
 @overload
@@ -2965,7 +2976,7 @@ def with_annotated(
 
 
 def with_annotated(
-    func: Callable[_CommandParams, _CommandReturn] | None = None,
+    func: _AnnotatedCommand[_CommandParams] | None = None,
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -2983,7 +2994,7 @@ def with_annotated(
     subcommand_title: str | None = None,
     subcommand_description: str | None = None,
     **parser_kwargs: Unpack[Cmd2ParserKwargs],
-) -> Callable[_CommandParams, _CommandReturn] | _WithAnnotatedDecorator:
+) -> _AnnotatedCommand[_CommandParams] | _WithAnnotatedDecorator:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
     :param func: the command function (when used without parentheses)
@@ -3044,11 +3055,9 @@ def with_annotated(
         subcommand_description=subcommand_description,
     )
 
-    def decorator(fn: Callable[_CommandParams, _CommandReturn]) -> Callable[_CommandParams, _CommandReturn]:
-        # ``with_annotated`` is publicly typed as signature-preserving. Its runtime contract is
-        # narrower: decorated functions must be cmd2 command methods. Keep that narrowing local
-        # to the parser-building machinery while retaining the callable's public signature.
-        command_func = cast(_CommandFunc, fn)
+    def decorator(
+        command_func: _AnnotatedCommand[_CommandParams],
+    ) -> _AnnotatedCommand[_CommandParams]:
         if with_unknown_args:
             unknown_param = inspect.signature(command_func).parameters.get("_unknown")
             if unknown_param is None:
@@ -3078,7 +3087,7 @@ def with_annotated(
                 parser_source=subcmd_parser_builder,
             )
             setattr(handler, constants.SUBCOMMAND_ATTR_SPEC, subcommand_spec)
-            return cast(Callable[_CommandParams, _CommandReturn], handler)
+            return handler
 
         command_name = command_func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
@@ -3155,9 +3164,9 @@ def with_annotated(
         )
         setattr(cmd_wrapper, constants.ARGPARSE_COMMAND_ATTR_SPEC, argparse_command_spec)
 
-        return cast(Callable[_CommandParams, _CommandReturn], cmd_wrapper)
+        return cmd_wrapper
 
     # Support both @with_annotated and @with_annotated(...)
     if func is not None:
         return decorator(func)
-    return cast(_WithAnnotatedDecorator, decorator)
+    return decorator
