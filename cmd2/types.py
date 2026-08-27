@@ -89,7 +89,6 @@ class UnboundCommandFunc(Protocol[CmdOrSetT, P]):
 
     def __call__(self, __self: CmdOrSetT, /, *args: P.args, **kwargs: P.kwargs) -> bool | None:
         """Invoke the unbound command function with its command instance."""
-        ...
 
     @overload
     def __get__(self, instance: None, owner: Any = ...) -> "UnboundCommandFunc[CmdOrSetT, P]": ...
