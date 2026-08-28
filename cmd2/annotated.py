@@ -290,7 +290,6 @@ from typing import (
     TypeVar,
     Union,
     Unpack,
-    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -2878,12 +2877,12 @@ def _make_parser_builder(
 
 
 def _build_subcommand_handler(
-    func: _CommandFunc,
+    func: "_AnnotatedCommand[_CommandParams]",
     subcommand_to: str,
     *,
     base_command: bool = False,
     options: _ParserBuildOptions,
-) -> tuple[_CommandFunc, str, Callable[[], Cmd2ArgumentParser]]:
+) -> tuple["_AnnotatedCommand[_CommandParams]", str, Callable[[], Cmd2ArgumentParser]]:
     """Build a subcommand's parser and a handler that unpacks the Namespace into typed kwargs.
 
     :param func: the subcommand handler function
@@ -2909,8 +2908,13 @@ def _build_subcommand_handler(
     _leading_names, _var_positional_name = _var_positional_call_plan(func)
 
     @functools.wraps(func)
-    def handler(self_arg: Any, ns: Any) -> Any:
+    def handler(*args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> bool | None:
         """Unpack Namespace into typed kwargs for the subcommand handler."""
+        if kwargs:
+            raise TypeError("subcommand handlers do not accept keyword arguments")
+        self_arg, ns = args
+        if not isinstance(ns, argparse.Namespace):
+            raise TypeError("subcommand handlers require a parsed argparse.Namespace")
         _blocks, _eff_accepted = _resolve_blocks()
         filtered = _filtered_namespace_kwargs(ns, accepted=_eff_accepted)
         if constants.NS_ATTR_SUBCOMMAND_FUNC in filtered:
@@ -2918,9 +2922,12 @@ def _build_subcommand_handler(
             if isinstance(cmd2_h, functools.partial) and getattr(cmd2_h.func, "__func__", cmd2_h.func) is handler:
                 filtered[constants.NS_ATTR_SUBCOMMAND_FUNC] = None
         _reconstruct_dataclass_blocks(filtered, _blocks, ns)
-        return _invoke_command_func(
+        result = _invoke_command_func(
             func, self_arg, filtered, leading_names=_leading_names, var_positional_name=_var_positional_name
         )
+        if result is None or isinstance(result, bool):
+            return result
+        raise TypeError("annotated command functions must return bool or None")
 
     parser_builder = _make_parser_builder(func, skip_params=_SKIP_PARAMS, base_command=base_command, options=options)
     return handler, subcmd_name, parser_builder
@@ -2972,7 +2979,7 @@ def with_annotated(
 
 
 def with_annotated(
-    func: _AnnotatedCommand[_CommandParams] | None = None,
+    func: _CommandFunc | None = None,
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -2990,7 +2997,7 @@ def with_annotated(
     subcommand_title: str | None = None,
     subcommand_description: str | None = None,
     **parser_kwargs: Unpack[Cmd2ParserKwargs],
-) -> _AnnotatedCommand[_CommandParams] | _WithAnnotatedDecorator:
+) -> Any:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
     :param func: the command function (when used without parentheses)
@@ -3083,7 +3090,7 @@ def with_annotated(
                 parser_source=subcmd_parser_builder,
             )
             setattr(handler, constants.SUBCOMMAND_ATTR_SPEC, subcommand_spec)
-            return cast(_AnnotatedCommand[_CommandParams], handler)
+            return handler
 
         command_name = command_func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
@@ -3165,4 +3172,4 @@ def with_annotated(
     # Support both @with_annotated and @with_annotated(...)
     if func is not None:
         return decorator(func)
-    return cast(_WithAnnotatedDecorator, decorator)
+    return decorator
