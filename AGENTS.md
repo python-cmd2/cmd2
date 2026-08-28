@@ -1,7 +1,7 @@
-# Instructions for Gemini CLI in a `uv` Python project
+# Instructions for AI Agents
 
-This `GEMINI.md` file provides context and instructions for the Gemini CLI when working with this
-Python project, which utilizes `uv` for environment and package management.
+This file provides context and instructions for the agentic AI tools when working with this Python
+project, which utilizes `uv` for environment and package management.
 
 ## General Instructions
 
