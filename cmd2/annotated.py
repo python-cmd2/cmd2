@@ -290,6 +290,7 @@ from typing import (
     TypeVar,
     Union,
     Unpack,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -3052,7 +3053,7 @@ def with_annotated(
 
     def decorator(
         command_func: _AnnotatedCommand[_CommandParams],
-    ) -> _CommandFunc:
+    ) -> _AnnotatedCommand[_CommandParams]:
         if with_unknown_args:
             unknown_param = inspect.signature(command_func).parameters.get("_unknown")
             if unknown_param is None:
@@ -3082,7 +3083,7 @@ def with_annotated(
                 parser_source=subcmd_parser_builder,
             )
             setattr(handler, constants.SUBCOMMAND_ATTR_SPEC, subcommand_spec)
-            return handler
+            return cast(_AnnotatedCommand[_CommandParams], handler)
 
         command_name = command_func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
@@ -3164,4 +3165,4 @@ def with_annotated(
     # Support both @with_annotated and @with_annotated(...)
     if func is not None:
         return decorator(func)
-    return decorator
+    return cast(_WithAnnotatedDecorator, decorator)
