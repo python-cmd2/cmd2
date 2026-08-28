@@ -831,7 +831,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         temp_parser = Cmd2ArgumentParser(
             prog=self.prog,
             usage=None,
-            formatter_class=cast(type[Cmd2HelpFormatter], self.formatter_class),
+            formatter_class=cast(type[Cmd2HelpFormatter], self.formatter_class),  # type: ignore[redundant-cast]
             add_help=False,
         )
 
@@ -1037,7 +1037,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
 
     def _get_formatter(self, *_args: Any, **_kwargs: Any) -> Cmd2HelpFormatter:
         """Override with customizations for Cmd2HelpFormatter."""
-        formatter_class = cast(type[Cmd2HelpFormatter], self.formatter_class)
+        formatter_class = cast(type[Cmd2HelpFormatter], self.formatter_class)  # type: ignore[redundant-cast]
         return formatter_class(prog=self.prog, file=self._thread_locals.current_output_file)
 
     def format_help(self, *args: Any, **kwargs: Any) -> str:

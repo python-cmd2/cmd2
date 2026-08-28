@@ -3052,7 +3052,7 @@ def with_annotated(
 
     def decorator(
         command_func: _AnnotatedCommand[_CommandParams],
-    ) -> _AnnotatedCommand[_CommandParams]:
+    ) -> _CommandFunc:
         if with_unknown_args:
             unknown_param = inspect.signature(command_func).parameters.get("_unknown")
             if unknown_param is None:
