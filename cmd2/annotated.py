@@ -284,6 +284,7 @@ from typing import (
     NamedTuple,
     ParamSpec,
     Protocol,
+    TypeAlias,
     TypedDict,
     TypeGuard,
     TypeVar,
@@ -312,11 +313,15 @@ from .types import (
     BoundCommandFunc,
     CmdOrSetT,
     UnboundChoicesProvider,
+    UnboundCommandFunc,
     UnboundCompleter,
 )
 
 #: ``nargs`` values accepted by cmd2's patched ``add_argument`` (incl. ranged tuples).
 _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
+
+# Parser construction works with a command method before or after descriptor binding.
+_CommandFunc: TypeAlias = BoundCommandFunc | UnboundCommandFunc[Any, ...]
 
 
 class Cmd2ParserKwargs(TypedDict, total=False):
@@ -2119,7 +2124,7 @@ def _link_mutex_group_membership(
             by_name[name].mutex_group_indices.append(index)
 
 
-def _resolve_func_hints(func: BoundCommandFunc, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, Any]:
+def _resolve_func_hints(func: _CommandFunc, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, Any]:
     """Resolve the type hints for the parameters that become arguments.
 
     The bound first parameter (self/cls), the injected ``skip_params``, and the ``return`` annotation
@@ -2297,7 +2302,7 @@ def _block_field_dest(spec: _BlockSpec, field_name: str) -> str:
     return _shared_field_dest(spec.dc_type, field_name) if spec.shared else field_name
 
 
-def _dataclass_blocks(func: BoundCommandFunc, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, _BlockSpec]:
+def _dataclass_blocks(func: _CommandFunc, *, skip_params: frozenset[str] = _SKIP_PARAMS) -> dict[str, _BlockSpec]:
     """Map each dataclass-block parameter name to its :class:`_BlockSpec`.
 
     Used by the runtime handler to reconstruct the dataclass instance from the parsed namespace.  A
@@ -2321,7 +2326,7 @@ def _dataclass_blocks(func: BoundCommandFunc, *, skip_params: frozenset[str] = _
 
 
 def _lazy_block_resolver(
-    func: BoundCommandFunc,
+    func: _CommandFunc,
     *,
     base_accepted: set[str],
     skip_params: frozenset[str],
@@ -2378,7 +2383,7 @@ def _reconstruct_dataclass_blocks(func_kwargs: dict[str, Any], blocks: dict[str,
 
 
 def _resolve_parameters(
-    func: BoundCommandFunc,
+    func: _CommandFunc,
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     base_command: bool = False,
@@ -2722,7 +2727,7 @@ def _docstring_first_paragraph(doc: str | None) -> str | None:
 
 
 def build_parser_from_function(
-    func: BoundCommandFunc,
+    func: _CommandFunc,
     *,
     skip_params: frozenset[str] = _SKIP_PARAMS,
     groups: tuple[Group, ...] | None = None,
@@ -2797,7 +2802,7 @@ def build_parser_from_function(
     return parser
 
 
-def _derive_subcommand_name(func: BoundCommandFunc, subcommand_to: str) -> str:
+def _derive_subcommand_name(func: _CommandFunc, subcommand_to: str) -> str:
     """Derive the subcommand name from the function name and validate the naming convention.
 
     ``subcommand_to='team member'`` + ``func.__name__='team_member_add'`` -> ``'add'``.
@@ -2833,7 +2838,7 @@ class _ParserBuildOptions:
 
 
 def _make_parser_builder(
-    func: BoundCommandFunc,
+    func: _CommandFunc,
     *,
     skip_params: frozenset[str],
     base_command: bool,
@@ -2872,12 +2877,12 @@ def _make_parser_builder(
 
 
 def _build_subcommand_handler(
-    func: BoundCommandFunc,
+    func: _CommandFunc,
     subcommand_to: str,
     *,
     base_command: bool = False,
     options: _ParserBuildOptions,
-) -> tuple[BoundCommandFunc, str, Callable[[], Cmd2ArgumentParser]]:
+) -> tuple[_CommandFunc, str, Callable[[], Cmd2ArgumentParser]]:
     """Build a subcommand's parser and a handler that unpacks the Namespace into typed kwargs.
 
     :param func: the subcommand handler function
@@ -2923,8 +2928,11 @@ def _build_subcommand_handler(
 _CommandParams = ParamSpec("_CommandParams")
 
 
-class _AnnotatedCommand(BoundCommandFunc, Protocol[_CommandParams]):
+class _AnnotatedCommand(Protocol[_CommandParams]):
     """A callable command method with the metadata used by ``with_annotated``."""
+
+    __name__: str
+    __qualname__: str
 
     def __call__(self, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> bool | None: ...
 
