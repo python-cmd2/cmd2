@@ -2934,6 +2934,7 @@ def _build_subcommand_handler(
 
 
 _CommandParams = ParamSpec("_CommandParams")
+_DecoratorParams = ParamSpec("_DecoratorParams")
 
 
 class _AnnotatedCommand(Protocol[_CommandParams]):
@@ -2979,7 +2980,7 @@ def with_annotated(
 
 
 def with_annotated(
-    func: _CommandFunc | None = None,
+    func: _AnnotatedCommand[_CommandParams] | None = None,
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -2997,7 +2998,7 @@ def with_annotated(
     subcommand_title: str | None = None,
     subcommand_description: str | None = None,
     **parser_kwargs: Unpack[Cmd2ParserKwargs],
-) -> Any:
+) -> _AnnotatedCommand[_CommandParams] | _WithAnnotatedDecorator:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
     :param func: the command function (when used without parentheses)
@@ -3059,8 +3060,8 @@ def with_annotated(
     )
 
     def decorator(
-        command_func: _AnnotatedCommand[_CommandParams],
-    ) -> _AnnotatedCommand[_CommandParams]:
+        command_func: _AnnotatedCommand[_DecoratorParams],
+    ) -> _AnnotatedCommand[_DecoratorParams]:
         if with_unknown_args:
             unknown_param = inspect.signature(command_func).parameters.get("_unknown")
             if unknown_param is None:
