@@ -2876,13 +2876,32 @@ def _make_parser_builder(
     return parser_builder
 
 
+_CommandParams = ParamSpec("_CommandParams")
+_DecoratorParams = ParamSpec("_DecoratorParams")
+
+
+class _AnnotatedCommand(Protocol[_CommandParams]):
+    """A callable command method with the metadata used by ``with_annotated``."""
+
+    __name__: str
+    __qualname__: str
+
+    def __call__(self, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> bool | None: ...
+
+
+class _WithAnnotatedDecorator(Protocol):
+    """The signature-preserving decorator ``with_annotated(...)`` returns (generic per call)."""
+
+    def __call__(self, fn: _AnnotatedCommand[_CommandParams], /) -> _AnnotatedCommand[_CommandParams]: ...
+
+
 def _build_subcommand_handler(
-    func: "_AnnotatedCommand[_CommandParams]",
+    func: _AnnotatedCommand[_CommandParams],
     subcommand_to: str,
     *,
     base_command: bool = False,
     options: _ParserBuildOptions,
-) -> tuple["_AnnotatedCommand[_CommandParams]", str, Callable[[], Cmd2ArgumentParser]]:
+) -> tuple[_AnnotatedCommand[_CommandParams], str, Callable[[], Cmd2ArgumentParser]]:
     """Build a subcommand's parser and a handler that unpacks the Namespace into typed kwargs.
 
     :param func: the subcommand handler function
@@ -2931,25 +2950,6 @@ def _build_subcommand_handler(
 
     parser_builder = _make_parser_builder(func, skip_params=_SKIP_PARAMS, base_command=base_command, options=options)
     return handler, subcmd_name, parser_builder
-
-
-_CommandParams = ParamSpec("_CommandParams")
-_DecoratorParams = ParamSpec("_DecoratorParams")
-
-
-class _AnnotatedCommand(Protocol[_CommandParams]):
-    """A callable command method with the metadata used by ``with_annotated``."""
-
-    __name__: str
-    __qualname__: str
-
-    def __call__(self, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> bool | None: ...
-
-
-class _WithAnnotatedDecorator(Protocol):
-    """The signature-preserving decorator ``with_annotated(...)`` returns (generic per call)."""
-
-    def __call__(self, fn: _AnnotatedCommand[_CommandParams], /) -> _AnnotatedCommand[_CommandParams]: ...
 
 
 @overload
