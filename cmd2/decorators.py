@@ -11,6 +11,7 @@ from typing import (
     Any,
     TypeAlias,
     TypeVar,
+    cast,
     overload,
 )
 
@@ -196,7 +197,7 @@ def with_argument_list(
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
         cmd_wrapper.__doc__ = func.__doc__
-        return cmd_wrapper
+        return cast(RawCommandFunc[CmdOrSetT], cmd_wrapper)
 
     if callable(cmd_func):
         return arg_decorator(cmd_func)
@@ -372,7 +373,7 @@ def with_argparser(
         )
         setattr(cmd_wrapper, constants.ARGPARSE_COMMAND_ATTR_SPEC, spec)
 
-        return cmd_wrapper
+        return cast(RawCommandFunc[CmdOrSetT], cmd_wrapper)
 
     return arg_decorator
 

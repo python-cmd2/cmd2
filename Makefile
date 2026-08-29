@@ -20,6 +20,8 @@ check: ## Run code quality tools.
 	@uv run prek run -a
 	@echo "🚀 Static type checking: Running ty"
 	@uv run ty check
+	@echo "🚀 Static type checking: Running mypy"
+	@uv run mypy .
 
 .PHONY: format
 format: ## Perform ruff formatting
@@ -29,8 +31,17 @@ format: ## Perform ruff formatting
 lint: ## Perform ruff linting
 	@uv run ruff check --fix
 
+.PHONY: mypy
+mypy: ## Perform type checking using mypy
+	@uv run mypy .
+
+.PHONY: ty
+ty: ## Perform type checking using ty
+	@uv run ty check
+
 .PHONY: typecheck
-typecheck: ## Perform type checking
+typecheck: ## Perform type checking using both mypy and ty
+	@uv run mypy .
 	@uv run ty check
 
 .PHONY: test

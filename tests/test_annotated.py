@@ -2307,6 +2307,67 @@ class TestCommandSet:
 # ---------------------------------------------------------------------------
 
 
+def test_subcommand_handler_rejects_keyword_arguments() -> None:
+    """The internal subcommand adapter only accepts the owner and parsed namespace positionally."""
+
+    @with_annotated(subcommand_to="root")
+    def root_child(self) -> None:
+        pass
+
+    with pytest.raises(TypeError, match="do not accept keyword arguments"):
+        root_child(object(), argparse.Namespace(), unexpected=True)
+
+
+def test_subcommand_handler_rejects_wrong_positional_argument_count() -> None:
+    """The internal subcommand adapter requires exactly two positional arguments (self, namespace)."""
+
+    @with_annotated(subcommand_to="root")
+    def root_child(self) -> None:
+        pass
+
+    with pytest.raises(TypeError, match=r"require 2 positional arguments"):
+        root_child(object())
+
+    with pytest.raises(TypeError, match=r"require 2 positional arguments"):
+        root_child(object(), argparse.Namespace(), "extra")
+
+
+def test_subcommand_handler_requires_namespace() -> None:
+    """The internal subcommand adapter rejects calls without a parsed namespace."""
+
+    @with_annotated(subcommand_to="root")
+    def root_child(self) -> None:
+        pass
+
+    with pytest.raises(TypeError, match=r"parsed argparse.Namespace"):
+        root_child(object(), object())
+
+
+def test_subcommand_handler_preserves_truthy_return_value() -> None:
+    """The internal subcommand adapter preserves any truthy command result."""
+
+    @with_annotated(subcommand_to="root")
+    def root_child(self) -> int:
+        return 1
+
+    assert root_child(object(), argparse.Namespace()) == 1
+
+
+def test_truthy_subcommand_return_stops_command_loop() -> None:
+    """A documented non-boolean truthy result propagates through the command loop."""
+
+    class TruthySubcommandApp(cmd2.Cmd):
+        @with_annotated(base_command=True)
+        def do_root(self, cmd2_subcommand_func) -> int | None:
+            return cmd2_subcommand_func() if cmd2_subcommand_func is not None else None
+
+        @with_annotated(subcommand_to="root")
+        def root_stop(self) -> int:
+            return 1
+
+    assert TruthySubcommandApp().onecmd_plus_hooks("root stop")
+
+
 class _IntegrationApp(cmd2.Cmd):
     def __init__(self) -> None:
         super().__init__()

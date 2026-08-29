@@ -31,5 +31,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Check typing
+      - name: Check typing using ty
         run: uv run ty check
+
+      - name: Check typing using mypy
+        run: uv run mypy .

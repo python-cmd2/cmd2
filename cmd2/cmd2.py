@@ -228,7 +228,7 @@ class DisabledCommand(NamedTuple):
     This data is used to restore its functions when the command is enabled.
     """
 
-    command_func: BoundCommandFunc
+    command_func: BoundCommandFunc[...]
     help_func: Callable[[], Any] | None
     completer_func: BoundCompleter | None
 
@@ -251,14 +251,14 @@ class CommandParsers:
         self._parsers: dict[str, Cmd2ArgumentParser] = {}
 
     @staticmethod
-    def _fully_qualified_name(command_method: BoundCommandFunc) -> str:
+    def _fully_qualified_name(command_method: BoundCommandFunc[...]) -> str:
         """Return the fully qualified name of a method or None if a method wasn't passed in."""
         try:
             return f"{command_method.__module__}.{command_method.__qualname__}"
         except AttributeError:
             return ""
 
-    def __contains__(self, command_method: BoundCommandFunc) -> bool:
+    def __contains__(self, command_method: BoundCommandFunc[...]) -> bool:
         """Return whether a given method's parser is in self.
 
         If the parser does not yet exist, it will be created if applicable.
@@ -267,7 +267,7 @@ class CommandParsers:
         parser = self.get(command_method)
         return bool(parser)
 
-    def get(self, command_method: BoundCommandFunc) -> Cmd2ArgumentParser | None:
+    def get(self, command_method: BoundCommandFunc[...]) -> Cmd2ArgumentParser | None:
         """Return a given method's parser or None if the method is not argparse-based.
 
         If the parser does not yet exist, it will be created.
@@ -300,7 +300,7 @@ class CommandParsers:
 
         return self._parsers.get(full_method_name)
 
-    def remove(self, command_method: BoundCommandFunc) -> None:
+    def remove(self, command_method: BoundCommandFunc[...]) -> None:
         """Remove a given method's parser if it exists."""
         full_method_name = self._fully_qualified_name(command_method)
         if full_method_name in self._parsers:
@@ -919,7 +919,7 @@ class Cmd:
 
         cmdset.on_register(self)
         methods = cast(
-            list[tuple[str, Callable[..., Any]]],
+            list[tuple[str, BoundCommandFunc[...]]],
             inspect.getmembers(
                 cmdset,
                 predicate=lambda meth: (  # type: ignore[arg-type]
@@ -1021,7 +1021,9 @@ class Cmd:
 
         return parser
 
-    def _install_command_function(self, command_func_name: str, command_method: BoundCommandFunc, context: str = "") -> None:
+    def _install_command_function(
+        self, command_func_name: str, command_method: BoundCommandFunc[...], context: str = ""
+    ) -> None:
         """Install a new command function into the CLI.
 
         :param command_func_name: name of command function to add
@@ -1086,12 +1088,15 @@ class Cmd:
             cmdset.on_unregister()
             self._unregister_subcommands(cmdset)
 
-            methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
-                cmdset,
-                predicate=lambda meth: (  # type: ignore[arg-type]
-                    isinstance(meth, Callable)  # type: ignore[arg-type]
-                    and hasattr(meth, "__name__")
-                    and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+            methods: list[tuple[str, BoundCommandFunc[...]]] = cast(
+                list[tuple[str, BoundCommandFunc[...]]],
+                inspect.getmembers(
+                    cmdset,
+                    predicate=lambda meth: (  # type: ignore[arg-type]
+                        isinstance(meth, Callable)  # type: ignore[arg-type]
+                        and hasattr(meth, "__name__")
+                        and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+                    ),
                 ),
             )
 
@@ -1158,12 +1163,15 @@ class Cmd:
                     )
                 check_parser_uninstallable(subparser)
 
-        methods: list[tuple[str, Callable[..., Any]]] = inspect.getmembers(
-            cmdset,
-            predicate=lambda meth: (  # type: ignore[arg-type]
-                isinstance(meth, Callable)  # type: ignore[arg-type]
-                and hasattr(meth, "__name__")
-                and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+        methods: list[tuple[str, BoundCommandFunc[...]]] = cast(
+            list[tuple[str, BoundCommandFunc[...]]],
+            inspect.getmembers(
+                cmdset,
+                predicate=lambda meth: (  # type: ignore[arg-type]
+                    isinstance(meth, Callable)  # type: ignore[arg-type]
+                    and hasattr(meth, "__name__")
+                    and meth.__name__.startswith(COMMAND_FUNC_PREFIX)
+                ),
             ),
         )
 
@@ -2827,9 +2835,10 @@ class Cmd:
 
         # Add commands
         for command in self.get_visible_commands():
-            command_func = cast(BoundCommandFunc, self.get_command_func(command))
-            description = strip_doc_annotations(command_func.__doc__).splitlines()[0] if command_func.__doc__ else ""
-            items.append(CompletionItem(command, display_meta=description))
+            command_func = self.get_command_func(command)
+            if command_func is not None:
+                description = strip_doc_annotations(command_func.__doc__).splitlines()[0] if command_func.__doc__ else ""
+                items.append(CompletionItem(command, display_meta=description))
 
         # Add aliases
         for name, value in self.aliases.items():
@@ -3406,7 +3415,7 @@ class Cmd:
         self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
         self._redirecting = saved_redir_state.saved_redirecting
 
-    def get_command_func(self, command: str) -> BoundCommandFunc | None:
+    def get_command_func(self, command: str) -> BoundCommandFunc[...] | None:
         """Get the bound command function for a command.
 
         :param command: the name of the command
@@ -3414,9 +3423,9 @@ class Cmd:
         """
         command_func_name = constants.COMMAND_FUNC_PREFIX + command
         command_func = getattr(self, command_func_name, None)
-        return cast(BoundCommandFunc, command_func) if callable(command_func) else None
+        return cast(BoundCommandFunc[...], command_func) if callable(command_func) else None
 
-    def _get_command_category(self, func: BoundCommandFunc) -> str:
+    def _get_command_category(self, func: BoundCommandFunc[...]) -> str:
         """Determine the category for a command.
 
         :param func: the do_* function implementing the command
@@ -4345,9 +4354,10 @@ class Cmd:
                 help_topics.remove(command)
 
             # Store the command within its category
-            command_func = cast(BoundCommandFunc, self.get_command_func(command))
-            category = self._get_command_category(command_func)
-            cmds_cats.setdefault(category, []).append(command)
+            command_func = self.get_command_func(command)
+            if command_func is not None:
+                category = self._get_command_category(command_func)
+                cmds_cats.setdefault(category, []).append(command)
 
         return cmds_cats, help_topics
 
@@ -5814,8 +5824,8 @@ class Cmd:
         all_commands = self.get_all_commands()
 
         for command in all_commands:
-            command_func = cast(BoundCommandFunc, self.get_command_func(command))
-            if self._get_command_category(command_func) == category:
+            command_func = self.get_command_func(command)
+            if command_func is not None and self._get_command_category(command_func) == category:
                 self.disable_command(command, message_to_print)
 
         self.disabled_categories[category] = message_to_print
@@ -5918,7 +5928,7 @@ class Cmd:
         nparam = len(signature.parameters)
         if nparam != count:
             plural = "" if nparam == 1 else "s"
-            raise TypeError(f"{func.__name__} has {nparam} positional argument{plural}, expected {count}")
+            raise TypeError(f"{getattr(func, '__name__', 'hook')} has {nparam} positional argument{plural}, expected {count}")
 
     @classmethod
     def _validate_prepostloop_callable(cls, func: Callable[[], None]) -> None:
@@ -5927,7 +5937,7 @@ class Cmd:
         # make sure there is no return annotation or the return is specified as None
         _, ret_ann = get_types(func)
         if ret_ann is not None:
-            raise TypeError(f"{func.__name__} must have a return type of 'None', got: {ret_ann}")
+            raise TypeError(f"{getattr(func, '__name__', 'hook')} must have a return type of 'None', got: {ret_ann}")
 
     def register_preloop_hook(self, func: Callable[[], None]) -> None:
         """Register a function to be called at the beginning of the command loop."""
@@ -5942,15 +5952,16 @@ class Cmd:
     @classmethod
     def _validate_postparsing_callable(cls, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Check parameter and return types for postparsing hooks."""
-        cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
+        cls._validate_callable_param_count(func, 1)
         type_hints, ret_ann = get_types(func)
+        func_name = getattr(func, "__name__", "hook")
         if not type_hints:
-            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: 'cmd2.plugin.PostparsingData'")
+            raise TypeError(f"{func_name} parameter is missing a type hint, expected: 'cmd2.plugin.PostparsingData'")
         par_ann = next(iter(type_hints.values()))
         if par_ann != plugin.PostparsingData:
-            raise TypeError(f"{func.__name__} must have one parameter declared with type 'cmd2.plugin.PostparsingData'")
+            raise TypeError(f"{func_name} must have one parameter declared with type 'cmd2.plugin.PostparsingData'")
         if ret_ann != plugin.PostparsingData:
-            raise TypeError(f"{func.__name__} must declare return a return type of 'cmd2.plugin.PostparsingData'")
+            raise TypeError(f"{func_name} must declare a return type of 'cmd2.plugin.PostparsingData'")
 
     def register_postparsing_hook(self, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Register a function to be called after parsing user input but before running the command."""
@@ -5965,20 +5976,21 @@ class Cmd:
     ) -> None:
         """Check parameter and return types for pre and post command hooks."""
         # validate that the callable has the right number of parameters
-        cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
+        cls._validate_callable_param_count(func, 1)
 
         type_hints, ret_ann = get_types(func)
+        func_name = getattr(func, "__name__", "hook")
         if not type_hints:
-            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: {data_type}")
+            raise TypeError(f"{func_name} parameter is missing a type hint, expected: {data_type}")
         _param_name, par_ann = next(iter(type_hints.items()))
         # validate the parameter has the right annotation
         if par_ann != data_type:
-            raise TypeError(f"argument 1 of {func.__name__} has incompatible type {par_ann}, expected {data_type}")
+            raise TypeError(f"argument 1 of {func_name} has incompatible type {par_ann}, expected {data_type}")
         # validate the return value has the right annotation
         if ret_ann is None:
-            raise TypeError(f"{func.__name__} does not have a declared return type, expected {data_type}")
+            raise TypeError(f"{func_name} does not have a declared return type, expected {data_type}")
         if ret_ann != data_type:
-            raise TypeError(f"{func.__name__} has incompatible return type {ret_ann}, expected {data_type}")
+            raise TypeError(f"{func_name} has incompatible return type {ret_ann}, expected {data_type}")
 
     def register_precmd_hook(self, func: Callable[[plugin.PrecommandData], plugin.PrecommandData]) -> None:
         """Register a hook to be called before the command function."""
@@ -5997,15 +6009,16 @@ class Cmd:
         """Check parameter and return types for command finalization hooks."""
         cls._validate_callable_param_count(func, 1)
         type_hints, ret_ann = get_types(func)
+        func_name = getattr(func, "__name__", "hook")
         if not type_hints:
-            raise TypeError(f"{func.__name__} parameter is missing a type hint, expected: {plugin.CommandFinalizationData}")
+            raise TypeError(f"{func_name} parameter is missing a type hint, expected: {plugin.CommandFinalizationData}")
         _, par_ann = next(iter(type_hints.items()))
         if par_ann != plugin.CommandFinalizationData:
             raise TypeError(
-                f"{func.__name__} must have one parameter declared with type {plugin.CommandFinalizationData}, got: {par_ann}"
+                f"{func_name} must have one parameter declared with type {plugin.CommandFinalizationData}, got: {par_ann}"
             )
         if ret_ann != plugin.CommandFinalizationData:
-            raise TypeError(f"{func.__name__} must declare return a return type of {plugin.CommandFinalizationData}")
+            raise TypeError(f"{func_name} must declare a return type of {plugin.CommandFinalizationData}")
 
     def register_cmdfinalization_hook(
         self, func: Callable[[plugin.CommandFinalizationData], plugin.CommandFinalizationData]

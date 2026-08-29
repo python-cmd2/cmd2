@@ -38,7 +38,6 @@ from cmd2 import (
 )
 from cmd2 import rich_utils as ru
 from cmd2 import string_utils as su
-from cmd2.types import BoundCommandFunc
 
 from .conftest import (
     SHORTCUTS_TXT,
@@ -4178,7 +4177,8 @@ def test_help_disabled_no_help_func(base_app: cmd2.Cmd) -> None:
 
     # Intentionally bypass disable_command() to test the fallback in do_help()
     command = "quit"
-    command_func = cast(BoundCommandFunc, base_app.get_command_func(command))
+    command_func = base_app.get_command_func(command)
+    assert command_func is not None
     base_app.disabled_commands[command] = DisabledCommand(command_func=command_func, help_func=None, completer_func=None)
 
     _out, err = run_cmd(base_app, f"help {command}")
