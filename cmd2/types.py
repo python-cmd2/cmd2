@@ -72,8 +72,15 @@ CmdOrSetClassT = TypeVar("CmdOrSetClassT", bound=CmdOrSetClass)
 class BoundCommandFunc(Protocol[P]):
     """Protocol for a command function bound to a command instance."""
 
-    __name__: str
-    __qualname__: str
+    if TYPE_CHECKING:
+
+        @property
+        def __name__(self) -> str:
+            """Name of the command function."""
+
+        @property
+        def __qualname__(self) -> str:
+            """Qualified name of the command function."""
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> bool | None:
         """Invoke the bound command function."""
