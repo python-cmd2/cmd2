@@ -5950,7 +5950,7 @@ class Cmd:
     @classmethod
     def _validate_postparsing_callable(cls, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Check parameter and return types for postparsing hooks."""
-        cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
+        cls._validate_callable_param_count(func, 1)
         type_hints, ret_ann = get_types(func)
         func_name = getattr(func, "__name__", "hook")
         if not type_hints:
@@ -5974,7 +5974,7 @@ class Cmd:
     ) -> None:
         """Check parameter and return types for pre and post command hooks."""
         # validate that the callable has the right number of parameters
-        cls._validate_callable_param_count(cast(Callable[..., Any], func), 1)
+        cls._validate_callable_param_count(func, 1)
 
         type_hints, ret_ann = get_types(func)
         func_name = getattr(func, "__name__", "hook")
