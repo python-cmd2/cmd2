@@ -228,7 +228,7 @@ class DisabledCommand(NamedTuple):
     This data is used to restore its functions when the command is enabled.
     """
 
-    command_func: BoundCommandFunc
+    command_func: BoundCommandFunc[...]
     help_func: Callable[[], Any] | None
     completer_func: BoundCompleter | None
 
@@ -251,14 +251,14 @@ class CommandParsers:
         self._parsers: dict[str, Cmd2ArgumentParser] = {}
 
     @staticmethod
-    def _fully_qualified_name(command_method: BoundCommandFunc) -> str:
+    def _fully_qualified_name(command_method: BoundCommandFunc[...]) -> str:
         """Return the fully qualified name of a method or None if a method wasn't passed in."""
         try:
             return f"{command_method.__module__}.{command_method.__qualname__}"
         except AttributeError:
             return ""
 
-    def __contains__(self, command_method: BoundCommandFunc) -> bool:
+    def __contains__(self, command_method: BoundCommandFunc[...]) -> bool:
         """Return whether a given method's parser is in self.
 
         If the parser does not yet exist, it will be created if applicable.
@@ -267,7 +267,7 @@ class CommandParsers:
         parser = self.get(command_method)
         return bool(parser)
 
-    def get(self, command_method: BoundCommandFunc) -> Cmd2ArgumentParser | None:
+    def get(self, command_method: BoundCommandFunc[...]) -> Cmd2ArgumentParser | None:
         """Return a given method's parser or None if the method is not argparse-based.
 
         If the parser does not yet exist, it will be created.
@@ -300,7 +300,7 @@ class CommandParsers:
 
         return self._parsers.get(full_method_name)
 
-    def remove(self, command_method: BoundCommandFunc) -> None:
+    def remove(self, command_method: BoundCommandFunc[...]) -> None:
         """Remove a given method's parser if it exists."""
         full_method_name = self._fully_qualified_name(command_method)
         if full_method_name in self._parsers:
@@ -919,7 +919,7 @@ class Cmd:
 
         cmdset.on_register(self)
         methods = cast(
-            list[tuple[str, BoundCommandFunc]],
+            list[tuple[str, BoundCommandFunc[...]]],
             inspect.getmembers(
                 cmdset,
                 predicate=lambda meth: (  # type: ignore[arg-type]
@@ -1021,7 +1021,9 @@ class Cmd:
 
         return parser
 
-    def _install_command_function(self, command_func_name: str, command_method: BoundCommandFunc, context: str = "") -> None:
+    def _install_command_function(
+        self, command_func_name: str, command_method: BoundCommandFunc[...], context: str = ""
+    ) -> None:
         """Install a new command function into the CLI.
 
         :param command_func_name: name of command function to add
@@ -1086,8 +1088,8 @@ class Cmd:
             cmdset.on_unregister()
             self._unregister_subcommands(cmdset)
 
-            methods: list[tuple[str, BoundCommandFunc]] = cast(
-                list[tuple[str, BoundCommandFunc]],
+            methods: list[tuple[str, BoundCommandFunc[...]]] = cast(
+                list[tuple[str, BoundCommandFunc[...]]],
                 inspect.getmembers(
                     cmdset,
                     predicate=lambda meth: (  # type: ignore[arg-type]
@@ -1161,8 +1163,8 @@ class Cmd:
                     )
                 check_parser_uninstallable(subparser)
 
-        methods: list[tuple[str, BoundCommandFunc]] = cast(
-            list[tuple[str, BoundCommandFunc]],
+        methods: list[tuple[str, BoundCommandFunc[...]]] = cast(
+            list[tuple[str, BoundCommandFunc[...]]],
             inspect.getmembers(
                 cmdset,
                 predicate=lambda meth: (  # type: ignore[arg-type]
@@ -3413,7 +3415,7 @@ class Cmd:
         self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
         self._redirecting = saved_redir_state.saved_redirecting
 
-    def get_command_func(self, command: str) -> BoundCommandFunc | None:
+    def get_command_func(self, command: str) -> BoundCommandFunc[...] | None:
         """Get the bound command function for a command.
 
         :param command: the name of the command
@@ -3421,9 +3423,9 @@ class Cmd:
         """
         command_func_name = constants.COMMAND_FUNC_PREFIX + command
         command_func = getattr(self, command_func_name, None)
-        return cast(BoundCommandFunc, command_func) if callable(command_func) else None
+        return cast(BoundCommandFunc[...], command_func) if callable(command_func) else None
 
-    def _get_command_category(self, func: BoundCommandFunc) -> str:
+    def _get_command_category(self, func: BoundCommandFunc[...]) -> str:
         """Determine the category for a command.
 
         :param func: the do_* function implementing the command

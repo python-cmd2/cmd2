@@ -290,6 +290,7 @@ from typing import (
     TypeVar,
     Union,
     Unpack,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
@@ -321,7 +322,7 @@ from .types import (
 _NargsValue = int | str | tuple[int] | tuple[int, int] | tuple[int, float]
 
 # Parser construction works with a command method before or after descriptor binding.
-_CommandFunc: TypeAlias = BoundCommandFunc | UnboundCommandFunc[Any, ...]
+_CommandFunc: TypeAlias = BoundCommandFunc[...] | UnboundCommandFunc[Any, ...]
 
 
 class Cmd2ParserKwargs(TypedDict, total=False):
@@ -2880,28 +2881,36 @@ _CommandParams = ParamSpec("_CommandParams")
 _DecoratorParams = ParamSpec("_DecoratorParams")
 
 
-class _AnnotatedCommand(Protocol[_CommandParams]):
+class _AnnotatedCommand(Protocol[CmdOrSetT, _CommandParams]):
     """A callable command method with the metadata used by ``with_annotated``."""
 
     __name__: str
     __qualname__: str
 
-    def __call__(self, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> bool | None: ...
+    def __call__(self, __self: CmdOrSetT, /, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> bool | None: ...
+
+    @overload
+    def __get__(self, instance: None, owner: Any = ...) -> "_AnnotatedCommand[CmdOrSetT, _CommandParams]": ...
+
+    @overload
+    def __get__(self, instance: CmdOrSetT, owner: Any = ...) -> BoundCommandFunc[_CommandParams]: ...
 
 
 class _WithAnnotatedDecorator(Protocol):
     """The signature-preserving decorator ``with_annotated(...)`` returns (generic per call)."""
 
-    def __call__(self, fn: _AnnotatedCommand[_CommandParams], /) -> _AnnotatedCommand[_CommandParams]: ...
+    def __call__(
+        self, fn: _AnnotatedCommand[CmdOrSetT, _CommandParams], /
+    ) -> _AnnotatedCommand[CmdOrSetT, _CommandParams]: ...
 
 
 def _build_subcommand_handler(
-    func: _AnnotatedCommand[_CommandParams],
+    func: _AnnotatedCommand[Any, ...],
     subcommand_to: str,
     *,
     base_command: bool = False,
     options: _ParserBuildOptions,
-) -> tuple[_AnnotatedCommand[_CommandParams], str, Callable[[], Cmd2ArgumentParser]]:
+) -> tuple[_AnnotatedCommand[Any, ...], str, Callable[[], Cmd2ArgumentParser]]:
     """Build a subcommand's parser and a handler that unpacks the Namespace into typed kwargs.
 
     :param func: the subcommand handler function
@@ -2927,7 +2936,7 @@ def _build_subcommand_handler(
     _leading_names, _var_positional_name = _var_positional_call_plan(func)
 
     @functools.wraps(func)
-    def handler(*args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> bool | None:
+    def handler(*args: Any, **kwargs: Any) -> bool | None:
         """Unpack Namespace into typed kwargs for the subcommand handler."""
         if kwargs:
             raise TypeError("subcommand handlers do not accept keyword arguments")
@@ -2951,11 +2960,11 @@ def _build_subcommand_handler(
         raise TypeError("annotated command functions must return bool or None")
 
     parser_builder = _make_parser_builder(func, skip_params=_SKIP_PARAMS, base_command=base_command, options=options)
-    return handler, subcmd_name, parser_builder
+    return cast(_AnnotatedCommand[Any, ...], handler), subcmd_name, parser_builder
 
 
 @overload
-def with_annotated(func: _AnnotatedCommand[_CommandParams], /) -> _AnnotatedCommand[_CommandParams]: ...
+def with_annotated(func: _AnnotatedCommand[CmdOrSetT, _CommandParams], /) -> _AnnotatedCommand[CmdOrSetT, _CommandParams]: ...
 
 
 @overload
@@ -2982,7 +2991,7 @@ def with_annotated(
 
 
 def with_annotated(
-    func: _AnnotatedCommand[_CommandParams] | None = None,
+    func: _AnnotatedCommand[CmdOrSetT, _CommandParams] | None = None,
     *,
     ns_provider: Callable[..., argparse.Namespace] | None = None,
     preserve_quotes: bool = False,
@@ -3000,7 +3009,7 @@ def with_annotated(
     subcommand_title: str | None = None,
     subcommand_description: str | None = None,
     **parser_kwargs: Unpack[Cmd2ParserKwargs],
-) -> _AnnotatedCommand[_CommandParams] | _WithAnnotatedDecorator:
+) -> _AnnotatedCommand[CmdOrSetT, _CommandParams] | _WithAnnotatedDecorator:
     """Decorate a ``do_*`` method to build its argparse parser from type annotations.
 
     :param func: the command function (when used without parentheses)
@@ -3062,8 +3071,8 @@ def with_annotated(
     )
 
     def decorator(
-        command_func: _AnnotatedCommand[_DecoratorParams],
-    ) -> _AnnotatedCommand[_DecoratorParams]:
+        command_func: _AnnotatedCommand[CmdOrSetT, _DecoratorParams],
+    ) -> _AnnotatedCommand[CmdOrSetT, _DecoratorParams]:
         if with_unknown_args:
             unknown_param = inspect.signature(command_func).parameters.get("_unknown")
             if unknown_param is None:
@@ -3093,7 +3102,7 @@ def with_annotated(
                 parser_source=subcmd_parser_builder,
             )
             setattr(handler, constants.SUBCOMMAND_ATTR_SPEC, subcommand_spec)
-            return handler
+            return cast(_AnnotatedCommand[CmdOrSetT, _DecoratorParams], handler)
 
         command_name = command_func.__name__[len(constants.COMMAND_FUNC_PREFIX) :]
 
@@ -3170,9 +3179,9 @@ def with_annotated(
         )
         setattr(cmd_wrapper, constants.ARGPARSE_COMMAND_ATTR_SPEC, argparse_command_spec)
 
-        return cmd_wrapper
+        return cast(_AnnotatedCommand[CmdOrSetT, _DecoratorParams], cmd_wrapper)
 
     # Support both @with_annotated and @with_annotated(...)
     if func is not None:
         return decorator(func)
-    return decorator
+    return cast(_WithAnnotatedDecorator, decorator)

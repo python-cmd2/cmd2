@@ -69,13 +69,13 @@ CmdOrSetClassT = TypeVar("CmdOrSetClassT", bound=CmdOrSetClass)
 
 # A bound cmd2 command function (e.g. do_command).
 # The 'self' argument is already tied to an instance and is omitted.
-class BoundCommandFunc(Protocol):
+class BoundCommandFunc(Protocol[P]):
     """Protocol for a command function bound to a command instance."""
 
     __name__: str
     __qualname__: str
 
-    def __call__(self, *args: Any, **kwargs: Any) -> bool | None:
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> bool | None:
         """Invoke the bound command function."""
 
 
@@ -94,7 +94,7 @@ class UnboundCommandFunc(Protocol[CmdOrSetT, P]):
     def __get__(self, instance: None, owner: Any = ...) -> "UnboundCommandFunc[CmdOrSetT, P]": ...
 
     @overload
-    def __get__(self, instance: CmdOrSetT, owner: Any = ...) -> BoundCommandFunc: ...
+    def __get__(self, instance: CmdOrSetT, owner: Any = ...) -> BoundCommandFunc[P]: ...
 
 
 ##################################################################################################
