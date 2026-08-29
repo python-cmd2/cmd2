@@ -2307,6 +2307,41 @@ class TestCommandSet:
 # ---------------------------------------------------------------------------
 
 
+def test_subcommand_handler_rejects_keyword_arguments() -> None:
+    """The internal subcommand adapter only accepts the owner and parsed namespace positionally."""
+
+    @with_annotated(subcommand_to="root")
+    def root_child(self) -> None:
+        pass
+
+    with pytest.raises(TypeError, match="do not accept keyword arguments"):
+        root_child(object(), argparse.Namespace(), unexpected=True)
+
+
+def test_subcommand_handler_requires_namespace() -> None:
+    """The internal subcommand adapter rejects calls without a parsed namespace."""
+
+    @with_annotated(subcommand_to="root")
+    def root_child(self) -> None:
+        pass
+
+    with pytest.raises(TypeError, match=r"parsed argparse.Namespace"):
+        root_child(object(), object())
+
+
+def test_subcommand_handler_rejects_invalid_return_value() -> None:
+    """The internal subcommand adapter enforces the command return contract."""
+
+    invalid_result: Any = object()
+
+    @with_annotated(subcommand_to="root")
+    def root_child(self) -> bool | None:
+        return invalid_result
+
+    with pytest.raises(TypeError, match="must return bool or None"):
+        root_child(object(), argparse.Namespace())
+
+
 class _IntegrationApp(cmd2.Cmd):
     def __init__(self) -> None:
         super().__init__()
