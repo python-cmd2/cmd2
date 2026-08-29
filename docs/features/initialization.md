@@ -4,9 +4,11 @@ Here is a basic example `cmd2` application which demonstrates many capabilities 
 
 !!! example "examples/getting_started.py"
 
+    <!-- fmt:off -->
     ```py
     --8<-- "examples/getting_started.py"
     ```
+    <!-- fmt:on -->
 
 ## Cmd class initializer
 

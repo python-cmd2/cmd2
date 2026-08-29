@@ -19,9 +19,11 @@ click the **Copy** button in the top-right):
 
 !!! example "getting_started.py"
 
+    <!-- fmt:off -->
     ```py
     --8<-- "examples/getting_started.py"
     ```
+    <!-- fmt:on -->
 
 ## Basic Application
 
@@ -31,6 +33,7 @@ following contents:
 ```py
 #!/usr/bin/env python
 """A basic cmd2 application."""
+
 import cmd2
 
 
@@ -38,8 +41,9 @@ class BasicApp(cmd2.Cmd):
     """Cmd2 application to demonstrate many common features."""
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
+
     app = BasicApp()
     sys.exit(app.cmdloop())
 ```
@@ -69,7 +73,7 @@ def __init__(self):
 
     # Make maxrepeats settable at runtime
     self.maxrepeats = 3
-    self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
+    self.add_settable(cmd2.Settable("maxrepeats", int, "max repetitions for speak command", self))
 ```
 
 In that initializer, the first thing to do is to make sure we initialize `cmd2`. That's what the
@@ -94,10 +98,11 @@ that the `speak_parser` attribute and the `do_speak()` method are part of the `B
 
 ```py
 speak_parser = cmd2.Cmd2ArgumentParser()
-speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-speak_parser.add_argument('words', nargs='+', help='words to say')
+speak_parser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
+speak_parser.add_argument("-s", "--shout", action="store_true", help="N00B EMULATION MODE")
+speak_parser.add_argument("-r", "--repeat", type=int, help="output [n] times")
+speak_parser.add_argument("words", nargs="+", help="words to say")
+
 
 @cmd2.with_argparser(speak_parser)
 def do_speak(self, args):
@@ -105,14 +110,14 @@ def do_speak(self, args):
     words = []
     for word in args.words:
         if args.piglatin:
-            word = '%s%say' % (word[1:], word[0])
+            word = "%s%say" % (word[1:], word[0])
         if args.shout:
             word = word.upper()
         words.append(word)
     repetitions = args.repeat or 1
     for _ in range(min(repetitions, self.maxrepeats)):
         # .poutput handles newlines, and accommodates output redirection too
-        self.poutput(' '.join(words))
+        self.poutput(" ".join(words))
 ```
 
 Up at the top of the script, you'll also need to add:
@@ -186,12 +191,12 @@ Let's add a shortcut for our `speak` command. Change the `__init__()` method so 
 ```py
 def __init__(self):
     shortcuts = cmd2.DEFAULT_SHORTCUTS
-    shortcuts.update({'&': 'speak'})
+    shortcuts.update({"&": "speak"})
     super().__init__(shortcuts=shortcuts)
 
     # Make maxrepeats settable at runtime
     self.maxrepeats = 3
-    self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
+    self.add_settable(cmd2.Settable("maxrepeats", int, "max repetitions for speak command", self))
 ```
 
 Shortcuts are passed to the `cmd2` initializer, and if you want the built-in shortcuts of `cmd2` you
@@ -224,14 +229,15 @@ def do_speak(self, args):
     words = []
     for word in args.words:
         if args.piglatin:
-            word = '%s%say' % (word[1:], word[0])
+            word = "%s%say" % (word[1:], word[0])
         if args.shout:
             word = word.upper()
         words.append(word)
     repetitions = args.repeat or 1
     for _ in range(min(repetitions, self.maxrepeats)):
         # .poutput handles newlines, and accommodates output redirection too
-        self.poutput(' '.join(words))
+        self.poutput(" ".join(words))
+
 
 # orate is a synonym for speak which takes multiline input
 do_orate = do_speak
@@ -241,7 +247,7 @@ With the new command created, we need to tell `cmd2` to treat that command as a 
 Modify the super initialization line to look like this:
 
 ```py
-super().__init__(multiline_commands=['orate'], shortcuts=shortcuts)
+super().__init__(multiline_commands=["orate"], shortcuts=shortcuts)
 ```
 
 Now when you run the example, you can type something like this:

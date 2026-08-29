@@ -172,8 +172,8 @@ simple example which shows the proper technique:
 
 ```py
 def myhookmethod(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-    if not '|' in params.statement.raw:
-        newinput = params.statement.raw + ' | less'
+    if not "|" in params.statement.raw:
+        newinput = params.statement.raw + " | less"
         params.statement = self.statement_parser.parse(newinput)
     return params
 ```

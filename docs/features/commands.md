@@ -15,6 +15,7 @@ The simplest `cmd2` application looks like this:
 ```py
 #!/usr/bin/env python
 """A simple cmd2 application."""
+
 import cmd2
 
 
@@ -22,8 +23,9 @@ class App(cmd2.Cmd):
     """A simple cmd2 application."""
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
+
     c = App()
     sys.exit(c.cmdloop())
 ```
@@ -142,11 +144,13 @@ You can use this capability to easily return your own values to the operating sy
 ```py
 #!/usr/bin/env python
 """A simple cmd2 application."""
+
 import cmd2
 
 
 class App(cmd2.Cmd):
     """A simple cmd2 application."""
+
 
 def do_bail(self, line):
     """Exit the application"""
@@ -154,8 +158,10 @@ def do_bail(self, line):
     self.exit_code = 2
     return True
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import sys
+
     c = App()
     sys.exit(c.cmdloop())
 ```

@@ -19,7 +19,7 @@ format `{'shortcut': 'command_name'}` where you omit `do_` from the command name
 class App(Cmd):
     def __init__(self):
         shortcuts = cmd2.DEFAULT_SHORTCUTS
-        shortcuts.update({'*': 'sneeze', '~': 'squirm'})
+        shortcuts.update({"*": "sneeze", "~": "squirm"})
         cmd2.Cmd.__init__(self, shortcuts=shortcuts)
 ```
 

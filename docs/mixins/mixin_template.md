@@ -89,7 +89,6 @@ Your mixin can add user visible commands. You do it the same way in a mixin that
 
 ```python
 class MyMixin:
-
     def do_say(self, statement):
         """Simple say command"""
         self.poutput(statement)
@@ -108,8 +107,8 @@ class MyMixin:
         # code placed here runs before cmd2.Cmd initializes
         super().__init__(*args, **kwargs)
         # code placed here runs after cmd2.Cmd initializes
-        self.mysetting = 'somevalue'
-        self.settable.update({'mysetting': 'short help message for mysetting'})
+        self.mysetting = "somevalue"
+        self.settable.update({"mysetting": "short help message for mysetting"})
 ```
 
 You can also hide settings from the user by removing them from `self.settable`.
@@ -142,7 +141,6 @@ Here's a simple example:
 
 ```python
 class MyMixin:
-
     def __init__(self, *args, **kwargs):
         # code placed here runs before cmd2 initializes
         super().__init__(*args, **kwargs)
@@ -152,7 +150,7 @@ class MyMixin:
 
     def cmd2_mymixin_postparsing_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """Method to be called after parsing user input, but before running the command"""
-        self.poutput('in postparsing_hook')
+        self.poutput("in postparsing_hook")
         return data
 ```
 
