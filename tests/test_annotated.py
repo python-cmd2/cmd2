@@ -2318,6 +2318,20 @@ def test_subcommand_handler_rejects_keyword_arguments() -> None:
         root_child(object(), argparse.Namespace(), unexpected=True)
 
 
+def test_subcommand_handler_rejects_wrong_positional_argument_count() -> None:
+    """The internal subcommand adapter requires exactly two positional arguments (self, namespace)."""
+
+    @with_annotated(subcommand_to="root")
+    def root_child(self) -> None:
+        pass
+
+    with pytest.raises(TypeError, match=r"require 2 positional arguments"):
+        root_child(object())
+
+    with pytest.raises(TypeError, match=r"require 2 positional arguments"):
+        root_child(object(), argparse.Namespace(), "extra")
+
+
 def test_subcommand_handler_requires_namespace() -> None:
     """The internal subcommand adapter rejects calls without a parsed namespace."""
 

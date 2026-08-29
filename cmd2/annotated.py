@@ -2931,6 +2931,8 @@ def _build_subcommand_handler(
         """Unpack Namespace into typed kwargs for the subcommand handler."""
         if kwargs:
             raise TypeError("subcommand handlers do not accept keyword arguments")
+        if len(args) != 2:
+            raise TypeError(f"subcommand handlers require 2 positional arguments (self, namespace), got {len(args)}")
         self_arg, ns = args
         if not isinstance(ns, argparse.Namespace):
             raise TypeError("subcommand handlers require a parsed argparse.Namespace")

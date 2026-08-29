@@ -5959,7 +5959,7 @@ class Cmd:
         if par_ann != plugin.PostparsingData:
             raise TypeError(f"{func_name} must have one parameter declared with type 'cmd2.plugin.PostparsingData'")
         if ret_ann != plugin.PostparsingData:
-            raise TypeError(f"{func_name} must declare return a return type of 'cmd2.plugin.PostparsingData'")
+            raise TypeError(f"{func_name} must declare a return type of 'cmd2.plugin.PostparsingData'")
 
     def register_postparsing_hook(self, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Register a function to be called after parsing user input but before running the command."""
@@ -6016,7 +6016,7 @@ class Cmd:
                 f"{func_name} must have one parameter declared with type {plugin.CommandFinalizationData}, got: {par_ann}"
             )
         if ret_ann != plugin.CommandFinalizationData:
-            raise TypeError(f"{func_name} must declare return a return type of {plugin.CommandFinalizationData}")
+            raise TypeError(f"{func_name} must declare a return type of {plugin.CommandFinalizationData}")
 
     def register_cmdfinalization_hook(
         self, func: Callable[[plugin.CommandFinalizationData], plugin.CommandFinalizationData]
