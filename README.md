@@ -71,6 +71,8 @@ Hello, Ada!
 Hello, Ada!
 ```
 
+[![Animated demonstration of the cmd2 quick-start application](docs/assets/cmd2-readme-demo.gif)](docs/assets/cmd2-readme-demo.gif)
+
 See the [getting started tutorial](https://cmd2.readthedocs.io/en/latest/examples/getting_started/)
 to build a more complete application.
 
