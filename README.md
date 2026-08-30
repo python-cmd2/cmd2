@@ -58,6 +58,10 @@ if __name__ == "__main__":
     App().cmdloop()
 ```
 
+`cmd2` supports [Typer](https://typer.tiangolo.com/)-style syntax for specifying command arguments
+with type annotations. In this example, `@cmd2.with_annotated` turns `name` and `count` into a
+positional argument and an option.
+
 Run it with `python app.py`. Your new `greet` command already has input validation, generated help,
 and tab completion for its options. The application also includes discoverable help, command
 history, aliases, macros, scripting, shell integration, and other built-in commands.
