@@ -20,10 +20,10 @@ Presents numbered options to user, as bash `select`.
 
 ```py
 def do_eat(self, arg):
-    sauce = self.select('sweet salty', 'Sauce? ')
-    result = '{food} with {sauce} sauce, yum!'
+    sauce = self.select("sweet salty", "Sauce? ")
+    result = "{food} with {sauce} sauce, yum!"
     result = result.format(food=arg, sauce=sauce)
-    self.stdout.write(result + '\n')
+    self.stdout.write(result + "\n")
 ```
 
 ```text

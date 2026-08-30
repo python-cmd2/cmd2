@@ -36,13 +36,15 @@ by using code like the following:
 ```py
 import cmd2
 
+
 class Cmd2EventBased(cmd2.Cmd):
     def __init__(self):
         cmd2.Cmd.__init__(self)
 
     # ... your class code here ...
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     app = Cmd2EventBased()
     app.preloop()
 

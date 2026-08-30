@@ -79,14 +79,15 @@ You can customize the content of the toolbar by overriding the [cmd2.Cmd.get_bot
 method.
 
 ```py
-    from prompt_toolkit.formatted_text import AnyFormattedText
+from prompt_toolkit.formatted_text import AnyFormattedText
 
-    def get_bottom_toolbar(self) -> AnyFormattedText:
-        return [
-            ('ansigreen', 'My Application Name'),
-            ('', ' - '),
-            ('ansiyellow', 'Current Status: Idle'),
-        ]
+
+def get_bottom_toolbar(self) -> AnyFormattedText:
+    return [
+        ("ansigreen", "My Application Name"),
+        ("", " - "),
+        ("ansiyellow", "Current Status: Idle"),
+    ]
 ```
 
 ### Refreshing the Toolbar

@@ -32,6 +32,7 @@ import cmd2
 _event_loop = None
 _event_lock = threading.Lock()
 
+
 def _get_event_loop() -> asyncio.AbstractEventLoop:
     """Get or create the background event loop."""
     global _event_loop
@@ -42,21 +43,25 @@ def _get_event_loop() -> asyncio.AbstractEventLoop:
                 _event_loop = asyncio.new_event_loop()
                 thread = threading.Thread(
                     target=_event_loop.run_forever,
-                    name='Async Runner',
+                    name="Async Runner",
                     daemon=True,
                 )
                 thread.start()
     return _event_loop
 
+
 def with_async_loop(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to run a command method asynchronously in a background thread."""
+
     @functools.wraps(func)
     def wrapper(self: cmd2.Cmd, *args: Any, **kwargs: Any) -> Any:
         loop = _get_event_loop()
         coro = func(self, *args, **kwargs)
         future = asyncio.run_coroutine_threadsafe(coro, loop)
         return future.result()
+
     return wrapper
+
 
 class AsyncApp(cmd2.Cmd):
     @with_async_loop

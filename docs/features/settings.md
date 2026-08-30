@@ -91,9 +91,11 @@ Here's an example, from
 
 !!! example "examples/environment.py"
 
+    <!-- fmt:off -->
     ```py
     --8<-- "examples/environment.py"
     ```
+    <!-- fmt:on -->
 
 If you want to be notified when a setting changes (as we do above), then be sure to supply a method
 to the `onchange_cb` parameter of the `cmd2.utils.Settable`. This method will be called after the

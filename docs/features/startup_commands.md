@@ -32,6 +32,8 @@ application and easily used in automation.
 
     ```py
     from cmd2 import Cmd
+
+
     class App(Cmd):
         def __init__(self):
             super().__init__(allow_cli_args=False)
@@ -56,7 +58,7 @@ You can execute commands from an initialization script by passing a file path to
 ```py
 class StartupApp(cmd2.Cmd):
     def __init__(self):
-        cmd2.Cmd.__init__(self, startup_script='.cmd2rc')
+        cmd2.Cmd.__init__(self, startup_script=".cmd2rc")
 ```
 
 This text file should contain a [Command Script](./scripting.md#command-scripts). See the
@@ -66,7 +68,7 @@ example for a demonstration.
 You can silence a startup script's output by setting `silence_startup_script` to True:
 
 ```py
-cmd2.Cmd.__init__(self, startup_script='.cmd2rc', silence_startup_script=True)
+cmd2.Cmd.__init__(self, startup_script=".cmd2rc", silence_startup_script=True)
 ```
 
 !!! warning

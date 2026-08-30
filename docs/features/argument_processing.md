@@ -81,17 +81,18 @@ Here's what it looks like:
 from cmd2 import Cmd2ArgumentParser, with_argparser
 
 argparser = Cmd2ArgumentParser()
-argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-argparser.add_argument('word', nargs='?', help='word to say')
+argparser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
+argparser.add_argument("-s", "--shout", action="store_true", help="N00B EMULATION MODE")
+argparser.add_argument("-r", "--repeat", type=int, help="output [n] times")
+argparser.add_argument("word", nargs="?", help="word to say")
+
 
 @with_argparser(argparser)
 def do_speak(self, opts):
     """Repeats what you tell me to."""
     arg = opts.word
     if opts.piglatin:
-        arg = '%s%say' % (arg[1:], arg[0])
+        arg = "%s%say" % (arg[1:], arg[0])
     if opts.shout:
         arg = arg.upper()
     repetitions = opts.repeat or 1
@@ -125,13 +126,15 @@ With this code:
 from cmd2 import Cmd2ArgumentParser, with_argparser
 
 argparser = Cmd2ArgumentParser()
-argparser.add_argument('tag', help='tag')
-argparser.add_argument('content', nargs='+', help='content to surround with tag')
+argparser.add_argument("tag", help="tag")
+argparser.add_argument("content", nargs="+", help="content to surround with tag")
+
+
 @with_argparser(argparser)
 def do_tag(self, args):
     """Create an HTML tag"""
-    self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
-    self.stdout.write('\n')
+    self.stdout.write("<{0}>{1}</{0}>".format(args.tag, " ".join(args.content)))
+    self.stdout.write("\n")
 ```
 
 the `help tag` command displays:
@@ -155,13 +158,15 @@ leave the docstring on your method blank:
 ```py
 from cmd2 import Cmd2ArgumentParser, with_argparser
 
-argparser = Cmd2ArgumentParser(description='create an HTML tag')
-argparser.add_argument('tag', help='tag')
-argparser.add_argument('content', nargs='+', help='content to surround with tag')
+argparser = Cmd2ArgumentParser(description="create an HTML tag")
+argparser.add_argument("tag", help="tag")
+argparser.add_argument("content", nargs="+", help="content to surround with tag")
+
+
 @with_argparser(argparser)
 def do_tag(self, args):
-    self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
-    self.stdout.write('\n')
+    self.stdout.write("<{0}>{1}</{0}>".format(args.tag, " ".join(args.content)))
+    self.stdout.write("\n")
 ```
 
 Now when the user enters `help tag` they see:
@@ -184,14 +189,17 @@ To add additional text to the end of the generated help message, use the `epilog
 ```py
 from cmd2 import Cmd2ArgumentParser, with_argparser
 
-argparser = Cmd2ArgumentParser(description='create an HTML tag',
-                                epilog='This command cannot generate tags with no content, like <br/>.')
-argparser.add_argument('tag', help='tag')
-argparser.add_argument('content', nargs='+', help='content to surround with tag')
+argparser = Cmd2ArgumentParser(
+    description="create an HTML tag", epilog="This command cannot generate tags with no content, like <br/>."
+)
+argparser.add_argument("tag", help="tag")
+argparser.add_argument("content", nargs="+", help="content to surround with tag")
+
+
 @with_argparser(argparser)
 def do_tag(self, args):
-    self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
-    self.stdout.write('\n')
+    self.stdout.write("<{0}>{1}</{0}>".format(args.tag, " ".join(args.content)))
+    self.stdout.write("\n")
 ```
 
 Which yields:
@@ -248,7 +256,7 @@ additional attributes that may be helpful, including `arg_list` and `argv`:
 
 ```py
 class CmdLineApp(cmd2.Cmd):
-    """ Example cmd2 application. """
+    """Example cmd2 application."""
 
     def do_say(self, statement):
         # statement contains a string
@@ -276,8 +284,9 @@ methods that should receive an argument list instead of a string:
 ```py
 from cmd2 import with_argument_list
 
+
 class CmdLineApp(cmd2.Cmd):
-    """ Example cmd2 application. """
+    """Example cmd2 application."""
 
     def do_say(self, cmdline):
         # cmdline contains a string
@@ -300,8 +309,8 @@ Here's what it looks like:
 from cmd2 import Cmd2ArgumentParser, with_argparser
 
 dir_parser = Cmd2ArgumentParser()
-dir_parser.add_argument('-l', '--long', action='store_true',
-                        help="display in long format with one item per line")
+dir_parser.add_argument("-l", "--long", action="store_true", help="display in long format with one item per line")
+
 
 @with_argparser(dir_parser, with_unknown_args=True)
 def do_dir(self, args, unknown):
@@ -309,8 +318,8 @@ def do_dir(self, args, unknown):
     # No arguments for this command
     if unknown:
         self.perror("dir does not take any positional arguments:")
-        self.do_help('dir')
-        self.last_result = 'Bad arguments'
+        self.do_help("dir")
+        self.last_result = "Bad arguments"
         return
 
     # Get the contents as a list

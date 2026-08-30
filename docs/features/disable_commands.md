@@ -40,22 +40,23 @@ the `hidden_commands` list:
 ```py
 class HiddenCommands(cmd2.Cmd):
     """An app which demonstrates how to hide a command"""
+
     def __init__(self):
         super().__init__()
-        self.hidden_commands.append('py')
+        self.hidden_commands.append("py")
 ```
 
 As shown above, you would typically do this as part of initializing your application. If you decide
 you want to unhide a command later in the execution of your application, you can by doing:
 
 ```py
-self.hidden_commands = [cmd for cmd in self.hidden_commands if cmd != 'py']
+self.hidden_commands = [cmd for cmd in self.hidden_commands if cmd != "py"]
 ```
 
 You might be thinking that the list comprehension is overkill and you'd rather do something like:
 
 ```py
-self.hidden_commands.remove('py')
+self.hidden_commands.remove("py")
 ```
 
 You may be right, but `remove()` will raise a `ValueError` if `py` isn't in the list, and it will
@@ -75,16 +76,16 @@ class DisabledCommands(cmd2.Cmd):
     """An application which disables and enables commands"""
 
     def do_lock(self, line):
-        self.disable_command('open', "you can't open the door because it is locked")
-        self.poutput('the door is locked')
+        self.disable_command("open", "you can't open the door because it is locked")
+        self.poutput("the door is locked")
 
     def do_unlock(self, line):
-        self.enable_command('open')
-        self.poutput('the door is unlocked')
+        self.enable_command("open")
+        self.poutput("the door is unlocked")
 
     def do_open(self, line):
         """open the door"""
-        self.poutput('opening the door')
+        self.poutput("opening the door")
 ```
 
 This method has the added benefit of removing disabled commands from the help menu. But, this method
@@ -99,14 +100,14 @@ all the commands in a category with a single method call. Say you have created a
 commands called "Server Information". You can disable all commands in that category:
 
 ```py
-not_connected_msg = 'You must be connected to use this command'
-self.disable_category('Server Information', not_connected_msg)
+not_connected_msg = "You must be connected to use this command"
+self.disable_category("Server Information", not_connected_msg)
 ```
 
 Similarly, you can re-enable all the commands in a category:
 
 ```py
-self.enable_category('Server Information')
+self.enable_category("Server Information")
 ```
 
 See [help_categories.py](https://github.com/python-cmd2/cmd2/blob/main/examples/help_categories.py)
