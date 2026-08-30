@@ -49,6 +49,8 @@ output of that to a file called _output.txt_.
 
     ```py
     from cmd2 import Cmd
+
+
     class App(Cmd):
         def __init__(self):
             super().__init__(allow_redirection=False)

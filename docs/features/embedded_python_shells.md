@@ -7,6 +7,8 @@ will be present and run an interactive Python shell:
 
 ```py
 from cmd2 import Cmd
+
+
 class App(Cmd):
     def __init__(self):
         Cmd.__init__(self, include_py=True)
@@ -59,6 +61,8 @@ interactive IPython shell:
 
 ```py
 from cmd2 import Cmd
+
+
 class App(Cmd):
     def __init__(self):
         Cmd.__init__(self, include_ipy=True)

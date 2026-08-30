@@ -46,8 +46,8 @@ Another one using [pytest-mock](https://pypi.org/project/pytest-mock) to provide
 
 ```py
 def test_mocked_methods2(mocker):
-   mock_cmdloop = mocker.patch("cmd2.Cmd.cmdloop", autospec=True)
-   cli = cmd2.Cmd()
-   cli.cmdloop()
-   assert mock_cmdloop.call_count == 1
+    mock_cmdloop = mocker.patch("cmd2.Cmd.cmdloop", autospec=True)
+    cli = cmd2.Cmd()
+    cli.cmdloop()
+    assert mock_cmdloop.call_count == 1
 ```

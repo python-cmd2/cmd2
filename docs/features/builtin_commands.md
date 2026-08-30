@@ -125,5 +125,5 @@ from your application:
 class NoShellApp(cmd2.Cmd):
     """A simple cmd2 application."""
 
-    delattr(cmd2.Cmd, 'do_shell')
+    delattr(cmd2.Cmd, "do_shell")
 ```

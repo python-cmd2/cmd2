@@ -31,9 +31,10 @@ The two decorators are interchangeable -- here is the same command written both 
 
     ```py
     parser = Cmd2ArgumentParser()
-    parser.add_argument('name', help='person to greet')
-    parser.add_argument('--count', type=int, default=1, help='repetitions')
-    parser.add_argument('--loud', action='store_true', help='shout')
+    parser.add_argument("name", help="person to greet")
+    parser.add_argument("--count", type=int, default=1, help="repetitions")
+    parser.add_argument("--loud", action="store_true", help="shout")
+
 
     @with_argparser(parser)
     def do_greet(self, args):
@@ -60,6 +61,7 @@ Underscores in parameter names are converted to dashes in the generated flag, so
 
 ```py
 from cmd2.annotated import with_annotated
+
 
 class MyApp(cmd2.Cmd):
     @with_annotated
@@ -132,6 +134,7 @@ For finer control, use `typing.Annotated` with [Argument][cmd2.annotated.Argumen
 from typing import Annotated
 from cmd2.annotated import Argument, Option, with_annotated
 
+
 class MyApp(cmd2.Cmd):
     def sport_choices(self) -> cmd2.Choices:
         return cmd2.Choices.from_values(["football", "basketball"])
@@ -139,15 +142,22 @@ class MyApp(cmd2.Cmd):
     @with_annotated
     def do_play(
         self,
-        sport: Annotated[str, Argument(
-            choices_provider=sport_choices,
-            help_text="Sport to play",
-        )],
-        venue: Annotated[str, Option(
-            "--venue", "-v",
-            help_text="Where to play",
-            completer=cmd2.Cmd.path_complete,
-        )] = "home",
+        sport: Annotated[
+            str,
+            Argument(
+                choices_provider=sport_choices,
+                help_text="Sport to play",
+            ),
+        ],
+        venue: Annotated[
+            str,
+            Option(
+                "--venue",
+                "-v",
+                help_text="Where to play",
+                completer=cmd2.Cmd.path_complete,
+            ),
+        ] = "home",
     ):
         self.poutput(f"Playing {sport} at {venue}")
 ```
@@ -173,6 +183,7 @@ import enum
 from typing import Annotated
 from cmd2.annotated import Argument, with_annotated
 
+
 class Color(enum.Enum):
     red = "red"
     green = "green"
@@ -182,6 +193,7 @@ class Color(enum.Enum):
     def _missing_(cls, value):
         # map a special keyword onto a real member; return None to reject
         return cls.red if str(value).lower() == "auto" else None
+
 
 class MyApp(cmd2.Cmd):
     @with_annotated
@@ -265,6 +277,7 @@ class UpperAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, values.upper())
 
+
 @with_annotated
 def do_shout(self, name: Annotated[str, Option("--name", action=UpperAction)] = ""):
     self.poutput(name)
@@ -297,6 +310,7 @@ forms are equivalent:
 ```py
 # Signature default
 def do_x(self, name: Annotated[str, Option("--name")] = "HI"): ...
+
 
 # Metadata default (same behaviour)
 def do_x(self, name: Annotated[str, Option("--name", default="HI")]): ...
@@ -359,10 +373,12 @@ import datetime
 from typing import Annotated
 from cmd2.annotated import Argument, Option, with_annotated
 
+
 def parse_size(value: str) -> int:
     """Parse an integer with an optional K/M/G suffix."""
     multiplier = {"K": 1_000, "M": 1_000_000, "G": 1_000_000_000}.get(value[-1:].upper(), 1)
     return int(value[:-1] if multiplier != 1 else value) * multiplier
+
 
 class MyApp(cmd2.Cmd):
     @with_annotated
@@ -382,8 +398,10 @@ instead infer `nargs` and split the input across several tokens:
 ```py
 from typing import Annotated, Any
 
+
 def parse_intset(value: str) -> set[int]:
     return {int(piece) for piece in value.split(",")}
+
 
 @with_annotated
 def do_select(self, idx: Annotated[Any, Option("--idx", converter=parse_intset)]) -> None:
@@ -403,6 +421,7 @@ completion while accepting normalized input, and a `Path` keeps its completer:
 import os
 from typing import Annotated
 from cmd2.annotated import Argument, with_annotated
+
 
 class MyApp(cmd2.Cmd):
     @with_annotated
@@ -486,6 +505,7 @@ and `description` for a titled help section (omit them for an untitled group):
 ```py
 from cmd2.annotated import Group, with_annotated
 
+
 class App(cmd2.Cmd):
     @with_annotated(
         description="Open a network connection.",
@@ -509,6 +529,8 @@ def do_greet(self, name: str):
     :param name: who to greet
     """
     self.poutput(f"hello {name}")
+
+
 # parser.description == "Greet someone by name."
 ```
 
@@ -532,9 +554,7 @@ choice reads as `[--json | --csv]` instead of expanding to `--json`/`--no-json` 
 
 ```py
 @with_annotated(
-    mutually_exclusive_groups=(
-        Group("json", "csv", title="output", description="how to write results"),
-    ),
+    mutually_exclusive_groups=(Group("json", "csv", title="output", description="how to write results"),),
 )
 def do_render(
     self,
@@ -559,6 +579,7 @@ than the block:
 class Conn(ArgumentBlock):
     host: Annotated[str, Option("--host")] = "localhost"
     port: Annotated[int, Option("--port")] = 8080
+
 
 @with_annotated(groups=(Group("host", "port", title="connection"),))
 def do_connect(self, conn: Conn) -> None: ...
@@ -611,6 +632,7 @@ def do_manage(self, *, cmd2_subcommand_func):
     if cmd2_subcommand_func:
         cmd2_subcommand_func()
 
+
 @with_annotated(subcommand_to="manage", help="list projects")
 def manage_list(self):
     self.poutput("listing")
@@ -625,6 +647,7 @@ creates its own subparsers:
 def manage_project(self, *, cmd2_subcommand_func):
     if cmd2_subcommand_func:
         cmd2_subcommand_func()
+
 
 @with_annotated(subcommand_to="manage project", help="add a project")
 def manage_project_add(self, name: str):
@@ -770,8 +793,10 @@ decorator, it skips the first parameter as the method receiver (`self`/`cls`).
 ```py
 from cmd2.annotated import build_parser_from_function
 
+
 def greet(self, name: str, count: int = 1):
     """Greet someone."""
+
 
 parser = build_parser_from_function(greet)
 namespace = parser.parse_args(["Alice", "--count", "3"])

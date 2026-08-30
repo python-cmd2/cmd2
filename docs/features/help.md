@@ -70,7 +70,7 @@ By default, `cmd2.Cmd` defines its `DEFAULT_CATEGORY` as `"Cmd2 Commands"`.
 ```py
 class MyApp(cmd2.Cmd):
     # All commands defined in this class will be grouped here
-    DEFAULT_CATEGORY = 'Application Commands'
+    DEFAULT_CATEGORY = "Application Commands"
 
     def do_echo(self, arg):
         """Echo command"""
@@ -81,11 +81,11 @@ This also works for [Command Sets](./modular_commands.md):
 
 ```py
 class Plugin(cmd2.CommandSet):
-    DEFAULT_CATEGORY = 'Plugin Commands'
+    DEFAULT_CATEGORY = "Plugin Commands"
 
     def do_plugin_cmd(self, _):
         """Plugin command"""
-        self._cmd.poutput('Plugin')
+        self._cmd.poutput("Plugin")
 ```
 
 When using inheritance, `cmd2` uses the `DEFAULT_CATEGORY` of the class where the command was
@@ -98,10 +98,10 @@ If you want to rename the built-in category itself, you can do so by reassigning
 ```py
 class MyApp(cmd2.Cmd):
     # Rename the framework's built-in category
-    cmd2.Cmd.DEFAULT_CATEGORY = 'Shell Commands'
+    cmd2.Cmd.DEFAULT_CATEGORY = "Shell Commands"
 
     # Set the category for your own commands
-    DEFAULT_CATEGORY = 'Application Commands'
+    DEFAULT_CATEGORY = "Application Commands"
 ```
 
 For a complete demonstration of this functionality, see the
@@ -117,10 +117,10 @@ precedence over the `DEFAULT_CATEGORY`.
 Using the `@with_category` decorator:
 
 ```py
-@with_category('Connecting')
+@with_category("Connecting")
 def do_which(self, _):
     """Which command"""
-    self.poutput('Which')
+    self.poutput("Which")
 ```
 
 Using the `categorize()` function:
@@ -130,7 +130,8 @@ You can call with a single function:
 ```py
 def do_connect(self, _):
     """Connect command"""
-    self.poutput('Connect')
+    self.poutput("Connect")
+
 
 # Tag the above command functions under the category Connecting
 categorize(do_connect, CMD_CAT_CONNECTING)
@@ -141,20 +142,21 @@ Or with an Iterable container of functions:
 ```py
 def do_undeploy(self, _):
     """Undeploy command"""
-    self.poutput('Undeploy')
+    self.poutput("Undeploy")
+
 
 def do_stop(self, _):
     """Stop command"""
-    self.poutput('Stop')
+    self.poutput("Stop")
+
 
 def do_findleakers(self, _):
     """Find Leakers command"""
-    self.poutput('Find Leakers')
+    self.poutput("Find Leakers")
+
 
 # Tag the above command functions under the category Application Management
-categorize((do_undeploy,
-            do_stop,
-            do_findleakers), CMD_CAT_APP_MGMT)
+categorize((do_undeploy, do_stop, do_findleakers), CMD_CAT_APP_MGMT)
 ```
 
 The `help` command also has a verbose option (`help -v` or `help --verbose`) that combines the help

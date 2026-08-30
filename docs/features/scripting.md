@@ -154,26 +154,27 @@ As a baseline, let's start with the following `cmd2` application called `FirstAp
 ```py
 #!/usr/bin/env python
 """A simple cmd2 application."""
+
 import cmd2
 
 
 class FirstApp(cmd2.Cmd):
     """A simple cmd2 application."""
+
     def __init__(self):
         shortcuts = cmd2.DEFAULT_SHORTCUTS
-        shortcuts.update({'&': 'speak'})
+        shortcuts.update({"&": "speak"})
         super().__init__(shortcuts=shortcuts)
 
         # Make maxrepeats settable at runtime
         self.maxrepeats = 3
-        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command', self))
-
+        self.add_settable(cmd2.Settable("maxrepeats", int, "max repetitions for speak command", self))
 
     speak_parser = cmd2.Cmd2ArgumentParser()
-    speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    speak_parser.add_argument('words', nargs='+', help='words to say')
+    speak_parser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
+    speak_parser.add_argument("-s", "--shout", action="store_true", help="N00B EMULATION MODE")
+    speak_parser.add_argument("-r", "--repeat", type=int, help="output [n] times")
+    speak_parser.add_argument("words", nargs="+", help="words to say")
 
     @cmd2.with_argparser(speak_parser)
     def do_speak(self, args):
@@ -181,17 +182,19 @@ class FirstApp(cmd2.Cmd):
         words = []
         for word in args.words:
             if args.piglatin:
-                word = '%s%say' % (word[1:], word[0])
+                word = "%s%say" % (word[1:], word[0])
             if args.shout:
                 word = word.upper()
             words.append(word)
         repetitions = args.repeat or 1
         for _ in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
-            self.poutput(' '.join(words))
+            self.poutput(" ".join(words))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import sys
+
     c = FirstApp()
     sys.exit(c.cmdloop())
 ```
@@ -226,7 +229,7 @@ Even though this is a fully qualified `cmd2` error, the pyscript must check for 
 perform error checking.:
 
 ```py
-app('speak')
+app("speak")
 print("Working")
 ```
 
@@ -238,7 +241,7 @@ You should notice that no error message is printed. Let's utilize the `CommandRe
 inspect the actual returned data.:
 
 ```py
-result = app('speak')
+result = app("speak")
 print(result)
 ```
 
@@ -248,7 +251,7 @@ print(result)
 Now we can see that there has been an error. Let's rewrite the script to perform error checking.:
 
 ```py
-result = app('speak')
+result = app("speak")
 
 if not result:
     print(result.stderr)
@@ -262,7 +265,7 @@ In Python development, it is good practice to fail fast after user input.:
 ```py
 import sys
 
-result = app('speak TRUTH!!')
+result = app("speak TRUTH!!")
 
 if not result:
     print("Something went wrong")
@@ -280,8 +283,8 @@ the `CommandResult`:
 ```py
 import sys
 
-#Syntax error
-result = app('speak TRUTH!!!')
+# Syntax error
+result = app("speak TRUTH!!!")
 if not result:
     print("Something went wrong")
     sys.exit()
@@ -317,8 +320,8 @@ In the following command example we return a list containing directory elements.
 
 ```py
 dir_parser = cmd2.Cmd2ArgumentParser()
-dir_parser.add_argument('-l', '--long', action='store_true',
-                        help="display in long format with one item per line")
+dir_parser.add_argument("-l", "--long", action="store_true", help="display in long format with one item per line")
+
 
 @cmd2.with_argparser(dir_parser, with_unknown_args=True)
 def do_dir(self, args, unknown):
@@ -326,15 +329,15 @@ def do_dir(self, args, unknown):
     # No arguments for this command
     if unknown:
         self.perror("dir does not take any positional arguments:")
-        self.do_help('dir')
+        self.do_help("dir")
         return
 
     # Get the contents as a list
     contents = os.listdir(self.cwd)
 
     for f in contents:
-        self.poutput(f'{f}')
-    self.poutput('')
+        self.poutput(f"{f}")
+    self.poutput("")
 
     self.last_result = contents
 ```
@@ -342,7 +345,7 @@ def do_dir(self, args, unknown):
 The following script retrieves the array contents.:
 
 ```py
-result = app('dir')
+result = app("dir")
 print(result.data)
 ```
 
@@ -373,6 +376,7 @@ app.py:
 ```py
 #!/usr/bin/env python
 """A simple cmd2 application."""
+
 import sys
 from dataclasses import dataclass
 from random import choice, randint
@@ -419,9 +423,7 @@ class FirstApp(cmd2.Cmd):
         status = self._start_build(args.name)
         self._status_cache[args.name] = status
 
-        self.poutput(
-            f"Build {args.name.upper()} successfully started with id : {status.id}"
-        )
+        self.poutput(f"Build {args.name.upper()} successfully started with id : {status.id}")
         self.last_result = status
 
     status_parser = cmd2.Cmd2ArgumentParser()
@@ -451,11 +453,11 @@ import sys
 import time
 
 # start build
-result = app('build tower')
+result = app("build tower")
 
 # If there was an error then exit
 if not result:
-    print('Build failed')
+    print("Build failed")
     sys.exit()
 
 # This is a BuildStatus dataclass object
@@ -465,11 +467,10 @@ print(f"Build {build.name} : {build.status}")
 
 # Poll status
 while True:
-
     # Perform status check
-    result = app('status tower')
+    result = app("status tower")
 
-    #error checking
+    # error checking
     if not result:
         print("Unable to determine status")
         break
@@ -477,7 +478,7 @@ while True:
     build_status = result.data
 
     # If the status shows complete then the script is done
-    if build_status.status in ['finished', 'canceled']:
+    if build_status.status in ["finished", "canceled"]:
         print(f"Build {build.name} has completed")
         break
 
