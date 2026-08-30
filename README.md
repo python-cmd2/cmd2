@@ -34,24 +34,24 @@ pip install cmd2
 Then create `app.py`:
 
 ```python
-import argparse
+from typing import Annotated
 
 import cmd2
-
-
-greet_parser = cmd2.Cmd2ArgumentParser()
-greet_parser.add_argument("name", help="person to greet")
-greet_parser.add_argument("--count", type=int, default=1, help="number of greetings")
+from cmd2.annotated import Argument, Option
 
 
 class App(cmd2.Cmd):
     """A small interactive application."""
 
-    @cmd2.with_argparser(greet_parser)
-    def do_greet(self, args: argparse.Namespace) -> None:
+    @cmd2.with_annotated
+    def do_greet(
+        self,
+        name: Annotated[str, Argument(help_text="person to greet")],
+        count: Annotated[int, Option(help_text="number of greetings")] = 1,
+    ) -> None:
         """Greet a person."""
-        for _ in range(args.count):
-            self.poutput(f"Hello, {args.name}!")
+        for _ in range(count):
+            self.poutput(f"Hello, {name}!")
 
 
 if __name__ == "__main__":
