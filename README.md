@@ -92,26 +92,54 @@ to build a more complete application.
 
 ### Give users a capable interface from day one
 
-- Context-aware [tab completion](https://cmd2.readthedocs.io/en/latest/features/completion/) for
-  commands, subcommands, options, choices, file paths, and custom data sources.
-- Generated, categorized [help](https://cmd2.readthedocs.io/en/latest/features/help/) that stays in
-  sync with each command's argument parser.
-- Editable and optionally persistent
-  [history](https://cmd2.readthedocs.io/en/latest/features/history/), multiline commands,
-  configurable prompts, runtime settings, and built-in editor support.
-- [Aliases, macros, and shortcuts](https://cmd2.readthedocs.io/en/latest/features/shortcuts_aliases_macros/)
-  that let users adapt repetitive workflows without application changes.
-- [Pipes and output redirection](https://cmd2.readthedocs.io/en/latest/features/redirection/), shell
-  commands, clipboard integration, and styled terminal output.
+- **Tab completion:** provide context-aware completion for commands, subcommands, options, choices,
+  file paths, and custom data sources, with descriptive hints for completion candidates. Learn more
+  about [completion](https://cmd2.readthedocs.io/en/latest/features/completion/).
+- **History:** search, edit, rerun, save, and optionally persist previously entered commands. Users
+  also get familiar navigation and reverse search such as <kbd>Ctrl</kbd>+<kbd>R</kbd>. Learn more
+  about [history](https://cmd2.readthedocs.io/en/latest/features/history/).
+- **Unicode:** accept Unicode in commands, arguments, file names, and output, and run UTF-8 command
+  scripts for applications used in any language. Learn more about
+  [command scripts](https://cmd2.readthedocs.io/en/latest/features/scripting/#command-scripts).
+- **Shell shortcuts and hotkeys:** use familiar Readline-style keyboard shortcuts for navigating and
+  editing the command line, including Emacs-style bindings provided by `prompt-toolkit`. Learn more
+  about [keyboard shortcuts](https://cmd2.readthedocs.io/en/latest/features/history/#for-users).
+- **Help:** generate discoverable, categorized help for commands, subcommands, and arguments
+  directly from their argument parsers. Learn more about
+  [help](https://cmd2.readthedocs.io/en/latest/features/help/).
+- **Rich UI/UX:** offer syntax highlighting, Fish-style history suggestions, multiline input,
+  configurable prompts, completion menus, themes, and an optional bottom toolbar. Learn more about
+  [prompts and toolbars](https://cmd2.readthedocs.io/en/latest/features/prompt/) and
+  [themes](https://cmd2.readthedocs.io/en/latest/features/theme/).
 
 ### Grow from exploration to automation
 
-An interactive session does not have to become a dead end. Users can replay commands from history,
-save and run command scripts, execute Python scripts, pass startup commands from the shell, or use a
-Python API exposed by the application. The commands they discover interactively become the same
-commands they automate later. See the
-[scripting guide](https://cmd2.readthedocs.io/en/latest/features/scripting/) for the available
-approaches.
+- **Shell scripting:** automate the same commands users run interactively by passing them as command
+  arguments or standard input from shell scripts. Learn more about
+  [automating cmd2 applications](https://cmd2.readthedocs.io/en/latest/features/os/#automating-cmd2-apps-from-other-cliclu-tools).
+- **Python scripting:** run Python scripts inside the application for loops, branching, complex
+  control flow, and integration with the application's commands and data. Learn more about
+  [Python scripts](https://cmd2.readthedocs.io/en/latest/features/scripting/#python-scripts).
+- **Run shell commands:** execute operating-system commands without leaving the application, using
+  the built-in `shell` command or its `!` shortcut. Learn more about
+  [OS integration](https://cmd2.readthedocs.io/en/latest/features/os/#executing-os-commands-from-within-cmd2).
+- **Redirect output:** send command output to files or the clipboard, or pipe it through one or more
+  shell commands. Learn more about
+  [output redirection and pipes](https://cmd2.readthedocs.io/en/latest/features/redirection/).
+- **Aliases, macros, and shortcuts:** let users customize names, parameterized commands, and terse
+  shortcuts for repetitive workflows without changing the application. Learn more about
+  [aliases, macros, and shortcuts](https://cmd2.readthedocs.io/en/latest/features/shortcuts_aliases_macros/).
+- **Startup scripts:** initialize an application consistently by running saved commands every time
+  it starts. Learn more about
+  [startup commands and scripts](https://cmd2.readthedocs.io/en/latest/features/startup_commands/).
+- **Embedded Python and IPython shells:** drop into an interactive Python or IPython session for
+  experimentation, debugging, object introspection, and access to application state. Learn more
+  about
+  [embedded Python shells](https://cmd2.readthedocs.io/en/latest/features/embedded_python_shells/).
+- **Color, style, and tables:** produce readable output with Rich colors and styles, custom themes,
+  paging, and flexible table layouts. Learn more about
+  [generating output](https://cmd2.readthedocs.io/en/latest/features/generating_output/) and
+  [creating tables](https://cmd2.readthedocs.io/en/latest/features/table_creation/).
 
 ## Installation
 
