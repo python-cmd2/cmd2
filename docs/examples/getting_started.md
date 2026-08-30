@@ -10,9 +10,12 @@ example application which demonstrates many features of `cmd2`:
 - [Generating Output](../features/generating_output.md)
 - [Help](../features/help.md)
 - [Shortcuts](../features/shortcuts_aliases_macros.md#shortcuts)
-- [Multiline Commands](../features/multiline_commands.md)
 - [History](../features/history.md)
 - [Bottom Toolbar](../features/prompt.md#bottom-toolbar)
+
+The following animation shows the `cat`, `echo`, and `intro` commands in action:
+
+![Animated demonstration of the getting started application](../assets/getting-started-demo.gif)
 
 If you don't want to type as we go, here is the complete source (you can click to expand and then
 click the **Copy** button in the top-right):
@@ -27,146 +30,182 @@ click the **Copy** button in the top-right):
 
 ## Basic Application
 
-First we need to create a new `cmd2` application. Create a new file `getting_started.py` with the
-following contents:
+The example defines `BasicApp` as a subclass of [cmd2.Cmd][]:
 
 ```py
-#!/usr/bin/env python
-"""A basic cmd2 application."""
-
-import cmd2
-
-
 class BasicApp(cmd2.Cmd):
     """Cmd2 application to demonstrate many common features."""
+```
 
+At the end of the file, the application creates an instance of that class and passes control to the
+[cmd2.Cmd.cmdloop][] method:
 
+```py
 if __name__ == "__main__":
-    import sys
-
     app = BasicApp()
     sys.exit(app.cmdloop())
 ```
 
-We have a new class `BasicApp` which is a subclass of [cmd2.Cmd][]. When we tell Python to run our
-file like this:
+Run the example from the repository root:
 
 ```shell
-$ python getting_started.py
+$ uv run python examples/getting_started.py
 ```
 
-The application creates an instance of our class, and calls the [cmd2.Cmd.cmdloop][] method. This
-method accepts user input and runs commands based on that input. Because we subclassed `cmd2.Cmd`,
-our new app already has a bunch of built-in features.
+The application displays its intro banner and the custom `myapp>` prompt. Because `BasicApp`
+subclasses `cmd2.Cmd`, it also includes `cmd2`'s built-in commands and features. Type `quit` to
+exit.
 
-Congratulations, you have a working `cmd2` app. You can run it, and then type `quit` to exit.
+## Create a Setting
 
-## Create a New Setting
-
-Before we create our first command, we are going to add a new setting to this app. `cmd2` includes
-robust support for [Settings](../features/settings.md). You configure settings during object
-initialization, so we need to add an initializer to our class:
+`cmd2` includes robust support for [Settings](../features/settings.md). The example stores the color
+used by the `echo` command in `foreground_color`, then exposes that attribute as a runtime setting.
+The choices are the color values supported by [cmd2.Color][]:
 
 ```py
-def __init__(self):
-    super().__init__()
+# Color to output text in with echo command
+self.foreground_color = Color.CYAN.value
 
-    # Make maxrepeats settable at runtime
-    self.maxrepeats = 3
-    self.add_settable(cmd2.Settable("maxrepeats", int, "max repetitions for speak command", self))
+# Make echo_fg settable at runtime
+fg_colors = [c.value for c in Color]
+self.add_settable(
+    cmd2.Settable(
+        "foreground_color",
+        str,
+        Text.assemble(
+            "Foreground color to use with echo command ",
+            "(Options: ",
+            Text("Green", Style(color=Color.GREEN)),
+            ", ",
+            Text("Red", Style(color=Color.RED)),
+            ", ",
+            Text("Blue", Style(color=Color.BLUE)),
+            ", ...)",
+        ),
+        self,
+        choices=fg_colors,
+    )
+)
 ```
 
-In that initializer, the first thing to do is to make sure we initialize `cmd2`. That's what the
-`super().__init__()` line does. Next create an attribute to hold the setting. Finally, call the
-[cmd2.Cmd.add_settable][] method with a new instance of a [cmd2.utils.Settable][] class. Now if you
-run the script, and enter the `set` command to see the settings, like this:
+The [cmd2.Cmd.add_settable][] method registers a [cmd2.utils.Settable][] that validates new values
+against `fg_colors`. Use the built-in `set` command to inspect or change it:
 
 ```shell
-$ python getting_started.py
-(Cmd) set
+myapp> set foreground_color
+myapp> set foreground_color Red
 ```
 
-you will see our `maxrepeats` setting show up with its default value of `3`.
+The first command displays the current value. The second changes the color used by subsequent `echo`
+output.
 
-## Create A Command
+## Commands
 
-Now we will create our first command, called `speak`, which will echo back whatever we tell it to
-say. We are going to use an [argument processor](../features/argument_processing.md) so the `speak`
-command can shout and talk Pig Latin. We will also use some built in methods for
-[generating output](../features/generating_output.md). Add this code to `getting_started.py`, so
-that the `speak_parser` attribute and the `do_speak()` method are part of the `BasicApp()` class:
+Methods whose names start with `do_` become commands. `BasicApp` defines three commands: `cat`,
+`echo`, and `intro`. Each one demonstrates a different way to process arguments.
+
+### cat
+
+The `cat` command uses [cmd2.with_annotated][] to build its argument parser from type annotations.
+The `pathlib.Path` annotation enables path completion, and [cmd2.annotated.Option][] defines the
+optional `-n`/`--number` flag:
 
 ```py
-speak_parser = cmd2.Cmd2ArgumentParser()
-speak_parser.add_argument("-p", "--piglatin", action="store_true", help="atinLay")
-speak_parser.add_argument("-s", "--shout", action="store_true", help="N00B EMULATION MODE")
-speak_parser.add_argument("-r", "--repeat", type=int, help="output [n] times")
-speak_parser.add_argument("words", nargs="+", help="words to say")
+@cmd2.with_annotated
+def do_cat(
+    self,
+    path: pathlib.Path,  # Required positional argument with type annotation, tab-completes filesystem paths automatically
+    numbered: Annotated[  # Optional flag argument with type annotation, default value, and help text
+        bool, Option("-n", "--number", help_text="prefix each line with its number")
+    ] = False,
+) -> None:
+    """Print a file's contents. `path` tab-completes filesystem paths automatically.
 
-
-@cmd2.with_argparser(speak_parser)
-def do_speak(self, args):
-    """Repeats what you tell me to."""
-    words = []
-    for word in args.words:
-        if args.piglatin:
-            word = "%s%say" % (word[1:], word[0])
-        if args.shout:
-            word = word.upper()
-        words.append(word)
-    repetitions = args.repeat or 1
-    for _ in range(min(repetitions, self.maxrepeats)):
-        # .poutput handles newlines, and accommodates output redirection too
-        self.poutput(" ".join(words))
+    Try:
+        cat <TAB>              # path completes files/dirs -- no completer wired
+        cat notes.txt
+        cat notes.txt -n       # -n / --number, declared via Option metadata
+        cat notes.txt --no-number
+    """
+    text = path.read_text()
+    lines = text.splitlines()
+    if numbered:
+        numbered_lines = []
+        for index, line in enumerate(lines, start=1):
+            numbered_lines.append(f"{index}: {line}")
+        self.ppaged("\n".join(numbered_lines))
+    else:
+        # Just print the contents using a pager
+        self.ppaged(path.read_text())
 ```
 
-Up at the top of the script, you'll also need to add:
+The command uses [cmd2.Cmd.ppaged][] so longer files can be viewed in a pager. Try it on the startup
+script included with the example:
+
+```shell
+myapp> cat examples/.cmd2rc --number
+```
+
+### echo
+
+The `echo` command demonstrates [cmd2.with_argparser][]. Its parser factory defines options for
+uppercasing and repeating the output, plus one or more words to print:
 
 ```py
-import argparse
+@staticmethod
+def _build_echo_parser() -> cmd2.Cmd2ArgumentParser:
+    """Parser factory method for use with the echo command."""
+    echo_parser = cmd2.Cmd2ArgumentParser(description="Command that echoes input.")
+    echo_parser.add_argument("-u", "--upper", action="store_true", help="uppercase the output")
+    echo_parser.add_argument("-r", "--repeat", type=int, default=1, help="output [n] times")
+    echo_parser.add_argument("words", nargs="+", help="words to print")
+    return echo_parser
+
+
+@cmd2.with_argparser(_build_echo_parser)
+def do_echo(self, args: argparse.Namespace) -> None:
+    """Command using with_argparser decorator for parsing arguments."""
+    output_str = " ".join(args.words)
+    if args.upper:
+        output_str = output_str.upper()
+
+    for _ in range(args.repeat):
+        self.poutput(
+            stylize(
+                output_str,
+                style=Style(color=self.foreground_color),
+            )
+        )
 ```
 
-There's a bit to unpack here, so let's walk through it. We created `speak_parser`, which uses the
-[argparse](https://docs.python.org/3/library/argparse.html) module from the Python standard library
-to parse command line input from a user. So far, there is nothing specific to `cmd2`.
+The decorator parses the command line and passes an `argparse.Namespace` to `do_echo()`. It also
+generates command help from the parser. The method styles the text with the configured foreground
+color and writes it with [cmd2.Cmd.poutput][], which supports `cmd2` output redirection:
 
-There is also a new method called `do_speak()`. In both
-[cmd](https://docs.python.org/3/library/cmd.html) and `cmd2`, methods that start with `do_` become
-new commands, so by defining this method we have created a command called `speak`.
+```shell
+myapp> echo --upper --repeat 2 hello cmd2
+HELLO CMD2
+HELLO CMD2
+myapp> help echo
+```
 
-Note the `cmd2.decorators.with_argparser` decorator on the `do_speak()` method. This decorator does
-3 useful things for us:
+### intro
 
-1.  It tells `cmd2` to process all input for the `speak` command using the argparser we defined. If
-    the user input doesn't meet the requirements defined by the argparser, then an error will be
-    displayed for the user.
-1.  It alters our `do_speak` method so that instead of receiving the raw user input as a parameter,
-    we receive the namespace from the argument parser.
-1.  It creates a help message for us based on the argparser.
+The `intro` command takes no arguments, so it demonstrates the raw [cmd2.Statement][] interface:
 
-You can see in the body of the method how we use the namespace from the argparser (passed in as the
-variable `args`). We build a list of words which we will output, honoring both the `--piglatin` and
-`--shout` options.
+```py
+def do_intro(self, _: cmd2.Statement) -> None:
+    """Display the intro banner.
 
-At the end of the method, we use our `maxrepeats` setting as an upper limit to the number of times
-we will print the output.
+    This command uses raw statement parsing. In general, we strongly recommend against this approach. But since this
+    command effectively takes no arguments, it is safe to use raw statement parsing here.
 
-The last thing you'll notice is that we used the `self.poutput()` method to display our output.
-`poutput()` is a method provided by `cmd2`, which I strongly recommend you use any time you want to
-[generate output](../features/generating_output.md). It provides the following benefits:
+    The & key is also used as a shortcut for this command, so you can also type & to display the intro banner.
+    """
+    self.poutput(self.intro)
+```
 
-1.  Allows the user to redirect output to a text file or pipe it to a shell process
-1.  Gracefully handles `BrokenPipeError` exceptions for redirected output
-1.  Honors the setting to [strip embedded ANSI sequences](../features/settings.md#allow_style)
-    (typically used for background and foreground colors)
-
-Go run the script again, and try out the `speak` command. Try typing `help speak`, and you will see
-a lovely usage message describing the various options for the command.
-
-With those few lines of code, we created a [command](../features/commands.md), used an
-[Argument Processor](../features/argument_processing.md), added a nice
-[help message](../features/help.md) for our users, and
-[generated some output](../features/generating_output.md).
+Typing `intro` displays the same banner that the application shows at startup.
 
 ## Shortcuts
 
@@ -186,82 +225,23 @@ you can type this:
 (Cmd) !ls -al
 ```
 
-Let's add a shortcut for our `speak` command. Change the `__init__()` method so it looks like this:
+The example adds `&` as a shortcut for the `intro` command:
 
 ```py
-def __init__(self):
-    shortcuts = cmd2.DEFAULT_SHORTCUTS
-    shortcuts.update({"&": "speak"})
-    super().__init__(shortcuts=shortcuts)
-
-    # Make maxrepeats settable at runtime
-    self.maxrepeats = 3
-    self.add_settable(cmd2.Settable("maxrepeats", int, "max repetitions for speak command", self))
+shortcuts = cmd2.DEFAULT_SHORTCUTS
+shortcuts.update({"&": "intro"})
 ```
 
-Shortcuts are passed to the `cmd2` initializer, and if you want the built-in shortcuts of `cmd2` you
-have to pass them. These shortcuts are defined as a dictionary, with the key being the shortcut, and
-the value containing the command. When using the default shortcuts and adding your own, it's a good
-idea to use the `.update()` method to modify the dictionary. This way, if you add a shortcut that
-happens to already be in the default set, yours will override, and you won't get any errors at
-runtime.
+The `shortcuts` dictionary is then passed to the `cmd2.Cmd` initializer with the rest of the
+application configuration. Starting with [cmd2.DEFAULT_SHORTCUTS][] retains the built-in shortcuts;
+calling `.update()` adds the new shortcut or overrides an existing one with the same key.
 
-Run your app again, and type:
+Use the built-in `shortcuts` command to list them, or type `&` to invoke `intro`:
 
 ```shell
-(Cmd) shortcuts
+myapp> shortcuts
+myapp> &
 ```
-
-to see the list of all the shortcuts, including the one for speak that we just created.
-
-## Multiline Commands
-
-Some use cases benefit from commands that span more than one line. For example, you might want the
-ability for your user to type in a SQL command, which can often span lines and which are terminated
-with a semicolon. Let's add a [multiline command](../features/multiline_commands.md) to our
-application. First we'll create a new command called `orate`. This code shows both the definition of
-our `speak` command, and the `orate` command:
-
-```py
-@cmd2.with_argparser(speak_parser)
-def do_speak(self, args):
-    """Repeats what you tell me to."""
-    words = []
-    for word in args.words:
-        if args.piglatin:
-            word = "%s%say" % (word[1:], word[0])
-        if args.shout:
-            word = word.upper()
-        words.append(word)
-    repetitions = args.repeat or 1
-    for _ in range(min(repetitions, self.maxrepeats)):
-        # .poutput handles newlines, and accommodates output redirection too
-        self.poutput(" ".join(words))
-
-
-# orate is a synonym for speak which takes multiline input
-do_orate = do_speak
-```
-
-With the new command created, we need to tell `cmd2` to treat that command as a multi-line command.
-Modify the super initialization line to look like this:
-
-```py
-super().__init__(multiline_commands=["orate"], shortcuts=shortcuts)
-```
-
-Now when you run the example, you can type something like this:
-
-```text
-(Cmd) orate O for a Muse of fire, that would ascend
-> The brightest heaven of invention,
-> A kingdom for a stage, princes to act
-> And monarchs to behold the swelling scene! ;
-```
-
-Notice the prompt changes to indicate that input is still ongoing. `cmd2` will continue prompting
-for input until it sees an unquoted semicolon (the default multi-line command termination
-character).
 
 ## History
 
