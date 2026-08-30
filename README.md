@@ -1,4 +1,4 @@
-<h1 align="center">cmd2 : immersive interactive command line applications</h1>
+<h1 align="center">cmd2: build feature-rich command-line applications in Python</h1>
 
 [![Latest Version](https://img.shields.io/pypi/v/cmd2.svg?style=flat-square&label=latest%20stable%20version)](https://pypi.python.org/pypi/cmd2/)
 [![Tests](https://github.com/python-cmd2/cmd2/actions/workflows/tests.yml/badge.svg)](https://github.com/python-cmd2/cmd2/actions/workflows/tests.yml)
@@ -7,77 +7,111 @@
 <a href="https://discord.gg/RpVG6tk"><img src="https://img.shields.io/badge/chat-on%20discord-7289da.svg" alt="Chat"></a>
 
 <p align="center">
-  <a href="#the-developers-toolbox">Developer's Toolbox</a> •
-  <a href="#philosophy">Philosophy</a> •
+  <a href="#quick-start">Quick start</a> •
+  <a href="#why-cmd2">Why cmd2?</a> •
   <a href="#installation">Installation</a> •
   <a href="#documentation">Documentation</a> •
-  <a href="#tutorials">Tutorials</a> •
-  <a href="#hello-world">Hello World</a> •
-  <a href="#projects-using-cmd2">Projects using cmd2</a> •
+  <a href="#projects-using-cmd2">Projects using cmd2</a>
 </p>
 
-[![Screenshot](https://raw.githubusercontent.com/python-cmd2/cmd2/main/cmd2.png)](https://youtu.be/DDU_JH6cFsA)
+`cmd2` makes it quick to build powerful, polished command-line applications and REPLs in Python.
+Start with a subclass of the standard library's
+[`cmd.Cmd`](https://docs.python.org/3/library/cmd.html), then add commands while `cmd2` handles the
+details that make an application pleasant to build and use: argument parsing, generated help, tab
+completion, command history, scripting, output styling, and much more.
 
-cmd2 is a tool for building interactive command line applications in Python. Its goal is to make it
-quick and easy for developers to build feature-rich and user-friendly interactive command line
-applications. It provides a simple API which is an extension of Python's built-in
-[cmd](https://docs.python.org/3/library/cmd.html) module. cmd2 provides a wealth of features on top
-of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary
-when using cmd.
+You can use `cmd2` for a small internal tool and grow the same application into an extensible,
+scriptable interface without replacing the framework or writing the usual CLI boilerplate.
 
-> :warning: **If you are upgrading from an older version of `cmd2`, both `3.x` and `4.x` have some
-> significant backwards incompatibilities from previous versions. Please see the
-> [CHANGELOG](./CHANGELOG.md) for info on what has changed and the
-> [Migration Guide](https://cmd2.readthedocs.io/en/latest/upgrades/) for tips on upgrading from an
-> older version of `cmd2` to `4.x`**
+## Quick start
 
-## The developers toolbox
+Install `cmd2`:
 
-![system schema](https://raw.githubusercontent.com/python-cmd2/cmd2/main/.github/images/graph.drawio.png)
+```bash
+pip install cmd2
+```
 
-When creating solutions developers have no shortage of tools to create rich and smart user
-interfaces. System administrators have long been duct taping together brittle workflows based on a
-menagerie of simple command line tools created by strangers on github and the guy down the hall.
-Unfortunately, when CLIs become significantly complex the ease of command discoverability tends to
-fade quickly. On the other hand, Web and traditional desktop GUIs are first in class when it comes
-to easily discovering functionality. The price we pay for beautifully colored displays is complexity
-required to aggregate disparate applications into larger systems. `cmd2` fills the niche between
-high [ease of command discovery](https://clig.dev/#ease-of-discovery) applications and smart
-workflow automation systems.
+Then create `app.py`:
 
-The `cmd2` framework provides a great mixture of both worlds. Application designers can easily
-create complex applications and rely on the cmd2 library to offer effortless user facing help and
-extensive tab completion. When users become comfortable with functionality, cmd2 turns into a
-feature rich library enabling a smooth transition to full automation. If designed with enough
-forethought, a well implemented cmd2 application can serve as a boutique workflow tool. `cmd2` pulls
-off this flexibility based on two pillars of philosophy:
+```python
+import argparse
 
-- Tab Completion
-- Automation Transition
+import cmd2
 
-## Philosophy
 
-<a href="https://imgflip.com/i/63h03x"><img src="https://i.imgflip.com/63h03x.jpg" title="made at imgflip.com" width="70%" height="%70"/></a>
+greet_parser = cmd2.Cmd2ArgumentParser()
+greet_parser.add_argument("name", help="person to greet")
+greet_parser.add_argument("--count", type=int, default=1, help="number of greetings")
 
-Deep extensive tab completion and help text generation based on the argparse library create the
-first pillar of 'ease of command discovery'. The following is a list of features in this category.
 
-- Great tab completion of commands, subcommands, file system paths, and shell commands.
-- Custom tab completion for user designed commands via simple function overloading.
-- Tab completion from `persistent_history_file` sources added with very little friction.
-- Automatic tab completion of `argparse` flags and optional arguments.
-- Path completion easily enabled.
-- When all else fails, custom tab completion based on `choices_provider` can fill any gaps.
+class App(cmd2.Cmd):
+    """A small interactive application."""
 
-<a href="https://imgflip.com/i/66t0y0"><img src="https://i.imgflip.com/66t0y0.jpg" title="made at imgflip.com" width="70%" height="70%"/></a>
+    @cmd2.with_argparser(greet_parser)
+    def do_greet(self, args: argparse.Namespace) -> None:
+        """Greet a person."""
+        for _ in range(args.count):
+            self.poutput(f"Hello, {args.name}!")
 
-cmd2 creates the second pillar of 'ease of transition to automation' through alias/macro creation,
-command line argument parsing and execution of cmd2 scripting.
 
-- Flexible alias and macro creation for quick abstraction of commands.
-- Text file scripting of your application with `run_script` (`@`) and `_relative_run_script` (`@@`)
-- Powerful and flexible built-in Python scripting of your application using the `run_pyscript`
-  command
+if __name__ == "__main__":
+    App().cmdloop()
+```
+
+Run it with `python app.py`. Your new `greet` command already has input validation, generated help,
+and tab completion for its options. The application also includes discoverable help, command
+history, aliases, macros, scripting, shell integration, and other built-in commands.
+
+```console
+(Cmd) help greet
+Usage: greet [-h] [--count COUNT] name
+
+(Cmd) greet --count 2 Ada
+Hello, Ada!
+Hello, Ada!
+```
+
+See the [getting started tutorial](https://cmd2.readthedocs.io/en/latest/examples/getting_started/)
+to build a more complete application.
+
+## Why cmd2?
+
+### Build more with less code
+
+- Define commands as Python methods and use familiar
+  [`argparse`](https://cmd2.readthedocs.io/en/latest/features/argument_processing/) parsers for
+  arguments and subcommands. A single parser definition drives validation, help, and completion.
+- Render Rich tables and other styled objects, with consistent helpers for
+  [normal output, errors, warnings, and paging](https://cmd2.readthedocs.io/en/latest/features/generating_output/).
+- Organize large applications into independently testable and dynamically loadable
+  [CommandSets](https://cmd2.readthedocs.io/en/latest/features/modular_commands/), and customize the
+  command lifecycle with [hooks](https://cmd2.readthedocs.io/en/latest/features/hooks/).
+- Integrate existing Python code, shell tools, or asynchronous work instead of restructuring your
+  application around the framework.
+- Run on Windows, macOS, and Linux with a pure-Python package and a small dependency footprint.
+
+### Give users a capable interface from day one
+
+- Context-aware [tab completion](https://cmd2.readthedocs.io/en/latest/features/completion/) for
+  commands, subcommands, options, choices, file paths, and custom data sources.
+- Generated, categorized [help](https://cmd2.readthedocs.io/en/latest/features/help/) that stays in
+  sync with each command's argument parser.
+- Editable and optionally persistent
+  [history](https://cmd2.readthedocs.io/en/latest/features/history/), multiline commands,
+  configurable prompts, runtime settings, and built-in editor support.
+- [Aliases, macros, and shortcuts](https://cmd2.readthedocs.io/en/latest/features/shortcuts_aliases_macros/)
+  that let users adapt repetitive workflows without application changes.
+- [Pipes and output redirection](https://cmd2.readthedocs.io/en/latest/features/redirection/), shell
+  commands, clipboard integration, and styled terminal output.
+
+### Grow from exploration to automation
+
+An interactive session does not have to become a dead end. Users can replay commands from history,
+save and run command scripts, execute Python scripts, pass startup commands from the shell, or use a
+Python API exposed by the application. The commands they discover interactively become the same
+commands they automate later. See the
+[scripting guide](https://cmd2.readthedocs.io/en/latest/features/scripting/) for the available
+approaches.
 
 ## Installation
 
@@ -94,14 +128,16 @@ For information on other installation options, see
 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html) in the
 cmd2 documentation.
 
+> [!IMPORTANT] Upgrading from an older release? Versions 3.x and 4.x include significant
+> backwards-incompatible changes. Review the [changelog](./CHANGELOG.md) and
+> [migration guide](https://cmd2.readthedocs.io/en/latest/upgrades/) before upgrading.
+
 ## Documentation
 
-The latest documentation for cmd2 can be read online here: https://cmd2.readthedocs.io/en/latest/
-
-It is available in HTML, PDF, and ePub formats.
-
-The best way to learn the cmd2 api is to delve into the example applications located in source under
-examples.
+Read the [latest documentation](https://cmd2.readthedocs.io/en/latest/) online or download it in
+HTML, PDF, and ePub formats. The
+[`examples`](https://github.com/python-cmd2/cmd2/tree/main/examples) directory contains focused,
+runnable demonstrations of individual features.
 
 ## Tutorials
 
@@ -115,29 +151,6 @@ examples.
       https://github.com/jayrod/cookiecutter-python-cmd2
     - Advanced cookiecutter template with external plugin support :
       https://github.com/jayrod/cookiecutter-python-cmd2-ext-plug
-
-## Hello World
-
-```python
-#!/usr/bin/env python
-"""A simple cmd2 application."""
-import cmd2
-
-
-class FirstApp(cmd2.Cmd):
-    """A simple cmd2 application."""
-
-    def do_hello_world(self, _: cmd2.Statement):
-        self.poutput('Hello World')
-
-
-if __name__ == '__main__':
-    import sys
-
-    c = FirstApp()
-    sys.exit(c.cmdloop())
-
-```
 
 ## Found a bug?
 
