@@ -93,7 +93,7 @@ against `fg_colors`. Use the built-in `set` command to inspect or change it:
 
 ```shell
 myapp> set foreground_color
-myapp> set foreground_color Red
+myapp> set foreground_color red
 ```
 
 The first command displays the current value. The second changes the color used by subsequent `echo`

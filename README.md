@@ -75,7 +75,7 @@ Hello, Ada!
 Hello, Ada!
 ```
 
-[![Animated demonstration of the cmd2 quick-start application](docs/assets/cmd2-readme-demo.gif)](docs/assets/cmd2-readme-demo.gif)
+[![Animated demonstration of the cmd2 quick-start application](https://raw.githubusercontent.com/python-cmd2/cmd2/main/docs/assets/cmd2-readme-demo.gif)](https://raw.githubusercontent.com/python-cmd2/cmd2/main/docs/assets/cmd2-readme-demo.gif)
 
 See the [getting started tutorial](https://cmd2.readthedocs.io/en/latest/examples/getting_started/)
 to build a more complete application.
