@@ -1,5 +1,7 @@
-## 4.2.3 (TBD)
+## 4.2.3 (September 2, 2026)
 
+- Bug Fixes
+    - Fix some links which were broken when published to PyPI
 - Enhancements
     - Converted `BoundCommandFunc` and `UnboundCommandFunc` TypeAliases in `types.py` to Protocol
       classes for stricter type checking on `cmd2` command method references
