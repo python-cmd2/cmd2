@@ -159,12 +159,14 @@ cmd2 works with Python 3.11+ on Windows, macOS, and Linux. It is pure Python cod
 dependencies. It works with both conventional CPython and free-threaded variants.
 
 For information on other installation options, see
-[Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html) in the
+[Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation/) in the
 cmd2 documentation.
 
-> [!IMPORTANT] Upgrading from an older release? Versions 3.x and 4.x include significant
-> backwards-incompatible changes. Review the [changelog](./CHANGELOG.md) and
-> [migration guide](https://cmd2.readthedocs.io/en/latest/upgrades/) before upgrading.
+<!-- prettier-ignore -->
+> [!IMPORTANT]
+> Upgrading from an older release? Versions 3.x and 4.x include significant
+> backwards-incompatible changes. Review the [changelog](https://github.com/python-cmd2/cmd2/blob/main/CHANGELOG.md)
+> and [migration guide](https://cmd2.readthedocs.io/en/latest/upgrades/) before upgrading.
 
 ## Documentation
 

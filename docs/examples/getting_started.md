@@ -66,7 +66,7 @@ The choices are the color values supported by [cmd2.Color][]:
 # Color to output text in with echo command
 self.foreground_color = Color.CYAN.value
 
-# Make echo_fg settable at runtime
+# Make foreground_color settable at runtime
 fg_colors = [c.value for c in Color]
 self.add_settable(
     cmd2.Settable(
