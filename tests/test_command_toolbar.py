@@ -438,6 +438,28 @@ def test_command_toolbar_failure_after_startup_is_reported(toolbar_app, capsys) 
     assert "after failure\n" in output.getvalue()
 
 
+def test_command_toolbar_input_eof_is_not_reported(toolbar_app, capsys) -> None:
+    app, pipe, output = toolbar_app
+
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        # Losing the terminal's input ends the display with EOFError. That is an
+        # ordinary shutdown, not a failure the running command should hear about.
+        pipe.close()
+        toolbar._thread.join(timeout=2)
+        assert not toolbar._thread.is_alive()
+        assert toolbar._error is None
+
+        # Output must still reach the terminal rather than a proxy nothing is draining.
+        assert all(stream.proxy is None for stream in toolbar._streams)
+        app.poutput("after eof")
+
+    assert capsys.readouterr().err == ""
+    assert "after eof\n" in output.getvalue()
+    assert app.stdout is output
+    assert app._command_toolbar is None
+
+
 def test_command_toolbar_render_failure(toolbar_app) -> None:
     app, _, output = toolbar_app
 
