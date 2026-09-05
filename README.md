@@ -222,6 +222,7 @@ reproduce the bug. At a minimum, please state the following:
 | [Falcon Toolkit](https://github.com/CrowdStrike/Falcon-Toolkit) | Unleash the power of the CrowdStrike Falcon Platform at the CLI                                                                  | [CrowdStrike](https://github.com/CrowdStrike)                         |
 | [EXPLIoT](https://gitlab.com/expliot_framework/expliot)         | Internet of Things Security Testing and Exploitation framework                                                                   | [expliot_framework](https://gitlab.com/expliot_framework/)            |
 | [Pobshell](https://github.com/pdalloz/pobshell)                 | A Bash‑like shell for live Python objects: `cd`, `ls`, `cat`, `find` and _CLI piping_ for object code, str values & more         | [Peter Dalloz](https://www.linkedin.com/in/pdalloz)                   |
+| [Wtsh](https://gitee.com/wazzge/wtsh)                           | WTSH is a shell built with Python cmd2(v4), which uses third-party plugins to construct a universal shell installed via Pip      | [wazzge](https://gitee.com/wazzge)                                    |
 
 Possibly defunct but still good examples
 
