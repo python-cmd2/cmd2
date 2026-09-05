@@ -39,6 +39,23 @@ def suspend_toolbar(func: _F) -> _F:
     return cast(_F, wrapped)
 
 
+def pipe_target(stream: Any) -> Any:
+    """Return the stream a pipe process can inherit, or ``None`` if its output must be captured.
+
+    A pipe process may be interactive, such as ``less`` or ``fzf``, so it needs the real
+    terminal rather than a stream this process reads on its behalf. Look through a
+    :class:`ToolbarStream` wrapper, but only hand back a stream owning a file descriptor.
+    """
+    if isinstance(stream, ToolbarStream):
+        stream = stream.original
+    try:
+        stream.fileno()
+    except (AttributeError, OSError):
+        # io.UnsupportedOperation, raised by streams like io.StringIO, subclasses OSError.
+        return None
+    return stream
+
+
 class _ContextStdoutProxy(StdoutProxy):
     """Keep stdout's flush worker in the toolbar's isolated application session."""
 
@@ -52,19 +69,24 @@ class _ContextStdoutProxy(StdoutProxy):
 class ToolbarStream:
     """Keep a stable stream identity across suspensions and cmd2 redirections."""
 
-    def __init__(self, original: TextIO) -> None:
+    def __init__(self, original: TextIO, lock: "threading.RLock") -> None:
         """Wrap a terminal stream while preserving its ordinary file attributes."""
         self.original = original
         self.proxy: StdoutProxy | None = None
+        # Shared with the toolbar so a write from another thread cannot land on a proxy
+        # that is being closed. Such a write is accepted by the dead proxy and discarded.
+        self._lock = lock
         self.buffer = _ToolbarBuffer(self)
 
     def write(self, data: str) -> int:
         """Write above the toolbar, or directly while the toolbar is suspended."""
-        return (self.proxy or self.original).write(data)
+        with self._lock:
+            return (self.proxy or self.original).write(data)
 
     def flush(self) -> None:
         """Flush the currently active output stream."""
-        (self.proxy or self.original).flush()
+        with self._lock:
+            (self.proxy or self.original).flush()
 
     def __getattr__(self, name: str) -> Any:
         """Delegate file attributes to the original terminal stream."""
@@ -112,6 +134,8 @@ class CommandToolbar:
         self._thread: threading.Thread | None = None
         self._streams: list[ToolbarStream] = []
         self._proxy: StdoutProxy | None = None
+        self._lock = threading.RLock()
+        self._pausing = False
 
         session = cmd.main_session
         bindings = KeyBindings()
@@ -127,12 +151,19 @@ class CommandToolbar:
             self._keys.clear()
             if sys.platform == "win32":
                 # os.kill(..., SIGINT) terminates the process on Windows instead
-                # of dispatching Python's signal handler.
+                # of dispatching Python's signal handler. This reaches only this
+                # process, so a console subprocess started by a command keeps
+                # running until it is waited on.
                 import _thread
 
                 _thread.interrupt_main()
             else:
-                os.kill(os.getpid(), signal.SIGINT)
+                # Raw mode clears ISIG, so no signal is generated for us. Signal the
+                # foreground process group the way the terminal driver would, since a
+                # command may be waiting on a subprocess that shares this group. Pipe
+                # processes are excluded because cmd2 starts them in their own session
+                # and forwards to them from sigint_handler().
+                os.killpg(os.getpgrp(), signal.SIGINT)
 
         @bindings.add(
             "c-z",
@@ -184,7 +215,7 @@ class CommandToolbar:
             for obj, name in ((self.cmd, "stdout"), (sys, "stdout"), (sys, "stderr")):
                 stream = getattr(obj, name)
                 if stream.isatty():
-                    wrapper = ToolbarStream(stream)
+                    wrapper = ToolbarStream(stream, self._lock)
                     self._streams.append(wrapper)
                     setattr(obj, name, cast(TextIO, wrapper))
                     stack.callback(self._restore_stream, obj, name, wrapper)
@@ -213,6 +244,7 @@ class CommandToolbar:
                 self._error = exc
             finally:
                 self._ready.set()
+                self._app_exited()
 
         self._thread = threading.Thread(target=context.run, args=(run,), name="cmd2-toolbar", daemon=True)
         self._thread.start()
@@ -221,29 +253,81 @@ class CommandToolbar:
             raise self._error
         # The worker already combines queued writes. A batching sleep would also
         # delay close(), which runs at each command finalization boundary.
-        self._proxy = _ContextStdoutProxy(raw=True, sleep_between_writes=0)
-        for stream in self._streams:
-            stream.proxy = self._proxy
+        proxy = _ContextStdoutProxy(raw=True, sleep_between_writes=0)
+        with self._lock:
+            self._proxy = proxy
+            for stream in self._streams:
+                stream.proxy = proxy
 
-    def _pause(self) -> None:
-        try:
-            if self._proxy is not None:
-                self._proxy.flush()
-                self._proxy.close()
-        finally:
-            self._proxy = None
+    def _app_exited(self) -> None:
+        """Give the terminal back to the streams when the display stops on its own.
+
+        ``_ready`` is set as soon as the first frame renders, so a failure after that is
+        never seen by the command thread waiting in ``_resume()``. The display is gone at
+        that point and its stdout proxy can no longer reach the terminal, so anything
+        written through it would be discarded without a trace.
+        """
+        if self._pausing:
+            # A deliberate pause restores the streams itself, in the right order.
+            return
+
+        with self._lock:
+            # Leave self._proxy set so that the next _pause() still drains and closes
+            # it. With the display gone, its worker writes to the terminal directly.
+            started = self._proxy is not None
             for stream in self._streams:
                 stream.proxy = None
-            if self.app.is_running and self.app.loop is not None:
-                self.app.loop.call_soon_threadsafe(self.app.exit)
-            if self._thread is not None:
-                self._thread.join()
-                self._thread = None
-            # Application.run() saves its unprocessed queue before the thread
-            # exits. Those keys arrived after the ones handled by save_key().
-            pending_keys = get_typeahead(self.app.input)
-            store_typeahead(self.app.input, self._keys + pending_keys)
-            self._keys.clear()
+
+        # A proxy exists only once _resume() has handed startup failures to the command
+        # thread, so reporting here does not duplicate the exception it raises.
+        if started and self._error is not None:
+            self.cmd.perror(f"Bottom toolbar stopped after an error: {self._error!r}")
+
+    def _exit(self) -> None:
+        """Stop the display unless it has already stopped on its own.
+
+        Application.exit() raises once the result is set, and this runs later than the
+        check that scheduled it. Any exception here would reach the loop's default
+        handler, which prints a traceback over the terminal.
+
+        Output queued before this does not need draining: Application.run_async() waits
+        for cursor position reports and for run_in_terminal() calls still in flight
+        before its loop closes.
+        """
+        if self.app.is_running:
+            self.app.exit()
+
+    def _pause(self) -> None:
+        self._pausing = True
+        try:
+            try:
+                # Hold off other threads while the proxy drains so their output is never
+                # handed to a proxy whose worker has already stopped. Writes that arrive
+                # after this go straight to the terminal, still in order.
+                with self._lock:
+                    try:
+                        if self._proxy is not None:
+                            self._proxy.flush()
+                            self._proxy.close()
+                    finally:
+                        self._proxy = None
+                        for stream in self._streams:
+                            stream.proxy = None
+            finally:
+                # The lock is released before joining, since the toolbar thread may be
+                # blocked writing through a stream that is waiting on it.
+                if self.app.is_running and self.app.loop is not None:
+                    self.app.loop.call_soon_threadsafe(self._exit)
+                if self._thread is not None:
+                    self._thread.join()
+                    self._thread = None
+                # Application.run() saves its unprocessed queue before the thread
+                # exits. Those keys arrived after the ones handled by save_key().
+                pending_keys = get_typeahead(self.app.input)
+                store_typeahead(self.app.input, self._keys + pending_keys)
+                self._keys.clear()
+        finally:
+            self._pausing = False
 
     def stop(self) -> None:
         """Flush output, stop rendering, and restore the terminal and its streams."""

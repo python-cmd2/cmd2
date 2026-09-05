@@ -115,13 +115,21 @@ fast and use a lock when reading state that a command or another thread modifies
 ### Commands That Take Over the Terminal
 
 cmd2 temporarily hides the toolbar for its input prompts, pagers, Python environments, and shell
-commands. It restores the toolbar when those operations finish. For custom terminal UIs, calls to
-`input()`, or subprocesses that inherit the terminal, use [cmd2.Cmd.suspend_bottom_toolbar][]:
+commands. It also hides it while a command's output is piped to another process, since that process
+may be interactive, as `less` and `fzf` are. It restores the toolbar when those operations finish.
+
+For custom terminal UIs, calls to `input()`, or subprocesses your own command code starts, use
+[cmd2.Cmd.suspend_bottom_toolbar][]:
 
 ```py
 with self.suspend_bottom_toolbar():
     answer = input("Continue? ")
 ```
+
+Suspending matters for subprocesses even when they only print. While the toolbar is displayed, the
+terminal is in raw mode, so the kernel generates no signals from keystrokes. cmd2 sends `Ctrl-C` on
+to its own process group, which reaches a subprocess your command started and waits on, but `Ctrl-\`
+(`SIGQUIT`) does nothing, exactly as at the main prompt.
 
 The command toolbar is used by the interactive command loop, including startup commands and scripts
 launched from that loop. It is disabled for non-interactive input. Calls to `onecmd_plus_hooks()`
