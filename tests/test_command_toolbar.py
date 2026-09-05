@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 import pytest
-from prompt_toolkit.application import get_app
+from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.input.typeahead import get_typeahead
 from prompt_toolkit.keys import Keys
@@ -40,13 +40,18 @@ def toolbar_app():
     output = Terminal()
     app.stdout = output
     with create_pipe_input() as pipe:
-        app.main_session = PromptSession(
-            input=pipe,
-            output=RecordingOutput(output),
-            bottom_toolbar="STATUS",
-            refresh_interval=0.01,
-        )
-        yield app, pipe, output
+        terminal = RecordingOutput(output)
+        # Bind the ambient app session to this terminal. Without it, prompt-toolkit
+        # builds a real one on demand for calls such as patch_stdout() in
+        # _read_raw_input(), which needs a console that Windows CI does not provide.
+        with create_app_session(input=pipe, output=terminal):
+            app.main_session = PromptSession(
+                input=pipe,
+                output=terminal,
+                bottom_toolbar="STATUS",
+                refresh_interval=0.01,
+            )
+            yield app, pipe, output
 
 
 def test_command_toolbar_refresh_and_output(toolbar_app, monkeypatch) -> None:
