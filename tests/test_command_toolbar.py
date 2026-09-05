@@ -14,6 +14,7 @@ from prompt_toolkit.data_structures import Size
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.input.typeahead import get_typeahead
 from prompt_toolkit.keys import Keys
+from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.shortcuts import PromptSession
 
@@ -449,6 +450,68 @@ def test_command_toolbar_exit_after_result_is_set(toolbar_app) -> None:
     assert app.main_session.app.layout is app.main_session.layout
 
 
+def test_command_toolbar_ui_call_propagates_failures(toolbar_app) -> None:
+    app, _, _ = toolbar_app
+
+    def fail(exception: BaseException) -> None:
+        raise exception
+
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+
+        # A UI callback runs on the display's loop, so its failure has to be carried
+        # back to the command thread rather than reaching the loop's error handler.
+        with pytest.raises(ValueError, match="broken ui call"):
+            toolbar._call_in_ui(lambda: fail(ValueError("broken ui call")))
+
+        # A TimeoutError raised by the callback is the same class the pending future
+        # reports itself with, and must not be mistaken for one.
+        with pytest.raises(TimeoutError, match="slow ui call"):
+            toolbar._call_in_ui(lambda: fail(TimeoutError("slow ui call")))
+
+        # A callback that outlives the poll interval keeps waiting instead of giving up.
+        assert toolbar._call_in_ui(lambda: time.sleep(0.2) or "finished") == "finished"
+
+
+def test_command_toolbar_ui_call_after_display_stopped(toolbar_app) -> None:
+    app, pipe, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        pipe.close()
+        toolbar._thread.join(timeout=2)
+        assert not toolbar._thread.is_alive()
+
+        # There is no loop left to run UI work on, so asking must fail rather than
+        # queue a callback onto a closed loop.
+        assert toolbar.app.loop is None
+        with pytest.raises(RuntimeError, match="Toolbar is not running"):
+            toolbar._call_in_ui(lambda: None)
+
+
+def test_command_toolbar_ui_call_reports_display_failure(toolbar_app, capsys) -> None:
+    app, _, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        loop = toolbar.app.loop
+        schedule = loop.call_soon_threadsafe
+        failed = threading.Event()
+
+        def die(*_args, **_kwargs) -> None:
+            # The display dies instead of running the queued callback, so the future
+            # the command is waiting on never resolves.
+            if not failed.is_set():
+                failed.set()
+                schedule(lambda: toolbar.app.exit(exception=ValueError("broken display")))
+
+        with (
+            mock.patch.object(loop, "call_soon_threadsafe", side_effect=die),
+            pytest.raises(ValueError, match="broken display"),
+        ):
+            toolbar._call_in_ui(lambda: None)
+
+    assert "broken display" in capsys.readouterr().err
+
+
 def test_command_toolbar_failure_after_startup_is_reported(toolbar_app, capsys) -> None:
     app, _, output = toolbar_app
 
@@ -498,7 +561,7 @@ def test_command_toolbar_render_failure(toolbar_app) -> None:
 
     app.main_session.bottom_toolbar = broken_toolbar
     with pytest.raises(ValueError, match="broken toolbar"), app._command_toolbar_context():
-        pytest.fail("Command should not run after a toolbar startup failure")
+        pytest.fail("Command should not run after a toolbar startup failure")  # pragma: no cover
     assert app.stdout is output
     assert app._command_toolbar is None
 
@@ -525,6 +588,23 @@ def test_cmdloop_runs_commands_with_toolbar(toolbar_app, monkeypatch) -> None:
     monkeypatch.setattr(app, "onecmd_plus_hooks", command)
     app._cmdloop()
     assert commands == ["startup", "quit"]
+
+
+@pytest.mark.parametrize(
+    ("layout", "error", "message"),
+    [
+        (Layout(Window()), TypeError, "Unsupported PromptSession layout"),
+        (Layout(HSplit([Window()])), RuntimeError, "Cannot locate PromptSession bottom toolbar"),
+    ],
+)
+def test_command_toolbar_requires_the_prompt_toolbar(toolbar_app, layout, error, message) -> None:
+    app, _, output = toolbar_app
+    # The display reuses the prompt's own toolbar container. If a future prompt-toolkit
+    # release moves it, say so instead of rendering something wrong.
+    with mock.patch.object(app.main_session, "layout", layout), pytest.raises(error, match=message):
+        app._command_toolbar_context().__enter__()
+    assert app._command_toolbar is None
+    assert app.stdout is output
 
 
 def test_command_toolbar_reuses_prompt_application(toolbar_app) -> None:
@@ -713,3 +793,100 @@ def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypat
         pager.assert_not_called()
     assert "Cmd2 Commands" in target.read_text()
     assert "Cmd2 Commands" not in output.getvalue()
+
+
+class PagerKeys:
+    """Send keys to the built-in pager and wait for each one to be handled."""
+
+    def __init__(self, app, pipe, pager) -> None:
+        self.pipe = pipe
+        self.pager = pager
+        self.states = []
+        self.updated = threading.Condition()
+        app.main_session.app.key_processor.after_key_press += self._record
+
+    def _record(self, _) -> None:
+        # Read the pager's own buffer rather than the focused one, which is the
+        # search field while a search is being typed.
+        with self.updated:
+            self.states.append((self.pager.text.buffer.document.cursor_position_row, self.pager.text.window.horizontal_scroll))
+            self.updated.notify_all()
+
+    def press(self, keys, row, column=0) -> None:
+        """Send keys and wait until a resulting position matches, so steps stay ordered."""
+        with self.updated:
+            index = len(self.states)
+        self.pipe.send_text(keys)
+        deadline = time.monotonic() + 5
+        with self.updated:
+            while True:
+                while index < len(self.states):
+                    state = self.states[index]
+                    index += 1
+                    if state == (row, column):
+                        return
+                remaining = deadline - time.monotonic()
+                notified = remaining > 0 and self.updated.wait(remaining)
+                assert notified, f"pager ignored {keys!r}: wanted {(row, column)}, saw {self.states}"
+
+
+@pytest.mark.parametrize("chop", [False, True])
+def test_pager_navigation_keys(toolbar_app, chop) -> None:
+    app, pipe, _ = toolbar_app
+    lines = [f"row {index:03d}" for index in range(100)]
+    lines[3] = ""  # A line with no columns for a scroll target to be clamped against.
+    created = []
+    entered = threading.Event()
+
+    def make_pager(*args, **kwargs):
+        pager = Pager(*args, **kwargs)
+        created.append(pager)
+        return pager
+
+    def observe(ui):
+        if created and ui.full_screen and ui.layout.current_buffer is created[0].text.buffer:
+            entered.set()
+
+    def interact():
+        try:
+            assert entered.wait(5)
+            keys = PagerKeys(app, pipe, created[0])
+            keys.press("j", row=1)
+            keys.press("j", row=2)
+            keys.press("j", row=3)  # Land on the empty line.
+            keys.press("k", row=2)  # Moving up off it re-enters the line above.
+            keys.press("G", row=99)
+            keys.press("g", row=0)
+            keys.press("/row 05\n", row=50)
+            keys.press("n", row=51)
+            keys.press("N", row=50)
+            keys.press("?row 01\n", row=19)
+            keys.press("x", row=19)  # Unbound keys are swallowed, not queued for the prompt.
+            # Horizontal scrolling applies only to chopped output, and stops at the
+            # end of a line shorter than the requested column.
+            keys.press("\x1b[C", row=19, column=len("row 019") if chop else 0)
+            keys.press("\x1b[D", row=19, column=0)
+        finally:
+            pipe.send_text("q")
+
+    app.main_session.app.after_render += observe
+    with mock.patch("cmd2.command_toolbar.Pager", side_effect=make_pager), ThreadPoolExecutor() as executor:
+        interaction = executor.submit(interact)
+        with app._command_toolbar_context():
+            app._command_toolbar.page("\n".join(lines), chop=chop)
+        interaction.result(timeout=10)
+    assert get_typeahead(pipe) == []
+
+
+@pytest.mark.parametrize("chop", [False, True])
+def test_pager_scrolling_before_first_render(chop) -> None:
+    pager = Pager("row\n" * 100, chop=chop)
+    # Keys can arrive before the first frame is drawn, when the window still has no
+    # rendered geometry to scroll against.
+    assert pager.text.window.render_info is None
+    event = SimpleNamespace(current_buffer=pager.text.buffer)
+    pager._scroll_page(event, pages=1.0)
+    pager._scroll(event, 1)
+    pager._scroll_horizontal(event, 1)
+    assert pager.text.buffer.cursor_position == 0
+    assert pager.text.window.horizontal_scroll == 0
