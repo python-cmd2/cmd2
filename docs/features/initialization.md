@@ -52,6 +52,7 @@ Here are instance attributes of `cmd2.Cmd` which developers might wish to overri
 - **max_completion_table_items**: The maximum number of completion results allowed for a completion table to appear (Default: 50)
 - **pager**: sets the pager command used by the `Cmd.ppaged()` method for displaying wrapped output using a pager
 - **pager_chop**: sets the pager command used by the `Cmd.ppaged()` method for displaying chopped/truncated output using a pager
+- **use_builtin_pager**: defaults to `enable_bottom_toolbar`; when enabled, `Cmd.ppaged()` uses an embedded pager with the persistent toolbar. Set to `False` to use the external `pager`/`pager_chop` commands.
 - **py_bridge_name**: name by which embedded Python environments and scripts refer to the `cmd2` application by in order to call commands (Default: `app`)
 - **py_locals**: dictionary that defines specific variables/functions available in Python shells and scripts (provides more fine-grained control than making everything available with **self_in_py**)
 - **quiet**: if `True`, then completely suppress nonessential output (Default: `False`)

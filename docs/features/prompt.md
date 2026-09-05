@@ -114,9 +114,19 @@ fast and use a lock when reading state that a command or another thread modifies
 
 ### Commands That Take Over the Terminal
 
-cmd2 temporarily hides the toolbar for its input prompts, pagers, Python environments, and shell
-commands. It restores the toolbar when those operations finish. For custom terminal UIs, calls to
-`input()`, or subprocesses that inherit the terminal, use [cmd2.Cmd.suspend_bottom_toolbar][]:
+With the toolbar enabled, `ppaged()` uses an embedded pager that keeps the same toolbar visible and
+refreshing. Use Space or PageDown to advance, `b` or PageUp to go back, `/` to search, `n`/`N` to
+repeat a search, and `q` to return to the command. Arrow keys navigate the output; `g`/`G` jump to
+the beginning/end. Short output is printed directly above the toolbar. Chopped output supports
+horizontal scrolling, including on Windows.
+
+Set `self.use_builtin_pager = False` to use your configured external `pager`/`pager_chop` commands.
+The embedded pager provides basic navigation and search; applications that need additional `less`
+features can use this opt-out.
+
+cmd2 temporarily hides the toolbar for its input prompts, external pagers, Python environments, and
+shell commands. It restores the toolbar when those operations finish. For custom terminal UIs, calls
+to `input()`, or subprocesses that inherit the terminal, use [cmd2.Cmd.suspend_bottom_toolbar][]:
 
 ```py
 with self.suspend_bottom_toolbar():

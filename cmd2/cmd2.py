@@ -645,6 +645,10 @@ class Cmd:
             if callargs:
                 self._startup_commands.extend(callargs)
 
+        # The embedded pager shares the main toolbar. Applications can opt back
+        # into their configured external pager by setting this to False.
+        self.use_builtin_pager = enable_bottom_toolbar
+
         # Set the pager(s) for use when displaying output using a pager
         if sys.platform.startswith("win"):
             self.pager = self.pager_chop = "more"
@@ -1871,7 +1875,6 @@ class Cmd:
                 rich_print_kwargs=rich_print_kwargs,
             )
 
-    @command_toolbar.suspend_toolbar
     def ppaged(
         self,
         *objects: Any,
@@ -1893,12 +1896,16 @@ class Cmd:
         fits on the screen. A pager is not used inside a script (Python or text) or when output is
         redirected or piped, and in these cases, output is sent to `poutput`.
 
+        With the bottom toolbar enabled, the built-in pager keeps it visible and refreshing.
+        Set ``use_builtin_pager=False`` to use the configured external ``pager`` or ``pager_chop``
+        command instead; external pagers temporarily hide the toolbar.
+
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
                               - wrapping is ideal when you want to keep users from having to use horizontal scrolling
-                     WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
+                     WARNING: The default external pager on Windows always wraps; the built-in pager supports chopping.
         :param soft_wrap: Enable soft wrap mode. If True, lines of text will not be word-wrapped or cropped to
                           fit the terminal width. Defaults to True.
 
@@ -1941,11 +1948,19 @@ class Cmd:
                     soft_wrap=soft_wrap,
                     **(rich_print_kwargs if rich_print_kwargs is not None else {}),
                 )
-            output_bytes = capture.get().encode("utf-8", "replace")
+            output = capture.get()
+
+            if self.use_builtin_pager:
+                with self._command_toolbar_context():
+                    if self._command_toolbar is not None and self._command_toolbar.is_active:
+                        self._command_toolbar.page(output, chop=chop)
+                        return
+
+            output_bytes = output.encode("utf-8", "replace")
 
             # Prevent KeyboardInterrupts while in the pager. The pager application will
             # still receive the SIGINT since it is in the same process group as us.
-            with self.sigint_protection:
+            with self.suspend_bottom_toolbar(), self.sigint_protection:
                 import subprocess
 
                 pipe_proc = subprocess.Popen(  # noqa: S602
@@ -2056,8 +2071,8 @@ class Cmd:
         or even a real-time clock.
 
         During command execution this callback runs in a background UI thread. Protect shared
-        state with a lock when necessary. The toolbar is suspended while another prompt, pager,
-        or interactive shell owns the terminal.
+        state with a lock when necessary. The built-in pager shares this toolbar. It is suspended
+        while another prompt, external pager, or interactive shell owns the terminal.
 
         :return: Content to populate the bottom toolbar.
         """
@@ -2069,7 +2084,7 @@ class Cmd:
 
         Use this context manager around application-specific calls to ``input()``, other
         terminal UIs, or subprocesses that inherit the terminal. cmd2 automatically suspends
-        its toolbar for its own input prompts, pagers, and shell commands.
+        its toolbar for its own input prompts, external pagers, and shell commands.
         """
         if self._command_toolbar is None:
             yield

@@ -3,11 +3,13 @@
 import io
 import sys
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 from unittest import mock
 
 import pytest
 from prompt_toolkit.application import get_app
+from prompt_toolkit.data_structures import Size
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.input.typeahead import get_typeahead
 from prompt_toolkit.keys import Keys
@@ -15,6 +17,7 @@ from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.shortcuts import PromptSession
 
 from cmd2 import Cmd
+from cmd2.pager import Pager
 
 
 class Terminal(io.StringIO):
@@ -25,6 +28,10 @@ class Terminal(io.StringIO):
 class RecordingOutput(DummyOutput):
     def __init__(self, stream: Terminal) -> None:
         self.stdout = stream
+        self.size = Size(rows=24, columns=80)
+
+    def get_size(self) -> Size:
+        return self.size
 
     def write(self, data: str) -> None:
         self.stdout.write(data)
@@ -260,6 +267,7 @@ def test_command_toolbar_typeahead_preserves_pending_input_order(toolbar_app) ->
         assert exiting.wait(2)
         toolbar._thread.join(timeout=2)
         assert not toolbar._thread.is_alive()
+        toolbar.app.key_processor.after_key_press -= exit_after_first_key
 
     assert app._read_raw_input("Next: ", app.main_session) == "ab"
 
@@ -317,3 +325,191 @@ def test_cmdloop_runs_commands_with_toolbar(toolbar_app, monkeypatch) -> None:
     monkeypatch.setattr(app, "onecmd_plus_hooks", command)
     app._cmdloop()
     assert commands == ["startup", "quit"]
+
+
+def test_command_toolbar_reuses_prompt_application(toolbar_app) -> None:
+    app, pipe, _ = toolbar_app
+    session = app.main_session
+    layout, bindings, erase = session.app.layout, session.app.key_bindings, session.app.erase_when_done
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        assert toolbar.app is session.app
+        assert toolbar.toolbar is session.layout.container.children[-1]
+        with app.suspend_bottom_toolbar():
+            assert session.app.layout is layout
+            assert session.app.key_bindings is bindings
+            assert session.app.erase_when_done is erase
+        assert session.app.layout is toolbar._layout
+    assert session.app.layout is layout
+    assert session.app.key_bindings is bindings
+    assert session.app.erase_when_done is erase
+    assert app._read_raw_input("Next: ", session, pre_run=lambda: pipe.send_text("answer\n")) == "answer"
+
+
+@pytest.mark.parametrize("quit_key", ["q", "\x03"])
+def test_builtin_pager_keeps_toolbar_live(toolbar_app, monkeypatch, quit_key) -> None:
+    app, pipe, _ = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    entered, refreshed, moved, found = (threading.Event() for _ in range(4))
+    state = ["BEFORE"]
+
+    def toolbar_text():
+        assert threading.current_thread() is not threading.main_thread()
+        if app.main_session.app.full_screen and state[0] == "AFTER":
+            refreshed.set()
+        return state[0]
+
+    app.main_session.bottom_toolbar = toolbar_text
+    prompt_layout = app.main_session.app.layout
+
+    def observe(ui):
+        if not ui.full_screen:
+            return
+        assert ui.layout.container.children[-1] is app._command_toolbar.toolbar
+        entered.set()
+        row = ui.layout.current_buffer.document.cursor_position_row
+        if row > 0:
+            moved.set()
+        if row == 80:
+            found.set()
+
+    def interact():
+        try:
+            assert entered.wait(2)
+            state[0] = "AFTER"
+            assert refreshed.wait(2)
+            pipe.send_text(" ")
+            assert moved.wait(2)
+            pipe.send_text("/row 080\n")
+            assert found.wait(2)
+        finally:
+            pipe.send_text(quit_key)
+
+    app.main_session.app.after_render += observe
+    with mock.patch("subprocess.Popen") as external, ThreadPoolExecutor() as executor:
+        interaction = executor.submit(interact)
+        with app._command_toolbar_context():
+            thread = app._command_toolbar._thread
+            app.ppaged("\n".join(f"row {i:03d}" for i in range(100)))
+            assert app._command_toolbar._thread is thread
+            assert app._command_toolbar.is_active
+            assert not app.main_session.app.full_screen
+            assert not app.main_session.app.renderer.full_screen
+        interaction.result(timeout=2)
+        external.assert_not_called()
+    assert app.main_session.app.layout is prompt_layout
+    assert refreshed.is_set()
+    assert get_typeahead(pipe) == []
+
+
+def test_builtin_pager_short_output(toolbar_app, monkeypatch) -> None:
+    app, _, output = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    with mock.patch("subprocess.Popen") as external, app._command_toolbar_context():
+        app.ppaged("short output")
+        assert app._command_toolbar.is_active
+        external.assert_not_called()
+    assert "short output\n" in output.getvalue()
+
+
+def test_external_pager_suspends_shared_application(toolbar_app, monkeypatch) -> None:
+    app, _, _ = toolbar_app
+    app.use_builtin_pager = False
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+
+    def external(*args, **kwargs):
+        assert not app.main_session.app.is_running
+        assert app.main_session.app.layout is app.main_session.layout
+        return mock.Mock()
+
+    with mock.patch("subprocess.Popen", side_effect=external), app._command_toolbar_context():
+        app.ppaged("external pager")
+        assert app._command_toolbar.is_active
+
+
+def test_builtin_pager_eof_restores_prompt(toolbar_app) -> None:
+    app, pipe, output = toolbar_app
+    layout = app.main_session.app.layout
+
+    def close_input(ui):
+        if ui.full_screen:
+            pipe.close()
+
+    app.main_session.app.after_render += close_input
+    with pytest.raises(EOFError), app._command_toolbar_context():
+        app._command_toolbar.page("line\n" * 100, chop=False)
+    assert app.main_session.app.layout is layout
+    assert not app.main_session.app.full_screen
+    assert not app.main_session.app.renderer.full_screen
+    assert app.stdout is output
+
+
+@pytest.mark.parametrize("chop", [False, True])
+def test_pager_styles_and_wrapping(chop) -> None:
+    pager = Pager("\x1b[31m" + "界" * 40 + "\x1b[0m\n", chop=chop)
+    assert pager.text.text == "界" * 40
+    assert pager.text.read_only
+    lexer = pager.text.lexer.lex_document(pager.text.document)
+    assert "ansired" in lexer(0)[0][0]
+    assert not pager.fits(20, 1)
+    assert pager.fits(20, 5) is (not chop)
+    assert pager.fits(100, 1)
+
+
+@pytest.mark.parametrize("chop", [False, True])
+def test_pager_long_line_navigation_resize_and_typeahead(toolbar_app, chop) -> None:
+    app, pipe, _ = toolbar_app
+    app.main_session.bottom_toolbar = "STATUS ONE\nSTATUS TWO"
+    entered, scrolled, resized = (threading.Event() for _ in range(3))
+
+    def observe(ui):
+        if not ui.full_screen:
+            return
+        # Check the rendered frame, not the stream of incremental terminal
+        # writes, to verify both toolbar rows survive navigation and resizing.
+        screen = ui.renderer._last_screen
+        size = ui.output.get_size()
+        bottom = "".join(screen.data_buffer[size.rows - 1][x].char for x in range(size.columns))
+        assert bottom.startswith("STATUS TWO")
+        entered.set()
+        if ui.current_buffer.cursor_position > 0:
+            scrolled.set()
+        if size.columns == 60:
+            resized.set()
+
+    def interact():
+        try:
+            assert entered.wait(2)
+            pipe.send_text("\x1b[C" if chop else " ")
+            assert scrolled.wait(2)
+            app.main_session.output.size = Size(rows=20, columns=60)
+            app.main_session.app.invalidate()
+            assert resized.wait(2)
+        finally:
+            pipe.send_text("qnext\n")
+
+    app.main_session.app.after_render += observe
+    with ThreadPoolExecutor() as executor:
+        interaction = executor.submit(interact)
+        with app._command_toolbar_context():
+            app._command_toolbar.page("界" * 4000, chop=chop)
+        interaction.result(timeout=2)
+    assert app._read_raw_input("Next: ", app.main_session) == "next"
+
+
+def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypatch, tmp_path) -> None:
+    app, _, output = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    target = tmp_path / "help.txt"
+    with mock.patch("cmd2.command_toolbar.Pager") as pager, app._command_toolbar_context():
+        app.onecmd_plus_hooks(f'help > "{target}"')
+        pager.assert_not_called()
+    assert "Cmd2 Commands" in target.read_text()
+    assert "Cmd2 Commands" not in output.getvalue()
