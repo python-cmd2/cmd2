@@ -61,7 +61,8 @@ example for a demonstration.
 ## Bottom Toolbar
 
 `cmd2` supports an optional, persistent bottom toolbar that is always visible at the bottom of the
-terminal window while the application is idle and waiting for input.
+terminal window while the application is waiting for input and while commands execute. Command
+output appears above the toolbar.
 
 ### Enabling the Toolbar
 
@@ -92,10 +93,10 @@ def get_bottom_toolbar(self) -> AnyFormattedText:
 
 ### Refreshing the Toolbar
 
-Since the toolbar is rendered by `prompt-toolkit` as part of the prompt, it is naturally redrawn
-whenever the prompt is refreshed. If you want the toolbar to update automatically (for example, to
-display a clock), you can set `refresh_interval` in the [cmd2.Cmd.__init__][] constructor to a value
-greater than 0.0.
+The toolbar is rendered by `prompt-toolkit` and is naturally redrawn whenever the prompt is
+refreshed. If you want the toolbar to update automatically during input and command execution (for
+example, to display a clock), you can set `refresh_interval` in the [cmd2.Cmd.__init__][]
+constructor to a value greater than 0.0.
 
 ```py
 class App(cmd2.Cmd):
@@ -105,4 +106,23 @@ class App(cmd2.Cmd):
 
 See the
 [getting_started.py](https://github.com/python-cmd2/cmd2/blob/main/examples/getting_started.py)
-example for a demonstration of this technique.
+example for a demonstration of this technique. Run its `work 5` command to see the clock update
+while the command prints output.
+
+During command execution, `get_bottom_toolbar()` runs in a background UI thread. Keep the callback
+fast and use a lock when reading state that a command or another thread modifies.
+
+### Commands That Take Over the Terminal
+
+cmd2 temporarily hides the toolbar for its input prompts, pagers, Python environments, and shell
+commands. It restores the toolbar when those operations finish. For custom terminal UIs, calls to
+`input()`, or subprocesses that inherit the terminal, use [cmd2.Cmd.suspend_bottom_toolbar][]:
+
+```py
+with self.suspend_bottom_toolbar():
+    answer = input("Continue? ")
+```
+
+The command toolbar is used by the interactive command loop, including startup commands and scripts
+launched from that loop. It is disabled for non-interactive input. Calls to `onecmd_plus_hooks()`
+outside the command loop do not start a toolbar.

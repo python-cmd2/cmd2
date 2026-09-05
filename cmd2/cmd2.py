@@ -48,6 +48,7 @@ from collections import deque
 from collections.abc import (
     Callable,
     Iterable,
+    Iterator,
     Mapping,
     Sequence,
 )
@@ -106,6 +107,7 @@ from rich.traceback import Traceback
 from . import (
     argparse_completer,
     argparse_utils,
+    command_toolbar,
     constants,
     plugin,
     utils,
@@ -416,7 +418,7 @@ class Cmd:
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
                              when `auto_load_commands` is set to False
-        :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar while at the main prompt.
+        :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar at the main prompt and during commands.
                                       Override ``get_bottom_toolbar()`` to define its content.
         :param enable_rprompt: if ``True``, enables a right prompt while at the main prompt.
                                Override ``get_rprompt()`` to define its content.
@@ -557,6 +559,7 @@ class Cmd:
         # custom prompt). Completion and UI logic should reference this variable
         # to ensure they modify the correct session state.
         self.active_session = self.main_session
+        self._command_toolbar: command_toolbar.CommandToolbar | None = None
 
         # Commands to exclude from the history command
         self.exclude_from_history = ["_eof", "history"]
@@ -1868,6 +1871,7 @@ class Cmd:
                 rich_print_kwargs=rich_print_kwargs,
             )
 
+    @command_toolbar.suspend_toolbar
     def ppaged(
         self,
         *objects: Any,
@@ -2042,7 +2046,7 @@ class Cmd:
     def get_bottom_toolbar(self) -> AnyFormattedText:
         """Get the bottom toolbar content.
 
-        This method is called by prompt-toolkit while at the main prompt if ``enable_bottom_toolbar``
+        This method is called by prompt-toolkit at the main prompt and during commands if ``enable_bottom_toolbar``
         was set to ``True`` during initialization. Because prompt-toolkit executes this callback
         on every UI refresh (such as on every keypress or at scheduled refresh intervals), keeping
         this function highly optimized is critical to ensuring the CLI remains responsive.
@@ -2051,9 +2055,49 @@ class Cmd:
         your application. This could be information like the application name, current state,
         or even a real-time clock.
 
+        During command execution this callback runs in a background UI thread. Protect shared
+        state with a lock when necessary. The toolbar is suspended while another prompt, pager,
+        or interactive shell owns the terminal.
+
         :return: Content to populate the bottom toolbar.
         """
         return None
+
+    @contextlib.contextmanager
+    def suspend_bottom_toolbar(self) -> Iterator[None]:
+        """Temporarily hide the command toolbar and give exclusive access to the terminal.
+
+        Use this context manager around application-specific calls to ``input()``, other
+        terminal UIs, or subprocesses that inherit the terminal. cmd2 automatically suspends
+        its toolbar for its own input prompts, pagers, and shell commands.
+        """
+        if self._command_toolbar is None:
+            yield
+        else:
+            with self._command_toolbar.suspend():
+                yield
+
+    @contextlib.contextmanager
+    def _command_toolbar_context(self) -> Iterator[None]:
+        """Display the toolbar around commands launched by the interactive command loop."""
+        if (
+            self._command_toolbar is not None
+            or self.main_session.bottom_toolbar is None
+            or not self._is_tty_session(self.main_session)
+        ):
+            yield
+            return
+
+        toolbar = command_toolbar.CommandToolbar(self)
+        try:
+            with self.sigint_protection:
+                toolbar.start()
+                self._command_toolbar = toolbar
+            yield
+        finally:
+            with self.sigint_protection:
+                toolbar.stop()
+                self._command_toolbar = None
 
     def get_rprompt(self) -> AnyFormattedText:
         """Provide text to populate the prompt-toolkit right prompt.
@@ -3079,6 +3123,7 @@ class Cmd:
 
         return stop
 
+    @command_toolbar.suspend_toolbar
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement | None) -> bool:
         """Run the command finalization hooks."""
         if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]
@@ -3314,12 +3359,17 @@ class Cmd:
                 if shell:
                     kwargs["executable"] = shell
 
-            # For any stream that is a StdSim, we will use a pipe so we can capture its output
+            # Capture subprocess output when it must pass through a Python stream,
+            # including the toolbar proxy which prints above the running display.
             proc = subprocess.Popen(  # noqa: S602
                 statement.redirect_to,
                 stdin=subproc_stdin,
-                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,  # type: ignore[unreachable]
-                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                stdout=subprocess.PIPE
+                if isinstance(self.stdout, (utils.StdSim, command_toolbar.ToolbarStream))  # type: ignore[unreachable]
+                else self.stdout,
+                stderr=subprocess.PIPE
+                if isinstance(sys.stderr, (utils.StdSim, command_toolbar.ToolbarStream))
+                else sys.stderr,
                 shell=True,
                 **kwargs,
             )
@@ -3515,6 +3565,7 @@ class Cmd:
         # a DummyOutput.
         return not isinstance(session.input, DummyInput)
 
+    @command_toolbar.suspend_toolbar
     def _read_raw_input(
         self,
         prompt: Callable[[], ANSI | str] | ANSI | str,
@@ -3796,7 +3847,11 @@ class Cmd:
         """
         try:
             # Run startup commands
-            stop = self.runcmds_plus_hooks(self._startup_commands)
+            if self._startup_commands:
+                with self._command_toolbar_context():
+                    stop = self.runcmds_plus_hooks(self._startup_commands)
+            else:
+                stop = False
             self._startup_commands.clear()
 
             while not stop:
@@ -3810,7 +3865,8 @@ class Cmd:
                     line = "_eof"
 
                 # Run the command along with all associated pre and post hooks
-                stop = self.onecmd_plus_hooks(line)
+                with self._command_toolbar_context():
+                    stop = self.onecmd_plus_hooks(line)
         finally:
             with self.sigint_protection:
                 # Shut down the alert thread.
@@ -4640,6 +4696,7 @@ class Cmd:
         self.last_result = True
         return True
 
+    @command_toolbar.suspend_toolbar
     def select(self, opts: str | Iterable[str] | Iterable[tuple[Any, str | None]], prompt: str = "Your choice? ") -> Any:
         """Present a menu to the user.
 
@@ -4848,6 +4905,7 @@ class Cmd:
 
     # Preserve quotes since we are passing these strings to the shell
     @with_argparser(_build_shell_parser, preserve_quotes=True)
+    @command_toolbar.suspend_toolbar
     def do_shell(self, args: argparse.Namespace) -> None:
         """Execute a command as if at the OS prompt."""
         import signal
@@ -4966,6 +5024,7 @@ class Cmd:
 
             readline.set_completer(cmd2_env.completer)
 
+    @command_toolbar.suspend_toolbar
     def _run_python(self, *, pyscript: str | None = None) -> bool | None:
         """Run an interactive Python shell or execute a pyscript file.
 
@@ -5177,6 +5236,7 @@ class Cmd:
         return argparse_utils.DEFAULT_ARGUMENT_PARSER(description="Run an interactive IPython shell.")
 
     @with_argparser(_build_ipython_parser)
+    @command_toolbar.suspend_toolbar
     def do_ipy(self, _: argparse.Namespace) -> bool | None:  # pragma: no cover
         """Run an interactive IPython shell.
 

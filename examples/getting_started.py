@@ -25,6 +25,7 @@ import datetime
 import pathlib
 import sys
 import threading
+import time
 from typing import Annotated
 
 from prompt_toolkit.application import get_app
@@ -163,6 +164,13 @@ class BasicApp(cmd2.Cmd):
         style = "bg:ansired fg:ansiwhite"
         text = f"cwd={current_working_directory}"
         return [(style, text)]
+
+    @cmd2.with_annotated
+    def do_work(self, seconds: int = 5) -> None:
+        """Simulate work while the bottom toolbar clock keeps updating."""
+        for second in range(seconds):
+            self.poutput(f"Working: {second + 1}/{seconds}")
+            time.sleep(1)
 
     @cmd2.with_annotated
     def do_cat(
