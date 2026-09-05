@@ -2111,8 +2111,12 @@ class Cmd:
             yield
         finally:
             with self.sigint_protection:
-                toolbar.stop()
-                self._command_toolbar = None
+                try:
+                    toolbar.stop()
+                finally:
+                    # Always forget a toolbar that has been torn down. Keeping a failed
+                    # one would disable the toolbar for the rest of the session.
+                    self._command_toolbar = None
 
     def get_rprompt(self) -> AnyFormattedText:
         """Provide text to populate the prompt-toolkit right prompt.
@@ -3374,37 +3378,50 @@ class Cmd:
                 if shell:
                     kwargs["executable"] = shell
 
-            # Capture subprocess output when it must pass through a Python stream,
-            # including the toolbar proxy which prints above the running display.
-            proc = subprocess.Popen(  # noqa: S602
-                statement.redirect_to,
-                stdin=subproc_stdin,
-                stdout=subprocess.PIPE
-                if isinstance(self.stdout, (utils.StdSim, command_toolbar.ToolbarStream))  # type: ignore[unreachable]
-                else self.stdout,
-                stderr=subprocess.PIPE
-                if isinstance(sys.stderr, (utils.StdSim, command_toolbar.ToolbarStream))
-                else sys.stderr,
-                shell=True,
-                **kwargs,
+            # Hand the pipe process the real terminal when there is one to inherit, since it
+            # may be interactive. Otherwise capture its output so it can pass through a Python
+            # stream, including the toolbar proxy which prints above the running display.
+            pipe_stdout = (
+                None
+                if isinstance(self.stdout, utils.StdSim)  # type: ignore[unreachable]
+                else command_toolbar.pipe_target(self.stdout)
             )
+            pipe_stderr = None if isinstance(sys.stderr, utils.StdSim) else command_toolbar.pipe_target(sys.stderr)
 
-            # Popen was called with shell=True so the user can chain pipe commands and redirect their output
-            # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
-            # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
-            # if the pipe process is still running.
-            with contextlib.suppress(subprocess.TimeoutExpired):
-                proc.wait(0.2)
+            with contextlib.ExitStack() as terminal_stack:
+                # The toolbar can neither draw nor hold the keyboard while a pipe process owns
+                # the terminal, so step aside until that process has finished.
+                if pipe_stdout is not None or pipe_stderr is not None:
+                    terminal_stack.enter_context(self.suspend_bottom_toolbar())
 
-            # Check if the pipe process already exited
-            if proc.returncode is not None:
-                subproc_stdin.close()
-                new_stdout.close()
-                raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
-            redir_saved_state.redirecting = True
-            cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+                proc = subprocess.Popen(  # noqa: S602
+                    statement.redirect_to,
+                    stdin=subproc_stdin,
+                    stdout=subprocess.PIPE if pipe_stdout is None else pipe_stdout,
+                    stderr=subprocess.PIPE if pipe_stderr is None else pipe_stderr,
+                    shell=True,
+                    **kwargs,
+                )
 
-            self.stdout = new_stdout
+                # Popen was called with shell=True so the user can chain pipe commands and redirect their output
+                # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
+                # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
+                # if the pipe process is still running.
+                with contextlib.suppress(subprocess.TimeoutExpired):
+                    proc.wait(0.2)
+
+                # Check if the pipe process already exited
+                if proc.returncode is not None:
+                    subproc_stdin.close()
+                    new_stdout.close()
+                    raise RedirectionError(f"Pipe process exited with code {proc.returncode} before command could run")
+                redir_saved_state.redirecting = True
+                cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+
+                self.stdout = new_stdout
+
+                # Hold the suspension open until _restore_output() reaps the pipe process.
+                redir_saved_state.toolbar_suspension = terminal_stack.pop_all()
 
         elif statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND):
             if statement.redirect_to:
@@ -3456,29 +3473,35 @@ class Cmd:
         :param statement: Statement object which contains the parsed input from the user
         :param saved_redir_state: contains information needed to restore state data
         """
-        if saved_redir_state.redirecting:
-            # If we redirected output to the clipboard
-            if (
-                statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
-                and not statement.redirect_to
-            ):
-                self.stdout.seek(0)
-                write_to_paste_buffer(self.stdout.read())
+        # The toolbar gets the terminal back once the pipe process is done with it.
+        with contextlib.ExitStack() as terminal_stack:
+            if saved_redir_state.toolbar_suspension is not None:
+                terminal_stack.callback(saved_redir_state.toolbar_suspension.close)
+                saved_redir_state.toolbar_suspension = None
 
-            with contextlib.suppress(BrokenPipeError):
-                # Close the file or pipe that stdout was redirected to
-                self.stdout.close()
+            if saved_redir_state.redirecting:
+                # If we redirected output to the clipboard
+                if (
+                    statement.redirector in (constants.REDIRECTION_OVERWRITE, constants.REDIRECTION_APPEND)
+                    and not statement.redirect_to
+                ):
+                    self.stdout.seek(0)
+                    write_to_paste_buffer(self.stdout.read())
 
-            # Restore self.stdout
-            self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
+                with contextlib.suppress(BrokenPipeError):
+                    # Close the file or pipe that stdout was redirected to
+                    self.stdout.close()
 
-            # Check if we need to wait for the process being piped to
-            if self._cur_pipe_proc_reader is not None:
-                self._cur_pipe_proc_reader.wait()
+                # Restore self.stdout
+                self.stdout = cast(TextIO, saved_redir_state.saved_self_stdout)
 
-        # These are restored regardless of whether the command redirected
-        self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
-        self._redirecting = saved_redir_state.saved_redirecting
+                # Check if we need to wait for the process being piped to
+                if self._cur_pipe_proc_reader is not None:
+                    self._cur_pipe_proc_reader.wait()
+
+            # These are restored regardless of whether the command redirected
+            self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+            self._redirecting = saved_redir_state.saved_redirecting
 
     def get_command_func(self, command: str) -> BoundCommandFunc[...] | None:
         """Get the bound command function for a command.

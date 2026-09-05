@@ -3,12 +3,13 @@
 import io
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 from unittest import mock
 
 import pytest
-from prompt_toolkit.application import get_app
+from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.data_structures import Size
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.input.typeahead import get_typeahead
@@ -46,13 +47,18 @@ def toolbar_app():
     output = Terminal()
     app.stdout = output
     with create_pipe_input() as pipe:
-        app.main_session = PromptSession(
-            input=pipe,
-            output=RecordingOutput(output),
-            bottom_toolbar="STATUS",
-            refresh_interval=0.01,
-        )
-        yield app, pipe, output
+        terminal = RecordingOutput(output)
+        # Bind the ambient app session to this terminal. Without it, prompt-toolkit
+        # builds a real one on demand for calls such as patch_stdout() in
+        # _read_raw_input(), which needs a console that Windows CI does not provide.
+        with create_app_session(input=pipe, output=terminal):
+            app.main_session = PromptSession(
+                input=pipe,
+                output=terminal,
+                bottom_toolbar="STATUS",
+                refresh_interval=0.01,
+            )
+            yield app, pipe, output
 
 
 def test_command_toolbar_refresh_and_output(toolbar_app, monkeypatch) -> None:
@@ -129,6 +135,49 @@ def test_command_toolbar_pipe_output(toolbar_app) -> None:
     assert "CMD2 COMMANDS" in output.getvalue()
 
 
+class FileTerminal:
+    """A real file that claims to be a terminal, so it owns a descriptor a subprocess can inherit."""
+
+    def __init__(self, file) -> None:
+        self.file = file
+
+    def isatty(self) -> bool:
+        return True
+
+    def __getattr__(self, name):
+        return getattr(self.file, name)
+
+
+@pytest.mark.parametrize("builtin_pager", [False, True])
+def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, builtin_pager) -> None:
+    app, _, _ = toolbar_app
+    app.use_builtin_pager = builtin_pager
+    destination = tmp_path / "terminal.txt"
+    running = []
+    readers = []
+
+    def command(statement, **kwargs):
+        # The pipe process owns the terminal, so the toolbar must have stepped aside.
+        running.append(app._command_toolbar.app.is_running)
+        assert app.main_session.app.layout is app.main_session.layout
+        readers.append(app._cur_pipe_proc_reader)
+        app.ppaged("piped")
+        return False
+
+    with destination.open("w+") as handle:
+        app.stdout = FileTerminal(handle)
+        with mock.patch.object(app, "onecmd", side_effect=command), app._command_toolbar_context():
+            app.onecmd_plus_hooks(f'custom | "{sys.executable}" -c "import sys; sys.stdout.write(sys.stdin.read().upper())"')
+            # The terminal goes back to the toolbar once the pipe process has exited.
+            assert app._command_toolbar.app.is_running
+            assert app.stdout.proxy is not None
+
+    assert running == [False]
+    # A process given the terminal writes to it directly instead of through a captured pipe.
+    assert readers[0]._proc.stdout is None
+    assert "PIPED" in destination.read_text()
+
+
 def test_command_toolbar_binary_output(toolbar_app) -> None:
     app, _, output = toolbar_app
     data = "Unicode: 😇\n".encode()
@@ -142,19 +191,25 @@ def test_command_toolbar_binary_output(toolbar_app) -> None:
 def test_command_toolbar_interrupt_uses_signal_handler(toolbar_app) -> None:
     app, pipe, _ = toolbar_app
     interrupted = threading.Event()
-    signal_target = "_thread.interrupt_main" if sys.platform == "win32" else "cmd2.command_toolbar.os.kill"
+    signal_target = "_thread.interrupt_main" if sys.platform == "win32" else "cmd2.command_toolbar.os.killpg"
     with mock.patch(signal_target, side_effect=lambda *_: interrupted.set()) as interrupt:
         with app._command_toolbar_context():
             pipe.send_text("\x03")
             assert interrupted.wait(2)
         interrupt.assert_called_once()
+        if sys.platform != "win32":
+            # Reach subprocesses a command started, as the terminal driver would.
+            import os
+            import signal
+
+            assert interrupt.call_args.args == (os.getpgrp(), signal.SIGINT)
 
 
 def test_command_toolbar_interrupt_discards_cancelled_typeahead(toolbar_app) -> None:
     app, pipe, _ = toolbar_app
     interrupted = threading.Event()
     received = threading.Event()
-    signal_target = "_thread.interrupt_main" if sys.platform == "win32" else "cmd2.command_toolbar.os.kill"
+    signal_target = "_thread.interrupt_main" if sys.platform == "win32" else "cmd2.command_toolbar.os.killpg"
     with mock.patch(signal_target, side_effect=lambda *_: interrupted.set()), app._command_toolbar_context():
         toolbar = app._command_toolbar
 
@@ -233,6 +288,66 @@ def test_command_toolbar_suspension_and_nested_input(toolbar_app) -> None:
         assert toolbar.app.is_running
 
 
+class CprOutput(RecordingOutput):
+    """A terminal that asks for cursor position reports and never answers them."""
+
+    def get_rows_below_cursor_position(self) -> int:
+        raise NotImplementedError
+
+    @property
+    def responds_to_cpr(self) -> bool:
+        return True
+
+
+def test_command_toolbar_flushes_writes_waiting_on_cursor_reports() -> None:
+    app = Cmd(allow_cli_args=False)
+    output = Terminal()
+    app.stdout = output
+
+    with create_pipe_input() as pipe:
+        app.main_session = PromptSession(
+            input=pipe,
+            output=CprOutput(output),
+            bottom_toolbar="STATUS",
+            refresh_interval=0.01,
+        )
+        # Terminal writes wait for a pending cursor position report, so stopping the
+        # display must not cancel them out from under the text.
+        with app._command_toolbar_context():
+            app.poutput("last words")
+
+    assert "last words\n" in output.getvalue()
+
+
+def test_command_toolbar_suspension_waits_for_in_flight_writes(toolbar_app) -> None:
+    app, _, output = toolbar_app
+    writing = threading.Event()
+
+    with app._command_toolbar_context():
+        proxy = app._command_toolbar._proxy
+        proxy_write = proxy.write
+
+        def slow_write(data: str) -> int:
+            # Widen the window in which suspending could close this proxy. A closed
+            # proxy accepts writes and discards them, so the output would vanish.
+            writing.set()
+            time.sleep(0.1)
+            return proxy_write(data)
+
+        proxy.write = slow_write
+        thread = threading.Thread(target=lambda: app.poutput("in flight"))
+        thread.start()
+        assert writing.wait(2)
+
+        # A command reaches this at every finalization boundary while its own
+        # threads are still printing.
+        with app.suspend_bottom_toolbar():
+            pass
+        thread.join()
+
+    assert "in flight\n" in output.getvalue()
+
+
 def test_command_toolbar_typeahead(toolbar_app) -> None:
     app, pipe, _ = toolbar_app
     received = threading.Event()
@@ -288,6 +403,69 @@ def test_command_toolbar_cleanup_on_exception(toolbar_app, exception) -> None:
     assert not threads[0].is_alive()
     assert app.stdout is output
     assert app._command_toolbar is None
+
+
+def test_command_toolbar_recovers_from_stop_failure(toolbar_app) -> None:
+    app, pipe, _ = toolbar_app
+    bindings = app.main_session.app.key_bindings
+
+    context = app._command_toolbar_context()
+    context.__enter__()
+    toolbar = app._command_toolbar
+    real_stop = toolbar.stop
+
+    def failing_stop() -> None:
+        # Tear down for real, then fail the way a broken stream close would.
+        real_stop()
+        raise RuntimeError("broken stop")
+
+    toolbar.stop = failing_stop
+    with pytest.raises(RuntimeError, match="broken stop"):
+        context.__exit__(None, None, None)
+
+    # A later command still gets a toolbar instead of being locked out by the dead one.
+    assert app._command_toolbar is None
+    assert app.main_session.app.layout is app.main_session.layout
+    assert app.main_session.app.key_bindings is bindings
+    with app._command_toolbar_context():
+        assert app._command_toolbar is not None
+        assert app._command_toolbar is not toolbar
+    assert app._command_toolbar is None
+    assert app._read_raw_input("Next: ", app.main_session, pre_run=lambda: pipe.send_text("recovered\n")) == "recovered"
+
+
+def test_command_toolbar_exit_after_result_is_set(toolbar_app) -> None:
+    app, _, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+
+        def already_exiting():
+            toolbar.app.exit()
+            # The result is set before run_async() has finished its cleanup.
+            assert toolbar.app.is_running
+            toolbar._exit()
+
+        toolbar._call_in_ui(already_exiting)
+    assert app.main_session.app.layout is app.main_session.layout
+
+
+def test_command_toolbar_failure_after_startup_is_reported(toolbar_app, capsys) -> None:
+    app, _, output = toolbar_app
+
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        # Stop the display the way an unhandled error in its own thread would, after
+        # _resume() has already returned and can no longer raise for the command.
+        toolbar.app.loop.call_soon_threadsafe(lambda: toolbar.app.exit(exception=ValueError("broken display")))
+        toolbar._thread.join(timeout=2)
+        assert not toolbar._thread.is_alive()
+
+        # Output must still reach the terminal rather than a proxy nothing is draining.
+        assert all(stream.proxy is None for stream in toolbar._streams)
+        app.poutput("after failure")
+
+    assert "broken display" in capsys.readouterr().err
+    assert "after failure\n" in output.getvalue()
 
 
 def test_command_toolbar_render_failure(toolbar_app) -> None:

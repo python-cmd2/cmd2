@@ -38,7 +38,7 @@ from cmd2 import (
     Color,
     stylize,
 )
-from cmd2.annotated import Option
+from cmd2.annotated import Argument, Option
 
 
 class BasicApp(cmd2.Cmd):
@@ -166,7 +166,12 @@ class BasicApp(cmd2.Cmd):
         return [(style, text)]
 
     @cmd2.with_annotated
-    def do_work(self, seconds: int = 5) -> None:
+    def do_work(
+        self,
+        seconds: Annotated[  # Optional positional argument, so both "work" and "work 5" are valid
+            int, Argument(nargs="?", help_text="number of seconds to work for")
+        ] = 5,
+    ) -> None:
         """Simulate work while the bottom toolbar clock keeps updating."""
         for second in range(seconds):
             self.poutput(f"Working: {second + 1}/{seconds}")
