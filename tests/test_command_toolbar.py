@@ -9,6 +9,7 @@ from unittest import mock
 
 import pytest
 from prompt_toolkit.application import get_app
+from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.input.typeahead import get_typeahead
 from prompt_toolkit.keys import Keys
@@ -809,3 +810,13 @@ def test_accepted_line_appears_once_in_output(toolbar_app) -> None:
     # An exact count catches both ways this can break: the line vanishing when no
     # is_done frame commits it, and it being echoed twice by a replacement for one.
     assert output.getvalue().count(f"{app.prompt}probe") == 1
+
+
+def test_read_line_keeps_the_application_running(toolbar_app) -> None:
+    """read_line() returns a line without ending the run that draws the toolbar."""
+    app, pipe, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        pipe.send_text("hello\n")
+        assert toolbar.read_line(ANSI("> ")) == "hello"
+        assert toolbar.is_active, "the application stopped when the line was accepted"

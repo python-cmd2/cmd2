@@ -27,7 +27,13 @@ from prompt_toolkit.utils import suspend_to_background_supported
 from .pager import Pager, output_fits
 
 if TYPE_CHECKING:
+    from prompt_toolkit.buffer import Buffer
+    from prompt_toolkit.formatted_text import ANSI
+
     from .cmd2 import Cmd
+
+    #: The prompt text, or a callable returning it for a dynamic prompt.
+    PromptMessage = Callable[[], ANSI | str] | ANSI | str
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
@@ -198,6 +204,19 @@ class CommandToolbar:
 
         self._bindings = bindings
         self._suspend_binding = suspend
+
+        # Prompt mode reuses the PromptSession's own layout, so completion menus,
+        # auto-suggestions, and the rprompt all keep working. Only the accept path
+        # changes: it hands the line to the command thread instead of ending the run.
+        self._prompt_layout = session.layout
+        # Captured before _resume() swaps in the command display's bindings, so this
+        # is the PromptSession's own set: completion, history, and cmd2's bindings.
+        self._prompt_bindings = session.app.key_bindings
+        self._line: Future[str] | None = None
+        # Only swapped in for the duration of read_line(). session.prompt() still runs
+        # nested prompts and the no-toolbar fallback, and those rely on the stock
+        # handler's app.exit() to return at all.
+        self._session_accept = session.default_buffer.accept_handler
 
     def _after_render(self, app: Application[str]) -> None:  # noqa: ARG002
         self._ready.set()
@@ -386,6 +405,61 @@ class CommandToolbar:
             if self._error is not None:
                 raise self._error
             raise EOFError
+
+    def _accept_line(self, buff: "Buffer") -> bool:
+        """Hand an accepted line to the waiting command thread without ending the run."""
+        if self._line is not None and not self._line.done():
+            self._line.set_result(buff.document.text)
+        return True  # Keep the text; read_line() resets the buffer itself.
+
+    def _fail_line(self, error: BaseException) -> None:
+        """Abort the pending read_line() with Ctrl-C's or Ctrl-D's exception."""
+        if self._line is not None and not self._line.done():
+            self._line.set_exception(error)
+
+    def read_line(
+        self,
+        message: "PromptMessage",
+        *,
+        pre_run: Callable[[], None] | None = None,
+    ) -> str:
+        """Read one line at the prompt while the toolbar's application keeps running.
+
+        :param message: the prompt text, or a callable returning it for a dynamic prompt
+        :param pre_run: optional callback run on the UI thread once the prompt is shown
+        :return: the accepted line
+        :raises KeyboardInterrupt: if the user pressed Ctrl-C
+        :raises EOFError: if the user pressed Ctrl-D on an empty line
+        """
+        line: Future[str] = Future()
+        self._line = line
+        session = self.cmd.main_session
+
+        def enter() -> None:
+            session.message = message
+            session.default_buffer.reset()
+            session.default_buffer.accept_handler = self._accept_line
+            self.app.layout = self._prompt_layout
+            self.app.layout.focus(session.default_buffer)
+            self.app.key_bindings = self._prompt_bindings
+            if pre_run is not None:
+                pre_run()
+            self.app.invalidate()
+
+        try:
+            self._call_in_ui(enter)
+            while True:
+                try:
+                    text = line.result(timeout=0.1)
+                except FutureTimeoutError:
+                    if line.done():
+                        raise
+                    self._check_running()
+                else:
+                    return text
+        finally:
+            self._line = None
+            session.default_buffer.accept_handler = self._session_accept
 
     def page(self, text: str, *, chop: bool) -> None:
         """Show a pager above the same toolbar without starting another input reader."""
