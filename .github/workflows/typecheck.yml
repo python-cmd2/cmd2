@@ -32,7 +32,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Check typing using ty
-        run: uv run ty check
+        run: uv run --no-default-groups --group validate ty check
 
       - name: Check typing using mypy
-        run: uv run mypy .
+        run: uv run --no-default-groups --group validate mypy .
