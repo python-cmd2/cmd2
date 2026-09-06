@@ -42,14 +42,48 @@ system.
 
 ## Terminal pagers
 
-Output of any command can be displayed one page at a time using the [cmd2.Cmd.ppaged][] method.
+Output of any command can be displayed one page at a time using the [cmd2.Cmd.ppaged][] method. A
+pager is only used when the terminal is interactive. Inside a script, or when the command's output
+is redirected or piped, `ppaged()` falls back to `poutput()`.
 
-While the bottom toolbar is running, `ppaged()` uses an embedded pager so the toolbar remains
-visible and continues refreshing. It supports scrolling, search, and chopped lines. Set
-`self.use_builtin_pager = False` to use the configured external `pager`/`pager_chop` commands
-instead. Anywhere the toolbar is not running, such as a command invoked outside the command loop,
-`ppaged()` uses the external pager regardless of this setting. See
-[Bottom Toolbar](./prompt.md#bottom-toolbar) for controls and details.
+### Embedded pager
+
+While the [bottom toolbar](./prompt.md#bottom-toolbar) is running, `ppaged()` displays its output in
+an embedded pager rather than handing the terminal to an external program. The toolbar stays visible
+and keeps refreshing beneath the paged output, and `cmd2` never gives up control of the terminal.
+
+Output which already fits in the space above the toolbar is printed directly, so there is no pager
+to dismiss.
+
+| Keys                               | Action                                            |
+| ---------------------------------- | ------------------------------------------------- |
+| `Space`, `PageDown`, `f`, `Ctrl-F` | Forward one page                                  |
+| `b`, `PageUp`, `Ctrl-B`            | Back one page                                     |
+| `d` / `u`, `Ctrl-D` / `Ctrl-U`     | Forward / back half a page                        |
+| `j` / `k`, `Down` / `Up`, `Enter`  | Down / up one line                                |
+| `h` / `l`, `Left` / `Right`        | Scroll left / right (chopped output only)         |
+| `g` / `G`, `Home` / `End`          | Jump to the beginning / end                       |
+| `/` / `?`                          | Search forward / backward                         |
+| `n` / `N`                          | Jump to the next / previous match                 |
+| `q`, `Escape`, `Ctrl-C`            | Close the pager and return to the running command |
+| `Ctrl-Z`                           | Suspend to the background, where supported        |
+
+Passing `chop=True` truncates lines longer than the screen width instead of wrapping them, and the
+hidden columns remain reachable with the left and right arrow keys. Unlike the default external
+pager on Windows (`more`), the embedded pager supports chopping on every platform.
+
+Rich styles in the paged output are preserved: colors are rendered while scrolling and searching,
+and the visible text of a hyperlink is shown without its escape sequence metadata.
+
+### External pagers
+
+Set `self.use_builtin_pager = False` to always use the external commands configured in `self.pager`
+and `self.pager_chop`. This is the opt-out for applications which need `less` features the embedded
+pager does not provide. External pagers temporarily hide the toolbar and restore it on exit.
+
+The setting only ever turns the embedded pager off. Because the embedded pager shares the toolbar's
+display, it is unavailable anywhere a toolbar is not running, such as a command invoked outside the
+command loop, and `ppaged()` uses the external pager there regardless of this setting.
 
 Alternatively, a terminal pager can be invoked directly using the ability to run shell commands with
 the `!` shortcut like so:

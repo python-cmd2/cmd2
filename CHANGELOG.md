@@ -3,6 +3,12 @@
 - Enhancements
     - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
       execution
+    - Added an embedded pager which `Cmd.ppaged()` uses while the bottom toolbar is running, so the
+      toolbar stays visible and refreshing instead of the terminal being handed to an external
+      pager. It supports vertical and horizontal scrolling, incremental search, and chopped lines on
+      every platform, including Windows where the default external pager (`more`) always wraps.
+      Output which already fits on the screen is printed directly rather than paged. Set
+      `self.use_builtin_pager = False` to keep using the external `pager`/`pager_chop` commands.
 
 ## 4.2.3 (September 2, 2026)
 

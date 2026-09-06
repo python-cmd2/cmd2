@@ -114,16 +114,11 @@ fast and use a lock when reading state that a command or another thread modifies
 
 ### Commands That Take Over the Terminal
 
-While the toolbar is running, `ppaged()` uses an embedded pager that keeps the same toolbar visible
-and refreshing. Use Space or PageDown to advance, `b` or PageUp to go back, `/` to search, `n`/`N`
-to repeat a search, and `q` to return to the command. Arrow keys navigate the output; `g`/`G` jump
-to the beginning/end. Short output is printed directly above the toolbar. Chopped output supports
-horizontal scrolling, including on Windows.
-
-Set `self.use_builtin_pager = False` to use your configured external `pager`/`pager_chop` commands.
-The embedded pager provides basic navigation and search; applications that need additional `less`
-features can use this opt-out. The setting only ever turns the embedded pager off: it cannot turn it
-on where no toolbar is running, since the two share one display.
+While the toolbar is running, `ppaged()` uses an embedded pager which keeps the same toolbar visible
+and refreshing instead of handing the terminal to an external pager. Short output is printed
+directly above the toolbar, and longer output becomes a scrollable, searchable view. Set
+`self.use_builtin_pager = False` to opt out and use your configured external `pager`/`pager_chop`
+commands. See [Embedded pager](./os.md#embedded-pager) for the key bindings and full details.
 
 cmd2 temporarily hides the toolbar for its input prompts, external pagers, Python environments, and
 shell commands. It also hides it while a command's output is piped to another process, since that
