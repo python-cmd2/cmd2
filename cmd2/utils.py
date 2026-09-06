@@ -690,6 +690,9 @@ class RedirectionSavedState:
         self.saved_pipe_proc_reader = pipe_proc_reader
         self.saved_redirecting = saved_redirecting
 
+        # Holds the bottom toolbar's suspension while a pipe process owns the terminal
+        self.toolbar_suspension: contextlib.ExitStack | None = None
+
 
 def categorize(func: Callable[..., Any] | Iterable[Callable[..., Any]], category: str) -> None:
     """Categorize a function.
