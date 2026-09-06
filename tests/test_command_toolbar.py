@@ -775,3 +775,37 @@ def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypat
         pager.assert_not_called()
     assert "Cmd2 Commands" in target.read_text()
     assert "Cmd2 Commands" not in output.getvalue()
+
+
+def test_prompt_ctrl_c_raises_keyboard_interrupt(toolbar_app) -> None:
+    """Ctrl-C at the main prompt aborts the line rather than returning text."""
+    app, pipe, _ = toolbar_app
+    pipe.send_text("partial\x03")
+    with pytest.raises(KeyboardInterrupt):
+        app._read_command_line(app.prompt)
+
+
+def test_prompt_ctrl_d_raises_eof(toolbar_app) -> None:
+    """Ctrl-D on an empty line signals end of input, which cmdloop turns into _eof."""
+    app, pipe, _ = toolbar_app
+    pipe.send_text("\x04")
+    with pytest.raises(EOFError):
+        app._read_command_line(app.prompt)
+
+
+def test_accepted_line_appears_once_in_output(toolbar_app) -> None:
+    """The accepted command line is committed to the terminal exactly once.
+
+    Nothing in cmd2 prints it today: prompt-toolkit's final `is_done` frame is what
+    leaves it in the scrollback. A continuous application never renders that frame,
+    so this pins the behaviour that replacement code has to reproduce.
+    """
+    app, pipe, output = toolbar_app
+    app.do_probe = lambda _: None
+    pipe.send_text("probe\n")
+    line = app._read_command_line(app.prompt)
+    with app._command_toolbar_context():
+        app.onecmd_plus_hooks(line)
+    # An exact count catches both ways this can break: the line vanishing when no
+    # is_done frame commits it, and it being echoed twice by a replacement for one.
+    assert output.getvalue().count(f"{app.prompt}probe") == 1
