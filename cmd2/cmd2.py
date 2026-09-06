@@ -2133,6 +2133,15 @@ class Cmd:
                     # one would disable the toolbar for the rest of the session.
                     self._command_toolbar = None
 
+    @contextlib.contextmanager
+    def _command_mode_context(self) -> Iterator[None]:
+        """Show the command display while a command runs, if a toolbar is running."""
+        if self._command_toolbar is None:
+            yield
+        else:
+            with self._command_toolbar.command_mode():
+                yield
+
     def get_rprompt(self) -> AnyFormattedText:
         """Provide text to populate the prompt-toolkit right prompt.
 
@@ -3880,6 +3889,11 @@ class Cmd:
                 self._alert_condition.notify_all()
 
         try:
+            # A running command display already owns the terminal and the application.
+            # Reading through it keeps that single run alive across the prompt, so the
+            # toolbar is never erased by an end-of-run frame.
+            if self._command_toolbar is not None and self._command_toolbar.is_active:
+                return self._command_toolbar.read_line(prompt_to_use, pre_run=_pre_prompt)
             return self._read_raw_input(
                 prompt=prompt_to_use,
                 session=self.main_session,
@@ -3899,27 +3913,31 @@ class Cmd:
         This serves the same role as cmd.cmdloop().
         """
         try:
-            # Run startup commands
-            if self._startup_commands:
-                with self._command_toolbar_context():
-                    stop = self.runcmds_plus_hooks(self._startup_commands)
-            else:
-                stop = False
-            self._startup_commands.clear()
+            # Hold one command display open for the whole loop. Starting and stopping
+            # it per command would end its application each time, and prompt-toolkit
+            # drops the bottom toolbar from the final frame of every run.
+            with self._command_toolbar_context():
+                # Run startup commands
+                if self._startup_commands:
+                    with self._command_mode_context():
+                        stop = self.runcmds_plus_hooks(self._startup_commands)
+                else:
+                    stop = False
+                self._startup_commands.clear()
 
-            while not stop:
-                # Get commands from user
-                try:
-                    line = self._read_command_line(self.prompt)
-                except KeyboardInterrupt:
-                    self.poutput("^C")
-                    line = ""
-                except EOFError:
-                    line = "_eof"
+                while not stop:
+                    # Get commands from user
+                    try:
+                        line = self._read_command_line(self.prompt)
+                    except KeyboardInterrupt:
+                        self.poutput("^C")
+                        line = ""
+                    except EOFError:
+                        line = "_eof"
 
-                # Run the command along with all associated pre and post hooks
-                with self._command_toolbar_context():
-                    stop = self.onecmd_plus_hooks(line)
+                    # Run the command along with all associated pre and post hooks
+                    with self._command_mode_context():
+                        stop = self.onecmd_plus_hooks(line)
         finally:
             with self.sigint_protection:
                 # Shut down the alert thread.

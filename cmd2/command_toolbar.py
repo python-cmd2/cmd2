@@ -29,6 +29,7 @@ from .pager import Pager, output_fits
 
 if TYPE_CHECKING:
     from prompt_toolkit.buffer import Buffer
+    from prompt_toolkit.key_binding.key_bindings import KeyBindingsBase
 
     from .cmd2 import Cmd
 
@@ -226,7 +227,10 @@ class CommandToolbar:
         # display's set, so it is the PromptSession's own: completion, history, and
         # cmd2's bindings. Merging the overrides last lets them win, because
         # KeyProcessor calls matches[-1].
-        self._prompt_bindings = merge_key_bindings([session.app.key_bindings, prompt_bindings])
+        session_bindings = session.app.key_bindings
+        self._prompt_bindings: KeyBindingsBase = (
+            merge_key_bindings([session_bindings, prompt_bindings]) if session_bindings is not None else prompt_bindings
+        )
         self._line: Future[str] | None = None
         # Only swapped in for the duration of read_line(). session.prompt() still runs
         # nested prompts and the no-toolbar fallback, and those rely on the stock
@@ -464,6 +468,14 @@ class CommandToolbar:
                 pre_run()
             self.app.invalidate()
 
+            # Keys typed while the command ran were swallowed by the save_key binding
+            # so they could not become commands mid-execution. Replay them now that a
+            # prompt is on screen and its bindings are active, in arrival order.
+            if self._keys:
+                pending, self._keys = self._keys, []
+                self.app.key_processor.feed_multiple(pending)
+                self.app.key_processor.process_keys()
+
         try:
             self._call_in_ui(enter)
             while True:
@@ -483,7 +495,7 @@ class CommandToolbar:
     @staticmethod
     def _resolve_message(message: "PromptMessage") -> str:
         """Render the prompt to text for the scrollback echo."""
-        resolved = message() if callable(message) else message
+        resolved = message if isinstance(message, (ANSI, str)) else message()
         return resolved.value if isinstance(resolved, ANSI) else resolved
 
     def _echo_accepted(self, message: "PromptMessage", text: str) -> None:
@@ -495,6 +507,25 @@ class CommandToolbar:
         """
         self.cmd.stdout.write(f"{self._resolve_message(message)}{text}\n")
         self.cmd.stdout.flush()
+
+    @contextlib.contextmanager
+    def command_mode(self) -> Iterator[None]:
+        """Swap to the toolbar-only layout while a command runs on the main thread."""
+
+        def enter() -> None:
+            self.app.layout = self._layout
+            self.app.key_bindings = self._bindings
+            self.app.invalidate()
+
+        self._call_in_ui(enter)
+        try:
+            yield
+        finally:
+            # Restore the command display if a nested prompt or the pager swapped the
+            # layout out. When the display has already stopped, _pause() has restored
+            # the borrowed application's own state and there is nothing to put back.
+            if self._thread is not None and self._thread.is_alive():
+                self._call_in_ui(enter)
 
     def page(self, text: str, *, chop: bool) -> None:
         """Show a pager above the same toolbar without starting another input reader."""

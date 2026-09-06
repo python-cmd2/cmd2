@@ -856,3 +856,19 @@ def test_read_line_echoes_the_accepted_line(toolbar_app) -> None:
         pipe.send_text("hello\n")
         assert toolbar.read_line(ANSI("myapp> ")) == "hello"
     assert output.getvalue().count("myapp> hello") == 1
+
+
+def test_typeahead_during_a_command_reaches_the_next_prompt(toolbar_app) -> None:
+    """Keys typed while a command runs are handled by the prompt that follows it."""
+    app, pipe, _ = toolbar_app
+
+    def slow(_) -> None:
+        pipe.send_text("typed\n")
+        time.sleep(0.2)
+
+    app.do_slow = slow
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        with app._command_mode_context():
+            app.onecmd_plus_hooks("slow")
+        assert toolbar.read_line(ANSI("> ")) == "typed"

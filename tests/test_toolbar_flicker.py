@@ -32,9 +32,12 @@ def test_no_toolbar_gap_between_prompt_and_command(toolbar_app) -> None:
     app.do_probe = lambda _: None
     try:
         pipe.send_text("probe\n")
-        line = app._read_command_line(app.prompt)
+        # Mirror _cmdloop: one display held open across both the prompt and the
+        # command, rather than started and stopped around each command.
         with app._command_toolbar_context():
-            app.onecmd_plus_hooks(line)
+            line = app._read_command_line(app.prompt)
+            with app._command_mode_context():
+                app.onecmd_plus_hooks(line)
     finally:
         ui.after_render.remove_handler(record)
 
