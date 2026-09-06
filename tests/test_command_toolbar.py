@@ -454,12 +454,19 @@ def test_command_toolbar_ui_call_reports_display_failure(toolbar_app, capsys) ->
         schedule = loop.call_soon_threadsafe
         failed = threading.Event()
 
-        def die(*_args, **_kwargs) -> None:
+        def die(*args, **kwargs):
             # The display dies instead of running the queued callback, so the future
-            # the command is waiting on never resolves.
-            if not failed.is_set():
+            # the command is waiting on never resolves. Only drop that one request,
+            # made here on the command thread. asyncio uses call_soon_threadsafe from
+            # its own threads, and on Windows the default executor's join is reported
+            # through it while asyncio.run() shuts the loop down. Swallowing that
+            # report strands the toolbar thread for 300 seconds, or forever before
+            # Python 3.12, where shutdown_default_executor() has no timeout.
+            if not failed.is_set() and threading.current_thread() is threading.main_thread():
                 failed.set()
                 schedule(lambda: toolbar.app.exit(exception=ValueError("broken display")))
+                return None
+            return schedule(*args, **kwargs)
 
         with (
             mock.patch.object(loop, "call_soon_threadsafe", side_effect=die),
