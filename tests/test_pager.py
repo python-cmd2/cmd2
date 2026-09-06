@@ -196,6 +196,13 @@ def test_pager_navigation_keys(toolbar_app, chop) -> None:
     lines[3] = ""  # A line with no columns for a scroll target to be clamped against.
 
     def script(keys) -> None:
+        keys.press("\x1b[B", row=1)  # Down arrow.
+        keys.press("\x1b[A", row=0)  # Up arrow.
+        page_rows = keys.pager.text.window.render_info.window_height - 1
+        keys.press("\x1b[6~", row=page_rows)  # Page Down.
+        keys.press("\x1b[5~", row=0)  # Page Up.
+        keys.press("\r", row=1)
+        keys.press("\x1b[A", row=0)
         keys.press("j", row=1)
         keys.press("j", row=2)
         keys.press("j", row=3)  # Land on the empty line.
