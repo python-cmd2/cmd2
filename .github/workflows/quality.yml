@@ -30,4 +30,4 @@ jobs:
       - name: Install the project
         run: uv sync --no-default-groups --group quality
       - name: Run prek
-        run: uv run prek run -a --show-diff-on-failure
+        run: uv run --no-default-groups --group quality prek run -a --show-diff-on-failure

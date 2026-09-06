@@ -64,7 +64,7 @@ test = [
     "pytest-cov>=5",
     "pytest-mock>=3.14.1",
 ]
-validate = ["mypy>=2.3.1", "ruff>=0.16.0", "ty>=0.0.75", "types-setuptools>=80.8.0"]
+validate = ["mypy>=2.3.1", "ty>=0.0.75", "types-setuptools>=80.8.0"]
 
 [tool.mypy]
 disallow_incomplete_defs = true

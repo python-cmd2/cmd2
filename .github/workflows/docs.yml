@@ -28,4 +28,4 @@ jobs:
       - name: Install the project
         run: uv sync --no-default-groups --group docs
       - name: Check if the Zensical documentation can be built
-        run: uv run zensical build -s
+        run: uv run --no-default-groups --group docs zensical build -s
