@@ -109,8 +109,9 @@ See the
 example for a demonstration of this technique. Run its `work 5` command to see the clock update
 while the command prints output.
 
-During command execution, `get_bottom_toolbar()` runs in a background UI thread. Keep the callback
-fast and use a lock when reading state that a command or another thread modifies.
+Inside the command loop, `get_bottom_toolbar()` runs in a background UI thread, at the prompt as
+well as during command execution, because a single prompt-toolkit application renders both. Keep the
+callback fast and use a lock when reading state that a command or another thread modifies.
 
 ### Commands That Take Over the Terminal
 

@@ -1,5 +1,10 @@
 ## 4.3.0 (TBD)
 
+- Bug Fixes
+    - Fixed an intermittent bottom toolbar flicker when running a command. The toolbar's
+      prompt-toolkit application now stays running across both the prompt and command execution
+      instead of stopping and restarting for each one, since prompt-toolkit drops the bottom toolbar
+      from the final frame of every application run.
 - Enhancements
     - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
       execution

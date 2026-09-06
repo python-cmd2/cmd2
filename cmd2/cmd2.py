@@ -2074,9 +2074,10 @@ class Cmd:
         your application. This could be information like the application name, current state,
         or even a real-time clock.
 
-        During command execution this callback runs in a background UI thread. Protect shared
-        state with a lock when necessary. The built-in pager shares this toolbar. It is suspended
-        while another prompt, external pager, or interactive shell owns the terminal.
+        Inside the command loop this callback runs in a background UI thread, at the prompt as
+        well as during command execution, because a single application renders both. Protect
+        shared state with a lock when necessary. The built-in pager shares this toolbar. It is
+        suspended while another prompt, external pager, or interactive shell owns the terminal.
 
         :return: Content to populate the bottom toolbar.
         """
