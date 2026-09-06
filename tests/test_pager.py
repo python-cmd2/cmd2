@@ -234,3 +234,88 @@ def test_pager_scrolling_before_first_render(chop) -> None:
     pager._scroll_horizontal(event, 1)
     assert pager.text.buffer.cursor_position == 0
     assert pager.text.window.horizontal_scroll == 0
+
+
+@pytest.mark.parametrize("chop", [False, True])
+def test_pager_half_page_scrolling(toolbar_app, chop) -> None:
+    """Half-page keys move half of what the full-page keys move, and never zero rows."""
+    app, pipe, _ = toolbar_app
+    lines = [f"row {index:03d}" for index in range(200)]
+
+    def script(keys) -> None:
+        page_rows = max(1, keys.pager.text.window.render_info.window_height - 1)
+        half_rows = max(1, int(page_rows * 0.5))
+        # A half page has to be a distinct, smaller step for this test to mean
+        # anything. The pager's own arithmetic is what decides the row it lands on.
+        assert 0 < half_rows < page_rows
+        keys.press("d", row=half_rows)
+        keys.press("d", row=2 * half_rows)
+        keys.press("u", row=half_rows)
+        keys.press("\x04", row=2 * half_rows)  # Ctrl-D.
+        keys.press("\x15", row=half_rows)  # Ctrl-U.
+        # Half-page steps stay half a page next to a full one taken from the same row.
+        keys.press("g", row=0)
+        keys.press("\x1b[6~", row=page_rows)  # Page Down.
+
+    drive_pager(app, pipe, "\n".join(lines), chop=chop, script=script)
+
+
+@pytest.mark.parametrize("key", ["\x1b", "\x03"], ids=["escape", "ctrl-c"])
+def test_pager_search_abort_keys(toolbar_app, key) -> None:
+    """Escape and Ctrl-C abort a search rather than closing the pager.
+
+    While the search field has focus the pager's own close bindings are filtered out,
+    so these keys have to reach prompt-toolkit's search bindings instead. Those are
+    registered explicitly so that they still work when the main prompt uses Vi mode.
+    """
+    app, pipe, _ = toolbar_app
+    lines = [f"row {index:03d}" for index in range(100)]
+
+    def script(keys) -> None:
+        keys.press("j", row=1)
+        # Typing a search previews it without moving the pager's own cursor.
+        keys.press("/row 05", row=1)
+        # Aborting restores the row the search started from instead of quitting.
+        keys.press(key, row=1)
+        # Focus is back on the pager, so ordinary navigation works again.
+        keys.press("j", row=2)
+
+    drive_pager(app, pipe, "\n".join(lines), chop=False, script=script)
+
+
+@pytest.mark.parametrize("key", ["\x1b", "\x03", "q"], ids=["escape", "ctrl-c", "q"])
+def test_pager_close_keys(toolbar_app, key) -> None:
+    """Each close key ends the pager without leaving the keystroke for the next prompt.
+
+    Escape is bound eagerly, and it is also the first byte of every arrow and page
+    key. Closing on a bare Escape must therefore not come at the cost of the escape
+    sequences that arrive with more bytes behind them.
+    """
+    app, pipe, _ = toolbar_app
+    entered = threading.Event()
+    closed = threading.Event()
+
+    def observe(ui) -> None:
+        if ui.full_screen:
+            entered.set()
+
+    def interact() -> None:
+        assert entered.wait(5), "pager never opened"
+        # Scroll first, so the pager is known to be reading keys before the close key.
+        pipe.send_text("j")
+        pipe.send_text(key)
+        if not closed.wait(5):
+            # Rescue the blocked main thread so this fails as an assertion, not a hang.
+            pipe.send_text("q")
+            raise AssertionError(f"{key!r} did not close the pager")
+
+    app.main_session.app.after_render += observe
+    with ThreadPoolExecutor() as executor:
+        interaction = executor.submit(interact)
+        try:
+            with app._command_toolbar_context():
+                app._command_toolbar.page("\n".join(f"row {index:03d}" for index in range(200)), chop=False)
+        finally:
+            closed.set()
+        interaction.result(timeout=10)
+    assert get_typeahead(pipe) == []
