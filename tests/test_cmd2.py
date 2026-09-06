@@ -13,6 +13,7 @@ from typing import (
 from unittest import mock
 
 import pytest
+from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import DummyCompleter
 from prompt_toolkit.input import DummyInput, create_pipe_input
@@ -4442,6 +4443,40 @@ def test_enable_rprompt() -> None:
     # Test False
     custom_app = cmd2.Cmd(enable_rprompt=False)
     assert custom_app.main_session.rprompt is None
+
+
+def test_rprompt_is_not_drawn_into_the_committed_line() -> None:
+    """The right prompt belongs to the live prompt line, not to the scrollback.
+
+    prompt-toolkit renders the right prompt as a Float with no ``~is_done`` filter,
+    unlike its bottom toolbar container, so by default it is part of the final frame
+    that gets committed to the terminal. That left a copy of the right prompt beside
+    every accepted command line in the scrollback.
+    """
+    drawn_while_done = []
+
+    class RPromptApp(cmd2.Cmd):
+        def get_rprompt(self):
+            drawn_while_done.append(get_app().is_done)
+            return [("", "RPROMPT")]
+
+    output = DummyOutput()
+    # Bind the ambient app session to this input and output. Without it, prompt-toolkit
+    # builds a real one on demand for calls such as patch_stdout() in _read_raw_input(),
+    # which needs a Windows console that CI does not provide.
+    with create_pipe_input() as pipe_input, create_app_session(input=pipe_input, output=output):
+        app = RPromptApp(allow_cli_args=False, enable_rprompt=True)
+        app.main_session = PromptSession(
+            input=pipe_input,
+            output=output,
+            rprompt=app.get_rprompt,
+        )
+        cmd2.cmd2.Cmd._hide_rprompt_when_done(app.main_session)
+        pipe_input.send_text("hello\n")
+        assert app._read_raw_input("(Cmd) ", app.main_session) == "hello"
+
+    assert drawn_while_done, "the right prompt was never rendered at all"
+    assert True not in drawn_while_done, "the right prompt was drawn into the committed final frame"
 
 
 def test_get_bottom_toolbar(base_app: cmd2.Cmd) -> None:
