@@ -18,7 +18,7 @@ from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.shortcuts import PromptSession
 
-from cmd2 import Cmd
+from cmd2 import Cmd, command_toolbar
 from cmd2.pager import Pager, output_fits
 
 
@@ -553,17 +553,57 @@ def test_command_toolbar_input_eof_is_not_reported(toolbar_app, capsys) -> None:
     assert app._command_toolbar is None
 
 
-def test_command_toolbar_render_failure(toolbar_app) -> None:
+def test_command_toolbar_startup_failure_still_runs_the_command(toolbar_app, capsys) -> None:
     app, _, output = toolbar_app
 
     def broken_toolbar():
         raise ValueError("broken toolbar")
 
     app.main_session.bottom_toolbar = broken_toolbar
-    with pytest.raises(ValueError, match="broken toolbar"), app._command_toolbar_context():
-        pytest.fail("Command should not run after a toolbar startup failure")  # pragma: no cover
+    ran = []
+    # The toolbar is cosmetic. A display that cannot start must not take the command
+    # with it, and must not escape cmdloop() and leave signal handlers installed.
+    with app._command_toolbar_context():
+        ran.append(True)
+        app.poutput("command output")
+
+    assert ran == [True]
+    assert "broken toolbar" in capsys.readouterr().err
+    assert "command output\n" in output.getvalue()
     assert app.stdout is output
     assert app._command_toolbar is None
+
+
+def test_command_toolbar_is_not_retried_after_a_startup_failure(toolbar_app, capsys) -> None:
+    app, _, _ = toolbar_app
+
+    def broken_toolbar():
+        raise ValueError("broken toolbar")
+
+    app.main_session.bottom_toolbar = broken_toolbar
+    with app._command_toolbar_context():
+        pass
+    assert "broken toolbar" in capsys.readouterr().err
+
+    # Without this, every later command repeats the same failure and the same message.
+    app.main_session.bottom_toolbar = "STATUS"
+    with mock.patch("cmd2.command_toolbar.CommandToolbar") as toolbar, app._command_toolbar_context():
+        toolbar.assert_not_called()
+    assert capsys.readouterr().err == ""
+
+
+def test_cmdloop_restores_signal_handlers_when_the_loop_fails(toolbar_app, monkeypatch) -> None:
+    import signal
+
+    app, _, _ = toolbar_app
+    original = signal.getsignal(signal.SIGINT)
+    monkeypatch.setattr(app, "_cmdloop", mock.Mock(side_effect=RuntimeError("loop failed")))
+
+    with pytest.raises(RuntimeError, match="loop failed"):
+        app.cmdloop()
+
+    # cmd2's handlers must not outlive the loop in the host process.
+    assert signal.getsignal(signal.SIGINT) is original
 
 
 @pytest.mark.parametrize("enabled", [False, True])
@@ -591,19 +631,21 @@ def test_cmdloop_runs_commands_with_toolbar(toolbar_app, monkeypatch) -> None:
 
 
 @pytest.mark.parametrize(
-    ("layout", "error", "message"),
+    ("layout", "message"),
     [
-        (Layout(Window()), TypeError, "Unsupported PromptSession layout"),
-        (Layout(HSplit([Window()])), RuntimeError, "Cannot locate PromptSession bottom toolbar"),
+        (Layout(Window()), "Unsupported PromptSession layout"),
+        (Layout(HSplit([Window()])), "Cannot locate PromptSession bottom toolbar"),
     ],
 )
-def test_command_toolbar_requires_the_prompt_toolbar(toolbar_app, layout, error, message) -> None:
+def test_command_toolbar_requires_the_prompt_toolbar(toolbar_app, capsys, layout, message) -> None:
     app, _, output = toolbar_app
     # The display reuses the prompt's own toolbar container. If a future prompt-toolkit
-    # release moves it, say so instead of rendering something wrong.
-    with mock.patch.object(app.main_session, "layout", layout), pytest.raises(error, match=message):
-        app._command_toolbar_context().__enter__()
+    # release moves it, say so and keep running without a toolbar.
+    with mock.patch.object(app.main_session, "layout", layout), app._command_toolbar_context():
+        app.poutput("command output")
+    assert message in capsys.readouterr().err
     assert app._command_toolbar is None
+    assert "command output\n" in output.getvalue()
     assert app.stdout is output
 
 
@@ -706,6 +748,22 @@ def test_builtin_pager_short_output_builds_no_pager(toolbar_app, monkeypatch) ->
         app.ppaged("short output")
         pager.assert_not_called()
     assert "short output\n" in output.getvalue()
+
+
+def test_builtin_pager_needs_an_already_running_toolbar(toolbar_app, monkeypatch) -> None:
+    app, _, _ = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    # Outside the command loop there is no toolbar to page inside. Starting one here
+    # would wrap the terminal streams and enter raw mode where the docs promise not to.
+    with (
+        mock.patch.object(command_toolbar.CommandToolbar, "start") as start,
+        mock.patch("subprocess.Popen") as external,
+    ):
+        app.ppaged("row\n" * 200)
+    start.assert_not_called()
+    external.assert_called_once()
 
 
 def test_external_pager_suspends_shared_application(toolbar_app, monkeypatch) -> None:
@@ -816,45 +874,57 @@ def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypat
 
 
 class PagerKeys:
-    """Send keys to the built-in pager and wait for each one to be handled."""
+    """Send keys to the built-in pager and wait for the frame that reflects them."""
 
     def __init__(self, app, pipe, pager) -> None:
         self.pipe = pipe
         self.pager = pager
+        self.presses = 0
         self.states = []
         self.updated = threading.Condition()
-        app.main_session.app.key_processor.after_key_press += self._record
+        ui = app.main_session.app
+        ui.key_processor.after_key_press += self._count
+        ui.after_render += self._record
+
+    def _count(self, _) -> None:
+        with self.updated:
+            self.presses += 1
 
     def _record(self, _) -> None:
-        # Read the pager's own buffer rather than the focused one, which is the
-        # search field while a search is being typed.
+        # Read the pager's own buffer, not the focused one, which is the search field
+        # while a search is being typed. Read it after rendering, because
+        # prompt-toolkit settles the window's scroll offsets while it draws.
         with self.updated:
-            self.states.append((self.pager.text.buffer.document.cursor_position_row, self.pager.text.window.horizontal_scroll))
+            self.states.append(
+                (
+                    self.presses,
+                    self.pager.text.buffer.document.cursor_position_row,
+                    self.pager.text.window.horizontal_scroll,
+                )
+            )
             self.updated.notify_all()
 
     def press(self, keys, row, column=0) -> None:
-        """Send keys and wait until a resulting position matches, so steps stay ordered."""
+        """Send keys and wait for a drawn frame that shows the expected position."""
         with self.updated:
-            index = len(self.states)
+            handled = self.presses
         self.pipe.send_text(keys)
         deadline = time.monotonic() + 5
+        index = 0
         with self.updated:
             while True:
                 while index < len(self.states):
-                    state = self.states[index]
+                    presses, *position = self.states[index]
                     index += 1
-                    if state == (row, column):
+                    if presses > handled and position == [row, column]:
                         return
                 remaining = deadline - time.monotonic()
                 notified = remaining > 0 and self.updated.wait(remaining)
-                assert notified, f"pager ignored {keys!r}: wanted {(row, column)}, saw {self.states}"
+                assert notified, f"pager ignored {keys!r}: wanted {(row, column)}, saw {self.states[-3:]}"
 
 
-@pytest.mark.parametrize("chop", [False, True])
-def test_pager_navigation_keys(toolbar_app, chop) -> None:
-    app, pipe, _ = toolbar_app
-    lines = [f"row {index:03d}" for index in range(100)]
-    lines[3] = ""  # A line with no columns for a scroll target to be clamped against.
+def drive_pager(app, pipe, text, *, chop, script) -> None:
+    """Page text and run script against its keys while the pager is displayed."""
     created = []
     entered = threading.Event()
 
@@ -870,22 +940,7 @@ def test_pager_navigation_keys(toolbar_app, chop) -> None:
     def interact():
         try:
             assert entered.wait(5)
-            keys = PagerKeys(app, pipe, created[0])
-            keys.press("j", row=1)
-            keys.press("j", row=2)
-            keys.press("j", row=3)  # Land on the empty line.
-            keys.press("k", row=2)  # Moving up off it re-enters the line above.
-            keys.press("G", row=99)
-            keys.press("g", row=0)
-            keys.press("/row 05\n", row=50)
-            keys.press("n", row=51)
-            keys.press("N", row=50)
-            keys.press("?row 01\n", row=19)
-            keys.press("x", row=19)  # Unbound keys are swallowed, not queued for the prompt.
-            # Horizontal scrolling applies only to chopped output, and stops at the
-            # end of a line shorter than the requested column.
-            keys.press("\x1b[C", row=19, column=len("row 019") if chop else 0)
-            keys.press("\x1b[D", row=19, column=0)
+            script(PagerKeys(app, pipe, created[0]))
         finally:
             pipe.send_text("q")
 
@@ -893,9 +948,49 @@ def test_pager_navigation_keys(toolbar_app, chop) -> None:
     with mock.patch("cmd2.command_toolbar.Pager", side_effect=make_pager), ThreadPoolExecutor() as executor:
         interaction = executor.submit(interact)
         with app._command_toolbar_context():
-            app._command_toolbar.page("\n".join(lines), chop=chop)
+            app._command_toolbar.page(text, chop=chop)
         interaction.result(timeout=10)
     assert get_typeahead(pipe) == []
+
+
+def test_pager_vertical_scrolling_keeps_horizontal_position(toolbar_app) -> None:
+    app, pipe, _ = toolbar_app
+    # Wide rows are what chopped output is for. Scrolling right to read a column and
+    # then moving down a row must not throw that column away.
+    text = "\n".join(f"row {index:03d} " + "col " * 40 for index in range(100))
+
+    def script(keys) -> None:
+        keys.press("\x1b[C", row=0, column=40)
+        keys.press("j", row=1, column=40)
+        keys.press("k", row=0, column=40)
+
+    drive_pager(app, pipe, text, chop=True, script=script)
+
+
+@pytest.mark.parametrize("chop", [False, True])
+def test_pager_navigation_keys(toolbar_app, chop) -> None:
+    app, pipe, _ = toolbar_app
+    lines = [f"row {index:03d}" for index in range(100)]
+    lines[3] = ""  # A line with no columns for a scroll target to be clamped against.
+
+    def script(keys) -> None:
+        keys.press("j", row=1)
+        keys.press("j", row=2)
+        keys.press("j", row=3)  # Land on the empty line.
+        keys.press("k", row=2)  # Moving up off it re-enters the line above.
+        keys.press("G", row=99)
+        keys.press("g", row=0)
+        keys.press("/row 05\n", row=50)
+        keys.press("n", row=51)
+        keys.press("N", row=50)
+        keys.press("?row 01\n", row=19)
+        keys.press("x", row=19)  # Unbound keys are swallowed, not queued for the prompt.
+        # Horizontal scrolling applies only to chopped output, and stops at the
+        # end of a line shorter than the requested column.
+        keys.press("\x1b[C", row=19, column=len("row 019") if chop else 0)
+        keys.press("\x1b[D", row=19, column=0)
+
+    drive_pager(app, pipe, "\n".join(lines), chop=chop, script=script)
 
 
 @pytest.mark.parametrize("chop", [False, True])

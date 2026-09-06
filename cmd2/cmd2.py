@@ -560,6 +560,8 @@ class Cmd:
         # to ensure they modify the correct session state.
         self.active_session = self.main_session
         self._command_toolbar: command_toolbar.CommandToolbar | None = None
+        # Set once a toolbar fails to start, so the failure is reported only once
+        self._command_toolbar_disabled = False
 
         # Commands to exclude from the history command
         self.exclude_from_history = ["_eof", "history"]
@@ -1896,9 +1898,10 @@ class Cmd:
         fits on the screen. A pager is not used inside a script (Python or text) or when output is
         redirected or piped, and in these cases, output is sent to `poutput`.
 
-        With the bottom toolbar enabled, the built-in pager keeps it visible and refreshing.
+        While the bottom toolbar is running, the built-in pager keeps it visible and refreshing.
         Set ``use_builtin_pager=False`` to use the configured external ``pager`` or ``pager_chop``
-        command instead; external pagers temporarily hide the toolbar.
+        command instead; external pagers temporarily hide the toolbar. Where no toolbar is
+        running, such as outside the command loop, the external pager is used regardless.
 
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
@@ -1950,11 +1953,12 @@ class Cmd:
                 )
             output = capture.get()
 
-            if self.use_builtin_pager:
-                with self._command_toolbar_context():
-                    if self._command_toolbar is not None and self._command_toolbar.is_active:
-                        self._command_toolbar.page(output, chop=chop)
-                        return
+            # Page inside the toolbar's display only when the command loop is already
+            # running one. Starting one here would seize the terminal for commands run
+            # outside that loop, which the toolbar is documented not to do.
+            if self.use_builtin_pager and self._command_toolbar is not None and self._command_toolbar.is_active:
+                self._command_toolbar.page(output, chop=chop)
+                return
 
             output_bytes = output.encode("utf-8", "replace")
 
@@ -2097,17 +2101,28 @@ class Cmd:
         """Display the toolbar around commands launched by the interactive command loop."""
         if (
             self._command_toolbar is not None
+            or self._command_toolbar_disabled
             or self.main_session.bottom_toolbar is None
             or not self._is_tty_session(self.main_session)
         ):
             yield
             return
 
-        toolbar = command_toolbar.CommandToolbar(self)
         try:
             with self.sigint_protection:
+                toolbar = command_toolbar.CommandToolbar(self)
                 toolbar.start()
                 self._command_toolbar = toolbar
+        except Exception as exc:  # noqa: BLE001
+            # The toolbar is cosmetic, so a display that cannot start must not take
+            # the command down, nor escape cmdloop() and leave its signal handlers
+            # installed. Report it once and run without it for the rest of the session.
+            self._command_toolbar_disabled = True
+            self.perror(f"Disabling the bottom toolbar during commands: {exc!r}")
+            yield
+            return
+
+        try:
             yield
         finally:
             with self.sigint_protection:
@@ -5988,19 +6003,21 @@ class Cmd:
             self.poutput(self.intro)
 
         # And then call _cmdloop() to enter the main loop
-        self._cmdloop()
+        try:
+            self._cmdloop()
+        finally:
+            # Restore original signal handlers however the loop ended. Leaving cmd2's
+            # handlers installed would outlive the application in its host process.
+            signal.signal(signal.SIGINT, original_sigint_handler)
+
+            if not sys.platform.startswith("win"):
+                signal.signal(signal.SIGHUP, original_sighup_handler)
+                signal.signal(signal.SIGTERM, original_sigterm_handler)
 
         # Run the postloop() no matter what
         for func in self._postloop_hooks:
             func()
         self.postloop()
-
-        # Restore original signal handlers
-        signal.signal(signal.SIGINT, original_sigint_handler)
-
-        if not sys.platform.startswith("win"):
-            signal.signal(signal.SIGHUP, original_sighup_handler)
-            signal.signal(signal.SIGTERM, original_sigterm_handler)
 
         return self.exit_code
 

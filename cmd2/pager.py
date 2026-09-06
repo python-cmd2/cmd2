@@ -203,7 +203,11 @@ class Pager:
             target -= height(line)
             line += 1
         target = max(0, min(target, height(line) - 1))
-        column = self._column_at_width(document.lines[line], target * info.window_width)
+        # Chopped lines never wrap, so leave the cursor at the column the reader
+        # scrolled to. Moving it to the start of the line would drag the view back
+        # with it, since the window scrolls horizontally to keep the cursor visible.
+        width = self.text.window.horizontal_scroll if self.chop else target * info.window_width
+        column = self._column_at_width(document.lines[line], width)
         event.current_buffer.cursor_position = document.translate_row_col_to_index(line, column)
         self.text.window.vertical_scroll = line
         self.text.window.vertical_scroll_2 = target if height(line) > info.window_height else 0

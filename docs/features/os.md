@@ -44,10 +44,12 @@ system.
 
 Output of any command can be displayed one page at a time using the [cmd2.Cmd.ppaged][] method.
 
-When the bottom toolbar is enabled, `ppaged()` uses an embedded pager so the toolbar remains visible
-and continues refreshing. It supports scrolling, search, and chopped lines. Set
+While the bottom toolbar is running, `ppaged()` uses an embedded pager so the toolbar remains
+visible and continues refreshing. It supports scrolling, search, and chopped lines. Set
 `self.use_builtin_pager = False` to use the configured external `pager`/`pager_chop` commands
-instead. See [Bottom Toolbar](./prompt.md#bottom-toolbar) for controls and details.
+instead. Anywhere the toolbar is not running, such as a command invoked outside the command loop,
+`ppaged()` uses the external pager regardless of this setting. See
+[Bottom Toolbar](./prompt.md#bottom-toolbar) for controls and details.
 
 Alternatively, a terminal pager can be invoked directly using the ability to run shell commands with
 the `!` shortcut like so:
