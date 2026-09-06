@@ -3776,6 +3776,7 @@ class Cmd:
 
         temp_session: PromptSession[str] = PromptSession(
             auto_suggest=self.main_session.auto_suggest,
+            bottom_toolbar=self.get_bottom_toolbar if self.main_session.bottom_toolbar is not None else None,
             color_depth=self.main_session.color_depth,
             complete_style=self.main_session.complete_style,
             complete_in_thread=self.main_session.complete_in_thread,
@@ -3786,6 +3787,7 @@ class Cmd:
             key_bindings=self.main_session.key_bindings,
             input=self.main_session.input,
             output=self.main_session.output,
+            refresh_interval=self.main_session.refresh_interval,
             style=self.main_session.style,
         )
 
@@ -3803,10 +3805,12 @@ class Cmd:
         :raises Exception: any other exceptions raised by prompt()
         """
         temp_session: PromptSession[str] = PromptSession(
+            bottom_toolbar=self.get_bottom_toolbar if self.main_session.bottom_toolbar is not None else None,
             color_depth=self.main_session.color_depth,
             enable_suspend=self.main_session.enable_suspend,
             input=self.main_session.input,
             output=self.main_session.output,
+            refresh_interval=self.main_session.refresh_interval,
             style=self.main_session.style,
         )
 

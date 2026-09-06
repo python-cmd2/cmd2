@@ -120,10 +120,15 @@ directly above the toolbar, and longer output becomes a scrollable, searchable v
 `self.use_builtin_pager = False` to opt out and use your configured external `pager`/`pager_chop`
 commands. See [Embedded pager](./os.md#embedded-pager) for the key bindings and full details.
 
-cmd2 temporarily hides the toolbar for its input prompts, external pagers, Python environments, and
-shell commands. It also hides it while a command's output is piped to another process, since that
-process may be interactive, as `less` and `fzf` are. It restores the toolbar when those operations
-finish.
+cmd2 temporarily hides the toolbar for external pagers, Python environments, and shell commands. It
+also hides it while a command's output is piped to another process, since that process may be
+interactive, as `less` and `fzf` are. It restores the toolbar when those operations finish.
+
+[cmd2.Cmd.read_input][] and [cmd2.Cmd.read_secret][] keep the toolbar visible, and it continues to
+refresh at the same `refresh_interval` as the main prompt, so a clock or status display does not go
+stale while your command waits for input. [cmd2.Cmd.select][] does not yet show one, because
+prompt-toolkit's `choice()` has no way to configure a refresh interval and its toolbar would go
+stale while the selection sits idle.
 
 For custom terminal UIs, calls to `input()`, or subprocesses your own command code starts, use
 [cmd2.Cmd.suspend_bottom_toolbar][]:
