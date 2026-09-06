@@ -13,7 +13,7 @@ from typing import (
 from unittest import mock
 
 import pytest
-from prompt_toolkit.application import get_app
+from prompt_toolkit.application import create_app_session, get_app
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.completion import DummyCompleter
 from prompt_toolkit.input import DummyInput, create_pipe_input
@@ -4460,11 +4460,15 @@ def test_rprompt_is_not_drawn_into_the_committed_line() -> None:
             drawn_while_done.append(get_app().is_done)
             return [("", "RPROMPT")]
 
-    app = RPromptApp(allow_cli_args=False, enable_rprompt=True)
-    with create_pipe_input() as pipe_input:
+    output = DummyOutput()
+    # Bind the ambient app session to this input and output. Without it, prompt-toolkit
+    # builds a real one on demand for calls such as patch_stdout() in _read_raw_input(),
+    # which needs a Windows console that CI does not provide.
+    with create_pipe_input() as pipe_input, create_app_session(input=pipe_input, output=output):
+        app = RPromptApp(allow_cli_args=False, enable_rprompt=True)
         app.main_session = PromptSession(
             input=pipe_input,
-            output=DummyOutput(),
+            output=output,
             rprompt=app.get_rprompt,
         )
         cmd2.cmd2.Cmd._hide_rprompt_when_done(app.main_session)
