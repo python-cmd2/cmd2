@@ -820,3 +820,25 @@ def test_read_line_keeps_the_application_running(toolbar_app) -> None:
         pipe.send_text("hello\n")
         assert toolbar.read_line(ANSI("> ")) == "hello"
         assert toolbar.is_active, "the application stopped when the line was accepted"
+
+
+def test_read_line_ctrl_c_raises_without_stopping_the_app(toolbar_app) -> None:
+    """Ctrl-C aborts the line but leaves the toolbar's application running."""
+    app, pipe, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        pipe.send_text("partial\x03")
+        with pytest.raises(KeyboardInterrupt):
+            toolbar.read_line(ANSI("> "))
+        assert toolbar.is_active
+
+
+def test_read_line_ctrl_d_raises_without_stopping_the_app(toolbar_app) -> None:
+    """Ctrl-D on an empty line signals EOF but leaves the application running."""
+    app, pipe, _ = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        pipe.send_text("\x04")
+        with pytest.raises(EOFError):
+            toolbar.read_line(ANSI("> "))
+        assert toolbar.is_active

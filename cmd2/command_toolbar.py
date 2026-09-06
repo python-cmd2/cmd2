@@ -17,7 +17,7 @@ from prompt_toolkit.application import Application, create_app_session
 from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.filters import Condition, to_filter
 from prompt_toolkit.input.typeahead import get_typeahead, store_typeahead
-from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.layout.containers import ConditionalContainer
@@ -209,9 +209,24 @@ class CommandToolbar:
         # auto-suggestions, and the rprompt all keep working. Only the accept path
         # changes: it hands the line to the command thread instead of ending the run.
         self._prompt_layout = session.layout
-        # Captured before _resume() swaps in the command display's bindings, so this
-        # is the PromptSession's own set: completion, history, and cmd2's bindings.
-        self._prompt_bindings = session.app.key_bindings
+
+        prompt_bindings = KeyBindings()
+
+        @prompt_bindings.add("c-c")
+        def prompt_interrupt(event: KeyPressEvent) -> None:  # noqa: ARG001
+            # PromptSession aborts by calling app.exit(), which would end the run that
+            # draws the toolbar. Fail the pending read instead and keep rendering.
+            self._fail_line(KeyboardInterrupt())
+
+        @prompt_bindings.add("c-d", filter=Condition(lambda: not self.app.current_buffer.text))
+        def prompt_eof(event: KeyPressEvent) -> None:  # noqa: ARG001
+            self._fail_line(EOFError())
+
+        # session.app.key_bindings is captured before _resume() swaps in the command
+        # display's set, so it is the PromptSession's own: completion, history, and
+        # cmd2's bindings. Merging the overrides last lets them win, because
+        # KeyProcessor calls matches[-1].
+        self._prompt_bindings = merge_key_bindings([session.app.key_bindings, prompt_bindings])
         self._line: Future[str] | None = None
         # Only swapped in for the duration of read_line(). session.prompt() still runs
         # nested prompts and the no-toolbar fallback, and those rely on the stock
