@@ -26,7 +26,9 @@ def test_pager_styles_and_wrapping(chop) -> None:
 @pytest.mark.parametrize("chop", [False, True])
 @pytest.mark.parametrize("terminator", ["\x1b\\", "\x07"], ids=["ST", "BEL"])
 def test_pager_rich_hyperlinks(chop, terminator) -> None:
-    console = Console(force_terminal=True, color_system="standard", no_color=False)
+    # legacy_windows=False keeps rich from suppressing OSC 8 hyperlinks when the
+    # tests run against a legacy Windows console.
+    console = Console(force_terminal=True, color_system="standard", no_color=False, legacy_windows=False)
     with console.capture() as capture:
         console.print("[link=https://example.com][red]click here[/red][/link] after")
     captured = capture.get()
