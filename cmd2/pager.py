@@ -1,5 +1,6 @@
 """A pager view hosted by the main prompt-toolkit application."""
 
+import re
 import threading
 from collections.abc import Callable
 from functools import partial
@@ -20,9 +21,14 @@ from prompt_toolkit.search import SearchDirection, start_search
 from prompt_toolkit.utils import get_cwidth
 from prompt_toolkit.widgets import SearchToolbar, TextArea
 
+_OSC_RE = re.compile(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)")
+
 
 def _fragments(text: str) -> StyleAndTextTuples:
     """Parse captured output, dropping the trailing newline that ends its last line."""
+    # prompt-toolkit's ANSI parser does not handle OSC sequences, including Rich
+    # hyperlinks. Remove their metadata while retaining visible text and SGR styles.
+    text = _OSC_RE.sub("", text)
     return to_formatted_text(ANSI(text.removesuffix("\n")))
 
 

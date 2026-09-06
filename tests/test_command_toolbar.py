@@ -17,6 +17,7 @@ from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.shortcuts import PromptSession
+from rich.console import Console
 
 from cmd2 import Cmd, command_toolbar
 from cmd2.pager import Pager, output_fits
@@ -806,6 +807,24 @@ def test_pager_styles_and_wrapping(chop) -> None:
     assert pager.text.read_only
     lexer = pager.text.lexer.lex_document(pager.text.document)
     assert "ansired" in lexer(0)[0][0]
+
+
+@pytest.mark.parametrize("chop", [False, True])
+@pytest.mark.parametrize("terminator", ["\x1b\\", "\x07"], ids=["ST", "BEL"])
+def test_pager_rich_hyperlinks(chop, terminator) -> None:
+    console = Console(force_terminal=True, color_system="standard", no_color=False)
+    with console.capture() as capture:
+        console.print("[link=https://example.com][red]click here[/red][/link] after")
+    captured = capture.get()
+    assert "\x1b]8;" in captured
+    captured = captured.replace("\x1b\\", terminator)
+
+    pager = Pager(captured, chop=chop)
+    assert pager.text.text == "click here after"
+    lexer = pager.text.lexer.lex_document(pager.text.document)
+    assert "ansired" in lexer(0)[0][0]
+    assert output_fits(captured, len("click here after"), 1, chop=chop)
+    assert not output_fits(captured, len("click here after") - 1, 1, chop=chop)
 
 
 @pytest.mark.parametrize("chop", [False, True])
