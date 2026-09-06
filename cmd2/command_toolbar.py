@@ -24,7 +24,7 @@ from prompt_toolkit.layout.containers import ConditionalContainer
 from prompt_toolkit.patch_stdout import StdoutProxy
 from prompt_toolkit.utils import suspend_to_background_supported
 
-from .pager import Pager
+from .pager import Pager, output_fits
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
@@ -389,20 +389,20 @@ class CommandToolbar:
 
     def page(self, text: str, *, chop: bool) -> None:
         """Show a pager above the same toolbar without starting another input reader."""
+        size = self.app.output.get_size()
+        # Measuring the toolbar can invoke its callback; keep that work on the
+        # UI thread along with rendering and layout changes.
+        toolbar_height = self._call_in_ui(lambda: self.toolbar.preferred_height(size.columns, size.rows).preferred)
+        if output_fits(text, size.columns, max(0, size.rows - toolbar_height), chop=chop):
+            self.cmd.stdout.write(text)
+            self.cmd.stdout.flush()
+            return
+
         pager = Pager(text, chop=chop)
         pager.bindings.add(
             "c-z",
             filter=Condition(lambda: suspend_to_background_supported() and to_filter(self.cmd.main_session.enable_suspend)()),
         )(self._suspend_binding)
-        size = self.app.output.get_size()
-        # Measuring the toolbar can invoke its callback; keep that work on the
-        # UI thread along with rendering and layout changes.
-        toolbar_height = self._call_in_ui(lambda: self.toolbar.preferred_height(size.columns, size.rows).preferred)
-        if pager.fits(size.columns, max(0, size.rows - toolbar_height)):
-            self.cmd.stdout.write(text)
-            self.cmd.stdout.flush()
-            return
-
         layout = Layout(HSplit([pager.container, self.toolbar]), focused_element=pager.text)
         previous = (self.app.layout, self.app.key_bindings, self.app.editing_mode, self.app.full_screen)
         entered = False

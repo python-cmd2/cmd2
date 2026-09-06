@@ -21,6 +21,33 @@ from prompt_toolkit.utils import get_cwidth
 from prompt_toolkit.widgets import SearchToolbar, TextArea
 
 
+def _fragments(text: str) -> StyleAndTextTuples:
+    """Parse captured output, dropping the trailing newline that ends its last line."""
+    return to_formatted_text(ANSI(text.removesuffix("\n")))
+
+
+def output_fits(text: str, columns: int, rows: int, *, chop: bool) -> bool:
+    """Check rendered line heights, including wrapping and wide Unicode characters.
+
+    Measuring the text itself keeps output that needs no scrolling from paying for a
+    Pager's widgets and key bindings, which would only be built to be thrown away.
+    """
+    lines = fragment_list_to_text(_fragments(text)).split("\n")
+    if chop:
+        # Even one wide line needs a pager so its hidden columns remain
+        # accessible through horizontal scrolling.
+        return len(lines) <= rows and all(get_cwidth(line) <= columns for line in lines)
+    # Reuse prompt-toolkit's own wrapping arithmetic so this matches what a Pager
+    # would render, without building a control to ask on the UI thread.
+    content = UIContent(get_line=lambda number: [("", lines[number])], line_count=len(lines))
+    height = 0
+    for line in range(content.line_count):
+        height += content.get_height_for_line(line, columns, None)
+        if height > rows:
+            return False
+    return True
+
+
 class _AnsiLexer(Lexer):
     """Preserve captured Rich styles while searching and scrolling plain text."""
 
@@ -42,7 +69,7 @@ class Pager:
         self.closed = threading.Event()
         self.on_close: Callable[[], None] = self.closed.set
         self.chop = chop
-        fragments = to_formatted_text(ANSI(text.removesuffix("\n")))
+        fragments = _fragments(text)
         self.search = SearchToolbar()
         self.text = TextArea(
             text=fragment_list_to_text(fragments),
@@ -190,20 +217,3 @@ class Pager:
         column = self._column_at_width(document.current_line, target)
         event.current_buffer.cursor_position = document.translate_row_col_to_index(document.cursor_position_row, column)
         self.text.window.horizontal_scroll = get_cwidth(document.current_line[:column])
-
-    def fits(self, columns: int, rows: int) -> bool:
-        """Check rendered line heights, including wrapping and wide Unicode characters."""
-        # Measuring must not ask BufferControl to create content: that starts
-        # history-loading tasks and is only safe on the application's event loop.
-        lines = self.text.document.lines
-        if self.chop:
-            # Even one wide line needs a pager so its hidden columns remain
-            # accessible through horizontal scrolling.
-            return len(lines) <= rows and all(get_cwidth(line) <= columns for line in lines)
-        content = UIContent(get_line=lambda number: [("", lines[number])], line_count=len(lines))
-        height = 0
-        for line in range(content.line_count):
-            height += content.get_height_for_line(line, columns, None)
-            if height > rows:
-                return False
-        return True

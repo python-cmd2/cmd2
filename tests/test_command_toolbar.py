@@ -19,7 +19,7 @@ from prompt_toolkit.output import DummyOutput
 from prompt_toolkit.shortcuts import PromptSession
 
 from cmd2 import Cmd
-from cmd2.pager import Pager
+from cmd2.pager import Pager, output_fits
 
 
 class Terminal(io.StringIO):
@@ -696,6 +696,18 @@ def test_builtin_pager_short_output(toolbar_app, monkeypatch) -> None:
     assert "short output\n" in output.getvalue()
 
 
+def test_builtin_pager_short_output_builds_no_pager(toolbar_app, monkeypatch) -> None:
+    app, _, output = toolbar_app
+    app.use_builtin_pager = True
+    monkeypatch.setattr(app, "stdin", Terminal())
+    monkeypatch.setenv("TERM", "xterm")
+    # Output that fits is written directly, so none of the pager's widgets are needed.
+    with mock.patch("cmd2.command_toolbar.Pager") as pager, app._command_toolbar_context():
+        app.ppaged("short output")
+        pager.assert_not_called()
+    assert "short output\n" in output.getvalue()
+
+
 def test_external_pager_suspends_shared_application(toolbar_app, monkeypatch) -> None:
     app, _, _ = toolbar_app
     app.use_builtin_pager = False
@@ -736,9 +748,17 @@ def test_pager_styles_and_wrapping(chop) -> None:
     assert pager.text.read_only
     lexer = pager.text.lexer.lex_document(pager.text.document)
     assert "ansired" in lexer(0)[0][0]
-    assert not pager.fits(20, 1)
-    assert pager.fits(20, 5) is (not chop)
-    assert pager.fits(100, 1)
+
+
+@pytest.mark.parametrize("chop", [False, True])
+def test_output_fits_measures_styled_and_wide_text(chop) -> None:
+    # Forty double-width characters occupy eighty columns, and styling them adds
+    # escape sequences that must not count towards the measurement.
+    text = "\x1b[31m" + "界" * 40 + "\x1b[0m\n"
+    assert not output_fits(text, 20, 1, chop=chop)
+    # Wrapping the line onto four rows fits; chopping keeps it one wide row that does not.
+    assert output_fits(text, 20, 5, chop=chop) is (not chop)
+    assert output_fits(text, 100, 1, chop=chop)
 
 
 @pytest.mark.parametrize("chop", [False, True])
