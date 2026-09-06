@@ -33,7 +33,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: uv sync --no-default-groups --group test
 
       - name: Run tests
         run: uv run python -Xutf8 -m pytest --cov --cov-config=pyproject.toml --cov-report=xml tests

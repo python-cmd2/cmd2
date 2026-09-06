@@ -119,4 +119,5 @@ embedded Python/IPython shells and `run_pyscript` while keeping isolation.
 ## Commit conventions
 
 Never add "Co-Authored-By" lines to commits. Do not include Claude attribution in commit messages,
-PR descriptions, or any git metadata.
+PR descriptions, or any git metadata. Do not include Claude session URL in commit messages, PR
+descriptions, or any git metadata.
