@@ -36,3 +36,15 @@ jobs:
 
       - name: Check typing using mypy
         run: uv run --no-default-groups --group validate mypy .
+
+  # Single stable status check for the whole type-check matrix, so branch
+  # protection doesn't need updating every time the Python matrix changes.
+  all-type-checks-passed:
+    name: All Type Checks Passed
+    if: always()
+    needs: [type-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any matrix job did not succeed
+        if: needs['type-check'].result != 'success'
+        run: exit 1
