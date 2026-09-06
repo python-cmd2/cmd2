@@ -57,3 +57,15 @@ jobs:
           name: codecov-umbrella
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
+
+  # Single stable status check for the whole test matrix, so branch protection
+  # doesn't need updating every time the OS/Python matrix changes.
+  all-tests-passed:
+    name: All Tests Passed
+    if: always()
+    needs: [tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any matrix job did not succeed
+        if: needs.tests.result != 'success'
+        run: exit 1
