@@ -1,5 +1,6 @@
 """Cmd2 unit/functional testing"""
 
+import io
 import sys
 from collections.abc import Callable
 from contextlib import redirect_stderr
@@ -12,6 +13,11 @@ from typing import (
 )
 
 import pytest
+from prompt_toolkit.application import create_app_session
+from prompt_toolkit.data_structures import Size
+from prompt_toolkit.input import create_pipe_input
+from prompt_toolkit.output import DummyOutput
+from prompt_toolkit.shortcuts import PromptSession
 
 import cmd2
 from cmd2 import rich_utils as ru
@@ -192,3 +198,47 @@ def autoload_command_sets_app():
 @pytest.fixture
 def manual_command_sets_app():
     return WithCommandSets(auto_load_commands=False)
+
+
+class Terminal(io.StringIO):
+    """An in-memory stream that claims to be a terminal."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+class RecordingOutput(DummyOutput):
+    """A prompt-toolkit output that records everything written to a Terminal."""
+
+    def __init__(self, stream: Terminal) -> None:
+        self.stdout = stream
+        self.size = Size(rows=24, columns=80)
+
+    def get_size(self) -> Size:
+        return self.size
+
+    def write(self, data: str) -> None:
+        self.stdout.write(data)
+
+    def write_raw(self, data: str) -> None:
+        self.stdout.write(data)
+
+
+@pytest.fixture
+def toolbar_app():
+    app = cmd2.Cmd(allow_cli_args=False)
+    output = Terminal()
+    app.stdout = output
+    with create_pipe_input() as pipe:
+        terminal = RecordingOutput(output)
+        # Bind the ambient app session to this terminal. Without it, prompt-toolkit
+        # builds a real one on demand for calls such as patch_stdout() in
+        # _read_raw_input(), which needs a console that Windows CI does not provide.
+        with create_app_session(input=pipe, output=terminal):
+            app.main_session = PromptSession(
+                input=pipe,
+                output=terminal,
+                bottom_toolbar="STATUS",
+                refresh_interval=0.01,
+            )
+            yield app, pipe, output
