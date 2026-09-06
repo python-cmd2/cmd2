@@ -842,3 +842,17 @@ def test_read_line_ctrl_d_raises_without_stopping_the_app(toolbar_app) -> None:
         with pytest.raises(EOFError):
             toolbar.read_line(ANSI("> "))
         assert toolbar.is_active
+
+
+def test_read_line_echoes_the_accepted_line(toolbar_app) -> None:
+    """The accepted line is committed to the terminal exactly once.
+
+    prompt-toolkit's is_done frame used to do this. A continuous application never
+    renders one, so read_line() has to write the line above the toolbar itself.
+    """
+    app, pipe, output = toolbar_app
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        pipe.send_text("hello\n")
+        assert toolbar.read_line(ANSI("myapp> ")) == "hello"
+    assert output.getvalue().count("myapp> hello") == 1

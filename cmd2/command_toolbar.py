@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, TextIO, TypeVar, cast
 from prompt_toolkit.application import Application, create_app_session
 from prompt_toolkit.enums import EditingMode
 from prompt_toolkit.filters import Condition, to_filter
+from prompt_toolkit.formatted_text import ANSI
 from prompt_toolkit.input.typeahead import get_typeahead, store_typeahead
 from prompt_toolkit.key_binding import KeyBindings, merge_key_bindings
 from prompt_toolkit.key_binding.key_processor import KeyPress, KeyPressEvent
@@ -28,7 +29,6 @@ from .pager import Pager, output_fits
 
 if TYPE_CHECKING:
     from prompt_toolkit.buffer import Buffer
-    from prompt_toolkit.formatted_text import ANSI
 
     from .cmd2 import Cmd
 
@@ -425,7 +425,10 @@ class CommandToolbar:
         """Hand an accepted line to the waiting command thread without ending the run."""
         if self._line is not None and not self._line.done():
             self._line.set_result(buff.document.text)
-        return True  # Keep the text; read_line() resets the buffer itself.
+        # Discard the text so the live prompt region stops showing the accepted line.
+        # _echo_accepted() is what commits it, and leaving it here too would draw it
+        # twice. validate_and_handle() still records history before resetting.
+        return False
 
     def _fail_line(self, error: BaseException) -> None:
         """Abort the pending read_line() with Ctrl-C's or Ctrl-D's exception."""
@@ -471,10 +474,27 @@ class CommandToolbar:
                         raise
                     self._check_running()
                 else:
+                    self._echo_accepted(message, text)
                     return text
         finally:
             self._line = None
             session.default_buffer.accept_handler = self._session_accept
+
+    @staticmethod
+    def _resolve_message(message: "PromptMessage") -> str:
+        """Render the prompt to text for the scrollback echo."""
+        resolved = message() if callable(message) else message
+        return resolved.value if isinstance(resolved, ANSI) else resolved
+
+    def _echo_accepted(self, message: "PromptMessage", text: str) -> None:
+        """Commit the accepted line above the toolbar.
+
+        prompt-toolkit normally leaves the prompt line in the scrollback when its run
+        ends. Prompt mode never ends a run, so write the line through the same stdout
+        proxy that keeps command output above the toolbar.
+        """
+        self.cmd.stdout.write(f"{self._resolve_message(message)}{text}\n")
+        self.cmd.stdout.flush()
 
     def page(self, text: str, *, chop: bool) -> None:
         """Show a pager above the same toolbar without starting another input reader."""
