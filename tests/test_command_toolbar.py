@@ -795,11 +795,15 @@ def test_prompt_ctrl_d_raises_eof(toolbar_app) -> None:
 
 
 def test_accepted_line_appears_once_in_output(toolbar_app) -> None:
-    """The accepted command line is committed to the terminal exactly once.
+    """The accepted command line reaches the terminal on the no-toolbar fallback path.
 
-    Nothing in cmd2 prints it today: prompt-toolkit's final `is_done` frame is what
-    leaves it in the scrollback. A continuous application never renders that frame,
-    so this pins the behaviour that replacement code has to reproduce.
+    Reading outside a running display falls through to session.prompt(), where
+    prompt-toolkit's final `is_done` frame is what leaves the line in the scrollback.
+    Only its presence is asserted: how many times the string appears in the rendered
+    byte stream depends on screen diffing and on how many frames were drawn while the
+    text arrived, so an exact count is a property of the renderer, not of cmd2.
+    read_line()'s own echo is pinned exactly by
+    test_read_line_echoes_the_accepted_line.
     """
     app, pipe, output = toolbar_app
     app.do_probe = lambda _: None
@@ -807,9 +811,7 @@ def test_accepted_line_appears_once_in_output(toolbar_app) -> None:
     line = app._read_command_line(app.prompt)
     with app._command_toolbar_context():
         app.onecmd_plus_hooks(line)
-    # An exact count catches both ways this can break: the line vanishing when no
-    # is_done frame commits it, and it being echoed twice by a replacement for one.
-    assert output.getvalue().count(f"{app.prompt}probe") == 1
+    assert f"{app.prompt}probe" in output.getvalue()
 
 
 def test_read_line_keeps_the_application_running(toolbar_app) -> None:
@@ -850,12 +852,30 @@ def test_read_line_echoes_the_accepted_line(toolbar_app) -> None:
     prompt-toolkit's is_done frame used to do this. A continuous application never
     renders one, so read_line() has to write the line above the toolbar itself.
     """
-    app, pipe, output = toolbar_app
+    app, pipe, _ = toolbar_app
+    written: list[str] = []
     with app._command_toolbar_context():
         toolbar = app._command_toolbar
+        stream_write = app.stdout.write
+
+        def spy(data: str) -> int:
+            written.append(data)
+            return stream_write(data)
+
+        app.stdout.write = spy
         pipe.send_text("hello\n")
         assert toolbar.read_line(ANSI("myapp> ")) == "hello"
-    assert output.getvalue().count("myapp> hello") == 1
+
+        # The input area must not still be displaying the line that was just
+        # committed, or the reader sees it twice: once live and once in the
+        # scrollback. This is what accepting with keep_text=False buys.
+        assert app.main_session.default_buffer.text == ""
+
+    # Count what cmd2 writes rather than what reaches the terminal. The rendered
+    # byte stream also contains the prompt line from the live input area, and
+    # whether it lands there as one contiguous string depends on prompt-toolkit's
+    # screen diffing and on how many frames it drew while the text arrived.
+    assert "".join(written).count("myapp> hello") == 1
 
 
 def test_typeahead_during_a_command_reaches_the_next_prompt(toolbar_app) -> None:
