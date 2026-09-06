@@ -1,5 +1,10 @@
 ## 4.3.0 (TBD)
 
+- Bug Fixes
+    - Fixed the right prompt being redrawn beside every accepted command line in the scrollback.
+      prompt-toolkit includes it in the final frame of each prompt, which is the frame left on the
+      terminal; it is now hidden there, as the bottom toolbar already was, and stays on the live
+      prompt line only
 - Enhancements
     - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
       execution
