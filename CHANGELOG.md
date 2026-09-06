@@ -8,6 +8,10 @@
 - Enhancements
     - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
       execution
+    - `Cmd.read_input()` and `Cmd.read_secret()` now keep the bottom toolbar visible while they wait
+      for input, refreshing at the same `refresh_interval` as the main prompt, instead of the
+      toolbar disappearing for the duration of the nested prompt. `Cmd.select()` is unchanged, since
+      prompt-toolkit's `choice()` offers no way to configure a refresh interval
     - Added an embedded pager which `Cmd.ppaged()` uses while the bottom toolbar is running, so the
       toolbar stays visible and refreshing instead of the terminal being handed to an external
       pager. It supports vertical and horizontal scrolling, incremental search, and chopped lines on
