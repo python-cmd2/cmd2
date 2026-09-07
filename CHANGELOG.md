@@ -1,10 +1,11 @@
 ## 4.3.0 (TBD)
 
 - Bug Fixes
-    - Fixed output redirection and piping failing on systems whose default encoding is not UTF-8,
-      such as a Windows console using a legacy code page. Command output is rendered by Rich and
-      routinely contains non-ASCII, so redirecting it raised `UnicodeEncodeError` and left an empty
-      file behind. Redirection targets and pipes now use UTF-8 explicitly
+    - Fixed output redirection and piping raising `UnicodeEncodeError` and leaving an empty file
+      behind. Command output is rendered by Rich and contains box-drawing characters, which no
+      `cp125x` Windows ANSI code page can represent, so redirecting or piping it failed. This
+      affects current Windows 11 with default settings on Python 3.11 through 3.14, not only older
+      systems. Redirection targets and pipes now use UTF-8 explicitly
     - Fixed the right prompt being redrawn beside every accepted command line in the scrollback.
       prompt-toolkit includes it in the final frame of each prompt, which is the frame left on the
       terminal; it is now hidden there, as the bottom toolbar already was, and stays on the live
