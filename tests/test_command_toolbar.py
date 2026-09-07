@@ -58,7 +58,7 @@ def test_command_toolbar_redirected_output(toolbar_app, tmp_path) -> None:
     destination = tmp_path / "help.txt"
     with app._command_toolbar_context():
         app.onecmd_plus_hooks(f'help > "{destination}"')
-    text = destination.read_text()
+    text = destination.read_text(encoding="utf-8")
     assert "Cmd2 Commands" in text
     assert "STATUS" not in text
     assert "Cmd2 Commands" not in output.getvalue()
@@ -79,7 +79,7 @@ def test_command_toolbar_redirection_survives_suspension(toolbar_app, tmp_path) 
         app.onecmd_plus_hooks(f'custom > "{destination}"')
         app.poutput("terminal output")
 
-    assert destination.read_text() == "before\nduring\nafter\n"
+    assert destination.read_text(encoding="utf-8") == "before\nduring\nafter\n"
     assert "before" not in output.getvalue()
     assert "during" not in output.getvalue()
     assert "after" not in output.getvalue()
@@ -134,7 +134,7 @@ def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, b
     assert running == [False]
     # A process given the terminal writes to it directly instead of through a captured pipe.
     assert readers[0]._proc.stdout is None
-    assert "PIPED" in destination.read_text()
+    assert "PIPED" in destination.read_text(encoding="utf-8")
 
 
 def test_command_toolbar_binary_output(toolbar_app) -> None:
@@ -773,5 +773,5 @@ def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypat
     with mock.patch("cmd2.command_toolbar.Pager") as pager, app._command_toolbar_context():
         app.onecmd_plus_hooks(f'help > "{target}"')
         pager.assert_not_called()
-    assert "Cmd2 Commands" in target.read_text()
+    assert "Cmd2 Commands" in target.read_text(encoding="utf-8")
     assert "Cmd2 Commands" not in output.getvalue()
