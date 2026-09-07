@@ -106,6 +106,10 @@ class ReservedBottomRows:
     def __enter__(self) -> Self:
         """Set the scroll region and install the bounded erase."""
         self._output.write_raw(self._region_sequence)
+        # write_raw only appends to the output's own buffer, so without this the
+        # reservation is merely queued and anything written before the next flush
+        # still scrolls through the reserved rows.
+        self._output.flush()
         # Shadow the bound method with an instance attribute. setattr keeps this legible to
         # type checkers, which otherwise reject assigning over a method. Capture any
         # override already installed by a caller so exit can put it back rather than
@@ -127,3 +131,7 @@ class ReservedBottomRows:
             setattr(self._output, "erase_down", self._previous_erase_down)  # noqa: B010
         self._previous_erase_down = None
         self._output.write_raw(reset_scroll_region_sequence())
+        # Restoration has to reach the terminal here. A body that exits without another
+        # renderer operation -- an exception, or application shutdown -- would otherwise
+        # leave the margins restricted and later shell output scrolling inside them.
+        self._output.flush()
