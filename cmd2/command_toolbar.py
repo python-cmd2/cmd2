@@ -376,7 +376,12 @@ class CommandToolbar:
                 value = result.result(timeout=0.1)
             except FutureTimeoutError:
                 if result.done():
-                    raise
+                    # The callback finished while this poll was expiring, or raised a
+                    # TimeoutError of its own -- indistinguishable here, because
+                    # concurrent.futures.TimeoutError is TimeoutError on Python 3.11+.
+                    # Ask the future for its outcome rather than re-raising this poll's
+                    # timeout, which would report a failure for a call that succeeded.
+                    return result.result()
                 self._check_running()
             else:
                 return value

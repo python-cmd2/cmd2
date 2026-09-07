@@ -3,7 +3,8 @@
 import sys
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from types import SimpleNamespace
 from unittest import mock
 
@@ -429,6 +430,36 @@ def test_command_toolbar_ui_call_propagates_failures(toolbar_app) -> None:
 
         # A callback that outlives the poll interval keeps waiting instead of giving up.
         assert toolbar._call_in_ui(lambda: time.sleep(0.2) or "finished") == "finished"
+
+
+def test_command_toolbar_ui_call_returns_a_result_that_lands_during_the_poll(toolbar_app, monkeypatch) -> None:
+    """A callback finishing while the poll expires must return its value, not a timeout.
+
+    `concurrent.futures.TimeoutError` is `TimeoutError` on Python 3.11+, so the poll
+    expiring and the callback raising a timeout of its own are indistinguishable by type.
+    Re-raising the caught exception once the future is done therefore reports a timeout for
+    a call that actually succeeded.
+    """
+    app, _, _ = toolbar_app
+
+    class RacyFuture(Future):
+        """Completes, and only then reports the poll as having expired."""
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._polled = False
+
+        def result(self, timeout=None):  # type: ignore[no-untyped-def]
+            if timeout is not None and not self._polled:
+                self._polled = True
+                super().result(timeout=5)  # let the callback finish first
+                raise FutureTimeoutError  # then act as though the poll had expired
+            return super().result(timeout)
+
+    monkeypatch.setattr(command_toolbar, "Future", RacyFuture)
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        assert toolbar._call_in_ui(lambda: "finished") == "finished"
 
 
 def test_command_toolbar_ui_call_after_display_stopped(toolbar_app) -> None:
