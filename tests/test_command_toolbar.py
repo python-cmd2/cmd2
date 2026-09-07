@@ -3,7 +3,8 @@
 import sys
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from types import SimpleNamespace
 from unittest import mock
 
@@ -58,7 +59,7 @@ def test_command_toolbar_redirected_output(toolbar_app, tmp_path) -> None:
     destination = tmp_path / "help.txt"
     with app._command_toolbar_context():
         app.onecmd_plus_hooks(f'help > "{destination}"')
-    text = destination.read_text()
+    text = destination.read_text(encoding="utf-8")
     assert "Cmd2 Commands" in text
     assert "STATUS" not in text
     assert "Cmd2 Commands" not in output.getvalue()
@@ -79,7 +80,7 @@ def test_command_toolbar_redirection_survives_suspension(toolbar_app, tmp_path) 
         app.onecmd_plus_hooks(f'custom > "{destination}"')
         app.poutput("terminal output")
 
-    assert destination.read_text() == "before\nduring\nafter\n"
+    assert destination.read_text(encoding="utf-8") == "before\nduring\nafter\n"
     assert "before" not in output.getvalue()
     assert "during" not in output.getvalue()
     assert "after" not in output.getvalue()
@@ -134,7 +135,7 @@ def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, b
     assert running == [False]
     # A process given the terminal writes to it directly instead of through a captured pipe.
     assert readers[0]._proc.stdout is None
-    assert "PIPED" in destination.read_text()
+    assert "PIPED" in destination.read_text(encoding="utf-8")
 
 
 def test_command_toolbar_binary_output(toolbar_app) -> None:
@@ -429,6 +430,36 @@ def test_command_toolbar_ui_call_propagates_failures(toolbar_app) -> None:
 
         # A callback that outlives the poll interval keeps waiting instead of giving up.
         assert toolbar._call_in_ui(lambda: time.sleep(0.2) or "finished") == "finished"
+
+
+def test_command_toolbar_ui_call_returns_a_result_that_lands_during_the_poll(toolbar_app, monkeypatch) -> None:
+    """A callback finishing while the poll expires must return its value, not a timeout.
+
+    `concurrent.futures.TimeoutError` is `TimeoutError` on Python 3.11+, so the poll
+    expiring and the callback raising a timeout of its own are indistinguishable by type.
+    Re-raising the caught exception once the future is done therefore reports a timeout for
+    a call that actually succeeded.
+    """
+    app, _, _ = toolbar_app
+
+    class RacyFuture(Future):
+        """Completes, and only then reports the poll as having expired."""
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._polled = False
+
+        def result(self, timeout=None):  # type: ignore[no-untyped-def]
+            if timeout is not None and not self._polled:
+                self._polled = True
+                super().result(timeout=5)  # let the callback finish first
+                raise FutureTimeoutError  # then act as though the poll had expired
+            return super().result(timeout)
+
+    monkeypatch.setattr(command_toolbar, "Future", RacyFuture)
+    with app._command_toolbar_context():
+        toolbar = app._command_toolbar
+        assert toolbar._call_in_ui(lambda: "finished") == "finished"
 
 
 def test_command_toolbar_ui_call_after_display_stopped(toolbar_app) -> None:
@@ -773,5 +804,5 @@ def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypat
     with mock.patch("cmd2.command_toolbar.Pager") as pager, app._command_toolbar_context():
         app.onecmd_plus_hooks(f'help > "{target}"')
         pager.assert_not_called()
-    assert "Cmd2 Commands" in target.read_text()
+    assert "Cmd2 Commands" in target.read_text(encoding="utf-8")
     assert "Cmd2 Commands" not in output.getvalue()

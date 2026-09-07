@@ -246,7 +246,7 @@ def test_run_pyscript_print_redirection(base_app, request, tmp_path, capsys) -> 
     out, err = capsys.readouterr()
 
     # Verify the output file contains what we expect from print()
-    content = pathlib.Path(out_file).read_text()
+    content = pathlib.Path(out_file).read_text(encoding="utf-8")
 
     # Look for everything written to self.stdout
     assert len(content.splitlines()) == 4
