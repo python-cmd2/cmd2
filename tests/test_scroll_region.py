@@ -23,6 +23,10 @@ class TestSequences:
     def test_scroll_region_honors_multiple_reserved_rows(self) -> None:
         assert sr.scroll_region_sequence(24, 3) == "\x1b[1;21r"
 
+    def test_accepts_the_two_usable_row_floor(self) -> None:
+        """Two usable rows is the smallest region terminals actually honour."""
+        assert sr.scroll_region_sequence(3, 1) == "\x1b[1;2r"
+
     def test_reset_sequence_restores_full_screen_margins(self) -> None:
         assert sr.reset_scroll_region_sequence() == "\x1b[r"
 
@@ -32,9 +36,12 @@ class TestSequences:
         assert seq.endswith("M"), f"expected a DL sequence, got {seq!r}"
         assert "J" not in seq, "must not use ED, which ignores the scroll margins"
 
-    @pytest.mark.parametrize(("total", "reserved"), [(24, 0), (24, 24), (24, 25), (1, 1), (24, -1)])
-    def test_rejects_regions_that_would_leave_no_usable_rows(self, total: int, reserved: int) -> None:
-        with pytest.raises(ValueError, match=r"reserved_rows must be at least 1|leaves no usable rows"):
+    @pytest.mark.parametrize(
+        ("total", "reserved"),
+        [(24, 0), (24, 24), (24, 25), (1, 1), (24, -1), (24, 23), (2, 1), (3, 2)],
+    )
+    def test_rejects_regions_that_would_leave_too_few_usable_rows(self, total: int, reserved: int) -> None:
+        with pytest.raises(ValueError, match=r"reserved_rows must be at least 1|needs at least"):
             sr.scroll_region_sequence(total, reserved)
 
 
@@ -78,6 +85,23 @@ class TestReservedBottomRows:
         output.erase_down()
         output.flush()
         assert "\x1b[J" in stream.getvalue()
+
+    def test_restores_a_pre_existing_instance_level_erase_down(self) -> None:
+        """A caller's own override must survive the reservation, not be replaced by ours."""
+        output, _stream = make_output(rows=24)
+        calls: list[str] = []
+
+        def caller_override() -> None:
+            calls.append("caller")
+
+        output.erase_down = caller_override  # type: ignore[method-assign]
+
+        with sr.ReservedBottomRows(output, reserved_rows=1):
+            pass
+
+        assert output.erase_down is caller_override
+        output.erase_down()
+        assert calls == ["caller"], "the caller's override must be the one that runs"
 
     def test_region_is_reset_even_if_the_body_raises(self) -> None:
         output, stream = make_output(rows=24)

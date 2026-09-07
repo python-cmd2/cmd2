@@ -13,13 +13,24 @@ behaves exactly like ``ED``, so it is safe to leave installed.
 
 The region must be anchored at row 1. A region starting lower orphans the rows above it: they
 never scroll and so never reach the terminal's scrollback.
+
+A region needs at least two usable rows. DECSTBM requires the bottom margin to be greater
+than the top, so a degenerate ``ESC [ 1 ; 1 r`` is ignored and the terminal silently keeps
+its previous margins -- measured on tmux 3.7c, where output then scrolled through the
+reserved row and destroyed it. The failure is total rather than degraded, so callers must
+release the reservation below this floor rather than narrow it.
 """
 
 from types import TracebackType
 from typing import TYPE_CHECKING, Self
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from prompt_toolkit.output import Output
+
+#: Smallest region a terminal will honour. ``ESC [ 1 ; 1 r`` is ignored outright.
+MIN_USABLE_ROWS = 2
 
 #: Upper bound on the lines one ``DL`` may delete. Terminals clamp the count to the scroll
 #: region, so any value at least as large as the tallest plausible terminal clears to the
@@ -33,13 +44,16 @@ def scroll_region_sequence(total_rows: int, reserved_rows: int) -> str:
     :param total_rows: height of the terminal in rows
     :param reserved_rows: number of bottom rows to keep out of the scroll region
     :return: the escape sequence setting the scroll region
-    :raises ValueError: if the reservation would leave no usable rows
+    :raises ValueError: if the reservation would leave fewer than two usable rows
     """
     if reserved_rows < 1:
         raise ValueError(f"reserved_rows must be at least 1, got {reserved_rows}")
     usable = total_rows - reserved_rows
-    if usable < 1:
-        raise ValueError(f"reserving {reserved_rows} of {total_rows} rows leaves no usable rows")
+    if usable < MIN_USABLE_ROWS:
+        raise ValueError(
+            f"reserving {reserved_rows} of {total_rows} rows leaves {usable} usable row(s); "
+            f"a scroll region needs at least {MIN_USABLE_ROWS}"
+        )
     return f"\x1b[1;{usable}r"
 
 
@@ -78,7 +92,7 @@ class ReservedBottomRows:
         self._total_rows = output.get_size().rows
         # Validate eagerly so a bad reservation fails at construction, not on entry.
         self._region_sequence = scroll_region_sequence(self._total_rows, reserved_rows)
-        self._had_own_erase_down = False
+        self._previous_erase_down: Callable[[], None] | None = None
 
     @property
     def usable_rows(self) -> int:
@@ -93,8 +107,10 @@ class ReservedBottomRows:
         """Set the scroll region and install the bounded erase."""
         self._output.write_raw(self._region_sequence)
         # Shadow the bound method with an instance attribute. setattr keeps this legible to
-        # type checkers, which otherwise reject assigning over a method.
-        self._had_own_erase_down = "erase_down" in vars(self._output)
+        # type checkers, which otherwise reject assigning over a method. Capture any
+        # override already installed by a caller so exit can put it back rather than
+        # leaving ours in place.
+        self._previous_erase_down = vars(self._output).get("erase_down")
         setattr(self._output, "erase_down", self._bounded_erase_down)  # noqa: B010
         return self
 
@@ -105,6 +121,9 @@ class ReservedBottomRows:
         traceback: TracebackType | None,
     ) -> None:
         """Restore the original erase and full-screen scroll margins."""
-        if not self._had_own_erase_down:
-            delattr(self._output, "erase_down")
+        if self._previous_erase_down is None:
+            delattr(self._output, "erase_down")  # fall back to the class implementation
+        else:
+            setattr(self._output, "erase_down", self._previous_erase_down)  # noqa: B010
+        self._previous_erase_down = None
         self._output.write_raw(reset_scroll_region_sequence())
