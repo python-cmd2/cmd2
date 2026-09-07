@@ -4,12 +4,18 @@ A DECSTBM scroll region keeps ordinary output from scrolling through the bottom 
 bottom toolbar painted there is never consumed by the scroll. On its own that is not enough:
 ``ED`` (``ESC [ J``), which prompt_toolkit's renderer uses to erase, ignores the scroll
 margins and erases to the bottom of the display regardless. ``DL`` (``ESC [ M``) *is* bounded
-by the margins, and deleting every line from the cursor to the bottom margin leaves the same
-all-blank result, so it is a drop-in replacement that respects the reserved rows.
+by the margins, so deleting every line from the cursor to the bottom margin clears the usable
+area while leaving the reserved rows intact.
+
+**The substitution is only valid from column zero.** ``ED`` preserves the part of the cursor's
+line before the cursor; ``DL`` deletes the whole line. Measured on tmux 3.7c, running ``DL``
+from a nonzero column destroyed committed text to the left of the cursor. The three renderer
+paths that reach ``erase_down`` all move to column zero first, which is what makes the
+replacement sound for them -- it is a precondition to enforce, not a property to assume, and
+the replacement must not be installed unconditionally outside an active reservation.
 
 ``DL`` needs no knowledge of the cursor's row, which matters because ``Output`` does not track
-one. When no scroll region is set the margins cover the whole screen and the replacement
-behaves exactly like ``ED``, so it is safe to leave installed.
+one.
 
 The region must be anchored at row 1. A region starting lower orphans the rows above it: they
 never scroll and so never reach the terminal's scrollback.
@@ -94,9 +100,11 @@ def cursor_restore_sequence() -> str:
 def bounded_erase_screen_sequence(rows: int) -> str:
     """Build a margin-bounded replacement for ``ED2``.
 
-    ``ED2`` erases the whole display and homes the cursor. Within a region the equivalent is
-    to home inside the region and delete every usable line, which leaves the reserved rows
-    untouched.
+    This is a deliberate contract rather than a reproduction of ``ED2``. ``ED2`` erases the
+    display without moving the cursor -- ``Renderer.clear()`` homes it separately afterwards.
+    The bounded form homes inside the region first because ``DL`` clears downward from the
+    cursor, so reaching the whole usable area requires starting at its top. Callers therefore
+    get an erase-and-home, which is what ``Renderer.clear()`` produces anyway.
 
     :param rows: number of usable rows to clear
     :return: the escape sequence clearing the usable region and homing within it
@@ -143,7 +151,10 @@ class ReservedBottomRows:
         self._output.write_raw(bounded_erase_down_sequence(self.usable_rows))
 
     def _bounded_erase_screen(self) -> None:
-        """Erase the usable region and home within it, leaving the reserved rows intact."""
+        """Erase the usable region and home within it, leaving the reserved rows intact.
+
+        Homing is part of this contract; see :func:`bounded_erase_screen_sequence`.
+        """
         self._output.write_raw(bounded_erase_screen_sequence(self.usable_rows))
 
     def _write_preserving_cursor(self, sequence: str) -> None:
