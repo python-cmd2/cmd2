@@ -6,6 +6,7 @@ which is expensive to diagnose because the failures look like product regression
 """
 
 import os
+import sys
 
 import pytest
 
@@ -45,9 +46,14 @@ def test_redirection_to_a_file_uses_utf8(tmp_path) -> None:
     assert "ENCODING=utf-8" in target.read_text(encoding="utf-8")
 
 
+#: A pass-through filter, run with this interpreter so the test does not depend on Unix
+#: utilities being installed. `cmd.exe` has no `cat`, and this fix exists for Windows.
+PASS_THROUGH = "import sys; sys.stdin.reconfigure(encoding='utf-8'); sys.stdout.write(sys.stdin.read())"
+
+
 def test_piping_uses_utf8(tmp_path) -> None:
     """The same applies to the pipe the subprocess reads from."""
     app = EncodingProbe(allow_cli_args=False)
     target = tmp_path / "piped.txt"
-    app.onecmd_plus_hooks(f'show_encoding | cat > "{target}"')
+    app.onecmd_plus_hooks(f'show_encoding | "{sys.executable}" -c "{PASS_THROUGH}" > "{target}"')
     assert "ENCODING=utf-8" in target.read_text(encoding="utf-8")
