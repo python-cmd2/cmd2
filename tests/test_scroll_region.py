@@ -30,6 +30,12 @@ class TestSequences:
     def test_reset_sequence_restores_full_screen_margins(self) -> None:
         assert sr.reset_scroll_region_sequence() == "\x1b[r"
 
+    def test_bounded_erase_screen_clears_the_region_and_homes_within_it(self) -> None:
+        """ED2 erases the whole display; the bounded form must stop at the margin."""
+        seq = sr.bounded_erase_screen_sequence(23)
+        assert seq == "\x1b[1;1H\x1b[23M"
+        assert "\x1b[2J" not in seq, "ED2 would erase the reserved rows"
+
     def test_bounded_erase_uses_delete_line_not_erase_display(self) -> None:
         """ED ignores the margins; DL is bounded by them, so the pinned row survives."""
         seq = sr.bounded_erase_down_sequence()
@@ -45,12 +51,28 @@ class TestSequences:
             sr.scroll_region_sequence(total, reserved)
 
 
+class TestCursorPreservation:
+    """DECSTBM homes the cursor, so every margin change must save and restore it."""
+
+    def test_entry_wraps_the_margin_change_in_save_and_restore(self) -> None:
+        output, stream = make_output(rows=24)
+        with sr.ReservedBottomRows(output, reserved_rows=1):
+            assert stream.getvalue() == "\x1b7\x1b[1;23r\x1b8"
+
+    def test_exit_wraps_the_margin_reset_in_save_and_restore(self) -> None:
+        output, stream = make_output(rows=24)
+        with sr.ReservedBottomRows(output, reserved_rows=1):
+            stream.truncate(0), stream.seek(0)
+        assert stream.getvalue() == "\x1b7\x1b[r\x1b8"
+
+
 class TestReservedBottomRows:
     def test_sets_the_region_on_enter_and_resets_it_on_exit(self) -> None:
         output, stream = make_output(rows=24)
         with sr.ReservedBottomRows(output, reserved_rows=1):
             assert "\x1b[1;23r" in stream.getvalue()
-        assert stream.getvalue().endswith("\x1b[r")
+        # the reset is wrapped in save/restore, so it is not the final bytes
+        assert stream.getvalue().endswith("\x1b7\x1b[r\x1b8")
 
     def test_the_region_reaches_the_terminal_on_entry(self) -> None:
         """Callers may rely on the reservation being in force once __enter__ returns."""
@@ -66,7 +88,7 @@ class TestReservedBottomRows:
         output, stream = make_output(rows=24)
         with sr.ReservedBottomRows(output, reserved_rows=1):
             output.flush()
-        assert stream.getvalue().endswith("\x1b[r"), "margins were left restricted"
+        assert stream.getvalue().endswith("\x1b7\x1b[r\x1b8"), "margins were left restricted"
         assert not output._buffer, "the reset is still sitting in prompt_toolkit's buffer"
 
     def test_erase_down_is_bounded_while_reserved(self) -> None:
@@ -89,6 +111,42 @@ class TestReservedBottomRows:
             output.flush()
             # Assert inside the region: on exit the reset is written and flushed too.
             assert stream.getvalue() == f"\x1b[{region.usable_rows}M"
+
+    def test_erase_screen_is_bounded_while_reserved(self) -> None:
+        """Ctrl-L reaches erase_screen; an unbounded ED2 would wipe the reserved row."""
+        output, stream = make_output(rows=24)
+        with sr.ReservedBottomRows(output, reserved_rows=1) as region:
+            stream.truncate(0), stream.seek(0)
+            output.erase_screen()
+            output.flush()
+            assert "\x1b[2J" not in stream.getvalue()
+            assert stream.getvalue() == f"\x1b[1;1H\x1b[{region.usable_rows}M"
+
+    def test_original_erase_screen_is_restored_on_exit(self) -> None:
+        output, stream = make_output(rows=24)
+        original = output.erase_screen
+        with sr.ReservedBottomRows(output, reserved_rows=1):
+            assert output.erase_screen != original
+        assert output.erase_screen == original
+        stream.truncate(0), stream.seek(0)
+        output.erase_screen()
+        output.flush()
+        assert "\x1b[2J" in stream.getvalue()
+
+    def test_restores_a_pre_existing_instance_level_erase_screen(self) -> None:
+        """Same contract as erase_down: a caller's override must survive."""
+        output, _stream = make_output(rows=24)
+        calls: list[str] = []
+
+        def caller_override() -> None:
+            calls.append("caller")
+
+        output.erase_screen = caller_override  # type: ignore[method-assign]
+        with sr.ReservedBottomRows(output, reserved_rows=1):
+            pass
+        assert output.erase_screen is caller_override
+        output.erase_screen()
+        assert calls == ["caller"]
 
     def test_original_erase_down_is_restored_on_exit(self) -> None:
         output, stream = make_output(rows=24)
@@ -122,7 +180,7 @@ class TestReservedBottomRows:
         output, stream = make_output(rows=24)
         with pytest.raises(RuntimeError), sr.ReservedBottomRows(output, reserved_rows=1):
             raise RuntimeError("boom")
-        assert stream.getvalue().endswith("\x1b[r")
+        assert stream.getvalue().endswith("\x1b7\x1b[r\x1b8")
         assert not output._buffer
 
     def test_usable_rows_excludes_the_reserved_rows(self) -> None:
