@@ -313,6 +313,7 @@ from .rich_utils import Cmd2HelpFormatter, HelpContent
 from .types import (
     BoundCommandFunc,
     CmdOrSetT,
+    CmdOrSetT_contra,
     UnboundChoicesProvider,
     UnboundCompleter,
 )
@@ -2907,23 +2908,25 @@ class _BoundAnnotatedCommand(Protocol[_CommandParams, _CommandReturn_co]):
     def __call__(self, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs) -> _CommandReturn_co: ...
 
 
-class _AnnotatedCommand(Protocol[CmdOrSetT, _CommandParams, _CommandReturn_co]):
+class _AnnotatedCommand(Protocol[CmdOrSetT_contra, _CommandParams, _CommandReturn_co]):
     """A callable command method with the metadata used by ``with_annotated``."""
 
     __name__: str
     __qualname__: str
 
     def __call__(
-        self, __self: CmdOrSetT, /, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs
+        self, __self: CmdOrSetT_contra, /, *args: _CommandParams.args, **kwargs: _CommandParams.kwargs
     ) -> _CommandReturn_co: ...
 
     @overload
     def __get__(
         self, instance: None, owner: Any = ...
-    ) -> "_AnnotatedCommand[CmdOrSetT, _CommandParams, _CommandReturn_co]": ...
+    ) -> "_AnnotatedCommand[CmdOrSetT_contra, _CommandParams, _CommandReturn_co]": ...
 
     @overload
-    def __get__(self, instance: CmdOrSetT, owner: Any = ...) -> _BoundAnnotatedCommand[_CommandParams, _CommandReturn_co]: ...
+    def __get__(
+        self, instance: CmdOrSetT_contra, owner: Any = ...
+    ) -> _BoundAnnotatedCommand[_CommandParams, _CommandReturn_co]: ...
 
 
 class _WithAnnotatedDecorator(Protocol):
