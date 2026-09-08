@@ -80,6 +80,23 @@ def run_cmd(app: cmd2.Cmd, cmd: str) -> tuple[list[str], list[str]]:
     return normalize(out), normalize(err)
 
 
+#: Environment variables that change how Rich and cmd2 render output. Left inherited,
+#: they make unrelated tests fail depending on who runs the suite: NO_COLOR fails 15
+#: tests, FORCE_COLOR and TTY_COMPATIBLE 53 each.
+COLOR_ENVIRONMENT = ("NO_COLOR", "FORCE_COLOR", "TTY_COMPATIBLE", "TTY_INTERACTIVE")
+
+
+@pytest.fixture(autouse=True)
+def neutral_color_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Render output the same way regardless of the caller's environment.
+
+    Tests that exercise these variables set them explicitly, which still works because
+    a test's own monkeypatching runs after this fixture.
+    """
+    for name in COLOR_ENVIRONMENT:
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.fixture
 def base_app() -> cmd2.Cmd:
     return cmd2.Cmd(include_py=True, include_ipy=True)
