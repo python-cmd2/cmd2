@@ -1,4 +1,4 @@
-## 4.2.4 (TBD)
+## 4.2.4 (September 8, 2026)
 
 - Bug Fixes
     - Fixed output redirection and piping raising `UnicodeEncodeError` and leaving an empty file
