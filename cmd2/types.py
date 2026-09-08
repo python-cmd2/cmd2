@@ -58,6 +58,9 @@ CommandSetT = TypeVar("CommandSetT", bound="CommandSet[Any]")
 # Tracks the specific subclass instance (either a Cmd or CommandSet)
 CmdOrSetT = TypeVar("CmdOrSetT", bound=CmdOrSet)
 
+# For protocols that accept a Cmd or CommandSet instance
+CmdOrSetT_contra = TypeVar("CmdOrSetT_contra", bound=CmdOrSet, contravariant=True)
+
 # Tracks the specific class itself (either a Cmd or CommandSet class)
 CmdOrSetClassT = TypeVar("CmdOrSetClassT", bound=CmdOrSetClass)
 
@@ -88,20 +91,20 @@ class BoundCommandFunc(Protocol[P]):
 
 # An unbound cmd2 command function (e.g. the class method do_command).
 # The 'self' argument can be either a Cmd or CommandSet instance.
-class UnboundCommandFunc(Protocol[CmdOrSetT, P]):
+class UnboundCommandFunc(Protocol[CmdOrSetT_contra, P]):
     """Protocol for an unbound command function."""
 
     __name__: str
     __qualname__: str
 
-    def __call__(self, __self: CmdOrSetT, /, *args: P.args, **kwargs: P.kwargs) -> bool | None:
+    def __call__(self, __self: CmdOrSetT_contra, /, *args: P.args, **kwargs: P.kwargs) -> bool | None:
         """Invoke the unbound command function with its command instance."""
 
     @overload
-    def __get__(self, instance: None, owner: Any = ...) -> "UnboundCommandFunc[CmdOrSetT, P]": ...
+    def __get__(self, instance: None, owner: Any = ...) -> "UnboundCommandFunc[CmdOrSetT_contra, P]": ...
 
     @overload
-    def __get__(self, instance: CmdOrSetT, owner: Any = ...) -> BoundCommandFunc[P]: ...
+    def __get__(self, instance: CmdOrSetT_contra, owner: Any = ...) -> BoundCommandFunc[P]: ...
 
 
 ##################################################################################################
