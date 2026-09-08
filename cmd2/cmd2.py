@@ -3373,9 +3373,11 @@ class Cmd:
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
-            # Open each side of the pipe
-            subproc_stdin = open(read_fd)  # noqa: SIM115
-            new_stdout: TextIO = cast(TextIO, open(write_fd, "w"))  # noqa: SIM115
+            # Open each side of the pipe. Both ends are given an explicit encoding:
+            # command output is rendered by Rich and routinely contains non-ASCII, which
+            # the locale encoding cannot always represent.
+            subproc_stdin = open(read_fd, encoding="utf-8")  # noqa: SIM115
+            new_stdout: TextIO = cast(TextIO, open(write_fd, "w", encoding="utf-8"))  # noqa: SIM115
 
             # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
             # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
@@ -3442,8 +3444,15 @@ class Cmd:
                 # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
                 mode = "a" if statement.redirector == constants.REDIRECTION_APPEND else "w"
                 try:
-                    # Use line buffering
-                    new_stdout = cast(TextIO, open(su.strip_quotes(statement.redirect_to), mode=mode, buffering=1))  # noqa: SIM115
+                    # Use line buffering. The encoding is explicit rather than the
+                    # locale's: command output is rendered by Rich and routinely contains
+                    # non-ASCII, so on a non-UTF-8 system -- a default Windows console,
+                    # for instance -- redirection would otherwise fail and leave an empty
+                    # file behind.
+                    new_stdout = cast(
+                        TextIO,
+                        open(su.strip_quotes(statement.redirect_to), mode=mode, buffering=1, encoding="utf-8"),  # noqa: SIM115
+                    )
                 except OSError as ex:
                     raise RedirectionError("Failed to redirect output") from ex
 
