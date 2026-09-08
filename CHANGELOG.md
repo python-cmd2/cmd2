@@ -1,10 +1,5 @@
 ## 4.3.0 (TBD)
 
-- Bug Fixes
-    - Fixed the right prompt being redrawn beside every accepted command line in the scrollback.
-      prompt-toolkit includes it in the final frame of each prompt, which is the frame left on the
-      terminal; it is now hidden there, as the bottom toolbar already was, and stays on the live
-      prompt line only
 - Enhancements
     - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
       execution
@@ -18,6 +13,19 @@
       every platform, including Windows where the default external pager (`more`) always wraps.
       Output which already fits on the screen is printed directly rather than paged. Set
       `self.use_builtin_pager = False` to keep using the external `pager`/`pager_chop` commands.
+
+## 4.2.4 (September 8, 2026)
+
+- Bug Fixes
+    - Fixed output redirection and piping raising `UnicodeEncodeError` and leaving an empty file
+      behind. Command output is rendered by Rich and contains box-drawing characters, which no
+      `cp125x` Windows ANSI code page can represent, so redirecting or piping it failed. This
+      affects current Windows 11 with default settings on Python 3.11 through 3.14, not only older
+      systems. Redirection targets and pipes now use UTF-8 explicitly
+    - Fixed the right prompt being redrawn beside every accepted command line in the scrollback.
+      prompt-toolkit includes it in the final frame of each prompt, which is the frame left on the
+      terminal; it is now hidden there, as the bottom toolbar already was, and stays on the live
+      prompt line only
 
 ## 4.2.3 (September 2, 2026)
 
