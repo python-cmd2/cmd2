@@ -2391,6 +2391,72 @@ def test_read_secret_eof(base_app, monkeypatch):
         base_app.read_secret("Secret: ")
 
 
+def _capture_nested_session(app, call):
+    """Run `call` and return the real PromptSession cmd2 built for the nested prompt."""
+    captured = []
+
+    def fake_read_raw_input(prompt, session, **kwargs):
+        captured.append(session)
+        return "typed"
+
+    with mock.patch.object(app, "_read_raw_input", side_effect=fake_read_raw_input):
+        call()
+    assert len(captured) == 1
+    return captured[0]
+
+
+def test_read_input_session_shows_the_bottom_toolbar(base_app) -> None:
+    """A nested prompt keeps the persistent toolbar instead of dropping it.
+
+    read_input() builds its own PromptSession, so without being told about the
+    toolbar the bar simply vanishes for as long as the nested prompt is up.
+    """
+    base_app.main_session.bottom_toolbar = base_app.get_bottom_toolbar
+
+    session = _capture_nested_session(base_app, lambda: base_app.read_input("Prompt> "))
+
+    assert session.bottom_toolbar == base_app.get_bottom_toolbar
+
+
+def test_read_input_session_inherits_refresh_interval(base_app) -> None:
+    """A toolbar clock keeps ticking while the nested prompt waits for input."""
+    base_app.main_session.bottom_toolbar = base_app.get_bottom_toolbar
+    base_app.main_session.refresh_interval = 0.25
+
+    session = _capture_nested_session(base_app, lambda: base_app.read_input("Prompt> "))
+
+    assert session.refresh_interval == 0.25
+
+
+def test_read_secret_session_shows_the_bottom_toolbar(base_app) -> None:
+    """Reading a secret keeps the persistent toolbar; the bar is not the secret."""
+    base_app.main_session.bottom_toolbar = base_app.get_bottom_toolbar
+
+    session = _capture_nested_session(base_app, lambda: base_app.read_secret("Secret: "))
+
+    assert session.bottom_toolbar == base_app.get_bottom_toolbar
+
+
+def test_read_secret_session_inherits_refresh_interval(base_app) -> None:
+    """A toolbar clock keeps ticking while a secret is being entered."""
+    base_app.main_session.bottom_toolbar = base_app.get_bottom_toolbar
+    base_app.main_session.refresh_interval = 0.25
+
+    session = _capture_nested_session(base_app, lambda: base_app.read_secret("Secret: "))
+
+    assert session.refresh_interval == 0.25
+
+
+@pytest.mark.parametrize("method", ["read_input", "read_secret"])
+def test_nested_prompt_has_no_toolbar_when_the_app_has_none(base_app, method) -> None:
+    """An app without a bottom toolbar must not sprout one at a nested prompt."""
+    assert base_app.main_session.bottom_toolbar is None
+
+    session = _capture_nested_session(base_app, lambda: getattr(base_app, method)("Prompt> "))
+
+    assert session.bottom_toolbar is None
+
+
 def test_read_input_passes_all_arguments_to_resolver(base_app):
     mock_choices = ["choice1", "choice2"]
     mock_provider = mock.MagicMock(name="provider")
