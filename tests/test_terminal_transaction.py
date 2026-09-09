@@ -278,28 +278,32 @@ class TestLockOrder:
 
 class TestSerialization:
     def test_two_threads_never_hold_the_terminal_at_once(self) -> None:
-        """The lock is what serializes emission; without it the two bodies overlap."""
+        """The lock is what serializes emission; without it the two bodies meet.
+
+        The overlap is detected with a barrier rather than a sleep. A sleep would only make
+        an overlap *likely* to be observed; a barrier that both threads must reach inside the
+        transaction can only be satisfied if they are genuinely inside it together.
+        """
         terminal = TerminalLock()
-        overlaps = 0
-        inside = 0
-        entered = threading.Barrier(2, timeout=5)
+        both_inside = threading.Barrier(2, timeout=0.2)
+        start = threading.Barrier(2, timeout=5)
+        overlaps: list[int] = []
 
         def emit() -> None:
-            nonlocal overlaps, inside
-            entered.wait()
+            start.wait()
             with terminal.transaction("paint"):
-                if inside:
-                    overlaps += 1
-                inside += 1
-                time.sleep(0.01)
-                inside -= 1
+                try:
+                    both_inside.wait()
+                except threading.BrokenBarrierError:
+                    return
+                overlaps.append(1)
 
         threads = [threading.Thread(target=emit) for _ in range(2)]
         for thread in threads:
             thread.start()
         for thread in threads:
             thread.join(timeout=5)
-        assert overlaps == 0
+        assert overlaps == []
 
 
 class TestDiagnostics:
