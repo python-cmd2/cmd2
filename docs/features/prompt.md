@@ -146,3 +146,21 @@ to its own process group, which reaches a subprocess your command started and wa
 The command toolbar is used by the interactive command loop, including startup commands and scripts
 launched from that loop. It is disabled for non-interactive input. Calls to `onecmd_plus_hooks()`
 outside the command loop do not start a toolbar.
+
+### Scrolling Back Through History
+
+The toolbar occupies a row of the visible terminal window. When you scroll up to read earlier
+output, the terminal shows you its scrollback buffer instead, and the toolbar scrolls out of view
+along with everything else. It reappears when you scroll back to the bottom.
+
+This is expected, and it is the same property that keeps your history clean. An application cannot
+paint into the terminal's scrollback view: it is not told that you scrolled, cannot query it, and
+has no escape sequence that addresses it. The only way the toolbar could stay visible over your
+history is if it had been written into the scrollback buffer -- which would mean a copy of it wedged
+between the lines of output you scrolled up to read. Programs that do pin a status line for the
+whole session, such as `less` and `vim`, buy it by switching to the alternate screen, where there is
+no scrollback at all and scrolling up does nothing.
+
+Some terminals offer a status line of their own -- tmux and screen have one, as does iTerm2 -- which
+persists because the terminal owns it rather than the application. Those are configured in the
+terminal, not in `cmd2`.
