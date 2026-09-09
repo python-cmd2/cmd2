@@ -263,7 +263,7 @@ class TerminalDisplay:
         self._geometry: Geometry | None = None
         self._depth = 0
         self._adapter: Any = None
-        self._handoff_geometry: Geometry | None = None
+        self._handoff_active = False
 
     @property
     def terminal(self) -> PhysicalTerminal:
@@ -362,7 +362,7 @@ class TerminalDisplay:
     def _teardown(self) -> None:
         """Restore full-screen margins and drop the adapter."""
         self._adapter = None
-        self._handoff_geometry = None
+        self._handoff_active = False
         if self._geometry is None:
             return
         self._geometry = None
@@ -378,11 +378,11 @@ class TerminalDisplay:
         """
         if self._depth == 0:
             return False
-        if self._handoff_geometry is not None:
+        if self._handoff_active:
             # A handoff keeps the lease deliberately, so lease depth alone does not mean the
             # terminal is ours. Reinstalling margins here would restrict the screen of the
             # program currently owning it. The resize is not lost: the return path measures
-            # afresh rather than restoring the snapshot taken before the handoff.
+            # afresh rather than restoring whatever was installed before the handoff.
             return False
         geometry = self._measure()
         if not geometry.is_eligible or not self._terminal.supports_reservation:
@@ -404,23 +404,30 @@ class TerminalDisplay:
         :meth:`reacquire_region_after_handoff` puts the region back afterwards. The two screen
         buffers keep separate margin state and the program taking over knows nothing about a
         reservation, so the main buffer is left as the shell expects it.
+
+        Ownership is recorded whether or not a region happened to be installed. A terminal
+        that had shrunk below the floor is released but still ours, and a guest can take it
+        from that state just as readily; tying the record to the geometry snapshot would let
+        a later resize reinstall margins over the guest's screen.
         """
+        if self._depth == 0:
+            return
+        self._handoff_active = True
         if self._geometry is None:
             return
-        self._handoff_geometry = self._geometry
         self._geometry = None
         self._terminal.release_region()
 
     def reacquire_region_after_handoff(self) -> None:
         """Re-establish the reservation after a program hands the terminal back.
 
-        Geometry is measured afresh rather than restored from the snapshot taken before the
-        handoff: the program in between may have resized the window, and a region installed
-        from a stale height puts the toolbar somewhere other than the bottom row.
+        Geometry is measured afresh rather than restored from whatever was installed before
+        the handoff: the program in between may have resized the window, and a region
+        installed from a stale height puts the toolbar somewhere other than the bottom row.
         """
-        if self._handoff_geometry is None or self._depth == 0:
+        if not self._handoff_active or self._depth == 0:
             return
-        self._handoff_geometry = None
+        self._handoff_active = False
         geometry = self._measure()
         if not geometry.is_eligible:
             # The terminal shrank while the guest had it. Nothing is installed, so callers

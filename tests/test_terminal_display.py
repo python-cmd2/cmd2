@@ -623,3 +623,80 @@ class TestFailedAcquisitionReturnsTheLease:
         display.terminal.write_margin_change = install_fails  # type: ignore[method-assign]
         with pytest.raises(OSError, match="install failed"):
             display.acquire()
+
+
+class TestHandoffFromAReleasedTerminal:
+    """A terminal below the floor is released but still ours, and a guest can take it from
+    that state. Recording ownership only when a region happened to be installed would let a
+    later resize reinstall margins over the guest's screen."""
+
+    def test_a_guest_can_take_a_terminal_that_is_below_the_floor(self) -> None:
+        output, _stream, screen = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        adapter = display.output
+        screen.rows = 2
+        display.reconfigure()
+        assert not display.is_reserved
+
+        adapter.enter_alternate_screen()
+        screen.rows = 24
+        assert not display.reconfigure(), "margins were reinstalled over the guest's screen"
+        assert not display.is_reserved
+
+    def test_the_guest_keeps_the_whole_screen(self) -> None:
+        output, _stream, screen = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        adapter = display.output
+        screen.rows = 2
+        display.reconfigure()
+        adapter.enter_alternate_screen()
+        screen.rows = 24
+        display.reconfigure()
+        assert adapter.get_size() == Size(rows=24, columns=80)
+
+    def test_no_margin_sequence_reaches_the_guest(self) -> None:
+        output, stream, screen = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        adapter = display.output
+        screen.rows = 2
+        display.reconfigure()
+        adapter.enter_alternate_screen()
+        adapter.flush()
+        screen.rows = 24
+        stream.truncate(0), stream.seek(0)
+
+        display.reconfigure()
+        adapter.flush()
+        assert stream.getvalue() == ""
+
+    def test_the_reservation_is_established_when_the_guest_hands_it_back(self) -> None:
+        """Suspending reconfiguration must not lose the resize that happened during it."""
+        output, stream, screen = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        adapter = display.output
+        screen.rows = 2
+        display.reconfigure()
+        adapter.enter_alternate_screen()
+        screen.rows = 24
+        display.reconfigure()
+        adapter.flush()
+        stream.truncate(0), stream.seek(0)
+
+        adapter.quit_alternate_screen()
+        adapter.flush()
+        assert display.is_reserved
+        assert "\x1b[1;23r" in stream.getvalue()
+        assert display.geometry is not None
+        assert display.geometry.usable_rows == 23
+
+    def test_a_handoff_without_a_lease_is_not_recorded(self) -> None:
+        """Nothing was ours to hand over, so nothing may be reclaimed later."""
+        output, _ = make_output(rows=24)
+        display = TerminalDisplay(output)
+        display.release_region_for_handoff()
+        assert display.acquire()
+        assert display.is_reserved
