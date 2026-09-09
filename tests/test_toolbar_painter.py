@@ -6,9 +6,19 @@ change". Wide characters occupy two cells, combining characters occupy none of t
 a wide character is never split across the right edge.
 """
 
-import pytest
+import io
+import re
 
-from cmd2.toolbar_painter import Cell, ToolbarFrame, measure_toolbar_height
+import pytest
+from prompt_toolkit.data_structures import Size
+from prompt_toolkit.formatted_text import AnyFormattedText
+from prompt_toolkit.output import ColorDepth
+from prompt_toolkit.output.vt100 import Vt100_Output
+from prompt_toolkit.styles import BaseStyle, DummyStyle
+
+from cmd2.terminal_display import Geometry
+from cmd2.terminal_transaction import TerminalLock, current_transaction
+from cmd2.toolbar_painter import Cell, ToolbarFrame, ToolbarPainter, measure_toolbar_height
 
 
 def text_of(frame: ToolbarFrame, row: int = 0) -> str:
@@ -175,3 +185,273 @@ class TestValidation:
         assert text_of(frame, 0) == "a   "
         assert text_of(frame, 1) == "    "
         assert text_of(frame, 2) == "b   "
+
+
+class Recorder(Vt100_Output):
+    """A backend that records what it was asked to do, and when."""
+
+    def __init__(self, stream: io.StringIO) -> None:
+        super().__init__(stream, lambda: Size(rows=24, columns=80))
+        self.flushes = 0
+        self.transaction_during_write: list[object] = []
+
+    def write_raw(self, data: str) -> None:
+        self.transaction_during_write.append(current_transaction())
+        super().write_raw(data)
+
+    def flush(self) -> None:
+        self.flushes += 1
+        super().flush()
+
+
+def make_painter(style: BaseStyle | None = None) -> tuple[ToolbarPainter, Recorder, io.StringIO]:
+    """Build a painter over a recording backend."""
+    stream = io.StringIO()
+    output = Recorder(stream)
+    painter = ToolbarPainter(
+        output=output,
+        lock=TerminalLock(),
+        style=style or DummyStyle(),
+        color_depth=ColorDepth.DEPTH_8_BIT,
+    )
+    return painter, output, stream
+
+
+def geometry(rows: int = 24, columns: int = 5, reserved: int = 1) -> Geometry:
+    """Build a geometry snapshot for the band."""
+    return Geometry(generation=1, physical_rows=rows, columns=columns, reserved_rows=reserved)
+
+
+def visible(stream: io.StringIO) -> str:
+    """Strip SGR sequences, leaving cursor motion and text."""
+    return re.sub(r"\x1b\[[0-9;]*m", "", stream.getvalue())
+
+
+def paint(painter: ToolbarPainter, content: AnyFormattedText, geo: Geometry) -> bool:
+    """Prepare and paint content in one step, as a refresh would."""
+    prepared = painter.prepare(lambda: content, width=geo.columns, height=geo.reserved_rows)
+    assert prepared is not None
+    return painter.paint(prepared, geo)
+
+
+class TestPainting:
+    def test_the_first_paint_writes_the_whole_band_at_its_physical_row(self) -> None:
+        painter, _output, stream = make_painter()
+        assert paint(painter, "hi", geometry()) is True
+        assert "\x1b[24;1H" in visible(stream)
+        assert "hi   " in visible(stream)
+
+    def test_a_multirow_band_writes_each_row_at_its_own_physical_row(self) -> None:
+        painter, _output, stream = make_painter()
+        paint(painter, "ab\ncd", geometry(rows=24, columns=2, reserved=2))
+        written = visible(stream)
+        assert "\x1b[23;1Hab" in written
+        assert "\x1b[24;1Hcd" in written
+
+    def test_an_unchanged_frame_emits_nothing(self) -> None:
+        """Same cells and attributes: the toolbar produces no output at all."""
+        painter, _output, _stream = make_painter()
+        paint(painter, "hi", geometry())
+        _painter, output, stream = painter, _output, _stream
+        before = stream.getvalue()
+        flushes = output.flushes
+        assert paint(painter, "hi", geometry()) is False
+        assert stream.getvalue() == before
+        assert output.flushes == flushes
+
+    def test_only_the_changed_run_is_rewritten(self) -> None:
+        painter, _output, stream = make_painter()
+        paint(painter, "abcd", geometry(columns=5))
+        stream.truncate(0)
+        stream.seek(0)
+        paint(painter, "abXd", geometry(columns=5))
+        written = visible(stream)
+        assert "\x1b[24;3HX" in written
+        assert "abX" not in written
+
+    def test_nothing_is_cleared_before_painting(self) -> None:
+        """An erase before the write is exactly the flicker this design exists to remove."""
+        painter, _output, stream = make_painter()
+        paint(painter, "abcd", geometry())
+        paint(painter, "z", geometry())
+        written = stream.getvalue()
+        for erase in ("\x1b[K", "\x1b[0K", "\x1b[2K", "\x1b[J", "\x1b[M"):
+            assert erase not in written
+
+    def test_a_shorter_frame_pads_its_tail_rather_than_erasing_it(self) -> None:
+        painter, _output, stream = make_painter()
+        paint(painter, "abcd", geometry(columns=5))
+        stream.truncate(0)
+        stream.seek(0)
+        paint(painter, "z", geometry(columns=5))
+        written = visible(stream)
+        # The final column was already blank in the previous frame, so it is not rewritten:
+        # the run stops where the difference does.
+        assert "\x1b[24;1Hz   " in written
+
+    def test_a_style_only_change_repaints_those_cells(self) -> None:
+        painter, _output, stream = make_painter()
+        paint(painter, [("", "hi")], geometry())
+        stream.truncate(0)
+        stream.seek(0)
+        assert paint(painter, [("bold", "hi")], geometry()) is True
+        assert "hi" in visible(stream)
+
+    def test_a_wide_character_is_replaced_as_a_whole(self) -> None:
+        """Both of its cells change together, so a run never begins on the right half."""
+        painter, _output, stream = make_painter()
+        paint(painter, "a广b", geometry(columns=5))
+        stream.truncate(0)
+        stream.seek(0)
+        paint(painter, "aXYb", geometry(columns=5))
+        assert "\x1b[24;2HXY" in visible(stream)
+
+    def test_the_cursor_is_saved_and_restored_around_the_paint(self) -> None:
+        painter, _output, stream = make_painter()
+        paint(painter, "hi", geometry())
+        written = stream.getvalue()
+        assert written.startswith("\x1b7")
+        assert written.endswith("\x1b8")
+
+    def test_autowrap_is_disabled_during_the_paint_and_restored(self) -> None:
+        """Writing the last column with autowrap on would push the band into another row."""
+        painter, _output, stream = make_painter()
+        paint(painter, "hi", geometry())
+        written = stream.getvalue()
+        assert written.index("\x1b[?7l") < written.index("\x1b[24;1H")
+        assert written.index("\x1b[?7h") > written.index("\x1b[24;1H")
+
+    def test_the_paint_is_flushed(self) -> None:
+        painter, output, _stream = make_painter()
+        paint(painter, "hi", geometry())
+        assert output.flushes >= 1
+
+    def test_every_write_happens_inside_a_terminal_transaction(self) -> None:
+        painter, output, _stream = make_painter()
+        paint(painter, "hi", geometry())
+        assert output.transaction_during_write
+        assert all(state is not None for state in output.transaction_during_write)
+
+    def test_invalidating_forces_a_full_repaint(self) -> None:
+        """After recovery the terminal's contents are unknown, so the diff baseline is gone."""
+        painter, _output, stream = make_painter()
+        paint(painter, "hi", geometry())
+        painter.invalidate()
+        stream.truncate(0)
+        stream.seek(0)
+        assert paint(painter, "hi", geometry()) is True
+        assert "\x1b[24;1Hhi   " in visible(stream)
+
+    def test_a_geometry_change_forces_a_full_repaint(self) -> None:
+        """The band moved; cells matching the old frame are not on the screen any more."""
+        painter, _output, stream = make_painter()
+        paint(painter, "hi", geometry(rows=24))
+        stream.truncate(0)
+        stream.seek(0)
+        assert paint(painter, "hi", geometry(rows=12)) is True
+        assert "\x1b[12;1Hhi   " in visible(stream)
+
+
+class TestContentEvaluation:
+    def test_the_callback_runs_outside_the_terminal_transaction(self) -> None:
+        """Named rule 13.2: a content callback must never run while the terminal is held."""
+        painter, _output, _stream = make_painter()
+        seen: list[object] = []
+        painter.prepare(lambda: seen.append(current_transaction()) or "hi", width=5, height=1)
+        assert seen == [None]
+
+    def test_the_callback_runs_once_per_requested_refresh(self) -> None:
+        painter, _output, _stream = make_painter()
+        calls = 0
+
+        def content() -> str:
+            nonlocal calls
+            calls += 1
+            return "hi"
+
+        painter.prepare(content, width=5, height=1)
+        assert calls == 1
+
+    def test_a_failing_callback_keeps_the_last_good_frame(self) -> None:
+        painter, _output, stream = make_painter()
+        paint(painter, "good", geometry())
+        good = painter.last_frame
+
+        def boom() -> str:
+            raise RuntimeError("callback failed")
+
+        assert painter.prepare(boom, width=5, height=1) is None
+        assert painter.last_frame == good
+        assert "good" in visible(stream)
+
+    def test_a_failing_callback_is_not_called_again(self) -> None:
+        """Repeated failing updates would report the same error on every refresh."""
+        painter, _output, _stream = make_painter()
+        calls = 0
+
+        def boom() -> str:
+            nonlocal calls
+            calls += 1
+            raise RuntimeError("callback failed")
+
+        painter.prepare(boom, width=5, height=1)
+        painter.prepare(boom, width=5, height=1)
+        assert calls == 1
+
+    def test_the_error_is_reported_once(self) -> None:
+        painter, _output, _stream = make_painter()
+
+        def boom() -> str:
+            raise RuntimeError("callback failed")
+
+        painter.prepare(boom, width=5, height=1)
+        first = painter.take_pending_error()
+        assert isinstance(first, RuntimeError)
+        assert painter.take_pending_error() is None
+
+    def test_taking_the_error_lets_content_be_evaluated_again(self) -> None:
+        """Reporting is what re-arms it: the user has been told, so a retry is not a loop."""
+        painter, _output, _stream = make_painter()
+        failures = [True]
+
+        def content() -> str:
+            if failures[0]:
+                raise RuntimeError("callback failed")
+            return "recovered"
+
+        painter.prepare(content, width=5, height=1)
+        painter.take_pending_error()
+        failures[0] = False
+        prepared = painter.prepare(content, width=12, height=1)
+        assert prepared is not None
+        assert "recovered" in "".join(cell.char for cell in prepared.frame.rows[0])
+
+    def test_empty_content_is_painted_rather_than_skipped(self) -> None:
+        """An empty toolbar is an intentional visibility change and must reach the band."""
+        painter, _output, stream = make_painter()
+        paint(painter, "hi", geometry())
+        stream.truncate(0)
+        stream.seek(0)
+        assert paint(painter, "", geometry()) is True
+        # Only the two cells that held text are rewritten; the rest of the band was already
+        # blank. Blanking by writing spaces is a paint, not an erase.
+        assert "\x1b[24;1H  " in visible(stream)
+
+
+class TestPaintValidation:
+    def test_a_frame_that_does_not_fit_the_band_is_refused(self) -> None:
+        """A resize between preparing and painting must not write outside the reservation."""
+        painter, _output, _stream = make_painter()
+        prepared = painter.prepare(lambda: "hi", width=5, height=1)
+        assert prepared is not None
+        with pytest.raises(ValueError, match="does not fit"):
+            painter.paint(prepared, geometry(columns=9))
+
+    def test_replacing_one_wide_character_with_another_repaints_both_cells(self) -> None:
+        """The two halves compare equal, so the run has to be extended over the second one."""
+        painter, _output, stream = make_painter()
+        paint(painter, "a广b", geometry(columns=5))
+        stream.truncate(0)
+        stream.seek(0)
+        assert paint(painter, "a国b", geometry(columns=5)) is True
+        assert "\x1b[24;2H国" in visible(stream)
