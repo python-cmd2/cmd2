@@ -67,5 +67,5 @@ gha-creds-*.json
 # Superpowers extension
 docs/superpowers
 
-# Artifacts from scripts/windows_toolbar_inventory.py
-scripts/windows_toolbar_inventory_*.json
+# Artifacts from scripts/toolbar_inventory.py
+scripts/toolbar_inventory_*.json
