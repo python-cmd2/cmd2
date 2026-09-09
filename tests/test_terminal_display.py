@@ -700,3 +700,57 @@ class TestHandoffFromAReleasedTerminal:
         display.release_region_for_handoff()
         assert display.acquire()
         assert display.is_reserved
+
+
+class TestHandoffReturnRestoresEverything:
+    """Coming back is an ordinary reconfiguration. Installing margins without rebinding the
+    adapter leaves a reserved terminal whose callers hold the plain backend -- and therefore
+    unbounded erases running over the reserved row."""
+
+    def test_the_adapter_is_rebound_when_the_region_comes_back(self) -> None:
+        output, _stream, screen = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        adapter = display.output
+        screen.rows = 2
+        display.reconfigure()
+        adapter.enter_alternate_screen()
+        screen.rows = 24
+        adapter.quit_alternate_screen()
+
+        assert display.is_reserved
+        assert isinstance(display.output, ReservedOutput), "callers were left on the backend"
+        assert display.output.get_size() == Size(rows=23, columns=80)
+
+    def test_erases_through_the_returned_output_are_bounded(self) -> None:
+        """The failure this guards against destroys the reserved row outright."""
+        output, stream, screen = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        adapter = display.output
+        screen.rows = 2
+        display.reconfigure()
+        adapter.enter_alternate_screen()
+        screen.rows = 24
+        adapter.quit_alternate_screen()
+
+        display.output.flush()
+        stream.truncate(0), stream.seek(0)
+        display.output.erase_down()
+        display.output.flush()
+        assert stream.getvalue() == "\x1b[23M"
+        assert "\x1b[J" not in stream.getvalue()
+
+    def test_an_unqualified_backend_is_still_unqualified_after_a_handoff(self) -> None:
+        """A refused acquisition still holds a lease, so the handoff flag can be set for a
+        backend that was never eligible. Capability has to be re-checked, not assumed."""
+        display = TerminalDisplay(DummyOutput())
+        assert not display.acquire()
+        assert display.lease_depth == 1
+
+        display.release_region_for_handoff()
+        display.reacquire_region_after_handoff()
+
+        assert not display.is_reserved
+        assert display.geometry is None
+        assert display.output is display.terminal.output

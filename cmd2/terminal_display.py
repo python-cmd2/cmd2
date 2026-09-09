@@ -371,8 +371,10 @@ class TerminalDisplay:
     def reconfigure(self) -> bool:
         """Resample the terminal and re-establish the reservation for the new geometry.
 
-        Used after a resize. A terminal that has shrunk below the floor releases rather than
-        narrowing, and one that has grown back above it reacquires.
+        Used after a resize, and on the way back from a handoff. A terminal that has shrunk
+        below the floor releases rather than narrowing, and one that has grown back above it
+        reacquires. An unqualified backend never installs anything: a refused acquisition
+        still holds a lease, so capability is re-checked here rather than assumed settled.
 
         :return: whether a reservation is installed after this call
         """
@@ -428,15 +430,12 @@ class TerminalDisplay:
         if not self._handoff_active or self._depth == 0:
             return
         self._handoff_active = False
-        geometry = self._measure()
-        if not geometry.is_eligible:
-            # The terminal shrank while the guest had it. Nothing is installed, so callers
-            # go back to the plain backend -- which they do by way of the geometry check in
-            # `output`, rather than by unbinding the adapter here, so that a terminal which
-            # grows again reuses the same object.
-            return
-        self._terminal.install_region(geometry)
-        self._geometry = geometry
+        # Coming back is an ordinary reconfiguration, so it goes through the one path that
+        # does the whole job: re-check backend capability, measure, install only if the
+        # result is eligible, and rebind the adapter. Reinstalling margins here directly
+        # would leave a reserved terminal whose callers still hold the plain backend, and
+        # therefore unbounded erases running over the reserved row.
+        self.reconfigure()
 
     def revalidate_viewport(self) -> bool:
         """Re-check the viewport origin and rebuild the region if it moved.
