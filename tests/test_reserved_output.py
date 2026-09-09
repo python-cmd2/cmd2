@@ -179,7 +179,6 @@ class WindowsLikeOutput:
         self._size = Size(rows=rows, columns=columns)
         self._rows_below = rows_below
         self.flushes = 0
-        self.raw: list[str] = []
 
     def get_size(self) -> Size:
         return self._size
@@ -189,9 +188,6 @@ class WindowsLikeOutput:
 
     def flush(self) -> None:
         self.flushes += 1
-
-    def write_raw(self, data: str) -> None:
-        self.raw.append(data)
 
 
 class TestWindowsOuterOutput:

@@ -75,14 +75,6 @@ class ReservedOutput(Output):
         """
         return self._display.geometry is not None
 
-    @property
-    def _usable_rows(self) -> int:
-        """Height of the usable region for the current generation."""
-        geometry = self._display.geometry
-        if geometry is None:
-            return self._wrapped.get_size().rows
-        return geometry.usable_rows
-
     # -- geometry -------------------------------------------------------------------------
 
     def get_size(self) -> Size:
@@ -122,10 +114,11 @@ class ReservedOutput(Output):
         is only sound inside an active reservation, so outside one the backend's own erase is
         what runs.
         """
-        if not self.is_reserved:
+        geometry = self._display.geometry
+        if geometry is None:
             self._wrapped.erase_down()
             return
-        self._wrapped.write_raw(bounded_erase_down_sequence(self._usable_rows))
+        self._wrapped.write_raw(bounded_erase_down_sequence(geometry.usable_rows))
 
     def erase_screen(self) -> None:
         """Clear the usable region and home within it, leaving the reserved rows intact.
@@ -137,10 +130,11 @@ class ReservedOutput(Output):
         Outside an active reservation this defers to the backend, for the reason given on
         :meth:`erase_down`.
         """
-        if not self.is_reserved:
+        geometry = self._display.geometry
+        if geometry is None:
             self._wrapped.erase_screen()
             return
-        self._wrapped.write_raw(bounded_erase_screen_sequence(self._usable_rows))
+        self._wrapped.write_raw(bounded_erase_screen_sequence(geometry.usable_rows))
 
     def erase_end_of_line(self) -> None:
         """Clear to the end of the current line, which is bounded by the line already."""
