@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 from prompt_toolkit.cursor_shapes import CursorShape
 from prompt_toolkit.data_structures import Size
-from prompt_toolkit.output import ColorDepth
+from prompt_toolkit.output import ColorDepth, DummyOutput
 from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.styles import Attrs
 
@@ -294,3 +294,7 @@ class TestEveryRecordedOperation:
             fileno=7,
         )
         assert RecordingOutput(facts).get_rows_below_cursor_position() == 9
+
+    def test_a_backend_that_refuses_a_file_descriptor_records_none(self) -> None:
+        """DummyOutput raises NotImplementedError rather than UnsupportedOperation."""
+        assert PreflightFacts.capture(DummyOutput()).fileno is None

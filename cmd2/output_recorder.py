@@ -89,7 +89,9 @@ class PreflightFacts:
             rows_below = None
         try:
             descriptor: int | None = output.fileno()
-        except (io.UnsupportedOperation, AttributeError, OSError):
+        except (io.UnsupportedOperation, NotImplementedError, AttributeError, OSError):
+            # Backends disagree on how to say "no descriptor": Vt100 lets StringIO raise
+            # UnsupportedOperation, DummyOutput raises NotImplementedError outright.
             descriptor = None
         return cls(
             size=output.get_size(),

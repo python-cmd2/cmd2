@@ -9,17 +9,35 @@ Each test names the design requirement it protects.
 
 import inspect
 import sys
+from typing import Any
 
+import prompt_toolkit.renderer
 import pytest
+from prompt_toolkit.application import Application
+from prompt_toolkit.application.current import set_app
+from prompt_toolkit.input import DummyInput
+from prompt_toolkit.layout import Layout, Window
+from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.output import DummyOutput, Output
 from prompt_toolkit.renderer import Renderer
 from prompt_toolkit.styles import default_ui_style
+
+from cmd2.output_recorder import Operation, PreflightFacts, RecordingOutput
 
 WINDOWS_ONLY = pytest.mark.skipif(sys.platform != "win32", reason="Windows backend is importable only on Windows")
 
 
 def make_renderer(output: Output) -> Renderer:
     return Renderer(default_ui_style(), output)
+
+
+def make_app() -> "Application[Any]":
+    """Build a minimal application to render."""
+    return Application(
+        layout=Layout(Window(FormattedTextControl("hello"))),
+        output=DummyOutput(),
+        input=DummyInput(),
+    )
 
 
 class TestCursorPositionArithmetic:
@@ -152,3 +170,54 @@ class TestWindowsBackendContract:
         from prompt_toolkit.output.win32 import Win32Output
 
         assert Win32Output.erase_down is not Vt100_Output.erase_down
+
+
+class TestDiscardedFrameRecoveryContract:
+    """Protects the section 7.2.1 recovery contract against a dependency upgrade.
+
+    Each test proves one of the reasons recovery is what it is: why clearing the diff baseline
+    is not sufficient, and why upstream's own ``reset()`` is not an acceptable substitute for
+    the narrow initialization the bridge performs.
+    """
+
+    def test_render_latches_mode_flags_beside_their_emission(self) -> None:
+        """A discarded frame leaves the flag ahead of the terminal, and nothing re-tests it."""
+        facts = PreflightFacts.capture(DummyOutput())
+        renderer = make_renderer(DummyOutput())
+        app = make_app()
+        first = RecordingOutput(facts)
+        renderer.output = first
+        with set_app(app):
+            renderer.render(app, app.layout)
+        assert Operation("enable_bracketed_paste") in first.operations
+        assert renderer._bracketed_paste_enabled is True
+
+        # Discard that frame's output. A second render emits nothing to re-enable it.
+        second = RecordingOutput(facts)
+        renderer.output = second
+        renderer._last_screen = None
+        with set_app(app):
+            renderer.render(app, app.layout)
+        assert Operation("enable_bracketed_paste") not in second.operations
+
+    def test_the_upstream_reset_emits_operations(self) -> None:
+        """Which is why recovery cannot simply call it: it writes to a terminal we are mid-fix."""
+        renderer = make_renderer(DummyOutput())
+        recorder = RecordingOutput(PreflightFacts.capture(DummyOutput()))
+        renderer.output = recorder
+        renderer.reset()
+        assert recorder.operations != ()
+
+    def test_the_upstream_reset_rewrites_available_height_bookkeeping(self) -> None:
+        renderer = make_renderer(DummyOutput())
+        renderer.report_absolute_cursor_row(5)
+        assert renderer._min_available_height > 0
+        renderer.reset()
+        assert renderer._min_available_height == 0
+
+    def test_a_full_repaint_still_moves_from_the_believed_cursor_position(self) -> None:
+        """So an uncommitted cursor position sends the repaint to the wrong origin."""
+        source = inspect.getsource(prompt_toolkit.renderer._output_screen_diff)
+        assert "current_pos" in source
+        assert '"\\r\\n" * (new.y - current_y)' in source or "\\r\\n" in source
+        assert "_cursor_pos" in inspect.getsource(Renderer.render)

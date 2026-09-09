@@ -1,0 +1,518 @@
+"""Tests for preparing, committing and recovering renderer frames.
+
+Several of these are the named regressions from design section 13.2. The property underneath
+all of them is that a frame the terminal never received must never become the baseline the
+next frame is diffed against: upstream advances its own state while it renders, so discarding
+the *output* is only half of discarding the frame.
+
+The renderer here is a real prompt-toolkit renderer driving a real application, so the
+recorded operations and the flags left behind are the ones production would see.
+"""
+
+import io
+from concurrent.futures import Future
+from typing import Any
+
+import pytest
+from prompt_toolkit.application import Application
+from prompt_toolkit.application.current import set_app
+from prompt_toolkit.data_structures import Point, Size
+from prompt_toolkit.input import DummyInput
+from prompt_toolkit.layout import Layout, Window
+from prompt_toolkit.layout.controls import FormattedTextControl
+from prompt_toolkit.output.vt100 import Vt100_Output
+
+from cmd2.prompt_toolkit_bridge import (
+    PromptToolkitBridge,
+    ReservedModeFailureError,
+)
+from cmd2.terminal_display import TerminalDisplay
+from cmd2.terminal_transaction import TerminalLock, current_transaction
+
+
+class TtyStringIO(io.StringIO):
+    """A stream that claims to be a terminal, so the backend will use cursor reports."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+class Harness:
+    """A real application over a reserved terminal, with the stream it writes to."""
+
+    def __init__(self, rows: int = 24, columns: int = 40, reserved_rows: int = 1, content: Any = "hello") -> None:
+        self.stream = TtyStringIO()
+        self.size = Size(rows=rows, columns=columns)
+        self.backend = Vt100_Output(self.stream, lambda: self.size)
+        self.display = TerminalDisplay(self.backend, reserved_rows=reserved_rows)
+        assert self.display.acquire() is True
+        self.lock = TerminalLock()
+        self.app: Application[Any] = Application(
+            layout=Layout(Window(FormattedTextControl(content))),
+            output=self.display.output,
+            input=DummyInput(),
+        )
+        self.bridge = PromptToolkitBridge(renderer=self.app.renderer, display=self.display, lock=self.lock)
+        self.bridge.set_prompt_anchor(1)
+        self.clear()
+
+    @property
+    def renderer(self) -> Any:
+        """The application's renderer."""
+        return self.app.renderer
+
+    def clear(self) -> str:
+        """Take everything written so far, leaving the stream empty."""
+        written = self.stream.getvalue()
+        self.stream.truncate(0)
+        self.stream.seek(0)
+        return written
+
+    def written(self) -> str:
+        """What has been written since the last clear."""
+        return self.stream.getvalue()
+
+    def prepare(self) -> Any:
+        """Prepare one frame, as the bridge's caller would."""
+        with set_app(self.app):
+            return self.bridge.prepare(self.app)
+
+    def render(self) -> bool:
+        """Prepare and commit one frame."""
+        prepared = self.prepare()
+        assert prepared is not None
+        return self.bridge.commit(prepared)
+
+    def resynchronize(self) -> None:
+        """Run recovery in the application's context."""
+        with set_app(self.app):
+            self.bridge.resynchronize()
+
+
+class TestPreparation:
+    def test_preparation_writes_nothing_to_the_terminal(self) -> None:
+        harness = Harness()
+        assert harness.prepare() is not None
+        assert harness.written() == ""
+
+    def test_render_callbacks_run_before_terminal_commit(self) -> None:
+        """Named test 13.2: layout and style callbacks must not run inside the transaction."""
+        seen: list[object] = []
+
+        def content() -> str:
+            seen.append(current_transaction())
+            return "hello"
+
+        harness = Harness(content=content)
+        assert harness.prepare() is not None
+        assert seen
+        assert all(state is None for state in seen)
+
+    def test_the_prepared_frame_is_what_gets_emitted(self) -> None:
+        harness = Harness()
+        assert harness.render() is True
+        assert "hello" in harness.written()
+
+    def test_preparation_does_not_advance_the_backend(self) -> None:
+        """A discarded frame must leave no trace in the backend's own buffering."""
+        harness = Harness()
+        harness.prepare()
+        harness.backend.flush()
+        assert harness.written() == ""
+
+    def test_the_application_renders_against_the_usable_height(self) -> None:
+        """The reservation is subtracted once: 24 physical rows, one reserved, 23 usable."""
+        harness = Harness(rows=24, reserved_rows=1)
+        prepared = harness.prepare()
+        assert prepared is not None
+        assert prepared.batch.facts.size == Size(rows=23, columns=40)
+
+    def test_a_failing_preparation_reports_and_asks_for_resynchronization(self) -> None:
+        def boom() -> str:
+            raise RuntimeError("layout failed")
+
+        harness = Harness(content=boom)
+        assert harness.prepare() is None
+        assert harness.bridge.needs_resynchronization is True
+        assert isinstance(harness.bridge.take_pending_error(), RuntimeError)
+        assert harness.written() == ""
+
+    def test_no_frame_is_prepared_while_resynchronization_is_owed(self) -> None:
+        harness = Harness()
+        harness.bridge.require_resynchronization("test")
+        assert harness.prepare() is None
+
+
+class TestCommitValidation:
+    def test_stale_prepared_frame_never_becomes_diff_baseline(self) -> None:
+        """Named test 13.2: intervening output retires the batch without emitting it."""
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.clear()
+
+        harness.bridge.note_managed_write()
+        assert harness.bridge.commit(prepared) is False
+
+        assert harness.written() == ""
+        assert harness.renderer._last_screen is None
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_a_resize_between_prepare_and_commit_retires_the_batch(self) -> None:
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.size = Size(rows=12, columns=40)
+        harness.display.reconfigure()
+        harness.clear()
+        assert harness.bridge.commit(prepared) is False
+        assert harness.written() == ""
+
+    def test_an_owner_change_retires_the_batch(self) -> None:
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.note_owner_change()
+        assert harness.bridge.commit(prepared) is False
+
+    def test_a_content_invalidation_does_not_authorize_a_stale_batch(self) -> None:
+        """Content generation is tracked separately so it cannot mask a real invalidation."""
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.note_managed_write()
+        harness.bridge.note_content_change()
+        assert harness.bridge.commit(prepared) is False
+
+    def test_a_content_invalidation_alone_does_not_retire_a_batch(self) -> None:
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.note_content_change()
+        assert harness.bridge.commit(prepared) is True
+
+    def test_the_committed_frame_is_the_next_diff_baseline(self) -> None:
+        harness = Harness()
+        harness.render()
+        assert harness.renderer._last_screen is not None
+        assert harness.bridge.needs_resynchronization is False
+
+    def test_uncommitted_frame_metadata_is_not_dispatched(self) -> None:
+        """Named test 13.2: provisional handlers and windows stay invisible until commit."""
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.note_managed_write()
+        assert harness.bridge.can_dispatch_input is False
+        assert harness.bridge.commit(prepared) is False
+        assert harness.bridge.can_dispatch_input is False
+        harness.resynchronize()
+        assert harness.bridge.can_dispatch_input is True
+
+
+class TestPartialCommitFailure:
+    def test_partial_commit_failure_does_not_replay_frame(self) -> None:
+        """Named test 13.2: some bytes are already out; replaying would duplicate them."""
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.clear()
+
+        failures = {"count": 0}
+        real_write = harness.backend.write_raw
+
+        def failing_write_raw(data: str) -> None:
+            failures["count"] += 1
+            if failures["count"] == 3:
+                raise OSError("terminal went away")
+            real_write(data)
+
+        harness.backend.write_raw = failing_write_raw  # type: ignore[method-assign]
+        assert harness.bridge.commit(prepared) is False
+        harness.backend.write_raw = real_write  # type: ignore[method-assign]
+
+        assert isinstance(harness.bridge.take_pending_error(), OSError)
+        assert harness.bridge.needs_resynchronization is True
+        assert harness.renderer._last_screen is None
+        emitted = harness.clear()
+
+        # The batch is not replayed: a retry would duplicate whatever already reached the
+        # terminal, and nothing here knows how much that was.
+        assert harness.bridge.commit(prepared) is False
+        assert harness.written() == ""
+        assert emitted != ""
+
+    def test_failed_cleanup_stops_reserved_emission(self) -> None:
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+
+        def always_fails(data: str) -> None:
+            raise OSError("terminal went away")
+
+        harness.backend.write_raw = always_fails  # type: ignore[method-assign]
+        assert harness.bridge.commit(prepared) is False
+        assert harness.bridge.reserved_emission_stopped is True
+
+    def test_nothing_is_prepared_once_reserved_emission_has_stopped(self) -> None:
+        harness = Harness()
+        harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        assert harness.prepare() is None
+
+
+class TestRecovery:
+    def test_discarded_frame_resynchronizes_terminal_modes(self) -> None:
+        """Named test 13.2: a latched flag never re-emits its sequence on its own."""
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        # Preparation advanced the flag even though the terminal saw nothing.
+        assert harness.renderer._bracketed_paste_enabled is True
+        harness.bridge.note_managed_write()
+        harness.bridge.commit(prepared)
+        harness.clear()
+
+        harness.resynchronize()
+        written = harness.written()
+        assert "\x1b[?2004h" in written  # bracketed paste, re-established physically
+        assert harness.renderer._bracketed_paste_enabled is True
+        assert harness.renderer._last_screen is None
+        assert harness.renderer._last_size is None
+        assert harness.renderer._last_style is None
+        assert harness.renderer._last_cursor_shape is None
+
+    def test_recovery_restores_the_baseline_only_after_a_full_frame(self) -> None:
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.note_managed_write()
+        harness.bridge.commit(prepared)
+        harness.resynchronize()
+        harness.clear()
+        assert harness.render() is True
+        assert "hello" in harness.written()
+
+    def test_discarded_frame_recovers_current_prompt_origin(self) -> None:
+        """Named test 13.2: intervening output scrolled the prompt; the stale cursor is wrong."""
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.note_managed_write()
+        harness.bridge.set_prompt_anchor(9)
+        harness.bridge.commit(prepared)
+        harness.clear()
+
+        harness.resynchronize()
+        assert "\x1b[9;1H" in harness.written()
+        assert harness.renderer._cursor_pos == Point(x=0, y=0)
+
+    def test_recovery_without_a_known_origin_fails_explicitly(self) -> None:
+        """Guessing an origin would paint the prompt over committed output."""
+        harness = Harness()
+        harness.bridge.forget_prompt_anchor()
+        harness.backend.enable_cpr = False
+        with pytest.raises(ReservedModeFailureError), set_app(harness.app):
+            harness.bridge.resynchronize()
+
+    def test_recovery_invalidates_provisional_mouse_metadata(self) -> None:
+        harness = Harness()
+        harness.render()
+        handlers = harness.renderer.mouse_handlers
+        harness.resynchronize()
+        assert harness.renderer.mouse_handlers is not handlers
+
+    def test_recovery_resets_available_height_bookkeeping(self) -> None:
+        """A visible marker does not prove prompt geometry; height has to be re-established."""
+        harness = Harness()
+        harness.renderer._min_available_height = 17
+        harness.resynchronize()
+        assert harness.renderer._min_available_height == 0
+
+    def test_recovery_does_not_use_the_upstream_reset(self) -> None:
+        """Upstream reset() emits operations and rewrites available-height bookkeeping."""
+        harness = Harness()
+        calls: list[int] = []
+        harness.renderer.reset = lambda *args, **kwargs: calls.append(1)  # type: ignore[method-assign]
+        harness.resynchronize()
+        assert calls == []
+
+    def test_the_narrow_reset_names_fields_this_prompt_toolkit_has(self) -> None:
+        """A version contract: a renamed upstream field must fail here, not silently do nothing."""
+        harness = Harness()
+        for name in (
+            "_last_screen",
+            "_last_size",
+            "_last_style",
+            "_last_cursor_shape",
+            "_cursor_pos",
+            "_min_available_height",
+            "_bracketed_paste_enabled",
+            "_mouse_support_enabled",
+            "_cursor_key_mode_reset",
+            "mouse_handlers",
+        ):
+            assert hasattr(harness.renderer, name), name
+
+
+class TestInvalidationCoalescing:
+    def test_repeated_invalidation_yields_to_managed_output(self) -> None:
+        """Named test 13.2: contention coalesces into one redraw and does not spin."""
+        harness = Harness()
+        scheduled: list[int] = []
+        harness.bridge.set_redraw_scheduler(lambda: scheduled.append(1))
+
+        for _ in range(5):
+            harness.bridge.note_managed_write()
+
+        assert len(scheduled) == 1
+        assert harness.bridge.redraw_pending is True
+
+        harness.resynchronize()
+        assert harness.render() is True
+        assert harness.bridge.redraw_pending is False
+
+    def test_a_redraw_is_requested_again_after_it_is_served(self) -> None:
+        harness = Harness()
+        scheduled: list[int] = []
+        harness.bridge.set_redraw_scheduler(lambda: scheduled.append(1))
+        harness.bridge.note_managed_write()
+        harness.resynchronize()
+        harness.render()
+        harness.bridge.note_managed_write()
+        assert len(scheduled) == 2
+
+
+class TestCursorPositionReports:
+    def test_cpr_uses_row_one_coordinate_contract(self) -> None:
+        """A valid row yields exactly U - r + 1 because the region is anchored at row one."""
+        harness = Harness(rows=24, reserved_rows=1)
+        assert harness.bridge.request_cursor_position() is True
+        assert harness.bridge.report_cursor_row(4) is True
+        assert harness.renderer._min_available_height == 23 - 4 + 1
+
+    def test_cpr_in_reserved_band_is_rejected(self) -> None:
+        """Named test 13.1: the upstream formula gives zero at U+1 and negative below it."""
+        harness = Harness(rows=24, reserved_rows=1)
+        harness.bridge.request_cursor_position()
+        assert 23 - 24 + 1 == 0
+        assert harness.bridge.report_cursor_row(24) is False
+        assert harness.renderer._min_available_height == 0
+        assert harness.bridge.needs_resynchronization is True
+
+        deeper = Harness(rows=24, reserved_rows=2)
+        deeper.bridge.request_cursor_position()
+        assert 22 - 24 + 1 == -1
+        assert deeper.bridge.report_cursor_row(24) is False
+        assert deeper.renderer._min_available_height == 0
+
+    def test_a_rejected_reply_settles_the_pending_request(self) -> None:
+        """A stuck future would leave the renderer waiting for a report that never comes."""
+        harness = Harness()
+        harness.bridge.request_cursor_position()
+        harness.bridge.report_cursor_row(24)
+        assert harness.renderer.waiting_for_cpr is False
+
+    def test_an_uncorrelated_late_reply_is_dropped(self) -> None:
+        harness = Harness()
+        assert harness.bridge.report_cursor_row(4) is False
+        assert harness.renderer._min_available_height == 0
+
+    def test_a_stale_generation_reply_cannot_satisfy_a_newer_request(self) -> None:
+        """Named test 13.2: replies correlate by order, and the wire carries no generation."""
+        harness = Harness()
+        harness.bridge.request_cursor_position()
+        harness.size = Size(rows=12, columns=40)
+        harness.display.reconfigure()
+        harness.bridge.note_geometry_change()
+        harness.bridge.request_cursor_position()
+
+        # The first reply belongs to the request made before the resize.
+        assert harness.bridge.report_cursor_row(4) is False
+        assert harness.renderer._min_available_height == 0
+        # The second one is the current generation's and is accepted.
+        assert harness.bridge.report_cursor_row(4) is True
+        assert harness.renderer._min_available_height == 11 - 4 + 1
+
+    def test_cpr_request_cannot_interleave_with_paint(self) -> None:
+        """The request is emitted in its own transaction, never inside another one."""
+        harness = Harness()
+        seen: list[object] = []
+        real_ask = harness.backend.ask_for_cpr
+
+        def watched_ask() -> None:
+            seen.append(current_transaction())
+            real_ask()
+
+        harness.backend.ask_for_cpr = watched_ask  # type: ignore[method-assign]
+        harness.bridge.request_cursor_position()
+        assert len(seen) == 1
+        state = seen[0]
+        assert state is not None
+        assert state.kind == "cursor position request"
+
+    def test_no_request_is_made_when_the_backend_does_not_answer(self) -> None:
+        harness = Harness()
+        harness.backend.enable_cpr = False
+        assert harness.bridge.request_cursor_position() is False
+
+
+class TestRecoveryEdges:
+    def test_recovery_after_reserved_emission_stopped_is_refused(self) -> None:
+        harness = Harness()
+        harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        with pytest.raises(ReservedModeFailureError), set_app(harness.app):
+            harness.bridge.resynchronize()
+
+    def test_an_unknown_origin_asks_the_terminal_and_stays_owed(self) -> None:
+        """The reply establishes the origin; recovery is not finished until it arrives."""
+        harness = Harness()
+        harness.bridge.require_resynchronization("test")
+        harness.bridge.forget_prompt_anchor()
+        harness.clear()
+        harness.resynchronize()
+        assert "\x1b[6n" in harness.written()
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_a_cursor_report_establishes_the_prompt_origin(self) -> None:
+        harness = Harness()
+        harness.bridge.forget_prompt_anchor()
+        harness.bridge.request_cursor_position()
+        assert harness.bridge.report_cursor_row(6) is True
+        assert harness.bridge.prompt_anchor == 6
+
+    def test_mouse_support_is_established_when_the_application_wants_it(self) -> None:
+        harness = Harness()
+        harness.renderer.mouse_support = lambda: True
+        harness.clear()
+        harness.resynchronize()
+        assert "\x1b[?1000h" in harness.written()
+        assert harness.renderer._mouse_support_enabled is True
+
+    def test_a_rejected_reply_resolves_a_renderer_future(self) -> None:
+        """Whoever asked is waiting; a rejected reply still has to settle that bookkeeping."""
+        harness = Harness()
+        pending: Future[None] = Future()
+        harness.renderer._waiting_for_cpr_futures.append(pending)
+        harness.bridge.request_cursor_position()
+        assert harness.bridge.report_cursor_row(24) is False
+        assert pending.done() is True
+
+
+class TestBookkeeping:
+    def test_content_invalidations_are_counted(self) -> None:
+        harness = Harness()
+        assert harness.bridge.content_generation == 0
+        harness.bridge.note_content_change()
+        assert harness.bridge.content_generation == 1
+
+    def test_the_prompt_anchor_is_reported(self) -> None:
+        harness = Harness()
+        assert harness.bridge.prompt_anchor == 1
+        harness.bridge.forget_prompt_anchor()
+        assert harness.bridge.prompt_anchor is None
+
+    def test_only_one_frame_is_in_flight_at_a_time(self) -> None:
+        """Two provisional frames would mean two claims on the renderer's state."""
+        harness = Harness()
+        assert harness.prepare() is not None
+        assert harness.prepare() is None

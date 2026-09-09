@@ -8,6 +8,7 @@ a wide character is never split across the right edge.
 
 import io
 import re
+import threading
 
 import pytest
 from prompt_toolkit.data_structures import Size
@@ -17,7 +18,7 @@ from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.styles import BaseStyle, DummyStyle
 
 from cmd2.terminal_display import Geometry
-from cmd2.terminal_transaction import TerminalLock, current_transaction
+from cmd2.terminal_transaction import TerminalLock, current_transaction, held_higher_level_locks
 from cmd2.toolbar_painter import Cell, ToolbarFrame, ToolbarPainter, measure_toolbar_height
 
 
@@ -455,3 +456,73 @@ class TestPaintValidation:
         stream.seek(0)
         assert paint(painter, "a国b", geometry(columns=5)) is True
         assert "\x1b[24;2H国" in visible(stream)
+
+
+class BlockingStream(io.StringIO):
+    """A stream whose first write blocks until the test releases it."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.blocked = threading.Event()
+        self.entered = threading.Event()
+        self.locks_held_while_blocked: tuple[str, ...] | None = None
+
+    def write(self, text: str) -> int:
+        if not self.entered.is_set():
+            self.entered.set()
+            self.locks_held_while_blocked = held_higher_level_locks()
+            self.blocked.wait(timeout=5)
+        return super().write(text)
+
+
+class TestBackpressure:
+    def test_paint_preserves_transaction_order_with_blocked_sink(self) -> None:
+        """Named test 13.2: a blocked writer holds the terminal, and nothing slips past it."""
+        stream = BlockingStream()
+        output = Vt100_Output(stream, lambda: Size(rows=24, columns=5))
+        lock = TerminalLock()
+        painter = ToolbarPainter(
+            output=output,
+            lock=lock,
+            style=DummyStyle(),
+            color_depth=ColorDepth.DEPTH_8_BIT,
+        )
+        order: list[str] = []
+
+        def command_output() -> None:
+            with lock.transaction("managed write"):
+                order.append("write start")
+                output.write("output from a command\n")
+                output.flush()
+                order.append("write end")
+
+        ready = threading.Event()
+
+        def toolbar_paint() -> None:
+            prepared = painter.prepare(lambda: "hi", width=5, height=1)
+            assert prepared is not None
+            ready.set()
+            painter.paint(prepared, geometry())
+            order.append("paint end")
+
+        writer = threading.Thread(target=command_output)
+        writer.start()
+        assert stream.entered.wait(timeout=5)
+
+        painter_thread = threading.Thread(target=toolbar_paint)
+        painter_thread.start()
+        assert ready.wait(timeout=5)
+        # The painter has its frame and is asking for the terminal, but the blocked writer
+        # holds it, so not one byte of the band can have reached the stream.
+        assert "\x1b7" not in stream.getvalue()
+
+        stream.blocked.set()
+        writer.join(timeout=5)
+        painter_thread.join(timeout=5)
+
+        assert order == ["write start", "write end", "paint end"]
+        written = stream.getvalue()
+        assert written.index("output from a command") < written.index("\x1b7")
+        # The writer blocked inside leaf I/O, holding no higher-level lock -- which is what
+        # keeps the rest of cmd2 able to make progress while the terminal is backed up.
+        assert stream.locks_held_while_blocked == ()
