@@ -21,6 +21,24 @@ def make_output(rows: int = 24, cols: int = 80) -> tuple[Vt100_Output, io.String
     return Vt100_Output(stream, lambda: Size(rows=rows, columns=cols)), stream
 
 
+class Screen:
+    """A terminal size that can change between reads."""
+
+    def __init__(self, rows: int, columns: int) -> None:
+        self.rows = rows
+        self.columns = columns
+
+    def size(self) -> Size:
+        return Size(rows=self.rows, columns=self.columns)
+
+
+def make_shrinkable_output(rows: int = 24, columns: int = 80) -> tuple[Vt100_Output, io.StringIO, Screen]:
+    """Build a real Vt100_Output whose size can be changed later."""
+    stream = io.StringIO()
+    screen = Screen(rows, columns)
+    return Vt100_Output(stream, screen.size), stream, screen
+
+
 def make_reserved(rows: int = 24, cols: int = 80, reserved: int = 1) -> tuple[ReservedOutput, io.StringIO, TerminalDisplay]:
     """Acquire a reservation and return the adapter to render through."""
     output, stream = make_output(rows, cols)
@@ -353,6 +371,7 @@ class TestScreenBufferTransitions:
     def test_leaving_the_alternate_screen_re_establishes_the_region(self) -> None:
         adapter, stream, display = make_reserved(rows=24)
         adapter.enter_alternate_screen()
+        adapter.flush()
         stream.truncate(0), stream.seek(0)
         adapter.quit_alternate_screen()
         assert display.is_reserved
@@ -390,3 +409,78 @@ class TestFileDescriptorAndCursorShape:
         adapter = ReservedOutput(recorder, TerminalDisplay(recorder))
         adapter.set_cursor_shape(CursorShape.BLOCK)
         assert seen == [CursorShape.BLOCK]
+
+
+class TestSuspendedReservation:
+    """The adapter outlives its reservation, so every margin-dependent operation must ask.
+
+    A handoff to the alternate screen restores full margins while deliberately keeping the
+    lease, and prompt-toolkit holds the output object it was created with. This object
+    therefore keeps receiving calls with no region installed.
+    """
+
+    def test_erase_down_defers_to_the_backend_while_suspended(self) -> None:
+        """DL against an unbounded screen deletes whole lines, including the text to the left
+        of a nonzero cursor column that ED would have preserved."""
+        adapter, stream, display = make_reserved(rows=24)
+        adapter.enter_alternate_screen()
+        adapter.flush()
+        stream.truncate(0), stream.seek(0)
+        adapter.erase_down()
+        adapter.flush()
+        assert stream.getvalue() == "\x1b[J"
+        assert "M" not in stream.getvalue()
+        assert not display.is_reserved
+
+    def test_erase_screen_defers_to_the_backend_while_suspended(self) -> None:
+        adapter, stream, _ = make_reserved(rows=24)
+        adapter.enter_alternate_screen()
+        adapter.flush()
+        stream.truncate(0), stream.seek(0)
+        adapter.erase_screen()
+        adapter.flush()
+        assert stream.getvalue() == "\x1b[2J"
+
+    def test_the_physical_size_is_reported_while_suspended(self) -> None:
+        """Nothing is reserved, so nothing should be hidden."""
+        adapter, _, _ = make_reserved(rows=24)
+        adapter.enter_alternate_screen()
+        assert adapter.get_size() == Size(rows=24, columns=80)
+
+    def test_rows_below_the_cursor_is_unadapted_while_suspended(self) -> None:
+        output = WindowsLikeOutput(rows=21, columns=92, rows_below=5)
+        display = TerminalDisplay(output)  # type: ignore[arg-type]
+        adapter = ReservedOutput(output, display)  # type: ignore[arg-type]
+        assert not adapter.is_reserved
+        assert adapter.get_rows_below_cursor_position() == 5
+
+    def test_the_bounded_erase_comes_back_when_the_region_does(self) -> None:
+        adapter, stream, _ = make_reserved(rows=24)
+        adapter.enter_alternate_screen()
+        adapter.quit_alternate_screen()
+        adapter.flush()
+        stream.truncate(0), stream.seek(0)
+        adapter.erase_down()
+        adapter.flush()
+        assert stream.getvalue() == "\x1b[23M"
+
+    def test_a_stale_adapter_stays_safe_after_the_terminal_shrinks(self) -> None:
+        """The guest resized the window below the floor. Anything still holding the adapter
+        must not keep emitting bounded erases against a terminal with no region."""
+        output, stream, screen = make_shrinkable_output(rows=24)
+        display = TerminalDisplay(output)
+        display.acquire()
+        adapter = display.output
+        assert isinstance(adapter, ReservedOutput)
+
+        adapter.enter_alternate_screen()
+        screen.rows = 2
+        adapter.quit_alternate_screen()
+        adapter.flush()
+
+        assert not display.is_reserved
+        assert not isinstance(display.output, ReservedOutput), "callers were left on the adapter"
+        stream.truncate(0), stream.seek(0)
+        adapter.erase_down()
+        adapter.flush()
+        assert stream.getvalue() == "\x1b[J"

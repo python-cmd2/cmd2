@@ -506,3 +506,120 @@ class TestReleasedStateIsInert:
         display.acquire()
         display.release()
         assert stream.getvalue() == ""
+
+
+class TestHandoffSuspendsReconfiguration:
+    """A handoff keeps the lease deliberately, so lease depth alone does not mean the
+    terminal is ours to write margins to."""
+
+    def test_reconfigure_is_inert_while_a_guest_owns_the_terminal(self) -> None:
+        """Reinstalling margins here would restrict the screen of the program that has it."""
+        output, stream = make_output(rows=24)
+        display = TerminalDisplay(output)
+        display.acquire()
+        display.release_region_for_handoff()
+        stream.truncate(0), stream.seek(0)
+
+        assert not display.reconfigure()
+        assert stream.getvalue() == ""
+        assert not display.is_reserved
+
+    def test_a_resize_during_a_handoff_is_applied_when_the_terminal_comes_back(self) -> None:
+        """The suppressed reconfigure loses nothing: the return path measures afresh."""
+        output, stream, screen = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        display.release_region_for_handoff()
+
+        screen.rows = 40
+        display.reconfigure()
+        stream.truncate(0), stream.seek(0)
+        display.reacquire_region_after_handoff()
+
+        assert stream.getvalue() == "\x1b7\x1b[1;39r\x1b8"
+        assert display.geometry is not None
+        assert display.geometry.usable_rows == 39
+
+    def test_an_ineligible_return_unbinds_the_adapter(self) -> None:
+        """Otherwise callers keep getting a virtual view of a terminal with no reservation."""
+        output, _stream, screen = make_resizable_output(rows=24, columns=80)
+        display = TerminalDisplay(output)
+        display.acquire()
+        assert isinstance(display.output, ReservedOutput)
+        display.release_region_for_handoff()
+
+        screen.rows = 2
+        display.reacquire_region_after_handoff()
+
+        assert not display.is_reserved
+        assert not isinstance(display.output, ReservedOutput)
+
+    def test_callers_render_through_the_backend_while_suspended(self) -> None:
+        output, _ = make_output(rows=24)
+        display = TerminalDisplay(output)
+        display.acquire()
+        display.release_region_for_handoff()
+        assert display.output is output
+
+
+class TestFailedAcquisitionReturnsTheLease:
+    """A lease stranded by a failure makes every later acquire() a no-op at depth two, which
+    never retries the installation and never reports why."""
+
+    def test_the_lease_is_returned_when_cleanup_fails_as_well(self) -> None:
+        output, _ = make_output(rows=24)
+        display = TerminalDisplay(output)
+
+        def always_fails(_sequence: str) -> None:
+            raise OSError("terminal is gone")
+
+        display.terminal.write_margin_change = always_fails  # type: ignore[method-assign]
+        with pytest.raises(OSError, match="terminal is gone"):
+            display.acquire()
+        assert display.lease_depth == 0
+
+    def test_a_recovered_terminal_can_be_acquired_after_a_total_failure(self) -> None:
+        output, stream = make_output(rows=24)
+        display = TerminalDisplay(output)
+
+        failing = True
+
+        def sometimes_fails(sequence: str) -> None:
+            if failing:
+                raise OSError("terminal is gone")
+            PhysicalTerminal(output).write_margin_change(sequence)
+
+        display.terminal.write_margin_change = sometimes_fails  # type: ignore[method-assign]
+        with pytest.raises(OSError, match="terminal is gone"):
+            display.acquire()
+
+        failing = False
+        stream.truncate(0), stream.seek(0)
+        assert display.acquire()
+        assert display.lease_depth == 1
+        assert stream.getvalue() == "\x1b7\x1b[1;23r\x1b8"
+
+    def test_a_measurement_failure_returns_the_lease_too(self) -> None:
+        """Measuring sits inside the rollback: an ioctl that fails must not strand a lease."""
+        output, _ = make_output(rows=24)
+        display = TerminalDisplay(output)
+
+        def no_size() -> Size:
+            raise OSError("ioctl failed")
+
+        output.get_size = no_size  # type: ignore[method-assign]
+        with pytest.raises(OSError, match="ioctl failed"):
+            display.acquire()
+        assert display.lease_depth == 0
+
+    def test_the_original_failure_is_what_propagates(self) -> None:
+        """A cleanup that also fails must not mask the error worth reading."""
+        output, _ = make_output(rows=24)
+        display = TerminalDisplay(output)
+
+        def install_fails(_sequence: str) -> None:
+            raise OSError("install failed")
+
+        display.terminal.write_margin_change = install_fails  # type: ignore[method-assign]
+        with pytest.raises(OSError, match="install failed"):
+            display.acquire()

@@ -29,6 +29,7 @@ floor the display releases and reports full geometry, and it reacquires when the
 grows back.
 """
 
+from contextlib import suppress
 from dataclasses import dataclass
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
@@ -282,7 +283,7 @@ class TerminalDisplay:
     @property
     def output(self) -> "Output":
         """The output callers should render through: the adapter while reserved, else the backend."""
-        if self._adapter is not None:
+        if self._adapter is not None and self._geometry is not None:
             return self._adapter  # type: ignore[no-any-return]
         return self._terminal.output
 
@@ -314,17 +315,23 @@ class TerminalDisplay:
         if not self._terminal.supports_reservation:
             return False
 
-        geometry = self._measure()
-        if not geometry.is_eligible:
-            return False
-
         try:
+            geometry = self._measure()
+            if not geometry.is_eligible:
+                return False
             self._terminal.install_region(geometry)
-        except Exception:
-            # Never leave margins half-installed; a failed acquisition falls back to ordinary
-            # full-screen rendering rather than to an unknown terminal state.
-            self._terminal.release_region()
+        except BaseException:
+            # Give the lease back *first*. Cleanup can fail too -- a terminal that could not
+            # be measured or written to may well refuse the reset as well -- and a lease
+            # stranded by that failure makes every later acquire() a no-op at depth two,
+            # which never retries the installation and never reports why.
             self._depth -= 1
+            # Never leave margins half-installed; a failed acquisition falls back to ordinary
+            # full-screen rendering rather than to an unknown terminal state. If even that
+            # write fails there is nothing further to try, and the original error is the one
+            # worth propagating.
+            with suppress(Exception):
+                self._terminal.release_region()
             raise
 
         self._geometry = geometry
@@ -371,6 +378,12 @@ class TerminalDisplay:
         """
         if self._depth == 0:
             return False
+        if self._handoff_geometry is not None:
+            # A handoff keeps the lease deliberately, so lease depth alone does not mean the
+            # terminal is ours. Reinstalling margins here would restrict the screen of the
+            # program currently owning it. The resize is not lost: the return path measures
+            # afresh rather than restoring the snapshot taken before the handoff.
+            return False
         geometry = self._measure()
         if not geometry.is_eligible or not self._terminal.supports_reservation:
             if self._geometry is not None:
@@ -410,6 +423,10 @@ class TerminalDisplay:
         self._handoff_geometry = None
         geometry = self._measure()
         if not geometry.is_eligible:
+            # The terminal shrank while the guest had it. Nothing is installed, so callers
+            # go back to the plain backend -- which they do by way of the geometry check in
+            # `output`, rather than by unbinding the adapter here, so that a terminal which
+            # grows again reuses the same object.
             return
         self._terminal.install_region(geometry)
         self._geometry = geometry

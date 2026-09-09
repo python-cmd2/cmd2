@@ -65,10 +65,21 @@ class ReservedOutput(Output):
         return self._wrapped
 
     @property
+    def is_reserved(self) -> bool:
+        """Whether a reservation is installed right now.
+
+        The adapter does outlive its reservation. A handoff to the alternate screen restores
+        full margins while deliberately keeping the lease, and prompt-toolkit holds the output
+        object it was created with, so this object keeps receiving calls with no region
+        installed. Every operation whose correctness depends on the margins has to ask.
+        """
+        return self._display.geometry is not None
+
+    @property
     def _usable_rows(self) -> int:
         """Height of the usable region for the current generation."""
         geometry = self._display.geometry
-        if geometry is None:  # pragma: no cover - the adapter does not outlive its reservation
+        if geometry is None:
             return self._wrapped.get_size().rows
         return geometry.usable_rows
 
@@ -80,7 +91,7 @@ class ReservedOutput(Output):
         :return: the virtual size, one reservation shorter than the physical terminal
         """
         geometry = self._display.geometry
-        if geometry is None:  # pragma: no cover - the adapter does not outlive its reservation
+        if geometry is None:
             return self._wrapped.get_size()
         return geometry.virtual_size
 
@@ -96,14 +107,24 @@ class ReservedOutput(Output):
         """
         below = self._wrapped.get_rows_below_cursor_position()
         geometry = self._display.geometry
-        if geometry is None:  # pragma: no cover - the adapter does not outlive its reservation
+        if geometry is None:
             return below
         return max(0, below - geometry.reserved_rows)
 
     # -- erases ---------------------------------------------------------------------------
 
     def erase_down(self) -> None:
-        """Clear from the cursor to the bottom margin, leaving the reserved rows intact."""
+        """Clear from the cursor to the bottom margin, leaving the reserved rows intact.
+
+        With no reservation installed there are no margins to be bounded by, so ``DL`` would
+        run against the whole screen and delete complete lines -- including the text to the
+        left of a nonzero cursor column, which ``ED`` would have preserved. The substitution
+        is only sound inside an active reservation, so outside one the backend's own erase is
+        what runs.
+        """
+        if not self.is_reserved:
+            self._wrapped.erase_down()
+            return
         self._wrapped.write_raw(bounded_erase_down_sequence(self._usable_rows))
 
     def erase_screen(self) -> None:
@@ -112,7 +133,13 @@ class ReservedOutput(Output):
         Homing is part of the contract rather than an extra: ``DL`` clears downward from the
         cursor, so covering the whole usable area means starting at its top. ``Renderer.clear()``
         homes immediately afterwards anyway, which is the path Ctrl-L takes.
+
+        Outside an active reservation this defers to the backend, for the reason given on
+        :meth:`erase_down`.
         """
+        if not self.is_reserved:
+            self._wrapped.erase_screen()
+            return
         self._wrapped.write_raw(bounded_erase_screen_sequence(self._usable_rows))
 
     def erase_end_of_line(self) -> None:
