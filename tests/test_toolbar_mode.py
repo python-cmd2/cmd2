@@ -139,3 +139,17 @@ class TestConstructorWiring:
         app = cmd2.Cmd(allow_cli_args=False)
         with pytest.raises(AttributeError):
             app.bottom_toolbar_mode = "reserved"  # type: ignore[misc]
+
+
+class TestLayoutPrerequisite:
+    def test_an_unrecognized_layout_falls_back_under_auto(self) -> None:
+        """Reserved rendering has to hide the native toolbar, and cannot find it here."""
+        mode, reason = select_toolbar_mode(
+            "auto", qualified_output(), toolbar_enabled=True, interactive=True, layout_supported=False
+        )
+        assert mode == "legacy"
+        assert "layout" in reason
+
+    def test_forcing_reserved_on_an_unrecognized_layout_is_an_error(self) -> None:
+        with pytest.raises(ValueError, match="layout"):
+            select_toolbar_mode("reserved", qualified_output(), toolbar_enabled=True, interactive=True, layout_supported=False)

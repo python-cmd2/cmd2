@@ -71,6 +71,7 @@ def select_toolbar_mode(
     *,
     toolbar_enabled: bool,
     interactive: bool,
+    layout_supported: bool = True,
     version: str | None = None,
 ) -> tuple[str, str]:
     """Decide how the toolbar will be rendered for this session.
@@ -79,6 +80,8 @@ def select_toolbar_mode(
     :param output: the backend prompt-toolkit selected
     :param toolbar_enabled: whether a bottom toolbar is configured at all
     :param interactive: whether input and output are a terminal
+    :param layout_supported: whether the session's layout has a toolbar window that reserved
+        rendering can recognize and hide
     :param version: the prompt-toolkit version to judge; the installed one by default
     :return: the mode to use -- always ``"reserved"`` or ``"legacy"`` -- and, when falling
         back from ``auto``, the reason it fell back
@@ -89,7 +92,13 @@ def select_toolbar_mode(
     if mode == "legacy":
         return "legacy", ""
 
-    reason = _unmet_prerequisite(output, toolbar_enabled=toolbar_enabled, interactive=interactive, version=version)
+    reason = _unmet_prerequisite(
+        output,
+        toolbar_enabled=toolbar_enabled,
+        interactive=interactive,
+        layout_supported=layout_supported,
+        version=version,
+    )
     if reason is None:
         return "reserved", ""
     if mode == "reserved":
@@ -102,6 +111,7 @@ def _unmet_prerequisite(
     *,
     toolbar_enabled: bool,
     interactive: bool,
+    layout_supported: bool,
     version: str | None,
 ) -> str | None:
     """Find the first prerequisite reserved rendering does not have.
@@ -113,6 +123,7 @@ def _unmet_prerequisite(
     :param output: the backend prompt-toolkit selected
     :param toolbar_enabled: whether a bottom toolbar is configured at all
     :param interactive: whether input and output are a terminal
+    :param layout_supported: whether the session's toolbar window can be located
     :param version: the prompt-toolkit version to judge; the installed one by default
     :return: the reason, or ``None`` when every prerequisite is met
     """
@@ -120,6 +131,8 @@ def _unmet_prerequisite(
         return "no bottom toolbar is configured"
     if not interactive:
         return "the session is not interactive"
+    if not layout_supported:
+        return "the session's layout has no bottom toolbar window to replace"
     supported, reason = dependency_capability(version)
     if not supported:
         return reason

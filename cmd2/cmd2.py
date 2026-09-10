@@ -165,6 +165,7 @@ from .parsing import (
     StatementParser,
     shlex_split,
 )
+from .reserved_toolbar import ReservedToolbar, native_toolbar_container
 from .rich_utils import (
     Cmd2BaseConsole,
     Cmd2ExceptionConsole,
@@ -174,7 +175,7 @@ from .rich_utils import (
 )
 from .styles import Cmd2Style
 from .theme import get_pt_theme
-from .toolbar_mode import validate_toolbar_mode
+from .toolbar_mode import select_toolbar_mode, validate_toolbar_mode
 from .types import (
     BoundCommandFunc,
     BoundCompleter,
@@ -559,6 +560,7 @@ class Cmd:
         # How the bottom toolbar is rendered. Validated here rather than at the first prompt
         # so that a typo fails where it was written.
         self._bottom_toolbar_mode = validate_toolbar_mode(bottom_toolbar_mode)
+        self._reserved_toolbar: ReservedToolbar | None = None
 
         # Create the main PromptSession
         self.main_session = self._create_main_session(
@@ -2146,6 +2148,42 @@ class Cmd:
         else:
             with self._command_toolbar.suspend():
                 yield
+
+    @property
+    def reserved_toolbar(self) -> "ReservedToolbar | None":
+        """The reserved-row toolbar owning the terminal, or ``None`` in legacy mode."""
+        return self._reserved_toolbar
+
+    @contextlib.contextmanager
+    def _reserved_toolbar_context(self) -> Iterator[None]:
+        """Own the reserved-row toolbar for the lifetime of one command loop.
+
+        The mode is chosen here rather than at construction because the answer depends on the
+        session in use *now*: a caller may have replaced ``main_session`` since, and the
+        terminal it renders to is what decides whether a reservation is possible.
+
+        A refused reservation is not a refused loop. Below the two-row floor there is nothing
+        to reserve and the toolbar renders natively, which is why the object is kept even when
+        it is inactive -- the terminal can grow back.
+        """
+        mode, _reason = select_toolbar_mode(
+            self._bottom_toolbar_mode,
+            self.main_session.app.output,
+            toolbar_enabled=self.main_session.bottom_toolbar is not None,
+            interactive=self._is_tty_session(self.main_session),
+            layout_supported=native_toolbar_container(self.main_session) is not None,
+        )
+        if mode == "legacy":
+            yield
+            return
+
+        toolbar = ReservedToolbar(self.main_session, lambda: self.main_session.bottom_toolbar)
+        self._reserved_toolbar = toolbar
+        try:
+            with toolbar:
+                yield
+        finally:
+            self._reserved_toolbar = None
 
     @contextlib.contextmanager
     def _command_toolbar_context(self) -> Iterator[None]:
@@ -6066,9 +6104,12 @@ class Cmd:
         if self.intro:
             self.poutput(self.intro)
 
-        # And then call _cmdloop() to enter the main loop
+        # And then call _cmdloop() to enter the main loop. The reservation is established
+        # here, after the intro has been printed: it must not be installed around output that
+        # belongs to the terminal's ordinary scrollback.
         try:
-            self._cmdloop()
+            with self._reserved_toolbar_context():
+                self._cmdloop()
         finally:
             # Restore original signal handlers however the loop ended. Leaving cmd2's
             # handlers installed would outlive the application in its host process.
