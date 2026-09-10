@@ -454,20 +454,42 @@ class CommandToolbar:
                     self._thread.join(timeout=_SHUTDOWN_TIMEOUT)
                     if self._thread.is_alive():
                         self._abandon_stuck_display()
-                    else:
-                        self._thread = None
-                # Return the borrowed application to the main prompt, including on
-                # proxy failures. The upstream toolbar owned a separate application.
-                if self._display_stack is not None:
-                    self._display_stack.close()
-                    self._display_stack = None
-                # Application.run() saves its unprocessed queue before the thread
-                # exits. Those keys arrived after the ones handled by save_key().
-                pending_keys = get_typeahead(self.app.input)
-                store_typeahead(self.app.input, self._keys + pending_keys)
-                self._keys.clear()
+                self._finish_pause()
         finally:
             self._pausing = False
+
+    def _finish_pause(self) -> None:
+        """Give the borrowed application back and hand over the keys typed meanwhile.
+
+        Only safe once the display's thread has ended: until then it is still using the layout
+        and key bindings this puts back.
+        """
+        self._thread = None
+        # Return the borrowed application to the main prompt, including on proxy failures.
+        # The upstream toolbar owned a separate application.
+        if self._display_stack is not None:
+            self._display_stack.close()
+            self._display_stack = None
+        # Application.run() saves its unprocessed queue before the thread exits. Those keys
+        # arrived after the ones handled by save_key().
+        pending_keys = get_typeahead(self.app.input)
+        store_typeahead(self.app.input, self._keys + pending_keys)
+        self._keys.clear()
+
+    def complete_abandoned_shutdown(self) -> bool:
+        """Finish the teardown a timed-out pause could not do, if the thread has since ended.
+
+        A pause that gave up left the application as the running thread expected to find it:
+        its layout, its key bindings, its erase-on-done setting. Once the thread is gone that
+        state belongs to nobody, and the next prompt would otherwise render as the command
+        display.
+
+        :return: whether the display has now been fully torn down
+        """
+        if self.thread_is_alive:
+            return False
+        self._finish_pause()
+        return True
 
     def _abandon_stuck_display(self) -> None:
         """Report that the display did not stop, and refuse to pretend it did.

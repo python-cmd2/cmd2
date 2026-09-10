@@ -598,3 +598,7 @@ class StuckDisplay:
     """A command display whose thread will not finish."""
 
     thread_is_alive = True
+
+    def complete_abandoned_shutdown(self) -> bool:
+        """Report that the teardown cannot be finished while the thread runs."""
+        return False

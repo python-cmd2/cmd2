@@ -976,24 +976,38 @@ def test_a_surviving_display_blocks_the_prompt(toolbar_app, monkeypatch) -> None
 
 
 def test_the_refusal_lifts_when_the_display_finally_exits(toolbar_app, monkeypatch) -> None:
-    """The thread may yet finish, and the session should not stay broken if it does."""
+    """The thread may yet finish, and the session should not stay broken if it does.
+
+    Lifting the refusal is not the whole of it. The pause that timed out never restored the
+    application it had borrowed, so the prompt that comes next would render with the command
+    display's layout and key bindings unless that teardown is finished first.
+    """
     app, _, _ = toolbar_app
     blocked = threading.Event()
     monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
     monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+
+    prompt_layout = app.main_session.app.layout
+    prompt_bindings = app.main_session.app.key_bindings
+    prompt_erase = app.main_session.app.erase_when_done
 
     app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
     with app._command_toolbar_context():
         pass
     surviving = app._display_holding_terminal
     assert surviving is not None
+    assert app.main_session.app.layout is not prompt_layout
 
     blocked.set()
     surviving._thread.join(timeout=5)
 
     with app.suspend_bottom_toolbar():
         pass
+
     assert app._display_holding_terminal is None
+    assert app.main_session.app.layout is prompt_layout
+    assert app.main_session.app.key_bindings is prompt_bindings
+    assert app.main_session.app.erase_when_done == prompt_erase
 
 
 def test_a_surviving_display_stops_another_from_starting(toolbar_app, monkeypatch) -> None:

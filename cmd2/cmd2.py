@@ -2155,7 +2155,10 @@ class Cmd:
         display = self._display_holding_terminal
         if display is None:
             return
-        if not display.thread_is_alive:
+        if display.complete_abandoned_shutdown():
+            # Its thread has ended, so the teardown its timed-out pause could not do has been
+            # finished here. Clearing the reference without that would hand the next prompt an
+            # application still dressed as the command display.
             self._display_holding_terminal = None
             return
         raise RuntimeError("the bottom toolbar's display has not released the terminal")
