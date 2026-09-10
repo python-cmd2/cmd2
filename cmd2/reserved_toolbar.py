@@ -39,6 +39,12 @@ if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.shortcuts import PromptSession
 
 
+#: Consecutive failed paints before the reservation is given up. One is a bad moment -- a
+#: window resize mid-write, a transient device error. Two in a row is a terminal that is not
+#: coming back, and holding rows in it helps nobody.
+_MAX_CONSECUTIVE_PAINT_FAILURES = 2
+
+
 def native_toolbar_container(session: "PromptSession[Any]") -> ConditionalContainer | None:
     """Find the window prompt-toolkit draws the bottom toolbar in.
 
@@ -93,6 +99,8 @@ class ReservedToolbar:
         # hand the renderer a terminal it never had.
         self._original_app_output: Any = None
         self._original_renderer_output: Any = None
+        self._pending_error: BaseException | None = None
+        self._consecutive_paint_failures = 0
         self._native_toolbar: ConditionalContainer | None = None
         self._original_filter: Any = None
         self._installed_filter: Any = None
@@ -178,7 +186,11 @@ class ReservedToolbar:
                 color_depth=app.color_depth,
                 default_style="class:bottom-toolbar",
             )
-            self.refresh()
+            # Strict on the way in: a band that cannot be painted at all is a reservation
+            # that cannot be established, and the rollback below hands the terminal back
+            # rather than leaving the caller with rows nothing can draw in. Once established,
+            # the same failure is survivable -- see :meth:`refresh`.
+            self._paint_once()
         except BaseException:
             # Everything after the acquisition has to come back off. A caller using this as a
             # context manager never reaches ``__exit__`` when ``__enter__`` raises, so a
@@ -191,8 +203,35 @@ class ReservedToolbar:
             raise
         return True
 
+    def take_pending_error(self) -> BaseException | None:
+        """Take the failure waiting to be reported, if there is one.
+
+        :return: the error to report once, or ``None``
+        """
+        error, self._pending_error = self._pending_error, None
+        if error is None and self._painter is not None:
+            error = self._painter.take_pending_error()
+        return error
+
     def refresh(self) -> bool:
         """Evaluate the toolbar's content and paint whatever changed.
+
+        A failure here never reaches the command that was running. The toolbar is cosmetic and
+        the command is not its to interrupt, so the error is kept for the caller to report and
+        the terminal is put back into a state the next frame can trust.
+
+        :return: whether anything was written
+        """
+        try:
+            painted = self._paint_once()
+        except Exception as error:  # noqa: BLE001 - a failed paint must not end a command
+            self._paint_failed(error)
+            return False
+        self._consecutive_paint_failures = 0
+        return painted
+
+    def _paint_once(self) -> bool:
+        """Evaluate the content and paint it, letting any failure out.
 
         :return: whether anything was written
         """
@@ -204,6 +243,29 @@ class ReservedToolbar:
             return False
         return painter.paint(prepared)
 
+    def _paint_failed(self, error: BaseException) -> None:
+        """Record a failed paint and decide whether the reservation can continue.
+
+        The backend clears its buffer before writing it, so a failed flush cannot say whether
+        the terminal received a prefix of the batch or none of it. Either way the cursor is
+        somewhere this process no longer knows, which makes it the renderer's problem as much
+        as the painter's: the next frame would be drawn from a believed position that may not
+        be where the cursor is. Recovery is therefore owed before anything renders again.
+
+        One failure is a bad moment; two in a row is a terminal that has gone away. The second
+        gives the rows back and lets the native toolbar render again, because compatibility
+        rendering starts only after the reservation has been released -- never alongside it.
+
+        :param error: what the paint raised
+        """
+        self._pending_error = error
+        self._consecutive_paint_failures += 1
+        if self._bridge is not None:
+            self._bridge.require_resynchronization("a toolbar paint failed; the cursor's position is unknown")
+        if self._consecutive_paint_failures >= _MAX_CONSECUTIVE_PAINT_FAILURES:
+            with suppress(Exception):
+                self.stop()
+
     def stop(self) -> None:
         """Restore the application's bindings and release the reservation.
 
@@ -213,7 +275,12 @@ class ReservedToolbar:
         """
         display, self._display = self._display, None
         self._bridge = None
+        # The painter is dropped, so anything it was holding to report goes with it unless it
+        # is taken now. An error the user never sees is the same as no error handling at all.
+        if self._painter is not None and self._pending_error is None:
+            self._pending_error = self._painter.take_pending_error()
         self._painter = None
+        self._consecutive_paint_failures = 0
         if display is None:
             return
 

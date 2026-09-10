@@ -479,17 +479,27 @@ class TestRestorationOwnership:
 
 
 class PartialWriteStream(TtyStringIO):
-    """Writes a prefix of one flushed batch and then fails, as a real terminal can."""
+    """Writes a prefix of chosen flushed batches and then fails, as a real terminal can."""
 
-    def __init__(self, fail_on_write: int, keep: int = 12) -> None:
+    def __init__(self, *fail_on_writes: int, keep: int = 12) -> None:
         super().__init__()
         self._writes = 0
-        self._fail_on_write = fail_on_write
+        self._fail_on_writes = set(fail_on_writes)
+        self._armed = False
         self._keep = keep
+
+    def fail_next(self) -> None:
+        """Fail the next flushed batch, whenever it comes.
+
+        Counting batches is brittle -- cleanup after a failure emits one of its own -- so
+        tests that care about *which* paint fails arm it directly instead.
+        """
+        self._armed = True
 
     def write(self, text: str) -> int:
         self._writes += 1
-        if self._writes == self._fail_on_write:
+        if self._armed or self._writes in self._fail_on_writes:
+            self._armed = False
             super().write(text[: self._keep])
             raise OSError("terminal went away")
         return super().write(text)
@@ -501,7 +511,7 @@ class TestPartialStartupPaint:
         harness = Harness()
         try:
             # Batch one installs the margins; batch two is the first paint.
-            harness.stream = PartialWriteStream(fail_on_write=2)
+            harness.stream = PartialWriteStream(2)
             harness.backend.stdout = harness.stream
             with pytest.raises(OSError, match="terminal went away"):
                 harness.toolbar.start()
@@ -514,3 +524,140 @@ class TestPartialStartupPaint:
             assert harness.app.output is harness.backend
         finally:
             harness.close()
+
+
+class TestRefreshFailure:
+    def make(self, *fail_on_writes: int) -> Harness:
+        """Build a toolbar over a terminal that fails the chosen flushed batches.
+
+        Batch one installs the margins and batch two is the first paint, so refreshes start
+        at batch three.
+        """
+        harness = Harness()
+        harness.stream = PartialWriteStream(*fail_on_writes)
+        harness.backend.stdout = harness.stream
+        return harness
+
+    def test_a_failed_paint_does_not_take_the_command_down(self) -> None:
+        """The toolbar is cosmetic; the command that was running is not its to interrupt."""
+        harness = self.make(3)
+        try:
+            harness.toolbar.start()
+            harness.session.bottom_toolbar = "CHANGED"
+            assert harness.toolbar.refresh() is False
+        finally:
+            harness.close()
+
+    def test_a_failed_paint_makes_the_bridge_resynchronize(self) -> None:
+        """Buffering the cursor save does not prove the terminal received it."""
+        harness = self.make(3)
+        try:
+            harness.toolbar.start()
+            bridge = harness.toolbar.bridge
+            assert bridge is not None
+            harness.session.bottom_toolbar = "CHANGED"
+            harness.toolbar.refresh()
+            assert bridge.needs_resynchronization is True
+            assert "cursor" in (bridge.resynchronization_reason or "")
+        finally:
+            harness.close()
+
+    def test_the_failure_is_reported_once(self) -> None:
+        harness = self.make(3)
+        try:
+            harness.toolbar.start()
+            harness.session.bottom_toolbar = "CHANGED"
+            harness.toolbar.refresh()
+            assert isinstance(harness.toolbar.take_pending_error(), OSError)
+            assert harness.toolbar.take_pending_error() is None
+        finally:
+            harness.close()
+
+    def test_a_terminal_that_keeps_failing_gives_the_rows_back(self) -> None:
+        """A terminal that fails twice is not coming back; legacy rendering is the fallback."""
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            container = native_toolbar_container(harness.session)
+            assert container is not None
+
+            harness.stream = AlwaysFailingStream()
+            harness.backend.stdout = harness.stream
+            harness.session.bottom_toolbar = "ONE"
+            harness.toolbar.refresh()
+            assert harness.toolbar.is_active is True
+
+            harness.session.bottom_toolbar = "TWO"
+            harness.toolbar.refresh()
+            assert harness.toolbar.is_active is False
+            # The native toolbar renders again, which is what "fall back" means here.
+            assert container.filter() is True
+        finally:
+            harness.close()
+
+    def test_a_successful_paint_forgets_earlier_failures(self) -> None:
+        """Only *consecutive* failures mean the terminal is gone: fail, recover, fail again."""
+        harness = self.make()
+        try:
+            harness.toolbar.start()
+            harness.session.bottom_toolbar = "ONE"
+            harness.stream.fail_next()
+            assert harness.toolbar.refresh() is False
+            harness.toolbar.take_pending_error()
+
+            harness.session.bottom_toolbar = "TWO"
+            assert harness.toolbar.refresh() is True
+
+            harness.session.bottom_toolbar = "THREE"
+            harness.stream.fail_next()
+            assert harness.toolbar.refresh() is False
+            # The success in between reset the count, so this is failure one again.
+            assert harness.toolbar.is_active is True
+        finally:
+            harness.close()
+
+    def test_nothing_is_pending_when_nothing_failed(self) -> None:
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            assert harness.toolbar.take_pending_error() is None
+        finally:
+            harness.close()
+
+    def test_an_unreported_content_error_survives_teardown(self) -> None:
+        """The painter is dropped on stop; an error it still held would go with it."""
+
+        def boom() -> str:
+            raise RuntimeError("callback failed")
+
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            harness.toolbar.content = boom
+            harness.toolbar.refresh()
+            harness.toolbar.stop()
+            assert isinstance(harness.toolbar.take_pending_error(), RuntimeError)
+        finally:
+            harness.close()
+
+    def test_a_failing_content_callback_is_reported_too(self) -> None:
+        """The painter keeps the last frame; the error still has to reach the user once."""
+
+        def boom() -> str:
+            raise RuntimeError("callback failed")
+
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            harness.toolbar.content = boom
+            assert harness.toolbar.refresh() is False
+            assert isinstance(harness.toolbar.take_pending_error(), RuntimeError)
+        finally:
+            harness.close()
+
+
+class AlwaysFailingStream(TtyStringIO):
+    """A terminal that has gone away."""
+
+    def write(self, text: str) -> int:
+        raise OSError("terminal went away")
