@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 from prompt_toolkit.data_structures import Size
+from prompt_toolkit.filters import Condition
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.output.vt100 import Vt100_Output
@@ -18,6 +19,7 @@ from prompt_toolkit.shortcuts import PromptSession
 
 from cmd2.reserved_output import ReservedOutput
 from cmd2.reserved_toolbar import ReservedToolbar, native_toolbar_container
+from cmd2.toolbar_painter import ToolbarPainter
 
 
 class TtyStringIO(io.StringIO):
@@ -367,5 +369,110 @@ class TestFirstPaint:
         harness = Harness()
         try:
             assert harness.toolbar.refresh() is False
+        finally:
+            harness.close()
+
+
+class TestStartupFailure:
+    def test_a_failed_first_paint_leaves_no_reservation_behind(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Review finding: __enter__ raising means __exit__ never runs, so start must roll back."""
+
+        def boom(self: Any, prepared: Any) -> bool:
+            raise OSError("terminal went away")
+
+        harness = Harness()
+        try:
+            monkeypatch.setattr(ToolbarPainter, "paint", boom)
+            harness.clear()
+            with pytest.raises(OSError, match="terminal went away"):
+                harness.toolbar.start()
+
+            assert harness.toolbar.is_active is False
+            assert harness.app.output is harness.backend
+            assert harness.app.renderer.output is harness.backend
+            assert "\x1b[r" in harness.written()
+        finally:
+            harness.close()
+
+    def test_a_failed_start_restores_the_native_toolbar(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def boom(self: Any, prepared: Any) -> bool:
+            raise OSError("terminal went away")
+
+        harness = Harness()
+        try:
+            container = native_toolbar_container(harness.session)
+            assert container is not None
+            original = container.filter
+            monkeypatch.setattr(ToolbarPainter, "paint", boom)
+            with pytest.raises(OSError, match="terminal went away"):
+                harness.toolbar.start()
+            assert container.filter is original
+        finally:
+            harness.close()
+
+    def test_a_failed_start_can_be_retried(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Rollback has to leave the object usable, not merely leave the terminal clean."""
+        failures = {"count": 1}
+        real_paint = ToolbarPainter.paint
+
+        def sometimes(self: Any, prepared: Any) -> bool:
+            if failures["count"]:
+                failures["count"] -= 1
+                raise OSError("terminal went away")
+            return bool(real_paint(self, prepared))
+
+        harness = Harness()
+        try:
+            monkeypatch.setattr(ToolbarPainter, "paint", sometimes)
+            with pytest.raises(OSError, match="terminal went away"):
+                harness.toolbar.start()
+            assert harness.toolbar.is_active is False
+            assert harness.toolbar.start() is True
+            assert harness.toolbar.is_active is True
+        finally:
+            harness.close()
+
+
+class TestRestorationOwnership:
+    def test_the_renderer_gets_its_own_original_output_back(self) -> None:
+        """Review finding: the renderer's output need not be the application's."""
+        harness = Harness()
+        try:
+            other = Vt100_Output(TtyStringIO(), lambda: Size(rows=24, columns=80))
+            harness.app.renderer.output = other
+
+            harness.toolbar.start()
+            harness.toolbar.stop()
+
+            assert harness.app.output is harness.backend
+            assert harness.app.renderer.output is other
+        finally:
+            harness.close()
+
+    def test_a_filter_installed_while_reserved_survives_teardown(self) -> None:
+        """Review finding: restoring unconditionally discards whatever replaced ours."""
+        harness = Harness()
+        try:
+            container = native_toolbar_container(harness.session)
+            assert container is not None
+            harness.toolbar.start()
+
+            replacement = Condition(lambda: True)
+            container.filter = replacement
+            harness.toolbar.stop()
+
+            assert container.filter is replacement
+        finally:
+            harness.close()
+
+    def test_the_filter_is_restored_when_it_is_still_ours(self) -> None:
+        harness = Harness()
+        try:
+            container = native_toolbar_container(harness.session)
+            assert container is not None
+            original = container.filter
+            harness.toolbar.start()
+            harness.toolbar.stop()
+            assert container.filter is original
         finally:
             harness.close()

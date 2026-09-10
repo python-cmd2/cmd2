@@ -17,6 +17,7 @@ The toolbar's content is read through a callable rather than captured, so a call
 new ``bottom_toolbar`` to the session still reaches the band.
 """
 
+from contextlib import suppress
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
 
@@ -87,9 +88,14 @@ class ReservedToolbar:
         self._painter: ToolbarPainter | None = None
         self._lock = TerminalLock()
         self._bound_output: Any = None
-        self._original_output: Any = None
+        # The application's output and the renderer's are saved separately. They are usually
+        # the same object, but nothing guarantees it, and restoring one over the other would
+        # hand the renderer a terminal it never had.
+        self._original_app_output: Any = None
+        self._original_renderer_output: Any = None
         self._native_toolbar: ConditionalContainer | None = None
         self._original_filter: Any = None
+        self._installed_filter: Any = None
 
     @property
     def is_active(self) -> bool:
@@ -148,28 +154,41 @@ class ReservedToolbar:
             return False
 
         self._display = display
-        self._original_output = app.output
-        self._bound_output = display.output
-        app.output = self._bound_output
-        app.renderer.output = self._bound_output
+        try:
+            self._original_app_output = app.output
+            self._original_renderer_output = app.renderer.output
+            self._bound_output = display.output
+            app.output = self._bound_output
+            app.renderer.output = self._bound_output
 
-        # Hidden by asking whether the reservation is live rather than by latching a False.
-        # A restoration that never runs -- a teardown that raised, a caller that dropped this
-        # object -- then leaves a filter that heals itself instead of a toolbar that is gone
-        # for the rest of the session.
-        self._native_toolbar = native
-        self._original_filter = native.filter
-        native.filter = native.filter & Condition(lambda: not self.is_active)
+            # Hidden by asking whether the reservation is live rather than by latching a
+            # False. A restoration that never runs -- a teardown that raised, a caller that
+            # dropped this object -- then leaves a filter that heals itself instead of a
+            # toolbar that is gone for the rest of the session.
+            self._native_toolbar = native
+            self._original_filter = native.filter
+            self._installed_filter = native.filter & Condition(lambda: not self.is_active)
+            native.filter = self._installed_filter
 
-        self._bridge = PromptToolkitBridge(renderer=app.renderer, display=display, lock=self._lock)
-        self._painter = ToolbarPainter(
-            display=display,
-            lock=self._lock,
-            style=DynamicStyle(get_pt_theme),
-            color_depth=app.color_depth,
-            default_style="class:bottom-toolbar",
-        )
-        self.refresh()
+            self._bridge = PromptToolkitBridge(renderer=app.renderer, display=display, lock=self._lock)
+            self._painter = ToolbarPainter(
+                display=display,
+                lock=self._lock,
+                style=DynamicStyle(get_pt_theme),
+                color_depth=app.color_depth,
+                default_style="class:bottom-toolbar",
+            )
+            self.refresh()
+        except BaseException:
+            # Everything after the acquisition has to come back off. A caller using this as a
+            # context manager never reaches ``__exit__`` when ``__enter__`` raises, so a
+            # failure here would otherwise leave the margins installed, both outputs wrapped
+            # and the native toolbar suppressed -- a terminal nobody owns and nobody will
+            # release. Cleanup is best-effort: if it fails too, the original failure is the
+            # one worth propagating.
+            with suppress(Exception):
+                self.stop()
+            raise
         return True
 
     def refresh(self) -> bool:
@@ -198,20 +217,23 @@ class ReservedToolbar:
         if display is None:
             return
 
+        # Everything here restores only what is still ours. Something else may have replaced
+        # any of it while the reservation was live, and putting a stale object back is worse
+        # than leaving a newer one alone.
         native, self._native_toolbar = self._native_toolbar, None
-        if native is not None and self._original_filter is not None:
+        if native is not None and native.filter is self._installed_filter:
             native.filter = self._original_filter
         self._original_filter = None
+        self._installed_filter = None
 
         app = self._session.app
-        # Only put the original back where the adapter is still installed. Something else may
-        # have rebound these in between, and a stale object is worse than a newer one.
         if app.output is self._bound_output:
-            app.output = self._original_output
+            app.output = self._original_app_output
         if app.renderer.output is self._bound_output:
-            app.renderer.output = self._original_output
+            app.renderer.output = self._original_renderer_output
         self._bound_output = None
-        self._original_output = None
+        self._original_app_output = None
+        self._original_renderer_output = None
         display.release()
 
     def __enter__(self) -> Self:
