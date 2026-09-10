@@ -34,6 +34,9 @@ class Harness:
         self._pipe = create_pipe_input()
         self.pipe = self._pipe.__enter__()
         self.app = cmd2.Cmd(allow_cli_args=False, bottom_toolbar_mode=mode)
+        # The command's output and the toolbar's paints share one terminal, as they do in
+        # life: the stream cmd2 writes to is the stream the backend renders to.
+        self.app.stdout = self.stream
         self.app.main_session = PromptSession(input=self.pipe, output=self.backend, bottom_toolbar=toolbar)
         self.clear()
 
@@ -167,5 +170,79 @@ class TestPaintedToolbar:
                 assert painter.last_frame is not None
                 row = "".join(cell.char for cell in painter.last_frame.rows[0])
                 assert row.startswith("FROM CALLABLE")
+        finally:
+            harness.close()
+
+
+class TestCommandOutputRouting:
+    def test_reserved_mode_serializes_output_instead_of_proxying_it(self) -> None:
+        """The proxy's erase-and-redraw is the flicker; the reservation removes the need."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                display = harness.app._command_toolbar
+                assert display is not None
+                assert display._proxy is None
+                assert display._streams
+                assert all(stream.serializer is not None for stream in display._streams)
+        finally:
+            harness.close()
+
+    def test_legacy_mode_still_proxies(self) -> None:
+        harness = Harness(mode="legacy")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                display = harness.app._command_toolbar
+                assert display is not None
+                assert display._proxy is not None
+                assert all(stream.serializer is None for stream in display._streams)
+        finally:
+            harness.close()
+
+    def test_command_output_reaches_the_terminal(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                harness.clear()
+                harness.app.poutput("command output")
+                assert "command output" in harness.written()
+        finally:
+            harness.close()
+
+    def test_command_output_tells_the_bridge_inside_the_write(self) -> None:
+        """The Stage 3 contract: the invalidation is part of the emitting transaction."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                bridge = toolbar.bridge
+                assert bridge is not None
+                harness.app.poutput("command output")
+                assert bridge.needs_resynchronization is True
+                assert bridge.prompt_anchor is None
+        finally:
+            harness.close()
+
+    def test_the_display_reports_itself_active_while_serialized(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                display = harness.app._command_toolbar
+                assert display is not None
+                assert display.is_active is True
+        finally:
+            harness.close()
+
+    def test_the_streams_are_given_back_when_the_display_stops(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                with harness.app._command_toolbar_context():
+                    display = harness.app._command_toolbar
+                    assert display is not None
+                    streams = list(display._streams)
+                assert all(stream.serializer is None for stream in streams)
+                assert harness.app.stdout is harness.app.stdout
         finally:
             harness.close()

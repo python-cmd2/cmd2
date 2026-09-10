@@ -24,11 +24,11 @@ from prompt_toolkit.layout.containers import ConditionalContainer
 from prompt_toolkit.patch_stdout import StdoutProxy
 from prompt_toolkit.utils import suspend_to_background_supported
 
+from .managed_output import SerializedTerminalWriter
 from .pager import Pager, output_fits
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
-    from .managed_output import SerializedTerminalWriter
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
@@ -168,6 +168,7 @@ class CommandToolbar:
         self._thread: threading.Thread | None = None
         self._streams: list[ToolbarStream] = []
         self._proxy: StdoutProxy | None = None
+        self._serialized = False
         self._lock = threading.RLock()
         self._pausing = False
 
@@ -286,6 +287,8 @@ class CommandToolbar:
         self._ready.wait()
         if self._error is not None:
             raise self._error
+        if self._install_serializers():
+            return
         # The worker already combines queued writes. A batching sleep would also
         # delay close(), which runs at each command finalization boundary.
         proxy = _ContextStdoutProxy(raw=True, sleep_between_writes=0)
@@ -293,6 +296,25 @@ class CommandToolbar:
             self._proxy = proxy
             for stream in self._streams:
                 stream.proxy = proxy
+
+    def _install_serializers(self) -> bool:
+        """Route output straight to the terminal when a reservation is holding the toolbar.
+
+        The stdout proxy exists to put output above a toolbar that scrolls with the screen:
+        it erases the toolbar, prints, and draws it again. A reserved toolbar does not scroll,
+        so none of that is needed -- and doing it anyway would reintroduce exactly the flicker
+        the reservation removes.
+
+        :return: whether serialized writing was installed
+        """
+        reserved = self.cmd.reserved_toolbar
+        if reserved is None or not reserved.is_active:
+            return False
+        with self._lock:
+            self._serialized = True
+            for stream in self._streams:
+                stream.serializer = SerializedTerminalWriter(stream.original, reserved.lock, reserved.bridge)
+        return True
 
     def _app_exited(self) -> None:
         """Give the terminal back to the streams when the display stops on its own.
@@ -309,9 +331,10 @@ class CommandToolbar:
         with self._lock:
             # Leave self._proxy set so that the next _pause() still drains and closes
             # it. With the display gone, its worker writes to the terminal directly.
-            started = self._proxy is not None
+            started = self._proxy is not None or self._serialized
             for stream in self._streams:
                 stream.proxy = None
+                stream.serializer = None
 
         # A proxy exists only once _resume() has handed startup failures to the command
         # thread, so reporting here does not duplicate the exception it raises.
@@ -346,8 +369,12 @@ class CommandToolbar:
                             self._proxy.close()
                     finally:
                         self._proxy = None
+                        self._serialized = False
                         for stream in self._streams:
                             stream.proxy = None
+                            # Nothing to drain: a serialized write reaches the terminal
+                            # before it returns, so there is no queued work to lose.
+                            stream.serializer = None
             finally:
                 # The lock is released before joining, since the toolbar thread may be
                 # blocked writing through a stream that is waiting on it.
@@ -383,7 +410,7 @@ class CommandToolbar:
     @property
     def is_active(self) -> bool:
         """Whether the display currently owns the terminal."""
-        return self._proxy is not None and self.app.is_running
+        return (self._proxy is not None or self._serialized) and self.app.is_running
 
     def _call_in_ui(self, func: Callable[[], _R]) -> _R:
         """Change UI state on its event loop, propagating failures to the command."""
