@@ -786,3 +786,37 @@ class TestReviewRegressionsRoundTwo:
         assert harness.bridge.report_cursor_row(5) is True
         assert harness.bridge.prompt_anchor == 5
         assert harness.renderer._min_available_height == 23 - 5 + 1
+
+    def test_a_reply_cannot_overtake_a_write_that_lands_while_it_waits(self) -> None:
+        """Review finding: validating a reply and publishing its origin must be one step."""
+        handover = RetiringLock()
+        harness = Harness(lock=TerminalLock(lock=handover))
+        harness.bridge.request_cursor_position()
+
+        handover.on_acquire = lambda: harness.bridge.note_managed_write(prompt_anchor=7)
+        assert harness.bridge.report_cursor_row(4) is False
+        assert harness.bridge.prompt_anchor == 7
+
+    def test_a_request_records_the_terminal_it_was_actually_sent_to(self) -> None:
+        """A write during acquisition must not make the reply to a later request look stale."""
+        handover = RetiringLock()
+        harness = Harness(lock=TerminalLock(lock=handover))
+
+        handover.on_acquire = lambda: harness.bridge.note_managed_write(prompt_anchor=7)
+        assert harness.bridge.request_cursor_position() is True
+        # The request went out after that write, so its reply describes the current terminal.
+        assert harness.bridge.report_cursor_row(4) is True
+        assert harness.bridge.prompt_anchor == 4
+
+    def test_recovery_that_finds_emission_stopped_writes_nothing(self) -> None:
+        """Review finding: rendering can be abandoned while recovery queues for the terminal."""
+        handover = RetiringLock()
+        harness = Harness(lock=TerminalLock(lock=handover))
+        harness.bridge.require_resynchronization("test")
+        harness.clear()
+
+        handover.on_acquire = lambda: harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        with pytest.raises(ReservedModeFailureError):
+            harness.resynchronize()
+        assert harness.written() == ""
+        assert harness.bridge.needs_resynchronization is True

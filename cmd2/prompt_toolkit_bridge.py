@@ -412,14 +412,16 @@ class PromptToolkitBridge:
             origin can be established at all
         """
         assert_no_terminal_transaction("resynchronizing the terminal")
-        if self._reserved_emission_stopped:
-            raise ReservedModeFailureError("reserved emission has stopped; release before rendering again")
-
         # Resolved before the terminal is taken: this runs application filters, which the
         # wait contract keeps off the lock.
         policy = self._desired_policy()
 
         with self._lock.transaction("resynchronize"):
+            if self._reserved_emission_stopped:
+                # Checked here rather than before the wait. Rendering can be abandoned while
+                # this call queues for the terminal, and recovery would then write cursor and
+                # mode sequences into a terminal nothing is allowed to emit to any more.
+                raise ReservedModeFailureError("reserved emission has stopped; release before rendering again")
             # The origin is read *here*, not before the wait. Recovery can queue behind
             # another writer for as long as that writer holds the terminal, and what it does
             # in the meantime -- emitting output, moving the prompt, resizing -- is exactly
@@ -549,14 +551,18 @@ class PromptToolkitBridge:
         output = self._display.output
         if not output.responds_to_cpr:
             return False
-        generations = self.generations()
-        with self._lock.transaction("cursor position request", generation=generations.geometry):
+        with self._lock.transaction("cursor position request"):
+            # Recorded here, not before the wait. A managed write can land while this call
+            # queues for the terminal, and a request stamped with the generations from before
+            # that write would have its own reply rejected as stale.
+            #
+            # The whole generation tuple, not just the geometry: the terminal samples the
+            # cursor when it processes the request, so output written afterwards moves the
+            # very thing the reply describes.
+            generations = self.generations()
             output.ask_for_cpr()
             output.flush()
-        # The whole generation tuple, not just the geometry. The terminal samples the cursor
-        # when it processes the request, so managed output written afterwards moves the very
-        # thing the reply describes -- a resize is not the only way a reply goes stale.
-        self._pending_cpr.append(generations)
+            self._pending_cpr.append(generations)
         return True
 
     def report_cursor_row(self, row: int) -> bool:
@@ -574,30 +580,41 @@ class PromptToolkitBridge:
         compute ``U - r + 1``, which is zero at the first reserved row and negative below it,
         and would leave the prompt's height silently invalid rather than raising.
 
+        Validating the reply and publishing the origin it establishes happen in one terminal
+        transaction. Split, they are two steps a managed write can land between: the reply
+        passes as current, the write moves the prompt, and the anchor it just recorded is then
+        overwritten by a row that is no longer where the prompt is. Managed output reaches the
+        terminal inside this same lock, so a reply validated here cannot be overtaken by one.
+
+        Completing the renderer's own pending report only schedules its callbacks on the event
+        loop, which is not a wait and dispatches no application code, so it belongs inside the
+        transaction with the decision it settles.
+
         :param row: the one-based physical row the terminal reported
         :return: whether the reply was accepted and used
         """
-        if not self._pending_cpr:
-            # Nothing outstanding: a late reply from a stream that was already drained. It
-            # must not be allowed to answer a request that was never made.
-            self._settle_renderer_cpr()
-            return False
-        # Popped whatever the outcome: replies correlate by order, so dropping one without
-        # taking it off the queue would answer every later request with its predecessor.
-        generations = self._pending_cpr.popleft()
-        if generations != self.generations():
-            self._settle_renderer_cpr()
-            return False
+        with self._lock.transaction("cursor position report"):
+            if not self._pending_cpr:
+                # Nothing outstanding: a late reply from a stream that was already drained. It
+                # must not be allowed to answer a request that was never made.
+                self._settle_renderer_cpr()
+                return False
+            # Popped whatever the outcome: replies correlate by order, so dropping one without
+            # taking it off the queue would answer every later request with its predecessor.
+            generations = self._pending_cpr.popleft()
+            if generations != self.generations():
+                self._settle_renderer_cpr()
+                return False
 
-        usable = self._usable_rows()
-        if not 1 <= row <= usable:
-            self._settle_renderer_cpr()
-            self.require_resynchronization(f"cursor position report row {row} is inside the reserved band")
-            return False
+            usable = self._usable_rows()
+            if not 1 <= row <= usable:
+                self._settle_renderer_cpr()
+                self.require_resynchronization(f"cursor position report row {row} is inside the reserved band")
+                return False
 
-        self._prompt_anchor = row
-        self._renderer.report_absolute_cursor_row(row)
-        return True
+            self._prompt_anchor = row
+            self._renderer.report_absolute_cursor_row(row)
+            return True
 
     def _settle_renderer_cpr(self) -> None:
         """Resolve one of the renderer's own pending reports, if it has any.
