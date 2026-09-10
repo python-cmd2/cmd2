@@ -123,7 +123,10 @@ class PromptToolkitBridge:
         self._pending_error: BaseException | None = None
         self._prompt_anchor: int | None = None
         self._resynchronization_reason: str | None = None
-        self._pending_cpr: deque[Generations] = deque()
+        # One entry per outstanding request, in the order they went out. An entry is ``None``
+        # once the screen it asked about is gone: the reply is still coming, so the place has
+        # to be kept, but nothing it says can be believed.
+        self._pending_cpr: deque[Generations | None] = deque()
         # The renderer methods this bridge replaced, by name, empty while unbound. Kept so
         # preparation can call the real render: calling the attribute would re-enter the
         # wrapper and never terminate.
@@ -420,7 +423,7 @@ class PromptToolkitBridge:
                 self._originals["clear"]()
             finally:
                 self._prompt_anchor = None
-                self._discard_pending_cursor_reports()
+                self._invalidate_pending_cursor_reports()
                 self.require_resynchronization("the renderer cleared the screen")
 
     # -- prepare and commit ----------------------------------------------------------------
@@ -544,8 +547,11 @@ class PromptToolkitBridge:
             output.flush()
             self._display.reconfigure()
         except Exception as error:  # noqa: BLE001 - cleanup failing is itself the answer
-            self._reserved_emission_stopped = True
-            self._pending_error = error
+            # Through the same door as every other abandonment, so the owner is told and can
+            # give the rows back. Setting the flag here directly would stop emission while
+            # leaving the reservation installed and the renderer bound -- and the later call
+            # that would have notified now returns early, having found it already stopped.
+            self.stop_reserved_emission(error)
             return False
         return True
 
@@ -725,7 +731,9 @@ class PromptToolkitBridge:
 
         Replies carry no generation on the wire, so they are correlated by order against the
         requests this bridge made. A reply from before a geometry change describes a screen
-        that no longer exists and must not satisfy the request made after it.
+        that no longer exists and must not satisfy the request made after it. Requests whose
+        screen has since been cleared away are kept in the queue but marked: their replies are
+        still coming and still have to be consumed in order, and none of them can be believed.
 
         A reply is stale when anything about the terminal has changed since the request went
         out -- a resize, an owner change, or managed output that moved the cursor the terminal
@@ -757,7 +765,7 @@ class PromptToolkitBridge:
             # Popped whatever the outcome: replies correlate by order, so dropping one without
             # taking it off the queue would answer every later request with its predecessor.
             generations = self._pending_cpr.popleft()
-            if generations != self.generations():
+            if generations is None or generations != self.generations():
                 self._settle_renderer_cpr()
                 return False
 
@@ -771,15 +779,16 @@ class PromptToolkitBridge:
             self._renderer.report_absolute_cursor_row(row)
             return True
 
-    def _discard_pending_cursor_reports(self) -> None:
-        """Drop every outstanding request, settling the bookkeeping each one owns.
+    def _invalidate_pending_cursor_reports(self) -> None:
+        """Mark every outstanding request unbelievable, without forgetting that it is coming.
 
-        Used where the screen changed underneath the requests themselves. Left in the queue,
-        the next reply to arrive would be matched to a request made about a different screen.
+        Used where the screen changed underneath the requests themselves. Emptying the queue
+        would not stop the replies: they are already in the terminal's hands, and the next one
+        to arrive would be matched against whatever request came *after* the change -- the
+        oldest reply answering the newest question. The entries stay, marked, so each reply is
+        still consumed in order and each one is refused.
         """
-        while self._pending_cpr:
-            self._pending_cpr.popleft()
-            self._settle_renderer_cpr()
+        self._pending_cpr = deque([None] * len(self._pending_cpr))
 
     def _settle_renderer_cpr(self) -> None:
         """Resolve one of the renderer's own pending reports, if it has any.

@@ -1196,3 +1196,48 @@ class TestReviewRegressionsRoundThree:
         harness.bridge.stop_reserved_emission(OSError("and again"))
         assert released == [1]
         assert str(harness.bridge.take_pending_error()) == "terminal went away"
+
+    def test_a_failed_cleanup_tells_the_owner_to_release(self) -> None:
+        """Review finding: the one path that really abandons emission skipped the transition."""
+        released: list[int] = []
+        harness = self.bound()
+        harness.bridge.set_emission_stopped_handler(lambda: released.append(1))
+
+        prepared = harness.bridge.prepare(harness.app)
+        assert prepared is not None
+        harness.backend.stdout = AlwaysFailingTtyStream()
+        assert harness.bridge.commit(prepared) is False
+
+        assert harness.bridge.reserved_emission_stopped is True
+        assert released == [1]
+
+    def test_a_reply_in_transit_when_the_screen_cleared_is_not_reused(self) -> None:
+        """Review finding: emptying the queue lets the next reply answer the wrong request."""
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
+        harness.bridge.set_prompt_anchor(7)
+
+        harness.bridge.request_cursor_position()  # request A, about the pre-clear screen
+        with set_app(harness.app):
+            harness.renderer.clear()
+        harness.bridge.request_cursor_position()  # request B, about the cleared screen
+
+        # Reply A arrives late. It describes the screen before the clear.
+        assert harness.bridge.report_cursor_row(9) is False
+        assert harness.bridge.prompt_anchor is None
+
+        # Reply B is the one that establishes the origin.
+        assert harness.bridge.report_cursor_row(4) is True
+        assert harness.bridge.prompt_anchor == 4
+
+    def test_the_renderers_own_bookkeeping_is_settled_for_each_stale_reply(self) -> None:
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
+        harness.bridge.request_cursor_position()
+        pending: Future[None] = Future()
+        harness.renderer._waiting_for_cpr_futures.append(pending)
+        with set_app(harness.app):
+            harness.renderer.clear()
+
+        assert harness.bridge.report_cursor_row(9) is False
+        assert pending.done() is True

@@ -739,3 +739,26 @@ class TestAbandonedEmission:
             assert isinstance(harness.toolbar.take_pending_error(), OSError)
         finally:
             harness.close()
+
+    def test_a_failed_cleanup_releases_the_rows(self) -> None:
+        """The path that truly abandons emission has to reach the owner like any other.
+
+        Driven at the cleanup itself: a real partial commit needs a running event loop to
+        render a prompt session, and what is under test here is the wiring from "cleanup
+        failed" to "the owner gave the rows back", not how the commit got there.
+        """
+        harness = Harness()
+        try:
+            original_render = harness.app.renderer.render
+            harness.toolbar.start()
+            bridge = harness.toolbar.bridge
+            assert bridge is not None
+
+            harness.backend.stdout = AlwaysFailingStream()
+            assert bridge._attempt_cleanup() is False
+
+            assert bridge.reserved_emission_stopped is True
+            assert harness.toolbar.is_active is False
+            assert harness.app.renderer.render == original_render
+        finally:
+            harness.close()
