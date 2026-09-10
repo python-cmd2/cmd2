@@ -933,3 +933,80 @@ def test_command_toolbar_that_would_not_stop_keeps_the_application(toolbar_app, 
             assert display.app.layout is layout
     finally:
         blocked.set()
+
+
+def test_a_surviving_display_blocks_later_handoffs(toolbar_app, monkeypatch) -> None:
+    """Disabling future displays is not enough: the old one still owns the terminal."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    entered = []
+
+    try:
+        app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
+        with app._command_toolbar_context():
+            pass
+
+        # The command display is gone as an object, but its thread is not.
+        assert app._command_toolbar is None
+        with pytest.raises(RuntimeError, match="terminal"), app.suspend_bottom_toolbar():
+            entered.append(True)
+        assert entered == []
+    finally:
+        blocked.set()
+
+
+def test_a_surviving_display_blocks_the_prompt(toolbar_app, monkeypatch) -> None:
+    """Two readers on one terminal is not a state to keep prompting in."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+
+    try:
+        app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
+        with app._command_toolbar_context():
+            pass
+
+        with pytest.raises(RuntimeError, match="terminal"):
+            app._read_raw_input("> ", app.main_session)
+    finally:
+        blocked.set()
+
+
+def test_the_refusal_lifts_when_the_display_finally_exits(toolbar_app, monkeypatch) -> None:
+    """The thread may yet finish, and the session should not stay broken if it does."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+
+    app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
+    with app._command_toolbar_context():
+        pass
+    surviving = app._display_holding_terminal
+    assert surviving is not None
+
+    blocked.set()
+    surviving._thread.join(timeout=5)
+
+    with app.suspend_bottom_toolbar():
+        pass
+    assert app._display_holding_terminal is None
+
+
+def test_a_surviving_display_stops_another_from_starting(toolbar_app, monkeypatch) -> None:
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+
+    try:
+        app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
+        with app._command_toolbar_context():
+            pass
+        with app._command_toolbar_context():
+            assert app._command_toolbar is None
+    finally:
+        blocked.set()

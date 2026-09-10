@@ -561,6 +561,9 @@ class Cmd:
         # so that a typo fails where it was written.
         self._bottom_toolbar_mode = validate_toolbar_mode(bottom_toolbar_mode)
         self._reserved_toolbar: ReservedToolbar | None = None
+        # A command display whose thread did not stop when it was asked to. It still owns the
+        # terminal, so nothing may be handed the terminal until it lets go.
+        self._display_holding_terminal: command_toolbar.CommandToolbar | None = None
 
         # Create the main PromptSession
         self.main_session = self._create_main_session(
@@ -2135,6 +2138,28 @@ class Cmd:
         """
         return None
 
+    def _require_terminal_ownership(self) -> None:
+        """Refuse to use the terminal while a display that would not stop still holds it.
+
+        A display that timed out on shutdown is disabled for the rest of the session, but that
+        only stops another one from starting. Its thread is still inside the application:
+        rendering, and reading the same input. Handing that terminal to a guest, or prompting
+        on it, would put two readers on one device and interleave their output.
+
+        The check heals itself. The thread may finish late -- a render callback that finally
+        returned, a subprocess that finally exited -- and once it has, the terminal is ours
+        again and this stops refusing.
+
+        :raises RuntimeError: while the surviving display still holds the terminal
+        """
+        display = self._display_holding_terminal
+        if display is None:
+            return
+        if not display.thread_is_alive:
+            self._display_holding_terminal = None
+            return
+        raise RuntimeError("the bottom toolbar's display has not released the terminal")
+
     @contextlib.contextmanager
     def suspend_bottom_toolbar(self) -> Iterator[None]:
         """Temporarily hide the command toolbar and give exclusive access to the terminal.
@@ -2149,6 +2174,7 @@ class Cmd:
         """
         with self._quiesce_bottom_toolbar():
             reserved = self._reserved_toolbar
+
             if reserved is None:
                 yield
             else:
@@ -2166,6 +2192,7 @@ class Cmd:
         something else is another, and the ordinary end of a command needs only the first --
         the toolbar has to still be there when the next prompt appears.
         """
+        self._require_terminal_ownership()
         if self._command_toolbar is None:
             yield
         else:

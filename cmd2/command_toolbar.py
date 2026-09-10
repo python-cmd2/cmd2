@@ -485,11 +485,13 @@ class CommandToolbar:
 
         The refusal is recorded on the application rather than on this object, which the next
         command replaces. The thread outlives it, and one terminal cannot have two input
-        readers.
+        readers -- so the application keeps a reference to the display that did not let go,
+        and refuses to hand the terminal anywhere until it does.
 
         :raises _DisplayStillRunningError: always
         """
         self.cmd._command_toolbar_disabled = True
+        self.cmd._display_holding_terminal = self
         raise _DisplayStillRunningError(f"the bottom toolbar did not stop within {_SHUTDOWN_TIMEOUT} seconds")
 
     def stop(self) -> None:
@@ -502,6 +504,11 @@ class CommandToolbar:
             if self._stack is not None:
                 self._stack.close()
                 self._stack = None
+
+    @property
+    def thread_is_alive(self) -> bool:
+        """Whether the display's thread is still running."""
+        return self._thread is not None and self._thread.is_alive()
 
     @property
     def is_active(self) -> bool:

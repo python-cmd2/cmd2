@@ -570,3 +570,31 @@ class TestPromptSuspension:
                 assert toolbar.display.is_reserved is True
         finally:
             harness.close()
+
+
+class TestSurvivingDisplay:
+    def test_the_rows_are_not_released_for_a_terminal_we_do_not_own(self) -> None:
+        """A guest cannot be given rows back while another reader still holds the terminal."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+
+                # Stand in for a display whose thread never stopped.
+                harness.app._display_holding_terminal = StuckDisplay()
+
+                harness.clear()
+                with pytest.raises(RuntimeError, match="terminal"), harness.app.suspend_bottom_toolbar():
+                    pass
+
+                assert toolbar.display.is_reserved is True
+                assert "\x1b[r" not in harness.written()
+        finally:
+            harness.close()
+
+
+class StuckDisplay:
+    """A command display whose thread will not finish."""
+
+    thread_is_alive = True
