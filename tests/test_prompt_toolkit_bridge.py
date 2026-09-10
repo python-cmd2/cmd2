@@ -11,6 +11,7 @@ recorded operations and the flags left behind are the ones production would see.
 
 import io
 import threading
+from collections import deque
 from concurrent.futures import Future
 from typing import Any
 
@@ -671,23 +672,31 @@ class TestReviewRegressions:
 
 
 class RetiringLock:
-    """A lock that runs a callback at the moment it is handed over.
+    """A lock that runs scheduled callbacks at the moments it is handed over.
 
-    This stands in for another writer retiring the batch while a commit waits for the
-    terminal. Driving that with two real threads cannot say *where* the second thread got to
-    before the lock was released -- the interleaving the test is about is the one where the
-    commit is already past its own checks -- so the handover itself is the seam to inject at.
+    This stands in for another writer changing the terminal while a caller waits for it.
+    Driving that with two real threads cannot say *where* the waiting thread had got to before
+    the lock was released -- the interleaving these tests are about is the one where it is
+    already past its own checks -- so the handover itself is the seam to inject at.
+
+    Callbacks are scheduled per acquisition, in order, so an operation that takes the terminal
+    more than once can be interrupted at the handover that matters. ``None`` skips one.
     """
 
     def __init__(self) -> None:
         self._lock = threading.RLock()
-        self.on_acquire: Any = None
+        self._schedule: deque[Any] = deque()
+
+    def schedule(self, *callbacks: Any) -> None:
+        """Queue one callback per upcoming acquisition."""
+        self._schedule.extend(callbacks)
 
     def acquire(self, *args: Any, **kwargs: Any) -> bool:
         acquired = self._lock.acquire(*args, **kwargs)
-        if self.on_acquire is not None:
-            callback, self.on_acquire = self.on_acquire, None
-            callback()
+        if self._schedule:
+            callback = self._schedule.popleft()
+            if callback is not None:
+                callback()
         return acquired
 
     def release(self) -> None:
@@ -730,7 +739,7 @@ class TestReviewRegressionsRoundTwo:
         assert prepared is not None
         harness.clear()
 
-        handover.on_acquire = lambda: harness.bridge.require_resynchronization("another writer")
+        handover.schedule(lambda: harness.bridge.require_resynchronization("another writer"))
         assert harness.bridge.commit(prepared) is False
         assert harness.written() == ""
         assert harness.bridge.needs_resynchronization is True
@@ -742,7 +751,7 @@ class TestReviewRegressionsRoundTwo:
         harness.bridge.set_prompt_anchor(1)
         harness.clear()
 
-        handover.on_acquire = lambda: harness.bridge.note_managed_write(prompt_anchor=7)
+        handover.schedule(lambda: harness.bridge.note_managed_write(prompt_anchor=7))
         harness.resynchronize()
 
         written = harness.written()
@@ -793,7 +802,7 @@ class TestReviewRegressionsRoundTwo:
         harness = Harness(lock=TerminalLock(lock=handover))
         harness.bridge.request_cursor_position()
 
-        handover.on_acquire = lambda: harness.bridge.note_managed_write(prompt_anchor=7)
+        handover.schedule(lambda: harness.bridge.note_managed_write(prompt_anchor=7))
         assert harness.bridge.report_cursor_row(4) is False
         assert harness.bridge.prompt_anchor == 7
 
@@ -802,7 +811,7 @@ class TestReviewRegressionsRoundTwo:
         handover = RetiringLock()
         harness = Harness(lock=TerminalLock(lock=handover))
 
-        handover.on_acquire = lambda: harness.bridge.note_managed_write(prompt_anchor=7)
+        handover.schedule(lambda: harness.bridge.note_managed_write(prompt_anchor=7))
         assert harness.bridge.request_cursor_position() is True
         # The request went out after that write, so its reply describes the current terminal.
         assert harness.bridge.report_cursor_row(4) is True
@@ -815,8 +824,30 @@ class TestReviewRegressionsRoundTwo:
         harness.bridge.require_resynchronization("test")
         harness.clear()
 
-        handover.on_acquire = lambda: harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        handover.schedule(lambda: harness.bridge.stop_reserved_emission(OSError("terminal went away")))
         with pytest.raises(ReservedModeFailureError):
             harness.resynchronize()
         assert harness.written() == ""
         assert harness.bridge.needs_resynchronization is True
+
+    def test_an_unknown_origin_request_that_finds_emission_stopped_writes_nothing(self) -> None:
+        """Review finding: recovery's second transaction is a second chance to be abandoned.
+
+        Recovery without an anchor releases the terminal and asks for it again to send the
+        cursor request. Emission can be given up in between, and the request would otherwise
+        write into a terminal nothing may emit to any more.
+        """
+        handover = RetiringLock()
+        harness = Harness(lock=TerminalLock(lock=handover))
+        harness.bridge.forget_prompt_anchor()
+        harness.bridge.require_resynchronization("test")
+        harness.clear()
+
+        # Skip recovery's own transaction; abandon emission as the request takes the terminal.
+        handover.schedule(None, lambda: harness.bridge.stop_reserved_emission(OSError("terminal went away")))
+        harness.resynchronize()
+
+        assert harness.bridge.reserved_emission_stopped is True
+        assert harness.written() == ""
+        # Nothing was queued either: a reply now would be answering a request never made.
+        assert harness.bridge.report_cursor_row(4) is False

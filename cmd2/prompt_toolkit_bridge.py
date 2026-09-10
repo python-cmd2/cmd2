@@ -552,6 +552,12 @@ class PromptToolkitBridge:
         if not output.responds_to_cpr:
             return False
         with self._lock.transaction("cursor position request"):
+            if self._reserved_emission_stopped:
+                # Recovery gives the terminal back before asking for it again to send this
+                # request, so emission can be abandoned in between. Checked here for the same
+                # reason recovery checks it here: before the wait, the answer describes a
+                # terminal somebody else still held.
+                return False
             # Recorded here, not before the wait. A managed write can land while this call
             # queues for the terminal, and a request stamped with the generations from before
             # that write would have its own reply rejected as stale.
