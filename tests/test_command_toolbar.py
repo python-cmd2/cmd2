@@ -1,5 +1,6 @@
 """Command toolbar lifecycle and terminal integration tests."""
 
+import contextlib
 import sys
 import threading
 import time
@@ -861,26 +862,74 @@ def test_command_toolbar_startup_timeout_does_not_block_on_cleanup(toolbar_app, 
         blocked.set()
 
 
-def test_command_toolbar_does_not_start_a_second_display_over_a_stuck_one(toolbar_app, monkeypatch, capsys) -> None:
-    """One terminal, one input reader: a display that would not stop cannot be restarted."""
+def _block_the_display(app, blocked: threading.Event) -> None:
+    """Wedge the running display inside a render callback it cannot leave."""
+    app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
+    app._command_toolbar.app.invalidate()
+
+
+def test_command_toolbar_suspension_does_not_hand_over_a_terminal_it_still_owns(toolbar_app, monkeypatch) -> None:
+    """A pause that timed out did not stop anything, and must not pretend otherwise."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    entered = []
+
+    try:
+        # The command context's own teardown fails the same way, for the same reason: the
+        # display never stopped. That is the established contract for a stop that fails.
+        with contextlib.suppress(RuntimeError), app._command_toolbar_context():
+            display = app._command_toolbar
+            assert display is not None
+            _block_the_display(app, blocked)
+
+            with pytest.raises(RuntimeError, match="did not stop"), app.suspend_bottom_toolbar():
+                entered.append(True)
+
+            # The guest never ran: the display still owns the application and the terminal.
+            assert entered == []
+            assert display.app.is_running is True
+    finally:
+        blocked.set()
+
+
+def test_command_toolbar_that_would_not_stop_is_not_used_again(toolbar_app, monkeypatch) -> None:
+    """The surviving thread outlives this display object, so the refusal has to as well."""
     app, _, _ = toolbar_app
     blocked = threading.Event()
     monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
 
     try:
-        with app._command_toolbar_context():
-            display = app._command_toolbar
-            assert display is not None
-            first_thread = display._thread
-
-            # Block the display inside a render, so its thread cannot finish.
-            app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
-            display.app.invalidate()
-
-            with app.suspend_bottom_toolbar():
+        with contextlib.suppress(RuntimeError), app._command_toolbar_context():
+            _block_the_display(app, blocked)
+            with contextlib.suppress(RuntimeError), app.suspend_bottom_toolbar():
                 pass
 
-            assert display._thread is first_thread
-            assert "not restored" in capsys.readouterr().err
+        assert app._command_toolbar_disabled is True
+
+        # A later command must not start a second display over the one still running.
+        with app._command_toolbar_context():
+            assert app._command_toolbar is None
+    finally:
+        blocked.set()
+
+
+def test_command_toolbar_that_would_not_stop_keeps_the_application(toolbar_app, monkeypatch) -> None:
+    """Its layout and bindings are still in use; restoring them would pull them out from under it."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+
+    try:
+        with contextlib.suppress(RuntimeError), app._command_toolbar_context():
+            display = app._command_toolbar
+            assert display is not None
+            layout = display.app.layout
+            _block_the_display(app, blocked)
+
+            with contextlib.suppress(RuntimeError), app.suspend_bottom_toolbar():
+                pass
+
+            assert display.app.layout is layout
     finally:
         blocked.set()

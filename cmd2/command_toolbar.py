@@ -92,10 +92,10 @@ def pipe_target(stream: Any) -> Any:
 
 
 class _DisplayStillRunningError(RuntimeError):
-    """Raised when a previous display's thread has not finished.
+    """Raised when the display's thread did not finish within its timeout.
 
-    One terminal cannot have two input readers, so a display that would not stop is a display
-    that cannot be started again.
+    Nothing was relinquished: the thread is still inside the application, so whatever was
+    about to be done with the terminal must not be.
     """
 
 
@@ -304,7 +304,11 @@ class CommandToolbar:
                     stack.callback(self._restore_stream, obj, name, wrapper)
             self._resume()
         except BaseException:
-            self.stop()
+            # A cleanup that cannot finish is reported by the state it leaves behind -- the
+            # display is disabled for the session either way -- and the failure that brought
+            # us here is the one worth propagating.
+            with contextlib.suppress(Exception):
+                self.stop()
             raise
 
     @staticmethod
@@ -313,10 +317,6 @@ class CommandToolbar:
             setattr(obj, name, stream.original)
 
     def _resume(self) -> None:
-        if self._thread is not None and self._thread.is_alive():
-            # A previous display never finished. One terminal cannot have two input readers,
-            # and the old one still holds the application.
-            raise _DisplayStillRunningError("the bottom toolbar's previous display is still running")
         self._ready.clear()
         self._error = None
         stack = self._display_stack = contextlib.ExitStack()
@@ -449,13 +449,11 @@ class CommandToolbar:
                 if self.app.is_running and self.app.loop is not None:
                     self.app.loop.call_soon_threadsafe(self._exit)
                 if self._thread is not None:
+                    # Bounded, so a render callback blocked inside the display cannot hold the
+                    # thread that is tearing it down.
                     self._thread.join(timeout=_SHUTDOWN_TIMEOUT)
                     if self._thread.is_alive():
-                        # Bounded, so a render callback blocked inside the display cannot hold
-                        # the thread that is tearing it down. The reference is kept rather
-                        # than cleared: the thread is still running the application, and
-                        # starting a second one would put two input readers on one terminal.
-                        self.cmd.perror(f"The bottom toolbar did not stop within {_SHUTDOWN_TIMEOUT} seconds")
+                        self._abandon_stuck_display()
                     else:
                         self._thread = None
                 # Return the borrowed application to the main prompt, including on
@@ -470,6 +468,29 @@ class CommandToolbar:
                 self._keys.clear()
         finally:
             self._pausing = False
+
+    def _abandon_stuck_display(self) -> None:
+        """Report that the display did not stop, and refuse to pretend it did.
+
+        A pause that timed out relinquished nothing. The thread is still inside the
+        application: still rendering, still reading input. Everything that would normally
+        follow a pause assumes the opposite -- the caller hands the terminal to a guest, the
+        borrowed layout and key bindings go back to the main prompt, and the display object is
+        dropped at the end of the command. Each of those would be acting on an application
+        that is still running.
+
+        So nothing further happens here. The application's state is left as the running thread
+        expects to find it, and the failure is raised rather than reported and swallowed,
+        because only the caller knows what it was about to do with the terminal.
+
+        The refusal is recorded on the application rather than on this object, which the next
+        command replaces. The thread outlives it, and one terminal cannot have two input
+        readers.
+
+        :raises _DisplayStillRunningError: always
+        """
+        self.cmd._command_toolbar_disabled = True
+        raise _DisplayStillRunningError(f"the bottom toolbar did not stop within {_SHUTDOWN_TIMEOUT} seconds")
 
     def stop(self) -> None:
         """Flush output, stop rendering, and restore the terminal and its streams."""
@@ -601,10 +622,4 @@ class CommandToolbar:
             yield
         finally:
             with self.cmd.sigint_protection:
-                try:
-                    self._resume()
-                except _DisplayStillRunningError as exc:
-                    # The display that would not stop is still holding the application, so
-                    # there is nothing to come back to. Report it once and carry on without a
-                    # toolbar: the command that suspended it is not this failure's to end.
-                    self.cmd.perror(f"Bottom toolbar not restored: {exc}")
+                self._resume()
