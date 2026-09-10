@@ -100,6 +100,7 @@ class ReservedToolbar:
         self._original_app_output: Any = None
         self._original_renderer_output: Any = None
         self._pending_error: BaseException | None = None
+        self._suspend_depth = 0
         self._consecutive_paint_failures = 0
         self._native_toolbar: ConditionalContainer | None = None
         self._original_filter: Any = None
@@ -243,25 +244,37 @@ class ReservedToolbar:
         A terminal with no region installed -- one below the two-row floor -- still goes
         through this. There is nothing to give back, but the guest may resize the window, and
         the return path is where that is noticed and the rows are taken again.
+
+        Suspensions nest, and only the outermost one changes anything. cmd2 suspends around
+        its own external commands and callers suspend around theirs, so an inner block ending
+        says nothing about whose terminal it is: the guest the outer block handed it to still
+        has it, and reinstalling margins or painting a band over their screen would be the
+        same mistake as never releasing at all.
         """
         display = self._display
         if display is None:
             yield
             return
 
-        with self._lock.transaction("suspend"):
-            display.release_region_for_handoff()
-            # Forgotten as the terminal changes hands, not after the guest has finished with
-            # it. From this moment the remembered row describes a screen someone else is
-            # writing on, and anything that rendered against it would paint over their output.
-            self._invalidate_ownership("the terminal was handed to another program")
+        outermost = self._suspend_depth == 0
+        self._suspend_depth += 1
         try:
+            if outermost:
+                with self._lock.transaction("suspend"):
+                    display.release_region_for_handoff()
+                    # Forgotten as the terminal changes hands, not after the guest has
+                    # finished with it. From this moment the remembered row describes a screen
+                    # someone else is writing on, and anything that rendered against it would
+                    # paint over their output.
+                    self._invalidate_ownership("the terminal was handed to another program")
             yield
         finally:
-            with self._lock.transaction("resume"):
-                display.reacquire_region_after_handoff()
-                self._invalidate_ownership("the terminal came back from another program")
-            self.refresh()
+            self._suspend_depth -= 1
+            if outermost:
+                with self._lock.transaction("resume"):
+                    display.reacquire_region_after_handoff()
+                    self._invalidate_ownership("the terminal came back from another program")
+                self.refresh()
 
     def _invalidate_ownership(self, reason: str) -> None:
         """Discard everything that described the screen before ownership changed.

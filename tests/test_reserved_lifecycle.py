@@ -320,15 +320,34 @@ class TestSuspension:
         finally:
             harness.close()
 
-    def test_nested_suspensions_are_safe(self) -> None:
+    def test_only_the_outermost_suspension_takes_the_rows_back(self) -> None:
+        """The interval between the inner and outer exits is still the guest's terminal."""
         harness = Harness(mode="reserved")
         try:
             with harness.app._reserved_toolbar_context():
                 toolbar = harness.app.reserved_toolbar
                 assert toolbar is not None
-                with harness.app.suspend_bottom_toolbar(), harness.app.suspend_bottom_toolbar():
+                with harness.app.suspend_bottom_toolbar():
+                    assert toolbar.display.is_reserved is False
+                    with harness.app.suspend_bottom_toolbar():
+                        assert toolbar.display.is_reserved is False
+                    # The inner context is done, the outer one is not: the guest still owns
+                    # the terminal, so nothing may have been reinstalled here.
                     assert toolbar.display.is_reserved is False
                 assert toolbar.display.is_reserved is True
+        finally:
+            harness.close()
+
+    def test_an_inner_suspension_paints_nothing(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app.suspend_bottom_toolbar():
+                harness.clear()
+                with harness.app.suspend_bottom_toolbar():
+                    pass
+                written = harness.written()
+                assert "\x1b[1;23r" not in written
+                assert "STATUS" not in written
         finally:
             harness.close()
 
