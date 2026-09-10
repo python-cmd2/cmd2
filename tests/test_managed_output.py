@@ -8,7 +8,9 @@ told about a terminal that had already changed again.
 
 import io
 import threading
-from typing import Any
+from typing import Any, Self
+
+import pytest
 
 from cmd2.command_toolbar import ToolbarStream
 from cmd2.managed_output import SerializedTerminalWriter
@@ -258,3 +260,112 @@ class TestToolbarStreamRouting:
         stream.serializer = SerializedTerminalWriter(original, TerminalLock())
         stream.flush()
         assert original.flushes >= 1
+
+
+class FailingStream(RecordingStream):
+    """A terminal that fails a chosen operation, having possibly emitted something first."""
+
+    def __init__(self, fail_write: bool = False, fail_flush: bool = False) -> None:
+        super().__init__()
+        self._fail_write = fail_write
+        self._fail_flush = fail_flush
+
+    def write(self, text: str) -> int:
+        if self._fail_write:
+            super().write(text[:3])
+            raise OSError("terminal went away")
+        return super().write(text)
+
+    def flush(self) -> None:
+        super().flush()
+        if self._fail_flush:
+            raise OSError("terminal went away")
+
+
+class TestFailedWrites:
+    def test_a_failed_write_still_invalidates(self) -> None:
+        """Part of the output may be on the screen; the bridge cannot be left believing not."""
+        bridge = RecordingBridge()
+        writer = SerializedTerminalWriter(FailingStream(fail_write=True), TerminalLock(), bridge)
+        with pytest.raises(OSError, match="terminal went away"):
+            writer.write("hello")
+        assert len(bridge.notes) == 1
+        assert bridge.notes[0] is not None
+
+    def test_a_failed_flush_still_invalidates(self) -> None:
+        bridge = RecordingBridge()
+        writer = SerializedTerminalWriter(FailingStream(fail_flush=True), TerminalLock(), bridge)
+        with pytest.raises(OSError, match="terminal went away"):
+            writer.write("hello")
+        assert len(bridge.notes) == 1
+
+    def test_the_original_failure_is_what_reaches_the_caller(self) -> None:
+        bridge = RecordingBridge()
+        writer = SerializedTerminalWriter(FailingStream(fail_write=True), TerminalLock(), bridge)
+        with pytest.raises(OSError, match="terminal went away"):
+            writer.write("hello")
+
+    def test_the_invalidation_happens_inside_the_transaction(self) -> None:
+        """Told after the lock is given up, it would describe a terminal already changed."""
+        bridge = RecordingBridge()
+        writer = SerializedTerminalWriter(FailingStream(fail_flush=True), TerminalLock(), bridge)
+        with pytest.raises(OSError, match="terminal went away"):
+            writer.write("hello")
+        assert bridge.notes[0] is not None
+
+
+class CountingLock:
+    """A routing lock that counts how many times it was taken."""
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self.acquisitions = 0
+
+    def __enter__(self) -> Self:
+        self._lock.acquire()
+        self.acquisitions += 1
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self._lock.release()
+
+    def acquire(self, *args: Any, **kwargs: Any) -> bool:
+        self.acquisitions += 1
+        return self._lock.acquire(*args, **kwargs)
+
+    def release(self) -> None:
+        self._lock.release()
+
+
+class TestRoutingIsDecidedOnce:
+    """One acquisition per write, or the destination can change between the two."""
+
+    def test_a_legacy_write_takes_the_routing_lock_once(self) -> None:
+        lock = CountingLock()
+        stream = ToolbarStream(RecordingStream(), lock)  # type: ignore[arg-type]
+        stream.write("hello")
+        assert lock.acquisitions == 1
+
+    def test_a_serialized_write_takes_the_routing_lock_once(self) -> None:
+        lock = CountingLock()
+        original = RecordingStream()
+        stream = ToolbarStream(original, lock)  # type: ignore[arg-type]
+        stream.serializer = SerializedTerminalWriter(original, TerminalLock())
+        stream.write("hello")
+        assert lock.acquisitions == 1
+
+    def test_a_flush_takes_the_routing_lock_once(self) -> None:
+        lock = CountingLock()
+        stream = ToolbarStream(RecordingStream(), lock)  # type: ignore[arg-type]
+        stream.flush()
+        assert lock.acquisitions == 1
+
+    def test_a_serializer_installed_after_the_decision_is_not_missed_by_the_next_write(self) -> None:
+        """A write in flight keeps its destination; the one after it sees the new one."""
+        original = RecordingStream()
+        stream = ToolbarStream(original, threading.RLock())
+        stream.write("before")
+        stream.serializer = SerializedTerminalWriter(original, TerminalLock())
+        stream.write("after")
+        assert original.transactions[0] is None
+        assert original.transactions[-1] is not None

@@ -95,32 +95,28 @@ class ToolbarStream:
 
     def write(self, data: str) -> int:
         """Write above the toolbar, or directly while the toolbar is suspended."""
-        serializer = self._serializer()
-        if serializer is not None:
-            # Deliberately outside the routing lock. The serializer takes the terminal lock,
-            # which is the last lock in the output path, and carrying a routing lock into it
-            # is the deadlock the ordering rule exists to prevent. The serializer revalidates
-            # what it needs once it holds the terminal.
-            return serializer.write(data)
         with self._lock:
-            return (self.proxy or self.original).write(data)
+            serializer = self.serializer
+            if serializer is None:
+                return (self.proxy or self.original).write(data)
+        # Chosen and performed in one acquisition, or performed after a single one. Deciding
+        # under the lock, releasing it, and then taking it again to act would let the
+        # destination change in between -- a serializer installed in that gap would be
+        # skipped, and its write would reach the terminal outside any transaction.
+        #
+        # The serializer runs after the release because it takes the terminal lock, which is
+        # the last lock in the output path: carrying a routing lock into it is the deadlock
+        # the ordering rule exists to prevent.
+        return serializer.write(data)
 
     def flush(self) -> None:
         """Flush the currently active output stream."""
-        serializer = self._serializer()
-        if serializer is not None:
-            serializer.flush()
-            return
         with self._lock:
-            (self.proxy or self.original).flush()
-
-    def _serializer(self) -> "SerializedTerminalWriter | None":
-        """Read the installed serializer under the routing lock, then let it go.
-
-        :return: the serializer, or ``None`` when output is routed the legacy way
-        """
-        with self._lock:
-            return self.serializer
+            serializer = self.serializer
+            if serializer is None:
+                (self.proxy or self.original).flush()
+                return
+        serializer.flush()
 
     def __getattr__(self, name: str) -> Any:
         """Delegate file attributes to the original terminal stream."""

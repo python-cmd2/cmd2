@@ -57,13 +57,21 @@ class SerializedTerminalWriter:
         :return: the number of characters written
         """
         with self._lock.transaction("managed write"):
-            written = self._stream.write(data)
-            # Flushed before the lock is given up. Left buffered, this output would reach the
-            # terminal after whatever paints next, which is the ordering the transaction is
-            # supposed to establish.
-            self._stream.flush()
-            if self.bridge is not None:
-                self.bridge.note_managed_write()
+            try:
+                written = self._stream.write(data)
+                # Flushed before the lock is given up. Left buffered, this output would reach
+                # the terminal after whatever paints next, which is the ordering the
+                # transaction is supposed to establish.
+                self._stream.flush()
+            finally:
+                # Recorded whether or not the write succeeded, and still inside the
+                # transaction. A write that raised may have emitted part of its text and may
+                # have scrolled the screen doing it -- a stream cannot say which -- so the
+                # bridge must not be left believing the terminal is as it was. Invalidating
+                # after output that never arrived costs a repaint; not invalidating after
+                # output that did costs a prompt drawn over it.
+                if self.bridge is not None:
+                    self.bridge.note_managed_write()
         return written
 
     def flush(self) -> None:
