@@ -826,3 +826,61 @@ def test_command_toolbar_startup_does_not_wait_forever(toolbar_app, monkeypatch,
 
     assert ran == [True]
     assert "did not start" in capsys.readouterr().err
+
+
+def test_command_toolbar_startup_timeout_does_not_block_on_cleanup(toolbar_app, monkeypatch, capsys) -> None:
+    """A blocked render callback must not hold the command thread through teardown either.
+
+    The readiness wait being bounded is only half of it: the display thread is still inside
+    the callback, so the join that follows has to be bounded too. This blocks the callback for
+    real rather than suppressing the readiness signal, which is what the earlier test did and
+    why it could not see this.
+    """
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+
+    def blocking_toolbar() -> str:
+        blocked.wait(timeout=10)
+        return "STATUS"
+
+    app.main_session.bottom_toolbar = blocking_toolbar
+    ran = []
+    try:
+        started = time.monotonic()
+        with app._command_toolbar_context():
+            ran.append(True)
+        elapsed = time.monotonic() - started
+
+        assert ran == [True]
+        # Both bounded waits, and nothing unbounded between them.
+        assert elapsed < 5
+        assert "did not start" in capsys.readouterr().err
+    finally:
+        blocked.set()
+
+
+def test_command_toolbar_does_not_start_a_second_display_over_a_stuck_one(toolbar_app, monkeypatch, capsys) -> None:
+    """One terminal, one input reader: a display that would not stop cannot be restarted."""
+    app, _, _ = toolbar_app
+    blocked = threading.Event()
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+
+    try:
+        with app._command_toolbar_context():
+            display = app._command_toolbar
+            assert display is not None
+            first_thread = display._thread
+
+            # Block the display inside a render, so its thread cannot finish.
+            app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
+            display.app.invalidate()
+
+            with app.suspend_bottom_toolbar():
+                pass
+
+            assert display._thread is first_thread
+            assert "not restored" in capsys.readouterr().err
+    finally:
+        blocked.set()
