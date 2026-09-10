@@ -473,3 +473,36 @@ class TestHandoffRecovery:
                 assert toolbar.is_active is True
         finally:
             harness.close()
+
+
+class TestRefreshCadence:
+    """The band is repainted after each frame the terminal actually received.
+
+    Driving a real render here would need a running event loop -- a prompt session loads its
+    history through one -- so the wiring is checked here and the behaviour it hangs on, that a
+    committed frame notifies and an uncommitted one does not, is covered against a real
+    renderer in the bridge's own tests.
+    """
+
+    def test_a_committed_frame_repaints_the_band(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                bridge = toolbar.bridge
+                assert bridge is not None
+                assert bridge._frame_committed_handler == toolbar.refresh
+
+                harness.app.main_session.bottom_toolbar = "UPDATED"
+                harness.clear()
+                bridge._frame_committed_handler()
+
+                painter = toolbar.painter
+                assert painter is not None
+                assert painter.last_frame is not None
+                row = "".join(cell.char for cell in painter.last_frame.rows[0])
+                assert row.startswith("UPDATED")
+                assert "UPDATED" in harness.written()
+        finally:
+            harness.close()

@@ -136,6 +136,7 @@ class PromptToolkitBridge:
         self._installed: dict[str, Any] = {}
         self._bound_app: Application[Any] | None = None
         self._emission_stopped_handler: Callable[[], None] | None = None
+        self._frame_committed_handler: Callable[[], object] | None = None
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -266,6 +267,17 @@ class PromptToolkitBridge:
         self._resynchronization_reason = reason
         self._retire()
 
+    def set_frame_committed_handler(self, handler: "Callable[[], object]") -> None:
+        """Install what to call after a frame has actually reached the terminal.
+
+        Runs off the lock and only for a committed frame. Upstream's own after-render event
+        fires during preparation, when the frame exists only as a recording, so it cannot
+        answer "has the user seen this".
+
+        :param handler: called after each committed frame; its return value is ignored
+        """
+        self._frame_committed_handler = handler
+
     def set_emission_stopped_handler(self, handler: "Callable[[], None]") -> None:
         """Install what to call when reserved rendering has to be abandoned.
 
@@ -332,6 +344,13 @@ class PromptToolkitBridge:
             "render": self._render_through_bridge,
             "erase": self._erase_through_bridge,
             "clear": self._clear_through_bridge,
+            # Upstream both asks for cursor reports and receives them: its own key binding
+            # calls report_absolute_cursor_row when the reply arrives. Unrecorded, a request
+            # would have its reply arrive uncorrelated and be discarded, leaving the prompt's
+            # height unknown; unvalidated, a reply from inside the reserved band would set a
+            # height of zero or less and never say so.
+            "request_absolute_cursor_position": self._request_cursor_position_through_bridge,
+            "report_absolute_cursor_row": self._report_cursor_row_through_bridge,
         }
         self._originals = {name: getattr(renderer, name) for name in replacements}
         self._installed = dict(replacements)
@@ -391,6 +410,34 @@ class PromptToolkitBridge:
             return
         if not self.commit(prepared):
             self._request_redraw()
+            return
+        if self._frame_committed_handler is not None:
+            self._frame_committed_handler()
+
+    def _request_cursor_position_through_bridge(self) -> None:
+        """Let upstream ask for the cursor, and record the request if one went out.
+
+        Upstream does not always emit one: in full-screen mode, and on backends that answer
+        natively, it fills in the height and returns. Recording those would leave entries in
+        the queue that no reply will ever consume, so what is recorded is what the renderer
+        actually started waiting for.
+        """
+        renderer = self._renderer
+        with self._lock.transaction("cursor position request"):
+            if self._reserved_emission_stopped:
+                return
+            generations = self.generations()
+            outstanding = len(renderer._waiting_for_cpr_futures)
+            self._originals["request_absolute_cursor_position"]()
+            if len(renderer._waiting_for_cpr_futures) > outstanding:
+                self._pending_cpr.append(generations)
+
+    def _report_cursor_row_through_bridge(self, row: int) -> None:
+        """Take a reply upstream's key binding delivered, through the same validation.
+
+        :param row: the one-based physical row the terminal reported
+        """
+        self.report_cursor_row(row)
 
     def _erase_through_bridge(self, leave_alternate_screen: bool = True) -> None:
         """Erase under the transaction, and treat what is left as unknown.
@@ -776,7 +823,8 @@ class PromptToolkitBridge:
                 return False
 
             self._prompt_anchor = row
-            self._renderer.report_absolute_cursor_row(row)
+            report = self._originals.get("report_absolute_cursor_row", self._renderer.report_absolute_cursor_row)
+            report(row)
             return True
 
     def _invalidate_pending_cursor_reports(self) -> None:

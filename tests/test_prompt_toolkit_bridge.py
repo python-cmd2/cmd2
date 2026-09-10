@@ -9,6 +9,7 @@ The renderer here is a real prompt-toolkit renderer driving a real application, 
 recorded operations and the flags left behind are the ones production would see.
 """
 
+import asyncio
 import io
 import threading
 from collections import deque
@@ -23,6 +24,7 @@ from prompt_toolkit.input import DummyInput
 from prompt_toolkit.layout import Layout, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.output.vt100 import Vt100_Output
+from prompt_toolkit.renderer import CPR_Support
 
 from cmd2.output_recorder import PreflightFacts
 from cmd2.prompt_toolkit_bridge import (
@@ -1241,3 +1243,135 @@ class TestReviewRegressionsRoundThree:
 
         assert harness.bridge.report_cursor_row(9) is False
         assert pending.done() is True
+
+
+class TestCursorReportInterception:
+    """Upstream asks for and receives cursor reports itself; both go through the bridge."""
+
+    @pytest.fixture(autouse=True)
+    def _event_loop(self) -> Any:
+        """Upstream builds an asyncio Future per request, which needs a loop to attach to.
+
+        In life that loop is the application's. Here there is no application running, so one
+        is provided for the duration rather than the request path being stubbed out -- the
+        bookkeeping under test is exactly what that Future is part of.
+        """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            yield
+        finally:
+            asyncio.set_event_loop(None)
+            loop.close()
+
+    def bound(self) -> Harness:
+        harness = Harness()
+        harness.stream_recorder = RecordingTtyStream()
+        harness.backend.stdout = harness.stream_recorder
+        # As it is once a reply has been seen. Left unknown, upstream schedules a timeout task
+        # on the event loop, which exists only while the application is running.
+        harness.renderer.cpr_support = CPR_Support.SUPPORTED
+        harness.bridge.bind(harness.app)
+        return harness
+
+    def test_an_upstream_request_is_recorded(self) -> None:
+        """Unrecorded, its reply would arrive uncorrelated and be thrown away."""
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position()
+        assert "\x1b[6n" in harness.stream_recorder.getvalue()
+        assert harness.bridge.report_cursor_row(4) is True
+        assert harness.renderer._min_available_height == 23 - 4 + 1
+
+    def test_a_reply_delivered_by_upstream_is_validated(self) -> None:
+        """Named regression 13.1: a row in the band must not set a height at all."""
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position()
+        harness.renderer.report_absolute_cursor_row(24)
+        assert harness.renderer._min_available_height == 0
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_a_valid_reply_delivered_by_upstream_is_used(self) -> None:
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position()
+        harness.renderer.report_absolute_cursor_row(6)
+        assert harness.renderer._min_available_height == 23 - 6 + 1
+        assert harness.bridge.prompt_anchor == 6
+
+    def test_a_request_that_emitted_nothing_is_not_recorded(self) -> None:
+        """On a terminal that does not answer there is no reply to wait for."""
+        harness = self.bound()
+        harness.renderer.cpr_support = CPR_Support.NOT_SUPPORTED
+        harness.renderer.request_absolute_cursor_position()
+        # Nothing outstanding, so a reply now would be answering a question never asked.
+        assert harness.bridge.report_cursor_row(4) is False
+
+    def test_reporting_does_not_re_enter_the_interception(self) -> None:
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position()
+        harness.renderer.report_absolute_cursor_row(6)
+        assert harness.renderer._min_available_height > 0
+
+    def test_an_abandoned_reservation_asks_for_nothing(self) -> None:
+        """Emission has stopped; a request would put bytes into a terminal being given back."""
+        harness = self.bound()
+        harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        harness.stream_recorder.truncate(0)
+        harness.stream_recorder.seek(0)
+        harness.renderer.request_absolute_cursor_position()
+        assert harness.stream_recorder.getvalue() == ""
+
+    def test_unbinding_restores_both(self) -> None:
+        harness = Harness()
+        request = harness.renderer.request_absolute_cursor_position
+        report = harness.renderer.report_absolute_cursor_row
+        harness.bridge.bind(harness.app)
+        harness.bridge.unbind()
+        assert harness.renderer.request_absolute_cursor_position == request
+        assert harness.renderer.report_absolute_cursor_row == report
+
+
+class TestCommittedFrameNotification:
+    def test_a_committed_frame_notifies_once(self) -> None:
+        committed: list[int] = []
+        harness = Harness()
+        harness.bridge.bind(harness.app)
+        harness.bridge.set_frame_committed_handler(lambda: committed.append(1))
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert committed == [1]
+
+    def test_a_frame_that_could_not_be_prepared_notifies_nobody(self) -> None:
+        committed: list[int] = []
+        harness = Harness(content=lambda: harness.bridge.note_managed_write() or "hello")
+        harness.bridge.bind(harness.app)
+        harness.bridge.set_frame_committed_handler(lambda: committed.append(1))
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert committed == []
+
+    def test_a_frame_that_could_not_be_committed_notifies_nobody(self) -> None:
+        """After-render work belongs to frames the terminal actually received.
+
+        Retired between preparing and committing, so the frame gets as far as the commit and
+        is refused there -- the case a preparation that never started cannot reach.
+        """
+        committed: list[int] = []
+        handover = RetiringLock()
+        harness = Harness(lock=TerminalLock(lock=handover))
+        harness.bridge.bind(harness.app)
+        harness.bridge.set_frame_committed_handler(lambda: committed.append(1))
+
+        # Preflight and publish take the terminal first; the third acquisition is the commit.
+        handover.schedule(None, None, harness.bridge.note_owner_change)
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert committed == []
+
+    def test_the_notification_runs_outside_the_transaction(self) -> None:
+        seen: list[object] = []
+        harness = Harness()
+        harness.bridge.bind(harness.app)
+        harness.bridge.set_frame_committed_handler(lambda: seen.append(current_transaction()))
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert seen == [None]

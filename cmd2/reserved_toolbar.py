@@ -194,6 +194,11 @@ class ReservedToolbar:
             # them back is this object's job, and it is what lets compatibility rendering
             # start.
             self._bridge.set_emission_stopped_handler(self._emission_stopped)
+            # The band is repainted after each frame the terminal actually received. That ties
+            # it to the refresh cadence the session already has -- its refresh interval, its
+            # invalidations, its key presses -- rather than inventing a second timer, and it
+            # paints after the prompt rather than into the middle of it.
+            self._bridge.set_frame_committed_handler(self.refresh)
             self._painter = ToolbarPainter(
                 display=display,
                 lock=self._lock,
