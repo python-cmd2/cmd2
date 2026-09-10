@@ -179,6 +179,9 @@ class ReservedToolbar:
             native.filter = self._installed_filter
 
             self._bridge = PromptToolkitBridge(renderer=app.renderer, display=display, lock=self._lock)
+            # From here the application's own renders go through prepare and commit, which is
+            # what puts them in the same queue as command output and toolbar paints.
+            self._bridge.bind(app)
             self._painter = ToolbarPainter(
                 display=display,
                 lock=self._lock,
@@ -274,6 +277,8 @@ class ReservedToolbar:
         other.
         """
         display, self._display = self._display, None
+        if self._bridge is not None:
+            self._bridge.unbind()
         self._bridge = None
         # The painter is dropped, so anything it was holding to report goes with it unless it
         # is taken now. An error the user never sees is the same as no error handling at all.

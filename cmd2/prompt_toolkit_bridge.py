@@ -124,6 +124,11 @@ class PromptToolkitBridge:
         self._prompt_anchor: int | None = None
         self._resynchronization_reason: str | None = None
         self._pending_cpr: deque[Generations] = deque()
+        # The renderer methods this bridge replaced, by name, empty while unbound. Kept so
+        # preparation can call the real render: calling the attribute would re-enter the
+        # wrapper and never terminate.
+        self._originals: dict[str, Any] = {}
+        self._bound_app: Application[Any] | None = None
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -287,12 +292,104 @@ class PromptToolkitBridge:
         self._in_flight = None
         self._renderer._last_screen = None
 
+    # -- binding ---------------------------------------------------------------------------
+
+    def bind(self, app: "Application[Any]") -> None:
+        """Route the application's own renders through this bridge.
+
+        prompt-toolkit renders from its event loop whenever it decides to, so intercepting is
+        the only way those frames come under the transaction. The interception is installed on
+        the renderer *instance* and removed again on the way out -- patching the class would
+        change every renderer in the process, including ones cmd2 does not own.
+
+        :param app: the application whose renders are being intercepted
+        """
+        if self._originals:
+            return
+        renderer = self._renderer
+        replacements = {
+            "render": self._render_through_bridge,
+            "erase": self._erase_through_bridge,
+            "clear": self._clear_through_bridge,
+        }
+        self._originals = {name: getattr(renderer, name) for name in replacements}
+        self._bound_app = app
+        for name, replacement in replacements.items():
+            # Set by name so the replacement lands on this instance. Assigning the class
+            # attribute would change every renderer in the process, including ones cmd2 does
+            # not own.
+            setattr(renderer, name, replacement)
+        if self._redraw_scheduler is None:
+            self._redraw_scheduler = app.invalidate
+
+    def unbind(self) -> None:
+        """Give the renderer its own methods back.
+
+        Safe to call when nothing was bound: teardown reaches this from more than one place.
+        """
+        originals, self._originals = self._originals, {}
+        for name, original in originals.items():
+            setattr(self._renderer, name, original)
+        self._bound_app = None
+
+    def _render_through_bridge(self, app: "Application[Any]", layout: Any, is_done: bool = False) -> None:
+        """Prepare and commit one frame in place of upstream's direct render.
+
+        Runs on the UI thread, which is where recovery's callbacks belong too, so an owed
+        recovery is done here rather than deferred: a frame prepared before the terminal has
+        been resynchronized would be diffed against a screen nobody has seen.
+
+        :param app: the application being rendered
+        :param layout: the layout to render; upstream passes ``app.layout``
+        :param is_done: whether this is the final frame of a prompt
+        """
+        if self._reserved_emission_stopped:
+            # Reserved rendering has been abandoned. Upstream still owns its renderer, and
+            # its frames are what the user sees from here on.
+            self._originals["render"](app, layout, is_done)
+            return
+
+        if self._needs_resynchronization:
+            self.resynchronize()
+            if self._needs_resynchronization:
+                # Recovery is waiting on the terminal to say where the cursor is. Drawing now
+                # would guess at the origin, which is the thing recovery exists to avoid.
+                return
+
+        prepared = self.prepare(app, layout, is_done=is_done)
+        if prepared is None:
+            self._request_redraw()
+            return
+        if not self.commit(prepared):
+            self._request_redraw()
+
+    def _erase_through_bridge(self, leave_alternate_screen: bool = True) -> None:
+        """Erase under the transaction, and treat what is left as unknown.
+
+        An erase moves the cursor and clears the screen below it, so nothing may be diffed
+        against what was there. Upstream's own ``reset()`` runs inside it, which is exactly the
+        state the bridge must not inherit beliefs from.
+
+        :param leave_alternate_screen: passed through to upstream
+        """
+        with self._lock.transaction("erase"):
+            self._originals["erase"](leave_alternate_screen)
+        self.require_resynchronization("the renderer erased the screen")
+
+    def _clear_through_bridge(self) -> None:
+        """Clear under the transaction, and treat what is left as unknown."""
+        with self._lock.transaction("clear"):
+            self._originals["clear"]()
+        self.require_resynchronization("the renderer cleared the screen")
+
     # -- prepare and commit ----------------------------------------------------------------
 
-    def prepare(self, app: "Application[Any]") -> PreparedRender | None:
+    def prepare(self, app: "Application[Any]", layout: Any = None, *, is_done: bool = False) -> PreparedRender | None:
         """Record a full renderer frame without emitting anything.
 
         :param app: the application to render
+        :param layout: the layout to render; the application's own by default
+        :param is_done: whether this is the final frame of a prompt
         :return: the prepared frame, or ``None`` if one cannot be prepared right now
         """
         assert_no_terminal_transaction("preparing a renderer frame")
@@ -315,8 +412,9 @@ class PromptToolkitBridge:
         # state is provisional -- a second render or an input dispatch started from one of
         # them would consume a screen that does not exist.
         self._preparing = True
+        render = self._originals.get("render", self._renderer.render)
         try:
-            self._renderer.render(app, app.layout)
+            render(app, app.layout if layout is None else layout, is_done)
         except Exception as error:  # noqa: BLE001 - a layout callback must not end a command
             self._pending_error = error
             self.require_resynchronization("preparing the frame raised")

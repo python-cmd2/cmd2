@@ -661,3 +661,49 @@ class AlwaysFailingStream(TtyStringIO):
 
     def write(self, text: str) -> int:
         raise OSError("terminal went away")
+
+
+class TestRenderBinding:
+    def test_starting_routes_the_application_renders_through_the_bridge(self) -> None:
+        harness = Harness()
+        try:
+            original = harness.app.renderer.render
+            harness.toolbar.start()
+            assert harness.app.renderer.render is not original
+        finally:
+            harness.close()
+
+    def test_stopping_gives_the_renderer_its_methods_back(self) -> None:
+        harness = Harness()
+        try:
+            original = harness.app.renderer.render
+            harness.toolbar.start()
+            harness.toolbar.stop()
+            assert harness.app.renderer.render == original
+        finally:
+            harness.close()
+
+    def test_a_failed_start_unbinds_as_well(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def boom(self: Any, prepared: Any) -> bool:
+            raise OSError("terminal went away")
+
+        harness = Harness()
+        try:
+            original = harness.app.renderer.render
+            monkeypatch.setattr(ToolbarPainter, "paint", boom)
+            with pytest.raises(OSError, match="terminal went away"):
+                harness.toolbar.start()
+            assert harness.app.renderer.render == original
+        finally:
+            harness.close()
+
+    def test_the_redraw_scheduler_asks_the_application(self) -> None:
+        """A frame that could not be committed has to come back, and the app owns that."""
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            bridge = harness.toolbar.bridge
+            assert bridge is not None
+            assert bridge._redraw_scheduler == harness.app.invalidate
+        finally:
+            harness.close()
