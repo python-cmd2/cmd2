@@ -375,6 +375,9 @@ class ToolbarPainter:
                 return False
 
             top_row = geometry.physical_rows - geometry.reserved_rows + 1
+            # Whether *this* paint has saved the cursor yet. The opening flush belongs to
+            # whoever wrote before us, and a failure there is not a partial paint.
+            saved_cursor = False
             try:
                 # Anything another writer left buffered goes out first, so the band is painted
                 # after the output it was meant to follow rather than in the middle of it.
@@ -382,6 +385,7 @@ class ToolbarPainter:
                 # DECSC saves the cursor *and* the current attributes, and DECRC restores
                 # both, so the renderer's next write lands where and how it expects.
                 self._output.write_raw(cursor_save_sequence())
+                saved_cursor = True
                 self._output.disable_autowrap()
                 for row_index, column, cells in runs:
                     self._output.write_raw(_cursor_position_sequence(top_row + row_index, column + 1))
@@ -398,7 +402,7 @@ class ToolbarPainter:
                 self._output.write_raw(cursor_restore_sequence())
                 self._output.flush()
             except BaseException:
-                self._recover_from_failed_paint()
+                self._recover_from_failed_paint(saved_cursor)
                 raise
 
             self._last_frame = frame
@@ -406,7 +410,7 @@ class ToolbarPainter:
             self._last_band = band
             return True
 
-    def _recover_from_failed_paint(self) -> None:
+    def _recover_from_failed_paint(self, saved_cursor: bool) -> None:
         """Undo what a half-finished paint left on the terminal.
 
         The backend buffers a paint and flushes it as one write, so a failure part-way through
@@ -420,10 +424,21 @@ class ToolbarPainter:
         the band is now showing something no frame describes, so the next paint has to be a
         full one rather than a diff against a frame that was never finished.
 
+        None of it applies when the paint failed before saving the cursor. The opening flush
+        drains whatever another writer left buffered, and a failure there belongs to that
+        output, not to this paint: the terminal's saved position is still the one some earlier
+        operation put there -- the margin change's, most likely -- and restoring it would move
+        the cursor backwards over output written since, which the next write would overwrite.
+        An old saved position is not a recovery origin.
+
         The restoration is itself a write to a terminal that has just failed one, so its own
         failure is suppressed -- the original is the one worth propagating.
+
+        :param saved_cursor: whether this paint got as far as saving the cursor
         """
         self.invalidate()
+        if not saved_cursor:
+            return
         with suppress(Exception):
             if self._autowrap_after_paint:
                 self._output.enable_autowrap()

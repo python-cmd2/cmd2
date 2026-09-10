@@ -710,3 +710,27 @@ class TestPartialPaint:
         assert painter.paint(again) is True
         # The whole band, from its first column: not just the cells that differ from "hi".
         assert "\x1b[24;1Hhi   " in re.sub(r"\x1b\[[0-9;]*m", "", stream.getvalue())
+
+    def test_a_failure_before_any_paint_bytes_restores_nothing(self) -> None:
+        """The initial flush drains another writer; this paint has saved no cursor yet.
+
+        DECRC would return to whatever was saved last -- the margin change's cursor, from
+        before the command that has been writing since -- and later output would then overwrite
+        what is already on the screen.
+        """
+        painter, stream, display = self.make(fail_on_write=2)
+        prepared = painter.prepare(lambda: "hi")
+        assert prepared is not None
+
+        # Something else has buffered output, so the paint's opening flush has work to do.
+        display.terminal.output.write("hello")
+        stream.truncate(0)
+        stream.seek(0)
+
+        with pytest.raises(OSError, match="terminal went away"):
+            painter.paint(prepared)
+
+        written = stream.getvalue()
+        assert "\x1b8" not in written
+        assert "\x1b[?7h" not in written
+        assert painter.last_frame is None
