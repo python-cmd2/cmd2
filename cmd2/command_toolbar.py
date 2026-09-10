@@ -28,6 +28,7 @@ from .pager import Pager, output_fits
 
 if TYPE_CHECKING:
     from .cmd2 import Cmd
+    from .managed_output import SerializedTerminalWriter
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
@@ -72,12 +73,21 @@ class _ContextStdoutProxy(StdoutProxy):
 
 
 class ToolbarStream:
-    """Keep a stable stream identity across suspensions and cmd2 redirections."""
+    """Keep a stable stream identity across suspensions and cmd2 redirections.
+
+    Output has three possible destinations, in priority order. A *serializer* is installed in
+    reserved mode: the toolbar sits in rows withheld from scrolling, so output goes straight
+    to the terminal under the terminal transaction rather than through a proxy that erases the
+    toolbar and draws it again. A *proxy* is prompt-toolkit's, used in legacy rendering to put
+    output above a toolbar that does scroll. With neither, the terminal stream itself -- which
+    is what a suspended toolbar leaves behind.
+    """
 
     def __init__(self, original: TextIO, lock: "threading.RLock") -> None:
         """Wrap a terminal stream while preserving its ordinary file attributes."""
         self.original = original
         self.proxy: StdoutProxy | None = None
+        self.serializer: SerializedTerminalWriter | None = None
         # Shared with the toolbar so a write from another thread cannot land on a proxy
         # that is being closed. Such a write is accepted by the dead proxy and discarded.
         self._lock = lock
@@ -85,13 +95,32 @@ class ToolbarStream:
 
     def write(self, data: str) -> int:
         """Write above the toolbar, or directly while the toolbar is suspended."""
+        serializer = self._serializer()
+        if serializer is not None:
+            # Deliberately outside the routing lock. The serializer takes the terminal lock,
+            # which is the last lock in the output path, and carrying a routing lock into it
+            # is the deadlock the ordering rule exists to prevent. The serializer revalidates
+            # what it needs once it holds the terminal.
+            return serializer.write(data)
         with self._lock:
             return (self.proxy or self.original).write(data)
 
     def flush(self) -> None:
         """Flush the currently active output stream."""
+        serializer = self._serializer()
+        if serializer is not None:
+            serializer.flush()
+            return
         with self._lock:
             (self.proxy or self.original).flush()
+
+    def _serializer(self) -> "SerializedTerminalWriter | None":
+        """Read the installed serializer under the routing lock, then let it go.
+
+        :return: the serializer, or ``None`` when output is routed the legacy way
+        """
+        with self._lock:
+            return self.serializer
 
     def __getattr__(self, name: str) -> Any:
         """Delegate file attributes to the original terminal stream."""
