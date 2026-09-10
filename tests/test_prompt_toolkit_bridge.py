@@ -1433,3 +1433,121 @@ class TestCommittedFrameNotification:
         harness.app.after_render.fire = replacement  # type: ignore[method-assign]
         harness.bridge.unbind()
         assert harness.app.after_render.fire is replacement
+
+
+class TestDelegatingWrappers:
+    """Someone else's wrapper may outlive the bridge and still call into it."""
+
+    @pytest.fixture(autouse=True)
+    def _event_loop(self) -> Any:
+        """Upstream builds an asyncio Future per cursor request, which needs a loop."""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            yield
+        finally:
+            asyncio.set_event_loop(None)
+            loop.close()
+
+    def bound(self) -> Harness:
+        harness = Harness()
+        harness.stream_recorder = RecordingTtyStream()
+        harness.backend.stdout = harness.stream_recorder
+        harness.renderer.cpr_support = CPR_Support.SUPPORTED
+        harness.bridge.bind(harness.app)
+        return harness
+
+    def test_a_wrapper_delegating_to_the_bridge_still_renders_after_unbinding(self) -> None:
+        """Review finding: the wrapper is kept, so what it delegates to has to keep working."""
+        harness = self.bound()
+        calls: list[int] = []
+        delegate = harness.renderer.render
+
+        def tracing_render(*args: Any, **kwargs: Any) -> None:
+            calls.append(1)
+            delegate(*args, **kwargs)
+
+        harness.renderer.render = tracing_render  # type: ignore[method-assign]
+        harness.bridge.unbind()
+
+        harness.stream_recorder.truncate(0)
+        harness.stream_recorder.seek(0)
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+
+        assert calls == [1]
+        assert "hello" in harness.stream_recorder.getvalue()
+
+    def test_an_unbound_bridge_renders_without_taking_the_terminal(self) -> None:
+        """It is not the terminal's owner any more, so it passes the call straight through."""
+        harness = self.bound()
+        delegate = harness.renderer.render
+
+        def passing_render(*args: Any, **kwargs: Any) -> None:
+            delegate(*args, **kwargs)
+
+        harness.renderer.render = passing_render  # type: ignore[method-assign]
+        harness.bridge.unbind()
+
+        harness.stream_recorder.truncate(0)
+        harness.stream_recorder.seek(0)
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert all(state is None for state in harness.stream_recorder.transactions)
+
+    def test_a_wrapper_delegating_to_the_bridge_can_still_fire_after_render(self) -> None:
+        harness = self.bound()
+        fired: list[int] = []
+        delegate = harness.app.after_render.fire
+
+        def tracing_fire() -> None:
+            fired.append(1)
+            delegate()
+
+        harness.app.after_render.fire = tracing_fire  # type: ignore[method-assign]
+        harness.bridge.unbind()
+
+        handled: list[int] = []
+        harness.app.after_render += lambda _app: handled.append(1)
+        harness.app.after_render.fire()
+
+        assert fired == [1]
+        assert handled == [1]
+
+    def test_delegated_erase_and_clear_still_work_after_unbinding(self) -> None:
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
+        erase, clear = harness.renderer.erase, harness.renderer.clear
+
+        def passing_erase(*args: Any, **kwargs: Any) -> None:
+            erase(*args, **kwargs)
+
+        def passing_clear() -> None:
+            clear()
+
+        harness.renderer.erase = passing_erase  # type: ignore[method-assign]
+        harness.renderer.clear = passing_clear  # type: ignore[method-assign]
+        harness.bridge.unbind()
+
+        with set_app(harness.app):
+            harness.renderer.erase()
+            harness.renderer.clear()
+
+    def test_delegated_cursor_reports_still_work_after_unbinding(self) -> None:
+        harness = self.bound()
+        request = harness.renderer.request_absolute_cursor_position
+        report = harness.renderer.report_absolute_cursor_row
+
+        def passing_request() -> None:
+            request()
+
+        def passing_report(row: int) -> None:
+            report(row)
+
+        harness.renderer.request_absolute_cursor_position = passing_request  # type: ignore[method-assign]
+        harness.renderer.report_absolute_cursor_row = passing_report  # type: ignore[method-assign]
+        harness.bridge.unbind()
+
+        harness.renderer.request_absolute_cursor_position()
+        harness.renderer.report_absolute_cursor_row(4)
+        assert harness.renderer._min_available_height == 23 - 4 + 1

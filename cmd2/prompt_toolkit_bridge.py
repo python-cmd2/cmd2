@@ -127,10 +127,12 @@ class PromptToolkitBridge:
         # once the screen it asked about is gone: the reply is still coming, so the place has
         # to be kept, but nothing it says can be believed.
         self._pending_cpr: deque[Generations | None] = deque()
-        # The renderer methods this bridge replaced, by name, empty while unbound. Kept so
-        # preparation can call the real render: calling the attribute would re-enter the
-        # wrapper and never terminate.
+        # The upstream methods this bridge wraps, by name. Kept after unbinding as well as
+        # during: preparation calls the real render through this rather than the attribute,
+        # which would re-enter the wrapper and never terminate -- and a wrapper somebody else
+        # installed over ours may outlive the binding and still call in here.
         self._originals: dict[str, Any] = {}
+        self._bound = False
         # What this bridge put in their place, so teardown can tell its own replacements from
         # something another caller installed afterwards.
         self._installed: dict[str, Any] = {}
@@ -355,7 +357,7 @@ class PromptToolkitBridge:
 
         :param app: the application whose renders are being intercepted
         """
-        if self._originals:
+        if self._bound:
             return
         renderer = self._renderer
         replacements = {
@@ -373,6 +375,7 @@ class PromptToolkitBridge:
         self._originals = {name: getattr(renderer, name) for name in replacements}
         self._installed = dict(replacements)
         self._bound_app = app
+        self._bound = True
         # Upstream fires this after ``render()`` returns, whatever the wrapper decided to do,
         # so a frame the bridge skipped would still tell everything waiting on a rendered
         # frame that one had happened -- including the command display's readiness signal.
@@ -398,12 +401,11 @@ class PromptToolkitBridge:
         event, self._after_render_event = self._after_render_event, None
         if event is not None and getattr(event, "fire", None) == self._after_render_installed:
             setattr(event, "fire", self._after_render_original)  # noqa: B010
-        self._after_render_original = None
         self._after_render_installed = None
 
-        originals, self._originals = self._originals, {}
+        self._bound = False
         installed, self._installed = self._installed, {}
-        for name, original in originals.items():
+        for name, original in self._originals.items():
             # Restored only where this bridge's replacement is still in place. Another caller
             # may have wrapped the renderer since -- for tracing, for a test -- and putting
             # the original back over theirs would silently undo it.
@@ -414,10 +416,19 @@ class PromptToolkitBridge:
     def _render_through_bridge(self, app: "Application[Any]", layout: Any, is_done: bool = False) -> None:
         """Prepare and commit one frame, telling anything waiting that an attempt was made.
 
+        Unbound, this passes straight through. A wrapper installed over this one -- for
+        tracing, for a test -- is left in place by :meth:`unbind` precisely because it is not
+        ours to remove, and it goes on calling in here afterwards. The bridge is no longer the
+        terminal's owner then, so the honest answer is upstream's own behaviour rather than an
+        error.
+
         :param app: the application being rendered
         :param layout: the layout to render; upstream passes ``app.layout``
         :param is_done: whether this is the final frame of a prompt
         """
+        if not self._bound:
+            self._originals["render"](app, layout, is_done)
+            return
         try:
             self._render_frame(app, layout, is_done)
         finally:
@@ -470,7 +481,7 @@ class PromptToolkitBridge:
         the screen: layout metadata is published from it, and the command display treats it as
         the signal that its first frame has been drawn.
         """
-        if not self._last_emission_committed:
+        if self._bound and not self._last_emission_committed:
             return
         self._after_render_original()
 
@@ -483,6 +494,9 @@ class PromptToolkitBridge:
         actually started waiting for.
         """
         renderer = self._renderer
+        if not self._bound:
+            self._originals["request_absolute_cursor_position"]()
+            return
         with self._lock.transaction("cursor position request"):
             if self._reserved_emission_stopped:
                 return
@@ -497,6 +511,9 @@ class PromptToolkitBridge:
 
         :param row: the one-based physical row the terminal reported
         """
+        if not self._bound:
+            self._originals["report_absolute_cursor_row"](row)
+            return
         self.report_cursor_row(row)
 
     def _erase_through_bridge(self, leave_alternate_screen: bool = True) -> None:
@@ -508,6 +525,9 @@ class PromptToolkitBridge:
 
         :param leave_alternate_screen: passed through to upstream
         """
+        if not self._bound:
+            self._originals["erase"](leave_alternate_screen)
+            return
         self._last_emission_committed = False
         with self._lock.transaction("erase"):
             try:
