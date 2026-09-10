@@ -174,6 +174,7 @@ from .rich_utils import (
 )
 from .styles import Cmd2Style
 from .theme import get_pt_theme
+from .toolbar_mode import validate_toolbar_mode
 from .types import (
     BoundCommandFunc,
     BoundCompleter,
@@ -376,6 +377,7 @@ class Cmd:
         allow_redirection: bool = True,
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
+        bottom_toolbar_mode: str = "legacy",
         complete_in_thread: bool = True,
         command_sets: Iterable[CommandSet[Any]] | None = None,
         enable_bottom_toolbar: bool = False,
@@ -420,6 +422,13 @@ class Cmd:
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
                              when `auto_load_commands` is set to False
+        :param bottom_toolbar_mode: how the bottom toolbar is rendered. ``"legacy"``, the
+                                    default, redraws it with the prompt. ``"reserved"`` keeps
+                                    it in terminal rows withheld from scrolling, and raises
+                                    ``ValueError`` where that is not available; ``"auto"``
+                                    uses reserved rendering only on qualified terminals and
+                                    falls back silently. Reserved rendering is experimental
+                                    and not yet a supported configuration.
         :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar at the main prompt and during commands.
                                       Override ``get_bottom_toolbar()`` to define its content.
         :param enable_rprompt: if ``True``, enables a right prompt while at the main prompt.
@@ -546,6 +555,10 @@ class Cmd:
         self.persistent_history_file = ""
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
+
+        # How the bottom toolbar is rendered. Validated here rather than at the first prompt
+        # so that a typo fails where it was written.
+        self._bottom_toolbar_mode = validate_toolbar_mode(bottom_toolbar_mode)
 
         # Create the main PromptSession
         self.main_session = self._create_main_session(
@@ -1507,6 +1520,16 @@ class Cmd:
                 self,
             )
         )
+
+    @property
+    def bottom_toolbar_mode(self) -> str:
+        """How the bottom toolbar is rendered: ``"auto"``, ``"reserved"`` or ``"legacy"``.
+
+        Read-only after construction: the reservation is established once for the lifetime of
+        the command loop, so changing this while one is running would leave the terminal and
+        the setting describing different things.
+        """
+        return self._bottom_toolbar_mode
 
     @property
     def allow_style(self) -> ru.AllowStyle:
