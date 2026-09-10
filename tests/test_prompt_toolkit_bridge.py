@@ -10,6 +10,7 @@ recorded operations and the flags left behind are the ones production would see.
 """
 
 import io
+import threading
 from concurrent.futures import Future
 from typing import Any
 
@@ -41,13 +42,20 @@ class TtyStringIO(io.StringIO):
 class Harness:
     """A real application over a reserved terminal, with the stream it writes to."""
 
-    def __init__(self, rows: int = 24, columns: int = 40, reserved_rows: int = 1, content: Any = "hello") -> None:
+    def __init__(
+        self,
+        rows: int = 24,
+        columns: int = 40,
+        reserved_rows: int = 1,
+        content: Any = "hello",
+        lock: TerminalLock | None = None,
+    ) -> None:
         self.stream = TtyStringIO()
         self.size = Size(rows=rows, columns=columns)
         self.backend = Vt100_Output(self.stream, lambda: self.size)
         self.display = TerminalDisplay(self.backend, reserved_rows=reserved_rows)
         assert self.display.acquire() is True
-        self.lock = TerminalLock()
+        self.lock = lock or TerminalLock()
         self.app: Application[Any] = Application(
             layout=Layout(Window(FormattedTextControl(content))),
             output=self.display.output,
@@ -208,7 +216,7 @@ class TestCommitValidation:
         harness = Harness()
         prepared = harness.prepare()
         assert prepared is not None
-        harness.bridge.note_managed_write()
+        harness.bridge.note_managed_write(prompt_anchor=1)
         assert harness.bridge.can_dispatch_input is False
         assert harness.bridge.commit(prepared) is False
         assert harness.bridge.can_dispatch_input is False
@@ -274,7 +282,7 @@ class TestRecovery:
         assert prepared is not None
         # Preparation advanced the flag even though the terminal saw nothing.
         assert harness.renderer._bracketed_paste_enabled is True
-        harness.bridge.note_managed_write()
+        harness.bridge.note_managed_write(prompt_anchor=1)
         harness.bridge.commit(prepared)
         harness.clear()
 
@@ -291,7 +299,7 @@ class TestRecovery:
         harness = Harness()
         prepared = harness.prepare()
         assert prepared is not None
-        harness.bridge.note_managed_write()
+        harness.bridge.note_managed_write(prompt_anchor=1)
         harness.bridge.commit(prepared)
         harness.resynchronize()
         harness.clear()
@@ -374,7 +382,7 @@ class TestInvalidationCoalescing:
         harness.bridge.set_redraw_scheduler(lambda: scheduled.append(1))
 
         for _ in range(5):
-            harness.bridge.note_managed_write()
+            harness.bridge.note_managed_write(prompt_anchor=1)
 
         assert len(scheduled) == 1
         assert harness.bridge.redraw_pending is True
@@ -387,10 +395,10 @@ class TestInvalidationCoalescing:
         harness = Harness()
         scheduled: list[int] = []
         harness.bridge.set_redraw_scheduler(lambda: scheduled.append(1))
-        harness.bridge.note_managed_write()
+        harness.bridge.note_managed_write(prompt_anchor=1)
         harness.resynchronize()
         harness.render()
-        harness.bridge.note_managed_write()
+        harness.bridge.note_managed_write(prompt_anchor=1)
         assert len(scheduled) == 2
 
 
@@ -660,3 +668,69 @@ class TestReviewRegressions:
         harness.bridge.request_cursor_position()
         assert harness.bridge.report_cursor_row(24) is True
         assert harness.renderer._min_available_height == 24 - 24 + 1
+
+
+class RetiringLock:
+    """A lock that runs a callback at the moment it is handed over.
+
+    This stands in for another writer retiring the batch while a commit waits for the
+    terminal. Driving that with two real threads cannot say *where* the second thread got to
+    before the lock was released -- the interleaving the test is about is the one where the
+    commit is already past its own checks -- so the handover itself is the seam to inject at.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.RLock()
+        self.on_acquire: Any = None
+
+    def acquire(self, *args: Any, **kwargs: Any) -> bool:
+        acquired = self._lock.acquire(*args, **kwargs)
+        if self.on_acquire is not None:
+            callback, self.on_acquire = self.on_acquire, None
+            callback()
+        return acquired
+
+    def release(self) -> None:
+        self._lock.release()
+
+
+class TestReviewRegressionsRoundTwo:
+    def test_a_managed_write_without_an_origin_forgets_the_old_one(self) -> None:
+        """Review finding 1: the output moved the cursor, so the remembered row is stale."""
+        harness = Harness()
+        harness.render()
+        assert harness.bridge.prompt_anchor == 1
+        harness.bridge.note_managed_write()
+        assert harness.bridge.prompt_anchor is None
+
+        harness.clear()
+        harness.resynchronize()
+        written = harness.written()
+        assert "\x1b[1;1H" not in written
+        assert "\x1b[6n" in written
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_a_frame_prepared_after_emission_stopped_is_not_published(self) -> None:
+        """Review finding 2: stopping is not the same state as owing a recovery."""
+
+        def content() -> str:
+            harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+            return "hello"
+
+        harness = Harness(content=content)
+        assert harness.prepare() is None
+        assert harness.bridge.in_flight is None
+        assert harness.bridge.reserved_emission_stopped is True
+
+    def test_a_frame_retired_while_the_commit_waits_is_not_emitted(self) -> None:
+        """Review finding 3: retirement only replaces an explicit guard if read under the lock."""
+        handover = RetiringLock()
+        harness = Harness(lock=TerminalLock(lock=handover))
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.clear()
+
+        handover.on_acquire = lambda: harness.bridge.require_resynchronization("another writer")
+        assert harness.bridge.commit(prepared) is False
+        assert harness.written() == ""
+        assert harness.bridge.needs_resynchronization is True

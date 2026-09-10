@@ -216,11 +216,13 @@ class PromptToolkitBridge:
         against a screen the terminal no longer shows, from an origin it no longer has.
 
         :param prompt_anchor: the physical row the prompt now starts on, where the layer that
-            emitted the output knows it; recovery asks the terminal otherwise
+            emitted the output knows it. Passing nothing *forgets* the origin rather than
+            keeping the old one: the write moved the cursor and may have scrolled the screen,
+            so the remembered row is exactly what is no longer true, and recovery asks the
+            terminal instead.
         """
         self._terminal_generation += 1
-        if prompt_anchor is not None:
-            self._prompt_anchor = prompt_anchor
+        self._prompt_anchor = prompt_anchor
         self.require_resynchronization("managed output reached the terminal")
         self._request_redraw()
 
@@ -323,10 +325,12 @@ class PromptToolkitBridge:
             self._renderer.output = original
             self._preparing = False
 
-        if self.needs_resynchronization:
+        if self.needs_resynchronization or self.reserved_emission_stopped:
             # Something invalidated the terminal while the frame was being prepared -- a
-            # managed write from inside a layout callback, say. The operations are already
-            # recorded against a terminal that has moved on.
+            # managed write from inside a layout callback, say, or a failure that abandoned
+            # the reservation outright. Either way the operations are recorded against a
+            # terminal that has moved on, and publishing them would hand the caller a frame
+            # that is already retired.
             self._retire()
             return None
 
@@ -341,14 +345,17 @@ class PromptToolkitBridge:
         :return: whether the frame was emitted in full
         """
         assert_no_terminal_transaction("committing a prepared frame")
-        if prepared is not self._in_flight:
-            # Already retired, or from a previous attempt. Replaying it would emit a frame
-            # nothing has validated, and possibly emit it twice. Everything that invalidates
-            # the terminal retires the frame in flight, so this one test covers an owed
-            # recovery and an abandoned reservation as well as a superseded batch.
-            return False
-
         with self._lock.transaction("commit", generation=prepared.generations.geometry):
+            if prepared is not self._in_flight:
+                # Already retired, or from a previous attempt. Replaying it would emit a frame
+                # nothing has validated, and possibly emit it twice. Everything that
+                # invalidates the terminal retires the frame in flight, so this one test
+                # covers an owed recovery and an abandoned reservation as well as a superseded
+                # batch -- but only when it is read here, after the terminal has been
+                # acquired. Read before the wait, it answers a question about a terminal
+                # somebody else still held: a writer can retire the batch while this call
+                # queues for the lock, changing neither the generations nor the size.
+                return False
             if self.generations() != prepared.generations:
                 self.require_resynchronization("the terminal changed between preparing and committing")
                 return False
