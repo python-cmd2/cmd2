@@ -12,11 +12,12 @@ from typing import Any
 import pytest
 from prompt_toolkit.data_structures import Size
 from prompt_toolkit.input import create_pipe_input
+from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.shortcuts import PromptSession
 
 from cmd2.reserved_output import ReservedOutput
-from cmd2.reserved_toolbar import ReservedToolbar
+from cmd2.reserved_toolbar import ReservedToolbar, native_toolbar_container
 
 
 class TtyStringIO(io.StringIO):
@@ -29,7 +30,7 @@ class TtyStringIO(io.StringIO):
 class Harness:
     """A prompt session over a terminal whose size the test controls."""
 
-    def __init__(self, rows: int = 24, columns: int = 80) -> None:
+    def __init__(self, rows: int = 24, columns: int = 80, toolbar: Any = "STATUS") -> None:
         self.stream = TtyStringIO()
         self.size = Size(rows=rows, columns=columns)
         self.backend = Vt100_Output(self.stream, lambda: self.size)
@@ -228,5 +229,143 @@ class TestComponents:
             assert harness.toolbar.display is display
             harness.toolbar.stop()
             assert harness.app.output is harness.backend
+        finally:
+            harness.close()
+
+
+class TestNativeToolbarSuppression:
+    def test_the_native_toolbar_window_is_hidden_while_reserved(self) -> None:
+        """Two toolbars would be drawn otherwise: the native one and the painted band."""
+        harness = Harness()
+        try:
+            container = native_toolbar_container(harness.session)
+            assert container is not None
+            assert container.filter() is True
+            harness.toolbar.start()
+            assert container.filter() is False
+        finally:
+            harness.close()
+
+    def test_the_original_filter_is_restored(self) -> None:
+        harness = Harness()
+        try:
+            container = native_toolbar_container(harness.session)
+            assert container is not None
+            original = container.filter
+            harness.toolbar.start()
+            harness.toolbar.stop()
+            assert container.filter is original
+            assert container.filter() is True
+        finally:
+            harness.close()
+
+    def test_the_window_reappears_even_if_the_filter_is_never_restored(self) -> None:
+        """The suppression asks whether the toolbar is active rather than latching a False."""
+        harness = Harness()
+        try:
+            container = native_toolbar_container(harness.session)
+            assert container is not None
+            harness.toolbar.start()
+            suppressed = container.filter
+            harness.toolbar.stop()
+            assert suppressed() is True
+        finally:
+            harness.close()
+
+    def test_the_content_provider_is_left_alone(self) -> None:
+        """Callers read this attribute to mean 'a toolbar is configured'."""
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            assert harness.session.bottom_toolbar == "STATUS"
+        finally:
+            harness.close()
+
+    def test_an_unrecognized_layout_is_refused_explicitly(self) -> None:
+        harness = Harness()
+        try:
+            harness.session.app.layout = Layout(Window())
+            with pytest.raises(RuntimeError, match="bottom toolbar"):
+                harness.toolbar.start()
+        finally:
+            harness.close()
+
+    def test_an_unrecognized_layout_has_no_container_to_find(self) -> None:
+        harness = Harness()
+        try:
+            harness.session.app.layout = Layout(Window())
+            assert native_toolbar_container(harness.session) is None
+        finally:
+            harness.close()
+
+    def test_a_layout_whose_last_child_is_not_the_toolbar_has_no_container(self) -> None:
+        """The shape check is about the toolbar window, not merely about the root's type."""
+        harness = Harness()
+        try:
+            harness.session.app.layout = Layout(HSplit([Window(), Window()]))
+            assert native_toolbar_container(harness.session) is None
+        finally:
+            harness.close()
+
+
+class TestFirstPaint:
+    def test_the_band_is_painted_when_the_reservation_starts(self) -> None:
+        """The toolbar has to be there from the first prompt, not from the first refresh."""
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            assert "\x1b[24;1H" in harness.written()
+            assert "STATUS" in harness.written()
+        finally:
+            harness.close()
+
+    def test_refreshing_repaints_changed_content(self) -> None:
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            harness.session.bottom_toolbar = "CHANGED"
+            harness.clear()
+            assert harness.toolbar.refresh() is True
+            # Only the cells that differ from "STATUS" are rewritten -- the shared "A" is
+            # left alone -- so the band is checked through the frame the painter published
+            # rather than by looking for the whole string in the stream.
+            painter = harness.toolbar.painter
+            assert painter is not None
+            assert painter.last_frame is not None
+            assert "".join(cell.char for cell in painter.last_frame.rows[0]).startswith("CHANGED")
+            assert "\x1b[24;" in harness.written()
+        finally:
+            harness.close()
+
+    def test_refreshing_unchanged_content_writes_nothing(self) -> None:
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            harness.clear()
+            assert harness.toolbar.refresh() is False
+            assert harness.written() == ""
+        finally:
+            harness.close()
+
+    def test_a_failing_content_callback_paints_nothing(self) -> None:
+        """The painter keeps the last good frame; the refresh simply reports it wrote nothing."""
+
+        def boom() -> str:
+            raise RuntimeError("callback failed")
+
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            harness.toolbar.content = boom
+            harness.clear()
+            assert harness.toolbar.refresh() is False
+            assert harness.written() == ""
+        finally:
+            harness.close()
+
+    def test_refreshing_while_stopped_does_nothing(self) -> None:
+        harness = Harness()
+        try:
+            assert harness.toolbar.refresh() is False
         finally:
             harness.close()

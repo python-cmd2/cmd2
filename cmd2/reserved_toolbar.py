@@ -20,6 +20,9 @@ new ``bottom_toolbar`` to the session still reaches the band.
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
 
+from prompt_toolkit.filters import Condition
+from prompt_toolkit.layout import HSplit, Window
+from prompt_toolkit.layout.containers import ConditionalContainer
 from prompt_toolkit.styles import DynamicStyle
 
 from .prompt_toolkit_bridge import PromptToolkitBridge
@@ -33,6 +36,29 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from prompt_toolkit.formatted_text import AnyFormattedText
     from prompt_toolkit.shortcuts import PromptSession
+
+
+def native_toolbar_container(session: "PromptSession[Any]") -> ConditionalContainer | None:
+    """Find the window prompt-toolkit draws the bottom toolbar in.
+
+    The shape is checked explicitly rather than assumed: ``PromptSession`` offers no public
+    hook for its toolbar window, so this is a dependency on its layout that has to fail
+    visibly when upstream changes it -- not quietly suppress the wrong container.
+
+    :param session: the prompt session to look in
+    :return: the toolbar's container, or ``None`` if this layout has no recognizable one
+    """
+    root = session.app.layout.container
+    if not isinstance(root, HSplit) or not root.children:
+        return None
+    candidate = root.children[-1]
+    if (
+        isinstance(candidate, ConditionalContainer)
+        and isinstance(candidate.content, Window)
+        and candidate.content.style == "class:bottom-toolbar"
+    ):
+        return candidate
+    return None
 
 
 class ReservedToolbar:
@@ -62,6 +88,8 @@ class ReservedToolbar:
         self._lock = TerminalLock()
         self._bound_output: Any = None
         self._original_output: Any = None
+        self._native_toolbar: ConditionalContainer | None = None
+        self._original_filter: Any = None
 
     @property
     def is_active(self) -> bool:
@@ -105,6 +133,13 @@ class ReservedToolbar:
             return True
 
         app = self._session.app
+        native = native_toolbar_container(self._session)
+        if native is None:
+            # Selection is supposed to have established this already. Reaching here means the
+            # layout changed underneath us, and reserving rows while the native toolbar still
+            # draws would put two toolbars on the screen.
+            raise RuntimeError("cannot locate the session's bottom toolbar window")
+
         display = TerminalDisplay(app.output, reserved_rows=self._reserved_rows)
         if not display.acquire():
             # Nothing was installed, so there is nothing to release; leaving the lease held
@@ -118,6 +153,14 @@ class ReservedToolbar:
         app.output = self._bound_output
         app.renderer.output = self._bound_output
 
+        # Hidden by asking whether the reservation is live rather than by latching a False.
+        # A restoration that never runs -- a teardown that raised, a caller that dropped this
+        # object -- then leaves a filter that heals itself instead of a toolbar that is gone
+        # for the rest of the session.
+        self._native_toolbar = native
+        self._original_filter = native.filter
+        native.filter = native.filter & Condition(lambda: not self.is_active)
+
         self._bridge = PromptToolkitBridge(renderer=app.renderer, display=display, lock=self._lock)
         self._painter = ToolbarPainter(
             display=display,
@@ -126,7 +169,21 @@ class ReservedToolbar:
             color_depth=app.color_depth,
             default_style="class:bottom-toolbar",
         )
+        self.refresh()
         return True
+
+    def refresh(self) -> bool:
+        """Evaluate the toolbar's content and paint whatever changed.
+
+        :return: whether anything was written
+        """
+        painter = self._painter
+        if painter is None:
+            return False
+        prepared = painter.prepare(self.content)
+        if prepared is None:
+            return False
+        return painter.paint(prepared)
 
     def stop(self) -> None:
         """Restore the application's bindings and release the reservation.
@@ -140,6 +197,11 @@ class ReservedToolbar:
         self._painter = None
         if display is None:
             return
+
+        native, self._native_toolbar = self._native_toolbar, None
+        if native is not None and self._original_filter is not None:
+            native.filter = self._original_filter
+        self._original_filter = None
 
         app = self._session.app
         # Only put the original back where the adapter is still installed. Something else may
