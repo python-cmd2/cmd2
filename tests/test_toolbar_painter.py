@@ -15,9 +15,9 @@ from prompt_toolkit.data_structures import Size
 from prompt_toolkit.formatted_text import AnyFormattedText
 from prompt_toolkit.output import ColorDepth
 from prompt_toolkit.output.vt100 import Vt100_Output
-from prompt_toolkit.styles import BaseStyle, DummyStyle
+from prompt_toolkit.styles import BaseStyle, DummyStyle, DynamicStyle, Style
 
-from cmd2.terminal_display import Geometry
+from cmd2.terminal_display import TerminalDisplay
 from cmd2.terminal_transaction import TerminalLock, current_transaction, held_higher_level_locks
 from cmd2.toolbar_painter import Cell, ToolbarFrame, ToolbarPainter, measure_toolbar_height
 
@@ -187,182 +187,270 @@ class TestValidation:
         assert text_of(frame, 1) == "    "
         assert text_of(frame, 2) == "b   "
 
+    def test_a_combining_mark_after_a_wide_character_joins_that_character(self) -> None:
+        """Attaching it to the continuation cell instead shifts every later column."""
+        frame = ToolbarFrame.build("广́x", width=6, height=1)
+        assert frame.rows[0][0].char == "广́"
+        assert frame.rows[0][1].is_continuation is True
+        assert frame.rows[0][2].char == "x"
 
-class Recorder(Vt100_Output):
-    """A backend that records what it was asked to do, and when."""
 
-    def __init__(self, stream: io.StringIO) -> None:
-        super().__init__(stream, lambda: Size(rows=24, columns=80))
+class ResizableDisplay(TerminalDisplay):
+    """A display whose terminal can be resized between preparing and painting."""
+
+    def __init__(self, output: Vt100_Output, screen: dict[str, int], reserved_rows: int = 1) -> None:
+        super().__init__(output, reserved_rows=reserved_rows)
+        self._screen = screen
+
+    def resize(self, rows: int) -> None:
+        """Change the terminal's height and re-establish the reservation."""
+        self._screen["rows"] = rows
+        self.reconfigure()
+
+
+class RecordingStream(io.StringIO):
+    """The terminal end of the backend, recording what reached it and when.
+
+    Deliberately a stream rather than an ``Output`` subclass: backend capability is decided by
+    exact class identity, so a subclassed backend would never be granted a reservation, and
+    every test here would pass for the wrong reason.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
         self.flushes = 0
         self.transaction_during_write: list[object] = []
 
-    def write_raw(self, data: str) -> None:
+    def write(self, text: str) -> int:
         self.transaction_during_write.append(current_transaction())
-        super().write_raw(data)
+        return super().write(text)
 
     def flush(self) -> None:
         self.flushes += 1
         super().flush()
 
 
-def make_painter(style: BaseStyle | None = None) -> tuple[ToolbarPainter, Recorder, io.StringIO]:
-    """Build a painter over a recording backend."""
-    stream = io.StringIO()
-    output = Recorder(stream)
-    painter = ToolbarPainter(
-        output=output,
-        lock=TerminalLock(),
-        style=style or DummyStyle(),
-        color_depth=ColorDepth.DEPTH_8_BIT,
-    )
-    return painter, output, stream
+class Harness:
+    """A painter over a real reservation, and the stream the terminal receives."""
 
+    def __init__(
+        self,
+        rows: int = 24,
+        columns: int = 5,
+        reserved: int = 1,
+        style: BaseStyle | None = None,
+    ) -> None:
+        self.stream = RecordingStream()
+        self.screen = {"rows": rows, "columns": columns}
+        self.output = Vt100_Output(self.stream, lambda: Size(rows=self.screen["rows"], columns=self.screen["columns"]))
+        self.display = ResizableDisplay(self.output, self.screen, reserved_rows=reserved)
+        assert self.display.acquire() is True
+        self.painter = ToolbarPainter(
+            display=self.display,
+            lock=TerminalLock(),
+            style=style or DummyStyle(),
+            color_depth=ColorDepth.DEPTH_8_BIT,
+        )
+        self.clear()
 
-def geometry(rows: int = 24, columns: int = 5, reserved: int = 1) -> Geometry:
-    """Build a geometry snapshot for the band."""
-    return Geometry(generation=1, physical_rows=rows, columns=columns, reserved_rows=reserved)
+    def clear(self) -> None:
+        """Discard everything written so far."""
+        self.stream.truncate(0)
+        self.stream.seek(0)
 
+    def written(self) -> str:
+        """Everything written since the last clear."""
+        return self.stream.getvalue()
 
-def visible(stream: io.StringIO) -> str:
-    """Strip SGR sequences, leaving cursor motion and text."""
-    return re.sub(r"\x1b\[[0-9;]*m", "", stream.getvalue())
+    def visible(self) -> str:
+        """What was written, with attribute changes stripped out."""
+        return re.sub(r"\x1b\[[0-9;]*m", "", self.stream.getvalue())
 
-
-def paint(painter: ToolbarPainter, content: AnyFormattedText, geo: Geometry) -> bool:
-    """Prepare and paint content in one step, as a refresh would."""
-    prepared = painter.prepare(lambda: content, width=geo.columns, height=geo.reserved_rows)
-    assert prepared is not None
-    return painter.paint(prepared, geo)
+    def paint(self, content: AnyFormattedText) -> bool:
+        """Prepare and paint content in one step, as a refresh would."""
+        prepared = self.painter.prepare(lambda: content)
+        assert prepared is not None
+        return self.painter.paint(prepared)
 
 
 class TestPainting:
     def test_the_first_paint_writes_the_whole_band_at_its_physical_row(self) -> None:
-        painter, _output, stream = make_painter()
-        assert paint(painter, "hi", geometry()) is True
-        assert "\x1b[24;1H" in visible(stream)
-        assert "hi   " in visible(stream)
+        harness = Harness()
+        assert harness.paint("hi") is True
+        assert "\x1b[24;1H" in harness.visible()
+        assert "hi   " in harness.visible()
 
     def test_a_multirow_band_writes_each_row_at_its_own_physical_row(self) -> None:
-        painter, _output, stream = make_painter()
-        paint(painter, "ab\ncd", geometry(rows=24, columns=2, reserved=2))
-        written = visible(stream)
+        harness = Harness(columns=2, reserved=2)
+        harness.paint("ab\ncd")
+        written = harness.visible()
         assert "\x1b[23;1Hab" in written
         assert "\x1b[24;1Hcd" in written
 
     def test_an_unchanged_frame_emits_nothing(self) -> None:
         """Same cells and attributes: the toolbar produces no output at all."""
-        painter, _output, _stream = make_painter()
-        paint(painter, "hi", geometry())
-        _painter, output, stream = painter, _output, _stream
-        before = stream.getvalue()
-        flushes = output.flushes
-        assert paint(painter, "hi", geometry()) is False
-        assert stream.getvalue() == before
-        assert output.flushes == flushes
+        harness = Harness()
+        harness.paint("hi")
+        harness.clear()
+        flushes = harness.stream.flushes
+        assert harness.paint("hi") is False
+        assert harness.written() == ""
+        assert harness.stream.flushes == flushes
 
     def test_only_the_changed_run_is_rewritten(self) -> None:
-        painter, _output, stream = make_painter()
-        paint(painter, "abcd", geometry(columns=5))
-        stream.truncate(0)
-        stream.seek(0)
-        paint(painter, "abXd", geometry(columns=5))
-        written = visible(stream)
+        harness = Harness()
+        harness.paint("abcd")
+        harness.clear()
+        harness.paint("abXd")
+        written = harness.visible()
         assert "\x1b[24;3HX" in written
         assert "abX" not in written
 
     def test_nothing_is_cleared_before_painting(self) -> None:
         """An erase before the write is exactly the flicker this design exists to remove."""
-        painter, _output, stream = make_painter()
-        paint(painter, "abcd", geometry())
-        paint(painter, "z", geometry())
-        written = stream.getvalue()
+        harness = Harness()
+        harness.paint("abcd")
+        harness.paint("z")
+        written = harness.written()
         for erase in ("\x1b[K", "\x1b[0K", "\x1b[2K", "\x1b[J", "\x1b[M"):
             assert erase not in written
 
     def test_a_shorter_frame_pads_its_tail_rather_than_erasing_it(self) -> None:
-        painter, _output, stream = make_painter()
-        paint(painter, "abcd", geometry(columns=5))
-        stream.truncate(0)
-        stream.seek(0)
-        paint(painter, "z", geometry(columns=5))
-        written = visible(stream)
+        harness = Harness()
+        harness.paint("abcd")
+        harness.clear()
+        harness.paint("z")
         # The final column was already blank in the previous frame, so it is not rewritten:
         # the run stops where the difference does.
-        assert "\x1b[24;1Hz   " in written
+        assert "\x1b[24;1Hz   " in harness.visible()
 
     def test_a_style_only_change_repaints_those_cells(self) -> None:
-        painter, _output, stream = make_painter()
-        paint(painter, [("", "hi")], geometry())
-        stream.truncate(0)
-        stream.seek(0)
-        assert paint(painter, [("bold", "hi")], geometry()) is True
-        assert "hi" in visible(stream)
+        # A real style, not DummyStyle: under DummyStyle "bold" and "" resolve to the same
+        # attributes, so the terminal would show the same thing and not painting is correct.
+        harness = Harness(style=Style.from_dict({}))
+        harness.paint([("", "hi")])
+        harness.clear()
+        assert harness.paint([("bold", "hi")]) is True
+        assert "hi" in harness.visible()
 
     def test_a_wide_character_is_replaced_as_a_whole(self) -> None:
         """Both of its cells change together, so a run never begins on the right half."""
-        painter, _output, stream = make_painter()
-        paint(painter, "a广b", geometry(columns=5))
-        stream.truncate(0)
-        stream.seek(0)
-        paint(painter, "aXYb", geometry(columns=5))
-        assert "\x1b[24;2HXY" in visible(stream)
+        harness = Harness()
+        harness.paint("a广b")
+        harness.clear()
+        harness.paint("aXYb")
+        assert "\x1b[24;2HXY" in harness.visible()
+
+    def test_replacing_one_wide_character_with_another_repaints_both_cells(self) -> None:
+        """The two halves compare equal, so the run has to be extended over the second one."""
+        harness = Harness()
+        harness.paint("a广b")
+        harness.clear()
+        assert harness.paint("a国b") is True
+        assert "\x1b[24;2H国" in harness.visible()
 
     def test_the_cursor_is_saved_and_restored_around_the_paint(self) -> None:
-        painter, _output, stream = make_painter()
-        paint(painter, "hi", geometry())
-        written = stream.getvalue()
+        harness = Harness()
+        harness.paint("hi")
+        written = harness.written()
         assert written.startswith("\x1b7")
         assert written.endswith("\x1b8")
 
     def test_autowrap_is_disabled_during_the_paint_and_restored(self) -> None:
         """Writing the last column with autowrap on would push the band into another row."""
-        painter, _output, stream = make_painter()
-        paint(painter, "hi", geometry())
-        written = stream.getvalue()
+        harness = Harness()
+        harness.paint("hi")
+        written = harness.written()
         assert written.index("\x1b[?7l") < written.index("\x1b[24;1H")
         assert written.index("\x1b[?7h") > written.index("\x1b[24;1H")
 
     def test_the_paint_is_flushed(self) -> None:
-        painter, output, _stream = make_painter()
-        paint(painter, "hi", geometry())
-        assert output.flushes >= 1
+        harness = Harness()
+        harness.paint("hi")
+        assert harness.stream.flushes >= 1
 
     def test_every_write_happens_inside_a_terminal_transaction(self) -> None:
-        painter, output, _stream = make_painter()
-        paint(painter, "hi", geometry())
-        assert output.transaction_during_write
-        assert all(state is not None for state in output.transaction_during_write)
+        harness = Harness()
+        harness.stream.transaction_during_write.clear()
+        harness.paint("hi")
+        assert harness.stream.transaction_during_write
+        assert all(state is not None for state in harness.stream.transaction_during_write)
 
     def test_invalidating_forces_a_full_repaint(self) -> None:
         """After recovery the terminal's contents are unknown, so the diff baseline is gone."""
-        painter, _output, stream = make_painter()
-        paint(painter, "hi", geometry())
-        painter.invalidate()
-        stream.truncate(0)
-        stream.seek(0)
-        assert paint(painter, "hi", geometry()) is True
-        assert "\x1b[24;1Hhi   " in visible(stream)
+        harness = Harness()
+        harness.paint("hi")
+        harness.painter.invalidate()
+        harness.clear()
+        assert harness.paint("hi") is True
+        assert "\x1b[24;1Hhi   " in harness.visible()
 
     def test_a_geometry_change_forces_a_full_repaint(self) -> None:
         """The band moved; cells matching the old frame are not on the screen any more."""
-        painter, _output, stream = make_painter()
-        paint(painter, "hi", geometry(rows=24))
-        stream.truncate(0)
-        stream.seek(0)
-        assert paint(painter, "hi", geometry(rows=12)) is True
-        assert "\x1b[12;1Hhi   " in visible(stream)
+        harness = Harness()
+        harness.paint("hi")
+        harness.display.resize(12)
+        harness.clear()
+        assert harness.paint("hi") is True
+        assert "\x1b[12;1Hhi   " in harness.visible()
+
+    def test_empty_content_is_painted_rather_than_skipped(self) -> None:
+        """An empty toolbar is an intentional visibility change and must reach the band."""
+        harness = Harness()
+        harness.paint("hi")
+        harness.clear()
+        assert harness.paint("") is True
+        # Only the two cells that held text are rewritten; the rest of the band was already
+        # blank. Blanking by writing spaces is a paint, not an erase.
+        assert "\x1b[24;1H  " in harness.visible()
+
+
+class TestOwnershipValidation:
+    def test_a_paint_is_refused_when_the_terminal_changed_between_prepare_and_paint(self) -> None:
+        """The band prepared for row 24 is in the command area once the terminal grows."""
+        harness = Harness(rows=24)
+        prepared = harness.painter.prepare(lambda: "hi")
+        assert prepared is not None
+        harness.display.resize(40)
+        harness.clear()
+        assert harness.painter.paint(prepared) is False
+        assert harness.written() == ""
+
+    def test_a_refused_paint_does_not_become_the_baseline(self) -> None:
+        """Publishing it would make the next diff skip changes the terminal never received."""
+        harness = Harness(rows=24)
+        prepared = harness.painter.prepare(lambda: "hi")
+        assert prepared is not None
+        harness.display.resize(40)
+        harness.painter.paint(prepared)
+        assert harness.painter.last_frame is None
+
+    def test_a_paint_is_refused_while_the_reservation_is_released(self) -> None:
+        """With no reservation there is no band to own, and no rows to write into."""
+        harness = Harness()
+        prepared = harness.painter.prepare(lambda: "hi")
+        assert prepared is not None
+        harness.display.release()
+        harness.clear()
+        assert harness.painter.paint(prepared) is False
+        assert harness.written() == ""
+
+    def test_nothing_is_prepared_while_the_reservation_is_released(self) -> None:
+        harness = Harness()
+        harness.display.release()
+        assert harness.painter.prepare(lambda: "hi") is None
 
 
 class TestContentEvaluation:
     def test_the_callback_runs_outside_the_terminal_transaction(self) -> None:
         """Named rule 13.2: a content callback must never run while the terminal is held."""
-        painter, _output, _stream = make_painter()
+        harness = Harness()
         seen: list[object] = []
-        painter.prepare(lambda: seen.append(current_transaction()) or "hi", width=5, height=1)
+        harness.painter.prepare(lambda: seen.append(current_transaction()) or "hi")
         assert seen == [None]
 
     def test_the_callback_runs_once_per_requested_refresh(self) -> None:
-        painter, _output, _stream = make_painter()
+        harness = Harness()
         calls = 0
 
         def content() -> str:
@@ -370,24 +458,24 @@ class TestContentEvaluation:
             calls += 1
             return "hi"
 
-        painter.prepare(content, width=5, height=1)
+        harness.painter.prepare(content)
         assert calls == 1
 
     def test_a_failing_callback_keeps_the_last_good_frame(self) -> None:
-        painter, _output, stream = make_painter()
-        paint(painter, "good", geometry())
-        good = painter.last_frame
+        harness = Harness(columns=6)
+        harness.paint("good")
+        good = harness.painter.last_frame
 
         def boom() -> str:
             raise RuntimeError("callback failed")
 
-        assert painter.prepare(boom, width=5, height=1) is None
-        assert painter.last_frame == good
-        assert "good" in visible(stream)
+        assert harness.painter.prepare(boom) is None
+        assert harness.painter.last_frame == good
+        assert "good" in harness.visible()
 
     def test_a_failing_callback_is_not_called_again(self) -> None:
         """Repeated failing updates would report the same error on every refresh."""
-        painter, _output, _stream = make_painter()
+        harness = Harness()
         calls = 0
 
         def boom() -> str:
@@ -395,24 +483,23 @@ class TestContentEvaluation:
             calls += 1
             raise RuntimeError("callback failed")
 
-        painter.prepare(boom, width=5, height=1)
-        painter.prepare(boom, width=5, height=1)
+        harness.painter.prepare(boom)
+        harness.painter.prepare(boom)
         assert calls == 1
 
     def test_the_error_is_reported_once(self) -> None:
-        painter, _output, _stream = make_painter()
+        harness = Harness()
 
         def boom() -> str:
             raise RuntimeError("callback failed")
 
-        painter.prepare(boom, width=5, height=1)
-        first = painter.take_pending_error()
-        assert isinstance(first, RuntimeError)
-        assert painter.take_pending_error() is None
+        harness.painter.prepare(boom)
+        assert isinstance(harness.painter.take_pending_error(), RuntimeError)
+        assert harness.painter.take_pending_error() is None
 
     def test_taking_the_error_lets_content_be_evaluated_again(self) -> None:
         """Reporting is what re-arms it: the user has been told, so a retry is not a loop."""
-        painter, _output, _stream = make_painter()
+        harness = Harness(columns=12)
         failures = [True]
 
         def content() -> str:
@@ -420,42 +507,37 @@ class TestContentEvaluation:
                 raise RuntimeError("callback failed")
             return "recovered"
 
-        painter.prepare(content, width=5, height=1)
-        painter.take_pending_error()
+        harness.painter.prepare(content)
+        harness.painter.take_pending_error()
         failures[0] = False
-        prepared = painter.prepare(content, width=12, height=1)
+        prepared = harness.painter.prepare(content)
         assert prepared is not None
         assert "recovered" in "".join(cell.char for cell in prepared.frame.rows[0])
 
-    def test_empty_content_is_painted_rather_than_skipped(self) -> None:
-        """An empty toolbar is an intentional visibility change and must reach the band."""
-        painter, _output, stream = make_painter()
-        paint(painter, "hi", geometry())
-        stream.truncate(0)
-        stream.seek(0)
-        assert paint(painter, "", geometry()) is True
-        # Only the two cells that held text are rewritten; the rest of the band was already
-        # blank. Blanking by writing spaces is a paint, not an erase.
-        assert "\x1b[24;1H  " in visible(stream)
 
+class TestResolvedStyles:
+    def test_a_resolved_style_change_repaints_the_cells(self) -> None:
+        """The class string is unchanged, but what the terminal shows is not."""
+        rules = {"status": "fg:ansired"}
+        style = DynamicStyle(lambda: Style.from_dict(dict(rules)))
+        harness = Harness(style=style)
 
-class TestPaintValidation:
-    def test_a_frame_that_does_not_fit_the_band_is_refused(self) -> None:
-        """A resize between preparing and painting must not write outside the reservation."""
-        painter, _output, _stream = make_painter()
-        prepared = painter.prepare(lambda: "hi", width=5, height=1)
-        assert prepared is not None
-        with pytest.raises(ValueError, match="does not fit"):
-            painter.paint(prepared, geometry(columns=9))
+        content = [("class:status", "hi")]
+        assert harness.paint(content) is True
+        harness.clear()
 
-    def test_replacing_one_wide_character_with_another_repaints_both_cells(self) -> None:
-        """The two halves compare equal, so the run has to be extended over the second one."""
-        painter, _output, stream = make_painter()
-        paint(painter, "a广b", geometry(columns=5))
-        stream.truncate(0)
-        stream.seek(0)
-        assert paint(painter, "a国b", geometry(columns=5)) is True
-        assert "\x1b[24;2H国" in visible(stream)
+        rules["status"] = "fg:ansiblue"
+        assert harness.paint(content) is True
+        assert "hi" in harness.visible()
+
+    def test_an_unchanged_resolved_style_still_emits_nothing(self) -> None:
+        style = DynamicStyle(lambda: Style.from_dict({"status": "fg:ansired"}))
+        harness = Harness(style=style)
+        content = [("class:status", "hi")]
+        harness.paint(content)
+        harness.clear()
+        assert harness.paint(content) is False
+        assert harness.written() == ""
 
 
 class BlockingStream(io.StringIO):
@@ -463,12 +545,13 @@ class BlockingStream(io.StringIO):
 
     def __init__(self) -> None:
         super().__init__()
+        self.armed = False
         self.blocked = threading.Event()
         self.entered = threading.Event()
         self.locks_held_while_blocked: tuple[str, ...] | None = None
 
     def write(self, text: str) -> int:
-        if not self.entered.is_set():
+        if self.armed and not self.entered.is_set():
             self.entered.set()
             self.locks_held_while_blocked = held_higher_level_locks()
             self.blocked.wait(timeout=5)
@@ -479,15 +562,23 @@ class TestBackpressure:
     def test_paint_preserves_transaction_order_with_blocked_sink(self) -> None:
         """Named test 13.2: a blocked writer holds the terminal, and nothing slips past it."""
         stream = BlockingStream()
-        output = Vt100_Output(stream, lambda: Size(rows=24, columns=5))
+        screen = {"rows": 24, "columns": 5}
+        output = Vt100_Output(stream, lambda: Size(rows=screen["rows"], columns=screen["columns"]))
+        display = ResizableDisplay(output, screen)
+        assert display.acquire() is True
         lock = TerminalLock()
         painter = ToolbarPainter(
-            output=output,
+            display=display,
             lock=lock,
             style=DummyStyle(),
             color_depth=ColorDepth.DEPTH_8_BIT,
         )
         order: list[str] = []
+        # Arm only now: the reservation's own margin write happens during setup, and blocking
+        # that would stall the harness rather than the case under test.
+        stream.truncate(0)
+        stream.seek(0)
+        stream.armed = True
 
         def command_output() -> None:
             with lock.transaction("managed write"):
@@ -499,10 +590,10 @@ class TestBackpressure:
         ready = threading.Event()
 
         def toolbar_paint() -> None:
-            prepared = painter.prepare(lambda: "hi", width=5, height=1)
+            prepared = painter.prepare(lambda: "hi")
             assert prepared is not None
             ready.set()
-            painter.paint(prepared, geometry())
+            painter.paint(prepared)
             order.append("paint end")
 
         writer = threading.Thread(target=command_output)

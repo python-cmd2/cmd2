@@ -22,6 +22,7 @@ from prompt_toolkit.layout import Layout, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.output.vt100 import Vt100_Output
 
+from cmd2.output_recorder import PreflightFacts
 from cmd2.prompt_toolkit_bridge import (
     PromptToolkitBridge,
     ReservedModeFailureError,
@@ -82,6 +83,11 @@ class Harness:
         prepared = self.prepare()
         assert prepared is not None
         return self.bridge.commit(prepared)
+
+    def resize(self, rows: int, columns: int = 40) -> None:
+        """Resize the terminal and re-establish the reservation for the new geometry."""
+        self.size = Size(rows=rows, columns=columns)
+        self.display.reconfigure()
 
     def resynchronize(self) -> None:
         """Run recovery in the application's context."""
@@ -321,12 +327,18 @@ class TestRecovery:
         harness.resynchronize()
         assert harness.renderer.mouse_handlers is not handlers
 
-    def test_recovery_resets_available_height_bookkeeping(self) -> None:
-        """A visible marker does not prove prompt geometry; height has to be re-established."""
-        harness = Harness()
+    def test_recovery_reestablishes_available_height_from_the_origin(self) -> None:
+        """A visible marker does not prove prompt geometry; height has to be re-established.
+
+        Zeroing it would leave ``height_is_known`` false while input was allowed to resume,
+        which is the same invalid state recovery exists to leave behind.
+        """
+        harness = Harness(rows=24, reserved_rows=1)
+        harness.bridge.set_prompt_anchor(6)
         harness.renderer._min_available_height = 17
         harness.resynchronize()
-        assert harness.renderer._min_available_height == 0
+        assert harness.renderer._min_available_height == 23 - 6 + 1
+        assert harness.renderer.height_is_known is True
 
     def test_recovery_does_not_use_the_upstream_reset(self) -> None:
         """Upstream reset() emits operations and rewrites available-height bookkeeping."""
@@ -516,3 +528,135 @@ class TestBookkeeping:
         harness = Harness()
         assert harness.prepare() is not None
         assert harness.prepare() is None
+
+
+class TestReviewRegressions:
+    def test_a_batch_prepared_against_a_stale_size_is_not_committed(self, monkeypatch: Any) -> None:
+        """Review finding 1: facts and generations must describe the same terminal."""
+        harness = Harness(rows=24)
+        capture = PreflightFacts.capture
+
+        def capture_then_resize(output: Any) -> PreflightFacts:
+            facts = capture(output)
+            harness.resize(12)
+            return facts
+
+        monkeypatch.setattr(PreflightFacts, "capture", staticmethod(capture_then_resize))
+        prepared = harness.prepare()
+        monkeypatch.undo()
+        assert prepared is not None
+        assert prepared.batch.facts.size == Size(rows=23, columns=40)
+        harness.clear()
+        assert harness.bridge.commit(prepared) is False
+        assert harness.written() == ""
+
+    def test_a_frame_is_not_committed_while_recovery_is_owed(self) -> None:
+        """Review finding 1: an invalidated preparation must not become committable.
+
+        Owing a recovery retires the frame in flight, and that retirement is the single
+        mechanism commit checks -- so this asserts it happened, not only that the commit was
+        refused, since a refusal for some other reason would prove nothing.
+        """
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.require_resynchronization("something invalidated the terminal")
+        assert harness.bridge.in_flight is None
+        harness.clear()
+        assert harness.bridge.commit(prepared) is False
+        assert harness.written() == ""
+
+    def test_abandoning_reserved_emission_retires_the_frame_in_flight(self) -> None:
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        assert harness.bridge.in_flight is None
+        assert harness.bridge.commit(prepared) is False
+
+    def test_input_cannot_be_dispatched_while_a_frame_is_being_prepared(self) -> None:
+        """Review finding 2: the renderer's state is provisional from the first callback on."""
+        seen: list[bool] = []
+        harness = Harness(content=lambda: seen.append(harness.bridge.can_dispatch_input) or "hello")
+        harness.prepare()
+        assert seen
+        assert not any(seen)
+
+    def test_a_recursive_preparation_is_refused(self) -> None:
+        """Review finding 2: two provisional frames would both claim the renderer's state."""
+        recursive: list[Any] = []
+
+        def content() -> str:
+            with set_app(harness.app):
+                recursive.append(harness.bridge.prepare(harness.app))
+            return "hello"
+
+        harness = Harness(content=content)
+        assert harness.prepare() is not None
+        assert recursive == [None]
+
+    def test_managed_output_between_frames_invalidates_the_baseline(self) -> None:
+        """Review finding 3: the committed cursor relationship does not survive a write."""
+        harness = Harness()
+        assert harness.render() is True
+        harness.bridge.note_managed_write()
+        assert harness.bridge.needs_resynchronization is True
+        assert harness.prepare() is None
+
+    def test_a_managed_write_can_supply_the_new_prompt_origin(self) -> None:
+        """The layer that emitted the output is the one that knows where it ended."""
+        harness = Harness()
+        harness.render()
+        harness.bridge.note_managed_write(prompt_anchor=7)
+        assert harness.bridge.prompt_anchor == 7
+        harness.clear()
+        harness.resynchronize()
+        assert "\x1b[7;1H" in harness.written()
+
+    def test_recovery_refuses_an_anchor_outside_the_usable_region(self) -> None:
+        """Review finding 5: a shrunken terminal makes a remembered row point into the band."""
+        harness = Harness(rows=24)
+        harness.bridge.set_prompt_anchor(20)
+        harness.resize(12)
+        harness.bridge.note_geometry_change()
+        harness.clear()
+        harness.resynchronize()
+        assert "\x1b[20;1H" not in harness.written()
+        assert harness.bridge.prompt_anchor is None
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_an_out_of_range_anchor_falls_back_when_the_terminal_cannot_report(self) -> None:
+        harness = Harness(rows=24)
+        harness.bridge.set_prompt_anchor(20)
+        harness.resize(12)
+        harness.backend.enable_cpr = False
+        with pytest.raises(ReservedModeFailureError), set_app(harness.app):
+            harness.bridge.resynchronize()
+
+    def test_the_resynchronization_reason_is_reported(self) -> None:
+        harness = Harness()
+        assert harness.bridge.resynchronization_reason is None
+        harness.bridge.require_resynchronization("a command wrote to the terminal")
+        assert harness.bridge.resynchronization_reason == "a command wrote to the terminal"
+        harness.resynchronize()
+        assert harness.bridge.resynchronization_reason is None
+
+    def test_a_write_from_inside_a_layout_callback_retires_the_frame(self) -> None:
+        """The operations were recorded against a terminal that moved on mid-render."""
+
+        def content() -> str:
+            harness.bridge.note_managed_write()
+            return "hello"
+
+        harness = Harness(content=content)
+        assert harness.prepare() is None
+        assert harness.bridge.needs_resynchronization is True
+        assert harness.bridge.can_dispatch_input is False
+
+    def test_a_cursor_report_is_validated_against_the_screen_when_released(self) -> None:
+        """With no reservation the whole screen is usable, and the band no longer exists."""
+        harness = Harness(rows=24)
+        harness.display.release()
+        harness.bridge.request_cursor_position()
+        assert harness.bridge.report_cursor_row(24) is True
+        assert harness.renderer._min_available_height == 24 - 24 + 1

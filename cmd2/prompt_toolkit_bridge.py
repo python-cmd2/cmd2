@@ -114,6 +114,7 @@ class PromptToolkitBridge:
         self._terminal_generation = 0
         self._content_generation = 0
         self._in_flight: PreparedRender | None = None
+        self._preparing = False
         self._committed: Generations | None = None
         self._needs_resynchronization = False
         self._reserved_emission_stopped = False
@@ -140,15 +141,24 @@ class PromptToolkitBridge:
     def can_dispatch_input(self) -> bool:
         """Whether input and after-render notifications may consume the renderer's state.
 
-        False while a frame is in flight: its mouse handlers, visible windows and cursor
-        position describe a screen the terminal has not been shown.
+        False from the moment a preparation starts: the renderer's mouse handlers, visible
+        windows and cursor position describe a screen the terminal has not been shown, and
+        they are provisional from the first layout callback -- not merely once the render
+        call returns.
         """
-        return not (self._needs_resynchronization or self._reserved_emission_stopped or self._in_flight is not None)
+        return not (
+            self._needs_resynchronization or self._reserved_emission_stopped or self._preparing or self._in_flight is not None
+        )
 
     @property
     def resynchronization_reason(self) -> str | None:
         """Why recovery is owed, for diagnostics, or ``None`` when none is."""
         return self._resynchronization_reason
+
+    @property
+    def in_flight(self) -> PreparedRender | None:
+        """The frame prepared but not yet committed, if there is one."""
+        return self._in_flight
 
     @property
     def redraw_pending(self) -> bool:
@@ -195,9 +205,23 @@ class PromptToolkitBridge:
         """
         self._redraw_scheduler = scheduler
 
-    def note_managed_write(self) -> None:
-        """Record that managed output reached the terminal."""
+    def note_managed_write(self, prompt_anchor: int | None = None) -> None:
+        """Record that managed output reached the terminal.
+
+        This invalidates the committed baseline rather than only bumping a generation.
+        Generation comparison catches a write that lands *during* a preparation, but a write
+        between two frames leaves the renderer believing its last screen is still displayed
+        and its cursor still where that screen ended -- and the output just emitted moved the
+        cursor, and may have scrolled everything above it. The next frame would be diffed
+        against a screen the terminal no longer shows, from an origin it no longer has.
+
+        :param prompt_anchor: the physical row the prompt now starts on, where the layer that
+            emitted the output knows it; recovery asks the terminal otherwise
+        """
         self._terminal_generation += 1
+        if prompt_anchor is not None:
+            self._prompt_anchor = prompt_anchor
+        self.require_resynchronization("managed output reached the terminal")
         self._request_redraw()
 
     def note_owner_change(self) -> None:
@@ -270,16 +294,25 @@ class PromptToolkitBridge:
         :return: the prepared frame, or ``None`` if one cannot be prepared right now
         """
         assert_no_terminal_transaction("preparing a renderer frame")
-        if self._reserved_emission_stopped or self._needs_resynchronization or self._in_flight is not None:
+        if self._reserved_emission_stopped or self._needs_resynchronization or self._preparing or self._in_flight is not None:
             return None
 
+        # One transaction, so a managed write or resize cannot land between reading the
+        # terminal and recording which generation was read: facts and generations have to
+        # describe the same terminal, or the batch is validated against one snapshot and
+        # rendered from another.
         with self._lock.transaction("preflight"):
             facts = PreflightFacts.capture(self._display.output)
-        generations = self.generations()
+            generations = self.generations()
 
         recorder = RecordingOutput(facts)
         original = self._renderer.output
         self._renderer.output = recorder
+        # Marked before the renderer is invoked, not after it returns. Layout, filter and
+        # style callbacks run inside that call, and from the first of them the renderer's
+        # state is provisional -- a second render or an input dispatch started from one of
+        # them would consume a screen that does not exist.
+        self._preparing = True
         try:
             self._renderer.render(app, app.layout)
         except Exception as error:  # noqa: BLE001 - a layout callback must not end a command
@@ -288,6 +321,14 @@ class PromptToolkitBridge:
             return None
         finally:
             self._renderer.output = original
+            self._preparing = False
+
+        if self.needs_resynchronization:
+            # Something invalidated the terminal while the frame was being prepared -- a
+            # managed write from inside a layout callback, say. The operations are already
+            # recorded against a terminal that has moved on.
+            self._retire()
+            return None
 
         prepared = PreparedRender(batch=recorder.batch(), generations=generations)
         self._in_flight = prepared
@@ -302,12 +343,21 @@ class PromptToolkitBridge:
         assert_no_terminal_transaction("committing a prepared frame")
         if prepared is not self._in_flight:
             # Already retired, or from a previous attempt. Replaying it would emit a frame
-            # nothing has validated, and possibly emit it twice.
+            # nothing has validated, and possibly emit it twice. Everything that invalidates
+            # the terminal retires the frame in flight, so this one test covers an owed
+            # recovery and an abandoned reservation as well as a superseded batch.
             return False
 
         with self._lock.transaction("commit", generation=prepared.generations.geometry):
             if self.generations() != prepared.generations:
                 self.require_resynchronization("the terminal changed between preparing and committing")
+                return False
+            if prepared.batch.facts.size != self._display.output.get_size():
+                # The generations can agree while the frame was laid out for a different
+                # terminal -- the geometry is read once per snapshot, and the batch carries
+                # what the renderer actually branched on. The frame's own facts are the last
+                # word on whether it still fits.
+                self.require_resynchronization("the frame was laid out for a different size")
                 return False
             try:
                 prepared.batch.replay(self._display.output)
@@ -359,7 +409,7 @@ class PromptToolkitBridge:
             raise ReservedModeFailureError("reserved emission has stopped; release before rendering again")
 
         policy = self._desired_policy()
-        origin = self._prompt_anchor
+        origin = self._usable_prompt_anchor()
         if origin is None:
             if not self._display.output.responds_to_cpr:
                 raise ReservedModeFailureError("the prompt's origin is unknown and the terminal does not report its cursor")
@@ -385,11 +435,39 @@ class PromptToolkitBridge:
             output.reset_cursor_shape()
             output.show_cursor()
             output.flush()
-            self._initialize_renderer(policy)
+            self._initialize_renderer(policy, origin)
 
         self._needs_resynchronization = False
         self._resynchronization_reason = None
         self._in_flight = None
+
+    def _usable_rows(self) -> int:
+        """How many rows the application may use right now.
+
+        :return: the usable height
+        """
+        geometry = self._display.geometry
+        if geometry is not None:
+            return geometry.usable_rows
+        return int(self._display.output.get_size().rows)
+
+    def _usable_prompt_anchor(self) -> int | None:
+        """Return the remembered prompt origin, if it is still inside the usable region.
+
+        A remembered row survives a resize that the row does not: after the terminal shrinks,
+        row 20 may be inside the reserved band or off the screen entirely. Rendering from
+        there would put the prompt in the toolbar's rows, so an anchor that no longer fits is
+        forgotten and re-established rather than trusted.
+
+        :return: the anchor, or ``None`` if there is none or it is out of range
+        """
+        anchor = self._prompt_anchor
+        if anchor is None:
+            return None
+        if not 1 <= anchor <= self._usable_rows():
+            self._prompt_anchor = None
+            return None
+        return anchor
 
     def _desired_policy(self) -> TerminalModePolicy:
         """Evaluate the current owner's mode policy, off the terminal lock.
@@ -398,7 +476,7 @@ class PromptToolkitBridge:
         """
         return TerminalModePolicy(mouse_support=bool(self._renderer.mouse_support()))
 
-    def _initialize_renderer(self, policy: TerminalModePolicy) -> None:
+    def _initialize_renderer(self, policy: TerminalModePolicy, origin: int) -> None:
         """Tell the renderer what the terminal now is.
 
         This is the version-specific half of recovery. Each assignment answers a field that
@@ -408,6 +486,7 @@ class PromptToolkitBridge:
         bookkeeping that a visible toolbar says nothing about.
 
         :param policy: the policy just established physically
+        :param origin: the physical row the cursor was just placed on
         """
         renderer = self._renderer
         renderer._bracketed_paste_enabled = True
@@ -421,7 +500,11 @@ class PromptToolkitBridge:
         renderer._last_size = None
         renderer._last_style = None
         renderer.mouse_handlers = MouseHandlers()
-        renderer._min_available_height = 0
+        # Not zero. The cursor was just placed on a known row inside the usable region, so the
+        # height below it is known by the same arithmetic a cursor-position reply would give:
+        # zeroing it would leave the prompt's height unknown while input was allowed to
+        # resume, which is the invalid state recovery exists to leave behind.
+        renderer._min_available_height = self._usable_rows() - origin + 1
 
     # -- cursor position reports -----------------------------------------------------------
 
@@ -469,8 +552,7 @@ class PromptToolkitBridge:
             self._settle_renderer_cpr()
             return False
 
-        geometry = self._display.geometry
-        usable = geometry.usable_rows if geometry is not None else self._display.output.get_size().rows
+        usable = self._usable_rows()
         if not 1 <= row <= usable:
             self._settle_renderer_cpr()
             self.require_resynchronization(f"cursor position report row {row} is inside the reserved band")

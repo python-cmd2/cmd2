@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from prompt_toolkit.formatted_text import to_formatted_text
-from prompt_toolkit.output import ColorDepth, Output
+from prompt_toolkit.output import ColorDepth
 from prompt_toolkit.utils import get_cwidth
 
 from .scroll_region import cursor_restore_sequence, cursor_save_sequence
@@ -41,7 +41,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.formatted_text import AnyFormattedText
     from prompt_toolkit.styles import Attrs, BaseStyle
 
-    from .terminal_display import Geometry
+    from .terminal_display import TerminalDisplay
 
 #: Columns between tab stops. Tabs are expanded during layout because the painter positions
 #: the cursor itself; letting a tab reach the terminal would move it by an amount the frame
@@ -178,11 +178,18 @@ def _layout(content: "AnyFormattedText", width: int, default_style: str) -> list
                 continue
 
             char_width = get_cwidth(char)
-            if char_width == 0 and row and not row[-1].is_continuation:
+            if char_width == 0 and row:
                 # A combining mark belongs to the character it follows; it occupies no column
-                # of its own, so it joins that cell rather than becoming one.
-                previous = row[-1]
-                row[-1] = Cell(previous.char + char, previous.style)
+                # of its own, so it joins that cell rather than becoming one. After a wide
+                # character the cell to the left is that character's right half, and the mark
+                # belongs to the half that carries the text -- attaching it to the
+                # continuation cell would give the mark a column of its own and shift every
+                # later cell one place right of where it is on the screen.
+                base = len(row) - 1
+                if row[base].is_continuation:
+                    base -= 1
+                previous = row[base]
+                row[base] = Cell(previous.char + char, previous.style, previous.is_continuation)
                 continue
             columns = max(1, char_width)
             if len(row) + columns > width:
@@ -216,6 +223,11 @@ class PreparedFrame:
     #: The color depth those attributes are rendered at.
     color_depth: ColorDepth
 
+    #: The geometry generation the frame was laid out for. The band's physical rows come
+    #: from this snapshot, so emitting the frame against any other one writes into rows the
+    #: application now owns.
+    generation: int
+
 
 class ToolbarPainter:
     """Paints the reserved band, writing only the cells that changed.
@@ -233,18 +245,24 @@ class ToolbarPainter:
 
     def __init__(
         self,
-        output: Output,
+        display: "TerminalDisplay",
         lock: TerminalLock,
         style: "BaseStyle",
         color_depth: ColorDepth,
         default_style: str = "",
         autowrap_after_paint: bool = True,
     ) -> None:
-        """Bind a painter to the physical backend.
+        """Bind a painter to the display that owns the reservation.
 
-        :param output: the *original* backend; the band is outside the application's geometry,
-            so painting through the reserved adapter would be painting through a view that
-            excludes it
+        The painter takes the display rather than an output and a geometry. The band's rows
+        are physical, so a frame laid out for one geometry addresses the wrong rows under any
+        other -- and a caller that passes both an output and a snapshot can pass a stale one.
+        Reading the geometry from its owner, inside the transaction, removes that possibility.
+
+        Painting goes to the *original* backend: the band is outside the application's
+        geometry, so the reserved adapter is a view that excludes it.
+
+        :param display: the owner of the reservation and its geometry
         :param lock: the terminal transaction lock shared by all cmd2-controlled output
         :param style: the style rules used to resolve fragment styles
         :param color_depth: the color depth to render attributes at
@@ -253,13 +271,15 @@ class ToolbarPainter:
             Upstream's renderer leaves autowrap enabled between frames, which is the default
             here; a bridge that has committed a different policy passes it instead.
         """
-        self._output = output
+        self._display = display
+        self._output = display.terminal.output
         self._lock = lock
         self._style = style
         self._color_depth = color_depth
         self._default_style = default_style
         self._autowrap_after_paint = autowrap_after_paint
         self._last_frame: ToolbarFrame | None = None
+        self._last_attrs: Mapping[str, Attrs] | None = None
         self._last_band: tuple[int, int, int, object] | None = None
         self._pending_error: BaseException | None = None
 
@@ -286,18 +306,21 @@ class ToolbarPainter:
         diff against a frame that may no longer be displayed would write nothing at all.
         """
         self._last_frame = None
+        self._last_attrs = None
         self._last_band = None
 
-    def prepare(self, content: "Callable[[], AnyFormattedText]", width: int, height: int) -> PreparedFrame | None:
+    def prepare(self, content: "Callable[[], AnyFormattedText]") -> PreparedFrame | None:
         """Evaluate the toolbar's content once and lay it out, off the terminal lock.
 
         :param content: the callback returning the toolbar's formatted text
-        :param width: the terminal width in columns
-        :param height: the height of the reserved band in rows
-        :return: the prepared frame, or ``None`` if evaluation failed or is waiting on a report
+        :return: the prepared frame, or ``None`` if there is no reservation to paint, or
+            evaluation failed, or a previous failure is still waiting to be reported
         """
         assert_no_terminal_transaction("evaluating the toolbar's content")
         if self._pending_error is not None:
+            return None
+        geometry = self._display.geometry
+        if geometry is None:
             return None
         try:
             text = content()
@@ -307,38 +330,50 @@ class ToolbarPainter:
             # running is not this callback's to interrupt.
             self._pending_error = error
             return None
-        frame = ToolbarFrame.build(text, width=width, height=height, default_style=self._default_style)
+        frame = ToolbarFrame.build(
+            text,
+            width=geometry.columns,
+            height=geometry.reserved_rows,
+            default_style=self._default_style,
+        )
         styles = {cell.style for row in frame.rows for cell in row}
         return PreparedFrame(
             frame=frame,
             attrs={style: self._style.get_attrs_for_style_str(style) for style in styles},
             color_depth=self._color_depth,
+            generation=geometry.generation,
         )
 
-    def paint(self, prepared: PreparedFrame, geometry: "Geometry") -> bool:
+    def paint(self, prepared: PreparedFrame) -> bool:
         """Write the changed cells of the band, inside one terminal transaction.
 
+        The geometry is read from its owner *inside* the transaction and checked against the
+        one the frame was laid out for. Between preparing and painting the terminal can be
+        resized, released, or handed to another program, and each of those makes the band's
+        physical rows rows the application owns instead. A refused frame publishes no
+        baseline: what the band is showing is then unknown, so the next paint must be full.
+
         :param prepared: the frame to paint
-        :param geometry: the geometry the band is positioned by
         :return: whether anything was written
-        :raises ValueError: if the frame does not match the reserved band
         """
-        frame = prepared.frame
-        if frame.height != geometry.reserved_rows or frame.width != geometry.columns:
-            raise ValueError(
-                f"a {frame.height}x{frame.width} frame does not fit a {geometry.reserved_rows}x{geometry.columns} band"
-            )
+        with self._lock.transaction("paint", generation=prepared.generation):
+            geometry = self._display.geometry
+            if geometry is None or geometry.generation != prepared.generation:
+                self.invalidate()
+                return False
 
-        band = (geometry.physical_rows, geometry.columns, geometry.reserved_rows, geometry.buffer_id)
-        previous = self._last_frame if band == self._last_band else None
-        runs = _changed_runs(previous, frame)
-        if not runs:
-            self._last_frame = frame
-            self._last_band = band
-            return False
+            frame = prepared.frame
+            band = (geometry.physical_rows, geometry.columns, geometry.reserved_rows, geometry.buffer_id)
+            previous = self._last_frame if band == self._last_band else None
+            previous_attrs = self._last_attrs if previous is not None else None
+            runs = _changed_runs(previous, previous_attrs, frame, prepared.attrs)
+            if not runs:
+                self._last_frame = frame
+                self._last_attrs = prepared.attrs
+                self._last_band = band
+                return False
 
-        top_row = geometry.physical_rows - geometry.reserved_rows + 1
-        with self._lock.transaction("paint", generation=geometry.generation):
+            top_row = geometry.physical_rows - geometry.reserved_rows + 1
             # Anything another writer left buffered goes out first, so the band is painted
             # after the output it was meant to follow rather than in the middle of it.
             self._output.flush()
@@ -361,9 +396,10 @@ class ToolbarPainter:
             self._output.write_raw(cursor_restore_sequence())
             self._output.flush()
 
-        self._last_frame = frame
-        self._last_band = band
-        return True
+            self._last_frame = frame
+            self._last_attrs = prepared.attrs
+            self._last_band = band
+            return True
 
 
 def _cursor_position_sequence(row: int, column: int) -> str:
@@ -379,9 +415,35 @@ def _cursor_position_sequence(row: int, column: int) -> str:
     return f"\x1b[{row};{column}H"
 
 
+def _same_cell(
+    old: Cell,
+    old_attrs: "Mapping[str, Attrs]",
+    new: Cell,
+    new_attrs: "Mapping[str, Attrs]",
+) -> bool:
+    """Decide whether two cells would look identical on the terminal.
+
+    Style *strings* are not enough. A style rule can be changed under a class name -- a theme
+    switch, a dynamic style -- leaving ``class:status`` naming a different colour than it did
+    last frame. Comparing the resolved attributes is what makes the comparison a question
+    about the screen rather than about the text of the style.
+
+    :param old: the cell believed to be displayed
+    :param old_attrs: resolved attributes as they were when it was painted
+    :param new: the cell to display
+    :param new_attrs: resolved attributes for the new frame
+    :return: whether the terminal would show the same thing
+    """
+    if old.char != new.char or old.is_continuation != new.is_continuation:
+        return False
+    return old_attrs.get(old.style) == new_attrs.get(new.style)
+
+
 def _changed_runs(
     previous: ToolbarFrame | None,
+    previous_attrs: "Mapping[str, Attrs] | None",
     frame: ToolbarFrame,
+    attrs: "Mapping[str, Attrs]",
 ) -> list[tuple[int, int, tuple[Cell, ...]]]:
     """Find the spans of cells that differ from what is believed to be on screen.
 
@@ -389,19 +451,24 @@ def _changed_runs(
     style and change together, so a difference can never start on the right half of one.
 
     :param previous: the frame believed to be displayed, or ``None`` for a full repaint
+    :param previous_attrs: the attributes that frame was painted with
     :param frame: the frame to display
+    :param attrs: resolved attributes for the frame to display
     :return: ``(row index, first column, cells)`` for each run, in order
     """
     runs: list[tuple[int, int, tuple[Cell, ...]]] = []
+    old_attrs: Mapping[str, Attrs] = previous_attrs if previous_attrs is not None else {}
     for row_index, row in enumerate(frame.rows):
         previous_row = previous.rows[row_index] if previous is not None else None
         column = 0
         while column < len(row):
-            if previous_row is not None and row[column] == previous_row[column]:
+            if previous_row is not None and _same_cell(previous_row[column], old_attrs, row[column], attrs):
                 column += 1
                 continue
             start = column
-            while column < len(row) and (previous_row is None or row[column] != previous_row[column]):
+            while column < len(row) and (
+                previous_row is None or not _same_cell(previous_row[column], old_attrs, row[column], attrs)
+            ):
                 column += 1
             # A wide character whose halves straddle the end of the run comes along whole.
             while column < len(row) and row[column].is_continuation:
