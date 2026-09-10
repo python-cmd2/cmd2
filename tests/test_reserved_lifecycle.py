@@ -16,6 +16,7 @@ from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.shortcuts import PromptSession
 
 import cmd2
+from cmd2.plugin import CommandFinalizationData
 from cmd2.reserved_toolbar import native_toolbar_container
 
 
@@ -602,3 +603,76 @@ class StuckDisplay:
     def complete_abandoned_shutdown(self) -> bool:
         """Report that the teardown cannot be finished while the thread runs."""
         return False
+
+
+class TestCommandLoop:
+    """The reservation's lifetime seen from the outside: a real cmdloop, start to finish."""
+
+    def run_loop(self, harness: Harness, *commands: str) -> None:
+        """Feed the loop some commands and let it exit."""
+        harness.pipe.send_text("".join(f"{command}\n" for command in (*commands, "quit")))
+        harness.app.cmdloop()
+
+    def test_a_loop_installs_and_releases_the_reservation(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            self.run_loop(harness)
+            written = harness.written()
+            assert "\x1b[1;23r" in written
+            assert written.rindex("\x1b[r") > written.index("\x1b[1;23r")
+            assert harness.app.reserved_toolbar is None
+        finally:
+            harness.close()
+
+    def test_the_terminal_is_left_as_it_was_found(self) -> None:
+        """Margins reset, and the application rendering through its own backend again."""
+        harness = Harness(mode="reserved")
+        try:
+            app = harness.app.main_session.app
+            backend = harness.backend
+            self.run_loop(harness)
+            assert app.output is backend
+            assert app.renderer.output is backend
+            assert harness.written().endswith("\x1b[r") or "\x1b[r" in harness.written()
+        finally:
+            harness.close()
+
+    def test_a_second_loop_reserves_again(self) -> None:
+        """Repeated loops in one process: each takes the rows and gives them back."""
+        harness = Harness(mode="reserved")
+        try:
+            self.run_loop(harness)
+            harness.clear()
+            self.run_loop(harness)
+            written = harness.written()
+            assert "\x1b[1;23r" in written
+            assert "\x1b[r" in written
+            assert harness.app.reserved_toolbar is None
+        finally:
+            harness.close()
+
+    def test_a_failing_finalization_hook_keeps_the_reservation(self) -> None:
+        """Finalization runs at the end of every command; a broken hook is not a lost toolbar."""
+        reserved_during: list[bool] = []
+
+        def failing_hook(data: CommandFinalizationData) -> CommandFinalizationData:
+            toolbar = harness.app.reserved_toolbar
+            reserved_during.append(toolbar is not None and toolbar.display.is_reserved)
+            raise RuntimeError("hook failed")
+
+        harness = Harness(mode="reserved")
+        try:
+            harness.app.register_cmdfinalization_hook(failing_hook)
+            self.run_loop(harness, "help")
+            assert reserved_during
+            assert all(reserved_during)
+        finally:
+            harness.close()
+
+    def test_a_legacy_loop_reserves_nothing(self) -> None:
+        harness = Harness(mode="legacy")
+        try:
+            self.run_loop(harness)
+            assert "\x1b[1;23r" not in harness.written()
+        finally:
+            harness.close()
