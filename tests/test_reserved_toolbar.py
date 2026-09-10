@@ -707,3 +707,35 @@ class TestRenderBinding:
             assert bridge._redraw_scheduler == harness.app.invalidate
         finally:
             harness.close()
+
+
+class TestAbandonedEmission:
+    def test_the_owner_releases_when_the_bridge_gives_up(self) -> None:
+        """Rendering cannot resume until the rows are back and the bridge is unbound."""
+        harness = Harness()
+        try:
+            original_render = harness.app.renderer.render
+            harness.toolbar.start()
+            bridge = harness.toolbar.bridge
+            assert bridge is not None
+            harness.clear()
+
+            bridge.stop_reserved_emission(OSError("terminal went away"))
+
+            assert harness.toolbar.is_active is False
+            assert "\x1b[r" in harness.written()
+            assert harness.app.renderer.render == original_render
+            assert harness.app.output is harness.backend
+        finally:
+            harness.close()
+
+    def test_the_failure_is_still_reported(self) -> None:
+        harness = Harness()
+        try:
+            harness.toolbar.start()
+            bridge = harness.toolbar.bridge
+            assert bridge is not None
+            bridge.stop_reserved_emission(OSError("terminal went away"))
+            assert isinstance(harness.toolbar.take_pending_error(), OSError)
+        finally:
+            harness.close()

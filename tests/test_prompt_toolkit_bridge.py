@@ -1029,14 +1029,20 @@ class TestRenderInterception:
             harness.renderer.render(harness.app, harness.app.layout)
         assert harness.bridge.in_flight is None
 
-    def test_an_abandoned_reservation_renders_upstream_directly(self) -> None:
-        """Compatibility rendering is the fallback, and it is upstream's own renderer."""
+    def test_compatibility_rendering_follows_the_release(self) -> None:
+        """The fallback is upstream's own renderer -- reached by unbinding, not by calling it."""
         harness = self.bound()
         harness.bridge.stop_reserved_emission(OSError("terminal went away"))
         with set_app(harness.app):
             harness.renderer.render(harness.app, harness.app.layout)
+        assert harness.stream_recorder.getvalue() == ""
+
+        # What the owner does on release: give the rows back, then unbind.
+        harness.display.release()
+        harness.bridge.unbind()
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
         assert "hello" in harness.stream_recorder.getvalue()
-        assert harness.stream_recorder.transactions
         assert all(state is None for state in harness.stream_recorder.transactions)
 
     def test_a_frame_that_cannot_be_prepared_asks_for_another(self) -> None:
@@ -1081,3 +1087,112 @@ class TestRenderInterception:
         assert harness.stream_recorder.transactions
         assert all(state is not None for state in harness.stream_recorder.transactions)
         assert harness.bridge.needs_resynchronization is True
+
+
+class AlwaysFailingTtyStream(TtyStringIO):
+    """A terminal that has gone away, having possibly emitted something first."""
+
+    def write(self, text: str) -> int:
+        super().write(text[:4])
+        raise OSError("terminal went away")
+
+
+class TestReviewRegressionsRoundThree:
+    def bound(self, content: Any = "hello") -> Harness:
+        """Build a harness whose renderer is intercepted by the bridge."""
+        harness = Harness(content=content)
+        harness.stream_recorder = RecordingTtyStream()
+        harness.backend.stdout = harness.stream_recorder
+        harness.bridge.bind(harness.app)
+        return harness
+
+    def test_abandoned_emission_renders_nothing_until_the_owner_releases(self) -> None:
+        """Review finding: compatibility rendering starts after the release, not before it."""
+        harness = self.bound()
+        harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        assert harness.stream_recorder.getvalue() == ""
+        assert harness.display.is_reserved is True
+
+    def test_abandoning_emission_tells_the_owner_to_release(self) -> None:
+        released: list[int] = []
+        harness = self.bound()
+        harness.bridge.set_emission_stopped_handler(lambda: released.append(1))
+        harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        assert released == [1]
+
+    def test_a_failed_erase_still_invalidates(self) -> None:
+        """Review finding: it emitted something before it raised, and moved the cursor."""
+        harness = self.bound()
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        harness.backend.stdout = AlwaysFailingTtyStream()
+
+        with pytest.raises(OSError, match="terminal went away"), set_app(harness.app):
+            harness.renderer.erase()
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_a_failed_clear_still_invalidates(self) -> None:
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+        harness.backend.stdout = AlwaysFailingTtyStream()
+
+        with pytest.raises(OSError, match="terminal went away"), set_app(harness.app):
+            harness.renderer.clear()
+        assert harness.bridge.needs_resynchronization is True
+
+    def test_clearing_forgets_where_the_prompt_was(self) -> None:
+        """Review finding: the clear moved the cursor, so the remembered row is not it."""
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
+        harness.bridge.set_prompt_anchor(7)
+        with set_app(harness.app):
+            harness.renderer.clear()
+        assert harness.bridge.prompt_anchor is None
+
+        harness.clear()
+        harness.stream_recorder.truncate(0)
+        harness.stream_recorder.seek(0)
+        harness.resynchronize()
+        assert "\x1b[7;1H" not in harness.stream_recorder.getvalue()
+
+    def test_clearing_discards_outstanding_cursor_reports(self) -> None:
+        """A reply describing the screen before the clear must not establish an origin."""
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
+        harness.bridge.request_cursor_position()
+        with set_app(harness.app):
+            harness.renderer.clear()
+        assert harness.bridge.report_cursor_row(4) is False
+        assert harness.bridge.prompt_anchor is None
+
+    def test_unbinding_leaves_a_newer_method_alone(self) -> None:
+        """Review finding: restoring unconditionally discards whatever replaced ours."""
+        harness = self.bound()
+        replacement = lambda *args, **kwargs: None  # noqa: E731
+        harness.renderer.render = replacement  # type: ignore[method-assign]
+        harness.bridge.unbind()
+        assert harness.renderer.render is replacement
+
+    def test_unbinding_restores_the_methods_that_are_still_ours(self) -> None:
+        harness = Harness()
+        original_erase = harness.renderer.erase
+        harness.bridge.bind(harness.app)
+        replacement = lambda *args, **kwargs: None  # noqa: E731
+        harness.renderer.render = replacement  # type: ignore[method-assign]
+        harness.bridge.unbind()
+        assert harness.renderer.render is replacement
+        assert harness.renderer.erase == original_erase
+
+    def test_abandoning_emission_twice_notifies_once(self) -> None:
+        """The owner releases once; telling it again would release a reservation it re-took."""
+        released: list[int] = []
+        harness = self.bound()
+        harness.bridge.set_emission_stopped_handler(lambda: released.append(1))
+        harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        harness.bridge.stop_reserved_emission(OSError("and again"))
+        assert released == [1]
+        assert str(harness.bridge.take_pending_error()) == "terminal went away"

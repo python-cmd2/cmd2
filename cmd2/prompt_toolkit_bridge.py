@@ -128,7 +128,11 @@ class PromptToolkitBridge:
         # preparation can call the real render: calling the attribute would re-enter the
         # wrapper and never terminate.
         self._originals: dict[str, Any] = {}
+        # What this bridge put in their place, so teardown can tell its own replacements from
+        # something another caller installed afterwards.
+        self._installed: dict[str, Any] = {}
         self._bound_app: Application[Any] | None = None
+        self._emission_stopped_handler: Callable[[], None] | None = None
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -259,14 +263,28 @@ class PromptToolkitBridge:
         self._resynchronization_reason = reason
         self._retire()
 
+    def set_emission_stopped_handler(self, handler: "Callable[[], None]") -> None:
+        """Install what to call when reserved rendering has to be abandoned.
+
+        The owner of the reservation is what runs here: rendering cannot resume until the rows
+        have been given back and this bridge unbound, and only the owner can do either.
+
+        :param handler: called once, when emission is abandoned
+        """
+        self._emission_stopped_handler = handler
+
     def stop_reserved_emission(self, error: BaseException) -> None:
         """Abandon reserved rendering after a failure that could not be cleaned up.
 
         :param error: what went wrong, to be reported once
         """
+        if self._reserved_emission_stopped:
+            return
         self._reserved_emission_stopped = True
         self._pending_error = error
         self._retire()
+        if self._emission_stopped_handler is not None:
+            self._emission_stopped_handler()
 
     def set_prompt_anchor(self, physical_row: int) -> None:
         """Record the physical row the prompt starts on.
@@ -313,6 +331,7 @@ class PromptToolkitBridge:
             "clear": self._clear_through_bridge,
         }
         self._originals = {name: getattr(renderer, name) for name in replacements}
+        self._installed = dict(replacements)
         self._bound_app = app
         for name, replacement in replacements.items():
             # Set by name so the replacement lands on this instance. Assigning the class
@@ -328,8 +347,13 @@ class PromptToolkitBridge:
         Safe to call when nothing was bound: teardown reaches this from more than one place.
         """
         originals, self._originals = self._originals, {}
+        installed, self._installed = self._installed, {}
         for name, original in originals.items():
-            setattr(self._renderer, name, original)
+            # Restored only where this bridge's replacement is still in place. Another caller
+            # may have wrapped the renderer since -- for tracing, for a test -- and putting
+            # the original back over theirs would silently undo it.
+            if getattr(self._renderer, name, None) == installed.get(name):
+                setattr(self._renderer, name, original)
         self._bound_app = None
 
     def _render_through_bridge(self, app: "Application[Any]", layout: Any, is_done: bool = False) -> None:
@@ -344,9 +368,11 @@ class PromptToolkitBridge:
         :param is_done: whether this is the final frame of a prompt
         """
         if self._reserved_emission_stopped:
-            # Reserved rendering has been abandoned. Upstream still owns its renderer, and
-            # its frames are what the user sees from here on.
-            self._originals["render"](app, layout, is_done)
+            # Abandoned, but the rows are still withheld until the owner releases them.
+            # Rendering upstream directly from here would write outside the transaction and
+            # into a terminal that is still reserved. Compatibility rendering follows the
+            # release: once the owner has unbound this bridge, upstream's own render is back
+            # on the renderer and nothing routes through here at all.
             return
 
         if self._needs_resynchronization:
@@ -373,14 +399,29 @@ class PromptToolkitBridge:
         :param leave_alternate_screen: passed through to upstream
         """
         with self._lock.transaction("erase"):
-            self._originals["erase"](leave_alternate_screen)
-        self.require_resynchronization("the renderer erased the screen")
+            try:
+                self._originals["erase"](leave_alternate_screen)
+            finally:
+                # Recorded whether or not it finished. An erase that raised part-way has still
+                # moved the cursor and cleared some of what was below it, and a stream cannot
+                # say how much.
+                self.require_resynchronization("the renderer erased the screen")
 
     def _clear_through_bridge(self) -> None:
-        """Clear under the transaction, and treat what is left as unknown."""
+        """Clear under the transaction, and treat what is left as unknown.
+
+        A clear also moves the prompt. Whatever row it started on, it is not that row now, so
+        the remembered origin is forgotten rather than carried across -- recovery would
+        otherwise place the next frame where the prompt used to be. Cursor reports already in
+        flight describe the screen before the clear and are discarded with it.
+        """
         with self._lock.transaction("clear"):
-            self._originals["clear"]()
-        self.require_resynchronization("the renderer cleared the screen")
+            try:
+                self._originals["clear"]()
+            finally:
+                self._prompt_anchor = None
+                self._discard_pending_cursor_reports()
+                self.require_resynchronization("the renderer cleared the screen")
 
     # -- prepare and commit ----------------------------------------------------------------
 
@@ -729,6 +770,16 @@ class PromptToolkitBridge:
             self._prompt_anchor = row
             self._renderer.report_absolute_cursor_row(row)
             return True
+
+    def _discard_pending_cursor_reports(self) -> None:
+        """Drop every outstanding request, settling the bookkeeping each one owns.
+
+        Used where the screen changed underneath the requests themselves. Left in the queue,
+        the next reply to arrive would be matched to a request made about a different screen.
+        """
+        while self._pending_cpr:
+            self._pending_cpr.popleft()
+            self._settle_renderer_cpr()
 
     def _settle_renderer_cpr(self) -> None:
         """Resolve one of the renderer's own pending reports, if it has any.

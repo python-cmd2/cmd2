@@ -182,6 +182,11 @@ class ReservedToolbar:
             # From here the application's own renders go through prepare and commit, which is
             # what puts them in the same queue as command output and toolbar paints.
             self._bridge.bind(app)
+            # When the bridge abandons reserved rendering it cannot resume anything itself:
+            # the rows are still withheld and the renderer is still routed through it. Giving
+            # them back is this object's job, and it is what lets compatibility rendering
+            # start.
+            self._bridge.set_emission_stopped_handler(self._emission_stopped)
             self._painter = ToolbarPainter(
                 display=display,
                 lock=self._lock,
@@ -245,6 +250,17 @@ class ReservedToolbar:
         if prepared is None:
             return False
         return painter.paint(prepared)
+
+    def _emission_stopped(self) -> None:
+        """Release the reservation after the bridge has given up on it.
+
+        The error the bridge is holding is taken here rather than left with it: the bridge is
+        dropped a moment later, and an error the user never sees is the same as none.
+        """
+        if self._bridge is not None and self._pending_error is None:
+            self._pending_error = self._bridge.take_pending_error()
+        with suppress(Exception):
+            self.stop()
 
     def _paint_failed(self, error: BaseException) -> None:
         """Record a failed paint and decide whether the reservation can continue.
