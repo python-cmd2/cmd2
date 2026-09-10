@@ -17,7 +17,7 @@ The toolbar's content is read through a callable rather than captured, so a call
 new ``bottom_toolbar`` to the session still reaches the band.
 """
 
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, Self
 
@@ -33,7 +33,7 @@ from .theme import get_pt_theme
 from .toolbar_painter import ToolbarPainter
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from prompt_toolkit.formatted_text import AnyFormattedText
     from prompt_toolkit.shortcuts import PromptSession
@@ -220,6 +220,37 @@ class ReservedToolbar:
         if error is None and self._painter is not None:
             error = self._painter.take_pending_error()
         return error
+
+    @contextmanager
+    def suspended(self) -> "Iterator[None]":
+        """Give the rows back for the duration of the block, and take them again after.
+
+        A program that inherits the terminal -- a shell command, an editor, an external pager
+        -- knows nothing about a scroll region, and one left installed would confine its
+        output to rows it never asked for. The lease is kept: this is a loan, not a release,
+        and the geometry is measured afresh on the way back because the guest may have resized
+        the window.
+
+        What the guest left on the screen is unknown, so the band's contents and the
+        renderer's beliefs are both discarded rather than trusted.
+        """
+        display = self._display
+        if display is None or not display.is_reserved:
+            yield
+            return
+
+        with self._lock.transaction("suspend"):
+            display.release_region_for_handoff()
+        try:
+            yield
+        finally:
+            with self._lock.transaction("resume"):
+                display.reacquire_region_after_handoff()
+            if self._painter is not None:
+                self._painter.invalidate()
+            if self._bridge is not None:
+                self._bridge.require_resynchronization("the terminal was handed to another program")
+            self.refresh()
 
     def refresh(self) -> bool:
         """Evaluate the toolbar's content and paint whatever changed.

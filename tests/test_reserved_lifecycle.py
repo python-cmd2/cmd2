@@ -246,3 +246,106 @@ class TestCommandOutputRouting:
                 assert harness.app.stdout is harness.app.stdout
         finally:
             harness.close()
+
+
+class TestSuspension:
+    """Two kinds of pause, and each site says which one it means."""
+
+    def test_finalization_keeps_the_rows(self) -> None:
+        """The ordinary end of a command: the toolbar must still be there afterwards."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                harness.clear()
+                harness.app._run_cmdfinalization_hooks(False, None)
+                assert toolbar.display.is_reserved is True
+                assert "\x1b[r" not in harness.written()
+        finally:
+            harness.close()
+
+    def test_quiescing_keeps_the_rows(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                harness.clear()
+                with harness.app._quiesce_bottom_toolbar():
+                    assert toolbar.display.is_reserved is True
+                assert "\x1b[r" not in harness.written()
+        finally:
+            harness.close()
+
+    def test_suspending_gives_the_rows_back(self) -> None:
+        """A program that inherits the terminal knows nothing about a scroll region."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                harness.clear()
+                with harness.app.suspend_bottom_toolbar():
+                    assert toolbar.display.is_reserved is False
+                    assert "\x1b[r" in harness.written()
+                assert toolbar.display.is_reserved is True
+        finally:
+            harness.close()
+
+    def test_the_band_is_repainted_when_the_terminal_comes_back(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                with harness.app.suspend_bottom_toolbar():
+                    harness.clear()
+                assert "STATUS" in harness.written()
+        finally:
+            harness.close()
+
+    def test_coming_back_leaves_recovery_owed(self) -> None:
+        """Another program owned the screen; nothing may be diffed against what it left."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                bridge = toolbar.bridge
+                assert bridge is not None
+                with harness.app.suspend_bottom_toolbar():
+                    pass
+                assert bridge.needs_resynchronization is True
+        finally:
+            harness.close()
+
+    def test_nested_suspensions_are_safe(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                with harness.app.suspend_bottom_toolbar(), harness.app.suspend_bottom_toolbar():
+                    assert toolbar.display.is_reserved is False
+                assert toolbar.display.is_reserved is True
+        finally:
+            harness.close()
+
+    def test_suspension_restores_the_rows_when_the_body_raises(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                with pytest.raises(ZeroDivisionError), harness.app.suspend_bottom_toolbar():
+                    raise ZeroDivisionError
+                assert toolbar.display.is_reserved is True
+        finally:
+            harness.close()
+
+    def test_legacy_suspension_is_unchanged(self) -> None:
+        harness = Harness(mode="legacy")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app.suspend_bottom_toolbar():
+                assert harness.app.reserved_toolbar is None
+        finally:
+            harness.close()

@@ -2142,6 +2142,29 @@ class Cmd:
         Use this context manager around application-specific calls to ``input()``, other
         terminal UIs, or subprocesses that inherit the terminal. cmd2 automatically suspends
         its toolbar for its own input prompts, external pagers, and shell commands.
+
+        In reserved mode this also gives the reserved rows back, because a program that
+        inherits the terminal knows nothing about a scroll region and would find its output
+        confined to rows it never asked for. The rows are taken again afterwards.
+        """
+        with self._quiesce_bottom_toolbar():
+            reserved = self._reserved_toolbar
+            if reserved is None:
+                yield
+            else:
+                # Inside the pause, not around it: the renderer has to be quiet before the
+                # margins go, or a frame could land in rows that are no longer reserved.
+                with reserved.suspended():
+                    yield
+
+    @contextlib.contextmanager
+    def _quiesce_bottom_toolbar(self) -> Iterator[None]:
+        """Stop the command display without giving the terminal away.
+
+        This is the other half of the distinction the reserved row makes necessary. Pausing
+        the renderer and the input reader is one thing; handing the physical terminal to
+        something else is another, and the ordinary end of a command needs only the first --
+        the toolbar has to still be there when the next prompt appears.
         """
         if self._command_toolbar is None:
             yield
@@ -3246,7 +3269,7 @@ class Cmd:
 
         return stop
 
-    @command_toolbar.suspend_toolbar
+    @command_toolbar.quiesce_toolbar
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement | None) -> bool:
         """Run the command finalization hooks."""
         if self._initial_termios_settings is not None and self.stdin.isatty():  # type: ignore[unreachable]

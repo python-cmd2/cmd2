@@ -35,11 +35,32 @@ _R = TypeVar("_R")
 
 
 def suspend_toolbar(func: _F) -> _F:
-    """Give a method exclusive access to the terminal."""
+    """Give a method exclusive access to the terminal, reserved rows included.
+
+    For methods that hand the terminal to something else: a shell command, an editor, an
+    embedded interpreter, an external pager. Anything that does not know about a scroll region
+    must not be given one.
+    """
 
     @functools.wraps(func)
     def wrapped(self: "Cmd", *args: Any, **kwargs: Any) -> Any:
         with self.suspend_bottom_toolbar():
+            return func(self, *args, **kwargs)
+
+    return cast(_F, wrapped)
+
+
+def quiesce_toolbar(func: _F) -> _F:
+    """Stop the command display for a method without giving the terminal away.
+
+    For methods that need the renderer and the input reader quiet but are still part of the
+    command loop -- command finalization above all, which restores terminal input settings at
+    the end of every command and must leave the toolbar exactly where it was.
+    """
+
+    @functools.wraps(func)
+    def wrapped(self: "Cmd", *args: Any, **kwargs: Any) -> Any:
+        with self._quiesce_bottom_toolbar():
             return func(self, *args, **kwargs)
 
     return cast(_F, wrapped)
