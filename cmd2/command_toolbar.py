@@ -30,6 +30,10 @@ from .pager import Pager, output_fits
 if TYPE_CHECKING:
     from .cmd2 import Cmd
 
+#: How long to wait for the display to report that it has started. Long enough that a busy
+#: machine is not mistaken for a broken one, short enough that a command is never held forever.
+_STARTUP_TIMEOUT = 10.0
+
 _F = TypeVar("_F", bound=Callable[..., Any])
 _R = TypeVar("_R")
 
@@ -246,8 +250,28 @@ class CommandToolbar:
         self._bindings = bindings
         self._suspend_binding = suspend
 
-    def _after_render(self, app: Application[str]) -> None:  # noqa: ARG002
+    def _display_started(self, app: Application[str]) -> None:  # noqa: ARG002
+        """Report that the display is up and has finished its first frame."""
         self._ready.set()
+
+    def _display_started_without_app(self) -> None:
+        """Report readiness from a render attempt that produced no frame.
+
+        A skipped frame still means the application is running and rendering. Waiting for one
+        that commits would make starting the display depend on a cursor-position round trip,
+        and a terminal that never answers would never let the command begin.
+        """
+        self._ready.set()
+
+    def _reserved_bridge(self) -> Any:
+        """Return the renderer bridge, when a reservation is holding the toolbar.
+
+        :return: the bridge, or ``None`` in legacy rendering
+        """
+        reserved = self.cmd.reserved_toolbar
+        if reserved is None or not reserved.is_active:
+            return None
+        return reserved.bridge
 
     def start(self) -> None:
         """Start rendering and protect terminal output."""
@@ -283,8 +307,15 @@ class CommandToolbar:
         for name, value in (("layout", self._layout), ("key_bindings", self._bindings), ("erase_when_done", True)):
             stack.callback(setattr, self.app, name, getattr(self.app, name))
             setattr(self.app, name, value)
-        self.app.after_render += self._after_render
-        stack.callback(self.app.after_render.remove_handler, self._after_render)
+        self.app.after_render += self._display_started
+        stack.callback(self.app.after_render.remove_handler, self._display_started)
+        bridge = self._reserved_bridge()
+        if bridge is not None:
+            # In reserved mode a frame can be skipped, and the after-render event is withheld
+            # for those because nothing reached the terminal. Readiness is a different
+            # question -- the display is up either way -- so it hangs on the attempt instead.
+            bridge.set_render_attempted_handler(self._display_started_without_app)
+            stack.callback(bridge.set_render_attempted_handler, None)
         context = contextvars.copy_context()
 
         def run() -> None:
@@ -301,7 +332,11 @@ class CommandToolbar:
 
         self._thread = threading.Thread(target=context.run, args=(run,), name="cmd2-toolbar", daemon=True)
         self._thread.start()
-        self._ready.wait()
+        if not self._ready.wait(timeout=_STARTUP_TIMEOUT):
+            # Bounded so a display that never reports itself started fails here instead of
+            # holding the command thread forever. The toolbar is cosmetic; a command waiting
+            # indefinitely on one is not a trade anyone would choose.
+            raise TimeoutError(f"the bottom toolbar did not start within {_STARTUP_TIMEOUT} seconds")
         if self._error is not None:
             raise self._error
         if self._install_serializers():

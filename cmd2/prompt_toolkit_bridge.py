@@ -137,6 +137,12 @@ class PromptToolkitBridge:
         self._bound_app: Application[Any] | None = None
         self._emission_stopped_handler: Callable[[], None] | None = None
         self._frame_committed_handler: Callable[[], object] | None = None
+        self._render_attempted_handler: Callable[[], object] | None = None
+        # Whether the last thing this bridge tried to emit actually reached the terminal.
+        self._last_emission_committed = False
+        self._after_render_event: Any = None
+        self._after_render_original: Any = None
+        self._after_render_installed: Any = None
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -278,6 +284,18 @@ class PromptToolkitBridge:
         """
         self._frame_committed_handler = handler
 
+    def set_render_attempted_handler(self, handler: "Callable[[], object] | None") -> None:
+        """Install what to call after each render attempt, whatever came of it.
+
+        Distinct from the committed-frame handler on purpose. "A frame reached the terminal"
+        and "the renderer has been through a frame" are different facts, and something waiting
+        for the display to start needs the second: a frame skipped while recovery is owed
+        still means the application is running and rendering.
+
+        :param handler: called after every render attempt, or ``None`` to remove it
+        """
+        self._render_attempted_handler = handler
+
     def set_emission_stopped_handler(self, handler: "Callable[[], None]") -> None:
         """Install what to call when reserved rendering has to be abandoned.
 
@@ -355,6 +373,15 @@ class PromptToolkitBridge:
         self._originals = {name: getattr(renderer, name) for name in replacements}
         self._installed = dict(replacements)
         self._bound_app = app
+        # Upstream fires this after ``render()`` returns, whatever the wrapper decided to do,
+        # so a frame the bridge skipped would still tell everything waiting on a rendered
+        # frame that one had happened -- including the command display's readiness signal.
+        self._after_render_event = app.after_render
+        self._after_render_original = app.after_render.fire
+        self._after_render_installed = self._fire_after_render_through_bridge
+        # By name, as with the renderer's methods: this replacement belongs to this event
+        # object, not to the class every application's events are built from.
+        setattr(app.after_render, "fire", self._after_render_installed)  # noqa: B010
         for name, replacement in replacements.items():
             # Set by name so the replacement lands on this instance. Assigning the class
             # attribute would change every renderer in the process, including ones cmd2 does
@@ -368,6 +395,12 @@ class PromptToolkitBridge:
 
         Safe to call when nothing was bound: teardown reaches this from more than one place.
         """
+        event, self._after_render_event = self._after_render_event, None
+        if event is not None and getattr(event, "fire", None) == self._after_render_installed:
+            setattr(event, "fire", self._after_render_original)  # noqa: B010
+        self._after_render_original = None
+        self._after_render_installed = None
+
         originals, self._originals = self._originals, {}
         installed, self._installed = self._installed, {}
         for name, original in originals.items():
@@ -379,6 +412,19 @@ class PromptToolkitBridge:
         self._bound_app = None
 
     def _render_through_bridge(self, app: "Application[Any]", layout: Any, is_done: bool = False) -> None:
+        """Prepare and commit one frame, telling anything waiting that an attempt was made.
+
+        :param app: the application being rendered
+        :param layout: the layout to render; upstream passes ``app.layout``
+        :param is_done: whether this is the final frame of a prompt
+        """
+        try:
+            self._render_frame(app, layout, is_done)
+        finally:
+            if self._render_attempted_handler is not None:
+                self._render_attempted_handler()
+
+    def _render_frame(self, app: "Application[Any]", layout: Any, is_done: bool = False) -> None:
         """Prepare and commit one frame in place of upstream's direct render.
 
         Runs on the UI thread, which is where recovery's callbacks belong too, so an owed
@@ -389,6 +435,7 @@ class PromptToolkitBridge:
         :param layout: the layout to render; upstream passes ``app.layout``
         :param is_done: whether this is the final frame of a prompt
         """
+        self._last_emission_committed = False
         if self._reserved_emission_stopped:
             # Abandoned, but the rows are still withheld until the owner releases them.
             # Rendering upstream directly from here would write outside the transaction and
@@ -411,8 +458,21 @@ class PromptToolkitBridge:
         if not self.commit(prepared):
             self._request_redraw()
             return
+        self._last_emission_committed = True
         if self._frame_committed_handler is not None:
             self._frame_committed_handler()
+
+    def _fire_after_render_through_bridge(self) -> None:
+        """Tell the application a frame was rendered, but only if one actually was.
+
+        A skipped frame -- recovery owed and unfinished, a preparation refused, a commit
+        retired -- emitted nothing. Everything downstream of this event believes a frame is on
+        the screen: layout metadata is published from it, and the command display treats it as
+        the signal that its first frame has been drawn.
+        """
+        if not self._last_emission_committed:
+            return
+        self._after_render_original()
 
     def _request_cursor_position_through_bridge(self) -> None:
         """Let upstream ask for the cursor, and record the request if one went out.
@@ -448,9 +508,11 @@ class PromptToolkitBridge:
 
         :param leave_alternate_screen: passed through to upstream
         """
+        self._last_emission_committed = False
         with self._lock.transaction("erase"):
             try:
                 self._originals["erase"](leave_alternate_screen)
+                self._last_emission_committed = True
             finally:
                 # Recorded whether or not it finished. An erase that raised part-way has still
                 # moved the cursor and cleared some of what was below it, and a stream cannot
@@ -465,9 +527,11 @@ class PromptToolkitBridge:
         otherwise place the next frame where the prompt used to be. Cursor reports already in
         flight describe the screen before the clear and are discarded with it.
         """
+        self._last_emission_committed = False
         with self._lock.transaction("clear"):
             try:
                 self._originals["clear"]()
+                self._last_emission_committed = True
             finally:
                 self._prompt_anchor = None
                 self._invalidate_pending_cursor_reports()

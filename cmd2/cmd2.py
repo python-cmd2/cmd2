@@ -3739,7 +3739,6 @@ class Cmd:
         # a DummyOutput.
         return not isinstance(session.input, DummyInput)
 
-    @command_toolbar.suspend_toolbar
     def _read_raw_input(
         self,
         prompt: Callable[[], ANSI | str] | ANSI | str,
@@ -3751,6 +3750,31 @@ class Cmd:
         If input is coming from a TTY, it uses `prompt_toolkit` to render a
         UI with completion and `patch_stdout` protection. Otherwise it performs
         a direct line read from `stdin`.
+
+        The command display is stopped either way, but only some prompts give the terminal
+        away with it. The main prompt is the one the reservation exists for: it renders
+        through the reserved output, and the toolbar has to still be there while the user is
+        typing -- that is what "stable across ordinary commands" means. Any other session is
+        an application prompt cmd2 has not bound to the reservation, so it gets the terminal
+        to itself, rows included.
+
+        :param prompt: the prompt text or a callable that returns the prompt.
+        :param session: the PromptSession instance to use for reading.
+        :param prompt_kwargs: additional arguments passed directly to session.prompt().
+        :return: the stripped input string.
+        :raises EOFError: if the input stream is closed or the user signals EOF (e.g., Ctrl+D)
+        """
+        owns_the_reservation = session is self.main_session
+        with self._quiesce_bottom_toolbar() if owns_the_reservation else self.suspend_bottom_toolbar():
+            return self._read_raw_input_now(prompt, session, **prompt_kwargs)
+
+    def _read_raw_input_now(
+        self,
+        prompt: Callable[[], ANSI | str] | ANSI | str,
+        session: PromptSession[str],
+        **prompt_kwargs: Any,
+    ) -> str:
+        """Read one line, with the display already stopped by the caller.
 
         :param prompt: the prompt text or a callable that returns the prompt.
         :param session: the PromptSession instance to use for reading.

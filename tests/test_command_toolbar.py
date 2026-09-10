@@ -806,3 +806,23 @@ def test_builtin_pager_does_not_capture_redirected_output(toolbar_app, monkeypat
         pager.assert_not_called()
     assert "Cmd2 Commands" in target.read_text(encoding="utf-8")
     assert "Cmd2 Commands" not in output.getvalue()
+
+
+def test_command_toolbar_startup_does_not_wait_forever(toolbar_app, monkeypatch, capsys) -> None:
+    """A display that never reports itself started must not hold the command thread.
+
+    The readiness signal comes from the display's own thread, so anything that stops it
+    arriving -- a render that never completes, a frame skipped forever -- would otherwise
+    block the command that is waiting to run.
+    """
+    app, _, _ = toolbar_app
+    monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar.CommandToolbar, "_display_started", lambda *args: None)
+    monkeypatch.setattr(command_toolbar.CommandToolbar, "_display_started_without_app", lambda *args: None)
+
+    ran = []
+    with app._command_toolbar_context():
+        ran.append(True)
+
+    assert ran == [True]
+    assert "did not start" in capsys.readouterr().err

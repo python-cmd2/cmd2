@@ -1375,3 +1375,61 @@ class TestCommittedFrameNotification:
         with set_app(harness.app):
             harness.renderer.render(harness.app, harness.app.layout)
         assert seen == [None]
+
+    def test_a_skipped_frame_fires_no_after_render(self) -> None:
+        """Upstream fires the event after render() returns, whatever the wrapper decided."""
+        fired: list[int] = []
+        harness = Harness()
+        harness.bridge.bind(harness.app)
+        harness.app.after_render += lambda _app: fired.append(1)
+        harness.bridge.forget_prompt_anchor()
+        harness.bridge.require_resynchronization("a command wrote")
+
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+            harness.app.after_render.fire()
+        assert fired == []
+
+    def test_a_committed_frame_fires_after_render(self) -> None:
+        fired: list[int] = []
+        harness = Harness()
+        harness.bridge.bind(harness.app)
+        harness.app.after_render += lambda _app: fired.append(1)
+
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+            harness.app.after_render.fire()
+        assert fired == [1]
+
+    def test_an_erase_fires_after_render(self) -> None:
+        """It reached the terminal, so whatever waits on a frame has had one."""
+        fired: list[int] = []
+        harness = Harness()
+        harness.bridge.bind(harness.app)
+        harness.app.after_render += lambda _app: fired.append(1)
+
+        with set_app(harness.app):
+            harness.renderer.render(harness.app, harness.app.layout)
+            harness.renderer.erase()
+            harness.app.after_render.fire()
+        assert fired == [1]
+
+    def test_unbinding_restores_the_event(self) -> None:
+        fired: list[int] = []
+        harness = Harness()
+        original = harness.app.after_render.fire
+        harness.bridge.bind(harness.app)
+        harness.bridge.unbind()
+        assert harness.app.after_render.fire == original
+
+        harness.app.after_render += lambda _app: fired.append(1)
+        harness.app.after_render.fire()
+        assert fired == [1]
+
+    def test_an_event_replaced_while_bound_is_left_alone(self) -> None:
+        harness = Harness()
+        harness.bridge.bind(harness.app)
+        replacement = lambda: None  # noqa: E731
+        harness.app.after_render.fire = replacement  # type: ignore[method-assign]
+        harness.bridge.unbind()
+        assert harness.app.after_render.fire is replacement

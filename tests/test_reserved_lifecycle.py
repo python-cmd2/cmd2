@@ -506,3 +506,67 @@ class TestRefreshCadence:
                 assert "UPDATED" in harness.written()
         finally:
             harness.close()
+
+
+class TestPromptSuspension:
+    """The main prompt is inside the reservation; other prompts are not, yet."""
+
+    def test_the_main_prompt_keeps_the_rows(self) -> None:
+        """The toolbar has to survive every ordinary command, prompt included."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                seen: list[bool] = []
+                harness.app.main_session.prompt = lambda *a, **k: (
+                    seen.append(  # type: ignore[method-assign]
+                        toolbar.display.is_reserved
+                    )
+                    or ""
+                )
+
+                harness.clear()
+                harness.app._read_raw_input("> ", harness.app.main_session)
+
+                assert seen == [True]
+                assert "\x1b[r" not in harness.written()
+        finally:
+            harness.close()
+
+    def test_the_main_prompt_leaves_the_native_toolbar_hidden(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                container = native_toolbar_container(harness.app.main_session)
+                assert container is not None
+                seen: list[bool] = []
+                harness.app.main_session.prompt = lambda *a, **k: (
+                    seen.append(  # type: ignore[method-assign]
+                        container.filter()
+                    )
+                    or ""
+                )
+
+                harness.app._read_raw_input("> ", harness.app.main_session)
+                assert seen == [False]
+        finally:
+            harness.close()
+
+    def test_another_session_still_gets_the_terminal_to_itself(self) -> None:
+        """A prompt cmd2 has not bound to the reservation renders outside it, for now."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                other = PromptSession(input=harness.pipe, output=harness.backend)
+                seen: list[bool] = []
+                other.prompt = lambda *a, **k: seen.append(toolbar.display.is_reserved) or ""  # type: ignore[method-assign]
+
+                harness.app._read_raw_input("> ", other)
+
+                assert seen == [False]
+                assert toolbar.display.is_reserved is True
+        finally:
+            harness.close()
