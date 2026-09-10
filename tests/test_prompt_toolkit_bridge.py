@@ -734,3 +734,55 @@ class TestReviewRegressionsRoundTwo:
         assert harness.bridge.commit(prepared) is False
         assert harness.written() == ""
         assert harness.bridge.needs_resynchronization is True
+
+    def test_recovery_uses_the_origin_it_finds_after_taking_the_terminal(self) -> None:
+        """Review finding: an origin read before the wait describes a terminal someone held."""
+        handover = RetiringLock()
+        harness = Harness(lock=TerminalLock(lock=handover))
+        harness.bridge.set_prompt_anchor(1)
+        harness.clear()
+
+        handover.on_acquire = lambda: harness.bridge.note_managed_write(prompt_anchor=7)
+        harness.resynchronize()
+
+        written = harness.written()
+        assert "\x1b[7;1H" in written
+        assert "\x1b[1;1H" not in written
+        assert harness.renderer._min_available_height == 23 - 7 + 1
+        assert harness.bridge.needs_resynchronization is False
+
+    def test_recovery_completes_before_the_terminal_is_released(self) -> None:
+        """Whoever takes the terminal next must not find a recovery still owed."""
+        seen: list[bool] = []
+        harness = Harness()
+        original = harness.bridge._initialize_renderer
+
+        def watched(policy: Any, origin: int) -> None:
+            original(policy, origin)
+            seen.append(harness.bridge.needs_resynchronization)
+
+        harness.bridge._initialize_renderer = watched  # type: ignore[method-assign]
+        harness.bridge.require_resynchronization("test")
+        harness.resynchronize()
+        assert seen == [False]
+
+    def test_a_cursor_report_invalidated_by_managed_output_is_rejected(self) -> None:
+        """Review finding: the write moved the cursor the terminal was sampling."""
+        harness = Harness()
+        harness.bridge.request_cursor_position()
+        harness.bridge.note_managed_write(prompt_anchor=7)
+        assert harness.bridge.report_cursor_row(4) is False
+        assert harness.bridge.prompt_anchor == 7
+        assert harness.renderer._min_available_height == 0
+
+    def test_replies_still_correlate_by_order_after_one_is_invalidated(self) -> None:
+        """Rejecting a reply must not desynchronize the queue behind it."""
+        harness = Harness()
+        harness.bridge.request_cursor_position()
+        harness.bridge.note_managed_write(prompt_anchor=7)
+        harness.bridge.request_cursor_position()
+
+        assert harness.bridge.report_cursor_row(4) is False
+        assert harness.bridge.report_cursor_row(5) is True
+        assert harness.bridge.prompt_anchor == 5
+        assert harness.renderer._min_available_height == 23 - 5 + 1

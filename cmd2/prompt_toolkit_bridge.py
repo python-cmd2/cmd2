@@ -123,7 +123,7 @@ class PromptToolkitBridge:
         self._pending_error: BaseException | None = None
         self._prompt_anchor: int | None = None
         self._resynchronization_reason: str | None = None
-        self._pending_cpr: deque[int] = deque()
+        self._pending_cpr: deque[Generations] = deque()
 
     # -- what is known ---------------------------------------------------------------------
 
@@ -415,38 +415,59 @@ class PromptToolkitBridge:
         if self._reserved_emission_stopped:
             raise ReservedModeFailureError("reserved emission has stopped; release before rendering again")
 
+        # Resolved before the terminal is taken: this runs application filters, which the
+        # wait contract keeps off the lock.
         policy = self._desired_policy()
-        origin = self._usable_prompt_anchor()
-        if origin is None:
-            if not self._display.output.responds_to_cpr:
-                raise ReservedModeFailureError("the prompt's origin is unknown and the terminal does not report its cursor")
-            # The reply establishes the origin. Recovery stays owed until it arrives; guessing
-            # would repaint the prompt over committed output.
-            self.request_cursor_position()
-            return
 
         with self._lock.transaction("resynchronize"):
-            output = self._display.output
-            output.write_raw(f"\x1b[{origin};1H")
-            # Upstream enables bracketed paste on every render and latches a flag beside the
-            # emission, so the policy here is not conditional: it is on, and the flag is made
-            # to agree with an enable that actually reached the terminal.
-            output.enable_bracketed_paste()
-            if policy.mouse_support:
-                output.enable_mouse_support()
+            # The origin is read *here*, not before the wait. Recovery can queue behind
+            # another writer for as long as that writer holds the terminal, and what it does
+            # in the meantime -- emitting output, moving the prompt, resizing -- is exactly
+            # what changes where the prompt now starts. An origin read beforehand describes a
+            # terminal somebody else still owned.
+            origin = self._usable_prompt_anchor()
+            if origin is None:
+                can_report = self._display.output.responds_to_cpr
             else:
-                output.disable_mouse_support()
-            output.reset_cursor_key_mode()
-            output.reset_attributes()
-            output.enable_autowrap()
-            output.reset_cursor_shape()
-            output.show_cursor()
-            output.flush()
-            self._initialize_renderer(policy, origin)
+                self._establish(policy, origin)
+                return
 
+        if not can_report:
+            raise ReservedModeFailureError("the prompt's origin is unknown and the terminal does not report its cursor")
+        # The reply establishes the origin. Recovery stays owed until it arrives; guessing
+        # would repaint the prompt over committed output.
+        self.request_cursor_position()
+
+    def _establish(self, policy: TerminalModePolicy, origin: int) -> None:
+        """Put the terminal into the known state, from inside the transaction.
+
+        Recovery is marked complete here rather than after the lock is given back: whoever
+        takes the terminal next must not find a recovery still owed against work that has
+        already been done.
+
+        :param policy: the mode policy to establish
+        :param origin: the physical row to place the cursor on
+        """
+        output = self._display.output
+        output.write_raw(f"\x1b[{origin};1H")
+        # Upstream enables bracketed paste on every render and latches a flag beside the
+        # emission, so the policy here is not conditional: it is on, and the flag is made
+        # to agree with an enable that actually reached the terminal.
+        output.enable_bracketed_paste()
+        if policy.mouse_support:
+            output.enable_mouse_support()
+        else:
+            output.disable_mouse_support()
+        output.reset_cursor_key_mode()
+        output.reset_attributes()
+        output.enable_autowrap()
+        output.reset_cursor_shape()
+        output.show_cursor()
+        output.flush()
         self._needs_resynchronization = False
         self._resynchronization_reason = None
         self._in_flight = None
+        self._initialize_renderer(policy, origin)
 
     def _usable_rows(self) -> int:
         """How many rows the application may use right now.
@@ -528,11 +549,14 @@ class PromptToolkitBridge:
         output = self._display.output
         if not output.responds_to_cpr:
             return False
-        generation = self.generations().geometry
-        with self._lock.transaction("cursor position request", generation=generation):
+        generations = self.generations()
+        with self._lock.transaction("cursor position request", generation=generations.geometry):
             output.ask_for_cpr()
             output.flush()
-        self._pending_cpr.append(generation)
+        # The whole generation tuple, not just the geometry. The terminal samples the cursor
+        # when it processes the request, so managed output written afterwards moves the very
+        # thing the reply describes -- a resize is not the only way a reply goes stale.
+        self._pending_cpr.append(generations)
         return True
 
     def report_cursor_row(self, row: int) -> bool:
@@ -541,6 +565,10 @@ class PromptToolkitBridge:
         Replies carry no generation on the wire, so they are correlated by order against the
         requests this bridge made. A reply from before a geometry change describes a screen
         that no longer exists and must not satisfy the request made after it.
+
+        A reply is stale when anything about the terminal has changed since the request went
+        out -- a resize, an owner change, or managed output that moved the cursor the terminal
+        was about to sample.
 
         A row inside the reserved band is the failure named in the design: upstream would
         compute ``U - r + 1``, which is zero at the first reserved row and negative below it,
@@ -554,8 +582,10 @@ class PromptToolkitBridge:
             # must not be allowed to answer a request that was never made.
             self._settle_renderer_cpr()
             return False
-        generation = self._pending_cpr.popleft()
-        if generation != self.generations().geometry:
+        # Popped whatever the outcome: replies correlate by order, so dropping one without
+        # taking it off the queue would answer every later request with its predecessor.
+        generations = self._pending_cpr.popleft()
+        if generations != self.generations():
             self._settle_renderer_cpr()
             return False
 
