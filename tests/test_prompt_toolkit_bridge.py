@@ -32,7 +32,7 @@ from cmd2.prompt_toolkit_bridge import (
     ReservedModeFailureError,
 )
 from cmd2.terminal_display import TerminalDisplay
-from cmd2.terminal_transaction import TerminalLock, current_transaction
+from cmd2.terminal_transaction import HigherLevelLock, TerminalLock, current_transaction
 
 
 class TtyStringIO(io.StringIO):
@@ -1514,7 +1514,13 @@ class TestDelegatingWrappers:
         assert fired == [1]
         assert handled == [1]
 
-    def test_delegated_erase_and_clear_still_work_after_unbinding(self) -> None:
+    def test_delegated_erase_and_clear_take_no_transaction_after_unbinding(self) -> None:
+        """A retired bridge is not the terminal's owner and must not act as one.
+
+        Taking its lock is not harmless: the caller may hold a higher-level lock, and the
+        ordering rule forbids that nesting -- so acting as owner turns someone else's clear
+        into an exception.
+        """
         harness = self.bound()
         harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
         erase, clear = harness.renderer.erase, harness.renderer.clear
@@ -1528,10 +1534,32 @@ class TestDelegatingWrappers:
         harness.renderer.erase = passing_erase  # type: ignore[method-assign]
         harness.renderer.clear = passing_clear  # type: ignore[method-assign]
         harness.bridge.unbind()
+        harness.bridge.require_resynchronization("before the delegated calls")
 
-        with set_app(harness.app):
+        harness.stream_recorder.transactions.clear()
+        with set_app(harness.app), HigherLevelLock("routing"):
             harness.renderer.erase()
             harness.renderer.clear()
+
+        assert harness.stream_recorder.transactions
+        assert all(state is None for state in harness.stream_recorder.transactions)
+
+    def test_a_delegated_clear_does_not_invalidate_the_retired_bridge(self) -> None:
+        """Its state describes a terminal it no longer owns; changing it means nothing."""
+        harness = self.bound()
+        harness.renderer.request_absolute_cursor_position = lambda: None  # type: ignore[method-assign]
+        harness.bridge.set_prompt_anchor(7)
+        clear = harness.renderer.clear
+
+        def passing_clear() -> None:
+            clear()
+
+        harness.renderer.clear = passing_clear  # type: ignore[method-assign]
+        harness.bridge.unbind()
+
+        with set_app(harness.app):
+            harness.renderer.clear()
+        assert harness.bridge.prompt_anchor == 7
 
     def test_delegated_cursor_reports_still_work_after_unbinding(self) -> None:
         harness = self.bound()

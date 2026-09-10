@@ -546,7 +546,14 @@ class PromptToolkitBridge:
         the remembered origin is forgotten rather than carried across -- recovery would
         otherwise place the next frame where the prompt used to be. Cursor reports already in
         flight describe the screen before the clear and are discarded with it.
+
+        Unbound, this passes straight through, for the reason given on the render wrapper: a
+        retired bridge is not the terminal's owner, and taking its lock or invalidating its
+        state on someone else's behalf would be acting as one.
         """
+        if not self._bound:
+            self._originals["clear"]()
+            return
         self._last_emission_committed = False
         with self._lock.transaction("clear"):
             try:
