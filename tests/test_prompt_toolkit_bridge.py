@@ -851,3 +851,41 @@ class TestReviewRegressionsRoundTwo:
         assert harness.written() == ""
         # Nothing was queued either: a reply now would be answering a request never made.
         assert harness.bridge.report_cursor_row(4) is False
+
+    def test_a_frame_is_not_published_over_an_abandonment(self) -> None:
+        """Review finding: checking and publishing must be one step, or one overwrites the other."""
+        handover = RetiringLock()
+        harness = Harness(lock=TerminalLock(lock=handover))
+        # Skip the preflight acquisition; abandon emission as the publication takes the lock.
+        handover.schedule(None, lambda: harness.bridge.stop_reserved_emission(OSError("terminal went away")))
+
+        assert harness.prepare() is None
+        assert harness.bridge.in_flight is None
+
+    def test_a_frame_in_flight_while_emission_is_abandoned_is_not_committed(self) -> None:
+        """Retirement alone cannot carry this: a publication can overwrite a retirement.
+
+        The state is built directly because that is the point -- commit must reject a frame
+        that is in flight while emission is abandoned, whatever sequence produced that pair,
+        rather than trusting that nothing can produce it.
+        """
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.stop_reserved_emission(OSError("terminal went away"))
+        harness.bridge._in_flight = prepared
+        harness.clear()
+
+        assert harness.bridge.commit(prepared) is False
+        assert harness.written() == ""
+
+    def test_a_frame_in_flight_while_recovery_is_owed_is_not_committed(self) -> None:
+        harness = Harness()
+        prepared = harness.prepare()
+        assert prepared is not None
+        harness.bridge.require_resynchronization("another writer")
+        harness.bridge._in_flight = prepared
+        harness.clear()
+
+        assert harness.bridge.commit(prepared) is False
+        assert harness.written() == ""

@@ -325,18 +325,22 @@ class PromptToolkitBridge:
             self._renderer.output = original
             self._preparing = False
 
-        if self.needs_resynchronization or self.reserved_emission_stopped:
-            # Something invalidated the terminal while the frame was being prepared -- a
-            # managed write from inside a layout callback, say, or a failure that abandoned
-            # the reservation outright. Either way the operations are recorded against a
-            # terminal that has moved on, and publishing them would hand the caller a frame
-            # that is already retired.
-            self._retire()
-            return None
+        with self._lock.transaction("publish"):
+            # Checking and publishing are one step. Apart, they are two, and a writer that
+            # abandons the reservation between them has its retirement overwritten by the
+            # publication that follows -- leaving a frame in flight that nothing invalidated
+            # and everything downstream believes is current.
+            if self.needs_resynchronization or self.reserved_emission_stopped:
+                # Something invalidated the terminal while the frame was being prepared -- a
+                # managed write from inside a layout callback, say, or a failure that
+                # abandoned the reservation outright. Either way the operations are recorded
+                # against a terminal that has moved on.
+                self._retire()
+                return None
 
-        prepared = PreparedRender(batch=recorder.batch(), generations=generations)
-        self._in_flight = prepared
-        return prepared
+            prepared = PreparedRender(batch=recorder.batch(), generations=generations)
+            self._in_flight = prepared
+            return prepared
 
     def commit(self, prepared: PreparedRender) -> bool:
         """Revalidate a prepared frame and, if it is still current, emit it.
@@ -348,13 +352,19 @@ class PromptToolkitBridge:
         with self._lock.transaction("commit", generation=prepared.generations.geometry):
             if prepared is not self._in_flight:
                 # Already retired, or from a previous attempt. Replaying it would emit a frame
-                # nothing has validated, and possibly emit it twice. Everything that
-                # invalidates the terminal retires the frame in flight, so this one test
-                # covers an owed recovery and an abandoned reservation as well as a superseded
-                # batch -- but only when it is read here, after the terminal has been
-                # acquired. Read before the wait, it answers a question about a terminal
-                # somebody else still held: a writer can retire the batch while this call
-                # queues for the lock, changing neither the generations nor the size.
+                # nothing has validated, and possibly emit it twice.
+                #
+                # Read here, after the terminal has been acquired: read before the wait, it
+                # answers a question about a terminal somebody else still held, since a writer
+                # can retire the batch while this call queues, changing neither the
+                # generations nor the size.
+                return False
+            if self._needs_resynchronization or self._reserved_emission_stopped:
+                # Not covered by the identity test above. Retirement clears the frame in
+                # flight, but a preparation completing concurrently can publish a new one over
+                # that retirement, and the frame it publishes matches on identity and on every
+                # generation. What makes it uncommittable is the state of the terminal, so
+                # that is what is asked.
                 return False
             if self.generations() != prepared.generations:
                 self.require_resynchronization("the terminal changed between preparing and committing")
