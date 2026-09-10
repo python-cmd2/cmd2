@@ -863,9 +863,23 @@ def test_command_toolbar_startup_timeout_does_not_block_on_cleanup(toolbar_app, 
 
 
 def _block_the_display(app, blocked: threading.Event) -> None:
-    """Wedge the running display inside a render callback it cannot leave."""
-    app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
+    """Wedge the running display inside a render callback it cannot leave.
+
+    Waits until the callback has actually been entered. Asking for a redraw only *schedules*
+    one, so returning before it runs leaves a race: the pause that follows may reach the
+    display's event loop first, in which case it exits cleanly and there is no wedged thread
+    to test against.
+    """
+    entered = threading.Event()
+
+    def blocking_toolbar() -> str:
+        entered.set()
+        blocked.wait(timeout=10)
+        return "STATUS"
+
+    app.main_session.bottom_toolbar = blocking_toolbar
     app._command_toolbar.app.invalidate()
+    assert entered.wait(timeout=5), "the display never reached the blocking callback"
 
 
 def test_command_toolbar_suspension_does_not_hand_over_a_terminal_it_still_owns(toolbar_app, monkeypatch) -> None:

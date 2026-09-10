@@ -9,6 +9,7 @@ import io
 from typing import Any
 
 import pytest
+from prompt_toolkit.application import create_app_session
 from prompt_toolkit.application.current import set_app
 from prompt_toolkit.data_structures import Size
 from prompt_toolkit.input import create_pipe_input
@@ -36,6 +37,11 @@ class Harness:
         self.backend = Vt100_Output(self.stream, lambda: self.size)
         self._pipe = create_pipe_input()
         self.pipe = self._pipe.__enter__()
+        # Bind the ambient app session to this terminal. Without it, prompt-toolkit builds a
+        # real one on demand -- patch_stdout() in _read_raw_input() does -- and on Windows that
+        # means asking for a console the CI runner does not have.
+        self._session_context = create_app_session(input=self.pipe, output=self.backend)
+        self._session_context.__enter__()
         self.app = cmd2.Cmd(allow_cli_args=False, bottom_toolbar_mode=mode)
         # The command's output and the toolbar's paints share one terminal, as they do in
         # life: the stream cmd2 writes to is the stream the backend renders to.
@@ -44,7 +50,8 @@ class Harness:
         self.clear()
 
     def close(self) -> None:
-        """Release the pipe input."""
+        """Release the app session and the pipe input."""
+        self._session_context.__exit__(None, None, None)
         self._pipe.__exit__(None, None, None)
 
     def clear(self) -> None:
