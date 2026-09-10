@@ -528,8 +528,13 @@ class CommandToolbar:
 
     @contextlib.contextmanager
     def suspend(self) -> Iterator[None]:
-        """Temporarily restore ordinary terminal access, including nested suspensions."""
-        if self._proxy is None:
+        """Temporarily restore ordinary terminal access, including nested suspensions.
+
+        Whether output is proxied or serialized, what has to stop is the display: its renderer
+        draws and its input reader reads, and a guest given the terminal alongside either of
+        them is sharing it rather than owning it.
+        """
+        if self._proxy is None and not self._serialized:
             yield
             return
         with self.cmd.sigint_protection:

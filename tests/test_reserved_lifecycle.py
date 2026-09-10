@@ -9,12 +9,14 @@ import io
 from typing import Any
 
 import pytest
+from prompt_toolkit.application.current import set_app
 from prompt_toolkit.data_structures import Size
 from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.shortcuts import PromptSession
 
 import cmd2
+from cmd2.reserved_toolbar import native_toolbar_container
 
 
 class TtyStringIO(io.StringIO):
@@ -347,5 +349,108 @@ class TestSuspension:
         try:
             with harness.app._reserved_toolbar_context(), harness.app.suspend_bottom_toolbar():
                 assert harness.app.reserved_toolbar is None
+        finally:
+            harness.close()
+
+
+class TestSuspensionWithALiveDisplay:
+    """A pause that does not stop the display leaves two programs sharing the terminal."""
+
+    def test_quiescing_stops_the_command_display(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                display = harness.app._command_toolbar
+                assert display is not None
+                assert display.app.is_running is True
+                with harness.app._quiesce_bottom_toolbar():
+                    assert display.app.is_running is False
+                assert display.app.is_running is True
+        finally:
+            harness.close()
+
+    def test_suspending_stops_the_command_display(self) -> None:
+        """The guest owns the terminal, so cmd2's input reader must not be reading it."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                display = harness.app._command_toolbar
+                assert display is not None
+                with harness.app.suspend_bottom_toolbar():
+                    assert display.app.is_running is False
+                assert display.app.is_running is True
+        finally:
+            harness.close()
+
+    def test_output_is_serialized_again_after_a_suspension(self) -> None:
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context(), harness.app._command_toolbar_context():
+                display = harness.app._command_toolbar
+                assert display is not None
+                with harness.app.suspend_bottom_toolbar():
+                    assert all(stream.serializer is None for stream in display._streams)
+                assert all(stream.serializer is not None for stream in display._streams)
+        finally:
+            harness.close()
+
+
+class TestHandoffRecovery:
+    def test_the_prompt_origin_is_forgotten_across_a_handoff(self) -> None:
+        """The guest moved the cursor; recovery would otherwise repaint over its output."""
+        harness = Harness(mode="reserved")
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                bridge = toolbar.bridge
+                assert bridge is not None
+                bridge.set_prompt_anchor(7)
+
+                with harness.app.suspend_bottom_toolbar():
+                    pass
+
+                assert bridge.prompt_anchor is None
+                harness.clear()
+                with set_app(harness.app.main_session.app):
+                    bridge.resynchronize()
+                assert "\x1b[7;1H" not in harness.written()
+        finally:
+            harness.close()
+
+    def test_a_terminal_too_short_on_return_gives_the_toolbar_back(self) -> None:
+        """No region means no band to paint in, so the native toolbar has to render again."""
+        harness = Harness(mode="reserved", rows=24)
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                container = native_toolbar_container(harness.app.main_session)
+                assert container is not None
+                assert container.filter() is False
+
+                with harness.app.suspend_bottom_toolbar():
+                    harness.size = Size(rows=2, columns=80)
+
+                assert toolbar.display.is_reserved is False
+                assert toolbar.is_active is False
+                assert container.filter() is True
+        finally:
+            harness.close()
+
+    def test_a_terminal_that_grows_back_takes_the_rows_again(self) -> None:
+        harness = Harness(mode="reserved", rows=24)
+        try:
+            with harness.app._reserved_toolbar_context():
+                toolbar = harness.app.reserved_toolbar
+                assert toolbar is not None
+                with harness.app.suspend_bottom_toolbar():
+                    harness.size = Size(rows=2, columns=80)
+                assert toolbar.is_active is False
+
+                harness.size = Size(rows=24, columns=80)
+                with harness.app.suspend_bottom_toolbar():
+                    pass
+                assert toolbar.is_active is True
         finally:
             harness.close()

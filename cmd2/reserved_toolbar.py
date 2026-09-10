@@ -107,8 +107,14 @@ class ReservedToolbar:
 
     @property
     def is_active(self) -> bool:
-        """Whether a reservation is installed and the application is bound to it."""
-        return self._display is not None
+        """Whether rows are reserved right now and the band is this object's to paint.
+
+        Owning the display is not the same as holding a region. A terminal below the two-row
+        floor, or one on loan to a guest program, leaves this object in charge of the
+        reservation *and* leaves no reservation installed -- and while there is no band, the
+        native toolbar is what has to render.
+        """
+        return self._display is not None and self._display.is_reserved
 
     @property
     def display(self) -> TerminalDisplay:
@@ -233,24 +239,40 @@ class ReservedToolbar:
 
         What the guest left on the screen is unknown, so the band's contents and the
         renderer's beliefs are both discarded rather than trusted.
+
+        A terminal with no region installed -- one below the two-row floor -- still goes
+        through this. There is nothing to give back, but the guest may resize the window, and
+        the return path is where that is noticed and the rows are taken again.
         """
         display = self._display
-        if display is None or not display.is_reserved:
+        if display is None:
             yield
             return
 
         with self._lock.transaction("suspend"):
             display.release_region_for_handoff()
+            # Forgotten as the terminal changes hands, not after the guest has finished with
+            # it. From this moment the remembered row describes a screen someone else is
+            # writing on, and anything that rendered against it would paint over their output.
+            self._invalidate_ownership("the terminal was handed to another program")
         try:
             yield
         finally:
             with self._lock.transaction("resume"):
                 display.reacquire_region_after_handoff()
-            if self._painter is not None:
-                self._painter.invalidate()
-            if self._bridge is not None:
-                self._bridge.require_resynchronization("the terminal was handed to another program")
+                self._invalidate_ownership("the terminal came back from another program")
             self.refresh()
+
+    def _invalidate_ownership(self, reason: str) -> None:
+        """Discard everything that described the screen before ownership changed.
+
+        :param reason: why, for diagnostics
+        """
+        if self._painter is not None:
+            self._painter.invalidate()
+        if self._bridge is not None:
+            self._bridge.forget_prompt_anchor()
+            self._bridge.require_resynchronization(reason)
 
     def refresh(self) -> bool:
         """Evaluate the toolbar's content and paint whatever changed.

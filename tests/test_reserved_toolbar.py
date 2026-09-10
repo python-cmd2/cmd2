@@ -762,3 +762,12 @@ class TestAbandonedEmission:
             assert harness.app.renderer.render == original_render
         finally:
             harness.close()
+
+    def test_suspending_a_toolbar_that_never_started_does_nothing(self) -> None:
+        harness = Harness()
+        try:
+            with harness.toolbar.suspended():
+                pass
+            assert harness.written() == ""
+        finally:
+            harness.close()
