@@ -25,6 +25,7 @@ subset rather than advertising support that does not exist.
 where the painter owns the cursor.
 """
 
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -374,32 +375,63 @@ class ToolbarPainter:
                 return False
 
             top_row = geometry.physical_rows - geometry.reserved_rows + 1
-            # Anything another writer left buffered goes out first, so the band is painted
-            # after the output it was meant to follow rather than in the middle of it.
-            self._output.flush()
-            # DECSC saves the cursor *and* the current attributes, and DECRC restores both, so
-            # the renderer's next write lands where and how it expects.
-            self._output.write_raw(cursor_save_sequence())
-            self._output.disable_autowrap()
-            for row_index, column, cells in runs:
-                self._output.write_raw(_cursor_position_sequence(top_row + row_index, column + 1))
-                style: str | None = None
-                for cell in cells:
-                    if cell.is_continuation:
-                        continue
-                    if cell.style != style:
-                        self._output.set_attributes(prepared.attrs[cell.style], prepared.color_depth)
-                        style = cell.style
-                    self._output.write(cell.char)
-            if self._autowrap_after_paint:
-                self._output.enable_autowrap()
-            self._output.write_raw(cursor_restore_sequence())
-            self._output.flush()
+            try:
+                # Anything another writer left buffered goes out first, so the band is painted
+                # after the output it was meant to follow rather than in the middle of it.
+                self._output.flush()
+                # DECSC saves the cursor *and* the current attributes, and DECRC restores
+                # both, so the renderer's next write lands where and how it expects.
+                self._output.write_raw(cursor_save_sequence())
+                self._output.disable_autowrap()
+                for row_index, column, cells in runs:
+                    self._output.write_raw(_cursor_position_sequence(top_row + row_index, column + 1))
+                    style: str | None = None
+                    for cell in cells:
+                        if cell.is_continuation:
+                            continue
+                        if cell.style != style:
+                            self._output.set_attributes(prepared.attrs[cell.style], prepared.color_depth)
+                            style = cell.style
+                        self._output.write(cell.char)
+                if self._autowrap_after_paint:
+                    self._output.enable_autowrap()
+                self._output.write_raw(cursor_restore_sequence())
+                self._output.flush()
+            except BaseException:
+                self._recover_from_failed_paint()
+                raise
 
             self._last_frame = frame
             self._last_attrs = prepared.attrs
             self._last_band = band
             return True
+
+    def _recover_from_failed_paint(self) -> None:
+        """Undo what a half-finished paint left on the terminal.
+
+        The backend buffers a paint and flushes it as one write, so a failure part-way through
+        that write leaves the terminal holding a prefix: the cursor saved and moved into the
+        band, autowrap off, some cells replaced and some not. None of that is undone by
+        unwinding the Python call -- the sequences are already on the wire.
+
+        Two things follow. The wrap mode and cursor are put back, because leaving autowrap off
+        makes the next ordinary line of output wrap where it should not, and leaving the cursor
+        in the band makes the next write land in the toolbar. And the baseline is discarded:
+        the band is now showing something no frame describes, so the next paint has to be a
+        full one rather than a diff against a frame that was never finished.
+
+        The restoration is itself a write to a terminal that has just failed one, so its own
+        failure is suppressed -- the original is the one worth propagating.
+        """
+        self.invalidate()
+        with suppress(Exception):
+            if self._autowrap_after_paint:
+                self._output.enable_autowrap()
+            # DECRC returns to whatever was last saved. After a partial batch that is either
+            # this paint's own save or the one the margin change made, so the cursor lands
+            # somewhere known rather than wherever the truncated write stopped.
+            self._output.write_raw(cursor_restore_sequence())
+            self._output.flush()
 
 
 def _cursor_position_sequence(row: int, column: int) -> str:

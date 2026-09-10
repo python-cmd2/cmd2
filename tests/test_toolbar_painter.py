@@ -9,6 +9,7 @@ a wide character is never split across the right edge.
 import io
 import re
 import threading
+from typing import Any
 
 import pytest
 from prompt_toolkit.data_structures import Size
@@ -617,3 +618,95 @@ class TestBackpressure:
         # The writer blocked inside leaf I/O, holding no higher-level lock -- which is what
         # keeps the rest of cmd2 able to make progress while the terminal is backed up.
         assert stream.locks_held_while_blocked == ()
+
+
+class PartialWriteStream(io.StringIO):
+    """Writes a prefix of one flushed batch and then fails, as a real terminal can.
+
+    A test that replaces ``paint`` entirely never emits anything, so it cannot see what a
+    half-written batch leaves behind. The backend buffers a whole paint and flushes it in one
+    ``write``, so cutting that write short is what puts the terminal into the state this is
+    about: autowrap off, cursor in the band, nothing restored.
+    """
+
+    def __init__(self, fail_on_write: int, keep: int = 12) -> None:
+        super().__init__()
+        self._writes = 0
+        self._fail_on_write = fail_on_write
+        self._keep = keep
+
+    def isatty(self) -> bool:
+        return True
+
+    def write(self, text: str) -> int:
+        self._writes += 1
+        if self._writes == self._fail_on_write:
+            super().write(text[: self._keep])
+            raise OSError("terminal went away")
+        return super().write(text)
+
+
+class TestPartialPaint:
+    def make(self, fail_on_write: int = 2) -> tuple[ToolbarPainter, PartialWriteStream, Any]:
+        """Build a painter over a terminal that fails part-way through one flushed batch.
+
+        Batch one is the margin install, so the default targets the first paint.
+        """
+        stream = PartialWriteStream(fail_on_write=fail_on_write)
+        screen = {"rows": 24, "columns": 5}
+        output = Vt100_Output(stream, lambda: Size(rows=screen["rows"], columns=screen["columns"]))
+        display = ResizableDisplay(output, screen)
+        assert display.acquire() is True
+        painter = ToolbarPainter(
+            display=display,
+            lock=TerminalLock(),
+            style=DummyStyle(),
+            color_depth=ColorDepth.DEPTH_8_BIT,
+        )
+        return painter, stream, display
+
+    def test_a_partial_paint_restores_wrap_and_cursor_state(self) -> None:
+        """Leaving autowrap off would make the next ordinary line wrap where it should not."""
+        painter, stream, _display = self.make()
+        prepared = painter.prepare(lambda: "hi")
+        assert prepared is not None
+        with pytest.raises(OSError, match="terminal went away"):
+            painter.paint(prepared)
+
+        written = stream.getvalue()
+        assert "\x1b[?7l" in written  # the paint really did start emitting
+        assert written.endswith("\x1b[?7h\x1b8")  # and the cleanup really did finish it
+
+    def test_a_partial_paint_discards_the_baseline(self) -> None:
+        """Some cells were overwritten and some were not; what the band shows is unknown."""
+        painter, _stream, _display = self.make(fail_on_write=3)
+        first = painter.prepare(lambda: "hi")
+        assert first is not None
+        assert painter.paint(first) is True
+        assert painter.last_frame is not None
+
+        second = painter.prepare(lambda: "zz")
+        assert second is not None
+        with pytest.raises(OSError, match="terminal went away"):
+            painter.paint(second)
+        assert painter.last_frame is None
+
+    def test_the_next_paint_after_a_failure_is_a_full_one(self) -> None:
+        """A diff against the discarded baseline would skip the cells that never arrived."""
+        painter, stream, _display = self.make(fail_on_write=3)
+        first = painter.prepare(lambda: "hi")
+        assert first is not None
+        painter.paint(first)
+
+        second = painter.prepare(lambda: "zz")
+        assert second is not None
+        with pytest.raises(OSError, match="terminal went away"):
+            painter.paint(second)
+
+        stream.truncate(0)
+        stream.seek(0)
+        again = painter.prepare(lambda: "hi")
+        assert again is not None
+        assert painter.paint(again) is True
+        # The whole band, from its first column: not just the cells that differ from "hi".
+        assert "\x1b[24;1Hhi   " in re.sub(r"\x1b\[[0-9;]*m", "", stream.getvalue())

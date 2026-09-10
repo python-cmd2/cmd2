@@ -476,3 +476,41 @@ class TestRestorationOwnership:
             assert container.filter is original
         finally:
             harness.close()
+
+
+class PartialWriteStream(TtyStringIO):
+    """Writes a prefix of one flushed batch and then fails, as a real terminal can."""
+
+    def __init__(self, fail_on_write: int, keep: int = 12) -> None:
+        super().__init__()
+        self._writes = 0
+        self._fail_on_write = fail_on_write
+        self._keep = keep
+
+    def write(self, text: str) -> int:
+        self._writes += 1
+        if self._writes == self._fail_on_write:
+            super().write(text[: self._keep])
+            raise OSError("terminal went away")
+        return super().write(text)
+
+
+class TestPartialStartupPaint:
+    def test_a_half_written_first_paint_leaves_no_state_behind(self) -> None:
+        """Review finding: rollback released the margins over a cursor still in the band."""
+        harness = Harness()
+        try:
+            # Batch one installs the margins; batch two is the first paint.
+            harness.stream = PartialWriteStream(fail_on_write=2)
+            harness.backend.stdout = harness.stream
+            with pytest.raises(OSError, match="terminal went away"):
+                harness.toolbar.start()
+
+            written = harness.stream.getvalue()
+            # Wrap mode and cursor are put back before the margins are released, so the
+            # release does not save a cursor that is still inside the band.
+            assert written.index("\x1b[?7h") < written.index("\x1b[r")
+            assert harness.toolbar.is_active is False
+            assert harness.app.output is harness.backend
+        finally:
+            harness.close()
