@@ -30,7 +30,6 @@ from cmd2 import (
     CommandSet,
     Completions,
     SubcommandRecord,
-    clipboard,
     constants,
     exceptions,
     plugin,
@@ -864,29 +863,38 @@ def test_pipe_to_shell_and_redirect(redirection_app) -> None:
     os.remove(filename)
 
 
-def test_pipe_to_shell_error(redirection_app) -> None:
-    # Try to pipe command output to a shell command that doesn't exist in order to produce an error
+def test_pipe_to_shell_error(redirection_app, mocker, capsys) -> None:
+    """An already-exited pipe process must be reported before the command runs.
+
+    A real nonexistent command may take longer than the startup probe under load.
+    In that case the command runs and writes to a closing pipe instead, exercising
+    a different path (including EINVAL on Windows). Model the early exit explicitly.
+    """
+    popen = mocker.patch("subprocess.Popen", autospec=True)
+    process = popen.return_value
+    process.returncode = 127
+    process.wait.return_value = 127
+
     out, err = run_cmd(redirection_app, "print_output | foobarbaz.this_does_not_exist")
     assert not out
-    assert "Pipe process exited with code" in err[0]
+    assert "Pipe process exited with code 127 before command could run" in " ".join(err)
+    assert capsys.readouterr().out == ""
+    process.wait.assert_called_once()
+    assert popen.call_args.kwargs["stdin"].closed
 
 
-try:
-    # try getting the contents of the clipboard
-    _ = clipboard.get_paste_buffer()
-    # pyperclip raises at least the following types of exceptions
-    #   FileNotFoundError on Windows Subsystem for Linux (WSL) when Windows paths are removed from $PATH
-    #   ValueError for headless Linux systems without Gtk installed
-    #   AssertionError can be raised by paste_klipper().
-    #   PyperclipException for pyperclip-specific exceptions
-except Exception:  # noqa: BLE001
-    can_paste = False
-else:
-    can_paste = True
+def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str], mocker) -> None:
+    # Exercise cmd2's real clipboard redirection against a private backend, not the
+    # shared OS clipboard (which another test run or desktop application can alter).
+    contents = "previous clipboard contents\n"
 
+    def copy(text: str) -> None:
+        nonlocal contents
+        contents = text
 
-@pytest.mark.skipif(not can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
-def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str]) -> None:
+    mocker.patch("pyperclip.copy", autospec=True, side_effect=copy)
+    mocker.patch("pyperclip.paste", autospec=True, side_effect=lambda: contents)
+
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(redirection_app, "print_output >")
 
@@ -932,10 +940,7 @@ def test_allow_clipboard_initializer(redirection_app) -> None:
     assert noclipcmd.allow_clipboard is False
 
 
-# if clipboard access is not allowed, cmd2 should check that first
-# before it tries to do anything with pyperclip, that's why we can
-# safely run this test without skipping it if pyperclip doesn't
-# work in the test environment, like we do for test_send_to_paste_buffer()
+# Disallowing clipboard access must be checked before contacting the backend.
 def test_allow_clipboard(base_app) -> None:
     base_app.allow_clipboard = False
     out, err = run_cmd(base_app, "help >")

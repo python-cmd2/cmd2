@@ -1,5 +1,6 @@
 """Cmd2 unit/functional testing"""
 
+import os
 import sys
 from collections.abc import Callable
 from contextlib import redirect_stderr
@@ -95,6 +96,18 @@ def neutral_color_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """
     for name in COLOR_ENVIRONMENT:
         monkeypatch.delenv(name, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def fixed_terminal_size(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep wrapping independent of the caller's terminal and xdist worker environment.
+
+    Clear explicit dimensions as well as fixing the OS query: Rich and argparse
+    consult both. Individual tests can still override geometry with monkeypatch.
+    """
+    monkeypatch.delenv("COLUMNS", raising=False)
+    monkeypatch.delenv("LINES", raising=False)
+    monkeypatch.setattr(os, "get_terminal_size", lambda fd=1: os.terminal_size((80, 24)))
 
 
 @pytest.fixture

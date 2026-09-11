@@ -25,6 +25,18 @@ def test_color_environment_does_not_leak_into_tests(name: str) -> None:
     )
 
 
+def test_terminal_dimensions_do_not_leak_into_tests() -> None:
+    """Both Rich and argparse must see the geometry used by wrapping assertions."""
+    import shutil
+
+    from rich.console import Console
+
+    assert "COLUMNS" not in os.environ
+    assert "LINES" not in os.environ
+    assert shutil.get_terminal_size() == (80, 24)
+    assert Console(force_terminal=False, legacy_windows=False).size == (80, 24)
+
+
 class EncodingProbe(cmd2.Cmd):
     """Reports the encoding of whatever stream output is currently going to."""
 
