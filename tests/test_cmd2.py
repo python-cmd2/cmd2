@@ -5,7 +5,9 @@ import os
 import signal
 import sys
 import tempfile
+import threading
 from code import InteractiveConsole
+from concurrent.futures import ThreadPoolExecutor
 from typing import (
     NoReturn,
     cast,
@@ -30,7 +32,6 @@ from cmd2 import (
     CommandSet,
     Completions,
     SubcommandRecord,
-    clipboard,
     constants,
     exceptions,
     plugin,
@@ -842,7 +843,7 @@ def test_disallow_redirection(redirection_app: RedirectionApp, capsys: pytest.Ca
     assert not os.path.exists(filename)
 
 
-def test_pipe_to_shell(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str]) -> None:
+def test_pipe_to_shell(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str], running_pipe_process) -> None:
     out, err = run_cmd(redirection_app, "print_output | sort")
 
     # Verify print() went to sys.stdout
@@ -855,7 +856,7 @@ def test_pipe_to_shell(redirection_app: RedirectionApp, capsys: pytest.CaptureFi
     assert not err
 
 
-def test_pipe_to_shell_and_redirect(redirection_app) -> None:
+def test_pipe_to_shell_and_redirect(redirection_app, running_pipe_process) -> None:
     filename = "out.txt"
     out, err = run_cmd(redirection_app, f"print_output | sort > {filename}")
     assert not out
@@ -864,29 +865,38 @@ def test_pipe_to_shell_and_redirect(redirection_app) -> None:
     os.remove(filename)
 
 
-def test_pipe_to_shell_error(redirection_app) -> None:
-    # Try to pipe command output to a shell command that doesn't exist in order to produce an error
+def test_pipe_to_shell_error(redirection_app, mocker, capsys) -> None:
+    """An already-exited pipe process must be reported before the command runs.
+
+    A real nonexistent command may take longer than the startup probe under load.
+    In that case the command runs and writes to a closing pipe instead, exercising
+    a different path (including EINVAL on Windows). Model the early exit explicitly.
+    """
+    popen = mocker.patch("subprocess.Popen", autospec=True)
+    process = popen.return_value
+    process.returncode = 127
+    process.wait.return_value = 127
+
     out, err = run_cmd(redirection_app, "print_output | foobarbaz.this_does_not_exist")
     assert not out
-    assert "Pipe process exited with code" in err[0]
+    assert "Pipe process exited with code 127 before command could run" in " ".join(err)
+    assert capsys.readouterr().out == ""
+    process.wait.assert_called_once()
+    assert popen.call_args.kwargs["stdin"].closed
 
 
-try:
-    # try getting the contents of the clipboard
-    _ = clipboard.get_paste_buffer()
-    # pyperclip raises at least the following types of exceptions
-    #   FileNotFoundError on Windows Subsystem for Linux (WSL) when Windows paths are removed from $PATH
-    #   ValueError for headless Linux systems without Gtk installed
-    #   AssertionError can be raised by paste_klipper().
-    #   PyperclipException for pyperclip-specific exceptions
-except Exception:  # noqa: BLE001
-    can_paste = False
-else:
-    can_paste = True
+def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str], mocker) -> None:
+    # Exercise cmd2's real clipboard redirection against a private backend, not the
+    # shared OS clipboard (which another test run or desktop application can alter).
+    contents = "previous clipboard contents\n"
 
+    def copy(text: str) -> None:
+        nonlocal contents
+        contents = text
 
-@pytest.mark.skipif(not can_paste, reason="Pyperclip could not find a copy/paste mechanism for your system")
-def test_send_to_paste_buffer(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str]) -> None:
+    mocker.patch("pyperclip.copy", autospec=True, side_effect=copy)
+    mocker.patch("pyperclip.paste", autospec=True, side_effect=lambda: contents)
+
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(redirection_app, "print_output >")
 
@@ -932,10 +942,7 @@ def test_allow_clipboard_initializer(redirection_app) -> None:
     assert noclipcmd.allow_clipboard is False
 
 
-# if clipboard access is not allowed, cmd2 should check that first
-# before it tries to do anything with pyperclip, that's why we can
-# safely run this test without skipping it if pyperclip doesn't
-# work in the test environment, like we do for test_send_to_paste_buffer()
+# Disallowing clipboard access must be checked before contacting the backend.
 def test_allow_clipboard(base_app) -> None:
     base_app.allow_clipboard = False
     out, err = run_cmd(base_app, "help >")
@@ -955,6 +962,9 @@ def test_base_timing(base_app) -> None:
 
 
 def test_base_debug(base_app) -> None:
+    # Verify the debug toggle and real traceback, without syntax-highlighting the
+    # entire cmd2 source file just to assert the traceback header.
+    base_app.traceback_kwargs["suppress"] = [cmd2]
     # Purposely set the editor to None
     base_app.editor = None
 
@@ -1267,6 +1277,37 @@ def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
     assert out == "hello\n\n"
 
 
+def _run_until_alerts_processed(app: cmd2.Cmd, pipe_input) -> None:
+    """Quit only once the alert worker has finished the queued batch.
+
+    Sending quit before starting the prompt races command input against the alert
+    worker. Observe the worker returning to its condition wait after draining the
+    queue, so even a stale prompt-only alert (which emits nothing) is accounted for.
+    """
+    assert app._alert_queue
+    processed = threading.Event()
+    wait_for = app._alert_condition.wait_for
+
+    def observe_wait(predicate, timeout=None):
+        # The worker still holds the condition here; all effects of the previous
+        # batch, including printing or invalidation, have completed.
+        if not app._alert_queue:
+            processed.set()
+        return wait_for(predicate, timeout)
+
+    def quit_after_processing() -> None:
+        try:
+            assert processed.wait(timeout=5), "the alert worker never finished the queued batch"
+        finally:
+            # Also release the prompt on failure, so the assertion cannot hang it.
+            pipe_input.send_text("quit\n")
+
+    with mock.patch.object(app._alert_condition, "wait_for", side_effect=observe_wait), ThreadPoolExecutor() as executor:
+        interaction = executor.submit(quit_after_processing)
+        app._cmdloop()
+        interaction.result(timeout=5)
+
+
 @pytest.mark.skipif(
     sys.platform.startswith("win"),
     reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
@@ -1313,9 +1354,7 @@ def test_async_alert(base_app: cmd2.Cmd, msg: str, prompt: str, is_stale: bool) 
                 history=base_app.main_session.history,
                 completer=base_app.main_session.completer,
             )
-            pipe_input.send_text("quit\n")
-
-            base_app._cmdloop()
+            _run_until_alerts_processed(base_app, pipe_input)
 
             # If there was a message, patch_stdout handles the redraw (no invalidate)
             if msg:
@@ -1365,8 +1404,7 @@ def test_async_alert_rich(base_app: cmd2.Cmd) -> None:
                 history=base_app.main_session.history,
                 completer=base_app.main_session.completer,
             )
-            pipe_input.send_text("quit\n")
-            base_app._cmdloop()
+            _run_until_alerts_processed(base_app, pipe_input)
 
             # Verify that print_formatted_text was called with a formatted ANSI object
             assert mock_print.called
