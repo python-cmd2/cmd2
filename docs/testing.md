@@ -6,9 +6,9 @@ This covers special considerations when writing unit or integration tests for a 
 
 ## Running cmd2's Test Suite
 
-Run `make test` to execute the suite with coverage and two pytest-xdist workers. The same settings
-apply to `uv run pytest` and CI. Two workers keep startup overhead modest while running independent
-tests concurrently.
+Run `make test` to execute the suite with coverage and pytest-xdist. The default, `-n auto`, selects
+the worker count automatically based on the available CPUs and runs independent tests concurrently.
+The same settings apply to `uv run pytest` and CI.
 
 For a focused test or interactive debugging, disable parallel execution:
 
