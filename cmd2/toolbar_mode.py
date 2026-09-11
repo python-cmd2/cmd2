@@ -61,7 +61,7 @@ class ToolbarMode(StrEnum):
     LEGACY = "legacy"
 
 
-def validate_toolbar_mode(mode: "ToolbarMode | str") -> ToolbarMode:
+def _validate_toolbar_mode(mode: "ToolbarMode | str") -> ToolbarMode:
     """Check that a mode name is one cmd2 offers.
 
     :param mode: the requested mode, as a member or as its name
@@ -75,7 +75,7 @@ def validate_toolbar_mode(mode: "ToolbarMode | str") -> ToolbarMode:
         raise ValueError(f"{mode!r} is not a bottom toolbar mode; choose one of {offered}") from None
 
 
-def dependency_capability(version: str | None = None) -> tuple[bool, str]:
+def _dependency_capability(version: str | None = None) -> tuple[bool, str]:
     """Decide whether the installed prompt-toolkit is one the reservation is qualified for.
 
     :param version: the version to judge; the installed one by default
@@ -88,7 +88,7 @@ def dependency_capability(version: str | None = None) -> tuple[bool, str]:
     return False, f"prompt-toolkit {installed} is not qualified for reserved rendering (qualified: {qualified})"
 
 
-def select_toolbar_mode(
+def _select_toolbar_mode(
     mode: "ToolbarMode | str",
     output: "Output",
     *,
@@ -111,7 +111,7 @@ def select_toolbar_mode(
     :raises ValueError: if the mode is not a mode, or if ``reserved`` was required and a
         prerequisite is missing
     """
-    requested = validate_toolbar_mode(mode)
+    requested = _validate_toolbar_mode(mode)
     if requested is ToolbarMode.LEGACY:
         return ToolbarMode.LEGACY, ""
 
@@ -156,7 +156,7 @@ def _unmet_prerequisite(
         return "the session is not interactive"
     if not layout_supported:
         return "the session's layout has no bottom toolbar window to replace"
-    supported, reason = dependency_capability(version)
+    supported, reason = _dependency_capability(version)
     if not supported:
         return reason
     supported, reason = PhysicalTerminal(output).capability()

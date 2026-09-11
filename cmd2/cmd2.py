@@ -175,7 +175,7 @@ from .rich_utils import (
 )
 from .styles import Cmd2Style
 from .theme import get_pt_theme
-from .toolbar_mode import ToolbarMode, select_toolbar_mode, validate_toolbar_mode
+from .toolbar_mode import ToolbarMode, _select_toolbar_mode, _validate_toolbar_mode
 from .types import (
     BoundCommandFunc,
     BoundCompleter,
@@ -561,7 +561,7 @@ class Cmd:
 
         # How the bottom toolbar is rendered. Validated here rather than at the first prompt
         # so that a typo fails where it was written.
-        self._bottom_toolbar_mode = validate_toolbar_mode(bottom_toolbar_mode)
+        self._bottom_toolbar_mode = _validate_toolbar_mode(bottom_toolbar_mode)
         self._reserved_toolbar: ReservedToolbar | None = None
         # A command display whose thread did not stop when it was asked to. It still owns the
         # terminal, so nothing may be handed the terminal until it lets go.
@@ -2223,7 +2223,7 @@ class Cmd:
         to reserve and the toolbar renders natively, which is why the object is kept even when
         it is inactive -- the terminal can grow back.
         """
-        mode, _reason = select_toolbar_mode(
+        mode, _reason = _select_toolbar_mode(
             self._bottom_toolbar_mode,
             self.main_session.app.output,
             toolbar_enabled=self.main_session.bottom_toolbar is not None,
