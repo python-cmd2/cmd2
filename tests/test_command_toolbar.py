@@ -90,9 +90,10 @@ def test_command_toolbar_redirection_survives_suspension(toolbar_app, tmp_path) 
 
 
 def test_command_toolbar_pipe_output(toolbar_app, running_pipe_process) -> None:
+    # The child needs only sys; -S skips site initialization while retaining real pipe I/O.
     app, _, output = toolbar_app
     with app._command_toolbar_context():
-        app.onecmd_plus_hooks(f'help | "{sys.executable}" -c "import sys; print(sys.stdin.read().upper())"')
+        app.onecmd_plus_hooks(f'help | "{sys.executable}" -S -c "import sys; print(sys.stdin.read().upper())"')
     assert "CMD2 COMMANDS" in output.getvalue()
 
 
@@ -128,7 +129,9 @@ def test_command_toolbar_pipe_process_inherits_terminal(toolbar_app, tmp_path, b
     with destination.open("w+") as handle:
         app.stdout = FileTerminal(handle)
         with mock.patch.object(app, "onecmd", side_effect=command), app._command_toolbar_context():
-            app.onecmd_plus_hooks(f'custom | "{sys.executable}" -c "import sys; sys.stdout.write(sys.stdin.read().upper())"')
+            app.onecmd_plus_hooks(
+                f'custom | "{sys.executable}" -S -c "import sys; sys.stdout.write(sys.stdin.read().upper())"'
+            )
             # The terminal goes back to the toolbar once the pipe process has exited.
             assert app._command_toolbar.app.is_running
             assert app.stdout.proxy is not None

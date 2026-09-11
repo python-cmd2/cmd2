@@ -58,6 +58,8 @@ def test_output_fits_measures_styled_and_wide_text(chop) -> None:
 def test_pager_long_line_navigation_resize_and_typeahead(toolbar_app, chop) -> None:
     app, pipe, _ = toolbar_app
     app.main_session.bottom_toolbar = "STATUS ONE\nSTATUS TWO"
+    # Input and the explicit resize invalidate the display; no periodic redraw is needed.
+    app.main_session.app.refresh_interval = None
     entered, scrolled, resized = (threading.Event() for _ in range(3))
 
     def observe(ui):
@@ -90,7 +92,9 @@ def test_pager_long_line_navigation_resize_and_typeahead(toolbar_app, chop) -> N
     with ThreadPoolExecutor() as executor:
         interaction = executor.submit(interact)
         with app._command_toolbar_context():
-            app._command_toolbar.page("界" * 4000, chop=chop)
+            # Thirty rows at 80 columns: still taller than the initial 24-row
+            # terminal, and longer after the resize, without rendering 100 rows.
+            app._command_toolbar.page("界" * 1200, chop=chop)
         interaction.result(timeout=2)
     assert app._read_raw_input("Next: ", app.main_session) == "next"
 
