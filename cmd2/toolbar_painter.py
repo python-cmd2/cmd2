@@ -21,6 +21,9 @@ band and into the application's rows.
 mouse map, so a handler here would never be called; rendering the visible part is the honest
 subset rather than advertising support that does not exist.
 
+**Lines are clipped with an ellipsis.** Newlines advance to the next reserved row;
+horizontal overflow never wraps. Omitted columns or rows are indicated at the right edge.
+
 **Carriage returns are dropped and tabs are expanded.** Both are cursor motion in a context
 where the painter owns the cursor.
 """
@@ -104,8 +107,9 @@ class ToolbarFrame:
 
         Content that does not fill the frame is padded with default-styled spaces: the pad is
         what overwrites a longer previous frame, so it is content rather than absence of it.
-        Content taller than the band is truncated here -- growing the toolbar is a geometry
-        transition, and writing the extra rows would put them outside the reservation.
+        Each logical line is clipped to the terminal width without wrapping. A right-edge
+        ellipsis marks omitted columns, or omitted lines on the last reserved row. Growing
+        the toolbar is a geometry transition, never a consequence of content overflow.
 
         :param content: the formatted text to lay out
         :param width: the terminal width in columns
@@ -120,6 +124,8 @@ class ToolbarFrame:
             raise ValueError(f"a frame needs a positive height, got {height}")
 
         rows = _layout(content, width, default_style)
+        if len(rows) > height:
+            _mark_truncated(rows[height - 1], default_style)
         blank = tuple(Cell(" ", default_style) for _ in range(width))
         while len(rows) < height:
             rows.append(list(blank))
@@ -129,9 +135,9 @@ class ToolbarFrame:
 def measure_toolbar_height(content: "AnyFormattedText", width: int) -> int:
     """Measure how many rows content needs at a given width.
 
-    This is what sizes the reservation, so it counts wrapping and explicit newlines the same
-    way :meth:`ToolbarFrame.build` lays them out. Empty content still measures one row: an
-    empty toolbar is an intentional visibility change, not a request for no reservation.
+    Only explicit newlines add rows; horizontal overflow is clipped, as in
+    :meth:`ToolbarFrame.build`. Empty content still measures one row. This helper does not
+    change the reservation, whose height is chosen by its owner.
 
     :param content: the formatted text to measure
     :param width: the terminal width in columns
@@ -143,22 +149,38 @@ def measure_toolbar_height(content: "AnyFormattedText", width: int) -> int:
     return max(1, len(_layout(content, width, "")))
 
 
+def _mark_truncated(row: list[Cell], default_style: str) -> None:
+    """Mark omitted content in the rightmost column without splitting a wide character.
+
+    :param row: a padded, nonempty row to modify
+    :param default_style: the style for the indicator and any cleared wide-character cell
+    """
+    if row[-1].is_continuation:
+        row[-2] = Cell(" ", default_style)
+    row[-1] = Cell("…", default_style)
+
+
 def _layout(content: "AnyFormattedText", width: int, default_style: str) -> list[list[Cell]]:
-    """Lay content out into as many full-width rows as it needs.
+    """Clip each logical line to one padded row, marking horizontal overflow.
 
     :param content: the formatted text to lay out
     :param width: the terminal width in columns
-    :param default_style: the style for padding cells
+    :param default_style: the style for padding and truncation indicators
     :return: the rows, each padded to ``width`` cells
     """
     rows: list[list[Cell]] = []
     row: list[Cell] = []
+    clipped = False
 
     def finish_row() -> None:
-        """Pad the row in progress and start a new one."""
+        """Pad and mark the row in progress, then start the next logical line."""
+        nonlocal clipped
         row.extend(Cell(" ", default_style) for _ in range(width - len(row)))
+        if clipped:
+            _mark_truncated(row, default_style)
         rows.append(list(row))
         row.clear()
+        clipped = False
 
     for fragment in to_formatted_text(content):
         style, text = fragment[0], fragment[1]
@@ -168,24 +190,19 @@ def _layout(content: "AnyFormattedText", width: int, default_style: str) -> list
             if char == "\n":
                 finish_row()
                 continue
-            if char == "\r":
+            if char == "\r" or clipped:
                 continue
             if char == "\t":
                 spaces = TAB_WIDTH - (len(row) % TAB_WIDTH)
-                for _ in range(spaces):
-                    if len(row) == width:
-                        finish_row()
-                    row.append(Cell(" ", style))
+                available = width - len(row)
+                row.extend(Cell(" ", style) for _ in range(min(spaces, available)))
+                clipped = spaces > available
                 continue
 
             char_width = get_cwidth(char)
             if char_width == 0 and row:
-                # A combining mark belongs to the character it follows; it occupies no column
-                # of its own, so it joins that cell rather than becoming one. After a wide
-                # character the cell to the left is that character's right half, and the mark
-                # belongs to the half that carries the text -- attaching it to the
-                # continuation cell would give the mark a column of its own and shift every
-                # later cell one place right of where it is on the screen.
+                # Combining marks still belong to a retained character at the right edge.
+                # Once a character is clipped, its marks must be discarded with it.
                 base = len(row) - 1
                 if row[base].is_continuation:
                     base -= 1
@@ -194,16 +211,14 @@ def _layout(content: "AnyFormattedText", width: int, default_style: str) -> list
                 continue
             columns = max(1, char_width)
             if len(row) + columns > width:
-                # Padding rather than splitting: half a wide character at the right edge is
-                # what makes the terminal wrap the row itself, which would put toolbar cells
-                # in a row the frame does not own.
-                finish_row()
+                clipped = True
+                continue
             row.append(Cell(char, style))
             if columns == 2:
                 row.append(Cell("", style, is_continuation=True))
 
-    if row:
-        finish_row()
+    # An empty string is one empty line; a trailing newline introduces another one.
+    finish_row()
     return rows
 
 

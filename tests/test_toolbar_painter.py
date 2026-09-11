@@ -34,6 +34,29 @@ def styles_of(frame: ToolbarFrame, row: int = 0) -> list[str]:
 
 
 class TestShape:
+    @pytest.mark.parametrize(
+        ("content", "width", "height", "expected"),
+        [
+            ("\nSTATUS", 8, 1, ["       …"]),
+            ("STATUS\nnext", 8, 1, ["STATUS …"]),
+            ("abcd", 4, 1, ["abcd"]),
+            ("abcde", 4, 1, ["abc…"]),
+            ("abcdef\nxy", 4, 2, ["abc…", "xy  "]),
+            ("a\nb\nc\nd", 4, 3, ["a   ", "b   ", "c  …"]),
+            ("abc\n", 4, 1, ["abc…"]),
+            ("广", 1, 1, ["…"]),
+            ("a广x", 3, 1, ["a …"]),
+            ("e\u0301abc", 3, 1, ["e\u0301a…"]),
+            ("abx\u0301", 3, 1, ["abx\u0301"]),
+            ("abcde\u0301\nz", 4, 2, ["abc…", "z   "]),
+            ("\tX\ny", 4, 2, ["   …", "y   "]),
+        ],
+    )
+    def test_truncation_is_visible_and_does_not_wrap(self, content, width, height, expected) -> None:
+        frame = ToolbarFrame.build(content, width=width, height=height)
+        assert [text_of(frame, row) for row in range(height)] == expected
+        assert all(len(row) == width for row in frame.rows)
+
     def test_a_frame_is_always_exactly_its_declared_size(self) -> None:
         frame = ToolbarFrame.build("hi", width=10, height=2)
         assert len(frame.rows) == 2
@@ -45,16 +68,16 @@ class TestShape:
         assert text_of(frame) == "hi   "
         assert styles_of(frame) == ["class:toolbar"] * 5
 
-    def test_content_wider_than_the_terminal_wraps(self) -> None:
+    def test_content_wider_than_the_terminal_is_clipped(self) -> None:
         frame = ToolbarFrame.build("abcdef", width=3, height=2)
-        assert text_of(frame, 0) == "abc"
-        assert text_of(frame, 1) == "def"
+        assert text_of(frame, 0) == "ab…"
+        assert text_of(frame, 1) == "   "
 
     def test_content_taller_than_the_band_is_truncated(self) -> None:
         """Growing past the band is a geometry transition, never a write outside it."""
         frame = ToolbarFrame.build("one\ntwo\nthree", width=10, height=2)
         assert text_of(frame, 0) == "one       "
-        assert text_of(frame, 1) == "two       "
+        assert text_of(frame, 1) == "two      …"
 
     def test_an_explicit_newline_starts_a_row(self) -> None:
         frame = ToolbarFrame.build("a\nb", width=3, height=2)
@@ -105,10 +128,10 @@ class TestCellWidths:
     def test_a_wide_character_is_never_split_at_the_right_edge(self) -> None:
         """Half a wide character at the edge is what wraps a row into the one below it."""
         frame = ToolbarFrame.build("a广", width=2, height=2)
-        assert text_of(frame, 0) == "a "
-        assert frame.rows[1][0].char == "广"
+        assert text_of(frame, 0) == "a…"
+        assert text_of(frame, 1) == "  "
 
-    def test_the_pad_before_a_wrapped_wide_character_uses_the_default_style(self) -> None:
+    def test_the_truncation_indicator_uses_the_default_style(self) -> None:
         frame = ToolbarFrame.build([("bold", "a广")], width=2, height=2, default_style="base")
         assert styles_of(frame, 0) == ["bold", "base"]
 
@@ -137,8 +160,8 @@ class TestMeasurement:
     def test_a_short_toolbar_is_one_row(self) -> None:
         assert measure_toolbar_height("hi", width=10) == 1
 
-    def test_wrapping_is_counted(self) -> None:
-        assert measure_toolbar_height("abcdef", width=3) == 2
+    def test_horizontal_overflow_does_not_add_rows(self) -> None:
+        assert measure_toolbar_height("abcdef", width=3) == 1
 
     def test_newlines_are_counted(self) -> None:
         assert measure_toolbar_height("a\nb\nc", width=10) == 3
@@ -148,10 +171,10 @@ class TestMeasurement:
         assert measure_toolbar_height("", width=10) == 1
 
     def test_measurement_matches_the_frame_it_would_build(self) -> None:
-        content = [("bold", "wide 广 content that wraps around")]
+        content = [("bold", "wide 广 content that is clipped\nlast row")]
         height = measure_toolbar_height(content, width=12)
         frame = ToolbarFrame.build(content, width=12, height=height)
-        # Nothing was truncated: the last row is where the content ended.
+        # Horizontal clipping does not move content onto the last logical line.
         assert measure_toolbar_height(content, width=12) == len(frame.rows)
         assert text_of(frame, height - 1).strip() != ""
 
@@ -181,12 +204,12 @@ class TestValidation:
     def test_an_empty_frame_reports_zero_width(self) -> None:
         assert ToolbarFrame(rows=()).width == 0
 
-    def test_a_tab_wraps_when_it_reaches_the_edge(self) -> None:
-        """The expansion is cells, so it wraps like any other run of them."""
+    def test_a_tab_is_clipped_when_it_reaches_the_edge(self) -> None:
+        """Tab expansion cannot spill into the next reserved row."""
         frame = ToolbarFrame.build("a\tb", width=4, height=3)
-        assert text_of(frame, 0) == "a   "
+        assert text_of(frame, 0) == "a  …"
         assert text_of(frame, 1) == "    "
-        assert text_of(frame, 2) == "b   "
+        assert text_of(frame, 2) == "    "
 
     def test_a_combining_mark_after_a_wide_character_joins_that_character(self) -> None:
         """Attaching it to the continuation cell instead shifts every later column."""

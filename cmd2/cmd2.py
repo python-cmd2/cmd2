@@ -2132,6 +2132,10 @@ class Cmd:
         your application. This could be information like the application name, current state,
         or even a real-time clock.
 
+        Reserved rendering uses one row and clips each logical line without wrapping. An
+        ellipsis in the rightmost column indicates omitted text or lines after a newline.
+        Widths are measured in terminal columns; wide characters are never split.
+
         During command execution this callback runs in a background UI thread. Protect shared
         state with a lock when necessary. The built-in pager shares this toolbar. It is suspended
         while another prompt, external pager, or interactive shell owns the terminal.

@@ -72,7 +72,7 @@ def terminal_harness(request):
         harness.close()
 
 
-def read_prompt(harness, terminal) -> None:
+def read_prompt(harness, terminal, expected_toolbar="STATUS") -> None:
     """Use the real input reader and CPR binding, then accept a prompt with known height."""
     ui = harness.app.main_session.app
     sent = False
@@ -92,11 +92,37 @@ def read_prompt(harness, terminal) -> None:
         assert sent
         assert terminal.reports
         assert all(row < terminal.screen.lines for row in terminal.reports)
-        assert terminal.screen.display[-1].startswith("STATUS")
+        assert terminal.screen.display[-1].startswith(expected_toolbar)
     finally:
         watchdog.cancel()
         watchdog.join()
         ui.after_render -= ready
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        ("STATUS\nsecond line", "STATUS" + " " * 73 + "…"),
+        ("\nSTATUS", " " * 79 + "…"),
+        ("S" * 81, "S" * 79 + "…"),
+        ("S" * 78 + "广x", "S" * 78 + " …"),
+    ],
+)
+def test_clipped_toolbar_survives_commands_and_prompt_refresh(terminal_harness, content, expected) -> None:
+    harness, terminal = terminal_harness
+    harness.app.main_session.bottom_toolbar = content
+    with harness.app._reserved_toolbar_context():
+        assert terminal.screen.display[-1] == expected
+        with harness.app._command_toolbar_context():
+            harness.app.poutput("ordinary output")
+        assert terminal.screen.display[-1] == expected
+        read_prompt(harness, terminal, expected_toolbar=expected)
+        # A shorter dynamic replacement must remove the old text and indicator.
+        harness.app.main_session.bottom_toolbar = "OK"
+        assert harness.app.reserved_toolbar.refresh()
+        assert terminal.screen.display[-1] == "OK" + " " * 78
+    assert terminal.screen.margins is None
+    assert terminal.screen.display[-1].strip() == ""
 
 
 @pytest.mark.parametrize("row", [1, 22, 23, 24])

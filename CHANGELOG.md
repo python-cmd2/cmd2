@@ -1,5 +1,10 @@
 ## 4.3.0 (TBD)
 
+- Bug Fixes
+    - Reserved bottom toolbars now indicate clipped content with a right-edge ellipsis (`…`). Long
+      lines are truncated without wrapping, and newlines beyond the reserved row are indicated
+      instead of silently hiding content, including when the first line is empty.
+
 - Breaking Changes
     - Replaced `enable_bottom_toolbar` with `bottom_toolbar_mode` in `Cmd.__init__()`. The default,
       `cmd2.ToolbarMode.OFF`, disables the toolbar. Use `cmd2.ToolbarMode.AUTO` where you previously
