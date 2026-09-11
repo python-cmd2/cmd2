@@ -102,17 +102,20 @@ Reserved rendering currently reserves one terminal row. Each logical line is cli
 width; long lines do not wrap. A newline starts another logical line, which is omitted when there is
 no reserved row available. A leading newline therefore leaves an empty first line.
 
-Whenever content is omitted, an ellipsis (`…`) appears in the rightmost column of the affected row.
-Omitted lines are indicated on the last reserved row. The indicator uses the toolbar's default
-style. For example, at a width of eight columns, `abcdefgh` fits unchanged, `abcdefghi` becomes
-`abcdefg…`, and `Ready\nDetails` becomes `Ready  …`. A leading newline displays spaces followed by
-`…`, rather than a completely blank toolbar.
+Whenever visible content is omitted, an ellipsis (`…`) appears in the rightmost column of the
+affected row. Omitted lines are indicated on the last reserved row. The indicator uses the toolbar's
+default style. For example, at a width of eight columns, `abcdefgh` fits unchanged, `abcdefghi`
+becomes `abcdefg…`, and `Ready\nDetails` becomes `Ready  …`. A leading newline displays spaces
+followed by `…`, rather than a completely blank toolbar. Overflow that nobody could have seen is not
+marked: trailing spaces, a trailing tab, and a trailing newline are dropped silently, so text padded
+to the terminal width or ending in a newline shows no indicator.
 
 Widths are measured in terminal display columns, including wide and combining characters. Truncation
 never splits a wide character; it may leave a space before the ellipsis. Tabs expand to eight-column
-tab stops, and carriage returns are ignored. These rules apply to `RESERVED` and to `AUTO` when it
-selects reserved rendering. `LEGACY` retains prompt-toolkit's layout. The number of reserved rows is
-not yet configurable through `Cmd`.
+tab stops, and carriage returns are ignored. Control characters are displayed in caret notation, as
+`LEGACY` rendering displays them, rather than sent to the terminal: an escape character appears as
+`^[`. These rules apply to `RESERVED` and to `AUTO` when it selects reserved rendering. `LEGACY`
+retains prompt-toolkit's layout. The number of reserved rows is not yet configurable through `Cmd`.
 
 ### Refreshing the Toolbar
 

@@ -18,9 +18,10 @@ from prompt_toolkit.output import ColorDepth
 from prompt_toolkit.output.vt100 import Vt100_Output
 from prompt_toolkit.styles import BaseStyle, DummyStyle, DynamicStyle, Style
 
+from cmd2 import toolbar_painter
 from cmd2.terminal_display import TerminalDisplay
 from cmd2.terminal_transaction import TerminalLock, current_transaction, held_higher_level_locks
-from cmd2.toolbar_painter import Cell, ToolbarFrame, ToolbarPainter, measure_toolbar_height
+from cmd2.toolbar_painter import Cell, ToolbarFrame, ToolbarPainter
 
 
 def text_of(frame: ToolbarFrame, row: int = 0) -> str:
@@ -43,19 +44,58 @@ class TestShape:
             ("abcde", 4, 1, ["abc…"]),
             ("abcdef\nxy", 4, 2, ["abc…", "xy  "]),
             ("a\nb\nc\nd", 4, 3, ["a   ", "b   ", "c  …"]),
-            ("abc\n", 4, 1, ["abc…"]),
+            ("abc\n\nx", 4, 1, ["abc…"]),
             ("广", 1, 1, ["…"]),
             ("a广x", 3, 1, ["a …"]),
             ("e\u0301abc", 3, 1, ["e\u0301a…"]),
             ("abx\u0301", 3, 1, ["abx\u0301"]),
             ("abcde\u0301\nz", 4, 2, ["abc…", "z   "]),
             ("\tX\ny", 4, 2, ["   …", "y   "]),
+            ("abcdefgh x", 8, 1, ["abcdefg…"]),
         ],
     )
     def test_truncation_is_visible_and_does_not_wrap(self, content, width, height, expected) -> None:
         frame = ToolbarFrame.build(content, width=width, height=height)
         assert [text_of(frame, row) for row in range(height)] == expected
         assert all(len(row) == width for row in frame.rows)
+
+    @pytest.mark.parametrize(
+        ("content", "width", "height", "expected"),
+        [
+            ("abcdefgh\t", 8, 1, ["abcdefgh"]),
+            ("abcdefgh  ", 8, 1, ["abcdefgh"]),
+            ("abc".ljust(12), 8, 1, ["abc     "]),
+            ("status".center(10), 8, 1, ["  status"]),
+            ("abcdefgh \u0301", 8, 1, ["abcdefgh"]),
+            ("Ready\n", 8, 1, ["Ready   "]),
+            ("abc\n", 4, 1, ["abc "]),
+            ("abc\n   ", 4, 1, ["abc "]),
+            ("abc\n\t\n", 4, 1, ["abc "]),
+            ("abc\n\u200b", 4, 1, ["abc "]),
+        ],
+    )
+    def test_omitted_whitespace_is_not_truncation(self, content, width, height, expected) -> None:
+        """Only content the user would have seen earns the indicator.
+
+        Padding to the column count with ``ljust``, a trailing tab, and the newline that ends
+        ``Console.export_text()`` all overflow by cells nobody can see. Marking those replaces
+        a real character with an ellipsis to announce that nothing was lost.
+        """
+        frame = ToolbarFrame.build(content, width=width, height=height)
+        assert [text_of(frame, row) for row in range(height)] == expected
+
+    def test_an_omitted_line_holding_only_escape_fragments_is_not_truncation(self) -> None:
+        """Escape fragments are never drawn, so a line made of them omits nothing visible."""
+        content = [("", "abc\n"), ("[ZeroWidthEscape]", "\x1b[6n")]
+        frame = ToolbarFrame.build(content, width=4, height=1)
+        assert text_of(frame) == "abc "
+
+    def test_a_combining_mark_after_a_dropped_character_is_dropped_with_it(self) -> None:
+        """Its base is gone, so attaching it to the last retained cell would mark the wrong one."""
+        frame = ToolbarFrame.build("abcdefghi\u0301", width=8, height=1)
+        assert text_of(frame) == "abcdefg…"
+        frame = ToolbarFrame.build("abcdefgh \u0301", width=8, height=1)
+        assert frame.rows[0][7].char == "h"
 
     def test_a_frame_is_always_exactly_its_declared_size(self) -> None:
         frame = ToolbarFrame.build("hi", width=10, height=2)
@@ -126,7 +166,7 @@ class TestCellWidths:
         assert text_of(frame) == "广  "
 
     def test_a_wide_character_is_never_split_at_the_right_edge(self) -> None:
-        """Half a wide character at the edge is what wraps a row into the one below it."""
+        """A wide character that does not fit is clipped whole and marked; nothing wraps."""
         frame = ToolbarFrame.build("a广", width=2, height=2)
         assert text_of(frame, 0) == "a…"
         assert text_of(frame, 1) == "  "
@@ -135,16 +175,47 @@ class TestCellWidths:
         frame = ToolbarFrame.build([("bold", "a广")], width=2, height=2, default_style="base")
         assert styles_of(frame, 0) == ["bold", "base"]
 
+    def test_the_truncation_indicator_is_a_module_constant(self, monkeypatch) -> None:
+        """U+2026 is ambiguous-width; a terminal that draws it two columns wide needs a substitute."""
+        monkeypatch.setattr(toolbar_painter, "TRUNCATION_INDICATOR", "~")
+        frame = ToolbarFrame.build("abcde", width=4, height=1)
+        assert text_of(frame) == "abc~"
+
     def test_a_combining_character_joins_the_cell_before_it(self) -> None:
         frame = ToolbarFrame.build("e\u0301x", width=4, height=1)
         assert frame.rows[0][0].char == "e\u0301"
         assert frame.rows[0][1].char == "x"
 
-    def test_a_leading_combining_character_gets_its_own_cell(self) -> None:
-        """There is nothing to combine with; dropping it would silently lose content."""
-        frame = ToolbarFrame.build("\u0301a", width=4, height=1)
-        assert frame.rows[0][0].char == "\u0301"
-        assert frame.rows[0][1].char == "a"
+    def test_a_leading_combining_character_is_drawn_on_a_space(self) -> None:
+        """There is nothing to combine with, and a cell drawn in zero columns would put every
+        later cell one column right of where the terminal shows it.
+        """
+        frame = ToolbarFrame.build("\u0301xy", width=3, height=1)
+        assert [cell.char for cell in frame.rows[0]] == [" \u0301", "x", "y"]
+        assert all(cell.width == 1 for cell in frame.rows[0])
+
+    @pytest.mark.parametrize(
+        ("content", "expected"),
+        [
+            ("a\x1b[2Jb", "a^[[2Jb "),
+            ("a\x07b", "a^Gb    "),
+            ("a\x85b", "a<85>b  "),
+            ("a\x7fb", "a^?b    "),
+            ("a\x00b", "a^@b    "),
+        ],
+    )
+    def test_control_characters_are_shown_in_caret_notation(self, content, expected) -> None:
+        """Raw control from a plain string would otherwise be executed inside the band.
+
+        The renderer shows ``^[`` for an escape; the painter shows the same thing, so the two
+        modes agree and a stray sequence in a callback cannot clear the screen.
+        """
+        frame = ToolbarFrame.build(content, width=8, height=1)
+        assert text_of(frame) == expected
+
+    def test_control_characters_carry_the_renderer_s_style_class(self) -> None:
+        frame = ToolbarFrame.build([("bold", "a\x1bb")], width=4, height=1)
+        assert styles_of(frame) == ["bold", "bold class:control-character", "bold class:control-character", "bold"]
 
     def test_a_tab_advances_to_the_next_tab_stop(self) -> None:
         frame = ToolbarFrame.build("a\tb", width=12, height=1)
@@ -154,29 +225,6 @@ class TestCellWidths:
         """A stray CR would move the cursor within the band rather than print."""
         frame = ToolbarFrame.build("a\rb", width=4, height=1)
         assert text_of(frame) == "ab  "
-
-
-class TestMeasurement:
-    def test_a_short_toolbar_is_one_row(self) -> None:
-        assert measure_toolbar_height("hi", width=10) == 1
-
-    def test_horizontal_overflow_does_not_add_rows(self) -> None:
-        assert measure_toolbar_height("abcdef", width=3) == 1
-
-    def test_newlines_are_counted(self) -> None:
-        assert measure_toolbar_height("a\nb\nc", width=10) == 3
-
-    def test_empty_content_still_measures_one_row(self) -> None:
-        """An empty toolbar is an intentional visibility change, not a zero-row reservation."""
-        assert measure_toolbar_height("", width=10) == 1
-
-    def test_measurement_matches_the_frame_it_would_build(self) -> None:
-        content = [("bold", "wide 广 content that is clipped\nlast row")]
-        height = measure_toolbar_height(content, width=12)
-        frame = ToolbarFrame.build(content, width=12, height=height)
-        # Horizontal clipping does not move content onto the last logical line.
-        assert measure_toolbar_height(content, width=12) == len(frame.rows)
-        assert text_of(frame, height - 1).strip() != ""
 
 
 class TestValidation:
@@ -192,10 +240,6 @@ class TestValidation:
         assert Cell("a", "").width == 1
         assert Cell("广", "").width == 2
         assert Cell("", "", is_continuation=True).width == 0
-
-    def test_measuring_needs_a_positive_width(self) -> None:
-        with pytest.raises(ValueError, match="width"):
-            measure_toolbar_height("hi", width=0)
 
     def test_a_frame_reports_its_own_size(self) -> None:
         frame = ToolbarFrame.build("hi", width=6, height=2)
@@ -338,6 +382,14 @@ class TestPainting:
         written = harness.written()
         for erase in ("\x1b[K", "\x1b[0K", "\x1b[2K", "\x1b[J", "\x1b[M"):
             assert erase not in written
+
+    def test_a_control_character_never_reaches_the_terminal_raw(self) -> None:
+        """The frame test proves the layout; this proves the wire, which is what matters."""
+        harness = Harness(columns=12)
+        harness.paint("a\x1b[2Jb")
+        written = harness.written()
+        assert "\x1b[2J" not in written
+        assert "a^[[2Jb" in harness.visible()
 
     def test_a_shorter_frame_pads_its_tail_rather_than_erasing_it(self) -> None:
         harness = Harness()

@@ -3,7 +3,10 @@
 - Bug Fixes
     - Reserved bottom toolbars now indicate clipped content with a right-edge ellipsis (`…`). Long
       lines are truncated without wrapping, and newlines beyond the reserved row are indicated
-      instead of silently hiding content, including when the first line is empty.
+      instead of silently hiding content, including when the first line is empty. Trailing
+      whitespace and a trailing newline are not marked, since nothing visible is lost.
+    - Reserved bottom toolbars display control characters in caret notation, as legacy rendering
+      does, instead of sending them to the terminal.
 
 - Breaking Changes
     - Replaced `enable_bottom_toolbar` with `bottom_toolbar_mode` in `Cmd.__init__()`. The default,

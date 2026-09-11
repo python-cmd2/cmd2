@@ -92,7 +92,7 @@ class Geometry:
     #: True viewport height, read from the unwrapped backend.
     physical_rows: int
 
-    #: Terminal width. Toolbar height is measured against this, so a width change is a new
+    #: Terminal width. The band is laid out against this, so a width change is a new
     #: generation even when the height is unchanged.
     columns: int
 
