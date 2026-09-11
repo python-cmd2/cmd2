@@ -11,7 +11,7 @@ wait has already begun would be no protection at all.
 import queue
 import threading
 import time
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, Self
 
 import pytest
@@ -25,6 +25,8 @@ from cmd2.terminal_transaction import (
     guarded_call,
     held_higher_level_locks,
 )
+
+from .conftest import ContendedLock
 
 
 class Sentinel:
@@ -278,32 +280,24 @@ class TestLockOrder:
 
 class TestSerialization:
     def test_two_threads_never_hold_the_terminal_at_once(self) -> None:
-        """The lock is what serializes emission; without it the two bodies meet.
-
-        The overlap is detected with a barrier rather than a sleep. A sleep would only make
-        an overlap *likely* to be observed; a barrier that both threads must reach inside the
-        transaction can only be satisfied if they are genuinely inside it together.
-        """
-        terminal = TerminalLock()
-        both_inside = threading.Barrier(2, timeout=0.2)
-        start = threading.Barrier(2, timeout=5)
-        overlaps: list[int] = []
+        """A contender must wait until the owning transaction finishes."""
+        observed = ContendedLock()
+        terminal = TerminalLock(lock=observed)
+        order = []
 
         def emit() -> None:
-            start.wait()
             with terminal.transaction("paint"):
-                try:
-                    both_inside.wait()
-                except threading.BrokenBarrierError:
-                    return
-                overlaps.append(1)
+                order.append("contender")
 
-        threads = [threading.Thread(target=emit) for _ in range(2)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=5)
-        assert overlaps == []
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with terminal.transaction("owner"):
+                pending = pool.submit(emit)
+                assert observed.contended.wait(5), "contender bypassed the terminal lock"
+                assert order == []
+                assert not pending.done()
+                order.append("owner")
+            pending.result(timeout=5)
+        assert order == ["owner", "contender"]
 
 
 class TestDiagnostics:

@@ -8,6 +8,7 @@ told about a terminal that had already changed again.
 
 import io
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Self
 
 import pytest
@@ -15,6 +16,8 @@ import pytest
 from cmd2.command_toolbar import ToolbarStream
 from cmd2.managed_output import SerializedTerminalWriter
 from cmd2.terminal_transaction import TerminalLock, current_transaction
+
+from .conftest import ContendedLock
 
 
 class RecordingBridge:
@@ -135,43 +138,20 @@ class TestInvalidationContract:
 
 class TestOrdering:
     def test_a_write_and_a_paint_do_not_interleave(self) -> None:
-        """Both take the same lock, so one completes before the other starts."""
-        writer, stream, lock = make()
-        both_inside = threading.Barrier(2, timeout=0.2)
-        start = threading.Barrier(2, timeout=5)
-        overlaps: list[int] = []
-
-        def emit_output() -> None:
-            start.wait()
-            writer.write("output\n")
-
-        def paint() -> None:
-            start.wait()
+        """A managed write cannot reach the stream while a paint owns the terminal."""
+        observed = ContendedLock()
+        lock = TerminalLock(lock=observed)
+        stream = RecordingStream()
+        writer = SerializedTerminalWriter(stream, lock, None)
+        with ThreadPoolExecutor(max_workers=1) as pool:
             with lock.transaction("paint"):
-                try:
-                    both_inside.wait()
-                except threading.BrokenBarrierError:
-                    return
-                overlaps.append(1)
-
-        original_write = stream.write
-
-        def watched(text: str) -> int:
-            try:
-                both_inside.wait()
-            except threading.BrokenBarrierError:
-                pass
-            else:
-                overlaps.append(1)
-            return original_write(text)
-
-        stream.write = watched  # type: ignore[method-assign]
-        threads = [threading.Thread(target=emit_output), threading.Thread(target=paint)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=5)
-        assert overlaps == []
+                pending = pool.submit(writer.write, "output\n")
+                assert observed.contended.wait(5), "write bypassed the paint's lock"
+                assert stream.getvalue() == ""
+                assert not pending.done()
+                stream.write("paint\n")
+            assert pending.result(timeout=5) == len("output\n")
+        assert stream.getvalue() == "paint\noutput\n"
 
     def test_writes_from_two_threads_are_not_torn(self) -> None:
         writer, stream, _lock = make()
