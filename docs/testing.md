@@ -4,6 +4,28 @@
 
 This covers special considerations when writing unit or integration tests for a cmd2 application.
 
+## Running cmd2's Test Suite
+
+Run `make test` to execute the suite with coverage and two pytest-xdist workers. The same settings
+apply to `uv run pytest` and CI. Two workers keep startup overhead modest while running independent
+tests concurrently.
+
+For a focused test or interactive debugging, disable parallel execution:
+
+```sh
+uv run pytest -n 0 tests/test_history.py
+uv run pytest -n 0 --no-cov --pdb tests/test_history.py
+```
+
+Override the worker count with `-n 4`, for example. Coverage is collected for `cmd2` and written to
+the terminal, `coverage.xml`, and `htmlcov/`. Each invocation starts fresh; pass `--cov-append`
+explicitly when combining separate runs is intentional.
+
+Terminal test doubles should answer cursor-position requests unless missing replies are what the
+test exercises. Synchronize concurrent tests with events rather than arbitrary sleeps, and shorten
+test-only expiry intervals when the timeout path is the assertion. Keep generous bounds on waits
+that depend on another thread making progress.
+
 ## Testing Commands
 
 We encourage `cmd2` application developers to look at the

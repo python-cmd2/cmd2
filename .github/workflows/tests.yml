@@ -36,9 +36,7 @@ jobs:
         run: uv sync --no-default-groups --group test
 
       - name: Run tests
-        run:
-          uv run --no-default-groups --group test python -Xutf8 -m pytest --cov
-          --cov-config=pyproject.toml --cov-report=xml tests
+        run: uv run --no-default-groups --group test python -Xutf8 -m pytest tests
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
