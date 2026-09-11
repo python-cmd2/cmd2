@@ -1,5 +1,9 @@
 """Choose between reserved-row and legacy toolbar rendering.
 
+Reserved rendering is experimental. ``legacy`` is the default and the only configuration the
+project supports today; the others are qualified terminal by terminal, and the set of qualified
+combinations is what decides whether ``auto`` selects it at all.
+
 Reserved rendering depends on things cmd2 does not control: which output backend
 prompt-toolkit selected, which version of prompt-toolkit is installed, whether there is a
 terminal at all. This module is the one place those prerequisites are decided, before
@@ -20,36 +24,55 @@ is what cmd2 *installs against*; this set is what the reserved-row mechanism has
 tested against, and it grows only when a version has been through the qualification gates.
 """
 
+from enum import StrEnum
 from importlib.metadata import version as _installed_version
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from .terminal_display import PhysicalTerminal
 
 if TYPE_CHECKING:  # pragma: no cover
     from prompt_toolkit.output import Output
 
-#: The modes a caller may ask for.
-TOOLBAR_MODES: tuple[str, ...] = ("auto", "reserved", "legacy")
-
 #: prompt-toolkit versions the reserved-row mechanism has been qualified against. The bridge
 #: reaches into renderer internals whose shape is not part of any public API, so this is an
 #: exact set rather than a floor.
 QUALIFIED_PROMPT_TOOLKIT_VERSIONS = frozenset({"3.0.53"})
 
-ToolbarMode = Literal["auto", "reserved", "legacy"]
+
+class ToolbarMode(StrEnum):
+    """How the bottom toolbar is rendered.
+
+    A string enum rather than bare strings: this is the one place the set of modes is written
+    down, and every comparison in the codebase is against a member rather than a spelling.
+    Because the members *are* strings, ``bottom_toolbar_mode="reserved"`` keeps working and
+    keeps comparing equal to :attr:`RESERVED`.
+    """
+
+    #: Use reserved rows where the terminal qualifies, and fall back silently where it does
+    #: not. A backend that looks close enough is still a guess, and a wrong guess corrupts the
+    #: screen the user is working in.
+    AUTO = "auto"
+
+    #: Require reserved rows, and refuse to start without them. A caller who asked for this
+    #: and silently got legacy rendering has been given the behaviour they ruled out.
+    RESERVED = "reserved"
+
+    #: Redraw the toolbar with the prompt, as cmd2 always has.
+    LEGACY = "legacy"
 
 
-def validate_toolbar_mode(mode: str) -> str:
+def validate_toolbar_mode(mode: "ToolbarMode | str") -> ToolbarMode:
     """Check that a mode name is one cmd2 offers.
 
-    :param mode: the requested mode
-    :return: the mode, unchanged
+    :param mode: the requested mode, as a member or as its name
+    :return: the corresponding member
     :raises ValueError: if the name is not a mode
     """
-    if mode not in TOOLBAR_MODES:
-        offered = ", ".join(sorted(TOOLBAR_MODES))
-        raise ValueError(f"{mode!r} is not a bottom toolbar mode; choose one of {offered}")
-    return mode
+    try:
+        return ToolbarMode(mode)
+    except ValueError:
+        offered = ", ".join(sorted(member.value for member in ToolbarMode))
+        raise ValueError(f"{mode!r} is not a bottom toolbar mode; choose one of {offered}") from None
 
 
 def dependency_capability(version: str | None = None) -> tuple[bool, str]:
@@ -66,31 +89,31 @@ def dependency_capability(version: str | None = None) -> tuple[bool, str]:
 
 
 def select_toolbar_mode(
-    mode: str,
+    mode: "ToolbarMode | str",
     output: "Output",
     *,
     toolbar_enabled: bool,
     interactive: bool,
     layout_supported: bool = True,
     version: str | None = None,
-) -> tuple[str, str]:
+) -> tuple[ToolbarMode, str]:
     """Decide how the toolbar will be rendered for this session.
 
-    :param mode: the requested mode
+    :param mode: the requested mode, as a member or as its name
     :param output: the backend prompt-toolkit selected
     :param toolbar_enabled: whether a bottom toolbar is configured at all
     :param interactive: whether input and output are a terminal
     :param layout_supported: whether the session's layout has a toolbar window that reserved
         rendering can recognize and hide
     :param version: the prompt-toolkit version to judge; the installed one by default
-    :return: the mode to use -- always ``"reserved"`` or ``"legacy"`` -- and, when falling
-        back from ``auto``, the reason it fell back
+    :return: the mode to use -- always :attr:`~ToolbarMode.RESERVED` or
+        :attr:`~ToolbarMode.LEGACY` -- and, when falling back from ``auto``, the reason
     :raises ValueError: if the mode is not a mode, or if ``reserved`` was required and a
         prerequisite is missing
     """
-    validate_toolbar_mode(mode)
-    if mode == "legacy":
-        return "legacy", ""
+    requested = validate_toolbar_mode(mode)
+    if requested is ToolbarMode.LEGACY:
+        return ToolbarMode.LEGACY, ""
 
     reason = _unmet_prerequisite(
         output,
@@ -100,10 +123,10 @@ def select_toolbar_mode(
         version=version,
     )
     if reason is None:
-        return "reserved", ""
-    if mode == "reserved":
+        return ToolbarMode.RESERVED, ""
+    if requested is ToolbarMode.RESERVED:
         raise ValueError(f"reserved bottom toolbar mode is not available here: {reason}")
-    return "legacy", reason
+    return ToolbarMode.LEGACY, reason
 
 
 def _unmet_prerequisite(

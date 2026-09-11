@@ -175,7 +175,7 @@ from .rich_utils import (
 )
 from .styles import Cmd2Style
 from .theme import get_pt_theme
-from .toolbar_mode import select_toolbar_mode, validate_toolbar_mode
+from .toolbar_mode import ToolbarMode, select_toolbar_mode, validate_toolbar_mode
 from .types import (
     BoundCommandFunc,
     BoundCompleter,
@@ -378,7 +378,7 @@ class Cmd:
         allow_redirection: bool = True,
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
-        bottom_toolbar_mode: str = "legacy",
+        bottom_toolbar_mode: ToolbarMode = ToolbarMode.LEGACY,
         complete_in_thread: bool = True,
         command_sets: Iterable[CommandSet[Any]] | None = None,
         enable_bottom_toolbar: bool = False,
@@ -423,13 +423,15 @@ class Cmd:
                              This allows CommandSets with custom constructor parameters to be
                              loaded.  This also allows the a set of CommandSets to be provided
                              when `auto_load_commands` is set to False
-        :param bottom_toolbar_mode: how the bottom toolbar is rendered. ``"legacy"``, the
-                                    default, redraws it with the prompt. ``"reserved"`` keeps
-                                    it in terminal rows withheld from scrolling, and raises
-                                    ``ValueError`` where that is not available; ``"auto"``
-                                    uses reserved rendering only on qualified terminals and
-                                    falls back silently. Reserved rendering is experimental
-                                    and not yet a supported configuration.
+        :param bottom_toolbar_mode: how the bottom toolbar is rendered, as a
+                                    [cmd2.ToolbarMode][] or its name.
+                                    ``ToolbarMode.LEGACY``, the default, redraws it with the
+                                    prompt. ``ToolbarMode.RESERVED`` keeps it in terminal rows
+                                    withheld from scrolling and raises ``ValueError`` where
+                                    that is not available; ``ToolbarMode.AUTO`` uses reserved
+                                    rendering only on qualified terminals and falls back
+                                    silently. Reserved rendering is experimental and not yet a
+                                    supported configuration.
         :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar at the main prompt and during commands.
                                       Override ``get_bottom_toolbar()`` to define its content.
         :param enable_rprompt: if ``True``, enables a right prompt while at the main prompt.
@@ -1527,12 +1529,14 @@ class Cmd:
         )
 
     @property
-    def bottom_toolbar_mode(self) -> str:
-        """How the bottom toolbar is rendered: ``"auto"``, ``"reserved"`` or ``"legacy"``.
+    def bottom_toolbar_mode(self) -> ToolbarMode:
+        """How the bottom toolbar is rendered.
 
         Read-only after construction: the reservation is established once for the lifetime of
         the command loop, so changing this while one is running would leave the terminal and
         the setting describing different things.
+
+        :return: the mode this application was constructed with
         """
         return self._bottom_toolbar_mode
 
@@ -2226,7 +2230,7 @@ class Cmd:
             interactive=self._is_tty_session(self.main_session),
             layout_supported=native_toolbar_container(self.main_session) is not None,
         )
-        if mode == "legacy":
+        if mode is ToolbarMode.LEGACY:
             yield
             return
 
