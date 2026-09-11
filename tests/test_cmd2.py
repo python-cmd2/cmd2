@@ -5,7 +5,9 @@ import os
 import signal
 import sys
 import tempfile
+import threading
 from code import InteractiveConsole
+from concurrent.futures import ThreadPoolExecutor
 from typing import (
     NoReturn,
     cast,
@@ -1272,6 +1274,37 @@ def test_ctrl_d_at_prompt(say_app, monkeypatch) -> None:
     assert out == "hello\n\n"
 
 
+def _run_until_alerts_processed(app: cmd2.Cmd, pipe_input) -> None:
+    """Quit only once the alert worker has finished the queued batch.
+
+    Sending quit before starting the prompt races command input against the alert
+    worker. Observe the worker returning to its condition wait after draining the
+    queue, so even a stale prompt-only alert (which emits nothing) is accounted for.
+    """
+    assert app._alert_queue
+    processed = threading.Event()
+    wait_for = app._alert_condition.wait_for
+
+    def observe_wait(predicate, timeout=None):
+        # The worker still holds the condition here; all effects of the previous
+        # batch, including printing or invalidation, have completed.
+        if not app._alert_queue:
+            processed.set()
+        return wait_for(predicate, timeout)
+
+    def quit_after_processing() -> None:
+        try:
+            assert processed.wait(timeout=5), "the alert worker never finished the queued batch"
+        finally:
+            # Also release the prompt on failure, so the assertion cannot hang it.
+            pipe_input.send_text("quit\n")
+
+    with mock.patch.object(app._alert_condition, "wait_for", side_effect=observe_wait), ThreadPoolExecutor() as executor:
+        interaction = executor.submit(quit_after_processing)
+        app._cmdloop()
+        interaction.result(timeout=5)
+
+
 @pytest.mark.skipif(
     sys.platform.startswith("win"),
     reason="Don't have a real Windows console with how we are currently running tests in GitHub Actions",
@@ -1318,9 +1351,7 @@ def test_async_alert(base_app: cmd2.Cmd, msg: str, prompt: str, is_stale: bool) 
                 history=base_app.main_session.history,
                 completer=base_app.main_session.completer,
             )
-            pipe_input.send_text("quit\n")
-
-            base_app._cmdloop()
+            _run_until_alerts_processed(base_app, pipe_input)
 
             # If there was a message, patch_stdout handles the redraw (no invalidate)
             if msg:
@@ -1370,8 +1401,7 @@ def test_async_alert_rich(base_app: cmd2.Cmd) -> None:
                 history=base_app.main_session.history,
                 completer=base_app.main_session.completer,
             )
-            pipe_input.send_text("quit\n")
-            base_app._cmdloop()
+            _run_until_alerts_processed(base_app, pipe_input)
 
             # Verify that print_formatted_text was called with a formatted ANSI object
             assert mock_print.called
