@@ -66,7 +66,12 @@ test = [
     "pytest-mock>=3.14.1",
     "pytest-xdist>=3.8",
 ]
-validate = ["ipython>=8.23", "mypy>=2.3.1", "ty>=0.0.75", "types-setuptools>=80.8.0"]
+validate = [
+    "ipython>=8.23",
+    "mypy>=2.3.1",
+    "ty>=0.0.75",
+    "types-setuptools>=80.8.0",
+]
 
 [tool.mypy]
 disallow_incomplete_defs = true
@@ -97,7 +102,7 @@ warn_unused_ignores = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [
-    "-n=2",
+    "-n=auto",
     "--cov=cmd2",
     "--cov-config=pyproject.toml",
     "--cov-report=xml",
