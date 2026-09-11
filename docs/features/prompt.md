@@ -66,13 +66,18 @@ output appears above the toolbar.
 
 ### Enabling the Toolbar
 
-To enable the toolbar, set `enable_bottom_toolbar=True` in the [cmd2.Cmd.__init__][] constructor:
+To enable the toolbar, set `bottom_toolbar_mode=cmd2.ToolbarMode.AUTO` in the [cmd2.Cmd.__init__][]
+constructor:
 
 ```py
 class App(cmd2.Cmd):
     def __init__(self):
-        super().__init__(enable_bottom_toolbar=True)
+        super().__init__(bottom_toolbar_mode=cmd2.ToolbarMode.AUTO)
 ```
+
+The default is `cmd2.ToolbarMode.OFF`. `AUTO` uses reserved terminal rows where supported and falls
+back to `LEGACY` rendering elsewhere. Select `LEGACY` to always redraw the toolbar with the prompt,
+or `RESERVED` to require reserved rows and raise an error if unavailable.
 
 ### Customizing Toolbar Content
 

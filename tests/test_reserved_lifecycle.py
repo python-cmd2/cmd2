@@ -6,6 +6,7 @@ shell is the one they started with.
 """
 
 import io
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -24,6 +25,20 @@ from cmd2.reserved_toolbar import native_toolbar_container
 class TtyStringIO(io.StringIO):
     """A stream that claims to be a terminal, as the backend requires."""
 
+    reply: Callable[[str], None] | None = None
+
+    def write(self, data: str) -> int:
+        """Answer each cursor request through the real input reader.
+
+        These lifecycle tests use a fixed prompt origin; screen geometry is tested
+        separately. Leaving requests unanswered makes every shutdown wait a second.
+        """
+        written = super().write(data)
+        if self.reply is not None:
+            for _ in range(data.count("\x1b[6n")):
+                self.reply("\x1b[1;1R")
+        return written
+
     def isatty(self) -> bool:
         return True
 
@@ -37,6 +52,7 @@ class Harness:
         self.backend = Vt100_Output(self.stream, lambda: self.size)
         self._pipe = create_pipe_input()
         self.pipe = self._pipe.__enter__()
+        self.stream.reply = self.pipe.send_text
         # Bind the ambient app session to this terminal. Without it, prompt-toolkit builds a
         # real one on demand -- patch_stdout() in _read_raw_input() does -- and on Windows that
         # means asking for a console the CI runner does not have.

@@ -269,6 +269,8 @@ def test_pager_search_abort_keys(toolbar_app, key) -> None:
     registered explicitly so that they still work when the main prompt uses Vi mode.
     """
     app, pipe, _ = toolbar_app
+    # The pipe sends complete escape sequences; only a bare Escape needs this timer.
+    app.main_session.app.ttimeoutlen = 0.01
     lines = [f"row {index:03d}" for index in range(100)]
 
     def script(keys) -> None:
@@ -292,6 +294,8 @@ def test_pager_close_keys(toolbar_app, key) -> None:
     sequences that arrive with more bytes behind them.
     """
     app, pipe, _ = toolbar_app
+    # The pipe sends complete escape sequences; only a bare Escape needs this timer.
+    app.main_session.app.ttimeoutlen = 0.01
     entered = threading.Event()
     closed = threading.Event()
 

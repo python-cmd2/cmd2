@@ -17,7 +17,7 @@ from prompt_toolkit.keys import Keys
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.shortcuts import PromptSession
 
-from cmd2 import Cmd, command_toolbar
+from cmd2 import Cmd, ToolbarMode, command_toolbar
 
 from .conftest import RecordingOutput, Terminal
 
@@ -260,7 +260,7 @@ class CprOutput(RecordingOutput):
         return True
 
 
-def test_command_toolbar_flushes_writes_waiting_on_cursor_reports() -> None:
+def test_command_toolbar_flushes_writes_waiting_on_cursor_reports(monkeypatch) -> None:
     app = Cmd(allow_cli_args=False)
     output = Terminal()
     app.stdout = output
@@ -272,6 +272,15 @@ def test_command_toolbar_flushes_writes_waiting_on_cursor_reports() -> None:
             bottom_toolbar="STATUS",
             refresh_interval=0.01,
         )
+        # Keep a real unanswered request, but expire its shutdown wait promptly.
+        # This test checks that queued output survives expiry, not the timeout duration.
+        renderer = app.main_session.app.renderer
+        wait_for_cpr = renderer.wait_for_cpr_responses
+
+        async def expire_cpr() -> None:
+            await wait_for_cpr(timeout=0.01)
+
+        monkeypatch.setattr(renderer, "wait_for_cpr_responses", expire_cpr)
         # Terminal writes wait for a pending cursor position report, so stopping the
         # display must not cancel them out from under the text.
         with app._command_toolbar_context():
@@ -605,7 +614,7 @@ def test_cmdloop_restores_signal_handlers_when_the_loop_fails(toolbar_app, monke
 
 @pytest.mark.parametrize("enabled", [False, True])
 def test_command_toolbar_headless(enabled) -> None:
-    app = Cmd(allow_cli_args=False, enable_bottom_toolbar=enabled)
+    app = Cmd(allow_cli_args=False, bottom_toolbar_mode=ToolbarMode.AUTO if enabled else ToolbarMode.OFF)
     with mock.patch("cmd2.command_toolbar.CommandToolbar") as toolbar, app._command_toolbar_context():
         toolbar.assert_not_called()
 
@@ -840,7 +849,7 @@ def test_command_toolbar_startup_timeout_does_not_block_on_cleanup(toolbar_app, 
     app, _, _ = toolbar_app
     blocked = threading.Event()
     monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
-    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
 
     def blocking_toolbar() -> str:
         blocked.wait(timeout=10)
@@ -886,7 +895,7 @@ def test_command_toolbar_suspension_does_not_hand_over_a_terminal_it_still_owns(
     """A pause that timed out did not stop anything, and must not pretend otherwise."""
     app, _, _ = toolbar_app
     blocked = threading.Event()
-    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
     entered = []
 
     try:
@@ -911,7 +920,7 @@ def test_command_toolbar_that_would_not_stop_is_not_used_again(toolbar_app, monk
     """The surviving thread outlives this display object, so the refusal has to as well."""
     app, _, _ = toolbar_app
     blocked = threading.Event()
-    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
 
     try:
         with contextlib.suppress(RuntimeError), app._command_toolbar_context():
@@ -932,7 +941,7 @@ def test_command_toolbar_that_would_not_stop_keeps_the_application(toolbar_app, 
     """Its layout and bindings are still in use; restoring them would pull them out from under it."""
     app, _, _ = toolbar_app
     blocked = threading.Event()
-    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
 
     try:
         with contextlib.suppress(RuntimeError), app._command_toolbar_context():
@@ -954,7 +963,7 @@ def test_a_surviving_display_blocks_later_handoffs(toolbar_app, monkeypatch) -> 
     app, _, _ = toolbar_app
     blocked = threading.Event()
     monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
-    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
     entered = []
 
     try:
@@ -976,7 +985,7 @@ def test_a_surviving_display_blocks_the_prompt(toolbar_app, monkeypatch) -> None
     app, _, _ = toolbar_app
     blocked = threading.Event()
     monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
-    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
 
     try:
         app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"
@@ -999,7 +1008,7 @@ def test_the_refusal_lifts_when_the_display_finally_exits(toolbar_app, monkeypat
     app, _, _ = toolbar_app
     blocked = threading.Event()
     monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
-    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
 
     prompt_layout = app.main_session.app.layout
     prompt_bindings = app.main_session.app.key_bindings
@@ -1028,7 +1037,7 @@ def test_a_surviving_display_stops_another_from_starting(toolbar_app, monkeypatc
     app, _, _ = toolbar_app
     blocked = threading.Event()
     monkeypatch.setattr(command_toolbar, "_STARTUP_TIMEOUT", 0.2)
-    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.2)
+    monkeypatch.setattr(command_toolbar, "_SHUTDOWN_TIMEOUT", 0.01)
 
     try:
         app.main_session.bottom_toolbar = lambda: blocked.wait(timeout=10) or "STATUS"

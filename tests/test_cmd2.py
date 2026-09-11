@@ -4521,17 +4521,17 @@ def test_refresh_interval() -> None:
     assert custom_app.main_session.refresh_interval == 5.0
 
 
-def test_enable_bottom_toolbar() -> None:
+def test_bottom_toolbar_mode() -> None:
     # Test default
     default_app = cmd2.Cmd()
     assert default_app.main_session.bottom_toolbar is None
 
-    # Test True
-    custom_app = cmd2.Cmd(enable_bottom_toolbar=True)
+    # Test enabled
+    custom_app = cmd2.Cmd(bottom_toolbar_mode=cmd2.ToolbarMode.AUTO)
     assert custom_app.main_session.bottom_toolbar == custom_app.get_bottom_toolbar
 
-    # Test False
-    custom_app = cmd2.Cmd(enable_bottom_toolbar=False)
+    # Test disabled
+    custom_app = cmd2.Cmd(bottom_toolbar_mode=cmd2.ToolbarMode.OFF)
     assert custom_app.main_session.bottom_toolbar is None
 
 
@@ -4653,7 +4653,6 @@ def test_create_main_session_with_custom_tty() -> None:
         app._create_main_session(
             auto_suggest=True,
             completekey=app.DEFAULT_COMPLETEKEY,
-            enable_bottom_toolbar=False,
             enable_rprompt=False,
             complete_in_thread=False,
             refresh_interval=0.0,

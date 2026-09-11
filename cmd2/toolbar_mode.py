@@ -1,15 +1,15 @@
-"""Choose between reserved-row and legacy toolbar rendering.
+"""Choose whether and how to render the bottom toolbar.
 
-Reserved rendering is experimental. ``legacy`` is the default and the only configuration the
-project supports today; the others are qualified terminal by terminal, and the set of qualified
-combinations is what decides whether ``auto`` selects it at all.
+The toolbar is disabled by default. Enabled toolbars can use legacy rendering or experimental
+reserved rendering, qualified terminal by terminal. The set of qualified combinations decides
+whether ``auto`` selects reserved rendering.
 
 Reserved rendering depends on things cmd2 does not control: which output backend
 prompt-toolkit selected, which version of prompt-toolkit is installed, whether there is a
 terminal at all. This module is the one place those prerequisites are decided, before
 anything binds a bridge or writes a margin sequence.
 
-The two non-default modes answer the same question differently, on purpose:
+The two modes that can reserve rows answer the same question differently, on purpose:
 
 ``auto`` falls back to legacy rendering for anything it has not qualified. A backend that
 looks close enough is still a guess, and a wrong guess here corrupts the screen the user is
@@ -47,6 +47,9 @@ class ToolbarMode(StrEnum):
     Because the members *are* strings, ``bottom_toolbar_mode="reserved"`` keeps working and
     keeps comparing equal to :attr:`RESERVED`.
     """
+
+    #: Disable the bottom toolbar (the default).
+    OFF = "off"
 
     #: Use reserved rows where the terminal qualifies, and fall back silently where it does
     #: not. A backend that looks close enough is still a guess, and a wrong guess corrupts the
@@ -106,14 +109,14 @@ def _select_toolbar_mode(
     :param layout_supported: whether the session's layout has a toolbar window that reserved
         rendering can recognize and hide
     :param version: the prompt-toolkit version to judge; the installed one by default
-    :return: the mode to use -- always :attr:`~ToolbarMode.RESERVED` or
-        :attr:`~ToolbarMode.LEGACY` -- and, when falling back from ``auto``, the reason
+    :return: the selected mode (``off``, ``legacy``, or ``reserved``) and, when
+        falling back from ``auto``, the reason
     :raises ValueError: if the mode is not a mode, or if ``reserved`` was required and a
         prerequisite is missing
     """
     requested = _validate_toolbar_mode(mode)
-    if requested is ToolbarMode.LEGACY:
-        return ToolbarMode.LEGACY, ""
+    if requested in (ToolbarMode.OFF, ToolbarMode.LEGACY):
+        return requested, ""
 
     reason = _unmet_prerequisite(
         output,

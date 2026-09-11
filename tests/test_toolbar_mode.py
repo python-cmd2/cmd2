@@ -42,8 +42,8 @@ class TestValidation:
         with pytest.raises(ValueError, match=r"auto.*legacy.*reserved"):
             _validate_toolbar_mode("pinned")
 
-    def test_the_modes_are_the_three_the_design_names(self) -> None:
-        assert {member.value for member in ToolbarMode} == {"auto", "reserved", "legacy"}
+    def test_the_available_modes(self) -> None:
+        assert {member.value for member in ToolbarMode} == {"off", "auto", "reserved", "legacy"}
 
     def test_a_mode_is_its_own_string(self) -> None:
         """Nothing that compared these to strings before has to change."""
@@ -98,9 +98,12 @@ class TestAutomaticSelection:
 
 
 class TestForcedModes:
-    def test_legacy_is_selected_whatever_the_terminal_supports(self) -> None:
-        mode, reason = _select_toolbar_mode("legacy", qualified_output(), toolbar_enabled=True, interactive=True)
-        assert mode is ToolbarMode.LEGACY
+    @pytest.mark.parametrize("requested", [ToolbarMode.OFF, ToolbarMode.LEGACY])
+    def test_modes_without_reservations_need_no_qualification(self, requested: ToolbarMode) -> None:
+        mode, reason = _select_toolbar_mode(
+            requested, DummyOutput(), toolbar_enabled=False, interactive=False, layout_supported=False, version="0"
+        )
+        assert mode is requested
         assert reason == ""
 
     def test_reserved_is_selected_when_everything_qualifies(self) -> None:
@@ -130,18 +133,20 @@ class TestForcedModes:
 
 
 class TestConstructorWiring:
-    def test_the_default_is_legacy(self) -> None:
-        """Reserved rendering is opt-in until it has been through the release gates."""
-        assert cmd2.Cmd(allow_cli_args=False).bottom_toolbar_mode is ToolbarMode.LEGACY
+    def test_the_default_is_off(self) -> None:
+        """No toolbar is configured unless the caller selects an enabled mode."""
+        assert cmd2.Cmd(allow_cli_args=False).bottom_toolbar_mode is ToolbarMode.OFF
 
     @pytest.mark.parametrize("mode", list(ToolbarMode))
     def test_a_requested_mode_is_remembered(self, mode: ToolbarMode) -> None:
-        app = cmd2.Cmd(allow_cli_args=False, enable_bottom_toolbar=True, bottom_toolbar_mode=mode)
+        app = cmd2.Cmd(allow_cli_args=False, bottom_toolbar_mode=mode)
         assert app.bottom_toolbar_mode is mode
+        assert (app.main_session.bottom_toolbar is not None) is (mode is not ToolbarMode.OFF)
+        assert app.use_builtin_pager is (mode is not ToolbarMode.OFF)
 
     def test_a_mode_given_as_a_string_is_remembered_as_the_member(self) -> None:
         """Existing calls pass strings; they get the same behaviour and a real member back."""
-        app = cmd2.Cmd(allow_cli_args=False, enable_bottom_toolbar=True, bottom_toolbar_mode="reserved")
+        app = cmd2.Cmd(allow_cli_args=False, bottom_toolbar_mode="reserved")
         assert app.bottom_toolbar_mode is ToolbarMode.RESERVED
 
     def test_the_enum_is_importable_from_the_package(self) -> None:

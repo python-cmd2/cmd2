@@ -36,7 +36,8 @@ While we have strived to maintain compatibility, there are some differences:
 `cmd2` now supports an optional, persistent bottom toolbar. This can be used to display information
 such as the application name, current state, or even a real-time clock.
 
-- **Enablement**: Set `enable_bottom_toolbar=True` in the [cmd2.Cmd.__init__][] constructor.
+- **Enablement**: Set `bottom_toolbar_mode=cmd2.ToolbarMode.AUTO` in the [cmd2.Cmd.__init__][]
+  constructor.
 - **Customization**: Override the [cmd2.Cmd.get_bottom_toolbar][] method to return the content you
   wish to display.
 

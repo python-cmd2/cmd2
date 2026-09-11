@@ -57,7 +57,7 @@ class BasicApp(cmd2.Cmd):
 
         super().__init__(
             auto_suggest=True,
-            enable_bottom_toolbar=True,
+            bottom_toolbar_mode=cmd2.ToolbarMode.AUTO,
             enable_rprompt=True,
             include_ipy=True,
             persistent_history_file="cmd2_history.dat",

@@ -1,8 +1,13 @@
 ## 4.3.0 (TBD)
 
+- Breaking Changes
+    - Replaced `enable_bottom_toolbar` with `bottom_toolbar_mode` in `Cmd.__init__()`. The default,
+      `cmd2.ToolbarMode.OFF`, disables the toolbar. Use `cmd2.ToolbarMode.AUTO` where you previously
+      passed `enable_bottom_toolbar=True`.
+
 - Enhancements
-    - `enable_bottom_toolbar=True` now keeps the toolbar visible and refreshing during command
-      execution
+    - `bottom_toolbar_mode=cmd2.ToolbarMode.AUTO` now keeps the toolbar visible and refreshing
+      during command execution
     - `Cmd.read_input()` and `Cmd.read_secret()` now keep the bottom toolbar visible while they wait
       for input, refreshing at the same `refresh_interval` as the main prompt, instead of the
       toolbar disappearing for the duration of the nested prompt. `Cmd.select()` is unchanged, since

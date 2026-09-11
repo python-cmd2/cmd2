@@ -378,10 +378,9 @@ class Cmd:
         allow_redirection: bool = True,
         auto_load_commands: bool = False,
         auto_suggest: bool = True,
-        bottom_toolbar_mode: ToolbarMode = ToolbarMode.LEGACY,
+        bottom_toolbar_mode: ToolbarMode = ToolbarMode.OFF,
         complete_in_thread: bool = True,
         command_sets: Iterable[CommandSet[Any]] | None = None,
-        enable_bottom_toolbar: bool = False,
         enable_rprompt: bool = False,
         include_ipy: bool = False,
         include_py: bool = False,
@@ -425,15 +424,16 @@ class Cmd:
                              when `auto_load_commands` is set to False
         :param bottom_toolbar_mode: how the bottom toolbar is rendered, as a
                                     [cmd2.ToolbarMode][] or its name.
-                                    ``ToolbarMode.LEGACY``, the default, redraws it with the
-                                    prompt. ``ToolbarMode.RESERVED`` keeps it in terminal rows
+                                    ``ToolbarMode.OFF``, the default, disables it. Other modes
+                                    enable it at the main prompt and during commands; override
+                                    ``get_bottom_toolbar()`` to define its content.
+                                    ``ToolbarMode.LEGACY`` redraws it with the prompt.
+                                    ``ToolbarMode.RESERVED`` keeps it in terminal rows
                                     withheld from scrolling and raises ``ValueError`` where
                                     that is not available; ``ToolbarMode.AUTO`` uses reserved
                                     rendering only on qualified terminals and falls back
                                     silently. Reserved rendering is experimental and not yet a
                                     supported configuration.
-        :param enable_bottom_toolbar: if ``True``, enables a bottom toolbar at the main prompt and during commands.
-                                      Override ``get_bottom_toolbar()`` to define its content.
         :param enable_rprompt: if ``True``, enables a right prompt while at the main prompt.
                                Override ``get_rprompt()`` to define its content.
         :param include_ipy: should the "ipy" command be included for an embedded IPython shell
@@ -572,7 +572,6 @@ class Cmd:
             auto_suggest=auto_suggest,
             complete_in_thread=complete_in_thread,
             completekey=completekey,
-            enable_bottom_toolbar=enable_bottom_toolbar,
             enable_rprompt=enable_rprompt,
             refresh_interval=refresh_interval,
         )
@@ -673,7 +672,7 @@ class Cmd:
 
         # The embedded pager shares the main toolbar. Applications can opt back
         # into their configured external pager by setting this to False.
-        self.use_builtin_pager = enable_bottom_toolbar
+        self.use_builtin_pager = self._bottom_toolbar_mode is not ToolbarMode.OFF
 
         # Set the pager(s) for use when displaying output using a pager
         if sys.platform.startswith("win"):
@@ -825,7 +824,6 @@ class Cmd:
         auto_suggest: bool,
         complete_in_thread: bool,
         completekey: str,
-        enable_bottom_toolbar: bool,
         enable_rprompt: bool,
         refresh_interval: float,
     ) -> PromptSession[str]:
@@ -838,7 +836,7 @@ class Cmd:
         # Base configuration
         kwargs: dict[str, Any] = {
             "auto_suggest": AutoSuggestFromHistory() if auto_suggest else None,
-            "bottom_toolbar": self.get_bottom_toolbar if enable_bottom_toolbar else None,
+            "bottom_toolbar": self.get_bottom_toolbar if self._bottom_toolbar_mode is not ToolbarMode.OFF else None,
             "color_depth": pt_resolve_color_depth(),
             "complete_style": CompleteStyle.MULTI_COLUMN,
             "complete_in_thread": complete_in_thread,
@@ -2125,8 +2123,8 @@ class Cmd:
     def get_bottom_toolbar(self) -> AnyFormattedText:
         """Get the bottom toolbar content.
 
-        This method is called by prompt-toolkit at the main prompt and during commands if ``enable_bottom_toolbar``
-        was set to ``True`` during initialization. Because prompt-toolkit executes this callback
+        This method is called by prompt-toolkit at the main prompt and during commands if ``bottom_toolbar_mode``
+        was set to a mode other than ``ToolbarMode.OFF`` during initialization. Because prompt-toolkit executes this callback
         on every UI refresh (such as on every keypress or at scheduled refresh intervals), keeping
         this function highly optimized is critical to ensuring the CLI remains responsive.
 
@@ -2230,7 +2228,7 @@ class Cmd:
             interactive=self._is_tty_session(self.main_session),
             layout_supported=native_toolbar_container(self.main_session) is not None,
         )
-        if mode is ToolbarMode.LEGACY:
+        if mode is not ToolbarMode.RESERVED:
             yield
             return
 
