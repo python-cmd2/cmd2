@@ -36,6 +36,8 @@ jobs:
         run: uv sync --no-default-groups --group test
 
       - name: Run tests
+        env:
+          COVERAGE_CORE: $${ matrix.python-version != '3.11' && 'sysmon' || '' }
         run: uv run --no-default-groups --group test python -Xutf8 -m pytest tests
 
       - name: Upload test results to Codecov
