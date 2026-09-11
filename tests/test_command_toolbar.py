@@ -30,11 +30,21 @@ def test_command_toolbar_refresh_and_output(toolbar_app, monkeypatch) -> None:
 
     def toolbar():
         threads.append(threading.current_thread())
-        if state[0] == "AFTER":
-            refreshed.set()
         return state[0]
 
+    def after_render(ui):
+        # Content evaluation precedes drawing. Wait for the completed frame, and
+        # inspect its cells: BEFORE and AFTER share the R in column five, so a
+        # correct incremental redraw may emit only AFTE rather than the whole word.
+        screen = ui.renderer._last_screen
+        if screen is not None:
+            size = ui.output.get_size()
+            band = "".join(screen.data_buffer[size.rows - 1][x].char for x in range(size.columns))
+            if band.rstrip() == "AFTER":
+                refreshed.set()
+
     app.main_session.bottom_toolbar = toolbar
+    app.main_session.app.after_render += after_render
     monkeypatch.setattr(sys, "stdout", output)
     original_stderr = sys.stderr
     with app._command_toolbar_context():
@@ -48,7 +58,6 @@ def test_command_toolbar_refresh_and_output(toolbar_app, monkeypatch) -> None:
 
     assert "command output\n" in output.getvalue()
     assert "standard output" in output.getvalue()
-    assert "AFTER" in output.getvalue()
     assert all(thread is not threading.main_thread() and not thread.is_alive() for thread in threads)
     assert app.stdout is output
     assert sys.stdout is output
