@@ -63,7 +63,7 @@ def test_redirection_to_a_file_uses_utf8(tmp_path) -> None:
 PASS_THROUGH = "import sys; sys.stdin.reconfigure(encoding='utf-8'); sys.stdout.write(sys.stdin.read())"
 
 
-def test_piping_uses_utf8(tmp_path) -> None:
+def test_piping_uses_utf8(tmp_path, running_pipe_process) -> None:
     """The same applies to the pipe the subprocess reads from."""
     app = EncodingProbe(allow_cli_args=False)
     target = tmp_path / "piped.txt"

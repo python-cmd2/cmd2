@@ -843,7 +843,7 @@ def test_disallow_redirection(redirection_app: RedirectionApp, capsys: pytest.Ca
     assert not os.path.exists(filename)
 
 
-def test_pipe_to_shell(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str]) -> None:
+def test_pipe_to_shell(redirection_app: RedirectionApp, capsys: pytest.CaptureFixture[str], running_pipe_process) -> None:
     out, err = run_cmd(redirection_app, "print_output | sort")
 
     # Verify print() went to sys.stdout
@@ -856,7 +856,7 @@ def test_pipe_to_shell(redirection_app: RedirectionApp, capsys: pytest.CaptureFi
     assert not err
 
 
-def test_pipe_to_shell_and_redirect(redirection_app) -> None:
+def test_pipe_to_shell_and_redirect(redirection_app, running_pipe_process) -> None:
     filename = "out.txt"
     out, err = run_cmd(redirection_app, f"print_output | sort > {filename}")
     assert not out
@@ -962,6 +962,9 @@ def test_base_timing(base_app) -> None:
 
 
 def test_base_debug(base_app) -> None:
+    # Verify the debug toggle and real traceback, without syntax-highlighting the
+    # entire cmd2 source file just to assert the traceback header.
+    base_app.traceback_kwargs["suppress"] = [cmd2]
     # Purposely set the editor to None
     base_app.editor = None
 

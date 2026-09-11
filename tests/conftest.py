@@ -1,6 +1,7 @@
 """Cmd2 unit/functional testing"""
 
 import os
+import subprocess
 import sys
 from collections.abc import Callable
 from contextlib import redirect_stderr
@@ -108,6 +109,24 @@ def fixed_terminal_size(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("COLUMNS", raising=False)
     monkeypatch.delenv("LINES", raising=False)
     monkeypatch.setattr(os, "get_terminal_size", lambda fd=1: os.terminal_size((80, 24)))
+
+
+@pytest.fixture
+def running_pipe_process(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise real pipe I/O without the failed-start detection delay.
+
+    Successful-pipe tests need a running child, not a timed startup probe. Model
+    that probe's timeout, but keep real unbounded waits so subprocess output and
+    exit are still observed. Early-exit handling has its own deterministic test.
+    """
+    wait = subprocess.Popen.wait
+
+    def wait_without_probe(process, timeout=None):
+        if timeout is not None:
+            raise subprocess.TimeoutExpired(process.args, timeout)
+        return wait(process)
+
+    monkeypatch.setattr(subprocess.Popen, "wait", wait_without_probe)
 
 
 @pytest.fixture
