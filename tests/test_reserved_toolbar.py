@@ -481,10 +481,8 @@ class TestRestorationOwnership:
 class PartialWriteStream(TtyStringIO):
     """Writes a prefix of chosen flushed batches and then fails, as a real terminal can."""
 
-    def __init__(self, *fail_on_writes: int, keep: int = 12) -> None:
+    def __init__(self, *, keep: int = 12) -> None:
         super().__init__()
-        self._writes = 0
-        self._fail_on_writes = set(fail_on_writes)
         self._armed = False
         self._keep = keep
 
@@ -497,8 +495,7 @@ class PartialWriteStream(TtyStringIO):
         self._armed = True
 
     def write(self, text: str) -> int:
-        self._writes += 1
-        if self._armed or self._writes in self._fail_on_writes:
+        if self._armed:
             self._armed = False
             super().write(text[: self._keep])
             raise OSError("terminal went away")
@@ -510,9 +507,16 @@ class TestPartialStartupPaint:
         """Review finding: rollback released the margins over a cursor still in the band."""
         harness = Harness()
         try:
-            # Batch one installs the margins; batch two is the first paint.
-            harness.stream = PartialWriteStream(2)
+            harness.stream = PartialWriteStream()
             harness.backend.stdout = harness.stream
+
+            def first_paint():
+                # Arm after acquisition, when the painter evaluates its content. Counting
+                # startup flushes would fail the wrong operation when acquisition changes.
+                harness.stream.fail_next()
+                return "TOOLBAR"
+
+            harness.session.bottom_toolbar = first_paint
             with pytest.raises(OSError, match="terminal went away"):
                 harness.toolbar.start()
 
@@ -527,22 +531,19 @@ class TestPartialStartupPaint:
 
 
 class TestRefreshFailure:
-    def make(self, *fail_on_writes: int) -> Harness:
-        """Build a toolbar over a terminal that fails the chosen flushed batches.
-
-        Batch one installs the margins and batch two is the first paint, so refreshes start
-        at batch three.
-        """
+    def make(self) -> Harness:
+        """Build a toolbar over a terminal whose next write can be failed explicitly."""
         harness = Harness()
-        harness.stream = PartialWriteStream(*fail_on_writes)
+        harness.stream = PartialWriteStream()
         harness.backend.stdout = harness.stream
         return harness
 
     def test_a_failed_paint_does_not_take_the_command_down(self) -> None:
         """The toolbar is cosmetic; the command that was running is not its to interrupt."""
-        harness = self.make(3)
+        harness = self.make()
         try:
             harness.toolbar.start()
+            harness.stream.fail_next()
             harness.session.bottom_toolbar = "CHANGED"
             assert harness.toolbar.refresh() is False
         finally:
@@ -550,9 +551,10 @@ class TestRefreshFailure:
 
     def test_a_failed_paint_makes_the_bridge_resynchronize(self) -> None:
         """Buffering the cursor save does not prove the terminal received it."""
-        harness = self.make(3)
+        harness = self.make()
         try:
             harness.toolbar.start()
+            harness.stream.fail_next()
             bridge = harness.toolbar.bridge
             assert bridge is not None
             harness.session.bottom_toolbar = "CHANGED"
@@ -563,9 +565,10 @@ class TestRefreshFailure:
             harness.close()
 
     def test_the_failure_is_reported_once(self) -> None:
-        harness = self.make(3)
+        harness = self.make()
         try:
             harness.toolbar.start()
+            harness.stream.fail_next()
             harness.session.bottom_toolbar = "CHANGED"
             harness.toolbar.refresh()
             assert isinstance(harness.toolbar.take_pending_error(), OSError)

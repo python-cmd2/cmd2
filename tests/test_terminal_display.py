@@ -148,7 +148,7 @@ class TestAcquisition:
         output, stream = make_output(rows=24)
         display = TerminalDisplay(output)
         assert display.acquire()
-        assert stream.getvalue() == "\x1b7\x1b[1;23r\x1b8"
+        assert stream.getvalue() == "\x1bD\x1b[1A\x1b7\x1b[1;23r\x1b8"
         assert not output._buffer
 
     def test_releasing_restores_full_screen_margins_immediately(self) -> None:
@@ -158,7 +158,7 @@ class TestAcquisition:
         display.acquire()
         stream.truncate(0), stream.seek(0)
         display.release()
-        assert stream.getvalue() == "\x1b7\x1b[r\x1b8"
+        assert stream.getvalue() == "\x1b7\x1b[24;1H\x1b[0m\x1b[J\x1b[r\x1b8"
         assert not output._buffer
 
     def test_the_region_is_reset_when_the_body_raises(self) -> None:
@@ -170,7 +170,7 @@ class TestAcquisition:
 
         with pytest.raises(RuntimeError, match="boom"), TerminalDisplay(output):
             blow_up()
-        assert stream.getvalue() == "\x1b7\x1b[r\x1b8"
+        assert stream.getvalue() == "\x1b7\x1b[24;1H\x1b[0m\x1b[J\x1b[r\x1b8"
 
     def test_release_is_idempotent(self) -> None:
         """Cleanup paths call this freely; a second reset would move the cursor again."""
@@ -213,7 +213,7 @@ class TestAcquisition:
         screen.rows = 40
         stream.truncate(0), stream.seek(0)
         display.acquire()
-        assert stream.getvalue() == "\x1b7\x1b[1;39r\x1b8"
+        assert stream.getvalue() == "\x1bD\x1b[1A\x1b7\x1b[1;39r\x1b8"
         assert display.geometry is not None
         assert display.geometry.usable_rows == 39
 
@@ -323,7 +323,7 @@ class TestScreenBufferHandoff:
         display.acquire()
         stream.truncate(0), stream.seek(0)
         display.release_region_for_handoff()
-        assert stream.getvalue() == "\x1b7\x1b[r\x1b8"
+        assert stream.getvalue() == "\x1b7\x1b[24;1H\x1b[0m\x1b[J\x1b[r\x1b8"
         assert not display.is_reserved
 
     def test_the_lease_survives_a_handoff(self) -> None:
@@ -344,7 +344,7 @@ class TestScreenBufferHandoff:
         screen.rows = 40
         stream.truncate(0), stream.seek(0)
         display.reacquire_region_after_handoff()
-        assert stream.getvalue() == "\x1b7\x1b[1;39r\x1b8"
+        assert stream.getvalue() == "\x1bD\x1b[1A\x1b7\x1b[1;39r\x1b8"
         assert display.geometry is not None
         assert display.geometry.usable_rows == 39
 
@@ -536,7 +536,7 @@ class TestHandoffSuspendsReconfiguration:
         stream.truncate(0), stream.seek(0)
         display.reacquire_region_after_handoff()
 
-        assert stream.getvalue() == "\x1b7\x1b[1;39r\x1b8"
+        assert stream.getvalue() == "\x1bD\x1b[1A\x1b7\x1b[1;39r\x1b8"
         assert display.geometry is not None
         assert display.geometry.usable_rows == 39
 
@@ -597,7 +597,7 @@ class TestFailedAcquisitionReturnsTheLease:
         stream.truncate(0), stream.seek(0)
         assert display.acquire()
         assert display.lease_depth == 1
-        assert stream.getvalue() == "\x1b7\x1b[1;23r\x1b8"
+        assert stream.getvalue() == "\x1bD\x1b[1A\x1b7\x1b[1;23r\x1b8"
 
     def test_a_measurement_failure_returns_the_lease_too(self) -> None:
         """Measuring sits inside the rollback: an ioctl that fails must not strand a lease."""

@@ -33,8 +33,9 @@ active reservation, which is why nothing here can install it.
 
 The caller is responsible for the cursor not being inside the reserved band when the region is
 established: this helper cannot discover the cursor's row without a cursor-position report,
-which needs input it does not have. Placing the prompt within the usable area belongs to the
-layer that owns the terminal.
+which needs input it does not have. The physical-terminal owner makes room under the cursor
+while full-screen margins are still installed, before saving its position and narrowing the
+region.
 
 A region needs at least two usable rows. DECSTBM requires the bottom margin to be greater
 than the top, so a degenerate ``ESC [ 1 ; 1 r`` is ignored and the terminal silently keeps

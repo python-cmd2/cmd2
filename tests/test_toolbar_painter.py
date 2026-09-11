@@ -650,13 +650,15 @@ class TestPartialPaint:
     def make(self, fail_on_write: int = 2) -> tuple[ToolbarPainter, PartialWriteStream, Any]:
         """Build a painter over a terminal that fails part-way through one flushed batch.
 
-        Batch one is the margin install, so the default targets the first paint.
+        Count relative to the completed acquisition, so changes to startup flushing
+        cannot make a paint regression fail in margin installation instead.
         """
-        stream = PartialWriteStream(fail_on_write=fail_on_write)
+        stream = PartialWriteStream(fail_on_write=-1)
         screen = {"rows": 24, "columns": 5}
         output = Vt100_Output(stream, lambda: Size(rows=screen["rows"], columns=screen["columns"]))
         display = ResizableDisplay(output, screen)
         assert display.acquire() is True
+        stream._fail_on_write = stream._writes + fail_on_write - 1
         painter = ToolbarPainter(
             display=display,
             lock=TerminalLock(),

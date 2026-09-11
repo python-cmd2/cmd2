@@ -248,7 +248,7 @@ class TestCprCoordinateContract:
         """The arithmetic above is only sound because of this."""
         output, stream = make_output(rows=24)
         TerminalDisplay(output).acquire()
-        assert stream.getvalue() == "\x1b7\x1b[1;23r\x1b8"
+        assert stream.getvalue() == "\x1bD\x1b[1A\x1b7\x1b[1;23r\x1b8"
 
     def test_a_cursor_in_the_reserved_band_gives_a_nonpositive_height(self) -> None:
         """The R5 hazard, stated in geometry terms: rejecting it belongs to the bridge, but
@@ -361,7 +361,7 @@ class TestScreenBufferTransitions:
         adapter, stream, display = make_reserved(rows=24)
         adapter.enter_alternate_screen()
         adapter.flush()
-        assert stream.getvalue().startswith("\x1b7\x1b[r\x1b8"), "margins were left installed"
+        assert stream.getvalue().startswith("\x1b7\x1b[24;1H\x1b[0m\x1b[J\x1b[r\x1b8"), "margins were left installed"
         assert not display.is_reserved
 
     def test_leaving_the_alternate_screen_re_establishes_the_region(self) -> None:
