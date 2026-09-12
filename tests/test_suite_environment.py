@@ -25,6 +25,18 @@ def test_color_environment_does_not_leak_into_tests(name: str) -> None:
     )
 
 
+def test_terminal_dimensions_do_not_leak_into_tests() -> None:
+    """Both Rich and argparse must see the geometry used by wrapping assertions."""
+    import shutil
+
+    from rich.console import Console
+
+    assert "COLUMNS" not in os.environ
+    assert "LINES" not in os.environ
+    assert shutil.get_terminal_size() == (80, 24)
+    assert Console(force_terminal=False, legacy_windows=False).size == (80, 24)
+
+
 class EncodingProbe(cmd2.Cmd):
     """Reports the encoding of whatever stream output is currently going to."""
 
@@ -51,7 +63,7 @@ def test_redirection_to_a_file_uses_utf8(tmp_path) -> None:
 PASS_THROUGH = "import sys; sys.stdin.reconfigure(encoding='utf-8'); sys.stdout.write(sys.stdin.read())"
 
 
-def test_piping_uses_utf8(tmp_path) -> None:
+def test_piping_uses_utf8(tmp_path, running_pipe_process) -> None:
     """The same applies to the pipe the subprocess reads from."""
     app = EncodingProbe(allow_cli_args=False)
     target = tmp_path / "piped.txt"
