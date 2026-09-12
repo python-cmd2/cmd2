@@ -733,6 +733,7 @@ class CommandToolbar:
         previous = (self.app.key_bindings, self.app.editing_mode, self.app.full_screen)
         entered = False
         restored = False
+        close_error: BaseException | None = None
 
         def restore() -> None:
             """Give the application back to the display, whichever thread is doing it.
@@ -747,6 +748,9 @@ class CommandToolbar:
             self._apply_display_layout()
             self.app.key_bindings, self.app.editing_mode, self.app.full_screen = previous
             self.app.renderer.full_screen = self.app.full_screen
+            # Even a failed erase or cursor request must return ownership of unfinished
+            # lines to the command. This also runs when the display's loop has stopped.
+            self._set_render_suppressed(True)
 
         def enter() -> None:
             nonlocal entered
@@ -768,19 +772,25 @@ class CommandToolbar:
             if not entered:
                 return
             entered = False
-            self.app.renderer.erase()
-            restore()
+            try:
+                self.app.renderer.erase()
+            finally:
+                restore()
             self.app.renderer.request_absolute_cursor_position()
-            # Back to ordinary command output, whose frames are suppressed again so the toolbar
-            # stays put. Command finalization and the next prompt lift this in turn.
-            self._set_render_suppressed(True)
             self.app.invalidate()
 
         def close() -> None:
+            nonlocal close_error
             # Switch bindings before the next key is processed, preserving
             # typeahead sent in the same terminal read as the pager's quit key.
-            leave()
-            pager.closed.set()
+            try:
+                leave()
+            except BaseException as exc:  # noqa: BLE001
+                # Deliver callback failures to the waiting command, rather than leaving it
+                # blocked while the event loop merely logs the exception.
+                close_error = exc
+            finally:
+                pager.closed.set()
 
         pager.on_close = close
 
@@ -788,6 +798,8 @@ class CommandToolbar:
             self._call_in_ui(enter)
             while not pager.closed.wait(0.1):
                 self._check_running()
+            if close_error is not None:
+                raise close_error
         finally:
             try:
                 if self.thread_is_alive:

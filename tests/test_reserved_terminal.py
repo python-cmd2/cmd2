@@ -691,9 +691,21 @@ class TestPager:
             # later command output keeps the toolbar rather than scrolling it away.
             assert display._proxy is not None
             assert all(stream.serializer is None for stream in display._streams)
-            harness.app.poutput("after the pager")
-            assert wait_for(lambda: any("after the pager" in row for row in terminal.screen.display))
-            assert terminal.screen.display[-1].startswith("STATUS")
+            output_rendered = threading.Event()
+
+            def after_output_render(_app) -> None:
+                # Proxy output precedes its asynchronous redraw. Inspect a completed frame,
+                # not the transient screen between the write and the toolbar repaint.
+                rows = terminal.screen.display
+                if any("after the pager" in row for row in rows) and rows[-1].startswith("STATUS"):
+                    output_rendered.set()
+
+            display.app.after_render += after_output_render
+            try:
+                harness.app.poutput("after the pager")
+                assert output_rendered.wait(5)
+            finally:
+                display.app.after_render -= after_output_render
             harness.app.main_session.bottom_toolbar = "RECOVERED"
             display.app.invalidate()
             assert wait_for(lambda: terminal.screen.display[-1].startswith("RECOVERED"))
@@ -707,7 +719,11 @@ class TestPager:
             assert harness.app.reserved_toolbar.bridge._render_suppressed is True
         assert terminal.screen.margins is None
 
-    def test_pager_teardown_restores_the_display_even_if_leaving_raises(self, terminal_harness, monkeypatch) -> None:
+    @pytest.mark.parametrize("quit_key", [False, True])
+    @pytest.mark.parametrize("failure", ["erase", "request_absolute_cursor_position"])
+    def test_pager_teardown_restores_the_display_even_if_leaving_raises(
+        self, terminal_harness, monkeypatch, quit_key, failure
+    ) -> None:
         """If the display cannot run the pager's exit on its own loop -- here the exit's erase
         raises -- page() must still put the display back itself. Left as the pager's, the
         full-screen flag and editing mode would carry into the next main prompt."""
@@ -726,27 +742,43 @@ class TestPager:
             bindings = display.app.key_bindings
             editing_mode = display.app.editing_mode
 
-            def erase_fails() -> None:
-                raise ValueError("erase failed")
+            original = getattr(display.app.renderer, failure)
+            forced_close = threading.Event()
+
+            def exit_fails() -> None:
+                monkeypatch.setattr(display.app.renderer, failure, original)
+                raise ValueError("exit failed")
 
             def drive() -> None:
                 assert wait_for(lambda: terminal.screen.display[0].startswith("row 000"))
-                # The exit's first act is an erase; make it raise, then end the pager without
-                # its quit key so the exit runs from page()'s own teardown.
-                monkeypatch.setattr(display.app.renderer, "erase", erase_fails)
-                created[0].closed.set()
+                monkeypatch.setattr(display.app.renderer, failure, exit_fails)
+                if quit_key:
+                    harness.pipe.send_text("q")
+                    if not wait_for(created[0].closed.is_set, timeout=3):
+                        forced_close.set()
+                        created[0].closed.set()
+                else:
+                    created[0].closed.set()
 
             with ThreadPoolExecutor() as executor:
                 future = executor.submit(drive)
-                with pytest.raises(ValueError, match="erase failed"):
+                with pytest.raises(ValueError, match="exit failed"):
                     display.page(PAGER_BODY, chop=False)
                 future.result(timeout=5)
 
+            assert not forced_close.is_set(), "the quit callback failed to release page()"
             assert display.app.full_screen is False
             assert display.app.renderer.full_screen is False
             assert display.app.layout is display._layout
             assert display.app.key_bindings is display._bindings or display.app.key_bindings is bindings
             assert display.app.editing_mode is editing_mode
+            assert harness.app.reserved_toolbar.bridge._render_suppressed is True
+            harness.app.stdout.write("PARTIAL")
+            harness.app.stdout.flush()
+            display._call_in_ui(display.app._redraw)
+            harness.app.stdout.write("END\n")
+            harness.app.stdout.flush()
+            assert any("PARTIALEND" in row for row in terminal.screen.display)
 
     def test_output_that_fits_is_printed_without_a_pager(self, terminal_harness) -> None:
         harness, terminal = terminal_harness
